@@ -72,6 +72,15 @@ public interface ResourceKeys {
   String YARN_CORES = "yarn.vcores";
 
   /**
+   * If normalization is set to false, then if the resource (memory and/or
+   * vcore) requested by a role is higher than YARN limits, then the resource
+   * request is not normalized. If this causes failures at the YARN level then
+   * applications are expecting that to happen. Default value is true.
+   */
+  String YARN_RESOURCE_NORMALIZATION_ENABLED =
+      "yarn.resource.normalization.enabled";
+
+  /**
    * Number of disks per instance to ask YARN for
    *  {@value}
    */
@@ -140,9 +149,9 @@ public interface ResourceKeys {
 
 
 
-  int DEFAULT_CONTAINER_FAILURE_WINDOW_DAYS = 0;
-  int DEFAULT_CONTAINER_FAILURE_WINDOW_HOURS = 6;
-  int DEFAULT_CONTAINER_FAILURE_WINDOW_MINUTES = 0;
+  long DEFAULT_CONTAINER_FAILURE_WINDOW_DAYS = 0;
+  long DEFAULT_CONTAINER_FAILURE_WINDOW_HOURS = 6;
+  long DEFAULT_CONTAINER_FAILURE_WINDOW_MINUTES = 0;
 
 
   /**

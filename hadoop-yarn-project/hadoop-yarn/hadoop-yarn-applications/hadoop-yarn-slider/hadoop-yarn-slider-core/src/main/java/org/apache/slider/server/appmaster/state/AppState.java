@@ -38,6 +38,7 @@ import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.InternalKeys;
 import org.apache.slider.api.StatusKeys;
 import org.apache.slider.api.proto.Messages;
+import org.apache.slider.api.proto.Messages.ComponentCountProto;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.ApplicationState;
 import org.apache.slider.api.resource.Component;
@@ -219,7 +220,13 @@ public class AppState {
     return roleStatusMap;
   }
   
+  protected Map<String, ProviderRole> getRoleMap() {
+    return roles;
+  }
 
+  public Map<Integer, ProviderRole> getRolePriorityMap() {
+    return rolePriorityMap;
+  }
 
   private Map<ContainerId, RoleInstance> getStartingContainers() {
     return startingContainers;
@@ -255,6 +262,11 @@ public class AppState {
   @VisibleForTesting
   public RoleHistory getRoleHistory() {
     return roleHistory;
+  }
+
+  @VisibleForTesting
+  public void setRoleHistory(RoleHistory roleHistory) {
+    this.roleHistory = roleHistory;
   }
 
   /**
@@ -306,6 +318,15 @@ public class AppState {
     appMetrics
         .tag("appId", "Application id for service", app.getId());
 
+    org.apache.slider.api.resource.Configuration conf = app.getConfiguration();
+    startTimeThreshold =
+        conf.getPropertyLong(InternalKeys.INTERNAL_CONTAINER_FAILURE_SHORTLIFE,
+            InternalKeys.DEFAULT_INTERNAL_CONTAINER_FAILURE_SHORTLIFE);
+    failureThreshold = conf.getPropertyInt(CONTAINER_FAILURE_THRESHOLD,
+        DEFAULT_CONTAINER_FAILURE_THRESHOLD);
+    nodeFailureThreshold = conf.getPropertyInt(NODE_FAILURE_THRESHOLD,
+        DEFAULT_NODE_FAILURE_THRESHOLD);
+
     //build the initial role list
     List<ProviderRole> roleList = new ArrayList<>(binding.roles);
     for (ProviderRole providerRole : roleList) {
@@ -314,6 +335,7 @@ public class AppState {
 
     int priority = 1;
     for (Component component : app.getComponents()) {
+      priority = getNewPriority(priority);
       String name = component.getName();
       if (roles.containsKey(name)) {
         continue;
@@ -324,21 +346,12 @@ public class AppState {
       }
       log.info("Adding component: " + name);
       ProviderRole dynamicRole =
-          createComponent(name, name, component, priority++);
+          createComponent(name, name, component, priority);
       buildRole(dynamicRole);
       roleList.add(dynamicRole);
     }
     //then pick up the requirements
     buildRoleRequirementsFromResources();
-
-    org.apache.slider.api.resource.Configuration conf = app.getConfiguration();
-    startTimeThreshold =
-        conf.getPropertyLong(InternalKeys.INTERNAL_CONTAINER_FAILURE_SHORTLIFE,
-            InternalKeys.DEFAULT_INTERNAL_CONTAINER_FAILURE_SHORTLIFE);
-    failureThreshold = (int) conf.getPropertyLong(CONTAINER_FAILURE_THRESHOLD,
-        DEFAULT_CONTAINER_FAILURE_THRESHOLD);
-    nodeFailureThreshold = (int) conf.getPropertyLong(NODE_FAILURE_THRESHOLD,
-        DEFAULT_NODE_FAILURE_THRESHOLD);
 
     // set up the role history
     roleHistory = new RoleHistory(roleStatusMap.values(), recordFactory);
@@ -359,34 +372,47 @@ public class AppState {
   //TODO WHY do we need to create the component for AM ?
   public ProviderRole createComponent(String name, String group,
       Component component, int priority) throws BadConfigException {
-
     org.apache.slider.api.resource.Configuration conf =
         component.getConfiguration();
     long placementTimeout = conf.getPropertyLong(PLACEMENT_ESCALATE_DELAY,
         DEFAULT_PLACEMENT_ESCALATE_DELAY_SECONDS);
     long placementPolicy = conf.getPropertyLong(COMPONENT_PLACEMENT_POLICY,
         PlacementPolicy.DEFAULT);
-    int threshold = (int) conf
-        .getPropertyLong(NODE_FAILURE_THRESHOLD, nodeFailureThreshold);
+    int threshold = conf.getPropertyInt(NODE_FAILURE_THRESHOLD,
+        nodeFailureThreshold);
+    String label = conf.getProperty(YARN_LABEL_EXPRESSION,
+        DEF_YARN_LABEL_EXPRESSION);
     ProviderRole newRole =
         new ProviderRole(name, group, priority, (int)placementPolicy, threshold,
-            placementTimeout, "", component);
+            placementTimeout, label, component);
 
     log.info("Created a new role " + newRole);
     return newRole;
   }
 
-  public synchronized void updateComponents(
-      Messages.FlexComponentRequestProto requestProto)
-      throws BadConfigException {
+  @VisibleForTesting
+  public synchronized List<ProviderRole> updateComponents(Map<String, Long>
+      componentCounts) throws BadConfigException {
     for (Component component : app.getComponents()) {
-      if (component.getName().equals(requestProto.getName())) {
-        component
-            .setNumberOfContainers((long) requestProto.getNumberOfContainers());
+      if (componentCounts.containsKey(component.getName())) {
+        component.setNumberOfContainers(componentCounts.get(component
+            .getName()));
       }
     }
     //TODO update cluster description
-    buildRoleRequirementsFromResources();
+    return buildRoleRequirementsFromResources();
+  }
+
+  public synchronized List<ProviderRole> updateComponents(
+      Messages.FlexComponentsRequestProto requestProto)
+      throws BadConfigException {
+    Map<String, Long> componentCounts = new HashMap<>();
+    for (ComponentCountProto componentCount : requestProto
+        .getComponentsList()) {
+      componentCounts.put(componentCount.getName(), componentCount
+          .getNumberOfContainers());
+    }
+    return updateComponents(componentCounts);
   }
 
   /**
@@ -445,10 +471,8 @@ public class AppState {
     // now the dynamic ones. Iterate through the the cluster spec and
     // add any role status entries not in the role status
 
-    List<RoleStatus> list = new ArrayList<>(getRoleStatusMap().values());
-    for (RoleStatus roleStatus : list) {
-      String name = roleStatus.getName();
-      Component component = roleStatus.getProviderRole().component;
+    for (Component component : app.getComponents()) {
+      String name = component.getName();
       if (roles.containsKey(name)) {
         continue;
       }
@@ -460,10 +484,12 @@ public class AppState {
           groupCount = groupCounts.get(name);
         }
         for (int i = groupCount + 1; i <= desiredInstanceCount; i++) {
-          int priority = roleStatus.getPriority();
           // this is a new instance of an existing group
           String newName = String.format("%s%d", name, i);
-          int newPriority = getNewPriority(priority + i - 1);
+          if (roles.containsKey(newName)) {
+            continue;
+          }
+          int newPriority = getNewPriority(i);
           log.info("Adding new role {}", newName);
           ProviderRole dynamicRole =
               createComponent(newName, name, component, newPriority);
@@ -477,11 +503,12 @@ public class AppState {
         }
       } else {
         // this is a new value
-        log.info("Adding new role {}", name);
+        log.info("Adding new role {}, num containers {}", name,
+            component.getNumberOfContainers());
         ProviderRole dynamicRole =
-            createComponent(name, name, component, roleStatus.getPriority());
+            createComponent(name, name, component, getNewPriority(1));
         RoleStatus newRole = buildRole(dynamicRole);
-        incDesiredContainers(roleStatus,
+        incDesiredContainers(newRole,
             component.getNumberOfContainers().intValue());
         log.info("New role {}", newRole);
         if (roleHistory != null) {
@@ -518,7 +545,8 @@ public class AppState {
     if (roleStatusMap.containsKey(priority)) {
       throw new BadConfigException("Duplicate Provider Key: %s and %s",
                                    providerRole,
-                                   roleStatusMap.get(priority));
+                                   roleStatusMap.get(priority)
+                                       .getProviderRole());
     }
     RoleStatus roleStatus = new RoleStatus(providerRole);
     roleStatusMap.put(priority, roleStatus);
@@ -536,6 +564,8 @@ public class AppState {
   private void buildRoleResourceRequirements() {
     for (RoleStatus role : roleStatusMap.values()) {
       role.setResourceRequirements(buildResourceRequirements(role));
+      log.info("Setting resource requirements for {} to {}", role.getName(),
+          role.getResourceRequirements());
     }
   }
   /**
@@ -827,7 +857,6 @@ public class AppState {
    * @return the container request to submit or null if there is none
    */
   private AMRMClient.ContainerRequest createContainerRequest(RoleStatus role) {
-    incPendingContainers(role);
     if (role.isAntiAffinePlacement()) {
       return createAAContainerRequest(role);
     } else {
@@ -857,28 +886,58 @@ public class AppState {
     return request.getIssuedRequest();
   }
 
-  private void incPendingContainers(RoleStatus role) {
-    role.getComponentMetrics().containersPending.incr();
-    appMetrics.containersPending.incr();
+  @VisibleForTesting
+  public void incRequestedContainers(RoleStatus role) {
+    log.info("Incrementing requested containers for {}", role.getName());
+    role.getComponentMetrics().containersRequested.incr();
+    appMetrics.containersRequested.incr();
   }
 
-  private void decPendingContainers(RoleStatus role) {
-    decPendingContainers(role, 1);
+  private void decRequestedContainers(RoleStatus role) {
+    role.getComponentMetrics().containersRequested.decr();
+    appMetrics.containersRequested.decr();
+    log.info("Decrementing requested containers for {} by {} to {}", role
+        .getName(), 1, role.getComponentMetrics().containersRequested.value());
   }
 
-  private void decPendingContainers(RoleStatus role, int n) {
-    role.getComponentMetrics().containersPending.decr(n);;
-    appMetrics.containersPending.decr(n);
+  private int decRequestedContainersToFloor(RoleStatus role, int delta) {
+    int actual = decMetricToFloor(role.getComponentMetrics()
+        .containersRequested, delta);
+    appMetrics.containersRequested.decr(actual);
+    log.info("Decrementing requested containers for {} by {} to {}", role
+            .getName(), actual, role.getComponentMetrics().containersRequested
+        .value());
+    return actual;
   }
 
+  private int decAAPendingToFloor(RoleStatus role, int delta) {
+    int actual = decMetricToFloor(role.getComponentMetrics()
+        .pendingAAContainers, delta);
+    appMetrics.pendingAAContainers.decr(actual);
+    log.info("Decrementing AA pending containers for {} by {} to {}", role
+        .getName(), actual, role.getComponentMetrics().pendingAAContainers
+        .value());
+    return actual;
+  }
 
-  private void incRunningContainers(RoleStatus role) {
-    role.getComponentMetrics().containersRunning.incr();;
+  private int decMetricToFloor(MutableGaugeInt metric, int delta) {
+    int currentValue = metric.value();
+    int decrAmount = delta;
+    if (currentValue - delta < 0) {
+      decrAmount = currentValue;
+    }
+    metric.decr(decrAmount);
+    return decrAmount;
+  }
+
+  @VisibleForTesting
+  public void incRunningContainers(RoleStatus role) {
+    role.getComponentMetrics().containersRunning.incr();
     appMetrics.containersRunning.incr();
   }
 
   private void decRunningContainers(RoleStatus role) {
-    role.getComponentMetrics().containersRunning.decr();;
+    role.getComponentMetrics().containersRunning.decr();
     appMetrics.containersRunning.decr();
   }
 
@@ -902,26 +961,47 @@ public class AppState {
     appMetrics.containersCompleted.incr();
   }
 
-  private void incFailedContainers(RoleStatus role, ContainerOutcome outcome) {
-    role.getComponentMetrics().containersFailed.incr();
-    appMetrics.containersFailed.incr();
+  @VisibleForTesting
+  public void incFailedContainers(RoleStatus role, ContainerOutcome outcome) {
     switch (outcome) {
     case Preempted:
       appMetrics.containersPreempted.incr();
       role.getComponentMetrics().containersPreempted.incr();
       break;
+    case Disk_failure:
+      appMetrics.containersDiskFailure.incr();
+      appMetrics.containersFailed.incr();
+      role.getComponentMetrics().containersDiskFailure.incr();
+      role.getComponentMetrics().containersFailed.incr();
+      break;
     case Failed:
       appMetrics.failedSinceLastThreshold.incr();
+      appMetrics.containersFailed.incr();
+      role.getComponentMetrics().failedSinceLastThreshold.incr();
+      role.getComponentMetrics().containersFailed.incr();
+      break;
+    case Failed_limits_exceeded:
+      appMetrics.containersLimitsExceeded.incr();
+      appMetrics.failedSinceLastThreshold.incr();
+      appMetrics.containersFailed.incr();
+      role.getComponentMetrics().containersLimitsExceeded.incr();
+      role.getComponentMetrics().failedSinceLastThreshold.incr();
+      role.getComponentMetrics().containersFailed.incr();
       break;
     default:
+      appMetrics.failedSinceLastThreshold.incr();
+      appMetrics.containersFailed.incr();
+      role.getComponentMetrics().failedSinceLastThreshold.incr();
+      role.getComponentMetrics().containersFailed.incr();
       break;
     }
   }
 
   /**
-   * Build up the resource requirements for this role from the
-   * cluster specification, including substituing max allowed values
-   * if the specification asked for it.
+   * Build up the resource requirements for this role from the cluster
+   * specification, including substituting max allowed values if the
+   * specification asked for it (except when
+   * {@link ResourceKeys#YARN_RESOURCE_NORMALIZATION_ENABLED} is set to false).
    * @param role role
    * during normalization
    */
@@ -934,17 +1014,36 @@ public class AppState {
       // TODO why do we need to create the component for AM ?
       return Resource.newInstance(1, 512);
     }
-    int cores = Math.min(containerMaxCores, component.getResource().getCpus());
+    int cores = DEF_YARN_CORES;
+    if (component.getResource() != null && component.getResource().getCpus()
+        != null) {
+      cores = Math.min(containerMaxCores, component.getResource().getCpus());
+    }
     if (cores <= 0) {
       cores = DEF_YARN_CORES;
     }
-    long mem = Math.min(containerMaxMemory,
-        Long.parseLong(component.getResource().getMemory()));
+    long rawMem = DEF_YARN_MEMORY;
+    if (component.getResource() != null && component.getResource().getMemory()
+        != null) {
+      if (YARN_RESOURCE_MAX.equals(component.getResource().getMemory())) {
+        rawMem = containerMaxMemory;
+      } else {
+        rawMem = Long.parseLong(component.getResource().getMemory());
+      }
+    }
+    boolean normalize = component.getConfiguration().getPropertyBool(
+        YARN_RESOURCE_NORMALIZATION_ENABLED, true);
+    if (!normalize) {
+      log.info("Resource normalization: disabled");
+      log.debug("Component {} has RAM={}, vCores={}", name, rawMem, cores);
+      return Resources.createResource(rawMem, cores);
+    }
+    long mem = Math.min(containerMaxMemory, rawMem);
     if (mem <= 0) {
       mem = DEF_YARN_MEMORY;
     }
     Resource capability = Resource.newInstance(mem, cores);
-    log.debug("Component {} has RAM={}, vCores ={}", name, mem, cores);
+    log.debug("Component {} has RAM={}, vCores={}", name, mem, cores);
     Resource normalized = recordFactory.normalize(capability, minResource,
         maxResource);
     if (!Resources.equals(normalized, capability)) {
@@ -1060,7 +1159,7 @@ public class AppState {
       log.debug("Created {} cancel requests", operations.size());
       return new NodeUpdatedOutcome(true, operations);
     }
-    return new NodeUpdatedOutcome(false, new ArrayList<AbstractRMOperation>(0));
+    return new NodeUpdatedOutcome(false, new ArrayList<>(0));
   }
 
   /**
@@ -1203,7 +1302,6 @@ public class AppState {
             message = String.format("Failure %s (%d)", containerId, exitStatus);
           }
           roleStatus.noteFailed(message);
-          incFailedContainers(roleStatus, result.outcome);
           long failed =
               roleStatus.getComponentMetrics().containersFailed.value();
           log.info("Current count of failed role[{}] {} =  {}",
@@ -1409,7 +1507,7 @@ public class AppState {
           role.getName(), failures, threshold);
     }
 
-    if (failures > threshold) {
+    if (threshold > 0 && failures > threshold) {
       throw new TriggerClusterTeardownException(
           SliderExitCodes.EXIT_DEPLOYMENT_FAILED, FinalApplicationStatus.FAILED,
           ErrorStrings.E_UNSTABLE_CLUSTER
@@ -1428,7 +1526,7 @@ public class AppState {
   private int getFailureThresholdForRole(RoleStatus roleStatus) {
     return (int) roleStatus.getProviderRole().component.getConfiguration()
         .getPropertyLong(CONTAINER_FAILURE_THRESHOLD,
-            DEFAULT_CONTAINER_FAILURE_THRESHOLD);
+            failureThreshold);
   }
 
 
@@ -1497,7 +1595,8 @@ public class AppState {
     }
 
     log.info("Reviewing {} : ", role);
-    log.debug("Expected {}, Delta: {}", expected, delta);
+    log.debug("Expected {}, Requested/Running {}, Delta: {}", expected,
+        role.getActualAndRequested(), delta);
     checkFailureThreshold(role);
 
     if (expected < 0 ) {
@@ -1526,7 +1625,7 @@ public class AppState {
               pending--;
               log.info("Starting an anti-affine request sequence for {} nodes; pending={}",
                 delta, pending);
-              addContainerRequest(operations, request);
+              addContainerRequest(operations, request, role);
             } else {
               log.info("No location for anti-affine request");
             }
@@ -1536,12 +1635,12 @@ public class AppState {
         }
         log.info("Setting pending to {}", pending);
         //TODO
-        role.setAAPending((int)pending);
+        role.setAAPending(pending);
       } else {
 
         for (int i = 0; i < delta; i++) {
           //get the role history to select a suitable node, if available
-          addContainerRequest(operations, createContainerRequest(role));
+          addContainerRequest(operations, createContainerRequest(role), role);
         }
       }
     } else if (delta < 0) {
@@ -1552,25 +1651,35 @@ public class AppState {
       long excess = -delta;
 
       // how many requests are outstanding? for AA roles, this includes pending
-      long outstandingRequests = role.getPending() + role.getAAPending();
+      long outstandingRequests = role.getRequested() + role.getAAPending();
       if (outstandingRequests > 0) {
         // outstanding requests.
         int toCancel = (int)Math.min(outstandingRequests, excess);
 
+        int pendingCancelled = 0;
+        if (role.getAAPending() > 0) {
+          pendingCancelled = decAAPendingToFloor(role, toCancel);
+        }
+        int remainingToCancel = toCancel - pendingCancelled;
+
         // Delegate to Role History
-        List<AbstractRMOperation> cancellations = roleHistory.cancelRequestsForRole(role, toCancel);
+        List<AbstractRMOperation> cancellations = roleHistory
+            .cancelRequestsForRole(role, remainingToCancel);
         log.info("Found {} outstanding requests to cancel", cancellations.size());
         operations.addAll(cancellations);
-        if (toCancel != cancellations.size()) {
+        if (remainingToCancel != cancellations.size()) {
           log.error("Tracking of outstanding requests is not in sync with the summary statistics:" +
               " expected to be able to cancel {} requests, but got {}",
-              toCancel, cancellations.size());
+              remainingToCancel, cancellations.size());
         }
-        decPendingContainers(role, toCancel);
-        excess -= toCancel;
+
+        int requestCancelled = decRequestedContainersToFloor(role,
+            remainingToCancel);
+        excess -= pendingCancelled;
+        excess -= requestCancelled;
         assert excess >= 0 : "Attempted to cancel too many requests";
         log.info("Submitted {} cancellations, leaving {} to release",
-            toCancel, excess);
+            pendingCancelled + requestCancelled, excess);
         if (excess == 0) {
           log.info("After cancelling requests, application is now at desired size");
         }
@@ -1645,7 +1754,7 @@ public class AppState {
    * @return true if a request was added
    */
   private boolean addContainerRequest(List<AbstractRMOperation> operations,
-      AMRMClient.ContainerRequest containerAsk) {
+      AMRMClient.ContainerRequest containerAsk, RoleStatus role) {
     if (containerAsk != null) {
       log.info("Container ask is {} and label = {}", containerAsk,
           containerAsk.getNodeLabelExpression());
@@ -1654,6 +1763,7 @@ public class AppState {
         log.warn("Memory requested: {} > max of {}", askMemory, containerMaxMemory);
       }
       operations.add(new ContainerRequestOperation(containerAsk));
+      incRequestedContainers(role);
       return true;
     } else {
       return false;
@@ -1727,6 +1837,8 @@ public class AppState {
       List<Container> allocatedContainers,
       List<ContainerAssignment> assignments,
       List<AbstractRMOperation> operations) {
+    assignments.clear();
+    operations.clear();
     List<Container> ordered = roleHistory.prepareAllocationList(allocatedContainers);
     log.info("onContainersAllocated(): Total containers allocated = {}", ordered.size());
     for (Container container : ordered) {
@@ -1735,13 +1847,13 @@ public class AppState {
       //get the role
       final ContainerId cid = container.getId();
       final RoleStatus role = lookupRoleStatus(container);
-      decPendingContainers(role);
+      decRequestedContainers(role);
 
       //inc allocated count -this may need to be dropped in a moment,
       // but us needed to update the logic below
       MutableGaugeInt containersRunning = role.getComponentMetrics().containersRunning;
-      final long allocated = containersRunning.value();
       incRunningContainers(role);
+      final long allocated = containersRunning.value();
       final long desired = role.getDesired();
 
       final String roleName = role.getName();
@@ -1778,7 +1890,8 @@ public class AppState {
           if (role.getAAPending() > 0) {
             // still an outstanding AA request: need to issue a new one.
             log.info("Asking for next container for AA role {}", roleName);
-            if (!addContainerRequest(operations, createAAContainerRequest(role))) {
+            if (!addContainerRequest(operations, createAAContainerRequest(role),
+                role)) {
               log.info("No capacity in cluster for new requests");
             } else {
               role.decAAPending();

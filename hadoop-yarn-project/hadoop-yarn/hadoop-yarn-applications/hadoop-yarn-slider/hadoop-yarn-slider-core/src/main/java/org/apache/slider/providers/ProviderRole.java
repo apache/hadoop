@@ -18,6 +18,7 @@
 
 package org.apache.slider.providers;
 
+import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.resource.Component;
 
 /**
@@ -36,6 +37,14 @@ public final class ProviderRole {
   public final String labelExpression;
   public final Component component;
 
+  public ProviderRole(String name, int id) {
+    this(name,
+        id,
+        PlacementPolicy.DEFAULT,
+        ResourceKeys.DEFAULT_NODE_FAILURE_THRESHOLD,
+        ResourceKeys.DEFAULT_PLACEMENT_ESCALATE_DELAY_SECONDS,
+        ResourceKeys.DEF_YARN_LABEL_EXPRESSION);
+  }
 
   /**
    * Create a provider role
@@ -59,7 +68,8 @@ public final class ProviderRole {
         policy,
         nodeFailureThreshold,
         placementTimeoutSeconds,
-        labelExpression, null);
+        labelExpression,
+        new Component().name(name).numberOfContainers(0L));
   }
 
   /**

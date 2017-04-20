@@ -1,0 +1,8 @@
+{"entry":{"org.apache.slider.server.avro.RoleHistoryHeader":{"version":1,"saved":1415296260647,"savedx":"149863b1a27","savedate":"6 Nov 2014 17:51:00 GMT","roles":6}}}
+{"entry":{"org.apache.slider.server.avro.NodeEntryRecord":{"host":"192.168.1.85","role":1,"active":false,"last_used":0}}}
+{"entry":{"org.apache.slider.server.avro.NodeEntryRecord":{"host":"192.168.1.85","role":2,"active":false,"last_used":0}}}
+{"entry":{"org.apache.slider.server.avro.NodeEntryRecord":{"host":"192.168.1.85","role":0,"active":false,"last_used":0}}}
+{"entry":{"org.apache.slider.server.avro.NodeEntryRecord":{"host":"192.168.1.86","role":4,"active":true,"last_used":0}}}
+{"entry":{"org.apache.slider.server.avro.NodeEntryRecord":{"host":"192.168.1.86","role":5,"active":true,"last_used":0}}}
+{"entry":{"org.apache.slider.server.avro.NodeEntryRecord":{"host":"192.168.1.86","role":6,"active":true,"last_used":0}}}
+{"entry":{"org.apache.slider.server.avro.RoleHistoryFooter":{"count":6}}}

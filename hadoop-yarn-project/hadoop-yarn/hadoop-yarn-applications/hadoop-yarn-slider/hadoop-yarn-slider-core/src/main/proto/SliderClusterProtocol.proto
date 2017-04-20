@@ -61,7 +61,7 @@ service SliderClusterProtocolPB {
   rpc upgradeContainers(UpgradeContainersRequestProto) 
     returns(UpgradeContainersResponseProto);
 
-  rpc flexComponent(FlexComponentRequestProto) returns (FlexComponentResponseProto);
+  rpc flexComponents(FlexComponentsRequestProto) returns (FlexComponentsResponseProto);
 
   /**
    * Get the current cluster status

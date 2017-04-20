@@ -1,0 +1,49 @@
+{
+  "name": "app-1",
+  "lifetime": "3600",
+  "configuration": {
+    "properties": {
+      "g1": "a",
+      "g2": "b"
+    }
+  },
+  "resource": {
+    "cpus": 1,
+    "memory": "512"
+  },
+  "number_of_containers": 2,
+  "components": [
+    {
+      "name": "simple",
+      "configuration": {
+        "properties": {
+          "g1": "a",
+          "g2": "b"
+        }
+      }
+    },
+    {
+      "name": "master",
+      "configuration": {
+        "properties": {
+          "g1": "overridden",
+          "g2": "b"
+        }
+      }
+    },
+    {
+      "name": "worker",
+      "resource": {
+        "cpus": 1,
+        "memory": "1024"
+      },
+      "configuration": {
+        "properties": {
+          "g1": "overridden-by-worker",
+          "g2": "b",
+          "timeout": "1000"
+        }
+      }
+    }
+  ]
+}

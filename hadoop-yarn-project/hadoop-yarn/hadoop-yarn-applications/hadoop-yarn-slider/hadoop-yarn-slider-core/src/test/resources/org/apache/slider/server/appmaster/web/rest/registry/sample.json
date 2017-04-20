@@ -1,0 +1,9 @@
+{
+  "nodes": ["/users/example/services/org-apache-slider/test-registry-rest-resources/components"], "service": {
+  "description": "Slider Application Master",
+  "yarn:id": "application_1411664296263_0001",
+  "yarn:persistence": 1,
+  "external": [],
+  "internal": []
+}
+}

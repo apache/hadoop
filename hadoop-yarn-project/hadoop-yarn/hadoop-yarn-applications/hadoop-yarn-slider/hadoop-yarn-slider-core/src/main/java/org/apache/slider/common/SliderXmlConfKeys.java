@@ -18,8 +18,6 @@
 
 package org.apache.slider.common;
 
-import org.apache.hadoop.registry.client.api.RegistryConstants;
-
 /**
  * These are the keys that can be added to <code>conf/slider-client.xml</code>.
  */
@@ -104,23 +102,6 @@ public interface SliderXmlConfKeys {
    * Default value for the data directory permissions: {@value}
    */
   String DEFAULT_DATA_DIRECTORY_PERMISSIONS = "750";
-
-  /**
-   *
-   * Use {@link RegistryConstants#KEY_REGISTRY_ZK_ROOT}
-   *
-   */
-  @Deprecated
-  String REGISTRY_PATH = "slider.registry.path";
-
-  /**
-   * 
-   * @Deprecated use {@link RegistryConstants#KEY_REGISTRY_ZK_QUORUM}
-   * 
-   */
-  @Deprecated
-  String REGISTRY_ZK_QUORUM = "slider.zookeeper.quorum";
-
 
   String IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH =
       "ipc.client.fallback-to-simple-auth-allowed";

@@ -20,12 +20,9 @@ package org.apache.slider.client;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.Files;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -67,7 +64,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.resource.Application;
@@ -83,22 +79,17 @@ import org.apache.slider.common.params.AbstractActionArgs;
 import org.apache.slider.common.params.AbstractClusterBuildingActionArgs;
 import org.apache.slider.common.params.ActionAMSuicideArgs;
 import org.apache.slider.common.params.ActionClientArgs;
-import org.apache.slider.common.params.ActionCreateArgs;
 import org.apache.slider.common.params.ActionDependencyArgs;
 import org.apache.slider.common.params.ActionDiagnosticArgs;
-import org.apache.slider.common.params.ActionEchoArgs;
 import org.apache.slider.common.params.ActionExistsArgs;
 import org.apache.slider.common.params.ActionFlexArgs;
 import org.apache.slider.common.params.ActionFreezeArgs;
-import org.apache.slider.common.params.ActionInstallKeytabArgs;
-import org.apache.slider.common.params.ActionInstallPackageArgs;
 import org.apache.slider.common.params.ActionKDiagArgs;
 import org.apache.slider.common.params.ActionKeytabArgs;
 import org.apache.slider.common.params.ActionKillContainerArgs;
 import org.apache.slider.common.params.ActionListArgs;
 import org.apache.slider.common.params.ActionLookupArgs;
 import org.apache.slider.common.params.ActionNodesArgs;
-import org.apache.slider.common.params.ActionPackageArgs;
 import org.apache.slider.common.params.ActionRegistryArgs;
 import org.apache.slider.common.params.ActionResolveArgs;
 import org.apache.slider.common.params.ActionResourceArgs;
@@ -122,7 +113,6 @@ import org.apache.slider.core.exceptions.NotFoundException;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.exceptions.UnknownApplicationInstanceException;
 import org.apache.slider.core.exceptions.UsageException;
-import org.apache.slider.core.exceptions.WaitTimeoutException;
 import org.apache.slider.core.launch.ClasspathConstructor;
 import org.apache.slider.core.launch.CredentialUtils;
 import org.apache.slider.core.launch.JavaCommandLineBuilder;
@@ -144,7 +134,6 @@ import org.apache.slider.core.zk.ZKIntegration;
 import org.apache.slider.providers.AbstractClientProvider;
 import org.apache.slider.providers.ProviderUtils;
 import org.apache.slider.providers.SliderProviderFactory;
-import org.apache.slider.providers.agent.AgentKeys;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
 import org.apache.slider.server.services.utility.AbstractSliderLaunchedService;
@@ -160,11 +149,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Console;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
@@ -177,8 +164,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -226,7 +211,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   private ClientArgs serviceArgs;
   public ApplicationId applicationId;
-  
+
   private String deployedClusterName;
   /**
    * Cluster operations against the deployed cluster -will be null
@@ -334,23 +319,19 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
         exitCode = actionAmSuicide(clusterName,
             serviceArgs.getActionAMSuicideArgs());
         break;
-      
+
+      case ACTION_BUILD:
+        exitCode = actionBuild(getApplicationFromArgs(clusterName,
+            serviceArgs.getActionBuildArgs()));
+        break;
+
       case ACTION_CLIENT:
         exitCode = actionClient(serviceArgs.getActionClientArgs());
         break;
 
       case ACTION_CREATE:
-        ActionCreateArgs args = serviceArgs.getActionCreateArgs();
-        File file = args.getAppDef();
-        Path filePath = new Path(file.getAbsolutePath());
-        log.info("Loading app definition from: " + filePath);
-        Application application =
-            jsonSerDeser.load(FileSystem.getLocal(getConfig()), filePath);
-        if(args.lifetime > 0) {
-          application.setLifetime(args.lifetime);
-        }
-        application.setName(clusterName);
-        actionCreate(application);
+        actionCreate(getApplicationFromArgs(clusterName,
+            serviceArgs.getActionCreateArgs()));
         break;
 
       case ACTION_DEPENDENCY:
@@ -391,14 +372,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
             serviceArgs.getActionKillContainerArgs());
         break;
 
-      case ACTION_INSTALL_KEYTAB:
-        exitCode = actionInstallKeytab(serviceArgs.getActionInstallKeytabArgs());
-        break;
-      
-      case ACTION_INSTALL_PACKAGE:
-        exitCode = actionInstallPkg(serviceArgs.getActionInstallPackageArgs());
-        break;
-
       case ACTION_KEYTAB:
         exitCode = actionKeytab(serviceArgs.getActionKeytabArgs());
         break;
@@ -413,10 +386,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
       case ACTION_NODES:
         exitCode = actionNodes("", serviceArgs.getActionNodesArgs());
-        break;
-
-      case ACTION_PACKAGE:
-        exitCode = actionPackage(serviceArgs.getActionPackageArgs());
         break;
 
       case ACTION_REGISTRY:
@@ -605,15 +574,15 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * force=true by default.
    */
   @Override
-  public void actionDestroy(String appName)
+  public int actionDestroy(String appName)
       throws YarnException, IOException {
     validateClusterName(appName);
+    verifyNoLiveApp(appName, "Destroy");
     Path appDir = sliderFileSystem.buildClusterDirPath(appName);
     FileSystem fs = sliderFileSystem.getFileSystem();
     if (fs.exists(appDir)) {
       if (fs.delete(appDir, true)) {
-        log.info("Successfully deleted application + " + appName);
-        return;
+        log.info("Successfully deleted application dir for " + appName);
       } else {
         String message =
             "Failed to delete application + " + appName + " at:  " + appDir;
@@ -627,7 +596,20 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       log.warn(message);
       throw new YarnException(message);
     }
-    //TODO clean registry
+
+    //TODO clean registry?
+    String registryPath = SliderRegistryUtils.registryPathForInstance(
+        appName);
+    try {
+      getRegistryOperations().delete(registryPath, true);
+    } catch (IOException e) {
+      log.warn("Error deleting registry entry {}: {} ", registryPath, e, e);
+    } catch (SliderException e) {
+      log.warn("Error binding to registry {} ", e, e);
+    }
+
+    log.info("Destroyed cluster {}", appName);
+    return EXIT_SUCCESS;
   }
 
   
@@ -648,6 +630,26 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return factory.createClientProvider();
   }
 
+  private Application getApplicationFromArgs(String clusterName,
+      AbstractClusterBuildingActionArgs args) throws IOException {
+    File file = args.getAppDef();
+    Path filePath = new Path(file.getAbsolutePath());
+    log.info("Loading app definition from: " + filePath);
+    Application application =
+        jsonSerDeser.load(FileSystem.getLocal(getConfig()), filePath);
+    if(args.lifetime > 0) {
+      application.setLifetime(args.lifetime);
+    }
+    application.setName(clusterName);
+    return application;
+  }
+
+  public int actionBuild(Application application) throws YarnException,
+      IOException {
+    Path appDir = checkAppNotExistOnHdfs(application);
+    persistApp(appDir, application);
+    return EXIT_SUCCESS;
+  }
 
   public ApplicationId actionCreate(Application application)
       throws IOException, YarnException {
@@ -684,8 +686,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     }
     submissionContext.setMaxAppAttempts(conf.getInt(KEY_AM_RESTART_LIMIT, 2));
 
-    Map<String, LocalResource> localResources =
-        new HashMap<String, LocalResource>();
+    Map<String, LocalResource> localResources = new HashMap<>();
 
     // copy local slideram-log4j.properties to hdfs and add to localResources
     boolean hasSliderAMLog4j =
@@ -724,8 +725,14 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     amLaunchContext.setLocalResources(localResources);
     addCredentialsIfSecure(conf, amLaunchContext);
     submissionContext.setAMContainerSpec(amLaunchContext);
-    yarnClient.submitApplication(submissionContext);
+    submitApplication(submissionContext);
     return submissionContext.getApplicationId();
+  }
+
+  @VisibleForTesting
+  public ApplicationId submitApplication(ApplicationSubmissionContext context)
+      throws IOException, YarnException {
+    return yarnClient.submitApplication(context);
   }
 
   private void printLocalResources(Map<String, LocalResource> map) {
@@ -800,7 +807,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   private Map<String, String> addAMEnv(Configuration conf, Path tempPath)
       throws IOException {
-    Map<String, String> env = new HashMap<String, String>();
+    Map<String, String> env = new HashMap<>();
     ClasspathConstructor classpath =
         buildClasspath(SliderKeys.SUBMITTED_CONF_DIR, "lib",
             sliderFileSystem, getUsingMiniMRCluster());
@@ -929,69 +936,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return 0;
   }
 
-//  protected static void checkForCredentials(Configuration conf,
-//      ConfTree tree, String clusterName) throws IOException {
-//    if (tree.credentials == null || tree.credentials.isEmpty()) {
-//      log.info("No credentials requested");
-//      return;
-//    }
-//
-//    Console console = System.console();
-//    for (Entry<String, List<String>> cred : tree.credentials.entrySet()) {
-//      String provider = cred.getKey()
-//          .replaceAll(Pattern.quote("${CLUSTER_NAME}"), clusterName)
-//          .replaceAll(Pattern.quote("${CLUSTER}"), clusterName);
-//      List<String> aliases = cred.getValue();
-//      if (aliases == null || aliases.isEmpty()) {
-//        continue;
-//      }
-//      Configuration c = new Configuration(conf);
-//      c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, provider);
-//      CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
-//      Set<String> existingAliases = new HashSet<>(credentialProvider.getAliases());
-//      for (String alias : aliases) {
-//        if (existingAliases.contains(alias.toLowerCase(Locale.ENGLISH))) {
-//          log.info("Credentials for " + alias + " found in " + provider);
-//        } else {
-//          if (console == null) {
-//            throw new IOException("Unable to input password for " + alias +
-//                " because System.console() is null; provider " + provider +
-//                " must be populated manually");
-//          }
-//          char[] pass = readPassword(alias, console);
-//          credentialProvider.createCredentialEntry(alias, pass);
-//          credentialProvider.flush();
-//          Arrays.fill(pass, ' ');
-//        }
-//      }
-//    }
-//  }
-
-  private static char[] readPassword(String alias, Console console)
-      throws IOException {
-    char[] cred = null;
-
-    boolean noMatch;
-    do {
-      console.printf("%s %s: \n", PASSWORD_PROMPT, alias);
-      char[] newPassword1 = console.readPassword();
-      console.printf("%s %s again: \n", PASSWORD_PROMPT, alias);
-      char[] newPassword2 = console.readPassword();
-      noMatch = !Arrays.equals(newPassword1, newPassword2);
-      if (noMatch) {
-        if (newPassword1 != null) Arrays.fill(newPassword1, ' ');
-        log.info(String.format("Passwords don't match. Try again."));
-      } else {
-        cred = newPassword1;
-      }
-      if (newPassword2 != null) Arrays.fill(newPassword2, ' ');
-    } while (noMatch);
-    if (cred == null)
-      throw new IOException("Could not read credentials for " + alias +
-          " from stdin");
-    return cred;
-  }
-
   @Override
   public int actionKeytab(ActionKeytabArgs keytabInfo)
       throws YarnException, IOException {
@@ -1074,43 +1018,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     sfs.setPermission(fileInFs,
         new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE));
 
-    return EXIT_SUCCESS;
-  }
-
-  @Override
-  public int actionInstallKeytab(ActionInstallKeytabArgs installKeytabInfo)
-      throws YarnException, IOException {
-    log.warn("The 'install-keytab' option has been deprecated.  Please use 'keytab --install'.");
-    return actionKeytab(new ActionKeytabArgs(installKeytabInfo));
-  }
-
-  @Override
-  public int actionInstallPkg(ActionInstallPackageArgs installPkgInfo) throws
-      YarnException,
-      IOException {
-    log.warn("The " + ACTION_INSTALL_PACKAGE
-        + " option has been deprecated. Please use '"
-        + ACTION_PACKAGE + " " + ClientArgs.ARG_INSTALL + "'.");
-    if (StringUtils.isEmpty(installPkgInfo.name)) {
-      throw new BadCommandArgumentsException(
-          E_INVALID_APPLICATION_TYPE_NAME + "\n"
-              + CommonArgs.usage(serviceArgs, ACTION_INSTALL_PACKAGE));
-    }
-    Path srcFile = extractPackagePath(installPkgInfo.packageURI);
-
-    // Do not provide new options to install-package command as it is in
-    // deprecated mode. So version is kept null here. Use package --install.
-    Path pkgPath = sliderFileSystem.buildPackageDirPath(installPkgInfo.name,
-        null);
-    FileSystem sfs = sliderFileSystem.getFileSystem();
-    sfs.mkdirs(pkgPath);
-
-    Path fileInFs = new Path(pkgPath, srcFile.getName());
-    log.info("Installing package {} at {} and overwrite is {}.",
-        srcFile, fileInFs, installPkgInfo.replacePkg);
-    require(!(sfs.exists(fileInFs) && !installPkgInfo.replacePkg),
-          "Package exists at %s. : %s", fileInFs.toUri(), E_USE_REPLACEPKG_TO_OVERWRITE);
-    sfs.copyFromLocalFile(false, installPkgInfo.replacePkg, srcFile, fileInFs);
     return EXIT_SUCCESS;
   }
 
@@ -1287,236 +1194,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return EXIT_SUCCESS;
   }
 
-
-  @Override
-  public int actionPackage(ActionPackageArgs actionPackageInfo)
-      throws YarnException, IOException {
-    initializeOutputStream(actionPackageInfo.out);
-    int exitCode = -1;
-    if (actionPackageInfo.help) {
-      exitCode = actionHelp(ACTION_PACKAGE);
-    }
-    if (actionPackageInfo.install) {
-      exitCode = actionPackageInstall(actionPackageInfo);
-    }
-    if (actionPackageInfo.delete) {
-      exitCode = actionPackageDelete(actionPackageInfo);
-    }
-    if (actionPackageInfo.list) {
-      exitCode = actionPackageList();
-    }
-    if (actionPackageInfo.instances) {
-      exitCode = actionPackageInstances();
-    }
-    finalizeOutputStream(actionPackageInfo.out);
-    if (exitCode != -1) {
-      return exitCode;
-    }
-    throw new BadCommandArgumentsException(
-        "Select valid package operation option");
-  }
-
-  private void initializeOutputStream(String outFile)
-      throws IOException {
-    if (outFile != null) {
-      clientOutputStream = new PrintStream(outFile, "UTF-8");
-    } else {
-      clientOutputStream = System.out;
-    }
-  }
-
-  private void finalizeOutputStream(String outFile) {
-    if (outFile != null && clientOutputStream != null) {
-      clientOutputStream.flush();
-      clientOutputStream.close();
-    }
-    clientOutputStream = System.out;
-  }
-
-  private int actionPackageInstances() throws YarnException, IOException {
-//    Map<String, Path> persistentInstances = sliderFileSystem
-//        .listPersistentInstances();
-//    if (persistentInstances.isEmpty()) {
-//      log.info("No slider cluster specification available");
-//      return EXIT_SUCCESS;
-//    }
-//    String pkgPathValue = sliderFileSystem
-//        .buildPackageDirPath(StringUtils.EMPTY, StringUtils.EMPTY).toUri()
-//        .getPath();
-//    FileSystem fs = sliderFileSystem.getFileSystem();
-//    Iterator<Map.Entry<String, Path>> instanceItr = persistentInstances
-//        .entrySet().iterator();
-//    log.info("List of applications with its package name and path");
-//    println("%-25s  %15s  %30s  %s", "Cluster Name", "Package Name",
-//        "Package Version", "Application Location");
-    //TODO deal with packages
-//    while(instanceItr.hasNext()) {
-//      Map.Entry<String, Path> entry = instanceItr.next();
-//      String clusterName = entry.getKey();
-//      Path clusterPath = entry.getValue();
-//      AggregateConf instanceDefinition = loadInstanceDefinitionUnresolved(
-//          clusterName, clusterPath);
-//      Path appDefPath = null;
-//      try {
-//        appDefPath = new Path(
-//            getApplicationDefinitionPath(instanceDefinition
-//                .getAppConfOperations()));
-//      } catch (BadConfigException e) {
-//        // Invalid cluster state, so move on to next. No need to log anything
-//        // as this is just listing of instances.
-//        continue;
-//      }
-//      if (!appDefPath.isUriPathAbsolute()) {
-//        appDefPath = new Path(fs.getHomeDirectory(), appDefPath);
-//      }
-//      String appDefPathStr = appDefPath.toUri().toString();
-//      try {
-//        if (appDefPathStr.contains(pkgPathValue) && fs.isFile(appDefPath)) {
-//          String packageName = appDefPath.getParent().getName();
-//          String packageVersion = StringUtils.EMPTY;
-//          if (instanceDefinition.isVersioned()) {
-//            packageVersion = packageName;
-//            packageName = appDefPath.getParent().getParent().getName();
-//          }
-//          println("%-25s  %15s  %30s  %s", clusterName, packageName,
-//              packageVersion, appDefPathStr);
-//        }
-//      } catch (IOException e) {
-//        log.debug("{} application definition path {} is not found.", clusterName, appDefPathStr);
-//      }
-//    }
-    return EXIT_SUCCESS;
-  }
-
-  private int actionPackageList() throws IOException {
-    Path pkgPath = sliderFileSystem.buildPackageDirPath(StringUtils.EMPTY,
-        StringUtils.EMPTY);
-    log.info("Package install path : {}", pkgPath);
-    FileSystem sfs = sliderFileSystem.getFileSystem();
-    if (!sfs.isDirectory(pkgPath)) {
-      log.info("No package(s) installed");
-      return EXIT_SUCCESS;
-    }
-    FileStatus[] fileStatus = sfs.listStatus(pkgPath);
-    boolean hasPackage = false;
-    StringBuilder sb = new StringBuilder();
-    sb.append("List of installed packages:\n");
-    for (FileStatus fstat : fileStatus) {
-      if (fstat.isDirectory()) {
-        sb.append("\t").append(fstat.getPath().getName());
-        sb.append("\n");
-        hasPackage = true;
-      }
-    }
-    if (hasPackage) {
-      println(sb.toString());
-    } else {
-      log.info("No package(s) installed");
-    }
-    return EXIT_SUCCESS;
-  }
-
-  private void createSummaryMetainfoFile(Path srcFile, Path destFile,
-      boolean overwrite) throws IOException {
-    FileSystem srcFs = srcFile.getFileSystem(getConfig());
-    try (InputStream inputStreamJson = SliderUtils
-        .getApplicationResourceInputStream(srcFs, srcFile, "metainfo.json");
-        InputStream inputStreamXml = SliderUtils
-            .getApplicationResourceInputStream(srcFs, srcFile, "metainfo.xml");) {
-      InputStream inputStream = null;
-      Path summaryFileInFs = null;
-      if (inputStreamJson != null) {
-        inputStream = inputStreamJson;
-        summaryFileInFs = new Path(destFile.getParent(), destFile.getName()
-            + ".metainfo.json");
-        log.info("Found JSON metainfo file in package");
-      } else if (inputStreamXml != null) {
-        inputStream = inputStreamXml;
-        summaryFileInFs = new Path(destFile.getParent(), destFile.getName()
-            + ".metainfo.xml");
-        log.info("Found XML metainfo file in package");
-      }
-      if (inputStream != null) {
-        try (FSDataOutputStream dataOutputStream = sliderFileSystem
-            .getFileSystem().create(summaryFileInFs, overwrite)) {
-          log.info("Creating summary metainfo file");
-          IOUtils.copy(inputStream, dataOutputStream);
-        }
-      }
-    }
-  }
-
-  private int actionPackageInstall(ActionPackageArgs actionPackageArgs)
-      throws YarnException, IOException {
-    requireArgumentSet(Arguments.ARG_NAME, actionPackageArgs.name);
-
-    Path srcFile = extractPackagePath(actionPackageArgs.packageURI);
-
-    Path pkgPath = sliderFileSystem.buildPackageDirPath(actionPackageArgs.name,
-        actionPackageArgs.version);
-    FileSystem fs = sliderFileSystem.getFileSystem();
-    if (!fs.exists(pkgPath)) {
-      fs.mkdirs(pkgPath);
-    }
-
-    Path fileInFs = new Path(pkgPath, srcFile.getName());
-    require(actionPackageArgs.replacePkg || !fs.exists(fileInFs),
-        E_PACKAGE_EXISTS +" at  %s. Use --replacepkg to overwrite.", fileInFs.toUri());
-
-    log.info("Installing package {} to {} (overwrite set to {})", srcFile,
-        fileInFs, actionPackageArgs.replacePkg);
-    fs.copyFromLocalFile(false, actionPackageArgs.replacePkg, srcFile, fileInFs);
-    createSummaryMetainfoFile(srcFile, fileInFs, actionPackageArgs.replacePkg);
-
-    String destPathWithHomeDir = Path
-        .getPathWithoutSchemeAndAuthority(fileInFs).toString();
-    String destHomeDir = Path.getPathWithoutSchemeAndAuthority(
-        fs.getHomeDirectory()).toString();
-    // a somewhat contrived approach to stripping out the home directory and any trailing
-    // separator; designed to work on windows and unix
-    String destPathWithoutHomeDir;
-    if (destPathWithHomeDir.startsWith(destHomeDir)) {
-      destPathWithoutHomeDir = destPathWithHomeDir.substring(destHomeDir.length());
-      if (destPathWithoutHomeDir.startsWith("/") || destPathWithoutHomeDir.startsWith("\\")) {
-        destPathWithoutHomeDir = destPathWithoutHomeDir.substring(1);
-      }
-    } else {
-      destPathWithoutHomeDir = destPathWithHomeDir;
-    }
-    log.info("Set " + AgentKeys.APP_DEF + " in your app config JSON to {}",
-        destPathWithoutHomeDir);
-
-    return EXIT_SUCCESS;
-  }
-
-  private Path extractPackagePath(String packageURI)
-      throws BadCommandArgumentsException {
-    require(isSet(packageURI), E_INVALID_APPLICATION_PACKAGE_LOCATION);
-    File pkgFile = new File(packageURI);
-    require(pkgFile.isFile(),
-        E_UNABLE_TO_READ_SUPPLIED_PACKAGE_FILE + ":  " + pkgFile.getAbsolutePath());
-    return new Path(pkgFile.toURI());
-  }
-
-  private int actionPackageDelete(ActionPackageArgs actionPackageArgs) throws
-      YarnException, IOException {
-    requireArgumentSet(Arguments.ARG_NAME, actionPackageArgs.name);
-
-    Path pkgPath = sliderFileSystem.buildPackageDirPath(actionPackageArgs.name,
-        actionPackageArgs.version);
-    FileSystem fs = sliderFileSystem.getFileSystem();
-    require(fs.exists(pkgPath), E_PACKAGE_DOES_NOT_EXIST +": %s ", pkgPath.toUri());
-    log.info("Deleting package {} at {}.", actionPackageArgs.name, pkgPath);
-
-    if(fs.delete(pkgPath, true)) {
-      log.info("Deleted package {} " + actionPackageArgs.name);
-      return EXIT_SUCCESS;
-    } else {
-      log.warn("Package deletion failed.");
-      return EXIT_NOT_FOUND;
-    }
-  }
-
   @Override
   public int actionUpdate(String clustername,
       AbstractClusterBuildingActionArgs buildInfo) throws
@@ -1594,7 +1271,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     String PLACEHOLDER_PATTERN = "\\$\\{[^{]+\\}";
     Pattern placeholderPattern = Pattern.compile(PLACEHOLDER_PATTERN);
     Matcher placeholderMatcher = placeholderPattern.matcher(env);
-    Map<String, String> placeholderKeyValueMap = new HashMap<String, String>();
+    Map<String, String> placeholderKeyValueMap = new HashMap<>();
     if (placeholderMatcher.find()) {
       String placeholderKey = placeholderMatcher.group();
       String systemKey = placeholderKey
@@ -1865,16 +1542,20 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   @Override
   @VisibleForTesting
-  public void actionFlex(String appName, ActionFlexArgs args)
+  public int actionFlex(String appName, ActionFlexArgs args)
       throws YarnException, IOException {
-    Component component = new Component();
-    component.setNumberOfContainers(args.getNumberOfContainers());
-    if (StringUtils.isEmpty(args.getComponent())) {
-      component.setName("DEFAULT");
-    } else {
-      component.setName(args.getComponent());
+    Map<String, Long> componentCounts = new HashMap<>(args.getComponentMap()
+        .size());
+    for (Entry<String, String> entry : args.getComponentMap().entrySet()) {
+      long numberOfContainers = Long.parseLong(entry.getValue());
+      componentCounts.put(entry.getKey(), numberOfContainers);
     }
-    flex(appName, component);
+    // throw usage exception if no changes proposed
+    if (componentCounts.size() == 0) {
+      actionHelp(ACTION_FLEX);
+    }
+    flex(appName, componentCounts);
+    return EXIT_SUCCESS;
   }
 
   @Override
@@ -1964,19 +1645,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
                                          id, name);
     }
     return EXIT_SUCCESS;
-  }
-
-  @Override
-  public String actionEcho(String name, ActionEchoArgs args) throws
-                                                             YarnException,
-                                                             IOException {
-    String message = args.message;
-    if (message == null) {
-      throw new BadCommandArgumentsException("missing message");
-    }
-    SliderClusterOperations clusterOps =
-      new SliderClusterOperations(bondToCluster(name));
-    return clusterOps.echo(message);
   }
 
   /**
@@ -2099,7 +1767,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   }
 
   @Override
-  public void actionStop(String appName, ActionFreezeArgs freezeArgs)
+  public int actionStop(String appName, ActionFreezeArgs freezeArgs)
       throws YarnException, IOException {
     validateClusterName(appName);
     ApplicationReport app = findInstance(appName);
@@ -2112,7 +1780,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
         .ordinal()) {
       log.info("Application {} is in a terminated state {}", appName,
           app.getYarnApplicationState());
-      return;
+      return EXIT_SUCCESS;
     }
 
     try {
@@ -2127,6 +1795,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           + " gracefully, forcefully kill the app.");
       yarnClient.killApplication(app.getApplicationId(), freezeArgs.message);
     }
+    return EXIT_SUCCESS;
   }
 
   @Override
@@ -2143,30 +1812,30 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return 0;
   }
 
-  public long flex(String appName, Component component)
-      throws YarnException, IOException {
+  public Map<String, Long> flex(String appName, Map<String, Long>
+      componentCounts) throws YarnException, IOException {
     validateClusterName(appName);
     Path appDir = sliderFileSystem.buildClusterDirPath(appName);
     Path appJson = new Path(appDir, appName + ".json");
     Application persistedApp =
         jsonSerDeser.load(sliderFileSystem.getFileSystem(), appJson);
-    long original = 0;
-    boolean foundComponent = false;
+    Map<String, Long> original = new HashMap<>(componentCounts.size());
     for (Component persistedComp : persistedApp.getComponents()) {
-      if (persistedComp.getName().equals(component.getName())) {
-        original = persistedComp.getNumberOfContainers();
-        persistedComp.setNumberOfContainers(component.getNumberOfContainers());
-        foundComponent = true;
-        break;
+      String name = persistedComp.getName();
+      if (componentCounts.containsKey(persistedComp.getName())) {
+        original.put(name, persistedComp.getNumberOfContainers());
+        persistedComp.setNumberOfContainers(componentCounts.get(name));
       }
     }
-    if (!foundComponent) {
-      throw new YarnException("Component " + component.getName()
-          + " does not exist in app definition.");
+    if (original.size() < componentCounts.size()) {
+      componentCounts.keySet().removeAll(original.keySet());
+      throw new YarnException("Components " + componentCounts.keySet()
+          + " do not exist in app definition.");
     }
     jsonSerDeser
         .save(sliderFileSystem.getFileSystem(), appJson, persistedApp, true);
-    log.info("Updated app definition file for component " + component);
+    log.info("Updated app definition file for components " + componentCounts
+        .keySet());
 
     ApplicationReport instance = findInstance(appName);
     if (instance != null) {
@@ -2174,11 +1843,14 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       SliderClusterProtocol appMaster = connect(instance);
       SliderClusterOperations clusterOps =
           new SliderClusterOperations(appMaster);
-      clusterOps.flex(component);
-      log.info(
-          "Application name = " + appName + ", Component name = " + component
-              .getName() + ", number of containers updated from " + original
-              + " to " + component.getNumberOfContainers());
+      clusterOps.flex(componentCounts);
+      for (Entry<String, Long> componentCount : componentCounts.entrySet()) {
+        log.info(
+            "Application name = " + appName + ", Component name = " +
+                componentCount.getKey() + ", number of containers updated " +
+                "from " + original.get(componentCount.getKey()) + " to " +
+                componentCount.getValue());
+      }
     } else {
       String message = "Application " + appName + "does not exist in RM. ";
       throw new YarnException(message);

@@ -25,7 +25,6 @@ import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.StateValues;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Component;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.api.types.NodeInformation;
 import org.apache.slider.api.types.NodeInformationList;
@@ -44,6 +43,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import static org.apache.slider.api.types.RestTypeMarshalling.unmarshall;
 
@@ -283,12 +284,17 @@ public class SliderClusterOperations {
     return state;
   }
 
-  public void flex(Component component) throws IOException{
-    Messages.FlexComponentRequestProto request =
-        Messages.FlexComponentRequestProto.newBuilder()
-            .setNumberOfContainers(component.getNumberOfContainers().intValue())
-            .setName(component.getName()).build();
-        appMaster.flexComponent(request);
+  public void flex(Map<String, Long> componentCounts) throws IOException{
+    Messages.FlexComponentsRequestProto.Builder builder =
+        Messages.FlexComponentsRequestProto.newBuilder();
+    for (Entry<String, Long> componentCount : componentCounts.entrySet()) {
+      Messages.ComponentCountProto componentProto =
+          Messages.ComponentCountProto.newBuilder()
+              .setName(componentCount.getKey())
+              .setNumberOfContainers(componentCount.getValue()).build();
+      builder.addComponents(componentProto);
+    }
+    appMaster.flexComponents(builder.build());
   }
 
   /**

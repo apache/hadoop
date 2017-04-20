@@ -196,11 +196,11 @@ public class SliderIPCService extends AbstractService
   }
 
   @Override
-  public Messages.FlexComponentResponseProto flexComponent(
-      Messages.FlexComponentRequestProto request) throws IOException {
+  public Messages.FlexComponentsResponseProto flexComponents(
+      Messages.FlexComponentsRequestProto request) throws IOException {
     onRpcCall("flex");
     schedule(new ActionFlexCluster("flex", 1, TimeUnit.MILLISECONDS, request));
-    return Messages.FlexComponentResponseProto.newBuilder().build();
+    return Messages.FlexComponentsResponseProto.newBuilder().build();
   }
 
   @Override //SliderClusterProtocol

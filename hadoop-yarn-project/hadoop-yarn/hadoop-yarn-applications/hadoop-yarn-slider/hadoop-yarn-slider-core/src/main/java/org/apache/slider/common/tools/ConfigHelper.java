@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.SliderXmlConfKeys;
 import org.apache.slider.core.exceptions.BadConfigException;
@@ -613,13 +612,6 @@ public class ConfigHelper {
    * Register anything we consider deprecated
    */
   public static void registerDeprecatedConfigItems() {
-    Configuration.addDeprecation(
-        SliderXmlConfKeys.REGISTRY_ZK_QUORUM,
-        RegistryConstants.KEY_REGISTRY_ZK_QUORUM);
-    Configuration.addDeprecation(
-        SliderXmlConfKeys.REGISTRY_PATH,
-        RegistryConstants.KEY_REGISTRY_ZK_ROOT);
-    
   }
 
   /**

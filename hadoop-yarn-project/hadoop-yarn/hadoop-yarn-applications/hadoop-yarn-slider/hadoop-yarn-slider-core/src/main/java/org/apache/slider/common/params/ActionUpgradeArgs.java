@@ -26,7 +26,7 @@ import java.util.List;
 
 @Parameters(commandNames = { SliderActions.ACTION_UPGRADE },
             commandDescription = SliderActions.DESCRIBE_ACTION_UPGRADE)
-public class ActionUpgradeArgs extends AbstractActionArgs {
+public class ActionUpgradeArgs extends AbstractClusterBuildingActionArgs {
 
   @Override
   public String getActionName() {

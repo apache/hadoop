@@ -21,7 +21,6 @@ package org.apache.slider.server.appmaster.state;
 import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricSet;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.RoleStatistics;
@@ -34,8 +33,6 @@ import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 /**
  * Models the ongoing status of all nodes in an application.
@@ -207,12 +204,16 @@ public final class RoleStatus implements MetricSet {
     return componentMetrics.containersDesired.value();
   }
 
-  long getRunning() {
+  public void setDesired(int desired) {
+    componentMetrics.containersDesired.set(desired);
+  }
+
+  public long getRunning() {
     return componentMetrics.containersRunning.value();
   }
 
-  public long getPending() {
-    return componentMetrics.containersPending.value();
+  public long getRequested() {
+    return componentMetrics.containersRequested.value();
   }
 
   public long getAAPending() {
@@ -222,22 +223,35 @@ public final class RoleStatus implements MetricSet {
   void decAAPending() {
     componentMetrics.pendingAAContainers.decr();
   }
+
   void setAAPending(long n) {
     componentMetrics.pendingAAContainers.set((int)n);
   }
 
-  long getFailedRecently() {
+  public long getLimitsExceeded() {
+    return componentMetrics.containersLimitsExceeded.value();
+  }
+
+  public long getPreempted() {
+    return componentMetrics.containersPreempted.value();
+  }
+
+  public long getDiskFailed() {
+    return componentMetrics.containersDiskFailure.value();
+  }
+
+  public long getFailedRecently() {
     return componentMetrics.failedSinceLastThreshold.value();
   }
 
-  long resetFailedRecently() {
+  public long resetFailedRecently() {
     long count =
         componentMetrics.failedSinceLastThreshold.value();
     componentMetrics.failedSinceLastThreshold.set(0);
     return count;
   }
 
-  long getFailed() {
+  public long getFailed() {
     return componentMetrics.containersFailed.value();
   }
 
@@ -254,6 +268,8 @@ public final class RoleStatus implements MetricSet {
     long inuse = getActualAndRequested();
     long delta = getDesired() - inuse;
     if (delta < 0) {
+      // TODO this doesn't do anything now that we're not tracking releasing
+      // containers -- maybe we need releasing
       //if we are releasing, remove the number that are already released.
       //but never switch to a positive
       delta = Math.min(delta, 0);
@@ -262,11 +278,11 @@ public final class RoleStatus implements MetricSet {
   }
 
   /**
-   * Get count of actual and requested containers. This includes pending ones
+   * Get count of actual and requested containers.
    * @return the size of the application when outstanding requests are included.
    */
   public long getActualAndRequested() {
-    return getRunning() + getPending();
+    return getRunning() + getRequested();
   }
 
   /**
@@ -341,6 +357,14 @@ public final class RoleStatus implements MetricSet {
   public synchronized RoleStatistics getStatistics() {
     RoleStatistics stats = new RoleStatistics();
     stats.activeAA = getOutstandingAARequestCount();
+    stats.actual = getRunning();
+    stats.desired = getDesired();
+    stats.failed = getFailed();
+    stats.limitsExceeded = getLimitsExceeded();
+    stats.nodeFailed = getDiskFailed();
+    stats.preempted = getPreempted();
+    stats.requested = getRequested();
+    stats.started = getRunning();
     return stats;
   }
 
