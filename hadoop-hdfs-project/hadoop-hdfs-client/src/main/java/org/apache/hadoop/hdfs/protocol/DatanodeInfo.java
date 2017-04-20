@@ -339,7 +339,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");
     }
-    buffer.append("Decommission Status : ");
+    buffer.append("Decommission Status: ");
     if (isDecommissioned()) {
       buffer.append("Decommissioned\n");
     } else if (isDecommissionInProgress()) {
