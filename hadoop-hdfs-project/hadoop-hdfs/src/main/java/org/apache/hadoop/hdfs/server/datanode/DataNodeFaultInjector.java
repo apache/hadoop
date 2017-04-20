@@ -30,7 +30,7 @@ import java.io.IOException;
 @VisibleForTesting
 @InterfaceAudience.Private
 public class DataNodeFaultInjector {
-  public static DataNodeFaultInjector instance = new DataNodeFaultInjector();
+  private static DataNodeFaultInjector instance = new DataNodeFaultInjector();
 
   public static DataNodeFaultInjector get() {
     return instance;
@@ -81,4 +81,8 @@ public class DataNodeFaultInjector {
 
   public void failPipeline(ReplicaInPipelineInterface replicaInfo,
       String mirrorAddr) throws IOException { }
+
+  public void startOfferService() throws Exception {}
+
+  public void endOfferService() throws Exception {}
 }
