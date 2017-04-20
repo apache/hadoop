@@ -321,4 +321,21 @@ public class TestMergeManager {
             new MROutputFiles());
     verifyReservedMapOutputType(mgr, 10L, "DISK");
   }
+
+  @Test
+  public void testZeroShuffleMemoryLimitPercent() throws Exception {
+    final JobConf jobConf = new JobConf();
+    jobConf.setFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT, 0.0f);
+    final MergeManager<Text, Text> mgr =
+        new MergeManagerImpl<>(null, jobConf, mock(LocalFileSystem.class),
+            null, null, null, null, null, null, null, null, null, null,
+            new MROutputFiles());
+    final long mapOutputSize = 10;
+    final int fetcher = 1;
+    final MapOutput<Text, Text> mapOutput = mgr.reserve(
+        TaskAttemptID.forName("attempt_0_1_m_1_1"),
+        mapOutputSize, fetcher);
+    assertEquals("Tiny map outputs should be shuffled to disk", "DISK",
+        mapOutput.getDescription());
+  }
 }
