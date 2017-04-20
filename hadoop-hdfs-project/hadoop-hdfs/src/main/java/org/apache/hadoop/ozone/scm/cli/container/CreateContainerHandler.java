@@ -56,7 +56,7 @@ public class CreateContainerHandler extends OzoneCommandHandler {
       }
     }
     String pipelineID = cmd.getOptionValue(PIPELINE_ID);
-    LOG.info("Create container :" + pipelineID + " " + getScmClient());
+    LOG.info("Create container : {}", pipelineID);
     getScmClient().createContainer(pipelineID);
     LOG.debug("Container creation returned");
   }

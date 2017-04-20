@@ -105,6 +105,12 @@ public class InitDatanodeState implements DatanodeState,
    */
   private void persistContainerDatanodeID() throws IOException {
     String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+    if (Strings.isNullOrEmpty(dataNodeIDPath)) {
+      LOG.error("A valid file path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+      this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
+      return;
+    }
     File idPath = new File(dataNodeIDPath);
     int containerPort = this.context.getContainerPort();
     DatanodeID datanodeID = this.context.getParent().getDatanodeID();
