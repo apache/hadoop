@@ -1,0 +1,38 @@
+{
+  "entry": {
+    "org.apache.slider.server.avro.RoleHistoryHeader": {
+      "version": 1,
+      "saved": 1450435691617,
+      "savedx": "151b4b44461",
+      "savedate": "18 Dec 2015 10:48:11 GMT",
+      "roles": 2
+    }
+  }
+}
+{
+  "entry": {
+    "org.apache.slider.server.avro.RoleHistoryMapping": {
+      "rolemap": {
+        "echo": 1,
+        "slider-appmaster": 0
+      }
+    }
+  }
+}
+{
+  "entry": {
+    "org.apache.slider.server.avro.NodeEntryRecord": {
+      "host": "192.168.56.1",
+      "role": 1,
+      "active": true,
+      "last_used": 0
+    }
+  }
+}
+{
+  "entry": {
+    "org.apache.slider.server.avro.RoleHistoryFooter": {
+      "count": 1
+    }
+  }
+}

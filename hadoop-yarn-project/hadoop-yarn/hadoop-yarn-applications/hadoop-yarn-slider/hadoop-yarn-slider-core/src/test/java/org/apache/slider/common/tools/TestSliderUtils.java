@@ -17,13 +17,9 @@
 package org.apache.slider.common.tools;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
-import org.apache.slider.tools.TestUtility;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,7 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,26 +38,6 @@ public class TestSliderUtils {
       LoggerFactory.getLogger(TestSliderUtils.class);
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
-
-  @Test
-  public void testGetMetaInfoStreamFromZip() throws Exception {
-    String zipFileName = TestUtility.createAppPackage(
-        folder,
-        "testpkg",
-        "test.zip",
-        "target/test-classes/org/apache/slider/common/tools/test");
-    Configuration configuration = new Configuration();
-    FileSystem fs = FileSystem.getLocal(configuration);
-    log.info("fs working dir is {}", fs.getWorkingDirectory().toString());
-    SliderFileSystem sliderFileSystem = new SliderFileSystem(fs, configuration);
-
-    InputStream stream = SliderUtils.getApplicationResourceInputStream(
-        sliderFileSystem.getFileSystem(),
-        new Path(zipFileName),
-        "metainfo.xml");
-    Assert.assertTrue(stream != null);
-    Assert.assertTrue(stream.available() > 0);
-  }
 
   @Test
   public void testTruncate() {

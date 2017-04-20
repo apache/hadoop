@@ -107,12 +107,7 @@ public interface Arguments {
   String ARG_LIFETIME = "--lifetime";
   String ARG_REPLACE_PKG = "--replacepkg";
   String ARG_RESOURCE = "--resource";
-  String ARG_RESOURCES = "--resources";
-  String ARG_RES_COMP_OPT = "--rescompopt";
-  String ARG_RES_COMP_OPT_SHORT = "--rco";
   String ARG_RESOURCE_MANAGER = "--rm";
-  String ARG_RESOURCE_OPT = "--resopt";
-  String ARG_RESOURCE_OPT_SHORT = "-ro";
   String ARG_SECURE = "--secure";
   String ARG_SERVICETYPE = "--servicetype";
   String ARG_SERVICES = "--services";
@@ -120,7 +115,6 @@ public interface Arguments {
   String ARG_SOURCE = "--source";
   String ARG_STATE = "--state";
   String ARG_SYSPROP = "-S";
-  String ARG_TEMPLATE = "--template";
   String ARG_TRUSTSTORE = "--truststore";
   String ARG_USER = "--user";
   String ARG_UPLOAD = "--upload";
@@ -136,29 +130,9 @@ public interface Arguments {
  RIGHT PLACE IN THE LIST
  */
 
-
-  /**
-   * Deprecated: use ARG_COMPONENT
-   */
-  @Deprecated
-  String ARG_ROLE = "--role";
-
-  /**
-   * Deprecated: use ARG_COMP_OPT
-   */
-  @Deprecated
-  String ARG_ROLEOPT = "--roleopt";
-
   /**
    * server: URI for the cluster
    */
   String ARG_CLUSTER_URI = "-cluster-uri";
-
-
-  /**
-   * server: Path for the resource manager instance (required)
-   */
-  String ARG_RM_ADDR = "--rm";
-
 
 }

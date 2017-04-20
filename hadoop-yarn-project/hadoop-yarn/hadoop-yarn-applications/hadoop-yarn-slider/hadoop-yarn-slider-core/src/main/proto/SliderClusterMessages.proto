@@ -80,12 +80,16 @@ message UpgradeContainersRequestProto {
 message UpgradeContainersResponseProto {
 }
 
-message FlexComponentRequestProto {
-  optional string name = 1;
-  optional int32 numberOfContainers = 2;
+message FlexComponentsRequestProto {
+  repeated ComponentCountProto components = 1;
 }
 
-message FlexComponentResponseProto {
+message ComponentCountProto {
+  optional string name = 1;
+  optional int64 numberOfContainers = 2;
+}
+
+message FlexComponentsResponseProto {
 }
 
 /**

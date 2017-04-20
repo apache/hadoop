@@ -20,26 +20,18 @@ package org.apache.slider.client;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.service.Service;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.types.NodeInformationList;
-import org.apache.slider.api.types.SliderInstanceDescription;
 import org.apache.slider.common.params.AbstractClusterBuildingActionArgs;
 import org.apache.slider.common.params.ActionAMSuicideArgs;
 import org.apache.slider.common.params.ActionClientArgs;
 import org.apache.slider.common.params.ActionDependencyArgs;
-import org.apache.slider.common.params.ActionDestroyArgs;
 import org.apache.slider.common.params.ActionDiagnosticArgs;
-import org.apache.slider.common.params.ActionEchoArgs;
 import org.apache.slider.common.params.ActionFlexArgs;
 import org.apache.slider.common.params.ActionFreezeArgs;
-import org.apache.slider.common.params.ActionInstallKeytabArgs;
-import org.apache.slider.common.params.ActionInstallPackageArgs;
 import org.apache.slider.common.params.ActionKeytabArgs;
 import org.apache.slider.common.params.ActionNodesArgs;
-import org.apache.slider.common.params.ActionPackageArgs;
 import org.apache.slider.common.params.ActionKillContainerArgs;
 import org.apache.slider.common.params.ActionListArgs;
 import org.apache.slider.common.params.ActionRegistryArgs;
@@ -53,7 +45,6 @@ import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.providers.AbstractClientProvider;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Interface of those method calls in the slider API that are intended
@@ -63,8 +54,7 @@ import java.util.Map;
  */
 public interface SliderClientAPI extends Service {
 
-  void actionDestroy(String clustername) throws YarnException,
-      IOException;
+  int actionDestroy(String clustername) throws YarnException, IOException;
 
   /**
    * AM to commit an asynchronous suicide
@@ -82,18 +72,6 @@ public interface SliderClientAPI extends Service {
     throws SliderException;
 
   /**
-   * Upload keytab to a designated sub-directory of the user home directory
-   *
-   * @param installKeytabInfo the arguments needed to upload the keytab
-   * @throws YarnException Yarn problems
-   * @throws IOException other problems
-   * @throws BadCommandArgumentsException bad arguments.
-   * @deprecated use #actionKeytab
-   */
-  int actionInstallKeytab(ActionInstallKeytabArgs installKeytabInfo)
-      throws YarnException, IOException;
-
-  /**
    * Manage keytabs leveraged by slider
    *
    * @param keytabInfo the arguments needed to manage the keytab
@@ -102,17 +80,6 @@ public interface SliderClientAPI extends Service {
    * @throws BadCommandArgumentsException bad arguments.
    */
   int actionKeytab(ActionKeytabArgs keytabInfo)
-      throws YarnException, IOException;
-
-  /**
-   * Upload application package to user home directory
-   *
-   * @param installPkgInfo the arguments needed to upload the package
-   * @throws YarnException Yarn problems
-   * @throws IOException other problems
-   * @throws BadCommandArgumentsException bad arguments.
-   */
-  int actionInstallPkg(ActionInstallPackageArgs installPkgInfo)
       throws YarnException, IOException;
 
   /**
@@ -136,17 +103,6 @@ public interface SliderClientAPI extends Service {
    */
   int actionClient(ActionClientArgs clientInfo)
       throws IOException, YarnException;
-
-  /**
-   * Managing slider application package
-   *
-   * @param pkgInfo the arguments needed to upload, delete or list the package
-   * @throws YarnException Yarn problems
-   * @throws IOException other problems
-   * @throws BadCommandArgumentsException bad arguments.
-   */
-  int actionPackage(ActionPackageArgs pkgInfo)
-      throws YarnException, IOException;
 
   /**
    * Update the cluster specification
@@ -179,7 +135,8 @@ public interface SliderClientAPI extends Service {
   int actionList(String clustername, ActionListArgs args) throws IOException, YarnException;
 
 
-  void actionFlex(String name, ActionFlexArgs args) throws YarnException, IOException;
+  int actionFlex(String name, ActionFlexArgs args) throws YarnException,
+      IOException;
 
   /**
    * Test for a cluster existing probe for a cluster of the given name existing
@@ -197,17 +154,6 @@ public interface SliderClientAPI extends Service {
    * @throws IOException
    */
   int actionKillContainer(String name, ActionKillContainerArgs args)
-      throws YarnException, IOException;
-
-  /**
-   * Echo operation (not currently wired up to command line)
-   * @param name cluster name
-   * @param args arguments
-   * @return the echoed text
-   * @throws YarnException
-   * @throws IOException
-   */
-  String actionEcho(String name, ActionEchoArgs args)
       throws YarnException, IOException;
 
   /**
@@ -246,7 +192,7 @@ public interface SliderClientAPI extends Service {
    * @param freezeArgs arguments to the stop
    * @return EXIT_SUCCESS if the cluster was not running by the end of the operation
    */
-  void actionStop(String clustername, ActionFreezeArgs freezeArgs)
+  int actionStop(String clustername, ActionFreezeArgs freezeArgs)
       throws YarnException, IOException;
 
   /**

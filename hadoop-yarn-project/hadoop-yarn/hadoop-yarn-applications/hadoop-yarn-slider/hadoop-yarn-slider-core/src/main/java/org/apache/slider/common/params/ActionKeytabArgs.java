@@ -26,13 +26,6 @@ import com.beust.jcommander.Parameters;
 
 public class ActionKeytabArgs extends AbstractActionArgs {
 
-  public ActionKeytabArgs(ActionInstallKeytabArgs installKeytabInfo) {
-    this.install = true;
-    this.overwrite = installKeytabInfo.overwrite;
-    this.keytab = installKeytabInfo.keytabUri;
-    this.folder = installKeytabInfo.folder;
-  }
-
   public ActionKeytabArgs() {
     super();
   }

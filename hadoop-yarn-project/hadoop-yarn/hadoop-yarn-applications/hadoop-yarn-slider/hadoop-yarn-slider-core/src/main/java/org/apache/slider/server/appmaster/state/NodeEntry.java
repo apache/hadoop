@@ -222,7 +222,7 @@ public class NodeEntry implements Cloneable {
         // general "any reason" app failure
         case Failed:
         // specific node failure
-        case Node_failure:
+        case Disk_failure:
 
           ++failed;
           ++failedRecently;

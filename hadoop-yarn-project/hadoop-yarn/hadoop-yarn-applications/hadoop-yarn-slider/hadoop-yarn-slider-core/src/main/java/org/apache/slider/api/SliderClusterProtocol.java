@@ -53,8 +53,8 @@ public interface SliderClusterProtocol extends VersionedProtocol {
       YarnException;
 
 
-  Messages.FlexComponentResponseProto flexComponent(
-      Messages.FlexComponentRequestProto request) throws IOException;
+  Messages.FlexComponentsResponseProto flexComponents(
+      Messages.FlexComponentsRequestProto request) throws IOException;
 
   /**
    * Get the current cluster status

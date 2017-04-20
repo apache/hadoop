@@ -18,24 +18,12 @@
 
 package org.apache.slider.common.params;
 
-import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.beust.jcommander.ParametersDelegate;
-
-import java.io.File;
 
 @Parameters(commandNames = {SliderActions.ACTION_CREATE},
             commandDescription = SliderActions.DESCRIBE_ACTION_CREATE)
 
 public class ActionCreateArgs extends AbstractClusterBuildingActionArgs {
-
-  @Parameter(names = {ARG_APPDEF},
-      description = "Template application definition file in JSON format.")
-  public File appDef;
-
-  public File getAppDef() {
-    return appDef;
-  }
 
   @Override
   public String getActionName() {

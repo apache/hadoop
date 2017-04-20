@@ -116,6 +116,28 @@ public class Configuration implements Serializable {
     return Long.parseLong(value);
   }
 
+  public int getPropertyInt(String name, int defaultValue) {
+    if (name == null) {
+      return defaultValue;
+    }
+    String value = properties.get(name.trim());
+    if (StringUtils.isEmpty(value)) {
+      return defaultValue;
+    }
+    return Integer.parseInt(value);
+  }
+
+  public boolean getPropertyBool(String name, boolean defaultValue) {
+    if (name == null) {
+      return defaultValue;
+    }
+    String value = properties.get(name.trim());
+    if (StringUtils.isEmpty(value)) {
+      return defaultValue;
+    }
+    return Boolean.parseBoolean(value);
+  }
+
   public String getProperty(String name, String defaultValue) {
     if (name == null) {
       return defaultValue;

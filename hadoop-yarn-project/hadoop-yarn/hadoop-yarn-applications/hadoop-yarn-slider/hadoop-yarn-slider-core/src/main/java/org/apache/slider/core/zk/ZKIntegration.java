@@ -337,5 +337,12 @@ public class ZKIntegration implements Watcher, Closeable {
     return SVC_SLIDER_USERS + "/" + username;
   }
 
-
+  /**
+   * Blocking enum of users.
+   * @return an unordered list of clusters under a user
+   */
+  public List<String> getClusters() throws KeeperException,
+      InterruptedException {
+    return zookeeper.getChildren(userPath, null);
+  }
 }

@@ -19,6 +19,13 @@
 package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParametersDelegate;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.slider.core.exceptions.BadCommandArgumentsException;
+
+import java.io.File;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract Action to build things; shares args across build and
@@ -26,6 +33,14 @@ import com.beust.jcommander.Parameter;
  */
 public abstract class AbstractClusterBuildingActionArgs
     extends AbstractActionArgs {
+  @Parameter(names = {ARG_APPDEF},
+      description = "Template application definition file in JSON format.")
+  public File appDef;
+
+  public File getAppDef() {
+    return appDef;
+  }
+
   @Parameter(names = {
       ARG_QUEUE }, description = "Queue to submit the application")
   public String queue;
@@ -33,4 +48,42 @@ public abstract class AbstractClusterBuildingActionArgs
   @Parameter(names = {
       ARG_LIFETIME }, description = "Lifetime of the application from the time of request")
   public long lifetime;
+
+  @ParametersDelegate
+  public ComponentArgsDelegate componentDelegate = new ComponentArgsDelegate();
+
+  @ParametersDelegate
+  public OptionArgsDelegate optionsDelegate =
+      new OptionArgsDelegate();
+
+
+  public Map<String, String> getOptionsMap() throws
+      BadCommandArgumentsException {
+    return optionsDelegate.getOptionsMap();
+  }
+
+  /**
+   * Get the role heap mapping (may be empty, but never null).
+   * @return role heap mapping
+   * @throws BadCommandArgumentsException parse problem
+   */
+  public Map<String, Map<String, String>> getCompOptionMap() throws
+      BadCommandArgumentsException {
+    return optionsDelegate.getCompOptionMap();
+  }
+
+  @VisibleForTesting
+  public List<String> getComponentTuples() {
+    return componentDelegate.getComponentTuples();
+  }
+
+  /**
+   * Get the role mapping (may be empty, but never null).
+   * @return role mapping
+   * @throws BadCommandArgumentsException parse problem
+   */
+  public Map<String, String> getComponentMap() throws
+      BadCommandArgumentsException {
+    return componentDelegate.getComponentMap();
+  }
 }

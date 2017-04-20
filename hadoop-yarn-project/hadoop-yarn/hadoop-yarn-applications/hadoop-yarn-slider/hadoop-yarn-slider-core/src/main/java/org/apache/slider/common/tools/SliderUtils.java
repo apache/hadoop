@@ -21,14 +21,10 @@ package org.apache.slider.common.tools;
 import com.google.common.base.Preconditions;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
-import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
-import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -52,6 +48,8 @@ import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.Slider;
 import org.apache.slider.api.RoleKeys;
+import org.apache.slider.api.resource.Application;
+import org.apache.slider.api.resource.Component;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.SliderXmlConfKeys;
@@ -70,7 +68,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -499,6 +496,26 @@ public final class SliderUtils {
     sw.append(t.toString()).append('\n');
     t.printStackTrace(new PrintWriter(sw));
     return sw.toString();
+  }
+
+  /**
+   * Extract the first line of a multi-line string. This is typically used to
+   * prune the stack trace appended to the end of exception messages returned by
+   * YARN in AMRMClientAsync callbacks.
+   *
+   * @param msg
+   *          message string (most likely multi-lines)
+   * @return the first line of a multi-line string or the original string if it
+   *         is a null, empty or single-line
+   */
+  public static String extractFirstLine(String msg) {
+    if (StringUtils.isNotBlank(msg)) {
+      int newlineIndex = msg.indexOf(System.lineSeparator());
+      if (newlineIndex != -1) {
+        msg = msg.substring(0, newlineIndex);
+      }
+    }
+    return msg;
   }
 
   /**
@@ -2046,48 +2063,6 @@ public final class SliderUtils {
     }
   }
 
-  public static InputStream getApplicationResourceInputStream(FileSystem fs,
-      Path appPath,
-      String entry)
-      throws IOException {
-    InputStream is = null;
-    try(FSDataInputStream appStream = fs.open(appPath)) {
-      ZipArchiveInputStream zis = new ZipArchiveInputStream(appStream);
-      ZipArchiveEntry zipEntry;
-      boolean done = false;
-      while (!done && (zipEntry = zis.getNextZipEntry()) != null) {
-        if (entry.equals(zipEntry.getName())) {
-          int size = (int) zipEntry.getSize();
-          if (size != -1) {
-            log.info("Reading {} of size {}", zipEntry.getName(),
-                zipEntry.getSize());
-            byte[] content = new byte[size];
-            int offset = 0;
-            while (offset < size) {
-              offset += zis.read(content, offset, size - offset);
-            }
-            is = new ByteArrayInputStream(content);
-          } else {
-            log.debug("Size unknown. Reading {}", zipEntry.getName());
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-              while (true) {
-                int byteRead = zis.read();
-                if (byteRead == -1) {
-                  break;
-                }
-                baos.write(byteRead);
-              }
-              is = new ByteArrayInputStream(baos.toByteArray());
-            }
-          }
-          done = true;
-        }
-      }
-    }
-
-    return is;
-  }
-
   /**
    * Check for any needed libraries being present. On Unix none are needed;
    * on windows they must be present
@@ -2524,5 +2499,54 @@ public final class SliderUtils {
   public static EnumSet<YarnApplicationState> getAllNonLiveAppStates() {
     return EnumSet.range(YarnApplicationState.FINISHED,
         YarnApplicationState.KILLED);
+  }
+
+  public static final String DAYS = ".days";
+  public static final String HOURS = ".hours";
+  public static final String MINUTES = ".minutes";
+  public static final String SECONDS = ".seconds";
+
+  /**
+   * Get the time range of a set of keys.
+   * @param conf configuration to read properties from
+   * @param basekey base key to which suffix gets applied
+   * @param defDays
+   * @param defHours
+   * @param defMins
+   * @param defSecs
+   * @return the aggregate time range in seconds
+   */
+  public static long getTimeRange(org.apache.slider.api.resource
+      .Configuration conf,
+      String basekey,
+      long defDays,
+      long defHours,
+      long defMins,
+      long defSecs) {
+    Preconditions.checkArgument(basekey != null);
+    long days = conf.getPropertyLong(basekey + DAYS, defDays);
+    long hours = conf.getPropertyLong(basekey + HOURS, defHours);
+
+    long minutes = conf.getPropertyLong(basekey + MINUTES, defMins);
+    long seconds = conf.getPropertyLong(basekey + SECONDS, defSecs);
+    // range check
+    Preconditions.checkState(days >= 0 && hours >= 0 && minutes >= 0
+            && seconds >= 0,
+        "Time range for %s has negative time component %s:%s:%s:%s",
+        basekey, days, hours, minutes, seconds);
+
+    // calculate total time, schedule the reset if expected
+    long totalMinutes = days * 24 * 60 + hours * 24 + minutes;
+    return totalMinutes * 60 + seconds;
+  }
+
+  public static void resolve(Application application) {
+    org.apache.slider.api.resource.Configuration global = application
+        .getConfiguration();
+    for (Component component : application.getComponents()) {
+      mergeMapsIgnoreDuplicateKeys(component.getConfiguration().getProperties(),
+          global.getProperties());
+    }
+    // TODO merge other information to components
   }
 }

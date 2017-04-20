@@ -50,6 +50,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -251,10 +252,12 @@ public class ApplicationApiService {
               .getNumberOfContainers()).build();
     }
     try {
-      long original = SLIDER_CLIENT.flex(appName, component);
-      return Response.ok().entity(
-          "Updating " + componentName + " size from " + original + " to "
-              + component.getNumberOfContainers()).build();
+      Map<String, Long> original = SLIDER_CLIENT.flex(appName, Collections
+          .singletonMap(component.getName(),
+              component.getNumberOfContainers()));
+      return Response.ok().entity("Updating " + componentName + " size from "
+          + original.get(componentName) + " to "
+          + component.getNumberOfContainers()).build();
     } catch (YarnException | IOException e) {
       ApplicationStatus status = new ApplicationStatus();
       status.setDiagnostics(e.getMessage());

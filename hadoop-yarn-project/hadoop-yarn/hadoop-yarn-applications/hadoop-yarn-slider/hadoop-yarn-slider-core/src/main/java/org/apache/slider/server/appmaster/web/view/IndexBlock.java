@@ -156,7 +156,7 @@ public class IndexBlock extends SliderHamletBlock {
         } else {
           aatext = "";
         }
-        if (status.getPending() > 0) {
+        if (status.getRequested() > 0) {
           roleWithOpenRequest ++;
         }
       }
@@ -165,7 +165,7 @@ public class IndexBlock extends SliderHamletBlock {
         .td().a(nameUrl, roleName)._()
         .td(String.format("%d", metrics.containersDesired.value()))
         .td(String.format("%d", metrics.containersRunning.value()))
-        .td(String.format("%d", metrics.containersPending.value()))
+        .td(String.format("%d", metrics.containersRequested.value()))
         .td(String.format("%d", metrics.containersFailed.value()))
         .td(aatext)
         ._();

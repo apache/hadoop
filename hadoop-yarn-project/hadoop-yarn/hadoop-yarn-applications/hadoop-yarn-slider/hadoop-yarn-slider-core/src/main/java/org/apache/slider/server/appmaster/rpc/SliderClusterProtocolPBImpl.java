@@ -70,11 +70,11 @@ public class SliderClusterProtocolPBImpl implements SliderClusterProtocolPB {
   }
 
   @Override
-  public Messages.FlexComponentResponseProto flexComponent(
-      RpcController controller, Messages.FlexComponentRequestProto request)
+  public Messages.FlexComponentsResponseProto flexComponents(
+      RpcController controller, Messages.FlexComponentsRequestProto request)
       throws ServiceException {
     try {
-      return real.flexComponent(request);
+      return real.flexComponents(request);
     } catch (IOException e) {
       throw wrap(e);
     }

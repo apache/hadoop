@@ -53,6 +53,7 @@ public class ClientArgs extends CommonArgs {
   // =========================================================
 
   private final ActionAMSuicideArgs actionAMSuicideArgs = new ActionAMSuicideArgs();
+  private final ActionBuildArgs actionBuildArgs = new ActionBuildArgs();
   private final ActionClientArgs actionClientArgs = new ActionClientArgs();
   private final ActionCreateArgs actionCreateArgs = new ActionCreateArgs();
   private final ActionDependencyArgs actionDependencyArgs = new ActionDependencyArgs();
@@ -62,8 +63,6 @@ public class ClientArgs extends CommonArgs {
   private final ActionFlexArgs actionFlexArgs = new ActionFlexArgs();
   private final ActionFreezeArgs actionFreezeArgs = new ActionFreezeArgs();
   private final ActionHelpArgs actionHelpArgs = new ActionHelpArgs();
-  private final ActionInstallPackageArgs actionInstallPackageArgs = new ActionInstallPackageArgs();
-  private final ActionInstallKeytabArgs actionInstallKeytabArgs = new ActionInstallKeytabArgs();
   private final ActionKDiagArgs actionKDiagArgs = new ActionKDiagArgs();
   private final ActionKeytabArgs actionKeytabArgs = new ActionKeytabArgs();
   private final ActionKillContainerArgs actionKillContainerArgs =
@@ -71,7 +70,6 @@ public class ClientArgs extends CommonArgs {
   private final ActionListArgs actionListArgs = new ActionListArgs();
   private final ActionLookupArgs actionLookupArgs = new ActionLookupArgs();
   private final ActionNodesArgs actionNodesArgs = new ActionNodesArgs();
-  private final ActionPackageArgs actionPackageArgs = new ActionPackageArgs();
   private final ActionRegistryArgs actionRegistryArgs = new ActionRegistryArgs();
   private final ActionResolveArgs actionResolveArgs = new ActionResolveArgs();
   private final ActionResourceArgs actionResourceArgs = new ActionResourceArgs();
@@ -95,6 +93,7 @@ public class ClientArgs extends CommonArgs {
 
     addActions(
         actionAMSuicideArgs,
+        actionBuildArgs,
         actionClientArgs,
         actionCreateArgs,
         actionDependencyArgs,
@@ -104,15 +103,12 @@ public class ClientArgs extends CommonArgs {
         actionFlexArgs,
         actionFreezeArgs,
         actionHelpArgs,
-        actionInstallKeytabArgs,
-        actionInstallPackageArgs,
         actionKDiagArgs,
         actionKeytabArgs,
         actionKillContainerArgs,
         actionListArgs,
         actionLookupArgs,
         actionNodesArgs,
-        actionPackageArgs,
         actionRegistryArgs,
         actionResolveArgs,
         actionResourceArgs,
@@ -153,13 +149,11 @@ public class ClientArgs extends CommonArgs {
     return actionAMSuicideArgs;
   }
 
-  public ActionInstallPackageArgs getActionInstallPackageArgs() { return actionInstallPackageArgs; }
+  public ActionBuildArgs getActionBuildArgs() {
+    return actionBuildArgs;
+  }
 
   public ActionClientArgs getActionClientArgs() { return actionClientArgs; }
-
-  public ActionPackageArgs getActionPackageArgs() { return actionPackageArgs; }
-
-  public ActionInstallKeytabArgs getActionInstallKeytabArgs() { return actionInstallKeytabArgs; }
 
   public ActionKDiagArgs getActionKDiagArgs() {
     return actionKDiagArgs;
@@ -250,6 +244,12 @@ public class ClientArgs extends CommonArgs {
       action = ACTION_HELP;
     }
     switch (action) {
+      case ACTION_BUILD:
+        bindCoreAction(actionBuildArgs);
+        //its a builder, so set those actions too
+        buildingActionArgs = actionBuildArgs;
+        break;
+
       case ACTION_CREATE:
         bindCoreAction(actionCreateArgs);
         //its a builder, so set those actions too
@@ -296,14 +296,6 @@ public class ClientArgs extends CommonArgs {
         bindCoreAction(actionHelpArgs);
         break;
 
-      case ACTION_INSTALL_KEYTAB:
-        bindCoreAction(actionInstallKeytabArgs);
-        break;
-
-      case ACTION_INSTALL_PACKAGE:
-        bindCoreAction(actionInstallPackageArgs);
-        break;
-
       case ACTION_KDIAG:
         bindCoreAction(actionKDiagArgs);
         break;
@@ -326,10 +318,6 @@ public class ClientArgs extends CommonArgs {
 
       case ACTION_NODES:
         bindCoreAction(actionNodesArgs);
-        break;
-
-      case ACTION_PACKAGE:
-        bindCoreAction(actionPackageArgs);
         break;
 
       case ACTION_REGISTRY:

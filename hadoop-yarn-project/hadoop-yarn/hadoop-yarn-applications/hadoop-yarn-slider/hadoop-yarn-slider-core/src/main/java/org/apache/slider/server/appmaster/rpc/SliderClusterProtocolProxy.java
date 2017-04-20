@@ -110,10 +110,10 @@ public class SliderClusterProtocolProxy implements SliderClusterProtocol {
   }
 
   @Override
-  public Messages.FlexComponentResponseProto flexComponent(
-      Messages.FlexComponentRequestProto request) throws IOException {
+  public Messages.FlexComponentsResponseProto flexComponents(
+      Messages.FlexComponentsRequestProto request) throws IOException {
     try {
-      return endpoint.flexComponent(NULL_CONTROLLER, request);
+      return endpoint.flexComponents(NULL_CONTROLLER, request);
     } catch (ServiceException e) {
       throw convert(e);
     }
