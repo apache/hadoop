@@ -16,7 +16,28 @@
  * limitations under the License.
  */
 
-import AppTableController from '../app-table-columns';
+import { moduleForComponent, test } from 'ember-qunit';
+import hbs from 'htmlbars-inline-precompile';
 
-export default AppTableController.extend({
+moduleForComponent('em-table-html-cell', 'Integration | Component | em table html cell', {
+  integration: true
+});
+
+test('it renders', function(assert) {
+
+  // Set any properties with this.set('myProperty', 'value');
+  // Handle any actions with this.on('myAction', function(val) { ... });" + EOL + EOL +
+
+  this.render(hbs`{{em-table-html-cell}}`);
+
+  assert.equal(this.$().text().trim(), '');
+
+  // Template block usage:" + EOL +
+  this.render(hbs`
+    {{#em-table-html-cell}}
+      template block text
+    {{/em-table-html-cell}}
+  `);
+
+  assert.equal(this.$().text().trim(), 'template block text');
 });
