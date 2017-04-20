@@ -199,7 +199,7 @@ public class CBlockLocalCache implements CacheModule {
    * @param dbPathString - Path to db
    * @return long bytes remaining.
    */
-  private static long getRemaningDiskSpace(String dbPathString) {
+  private static long getRemainingDiskSpace(String dbPathString) {
     try {
       URI fileUri = new URI("file:///");
       Path dbPath = Paths.get(fileUri).resolve(dbPathString);
@@ -298,7 +298,7 @@ public class CBlockLocalCache implements CacheModule {
 
   @Override
   public void start() throws IOException {
-    // This is a No-op for us. We start when we bootup.
+    blockWriter.start();
   }
 
   @Override
@@ -457,7 +457,7 @@ public class CBlockLocalCache implements CacheModule {
       if (StringUtils.isBlank(dbPath)) {
         return cacheSize;
       }
-      long spaceRemaining = getRemaningDiskSpace(dbPath);
+      long spaceRemaining = getRemainingDiskSpace(dbPath);
       double cacheRatio = 1.0;
 
       if (spaceRemaining < volumeSize) {

@@ -43,6 +43,11 @@ public class CBlockTargetMetrics {
   @Metric private MutableCounterLong numBlockBufferFlush;
   @Metric private MutableCounterLong numDirectBlockWrites;
   @Metric private MutableCounterLong numFailedDirectBlockWrites;
+  @Metric private MutableCounterLong numDirtyLogBlockRead;
+  @Metric private MutableCounterLong numBytesDirtyLogRead;
+  @Metric private MutableCounterLong numDirtyLogBlockUpdated;
+  @Metric private MutableCounterLong numBytesDirtyLogWritten;
+  @Metric private MutableCounterLong numFailedDirtyBlockFlushes;
 
   // Latency based Metrics
   @Metric private MutableRate dbReadLatency;
@@ -92,6 +97,26 @@ public class CBlockTargetMetrics {
 
   public void incNumBlockBufferFlush() {
     numBlockBufferFlush.incr();
+  }
+
+  public void incNumDirtyLogBlockRead() {
+    numDirtyLogBlockRead.incr();
+  }
+
+  public void incNumBytesDirtyLogRead(int bytes) {
+    numBytesDirtyLogRead.incr(bytes);
+  }
+
+  public void incNumDirtyLogBlockUpdated() {
+    numDirtyLogBlockUpdated.incr();
+  }
+
+  public void incNumBytesDirtyLogWritten(int bytes) {
+    numBytesDirtyLogWritten.incr(bytes);
+  }
+
+  public void incNumFailedDirtyBlockFlushes() {
+    numFailedDirtyBlockFlushes.incr();
   }
 
   public void updateDBReadLatency(long latency) {
@@ -156,5 +181,30 @@ public class CBlockTargetMetrics {
   @VisibleForTesting
   public long getNumBlockBufferFlush() {
     return numBlockBufferFlush.value();
+  }
+
+  @VisibleForTesting
+  public long getNumDirtyLogBlockRead() {
+    return numDirtyLogBlockRead.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBytesDirtyLogReads() {
+    return numBytesDirtyLogRead.value();
+  }
+
+  @VisibleForTesting
+  public long getNumDirtyLogBlockUpdated() {
+    return numDirtyLogBlockUpdated.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBytesDirtyLogWritten() {
+    return numBytesDirtyLogWritten.value();
+  }
+
+  @VisibleForTesting
+  public long getNumFailedDirtyBlockFlushes() {
+    return numFailedDirtyBlockFlushes.value();
   }
 }

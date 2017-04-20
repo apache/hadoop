@@ -95,7 +95,7 @@ public class BlockWriterTask implements Runnable {
       flusher.getLOG().debug("Time taken for Write Small File : {} ms",
           endTime - startTime);
 
-      flusher.incrementremoteIO();
+      flusher.incrementRemoteIO();
 
     } catch (IOException ex) {
       flusher.getLOG().error("Writing of block failed, We have attempted " +
@@ -119,7 +119,7 @@ public class BlockWriterTask implements Runnable {
     File logDir = new File(this.dbPath);
     if (!logDir.exists() && !logDir.mkdirs()) {
       flusher.getLOG().error(
-          "Unable to create the log directory, Crticial error cannot continue");
+          "Unable to create the log directory, Critical error cannot continue");
       return;
     }
     String log = Paths.get(this.dbPath, retryFileName).toString();
