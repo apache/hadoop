@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.junit.Assert.assertNull;
 
 import java.io.FileNotFoundException;
@@ -34,13 +35,17 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -823,6 +828,77 @@ public class TestStoragePolicySatisfier {
       DFSTestUtil.waitExpectedStorageType(file, StorageType.DISK, 3, 30000,
           dfs);
       DFSTestUtil.waitExpectedStorageType(file, StorageType.SSD, 0, 30000, dfs);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  /**
+   * Tests that Xattrs should be cleaned if satisfy storage policy called on EC
+   * file with unsuitable storage policy set.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testSPSShouldNotLeakXattrIfSatisfyStoragePolicyCallOnECFiles()
+      throws Exception {
+    StorageType[][] diskTypes =
+        new StorageType[][]{{StorageType.SSD, StorageType.DISK},
+            {StorageType.SSD, StorageType.DISK},
+            {StorageType.SSD, StorageType.DISK},
+            {StorageType.SSD, StorageType.DISK},
+            {StorageType.SSD, StorageType.DISK},
+            {StorageType.DISK, StorageType.SSD},
+            {StorageType.DISK, StorageType.SSD},
+            {StorageType.DISK, StorageType.SSD},
+            {StorageType.DISK, StorageType.SSD},
+            {StorageType.DISK, StorageType.SSD}};
+
+    int defaultStripedBlockSize =
+        ErasureCodingPolicyManager.getSystemPolicies()[0].getCellSize() * 4;
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultStripedBlockSize);
+    config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    config.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+        1L);
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+        false);
+
+    try {
+      hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
+          storagesPerDatanode, capacity);
+
+      // set "/foo" directory with ONE_SSD storage policy.
+      ClientProtocol client = NameNodeProxies.createProxy(config,
+          hdfsCluster.getFileSystem(0).getUri(), ClientProtocol.class)
+          .getProxy();
+      String fooDir = "/foo";
+      client.mkdirs(fooDir, new FsPermission((short) 777), true);
+      // set an EC policy on "/foo" directory
+      client.setErasureCodingPolicy(fooDir, null);
+
+      // write file to fooDir
+      final String testFile = "/foo/bar";
+      long fileLen = 20 * defaultStripedBlockSize;
+      dfs = hdfsCluster.getFileSystem();
+      DFSTestUtil.createFile(dfs, new Path(testFile), fileLen, (short) 3, 0);
+
+      // ONESSD is unsuitable storage policy on EC files
+      client.setStoragePolicy(fooDir, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
+      dfs.satisfyStoragePolicy(new Path(testFile));
+
+      // Thread.sleep(9000); // To make sure SPS triggered
+      // verify storage types and locations
+      LocatedBlocks locatedBlocks =
+          client.getBlockLocations(testFile, 0, fileLen);
+      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+        for (StorageType type : lb.getStorageTypes()) {
+          Assert.assertEquals(StorageType.DISK, type);
+        }
+      }
+
+      // Make sure satisfy xattr has been removed.
+      DFSTestUtil.waitForXattrRemoved(testFile, XATTR_SATISFY_STORAGE_POLICY,
+          hdfsCluster.getNamesystem(), 30000);
     } finally {
       shutdownCluster();
     }

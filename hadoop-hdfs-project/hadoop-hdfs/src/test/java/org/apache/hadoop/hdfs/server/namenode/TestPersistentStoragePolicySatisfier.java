@@ -20,22 +20,18 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.List;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
-import static org.junit.Assert.assertFalse;
 
 /**
  * Test persistence of satisfying files/directories.
@@ -341,15 +337,9 @@ public class TestPersistentStoragePolicySatisfier {
       DFSTestUtil.waitExpectedStorageType(
           testFileName, StorageType.DISK, 2, timeout, fs);
 
-      // Make sure that SPS xattr has been removed.
-      int retryTime = 0;
-      while (retryTime < 30) {
-        if (!fileContainsSPSXAttr(testFile)) {
-          break;
-        }
-        Thread.sleep(minCheckTimeout);
-        retryTime += 1;
-      }
+      // Make sure satisfy xattr has been removed.
+      DFSTestUtil.waitForXattrRemoved(testFileName,
+          XATTR_SATISFY_STORAGE_POLICY, cluster.getNamesystem(), 30000);
 
       fs.setStoragePolicy(testFile, COLD);
       fs.satisfyStoragePolicy(testFile);
@@ -379,7 +369,8 @@ public class TestPersistentStoragePolicySatisfier {
       cluster.getNamesystem().getBlockManager().deactivateSPS();
 
       // Make sure satisfy xattr has been removed.
-      assertFalse(fileContainsSPSXAttr(testFile));
+      DFSTestUtil.waitForXattrRemoved(testFileName,
+          XATTR_SATISFY_STORAGE_POLICY, cluster.getNamesystem(), 30000);
 
     } finally {
       clusterShutdown();
@@ -387,18 +378,29 @@ public class TestPersistentStoragePolicySatisfier {
   }
 
   /**
-   * Check whether file contains SPS xattr.
-   * @param fileName file name.
-   * @return true if file contains SPS xattr.
-   * @throws IOException
+   * Tests that Xattrs should be cleaned if all blocks already satisfied.
+   *
+   * @throws Exception
    */
-  private boolean fileContainsSPSXAttr(Path fileName) throws IOException {
-    final INode inode = cluster.getNamesystem()
-        .getFSDirectory().getINode(fileName.toString());
-    final XAttr satisfyXAttr =
-        XAttrHelper.buildXAttr(XATTR_SATISFY_STORAGE_POLICY);
-    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
-    return existingXAttrs.contains(satisfyXAttr);
+  @Test(timeout = 300000)
+  public void testSPSShouldNotLeakXattrIfStorageAlreadySatisfied()
+      throws Exception {
+    try {
+      clusterSetUp();
+      DFSTestUtil.waitExpectedStorageType(testFileName, StorageType.DISK, 3,
+          timeout, fs);
+      fs.satisfyStoragePolicy(testFile);
+
+      DFSTestUtil.waitExpectedStorageType(testFileName, StorageType.DISK, 3,
+          timeout, fs);
+
+      // Make sure satisfy xattr has been removed.
+      DFSTestUtil.waitForXattrRemoved(testFileName,
+          XATTR_SATISFY_STORAGE_POLICY, cluster.getNamesystem(), 30000);
+
+    } finally {
+      clusterShutdown();
+    }
   }
 
   /**

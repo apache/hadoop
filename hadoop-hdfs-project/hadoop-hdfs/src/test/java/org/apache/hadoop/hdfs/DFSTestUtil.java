@@ -97,8 +97,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -155,9 +158,12 @@ import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.XAttrStorage;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -175,6 +181,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -2455,5 +2462,33 @@ public class DFSTestUtil {
         return expectedStorageCount == actualStorageCount;
       }
     }, 500, timeout);
+  }
+
+  /**
+   * Waits for removal of a specified Xattr on a specified file.
+   *
+   * @param srcPath
+   *          file name.
+   * @param xattr
+   *          name of the extended attribute.
+   * @param ns
+   *          Namesystem
+   * @param timeout
+   *          max wait time
+   * @throws Exception
+   */
+  public static void waitForXattrRemoved(String srcPath, String xattr,
+      Namesystem ns, int timeout) throws TimeoutException, InterruptedException,
+          UnresolvedLinkException, AccessControlException,
+          ParentNotDirectoryException {
+    final INode inode = ns.getFSDirectory().getINode(srcPath);
+    final XAttr satisfyXAttr = XAttrHelper.buildXAttr(xattr);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+        return !existingXAttrs.contains(satisfyXAttr);
+      }
+    }, 100, timeout);
   }
 }

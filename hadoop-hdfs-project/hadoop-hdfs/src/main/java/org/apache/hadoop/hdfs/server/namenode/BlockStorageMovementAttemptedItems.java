@@ -333,7 +333,7 @@ public class BlockStorageMovementAttemptedItems {
                   + "doesn't exists in storageMovementAttemptedItems list",
                   storageMovementAttemptedResult.getTrackId());
               // Remove xattr for the track id.
-              this.sps.notifyBlkStorageMovementFinished(
+              this.sps.postBlkStorageMovementCleanup(
                   storageMovementAttemptedResult.getTrackId());
             }
             break;

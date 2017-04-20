@@ -79,6 +79,27 @@ public class StoragePolicySatisfier implements Runnable {
   private final BlockStorageMovementAttemptedItems storageMovementsMonitor;
   private volatile boolean isRunning = false;
 
+  /**
+   * Represents the collective analysis status for all blocks.
+   */
+  private enum BlocksMovingAnalysisStatus {
+    // Represents that, the analysis skipped due to some conditions. A such
+    // condition is if block collection is in incomplete state.
+    ANALYSIS_SKIPPED_FOR_RETRY,
+    // Represents that, all block storage movement needed blocks found its
+    // targets.
+    ALL_BLOCKS_TARGETS_PAIRED,
+    // Represents that, only fewer or none of the block storage movement needed
+    // block found its eligible targets.
+    FEW_BLOCKS_TARGETS_PAIRED,
+    // Represents that, none of the blocks found for block storage movements.
+    BLOCKS_ALREADY_SATISFIED,
+    // Represents that, the analysis skipped due to some conditions.
+    // Example conditions are if no blocks really exists in block collection or
+    // if analysis is not required on ec files with unsuitable storage policies
+    BLOCKS_TARGET_PAIRING_SKIPPED;
+  }
+
   public StoragePolicySatisfier(final Namesystem namesystem,
       final BlockStorageMovementNeeded storageMovementNeeded,
       final BlockManager blkManager, Configuration conf) {
@@ -208,10 +229,31 @@ public class StoragePolicySatisfier implements Runnable {
                 namesystem.getBlockCollection(blockCollectionID);
             // Check blockCollectionId existence.
             if (blockCollection != null) {
-              boolean allBlockLocsAttemptedToSatisfy =
-                  computeAndAssignStorageMismatchedBlocksToDNs(blockCollection);
-              this.storageMovementsMonitor
-                  .add(blockCollectionID, allBlockLocsAttemptedToSatisfy);
+              BlocksMovingAnalysisStatus status =
+                  analyseBlocksStorageMovementsAndAssignToDN(blockCollection);
+              switch (status) {
+              // Just add to monitor, so it will be retried after timeout
+              case ANALYSIS_SKIPPED_FOR_RETRY:
+                // Just add to monitor, so it will be tracked for result and
+                // be removed on successful storage movement result.
+              case ALL_BLOCKS_TARGETS_PAIRED:
+                this.storageMovementsMonitor.add(blockCollectionID, true);
+                break;
+              // Add to monitor with allBlcoksAttemptedToSatisfy flag false, so
+              // that it will be tracked and still it will be consider for retry
+              // as analysis was not found targets for storage movement blocks.
+              case FEW_BLOCKS_TARGETS_PAIRED:
+                this.storageMovementsMonitor.add(blockCollectionID, false);
+                break;
+              // Just clean Xattrs
+              case BLOCKS_TARGET_PAIRING_SKIPPED:
+              case BLOCKS_ALREADY_SATISFIED:
+              default:
+                LOG.info("Block analysis skipped or blocks already satisfied"
+                    + " with storages. So, Cleaning up the Xattrs.");
+                postBlkStorageMovementCleanup(blockCollectionID);
+                break;
+              }
             }
           }
         }
@@ -235,15 +277,15 @@ public class StoragePolicySatisfier implements Runnable {
         }
         LOG.error("StoragePolicySatisfier thread received runtime exception. "
             + "Stopping Storage policy satisfier work", t);
-        // TODO: Just break for now. Once we implement dynamic start/stop
-        // option, we can add conditions here when to break/terminate.
         break;
       }
     }
   }
 
-  private boolean computeAndAssignStorageMismatchedBlocksToDNs(
+  private BlocksMovingAnalysisStatus analyseBlocksStorageMovementsAndAssignToDN(
       BlockCollection blockCollection) {
+    BlocksMovingAnalysisStatus status =
+        BlocksMovingAnalysisStatus.BLOCKS_ALREADY_SATISFIED;
     byte existingStoragePolicyID = blockCollection.getStoragePolicyID();
     BlockStoragePolicy existingStoragePolicy =
         blockManager.getStoragePolicy(existingStoragePolicyID);
@@ -252,20 +294,19 @@ public class StoragePolicySatisfier implements Runnable {
       // So, should we add back? or leave it to user
       LOG.info("BlockCollectionID: {} file is under construction. So, postpone"
           + " this to the next retry iteration", blockCollection.getId());
-      return true;
+      return BlocksMovingAnalysisStatus.ANALYSIS_SKIPPED_FOR_RETRY;
     }
 
     // First datanode will be chosen as the co-ordinator node for storage
     // movements. Later this can be optimized if needed.
     DatanodeDescriptor coordinatorNode = null;
     BlockInfo[] blocks = blockCollection.getBlocks();
+    if (blocks.length == 0) {
+      LOG.info("BlockCollectionID: {} file is not having any blocks."
+          + " So, skipping the analysis.", blockCollection.getId());
+      return BlocksMovingAnalysisStatus.BLOCKS_TARGET_PAIRING_SKIPPED;
+    }
     List<BlockMovingInfo> blockMovingInfos = new ArrayList<BlockMovingInfo>();
-
-    // True value represents that, SPS is able to find matching target nodes
-    // to satisfy storage type for all the blocks locations of the given
-    // blockCollection. A false value represents that, blockCollection needed
-    // retries to satisfy the storage policy for some of the block locations.
-    boolean foundMatchingTargetNodesForAllBlocks = true;
 
     for (int i = 0; i < blocks.length; i++) {
       BlockInfo blockInfo = blocks[i];
@@ -283,19 +324,38 @@ public class StoragePolicySatisfier implements Runnable {
           LOG.warn("The storage policy " + existingStoragePolicy.getName()
               + " is not suitable for Striped EC files. "
               + "So, ignoring to move the blocks");
-          return false;
+          return BlocksMovingAnalysisStatus.BLOCKS_TARGET_PAIRING_SKIPPED;
         }
       } else {
         expectedStorageTypes = existingStoragePolicy
             .chooseStorageTypes(blockInfo.getReplication());
       }
-      foundMatchingTargetNodesForAllBlocks |= computeBlockMovingInfos(
-          blockMovingInfos, blockInfo, expectedStorageTypes);
+
+      DatanodeStorageInfo[] storages = blockManager.getStorages(blockInfo);
+      StorageType[] storageTypes = new StorageType[storages.length];
+      for (int j = 0; j < storages.length; j++) {
+        DatanodeStorageInfo datanodeStorageInfo = storages[j];
+        StorageType storageType = datanodeStorageInfo.getStorageType();
+        storageTypes[j] = storageType;
+      }
+      List<StorageType> existing =
+          new LinkedList<StorageType>(Arrays.asList(storageTypes));
+      if (!DFSUtil.removeOverlapBetweenStorageTypes(expectedStorageTypes,
+          existing, true)) {
+        boolean computeStatus = computeBlockMovingInfos(blockMovingInfos,
+            blockInfo, expectedStorageTypes, existing, storages);
+        if (computeStatus
+            && status != BlocksMovingAnalysisStatus.FEW_BLOCKS_TARGETS_PAIRED) {
+          status = BlocksMovingAnalysisStatus.ALL_BLOCKS_TARGETS_PAIRED;
+        } else {
+          status = BlocksMovingAnalysisStatus.FEW_BLOCKS_TARGETS_PAIRED;
+        }
+      }
     }
 
     assignBlockMovingInfosToCoordinatorDn(blockCollection.getId(),
         blockMovingInfos, coordinatorNode);
-    return foundMatchingTargetNodesForAllBlocks;
+    return status;
   }
 
   /**
@@ -311,22 +371,18 @@ public class StoragePolicySatisfier implements Runnable {
    *          - block details
    * @param expectedStorageTypes
    *          - list of expected storage type to satisfy the storage policy
+   * @param existing
+   *          - list to get existing storage types
+   * @param storages
+   *          - available storages
    * @return false if some of the block locations failed to find target node to
    *         satisfy the storage policy, true otherwise
    */
   private boolean computeBlockMovingInfos(
       List<BlockMovingInfo> blockMovingInfos, BlockInfo blockInfo,
-      List<StorageType> expectedStorageTypes) {
+      List<StorageType> expectedStorageTypes, List<StorageType> existing,
+      DatanodeStorageInfo[] storages) {
     boolean foundMatchingTargetNodesForBlock = true;
-    DatanodeStorageInfo[] storages = blockManager.getStorages(blockInfo);
-    StorageType[] storageTypes = new StorageType[storages.length];
-    for (int j = 0; j < storages.length; j++) {
-      DatanodeStorageInfo datanodeStorageInfo = storages[j];
-      StorageType storageType = datanodeStorageInfo.getStorageType();
-      storageTypes[j] = storageType;
-    }
-    List<StorageType> existing =
-        new LinkedList<StorageType>(Arrays.asList(storageTypes));
     if (!DFSUtil.removeOverlapBetweenStorageTypes(expectedStorageTypes,
         existing, true)) {
       List<StorageTypeNodePair> sourceWithStorageMap =
@@ -756,7 +812,7 @@ public class StoragePolicySatisfier implements Runnable {
     Long id;
     while ((id = storageMovementNeeded.get()) != null) {
       try {
-        notifyBlkStorageMovementFinished(id);
+        postBlkStorageMovementCleanup(id);
       } catch (IOException ie) {
         LOG.warn("Failed to remove SPS "
             + "xattr for collection id " + id, ie);
@@ -771,7 +827,7 @@ public class StoragePolicySatisfier implements Runnable {
    * @param trackId track id i.e., block collection id.
    * @throws IOException
    */
-  public void notifyBlkStorageMovementFinished(long trackId)
+  public void postBlkStorageMovementCleanup(long trackId)
       throws IOException {
     this.namesystem.getFSDirectory().removeSPSXattr(trackId);
   }
