@@ -180,8 +180,13 @@ public class FSSchedulerNode extends SchedulerNode {
   void addContainersForPreemption(Collection<RMContainer> containers,
                                   FSAppAttempt app) {
 
-    appIdToAppMap.putIfAbsent(app.getApplicationAttemptId(), app);
-    resourcesPreemptedForApp.putIfAbsent(app, Resource.newInstance(0, 0));
+    ApplicationAttemptId attempt = app.getApplicationAttemptId();
+    if (appIdToAppMap.get(attempt) == null) {
+      appIdToAppMap.put(attempt, app);
+    }
+    if (resourcesPreemptedForApp.get(app) == null) {
+      resourcesPreemptedForApp.put(app, Resource.newInstance(0, 0));
+    }
     Resource appReserved = resourcesPreemptedForApp.get(app);
 
     for(RMContainer container : containers) {
