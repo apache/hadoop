@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -46,6 +47,7 @@ import java.net.URL;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -294,21 +296,40 @@ public class TestDatanodeStateMachine {
   }
 
   /**
-   * Test state transition with a list of invalid SCM names,
+   * Test state transition with a list of invalid scm configurations,
    * and verify the state transits to SHUTDOWN each time.
    */
   @Test
-  public void testDatanodeStateMachineWithInvalidSCMNames()
+  public void testDatanodeStateMachineWithInvalidConfiguration()
       throws Exception {
-    for (String name : new String[] {
-        "",          // Empty
-        "x..y",      // Invalid schema
-        "scm:xyz",   // Invalid port
-        "scm:123456" // Port out of range
-    }) {
-      conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, name);
+
+    LinkedList<Map.Entry<String, String>> confList =
+        new LinkedList<Map.Entry<String, String>>();
+    confList.add(Maps.immutableEntry(ScmConfigKeys.OZONE_SCM_NAMES, ""));
+
+    // Invalid ozone.scm.names
+    /** Empty **/
+    confList.add(Maps.immutableEntry(
+        ScmConfigKeys.OZONE_SCM_NAMES, ""));
+    /** Invalid schema **/
+    confList.add(Maps.immutableEntry(
+        ScmConfigKeys.OZONE_SCM_NAMES, "x..y"));
+    /** Invalid port **/
+    confList.add(Maps.immutableEntry(
+        ScmConfigKeys.OZONE_SCM_NAMES, "scm:xyz"));
+    /** Port out of range **/
+    confList.add(Maps.immutableEntry(
+        ScmConfigKeys.OZONE_SCM_NAMES, "scm:123456"));
+    // Invalid ozone.scm.datanode.id
+    /** Empty **/
+    confList.add(Maps.immutableEntry(
+        ScmConfigKeys.OZONE_SCM_DATANODE_ID, ""));
+
+    confList.forEach((entry) -> {
+      Configuration perTestConf = new Configuration(conf);
+      perTestConf.setStrings(entry.getKey(), entry.getValue());
       try (DatanodeStateMachine stateMachine =
-          new DatanodeStateMachine(conf)) {
+          new DatanodeStateMachine(perTestConf)) {
         DatanodeStateMachine.DatanodeStates currentState =
             stateMachine.getContext().getState();
         Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -320,7 +341,9 @@ public class TestDatanodeStateMachine {
             task.await(2, TimeUnit.SECONDS);
         Assert.assertEquals(DatanodeStateMachine.DatanodeStates.SHUTDOWN,
             newState);
+      } catch (Exception e) {
+        Assert.fail("Unexpected exception found");
       }
-    }
+    });
   }
 }

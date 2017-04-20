@@ -23,6 +23,8 @@ import org.apache.hadoop.ozone.container.common.states.datanode.RunningDatanodeS
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -42,6 +44,8 @@ import static org.apache.hadoop.ozone.protocol.proto
  * Current Context of State Machine.
  */
 public class StateContext {
+  static final Logger LOG =
+      LoggerFactory.getLogger(StateContext.class);
   private final Queue<SCMCommand> commandQueue;
   private final Lock lock;
   private final DatanodeStateMachine parent;
@@ -187,6 +191,10 @@ public class StateContext {
     task.execute(service);
     DatanodeStateMachine.DatanodeStates newState = task.await(time, unit);
     if (this.state != newState) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Task {} executed, state transited from {} to {}",
+            task.getClass().getSimpleName(), this.state, newState);
+      }
       if (isExiting(newState)) {
         task.onExit();
       }
