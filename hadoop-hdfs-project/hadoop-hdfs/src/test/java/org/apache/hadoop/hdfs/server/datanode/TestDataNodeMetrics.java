@@ -32,6 +32,7 @@ import java.util.List;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,6 +59,7 @@ import org.mockito.Mockito;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+@NotThreadSafe
 public class TestDataNodeMetrics {
   private static final Log LOG = LogFactory.getLog(TestDataNodeMetrics.class);
 
@@ -216,6 +218,7 @@ public class TestDataNodeMetrics {
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
 
     final List<FSDataOutputStream> streams = Lists.newArrayList();
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
     try {
       final FSDataOutputStream out =
           cluster.getFileSystem().create(path, (short) 2);
@@ -224,7 +227,7 @@ public class TestDataNodeMetrics {
       Mockito.doThrow(new IOException("mock IOException")).
           when(injector).
           writeBlockAfterFlush();
-      DataNodeFaultInjector.instance = injector;
+      DataNodeFaultInjector.set(injector);
       streams.add(out);
       out.writeBytes("old gs data\n");
       out.hflush();
@@ -250,7 +253,7 @@ public class TestDataNodeMetrics {
       if (cluster != null) {
         cluster.shutdown();
       }
-      DataNodeFaultInjector.instance = new DataNodeFaultInjector();
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 
