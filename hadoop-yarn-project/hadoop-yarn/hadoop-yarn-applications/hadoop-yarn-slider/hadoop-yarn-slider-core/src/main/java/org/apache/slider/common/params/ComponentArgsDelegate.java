@@ -30,7 +30,7 @@ public class ComponentArgsDelegate extends AbstractArgsDelegate {
   /**
    * This is a listing of the roles to create
    */
-  @Parameter(names = {ARG_COMPONENT,  ARG_COMPONENT_SHORT, ARG_ROLE},
+  @Parameter(names = {ARG_COMPONENT, ARG_COMPONENT_SHORT},
              arity = 2,
              description = "--component <name> <count> e.g. +1 incr by 1, -2 decr by 2, and 3 makes final count 3",
              splitter = DontSplitArguments.class)

@@ -35,11 +35,8 @@ public class RoleStatistics {
   public long limitsExceeded = 0L;
   public long nodeFailed = 0L;
   public long preempted = 0L;
-  public long releasing = 0L;
   public long requested = 0L;
   public long started = 0L;
-  public long startFailed = 0L;
-  public long totalRequested = 0L;
 
   /**
    * Add another statistics instance
@@ -56,11 +53,8 @@ public class RoleStatistics {
     limitsExceeded += that.limitsExceeded;
     nodeFailed += that.nodeFailed;
     preempted += that.preempted;
-    releasing += that.releasing;
     requested += that.requested;
     started += that.started;
-    startFailed += that.totalRequested;
-    totalRequested += that.totalRequested;
     return this;
   }
 }

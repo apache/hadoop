@@ -18,31 +18,38 @@
 
 package org.apache.slider.common.params;
 
-import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.beust.jcommander.ParametersDelegate;
+import org.apache.slider.core.exceptions.BadCommandArgumentsException;
+
+import java.util.List;
+import java.util.Map;
 
 @Parameters(commandNames = {SliderActions.ACTION_FLEX},
             commandDescription = SliderActions.DESCRIBE_ACTION_FLEX)
 
 public class ActionFlexArgs extends AbstractActionArgs {
 
-  @Parameter(names = {ARG_COMPONENT},
-      description = "component name")
-  String componentName;
-
-  @Parameter(names = {ARG_COUNT},
-      description = "number of containers>")
-  long numberOfContainers;
-
   @Override
   public String getActionName() {
     return SliderActions.ACTION_FLEX;
   }
 
-  public String getComponent() {
-    return componentName;
+  @ParametersDelegate
+  public ComponentArgsDelegate componentDelegate = new ComponentArgsDelegate();
+
+  /**
+   * Get the component mapping (may be empty, but never null)
+   * @return mapping
+   * @throws BadCommandArgumentsException parse problem
+   */
+  public Map<String, String> getComponentMap() throws
+      BadCommandArgumentsException {
+    return componentDelegate.getComponentMap();
   }
-  public long getNumberOfContainers() {
-    return numberOfContainers;
+
+  public List<String> getComponentTuples() {
+    return componentDelegate.getComponentTuples();
   }
+
 }

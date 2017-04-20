@@ -39,14 +39,12 @@ public interface SliderActions {
   String ACTION_STOP = "stop";
   String ACTION_HELP = "help";
   String ACTION_INSTALL_KEYTAB = "install-keytab";
-  String ACTION_INSTALL_PACKAGE = "install-package";
   String ACTION_KDIAG = "kdiag";
   String ACTION_KEYTAB = "keytab";
   String ACTION_KILL_CONTAINER = "kill-container";
   String ACTION_LIST = "list";
   String ACTION_LOOKUP = "lookup";
   String ACTION_NODES = "nodes";
-  String ACTION_PACKAGE = "package";
   String ACTION_PREFLIGHT = "preflight";
   String ACTION_RECONFIGURE = "reconfigure";
   String ACTION_REGISTRY = "registry";
@@ -99,12 +97,7 @@ public interface SliderActions {
                         "Start a stopped application";
   String DESCRIBE_ACTION_VERSION =
                         "Print the Slider version information";
-  String DESCRIBE_ACTION_INSTALL_PACKAGE = "Install application package." +
-  		" Deprecated, use '" + ACTION_PACKAGE + " " + ClientArgs.ARG_INSTALL + "'.";
-  String DESCRIBE_ACTION_PACKAGE = "Install/list/delete application packages and list app instances that use the packages";
   String DESCRIBE_ACTION_CLIENT = "Install the application client in the specified directory or obtain a client keystore or truststore";
-  String DESCRIBE_ACTION_INSTALL_KEYTAB = "Install the Kerberos keytab." +
-  		" Deprecated, use '" + ACTION_KEYTAB + " " + ClientArgs.ARG_INSTALL + "'.";
   String DESCRIBE_ACTION_KEYTAB = "Manage a Kerberos keytab file (install, delete, list) in the sub-folder 'keytabs' of the user's Slider base directory";
   String DESCRIBE_ACTION_DIAGNOSTIC = "Diagnose the configuration of the running slider application and slider client";
   String DESCRIBE_ACTION_RESOURCE = "Manage a file (install, delete, list) in the 'resources' sub-folder of the user's Slider base directory";

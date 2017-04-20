@@ -26,9 +26,9 @@ import java.util.concurrent.TimeUnit;
 
 public class ActionFlexCluster extends AsyncAction {
 
-  final Messages.FlexComponentRequestProto requestProto;
+  final Messages.FlexComponentsRequestProto requestProto;
   public ActionFlexCluster(String name, long delay, TimeUnit timeUnit,
-      Messages.FlexComponentRequestProto requestProto) {
+      Messages.FlexComponentsRequestProto requestProto) {
     super(name, delay, timeUnit, ATTR_CHANGES_APP_SIZE);
     this.requestProto = requestProto;
   }

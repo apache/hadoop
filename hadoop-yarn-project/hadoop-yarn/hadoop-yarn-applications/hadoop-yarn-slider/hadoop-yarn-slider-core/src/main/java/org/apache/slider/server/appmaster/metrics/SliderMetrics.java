@@ -37,13 +37,13 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 @Metrics(context = "yarn-native-service")
 public class SliderMetrics implements MetricsSource {
 
-  @Metric("containers pending")
-  public MutableGaugeInt containersPending;
+  @Metric("containers requested")
+  public MutableGaugeInt containersRequested;
   @Metric("anti-affinity containers pending")
   public MutableGaugeInt pendingAAContainers;
-  @Metric("containers pending")
+  @Metric("containers running")
   public MutableGaugeInt containersRunning;
-  @Metric("containers requested")
+  @Metric("containers desired")
   public MutableGaugeInt containersDesired;
   @Metric("containers completed")
   public MutableGaugeInt containersCompleted;
@@ -53,8 +53,12 @@ public class SliderMetrics implements MetricsSource {
   public MutableGaugeInt failedSinceLastThreshold;
   @Metric("containers preempted")
   public MutableGaugeInt containersPreempted;
+  @Metric("containers exceeded limits")
+  public MutableGaugeInt containersLimitsExceeded;
   @Metric("containers surplus")
   public MutableGaugeInt surplusContainers;
+  @Metric("containers failed due to disk failure")
+  public MutableGaugeInt containersDiskFailure;
 
   protected final MetricsRegistry registry;
 

@@ -97,7 +97,6 @@ import org.apache.slider.common.tools.PortScanner;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.common.tools.SliderVersionInfo;
-import org.apache.slider.core.conf.MapOperations;
 import org.apache.slider.core.exceptions.BadConfigException;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.exceptions.SliderInternalStateException;
@@ -855,7 +854,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     providerService.setAMState(stateForProviders);
 
     // chaos monkey
-//    maybeStartMonkey();
+    maybeStartMonkey();
 
     // if not a secure cluster, extract the username -it will be
     // propagated to workers
@@ -1597,7 +1596,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * @throws SliderException slider problems, including invalid configs
    * @throws IOException IO problems
    */
-  public void flexCluster(Messages.FlexComponentRequestProto request)
+  public void flexCluster(Messages.FlexComponentsRequestProto request)
       throws IOException, SliderException {
     if (request != null) {
       appState.updateComponents(request);
@@ -1619,24 +1618,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     ResetFailureWindow reset = new ResetFailureWindow(rmOperationHandler);
 
-    long days =
-        conf.getPropertyLong(ResourceKeys.CONTAINER_FAILURE_WINDOW + ".days",
-            ResourceKeys.DEFAULT_CONTAINER_FAILURE_WINDOW_DAYS);
-    long hours =
-        conf.getPropertyLong(ResourceKeys.CONTAINER_FAILURE_WINDOW + ".hours",
-            ResourceKeys.DEFAULT_CONTAINER_FAILURE_WINDOW_HOURS);
-    long minutes =
-        conf.getPropertyLong(ResourceKeys.CONTAINER_FAILURE_WINDOW + ".minutes",
-            ResourceKeys.DEFAULT_CONTAINER_FAILURE_WINDOW_MINUTES);
-    long seconds =
-        conf.getPropertyLong(ResourceKeys.CONTAINER_FAILURE_WINDOW + ".seconds",
-            0);
-    Preconditions
-        .checkState(days >= 0 && hours >= 0 && minutes >= 0 && seconds >= 0,
-            "Time range for has negative time component %s:%s:%s:%s", days,
-            hours, minutes, seconds);
-    long totalMinutes = days * 24 * 60 + hours * 24 + minutes;
-    long totalSeconds = totalMinutes * 60 + seconds;
+    long totalSeconds = SliderUtils.getTimeRange(conf,
+        ResourceKeys.CONTAINER_FAILURE_WINDOW,
+        ResourceKeys.DEFAULT_CONTAINER_FAILURE_WINDOW_DAYS,
+        ResourceKeys.DEFAULT_CONTAINER_FAILURE_WINDOW_HOURS,
+        ResourceKeys.DEFAULT_CONTAINER_FAILURE_WINDOW_MINUTES,
+        0);
     if (totalSeconds > 0) {
       log.info("Scheduling the failure window reset interval to every {}"
               + " seconds", totalSeconds);
@@ -1810,12 +1797,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       LOG_YARN.error("AMRMClientAsync.onError() received {}", e, e);
       signalAMComplete(new ActionStopSlider("stop", EXIT_EXCEPTION_THROWN,
           FinalApplicationStatus.FAILED,
-          "AMRMClientAsync.onError() received " + e));
+          SliderUtils.extractFirstLine(e.getLocalizedMessage())));
     } else if (e instanceof InvalidApplicationMasterRequestException) {
       // halt the AM
       LOG_YARN.error("AMRMClientAsync.onError() received {}", e, e);
       queue(new ActionHalt(EXIT_EXCEPTION_THROWN,
-          "AMRMClientAsync.onError() received " + e));
+          SliderUtils.extractFirstLine(e.getLocalizedMessage())));
     } else {
       // ignore and log
       LOG_YARN.info("Ignoring AMRMClientAsync.onError() received {}", e);
@@ -2040,7 +2027,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    */
   public void onExceptionInThread(Thread thread, Throwable exception) {
     log.error("Exception in {}: {}", thread.getName(), exception, exception);
-    
+
     // if there is a teardown in progress, ignore it
     if (amCompletionFlag.get()) {
       log.info("Ignoring exception: shutdown in progress");
@@ -2052,26 +2039,27 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       signalAMComplete(new ActionStopSlider("stop",
           exitCode,
           FinalApplicationStatus.FAILED,
-          exception.toString()));
+          SliderUtils.extractFirstLine(exception.getLocalizedMessage())));
     }
   }
 
   /**
-   * TODO Start the chaos monkey
+   * TODO Read chaos monkey params from AM configuration rather than app
+   * configuration
    * @return true if it started
    */
   private boolean maybeStartMonkey() {
-//    MapOperations internals = getGlobalInternalOptions();
-    MapOperations internals = new MapOperations();
-    Boolean enabled =
-        internals.getOptionBool(InternalKeys.CHAOS_MONKEY_ENABLED,
-            InternalKeys.DEFAULT_CHAOS_MONKEY_ENABLED);
+    org.apache.slider.api.resource.Configuration configuration =
+        application.getConfiguration();
+    boolean enabled = configuration.getPropertyBool(
+        InternalKeys.CHAOS_MONKEY_ENABLED,
+        InternalKeys.DEFAULT_CHAOS_MONKEY_ENABLED);
     if (!enabled) {
       log.debug("Chaos monkey disabled");
       return false;
     }
     
-    long monkeyInterval = internals.getTimeRange(
+    long monkeyInterval = SliderUtils.getTimeRange(configuration,
         InternalKeys.CHAOS_MONKEY_INTERVAL,
         InternalKeys.DEFAULT_CHAOS_MONKEY_INTERVAL_DAYS,
         InternalKeys.DEFAULT_CHAOS_MONKEY_INTERVAL_HOURS,
@@ -2083,7 +2071,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       return false;
     }
 
-    long monkeyDelay = internals.getTimeRange(
+    long monkeyDelay = SliderUtils.getTimeRange(configuration,
         InternalKeys.CHAOS_MONKEY_DELAY,
         0,
         0,
@@ -2098,10 +2086,11 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     // configure the targets
     
     // launch failure: special case with explicit failure triggered now
-    int amLaunchFailProbability = internals.getOptionInt(
+    int amLaunchFailProbability = configuration.getPropertyInt(
         InternalKeys.CHAOS_MONKEY_PROBABILITY_AM_LAUNCH_FAILURE,
         0);
-    if (amLaunchFailProbability> 0 && monkey.chaosCheck(amLaunchFailProbability)) {
+    if (amLaunchFailProbability > 0 && monkey.chaosCheck(
+        amLaunchFailProbability)) {
       log.info("Chaos Monkey has triggered AM Launch failure");
       // trigger a failure
       ActionStopSlider stop = new ActionStopSlider("stop",
@@ -2112,12 +2101,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       queue(stop);
     }
     
-    int amKillProbability = internals.getOptionInt(
+    int amKillProbability = configuration.getPropertyInt(
         InternalKeys.CHAOS_MONKEY_PROBABILITY_AM_FAILURE,
         InternalKeys.DEFAULT_CHAOS_MONKEY_PROBABILITY_AM_FAILURE);
     monkey.addTarget("AM killer",
         new ChaosKillAM(actionQueues, -1), amKillProbability);
-    int containerKillProbability = internals.getOptionInt(
+    int containerKillProbability = configuration.getPropertyInt(
         InternalKeys.CHAOS_MONKEY_PROBABILITY_CONTAINER_FAILURE,
         InternalKeys.DEFAULT_CHAOS_MONKEY_PROBABILITY_CONTAINER_FAILURE);
     monkey.addTarget("Container killer",

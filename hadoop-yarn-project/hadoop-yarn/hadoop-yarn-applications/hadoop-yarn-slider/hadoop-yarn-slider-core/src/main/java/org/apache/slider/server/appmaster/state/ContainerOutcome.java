@@ -29,7 +29,7 @@ public enum ContainerOutcome {
   Completed,
   Failed,
   Failed_limits_exceeded,
-  Node_failure,
+  Disk_failure,
   Preempted;
 
   /**
@@ -48,7 +48,7 @@ public enum ContainerOutcome {
         // could either be a release or node failure. Treat as completion
         return Completed;
       case ContainerExitStatus.DISKS_FAILED:
-        return Node_failure;
+        return Disk_failure;
       case ContainerExitStatus.PREEMPTED:
         return Preempted;
       case ContainerExitStatus.KILLED_EXCEEDED_PMEM:

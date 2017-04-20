@@ -1,0 +1,54 @@
+{
+  "name": "app-1",
+  "lifetime": "3600",
+  "configuration": {
+    "properties": {
+      "g1": "a",
+      "g2": "b",
+      "internal.chaos.monkey.interval.seconds": "60",
+      "zookeeper.port": "2181",
+      "zookeeper.path": "/yarnapps_small_cluster",
+      "zookeeper.hosts": "zoo1,zoo2,zoo3",
+      "env.MALLOC_ARENA_MAX": "4",
+      "site.hbase.master.startup.retainassign": "true",
+      "site.fs.defaultFS": "hdfs://cluster:8020",
+      "site.fs.default.name": "hdfs://cluster:8020",
+      "site.hbase.master.info.port": "0",
+      "site.hbase.regionserver.info.port": "0"
+    }
+  },
+  "resource": {
+    "cpus": 1,
+    "memory": "512"
+  },
+  "number_of_containers": 2,
+  "components": [
+    {
+      "name": "simple"
+    },
+    {
+      "name": "master",
+      "number_of_containers": 1,
+      "configuration": {
+        "properties": {
+          "g1": "overridden",
+          "jvm.heapsize": "512M"
+        }
+      }
+    },
+    {
+      "name": "worker",
+      "number_of_containers": 5,
+      "resource": {
+        "cpus": 1,
+        "memory": "1024"
+      },
+      "configuration": {
+        "properties": {
+          "g1": "overridden-by-worker",
+          "jvm.heapsize": "512M"
+        }
+      }
+    }
+  ]
+}
