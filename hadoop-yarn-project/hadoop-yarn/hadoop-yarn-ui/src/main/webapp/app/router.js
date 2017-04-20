@@ -28,6 +28,7 @@ Router.map(function() {
     this.route('apps');
     this.route('services');
   });
+  this.route('yarn-services');
   this.route('yarn-nodes', function(){
     this.route('table');
     this.route('heatmap');

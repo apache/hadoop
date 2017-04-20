@@ -38,13 +38,13 @@
         <div class="tab-content">
           <div role="tabpanel" class="tab-pane active" id="graphViewTab">
             <br/><br/>
-            <div class="col-md-8 container-fluid" id={{parent-id}}></div>
+            <div class="col-md-7 container-fluid" id={{parent-id}}></div>
             <!-- diag info -->
-            <div class="col-md-4 container-fluid">
-              <div class="panel panel-default add-ellipsis">
+            <div class="col-md-5 container-fluid">
+              <div class="panel panel-default add-ellipsis attempt-info-panel">
                 <div class="panel-heading">
                   {{#if selected.link}}
-                    {{#link-to selected.linkname selected.id}}{{selected.id}}{{/link-to}}
+                    {{#link-to selected.linkname selected.id (query-params service=serviceName)}}{{selected.id}}{{/link-to}}
                   {{else}}
                     {{selected.id}}
                   {{/if}}

@@ -34,6 +34,7 @@ export default Ember.Component.extend({
   _selected: undefined,
   gridColumns: [],
   gridRows: [],
+  serviceName: undefined,
 
   selected: function() {
     return this._selected;
@@ -290,6 +291,7 @@ export default Ember.Component.extend({
   setAttemptsGridColumnsAndRows: function() {
     var self = this;
     var columns = [];
+    var serviceName = this.get('serviceName');
 
     columns.push({
       id: 'id',
@@ -298,10 +300,11 @@ export default Ember.Component.extend({
       cellComponentName: 'em-table-linked-cell',
       minWidth: '300px',
       getCellContent: function(row) {
+        var attemptId = row.get('id');
+        var query = serviceName? '?service='+serviceName : '';
         return {
-          displayText: row.get('id'),
-          routeName: 'yarn-app-attempt',
-          id: row.get('id')
+          displayText: attemptId,
+          href: `#/yarn-app-attempt/${attemptId}${query}`
         };
       }
     }, {
@@ -326,7 +329,7 @@ export default Ember.Component.extend({
       id: 'appMasterContainerId',
       headerTitle: 'AM Container ID',
       contentPath: 'appMasterContainerId',
-      minWidth: '300px'
+      minWidth: '350px'
     }, {
       id: 'amNodeId',
       headerTitle: 'AM Node ID',
@@ -384,7 +387,7 @@ export default Ember.Component.extend({
       id: 'id',
       headerTitle: 'Container ID',
       contentPath: 'id',
-      minWidth: '300px'
+      minWidth: '350px'
     }, {
       id: 'startedTime',
       headerTitle: 'Started Time',

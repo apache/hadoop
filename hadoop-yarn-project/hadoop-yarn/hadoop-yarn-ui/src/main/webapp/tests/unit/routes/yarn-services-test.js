@@ -16,7 +16,14 @@
  * limitations under the License.
  */
 
-import AppTableController from '../app-table-columns';
+import { moduleFor, test } from 'ember-qunit';
 
-export default AppTableController.extend({
+moduleFor('route:yarn-services', 'Unit | Route | yarn services', {
+  // Specify the other units that are required for this test.
+  // needs: ['controller:foo']
+});
+
+test('it exists', function(assert) {
+  let route = this.subject();
+  assert.ok(route);
 });

@@ -25,17 +25,21 @@
     <div class="col-md-2 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4>Application</h4>
+          {{#if service}}
+            <h4>Service</h4>
+          {{else}}
+            <h4>Application</h4>
+          {{/if}}
         </div>
         <div class="panel-body">
           <ul class="nav nav-pills nav-stacked" id="stacked-menu">
             <ul class="nav nav-pills nav-stacked collapse in">
               {{#link-to 'yarn-app' tagName="li"}}
-                {{#link-to 'yarn-app' model.app.id}}Information
+                {{#link-to 'yarn-app' model.app.id (query-params service=service)}}Information
                 {{/link-to}}
               {{/link-to}}
               {{#link-to 'yarn-app-attempts' tagName="li"}}
-                {{#link-to 'yarn-app-attempts' model.app.id}}Attempts List
+                {{#link-to 'yarn-app-attempts' model.app.id (query-params service=service)}}Attempts List
                 {{/link-to}}
               {{/link-to}}
             </ul>
@@ -88,7 +92,7 @@
                       </span>
                     </td>
                     <td>{{model.app.startTime}}</td>
-                    <td>{{model.app.elapsedTime}}</td>
+                    <td>{{model.app.formattedElapsedTime}}</td>
                     <td>{{model.app.validatedFinishedTs}}</td>
                     <td>{{model.app.priority}}</td>
                     <td>

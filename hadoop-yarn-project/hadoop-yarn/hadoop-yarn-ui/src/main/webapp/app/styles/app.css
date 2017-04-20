@@ -305,3 +305,12 @@ li a.navigation-link.ember-view {
 .donut-chart svg {
   width: 100%;
 }
+
+div.attempt-info-panel table {
+  table-layout: fixed;
+}
+
+div.attempt-info-panel table > tbody > tr > td:last-of-type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

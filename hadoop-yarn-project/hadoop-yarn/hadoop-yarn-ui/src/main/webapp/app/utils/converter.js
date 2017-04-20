@@ -125,5 +125,29 @@ export default {
       unit = "PB";
     }
     return value.toFixed(1) + " " + unit;
+  },
+  msToElapsedTimeUnit: function(millisecs) {
+    var seconds = Math.floor(millisecs / 1000);
+    var days = Math.floor(seconds / (3600 * 24));
+    var hours = Math.floor(seconds / 3600) - (days * 24);
+    var mins = Math.floor((seconds - (hours * 3600) - (days * 24 * 3600)) / 60);
+    var secs = seconds - (days * 24 * 3600) - (hours * 3600) - (mins * 60);
+    var timeStrArr = [];
+    var pluralize = "";
+    if (days > 0) {
+      pluralize = days > 1? " Days" : " Day";
+      timeStrArr.push(days + pluralize);
+    }
+    if (hours > 0) {
+      pluralize = hours > 1? " Hrs" : " Hour";
+      timeStrArr.push(hours + pluralize);
+    }
+    if (mins > 0) {
+      pluralize = mins > 1? " Mins" : " Min";
+      timeStrArr.push(mins + pluralize);
+    }
+    pluralize = secs > 1? " Secs" : " Sec";
+    timeStrArr.push(secs + pluralize);
+    return timeStrArr.join(" : ");
   }
 };

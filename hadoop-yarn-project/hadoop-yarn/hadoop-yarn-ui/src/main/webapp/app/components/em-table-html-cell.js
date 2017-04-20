@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import AppTableController from '../app-table-columns';
+import Ember from 'ember';
 
-export default AppTableController.extend({
+export default Ember.Component.extend({
+  content: null
 });

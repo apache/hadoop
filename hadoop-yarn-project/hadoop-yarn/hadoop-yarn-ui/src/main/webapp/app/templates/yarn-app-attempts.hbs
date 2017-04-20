@@ -30,11 +30,11 @@
           <ul class="nav nav-pills nav-stacked" id="stacked-menu">
             <ul class="nav nav-pills nav-stacked collapse in">
               {{#link-to 'yarn-app' tagName="li"}}
-                {{#link-to 'yarn-app' model.appId}}Information
+                {{#link-to 'yarn-app' model.appId (query-params service=service)}}Information
                 {{/link-to}}
               {{/link-to}}
               {{#link-to 'yarn-app-attempts' tagName="li"}}
-                {{#link-to 'yarn-app-attempts' model.appId}}Attempts List
+                {{#link-to 'yarn-app-attempts' model.appId (query-params service=service)}}Attempts List
                 {{/link-to}}
               {{/link-to}}
             </ul>
@@ -46,7 +46,7 @@
     <div class="col-md-10 container-fluid">
       <!-- timeline view of children -->
       <div class="row">
-         {{timeline-view parent-id="attempt-timeline-div" my-id="timeline-view" height="100%" rmModel=model.attempts label="shortAppAttemptId" attemptModel=true}}
+         {{timeline-view parent-id="attempt-timeline-div" my-id="timeline-view" height="100%" rmModel=model.attempts label="shortAppAttemptId" attemptModel=true serviceName=service}}
       </div>
     </div>
 

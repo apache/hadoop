@@ -16,7 +16,19 @@
  * limitations under the License.
  */
 
-import AppTableController from '../app-table-columns';
+import Ember from 'ember';
+import AbstractRoute from './abstract';
 
-export default AppTableController.extend({
+export default AbstractRoute.extend({
+  model() {
+      return Ember.RSVP.hash({
+        apps: this.store.query('yarn-app', {
+          applicationTypes: "org-apache-slider"
+        }),
+    });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-app');
+  }
 });

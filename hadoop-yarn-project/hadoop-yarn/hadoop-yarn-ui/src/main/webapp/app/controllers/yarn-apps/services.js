@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 
-
-import Ember from 'ember';
-import ColumnDef from 'em-table/utils/column-definition';
 import AppTableController from '../app-table-columns';
 
 export default AppTableController.extend({
