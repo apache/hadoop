@@ -1241,7 +1241,7 @@ public class TestDistributedFileSystem {
           return null;
         }
       }).when(injector).getHdfsBlocksMetadata();
-      DataNodeFaultInjector.instance = injector;
+      DataNodeFaultInjector.set(injector);
 
       BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(allLocs);
       for (BlockStorageLocation loc: locs) {
@@ -1251,7 +1251,7 @@ public class TestDistributedFileSystem {
       }
 
       // Restore a default injector
-      DataNodeFaultInjector.instance = new DataNodeFaultInjector();
+      DataNodeFaultInjector.set(new DataNodeFaultInjector());
 
       // Stop a datanode to simulate a failure.
       DataNodeProperties stoppedNode = cluster.stopDataNode(0);
