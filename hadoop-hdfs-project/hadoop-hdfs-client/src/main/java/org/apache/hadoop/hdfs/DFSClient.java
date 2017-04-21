@@ -2944,10 +2944,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Probe for encryption enabled on this filesystem.
+   * Note (see HDFS-11689):
+   * Not to throw exception in this method since it would break hive.
+   * Hive accesses this method and assumes no exception would be thrown.
+   * Hive should not access DFSClient since it is InterfaceAudience.Private.
+   * Deprecated annotation is added to trigger build warning at hive side.
+   * Request has been made to Hive to remove access to DFSClient.
    * @return true if encryption is enabled
    */
-  public boolean isHDFSEncryptionEnabled() throws IOException{
-    return getKeyProviderUri() != null;
+  @Deprecated
+  public boolean isHDFSEncryptionEnabled() {
+    boolean result = false;
+    try {
+      result = (getKeyProviderUri() != null);
+    } catch (IOException ioe) {
+      DFSClient.LOG.warn("Exception while checking whether encryption zone "
+            + "is supported, assumes it is not supported", ioe);
+    }
+    return result;
   }
 
   /**
