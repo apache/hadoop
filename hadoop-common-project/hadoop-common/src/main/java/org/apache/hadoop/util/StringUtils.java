@@ -440,10 +440,11 @@ public class StringUtils {
   }
   
   /**
-   * Splits a comma separated value <code>String</code>, trimming leading and
-   * trailing whitespace on each value.
+   * Splits a comma or newline separated value <code>String</code>, trimming
+   * leading and trailing whitespace on each value.
    *
-   * @param str a comma separated <code>String</code> with values, may be null
+   * @param str a comma or newline separated <code>String</code> with values,
+   *            may be null
    * @return an array of <code>String</code> values, empty array if null String
    *         input
    */
@@ -452,7 +453,7 @@ public class StringUtils {
       return emptyStringArray;
     }
 
-    return str.trim().split("\\s*,\\s*");
+    return str.trim().split("\\s*[,\n]\\s*");
   }
 
   final public static String[] emptyStringArray = {};
