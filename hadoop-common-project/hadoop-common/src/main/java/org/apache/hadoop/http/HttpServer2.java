@@ -384,6 +384,7 @@ public final class HttpServer2 implements FilterContainer {
           getPassword(sslConf, SSLFactory.SSL_SERVER_TRUSTSTORE_PASSWORD),
           sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE,
               SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT));
+      excludeCiphers(sslConf.get(SSLFactory.SSL_SERVER_EXCLUDE_CIPHER_LIST));
     }
 
     public HttpServer2 build() throws IOException {
