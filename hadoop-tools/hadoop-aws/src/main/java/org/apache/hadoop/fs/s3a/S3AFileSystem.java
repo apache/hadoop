@@ -156,6 +156,23 @@ public class S3AFileSystem extends FileSystem {
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
 
+  /** Add any deprecated keys. */
+  @SuppressWarnings("deprecation")
+  private static void addDeprecatedKeys() {
+    Configuration.addDeprecations(
+        new Configuration.DeprecationDelta[]{
+            // never shipped in an ASF release, but did get into the wild.
+            new Configuration.DeprecationDelta(
+                OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
+                SERVER_SIDE_ENCRYPTION_KEY)
+        });
+    Configuration.reloadExistingConfigurations();
+  }
+
+  static {
+    addDeprecatedKeys();
+  }
+
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem
@@ -240,18 +257,7 @@ public class S3AFileSystem extends FileSystem {
 
       initMultipartUploads(conf);
 
-      serverSideEncryptionAlgorithm = S3AEncryptionMethods.getMethod(
-          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
-      if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-          StringUtils.isBlank(getServerSideEncryptionKey(getConf()))) {
-        throw new IOException(Constants.SSE_C_NO_KEY_ERROR);
-      }
-      if(S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm) &&
-          StringUtils.isNotBlank(getServerSideEncryptionKey(
-            getConf()))) {
-        throw new IOException(Constants.SSE_S3_WITH_KEY_ERROR);
-      }
-      LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
+      serverSideEncryptionAlgorithm = getEncryptionAlgorithm(conf);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
 

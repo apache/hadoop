@@ -52,6 +52,8 @@ public class TestConfigRedactor {
     List<String> sensitiveKeys = Arrays.asList(
         "fs.s3a.secret.key",
         "fs.s3a.bucket.BUCKET.secret.key",
+        "fs.s3a.server-side-encryption.key",
+        "fs.s3a.bucket.engineering.server-side-encryption.key",
         "fs.s3n.awsSecretKey",
         "fs.azure.account.key.abcdefg.blob.core.windows.net",
         "fs.adl.oauth2.refresh.token",
@@ -77,7 +79,8 @@ public class TestConfigRedactor {
         "dfs.replication",
         "ssl.server.keystore.location",
         "httpfs.config.dir",
-        "hadoop.security.credstore.java-keystore-provider.password-file"
+        "hadoop.security.credstore.java-keystore-provider.password-file",
+        "fs.s3a.bucket.engineering.server-side-encryption-algorithm"
     );
     for (String key : normalKeys) {
       processedText = redactor.redact(key, ORIGINAL_VALUE);

@@ -815,6 +815,7 @@ public class CommonConfigurationKeysPublic {
           "password$",
           "ssl.keystore.pass$",
           "fs.s3.*[Ss]ecret.?[Kk]ey",
+          "fs.s3a.*.server-side-encryption.key",
           "fs.azure\\.account.key.*",
           "credential$",
           "oauth.*token$",
