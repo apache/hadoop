@@ -33,7 +33,7 @@ import org.apache.hadoop.io.erasurecode.coder.ErasureEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSLegacyRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
@@ -80,7 +80,7 @@ public final class CodecUtil {
   public static final String IO_ERASURECODE_CODEC_RS_LEGACY_RAWCODERS_KEY =
       IO_ERASURECODE_CODEC + "rs-legacy.rawcoders";
   public static final String IO_ERASURECODE_CODEC_RS_LEGACY_RAWCODERS_DEFAULT =
-      RSRawErasureCoderFactoryLegacy.class.getCanonicalName();
+      RSLegacyRawErasureCoderFactory.class.getCanonicalName();
   public static final String IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY =
       IO_ERASURECODE_CODEC + "rs.rawcoders";
   public static final String IO_ERASURECODE_CODEC_RS_RAWCODERS_DEFAULT =

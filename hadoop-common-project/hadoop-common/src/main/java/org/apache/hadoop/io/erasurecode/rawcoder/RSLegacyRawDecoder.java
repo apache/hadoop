@@ -34,12 +34,12 @@ import java.nio.ByteBuffer;
  * addressed in HADOOP-11871.
  */
 @InterfaceAudience.Private
-public class RSRawDecoderLegacy extends RawErasureDecoder {
+public class RSLegacyRawDecoder extends RawErasureDecoder {
   // To describe and calculate the needed Vandermonde matrix
   private int[] errSignature;
   private int[] primitivePower;
 
-  public RSRawDecoderLegacy(ErasureCoderOptions coderOptions) {
+  public RSLegacyRawDecoder(ErasureCoderOptions coderOptions) {
     super(coderOptions);
     if (getNumAllUnits() >= RSUtil.GF.getFieldSize()) {
       throw new HadoopIllegalArgumentException(

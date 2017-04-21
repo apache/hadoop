@@ -677,7 +677,7 @@
 
 <property>
   <name>io.erasurecode.codec.rs-legacy.rawcoders</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSLegacyRawErasureCoderFactory</value>
   <description>
     Comma separated raw coder implementations for the rs-legacy codec. The earlier
     factory is prior to followings in case of failure of creating raw coders.

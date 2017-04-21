@@ -26,7 +26,7 @@ public class TestXORRawCoder extends TestXORRawCoderBase {
 
   @Before
   public void setup() {
-    this.encoderClass = XORRawEncoder.class;
-    this.decoderClass = XORRawDecoder.class;
+    this.encoderFactoryClass = XORRawErasureCoderFactory.class;
+    this.decoderFactoryClass = XORRawErasureCoderFactory.class;
   }
 }
