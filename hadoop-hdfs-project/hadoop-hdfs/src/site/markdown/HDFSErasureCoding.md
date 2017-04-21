@@ -73,6 +73,16 @@ Architecture
 
     Directory-level EC policies only affect new files created within the directory. Once a file has been created, its erasure coding policy can be queried but not changed. If an erasure coded file is renamed to a directory with a different EC policy, the file retains its existing EC policy. Converting a file to a different EC policy requires rewriting its data; do this by copying the file (e.g. via distcp) rather than renaming it.
 
+    We allow users to define their own EC policies via an XML file, which must have the following three parts:
+
+       1. _layoutversion:_ This indicates the version of EC policy XML file format.
+
+       2. _schemas:_ This includes all the user defined EC schemas.
+
+       3. _policies:_ This includes all the user defined EC policies, and each policy consists of schema id and the size of a striping cell (cellsize).
+
+    A sample EC policy XML file named user_ec_policies.xml.template is in the Hadoop conf directory, which user can reference.
+
  *  **Intel ISA-L**
     Intel ISA-L stands for Intel Intelligent Storage Acceleration Library. ISA-L is an open-source collection of optimized low-level functions designed for storage applications. It includes fast block Reed-Solomon type erasure codes optimized for Intel AVX and AVX2 instruction sets.
     HDFS erasure coding can leverage ISA-L to accelerate encoding and decoding calculation. ISA-L supports most major operating systems, including Linux and Windows.
