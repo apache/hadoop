@@ -4622,14 +4622,30 @@
   </property>
 
   <property>
+    <name>dfs.namenode.provided.enabled</name>
+    <value>false</value>
+    <description>
+      Enables the Namenode to handle provided storages.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.block.provider.class</name>
+    <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockFormatProvider</value>
+    <description>
+      The class that is used to load provided blocks in the Namenode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.provider.class</name>
     <value>org.apache.hadoop.hdfs.server.common.TextFileRegionProvider</value>
     <description>
-        The class that is used to load information about blocks stored in
-        provided storages.
-        org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TextFileRegionProvider
-        is used as the default, which expects the blocks to be specified
-        using a delimited text file.
+      The class that is used to load information about blocks stored in
+      provided storages.
+      org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TextFileRegionProvider
+      is used as the default, which expects the blocks to be specified
+      using a delimited text file.
     </description>
   </property>
 
@@ -4637,7 +4653,7 @@
     <name>dfs.provided.df.class</name>
     <value>org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.DefaultProvidedVolumeDF</value>
     <description>
-        The class that is used to measure usage statistics of provided stores.
+      The class that is used to measure usage statistics of provided stores.
     </description>
   </property>
 
@@ -4645,7 +4661,7 @@
     <name>dfs.provided.storage.id</name>
     <value>DS-PROVIDED</value>
     <description>
-        The storage ID used for provided stores.
+      The storage ID used for provided stores.
     </description>
   </property>
 

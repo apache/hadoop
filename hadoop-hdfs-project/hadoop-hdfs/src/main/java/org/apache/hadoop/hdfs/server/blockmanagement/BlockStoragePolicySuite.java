@@ -82,6 +82,12 @@ public class BlockStoragePolicySuite {
         HdfsConstants.COLD_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.ARCHIVE}, StorageType.EMPTY_ARRAY,
         StorageType.EMPTY_ARRAY);
+    final byte providedId = HdfsConstants.PROVIDED_STORAGE_POLICY_ID;
+    policies[providedId] = new BlockStoragePolicy(providedId,
+      HdfsConstants.PROVIDED_STORAGE_POLICY_NAME,
+      new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
+      new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
+      new StorageType[]{StorageType.PROVIDED, StorageType.DISK});
     return new BlockStoragePolicySuite(hotId, policies);
   }
 
