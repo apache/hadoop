@@ -881,7 +881,7 @@ from placing its declaration on the command line.
     </property>
 
     <property>
-        <name>fs.s3a.server-side-encryption-key</name>
+        <name>fs.s3a.server-side-encryption.key</name>
         <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
         has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
         should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,

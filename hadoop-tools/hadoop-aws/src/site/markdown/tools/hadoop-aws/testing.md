@@ -270,7 +270,7 @@ source code tree, it is not going to get accidentally committed.
 ### Configuring S3a Encryption
 
 For S3a encryption tests to run correctly, the
-`fs.s3a.server-side-encryption-key` must be configured in the s3a contract xml
+`fs.s3a.server-side-encryption.key` must be configured in the s3a contract xml
 file with a AWS KMS encryption key arn as this value is different for each AWS
 KMS.
 
@@ -278,7 +278,7 @@ Example:
 
 ```xml
 <property>
-  <name>fs.s3a.server-side-encryption-key</name>
+  <name>fs.s3a.server-side-encryption.key</name>
   <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
 </property>
 ```

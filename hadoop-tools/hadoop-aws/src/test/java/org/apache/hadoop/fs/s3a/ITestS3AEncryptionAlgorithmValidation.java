@@ -91,7 +91,7 @@ public class ITestS3AEncryptionAlgorithmValidation
   public void testEncryptionAlgorithmSSECWithBlankEncryptionKey() throws
     Throwable {
     expectedException.expect(IOException.class);
-    expectedException.expectMessage(Constants.SSE_C_NO_KEY_ERROR);
+    expectedException.expectMessage(S3AUtils.SSE_C_NO_KEY_ERROR);
 
     Configuration conf = super.createConfiguration();
     //SSE-C must be configured with an encryption key
@@ -115,7 +115,7 @@ public class ITestS3AEncryptionAlgorithmValidation
   public void testEncryptionAlgorithmSSES3WithEncryptionKey() throws
     Throwable {
     expectedException.expect(IOException.class);
-    expectedException.expectMessage(Constants.SSE_S3_WITH_KEY_ERROR);
+    expectedException.expectMessage(S3AUtils.SSE_S3_WITH_KEY_ERROR);
 
     Configuration conf = super.createConfiguration();
     //SSE-S3 cannot be configured with an encryption key

@@ -33,6 +33,9 @@ public enum S3AEncryptionMethods {
   SSE_C("SSE-C"),
   NONE("");
 
+  static final String UNKNOWN_ALGORITHM
+      = "Unknown Server Side Encryption algorithm ";
+
   private String method;
 
   S3AEncryptionMethods(String method) {
@@ -43,6 +46,13 @@ public enum S3AEncryptionMethods {
     return method;
   }
 
+
+  /**
+   * Get the encryption mechanism from the value provided.
+   * @param name algorithm name
+   * @return the method
+   * @throws IOException if the algorithm is unknown
+   */
   public static S3AEncryptionMethods getMethod(String name) throws IOException {
     if(StringUtils.isBlank(name)) {
       return NONE;
@@ -55,7 +65,8 @@ public enum S3AEncryptionMethods {
     case "SSE-C":
       return SSE_C;
     default:
-      throw new IOException("Unknown Server Side algorithm "+name);
+      throw new IOException(UNKNOWN_ALGORITHM + name);
     }
   }
+
 }

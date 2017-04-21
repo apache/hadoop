@@ -230,18 +230,30 @@ public final class Constants {
    * Different implementations may support others (or none).
    * Use the S3AEncryptionMethods instead when configuring
    * which Server Side Encryption to use.
+   * Value: "{@value}".
    */
   @Deprecated
   public static final String SERVER_SIDE_ENCRYPTION_AES256 =
       "AES256";
 
   /**
-   *  Used to specify which AWS KMS key to use if
-   *  SERVER_SIDE_ENCRYPTION_ALGORITHM is AWS_KMS (will default to aws/s3
-   *  master key if left blank) or with SSE_C, the actual AES 256 key.
+   * Used to specify which AWS KMS key to use if
+   * {@link #SERVER_SIDE_ENCRYPTION_ALGORITHM} is
+   * {@code SSE-KMS} (will default to aws/s3
+   * master key if left blank).
+   * With with {@code SSE_C}, the base-64 encoded AES 256 key.
+   * May be set within a JCEKS file.
+   * Value: "{@value}".
    */
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
-      "fs.s3a.server-side-encryption-key";
+      "fs.s3a.server-side-encryption.key";
+
+  /**
+   * The original key name. Never used in ASF releases,
+   * but did get into downstream products.
+   */
+  static final String OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY
+      = "fs.s3a.server-side-encryption-key";
 
   //override signature algorithm used for signing requests
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
@@ -313,12 +325,4 @@ public final class Constants {
   @InterfaceAudience.Private
   public static final int MAX_MULTIPART_COUNT = 10000;
 
-  @InterfaceAudience.Private
-  public static final String SSE_C_NO_KEY_ERROR = S3AEncryptionMethods.SSE_C
-      .getMethod() +" is enabled and no encryption key is provided.";
-
-
-  @InterfaceAudience.Private
-  public static final String SSE_S3_WITH_KEY_ERROR = S3AEncryptionMethods.SSE_S3
-      .getMethod() +" is configured and an " + "encryption key is provided";
 }
