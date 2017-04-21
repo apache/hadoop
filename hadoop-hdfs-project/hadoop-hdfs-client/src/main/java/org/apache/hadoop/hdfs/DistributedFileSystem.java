@@ -201,6 +201,15 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Returns the hedged read metrics object for this client.
+   *
+   * @return object of DFSHedgedReadMetrics
+   */
+  public DFSHedgedReadMetrics getHedgedReadMetrics() {
+    return dfs.getHedgedReadMetrics();
+  }
+
+  /**
    * Checks that the passed URI belongs to this filesystem and returns
    * just the path component. Expects a URI with an absolute path.
    *

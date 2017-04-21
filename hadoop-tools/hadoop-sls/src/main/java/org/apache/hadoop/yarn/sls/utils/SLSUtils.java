@@ -149,4 +149,13 @@ public class SLSUtils {
     }
     return nodeSet;
   }
+
+  public static Set<? extends String> generateNodesFromSynth(
+      int numNodes, int nodesPerRack) {
+    Set<String> nodeSet = new HashSet<String>();
+    for (int i = 0; i < numNodes; i++) {
+      nodeSet.add("/rack" + i % nodesPerRack + "/node" + i);
+    }
+    return nodeSet;
+  }
 }

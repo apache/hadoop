@@ -46,6 +46,7 @@ public class TestRMDispatcher {
     YarnConfiguration conf = new YarnConfiguration();
     EventDispatcher schedulerDispatcher =
         new EventDispatcher(sched, sched.getClass().getName());
+    schedulerDispatcher.disableExitOnError();
     rmDispatcher.register(SchedulerEventType.class, schedulerDispatcher);
     rmDispatcher.init(conf);
     rmDispatcher.start();

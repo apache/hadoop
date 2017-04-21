@@ -169,6 +169,35 @@ extern  "C" {
     LIBHDFS_EXTERNAL
     void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats);
 
+    struct hdfsHedgedReadMetrics {
+      uint64_t hedgedReadOps;
+      uint64_t hedgedReadOpsWin;
+      uint64_t hedgedReadOpsInCurThread;
+    };
+
+    /**
+     * Get cluster wide hedged read metrics.
+     *
+     * @param fs       The configured filesystem handle
+     * @param metrics  (out parameter) on a successful return, the hedged read
+     *                 metrics. Unchanged otherwise. You must free the returned
+     *                 statistics with hdfsFreeHedgedReadMetrics.
+     * @return         0 if the metrics were successfully returned, -1 otherwise.
+     *                 On a failure, please check errno against
+     *                 ENOTSUP. webhdfs, LocalFilesystem, and so forth may
+     *                 not support hedged read metrics.
+     */
+    LIBHDFS_EXTERNAL
+    int hdfsGetHedgedReadMetrics(hdfsFS fs, struct hdfsHedgedReadMetrics **metrics);
+
+    /**
+     * Free HDFS Hedged read metrics.
+     *
+     * @param metrics  The HDFS Hedged read metrics to free
+     */
+    LIBHDFS_EXTERNAL
+    void hdfsFreeHedgedReadMetrics(struct hdfsHedgedReadMetrics *metrics);
+
     /** 
      * hdfsConnectAsUser - Connect to a hdfs file system as a specific user
      * Connect to the hdfs.

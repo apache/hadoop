@@ -20,7 +20,7 @@
   <tbody>
     <tr>
       <td>Application Attempt Id</td>
-      <td>{{attempt.id}}</td>
+      <td title="{{attempt.id}}">{{attempt.id}}</td>
     </tr>
     <tr>
       <td>Started Time</td>
@@ -38,11 +38,11 @@
     </tr>
     <tr>
       <td>AM Container Id</td>
-      <td>{{attempt.appMasterContainerId}}</td>
+      <td title="{{attempt.appMasterContainerId}}">{{attempt.appMasterContainerId}}</td>
     </tr>
     <tr>
       <td>AM Node Id</td>
-      <td>{{attempt.amNodeId}}</td>
+      <td title="{{attempt.amNodeId}}">{{attempt.amNodeId}}</td>
     </tr>
     {{#if attempt.attemptState}}
     <tr>
@@ -53,7 +53,7 @@
     {{#if attempt.nodeHttpAddress}}
     <tr>
       <td>AM Node Web UI</td>
-      <td><a href="{{prepend-protocol attempt.nodeHttpAddress}}" target="_blank">{{attempt.nodeHttpAddress}}</a></td>
+      <td title="{{attempt.nodeHttpAddress}}"><a href="{{prepend-protocol attempt.nodeHttpAddress}}" target="_blank">{{attempt.nodeHttpAddress}}</a></td>
     </tr>
     {{/if}}
     {{#if attempt.logsLink}}

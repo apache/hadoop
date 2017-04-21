@@ -68,6 +68,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
     super(context, exec, deletionContext, nodeStatusUpdater, metrics,
         dirsHandler);
+    dispatcher.disableExitOnDispatchException();
   }
 
   @Override

@@ -27,9 +27,11 @@ Yarn Scheduler Load Simulator (SLS)
     * [Metrics](#Metrics)
         * [Real-time Tracking](#Real-time_Tracking)
         * [Offline Analysis](#Offline_Analysis)
+    * [Synthetic Load Generator](#SynthGen)
     * [Appendix](#Appendix)
         * [Resources](#Resources)
         * [SLS JSON input file format](#SLS_JSON_input_file_format)
+        * [SYNTH JSON input file format](#SYNTH_JSON_input_file_format)
         * [Simulator input topology file format](#Simulator_input_topology_file_format)
 
 Overview
@@ -72,7 +74,7 @@ The following figure illustrates the implementation architecture of the simulato
 
 ![The architecture of the simulator](images/sls_arch.png)
 
-The simulator takes input of workload traces, and fetches the cluster and applications information. For each NM and AM, the simulator builds a simulator to simulate their running. All NM/AM simulators run in a thread pool. The simulator reuses Yarn Resource Manager, and builds a wrapper out of the scheduler. The Scheduler Wrapper can track the scheduler behaviors and generates several logs, which are the outputs of the simulator and can be further analyzed.
+The simulator takes input of workload traces, or synthetic load distributions and generaters the cluster and applications information. For each NM and AM, the simulator builds a simulator to simulate their running. All NM/AM simulators run in a thread pool. The simulator reuses Yarn Resource Manager, and builds a wrapper out of the scheduler. The Scheduler Wrapper can track the scheduler behaviors and generates several logs, which are the outputs of the simulator and can be further analyzed.
 
 ### Usecases
 
@@ -97,7 +99,7 @@ This section will show how to use the simulator. Here let `$HADOOP_ROOT` represe
 
 *   `bin`: contains running scripts for the simulator.
 
-*   `html`: contains several html/css/js files we needed for real-time tracking.
+*   `html`: Users can also reproduce those real-time tracking charts in offline mode. Just upload the `realtimetrack.json` to `$HADOOP_ROOT/share/hadoop/tools/sls/html/showSimulationTrace.html`. For browser security problem, need to put files `realtimetrack.json` and `showSimulationTrace.html` in the same directory.
 
 *   `sample-conf`: specifies the simulator configurations.
 
@@ -179,17 +181,30 @@ The simulator supports two types of input files: the rumen traces and its own in
 
     $ cd $HADOOP_ROOT/share/hadoop/tools/sls
     $ bin/slsrun.sh
-      --input-rumen |--input-sls=<TRACE_FILE1,TRACE_FILE2,...>
-      --output-dir=<SLS_SIMULATION_OUTPUT_DIRECTORY> [--nodes=<SLS_NODES_FILE>]
-        [--track-jobs=<JOBID1,JOBID2,...>] [--print-simulation]
+      Usage: slsrun.sh <OPTIONS>
+                 --tracetype=<SYNTH | SLS | RUMEN>
+                 --tracelocation=<FILE1,FILE2,...>
+                 (deprecated --input-rumen=<FILE1,FILE2,...>  | --input-sls=<FILE1,FILE2,...>)
+                 --output-dir=<SLS_SIMULATION_OUTPUT_DIRECTORY>
+                 [--nodes=<SLS_NODES_FILE>]
+                 [--track-jobs=<JOBID1,JOBID2,...>]
+                 [--print-simulation]
+
 
 *   `--input-rumen`: The input rumen trace files. Users can input multiple
     files, separated by comma. One example trace is provided in
     `$HADOOP_ROOT/share/hadoop/tools/sls/sample-data/2jobs2min-rumen-jh.json`.
+    This is equivalent to `--tracetype=RUMEN --tracelocation=<path_to_trace>`.
 
 *   `--input-sls`: Simulator its own file format. The simulator also
     provides a tool to convert rumen traces to sls traces (`rumen2sls.sh`).
     Refer to appendix for an example of sls input json file.
+    This is equivalent to `--tracetype=SLS --tracelocation=<path_to_trace>`.
+
+*   `--tracetype`: This is the new way to configure the trace generation and
+    takes values RUMEN, SLS, or SYNTH, to trigger the three type of load generation
+
+*   `--tracelocation`: Path to the input file, matching the tracetype above.
 
 *   `--output-dir`: The output directory for generated running logs and
     metrics.
@@ -281,12 +296,32 @@ After the simulator finishes, all logs are saved in the output directory specifi
 
 Users can also reproduce those real-time tracking charts in offline mode. Just upload the `realtimetrack.json` to `$HADOOP_ROOT/share/hadoop/tools/sls/html/showSimulationTrace.html`. For browser security problem, need to put files `realtimetrack.json` and `showSimulationTrace.html` in the same directory.
 
+
+Synthetic Load Generator
+------------------------
+The Synthetic Load Generator complements the extensive nature of SLS-native and RUMEN traces, by providing a
+distribution-driven generation of load. The load generator is organized as a JobStoryProducer
+(compatible with rumen, and thus gridmix for later integration). We seed the Random number generator so
+that results randomized but deterministic---hence reproducible.
+We organize the jobs being generated around */workloads/job_class* hierarchy, which allow to easily
+group jobs with similar behaviors and categorize them (e.g., jobs with long running containers, or maponly
+computations, etc..). The user can control average and standard deviations for many of the
+important parameters, such as number of mappers/reducers, duration of mapper/reducers, size
+(mem/cpu) of containers, chance of reservation, etc. We use weighted-random sampling (whenever we
+pick among a small number of options) or LogNormal distributions (to avoid negative values) when we
+pick from wide ranges of values---see appendix on LogNormal distributions.
+
+The SYNTH mode of SLS is very convenient to generate very large loads without the need for extensive input
+files. This allows to easily explore wide range of use cases (e.g., imagine simulating 100k jobs, and in different
+runs simply tune the average number of mappers, or average task duration), in an efficient and compact way.
+
 Appendix
 --------
 
 ### Resources
 
 [YARN-1021](https://issues.apache.org/jira/browse/YARN-1021) is the main JIRA that introduces Yarn Scheduler Load Simulator to Hadoop Yarn project.
+[YARN-6363](https://issues.apache.org/jira/browse/YARN-6363) is the main JIRA that introduces the Synthetic Load Generator to SLS.
 
 ### SLS JSON input file format
 
@@ -341,6 +376,77 @@ Here we provide an example format of the sls json file, which contains 2 jobs. T
       } ]
     }
 
+
+### SYNTH JSON input file format
+Here we provide an example format of the synthetic generator json file. We use *(json-non-conforming)* inline comments to explain the use of each parameter.
+
+    {
+      "description" : "tiny jobs workload",    //description of the meaning of this collection of workloads
+      "num_nodes" : 10,  //total nodes in the simulated cluster
+      "nodes_per_rack" : 4, //number of nodes in each simulated rack
+      "num_jobs" : 10, // total number of jobs being simulated
+      "rand_seed" : 2, //the random seed used for deterministic randomized runs
+
+      // a list of “workloads”, each of which has job classes, and temporal properties
+      "workloads" : [
+        {
+          "workload_name" : "tiny-test", // name of the workload
+          "workload_weight": 0.5,  // used for weighted random selection of which workload to sample from
+          "queue_name" : "sls_queue_1", //queue the job will be submitted to
+
+        //different classes of jobs for this workload
+           "job_classes" : [
+            {
+              "class_name" : "class_1", //name of the class
+              "class_weight" : 1.0, //used for weighted random selection of class within workload
+
+              //nextr group controls average and standard deviation of a LogNormal distribution that
+              //determines the number of mappers and reducers for thejob.
+              "mtasks_avg" : 5,
+              "mtasks_stddev" : 1,
+              "rtasks_avg" : 5,
+              "rtasks_stddev" : 1,
+
+              //averge and stdev input param of LogNormal distribution controlling job duration
+              "dur_avg" : 60,
+              "dur_stddev" : 5,
+
+              //averge and stdev input param of LogNormal distribution controlling mappers and reducers durations
+              "mtime_avg" : 10,
+              "mtime_stddev" : 2,
+              "rtime_avg" : 20,
+              "rtime_stddev" : 4,
+
+              //averge and stdev input param of LogNormal distribution controlling memory and cores for map and reduce
+              "map_max_memory_avg" : 1024,
+              "map_max_memory_stddev" : 0.001,
+              "reduce_max_memory_avg" : 2048,
+              "reduce_max_memory_stddev" : 0.001,
+              "map_max_vcores_avg" : 1,
+              "map_max_vcores_stddev" : 0.001,
+              "reduce_max_vcores_avg" : 2,
+              "reduce_max_vcores_stddev" : 0.001,
+
+              //probability of running this job with a reservation
+              "chance_of_reservation" : 0.5,
+              //input parameters of LogNormal distribution that determines the deadline slack (as a multiplier of job duration)
+              "deadline_factor_avg" : 10.0,
+              "deadline_factor_stddev" : 0.001,
+            }
+           ],
+        // for each workload determines with what probability each time bucket is picked to choose the job starttime.
+        // In the example below the jobs have twice as much chance to start in the first minute than in the second minute
+        // of simulation, and then zero chance thereafter.
+          "time_distribution" : [
+            { "time" : 1, "weight" : 66 },
+            { "time" : 60, "weight" : 33 },
+            { "time" : 120, "jobs" : 0 }
+         ]
+        }
+     ]
+    }
+
+
 ### Simulator input topology file format
 
 Here is an example input topology file which has 3 nodes organized in 1 rack.
@@ -355,3 +461,9 @@ Here is an example input topology file which has 3 nodes organized in 1 rack.
         "node" : "node3"
       }]
     }
+
+### Notes on LogNormal distribution:
+LogNormal distributions represent well many of the parameters we see in practice (e.g., most jobs have
+a small number of mappers, but few might be very large, and few very small, but greater than zero. It is
+however worth noticing that it might be tricky to use, as the average is typically on the right side of the
+peak (most common value) of the distribution, because the distribution has a one-side tail.

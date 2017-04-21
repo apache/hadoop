@@ -76,6 +76,22 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+      <directory>src/main/</directory>
+      <includes>
+        <include>html/simulate.html.template</include>
+        <include>html/simulate.info.html.template</include>
+        <include>html/track.html.template</include>
+        <include>html/css/bootstrap-responsive.min.css</include>
+        <include>html/css/bootstrap.min.css</include>
+        <include>html/js/thirdparty/bootstrap.min.js</include>
+        <include>html/js/thirdparty/d3.v3.js</include>
+        <include>html/js/thirdparty/d3-LICENSE</include>
+        <include>html/js/thirdparty/jquery.js</include>
+      </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -116,6 +132,9 @@
             <exclude>src/test/resources/simulate.html.template</exclude>
             <exclude>src/test/resources/simulate.info.html.template</exclude>
             <exclude>src/test/resources/track.html.template</exclude>
+            <exclude>src/test/resources/syn.json</exclude>
+            <exclude>src/test/resources/inputsls.json</exclude>
+            <exclude>src/test/resources/nodes.json</exclude>
           </excludes>
         </configuration>
       </plugin>

@@ -990,6 +990,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return false;
   }
 
+  @Override
+  public void reportException(Exception ex) {
+    healthChecker.reportException(ex);
+    sendOutofBandHeartBeat();
+  }
+
   private List<LogAggregationReport> getLogAggregationReportsForApps(
       ConcurrentLinkedQueue<LogAggregationReport> lastestLogAggregationStatus) {
     LogAggregationReport status;

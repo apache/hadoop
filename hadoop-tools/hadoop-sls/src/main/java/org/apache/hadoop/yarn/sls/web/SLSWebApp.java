@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.sls.web;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.text.MessageFormat;
@@ -31,7 +30,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -39,17 +38,17 @@ import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
+
 import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
-
+import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.ResourceHandler;
 
 @Private
 @Unstable
@@ -86,12 +85,12 @@ public class SLSWebApp extends HttpServlet {
     // load templates
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     try {
-      simulateInfoTemplate = FileUtils.readFileToString(new File(
-              cl.getResource("simulate.info.html.template").getFile()));
-      simulateTemplate = FileUtils.readFileToString(new File(
-              cl.getResource("simulate.html.template").getFile()));
-      trackTemplate = FileUtils.readFileToString(new File(
-              cl.getResource("track.html.template").getFile()));
+      simulateInfoTemplate = IOUtils.toString(
+          cl.getResourceAsStream("html/simulate.info.html.template"));
+      simulateTemplate = IOUtils.toString(
+          cl.getResourceAsStream("html/simulate.html.template"));
+      trackTemplate = IOUtils.toString(
+          cl.getResourceAsStream("html/track.html.template"));
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -107,20 +106,20 @@ public class SLSWebApp extends HttpServlet {
 
   public SLSWebApp(SchedulerWrapper wrapper, int metricsAddressPort) {
     this.wrapper = wrapper;
-    handleOperTimecostHistogramMap =
-            new HashMap<SchedulerEventType, Histogram>();
-    queueAllocatedMemoryCounterMap = new HashMap<String, Counter>();
-    queueAllocatedVCoresCounterMap = new HashMap<String, Counter>();
+    handleOperTimecostHistogramMap = new HashMap<>();
+    queueAllocatedMemoryCounterMap = new HashMap<>();
+    queueAllocatedVCoresCounterMap = new HashMap<>();
     schedulerMetrics = wrapper.getSchedulerMetrics();
     metrics = schedulerMetrics.getMetrics();
     port = metricsAddressPort;
   }
 
   public void start() throws Exception {
-    // static files
     final ResourceHandler staticHandler = new ResourceHandler();
     staticHandler.setMimeTypes(new MimeTypes());
-    staticHandler.setResourceBase("html");
+    String webRootDir = getClass().getClassLoader().getResource("html").
+        toExternalForm();
+    staticHandler.setResourceBase(webRootDir);
 
     Handler handler = new AbstractHandler() {
       @Override

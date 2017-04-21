@@ -649,19 +649,21 @@ static int create_container_directories(const char* user, const char *app_id,
     const char *container_id, char* const* local_dir, char* const* log_dir, const char *work_dir) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
-  if (app_id == NULL || container_id == NULL || user == NULL || user_detail == NULL || user_detail->pw_name == NULL) {
+  if (user == NULL || app_id == NULL || container_id == NULL ||
+      local_dir == NULL || log_dir == NULL || work_dir == NULL ||
+      user_detail == NULL || user_detail->pw_name == NULL) {
     fprintf(LOGFILE,
             "Either app_id, container_id or the user passed is null.\n");
-    return -1;
+    return ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS;
   }
 
-  int result = -1;
+  int result = COULD_NOT_CREATE_WORK_DIRECTORIES;
   char* const* local_dir_ptr;
   for(local_dir_ptr = local_dir; *local_dir_ptr != NULL; ++local_dir_ptr) {
     char *container_dir = get_container_work_directory(*local_dir_ptr, user, app_id,
                                                 container_id);
     if (container_dir == NULL) {
-      return -1;
+      return OUT_OF_MEMORY;
     }
     if (mkdirs(container_dir, perms) == 0) {
       result = 0;
@@ -674,12 +676,12 @@ static int create_container_directories(const char* user, const char *app_id,
     return result;
   }
 
-  result = -1;
+  result = COULD_NOT_CREATE_APP_LOG_DIRECTORIES;
   // also make the directory for the container logs
   char *combined_name = malloc(strlen(app_id) + strlen(container_id) + 2);
   if (combined_name == NULL) {
     fprintf(LOGFILE, "Malloc of combined name failed\n");
-    result = -1;
+    result = OUT_OF_MEMORY;
   } else {
     sprintf(combined_name, "%s/%s", app_id, container_id);
 
@@ -688,7 +690,7 @@ static int create_container_directories(const char* user, const char *app_id,
       char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
       if (container_log_dir == NULL) {
         free(combined_name);
-        return -1;
+        return OUT_OF_MEMORY;
       } else if (mkdirs(container_log_dir, perms) != 0) {
     	free(container_log_dir);
       } else {
@@ -703,12 +705,12 @@ static int create_container_directories(const char* user, const char *app_id,
     return result;
   }
 
-  result = -1;
+  result = COULD_NOT_CREATE_TMP_DIRECTORIES;
   // also make the tmp directory
   char *tmp_dir = get_tmp_directory(work_dir);
 
   if (tmp_dir == NULL) {
-    return -1;
+    return OUT_OF_MEMORY;
   }
   if (mkdirs(tmp_dir, perms) == 0) {
     result = 0;
@@ -1149,12 +1151,12 @@ char* parse_docker_command_file(const char* command_file) {
    fprintf(ERRORFILE, "Cannot open file %s - %s",
                  command_file, strerror(errno));
    fflush(ERRORFILE);
-   exit(ERROR_OPENING_FILE);
+   exit(ERROR_OPENING_DOCKER_FILE);
   }
   if ((read = getline(&line, &len, stream)) == -1) {
      fprintf(ERRORFILE, "Error reading command_file %s\n", command_file);
      fflush(ERRORFILE);
-     exit(ERROR_READING_FILE);
+     exit(ERROR_READING_DOCKER_FILE);
   }
   fclose(stream);
 
@@ -1267,25 +1269,27 @@ int create_local_dirs(const char * user, const char *app_id,
   // Create container specific directories as user. If there are no resources
   // to localize for this container, app-directories and log-directories are
   // also created automatically as part of this call.
-  if (create_container_directories(user, app_id, container_id, local_dirs,
-                                   log_dirs, work_dir) != 0) {
+  int directory_create_result = create_container_directories(user, app_id,
+    container_id, local_dirs, log_dirs, work_dir);
+  if (directory_create_result != 0) {
     fprintf(ERRORFILE, "Could not create container dirs");
     fflush(ERRORFILE);
+    exit_code = directory_create_result;
     goto cleanup;
   }
 
-  // 700
+  // Copy script file with permissions 700
   if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
     fprintf(ERRORFILE, "Could not create copy file %d %s\n", container_file_source, script_file_dest);
     fflush(ERRORFILE);
-    exit_code = INVALID_COMMAND_PROVIDED;
+    exit_code = COULD_NOT_CREATE_SCRIPT_COPY;
     goto cleanup;
   }
 
-  // 600
+  // Copy credential file to permissions 600
   if (copy_file(cred_file_source, cred_file, cred_file_dest,
         S_IRUSR | S_IWUSR) != 0) {
-    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    exit_code = COULD_NOT_CREATE_CREDENTIALS_FILE;
     fprintf(ERRORFILE, "Could not copy file");
     fflush(ERRORFILE);
     goto cleanup;
@@ -1870,7 +1874,7 @@ static int delete_path(const char *full_path,
   /* Return an error if the path is null. */
   if (full_path == NULL) {
     fprintf(LOGFILE, "Path is null\n");
-    return UNABLE_TO_BUILD_PATH;
+    return PATH_TO_DELETE_IS_NULL;
   }
   ret = recursive_unlink_children(full_path);
   if (ret == ENOENT) {

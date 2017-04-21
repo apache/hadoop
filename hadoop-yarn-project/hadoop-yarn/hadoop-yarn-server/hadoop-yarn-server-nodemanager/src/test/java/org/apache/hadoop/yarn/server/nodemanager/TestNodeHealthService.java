@@ -23,6 +23,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -165,8 +167,11 @@ public class TestNodeHealthService {
         healthStatus.getIsNodeHealthy());
     Assert.assertTrue("Node script time out message not propagated",
         healthStatus.getHealthReport().equals(
-            NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG
-            + NodeHealthCheckerService.SEPARATOR
-            + nodeHealthChecker.getDiskHandler().getDisksHealthReport(false)));
+            Joiner.on(NodeHealthCheckerService.SEPARATOR).skipNulls().join(
+                NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG,
+                Strings.emptyToNull(
+                    nodeHealthChecker.getDiskHandler()
+                        .getDisksHealthReport(false))
+            )));
   }
 }
