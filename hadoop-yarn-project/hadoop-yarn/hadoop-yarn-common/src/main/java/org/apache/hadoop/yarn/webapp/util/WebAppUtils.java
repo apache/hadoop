@@ -379,11 +379,18 @@ public class WebAppUtils {
    */
   public static HttpServer2.Builder loadSslConfiguration(
       HttpServer2.Builder builder, Configuration sslConf) {
+
+    boolean loadResource = false;
     if (sslConf == null) {
       sslConf = new Configuration(false);
+      loadResource = true;
+    } else {
+      loadResource = (sslConf.get("ssl.server.keystore.location") == null);
     }
     boolean needsClientAuth = YarnConfiguration.YARN_SSL_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
-    sslConf.addResource(YarnConfiguration.YARN_SSL_SERVER_RESOURCE_DEFAULT);
+    if (loadResource) {
+      sslConf.addResource(YarnConfiguration.YARN_SSL_SERVER_RESOURCE_DEFAULT);
+    }
 
     return builder
         .needsClientAuth(needsClientAuth)
