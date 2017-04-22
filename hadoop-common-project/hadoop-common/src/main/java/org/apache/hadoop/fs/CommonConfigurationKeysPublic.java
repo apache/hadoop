@@ -250,18 +250,43 @@ public class CommonConfigurationKeysPublic {
    * @deprecated Moved to mapreduce, see mapreduce.task.io.sort.mb
    * in mapred-default.xml
    * See https://issues.apache.org/jira/browse/HADOOP-6801
+   *
+   * For {@link org.apache.hadoop.io.SequenceFile.Sorter} control
+   * instead, see {@link #SEQ_IO_SORT_MB_KEY}.
    */
   public static final String  IO_SORT_MB_KEY = "io.sort.mb";
-  /** Default value for IO_SORT_MB_DEFAULT */
+  /** Default value for {@link #IO_SORT_MB_KEY}. */
   public static final int     IO_SORT_MB_DEFAULT = 100;
   /**
    * @deprecated Moved to mapreduce, see mapreduce.task.io.sort.factor
    * in mapred-default.xml
    * See https://issues.apache.org/jira/browse/HADOOP-6801
+   *
+   * For {@link org.apache.hadoop.io.SequenceFile.Sorter} control
+   * instead, see {@link #SEQ_IO_SORT_FACTOR_KEY}.
    */
   public static final String  IO_SORT_FACTOR_KEY = "io.sort.factor";
-  /** Default value for IO_SORT_FACTOR_DEFAULT */
+  /** Default value for {@link #IO_SORT_FACTOR_KEY}. */
   public static final int     IO_SORT_FACTOR_DEFAULT = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  SEQ_IO_SORT_MB_KEY = "seq.io.sort.mb";
+  /** Default value for {@link #SEQ_IO_SORT_MB_KEY}. */
+  public static final int     SEQ_IO_SORT_MB_DEFAULT = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  SEQ_IO_SORT_FACTOR_KEY = "seq.io.sort.factor";
+  /** Default value for {@link #SEQ_IO_SORT_FACTOR_KEY}. */
+  public static final int     SEQ_IO_SORT_FACTOR_DEFAULT = 100;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -512,6 +537,21 @@ public class CommonConfigurationKeysPublic {
    */
   public static final int
       HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS_DEFAULT = 3;
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS =
+      "hadoop.security.groups.shell.command.timeout";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final long
+          HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS_DEFAULT =
+          0L;
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -770,12 +810,15 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS =
       "hadoop.security.sensitive-config-keys";
   public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT =
-      "secret$" + "," +
-      "password$" + "," +
-      "ssl.keystore.pass$" + "," +
-      "fs.s3.*[Ss]ecret.?[Kk]ey" + "," +
-      "fs.azure\\.account.key.*" + "," +
-      "dfs.webhdfs.oauth2.[a-z]+.token" + "," +
-      HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
+      String.join(",",
+          "secret$",
+          "password$",
+          "ssl.keystore.pass$",
+          "fs.s3.*[Ss]ecret.?[Kk]ey",
+          "fs.s3a.*.server-side-encryption.key",
+          "fs.azure\\.account.key.*",
+          "credential$",
+          "oauth.*token$",
+          HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS);
 }
 

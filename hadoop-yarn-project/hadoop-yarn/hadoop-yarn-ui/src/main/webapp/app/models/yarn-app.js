@@ -59,10 +59,14 @@ export default DS.Model.extend({
 
   validatedFinishedTs: function() {
     if (this.get("finishedTime") < this.get("startTime")) {
-      return "";
+      return "N/A";
     }
     return this.get("finishedTime");
   }.property("finishedTime"),
+
+  formattedElapsedTime: function() {
+    return Converter.msToElapsedTimeUnit(this.get('elapsedTime'));
+  }.property('elapsedTime'),
 
   allocatedResource: function() {
     return Converter.resourceToString(this.get("allocatedMB"), this.get("allocatedVCores"));

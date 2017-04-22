@@ -2816,14 +2816,30 @@ public class SequenceFile {
     }
 
     /** Sort and merge using an arbitrary {@link RawComparator}. */
+    @SuppressWarnings("deprecation")
     public Sorter(FileSystem fs, RawComparator comparator, Class keyClass,
                   Class valClass, Configuration conf, Metadata metadata) {
       this.fs = fs;
       this.comparator = comparator;
       this.keyClass = keyClass;
       this.valClass = valClass;
-      this.memory = conf.getInt("io.sort.mb", 100) * 1024 * 1024;
-      this.factor = conf.getInt("io.sort.factor", 100);
+      // Remember to fall-back on the deprecated MB and Factor keys
+      // until they are removed away permanently.
+      if (conf.get(CommonConfigurationKeys.IO_SORT_MB_KEY) != null) {
+        this.memory = conf.getInt(CommonConfigurationKeys.IO_SORT_MB_KEY,
+          CommonConfigurationKeys.SEQ_IO_SORT_MB_DEFAULT) * 1024 * 1024;
+      } else {
+        this.memory = conf.getInt(CommonConfigurationKeys.SEQ_IO_SORT_MB_KEY,
+          CommonConfigurationKeys.SEQ_IO_SORT_MB_DEFAULT) * 1024 * 1024;
+      }
+      if (conf.get(CommonConfigurationKeys.IO_SORT_FACTOR_KEY) != null) {
+        this.factor = conf.getInt(CommonConfigurationKeys.IO_SORT_FACTOR_KEY,
+            CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_DEFAULT);
+      } else {
+        this.factor = conf.getInt(
+            CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY,
+            CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_DEFAULT);
+      }
       this.conf = conf;
       this.metadata = metadata;
     }

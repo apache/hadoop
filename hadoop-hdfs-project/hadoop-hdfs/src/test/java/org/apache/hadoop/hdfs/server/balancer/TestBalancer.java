@@ -46,7 +46,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBER
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -203,7 +202,7 @@ public class TestBalancer {
   }
 
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int dataBlocks = ecPolicy.getNumDataUnits();
   private final int parityBlocks = ecPolicy.getNumParityUnits();
   private final int groupSize = dataBlocks + parityBlocks;
@@ -1919,7 +1918,7 @@ public class TestBalancer {
   }
 
   private void doTestBalancerWithStripedFile(Configuration conf) throws Exception {
-    int numOfDatanodes = dataBlocks + parityBlocks + 2;
+    int numOfDatanodes = dataBlocks + parityBlocks + 3;
     int numOfRacks = dataBlocks;
     long capacity = 20 * defaultBlockSize;
     long[] capacities = new long[numOfDatanodes];
@@ -1930,6 +1929,8 @@ public class TestBalancer {
     for (int i = 0; i < numOfDatanodes; i++) {
       racks[i] = "/rack" + (i % numOfRacks);
     }
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .racks(racks)
@@ -1940,7 +1941,8 @@ public class TestBalancer {
       cluster.waitActive();
       client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
-      client.setErasureCodingPolicy("/", null);
+      client.setErasureCodingPolicy("/",
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       long totalCapacity = sum(capacities);
 
@@ -1954,11 +1956,12 @@ public class TestBalancer {
       LocatedBlocks locatedBlocks = client.getBlockLocations(fileName, 0, fileLen);
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks, groupSize);
 
-      // add one datanode
+      // add datanodes in new rack
       String newRack = "/rack" + (++numOfRacks);
-      cluster.startDataNodes(conf, 1, true, null,
-          new String[]{newRack}, null, new long[]{capacity});
-      totalCapacity += capacity;
+      cluster.startDataNodes(conf, 2, true, null,
+          new String[]{newRack, newRack}, null,
+          new long[]{capacity, capacity});
+      totalCapacity += capacity*2;
       cluster.triggerHeartbeats();
 
       // run balancer and validate results

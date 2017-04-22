@@ -115,9 +115,9 @@ function hadoop_verify_entry
   [[ ${!1} =~ \ ${2}\  ]]
 }
 
-## @description  Check if we are running with privilege
+## @description  Check if we are running with priv
 ## @description  by default, this implementation looks for
-## @description  EUID=0.  For OSes that have true privilege
+## @description  EUID=0.  For OSes that have true priv
 ## @description  separation, this should be something more complex
 ## @audience     private
 ## @stability    evolving
@@ -144,16 +144,13 @@ function hadoop_su
 {
   declare user=$1
   shift
-  declare idret
 
   if hadoop_privilege_check; then
-    id -u "${user}" >/dev/null 2>&1
-    idret=$?
-    if [[ ${idret} != 0 ]]; then
+    if hadoop_verify_user_resolves user; then
+       su -l "${user}" -- "$@"
+    else
       hadoop_error "ERROR: Refusing to run as root: ${user} account is not found. Aborting."
       return 1
-    else
-      su -l "${user}" -- "$@"
     fi
   else
     "$@"
@@ -194,15 +191,23 @@ function hadoop_uservar_su
   declare uprogram
   declare ucommand
   declare uvar
+  declare svar
 
   if hadoop_privilege_check; then
-    uvar=$(hadoop_get_verify_uservar "${program}" "${command}")
+    uvar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" USER)
+
+    svar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" SECURE_USER)
 
     if [[ -n "${!uvar}" ]]; then
       hadoop_su "${!uvar}" "$@"
+    elif [[ -n "${!svar}" ]]; then
+      ## if we are here, then SECURE_USER with no USER defined
+      ## we are already privileged, so just run the command and hope
+      ## for the best
+      "$@"
     else
-      hadoop_error "ERROR: Attempting to launch ${program} ${command} as root"
-      hadoop_error "ERROR: but there is no ${uvar} defined. Aborting launch."
+      hadoop_error "ERROR: Attempting to operate on ${program} ${command} as root"
+      hadoop_error "ERROR: but there is no ${uvar} defined. Aborting operation."
       return 1
     fi
   else
@@ -477,8 +482,10 @@ function hadoop_bootstrap
   # by default, we have not been self-re-execed
   HADOOP_REEXECED_CMD=false
 
-  # shellcheck disable=SC2034
   HADOOP_SUBCMD_SECURESERVICE=false
+
+  # This is the default we claim in hadoop-env.sh
+  JSVC_HOME=${JSVC_HOME:-"/usr/bin"}
 
   # usage output set to zero
   hadoop_reset_usage
@@ -533,7 +540,7 @@ function hadoop_exec_hadoopenv
   if [[ -z "${HADOOP_ENV_PROCESSED}" ]]; then
     if [[ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]]; then
       export HADOOP_ENV_PROCESSED=true
-      # shellcheck disable=SC1090
+      # shellcheck source=./hadoop-common-project/hadoop-common/src/main/conf/hadoop-env.sh
       . "${HADOOP_CONF_DIR}/hadoop-env.sh"
     fi
   fi
@@ -789,10 +796,8 @@ function hadoop_populate_workers_file
   local workersfile=$1
   shift
   if [[ -f "${workersfile}" ]]; then
-    # shellcheck disable=2034
     HADOOP_WORKERS="${workersfile}"
   elif [[ -f "${HADOOP_CONF_DIR}/${workersfile}" ]]; then
-    # shellcheck disable=2034
     HADOOP_WORKERS="${HADOOP_CONF_DIR}/${workersfile}"
   else
     hadoop_error "ERROR: Cannot find hosts file \"${workersfile}\""
@@ -2128,16 +2133,47 @@ function hadoop_secure_daemon_handler
   esac
 }
 
-## @description  Get the environment variable used to validate users
+## @description autodetect whether this is a priv subcmd
+## @description by whether or not a priv user var exists
+## @description and if HADOOP_SECURE_CLASSNAME is defined
 ## @audience     public
 ## @stability    stable
 ## @replaceable  yes
+## @param        command
 ## @param        subcommand
-## @return       string
-function hadoop_get_verify_uservar
+## @return       1 = not priv
+## @return       0 = priv
+function hadoop_detect_priv_subcmd
 {
   declare program=$1
   declare command=$2
+
+  if [[ -z "${HADOOP_SECURE_CLASSNAME}" ]]; then
+    hadoop_debug "No secure classname defined."
+    return 1
+  fi
+
+  uvar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" SECURE_USER)
+  if [[ -z "${!uvar}" ]]; then
+    hadoop_debug "No secure user defined."
+    return 1
+  fi
+  return 0
+}
+
+## @description  Build custom subcommand var
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        command
+## @param        subcommand
+## @param        customid
+## @return       string
+function hadoop_build_custom_subcmd_var
+{
+  declare program=$1
+  declare command=$2
+  declare custom=$3
   declare uprogram
   declare ucommand
 
@@ -2150,7 +2186,25 @@ function hadoop_get_verify_uservar
     ucommand=${command^^}
   fi
 
-  echo "${uprogram}_${ucommand}_USER"
+  echo "${uprogram}_${ucommand}_${custom}"
+}
+
+## @description  Verify that username in a var converts to user id
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        userstring
+## @return       0 for success
+## @return       1 for failure
+function hadoop_verify_user_resolves
+{
+  declare userstr=$1
+
+  if [[ -z ${userstr} || -z ${!userstr} ]] ; then
+    return 1
+  fi
+
+  id -u "${!userstr}" >/dev/null 2>&1
 }
 
 ## @description  Verify that ${USER} is allowed to execute the
@@ -2162,13 +2216,13 @@ function hadoop_get_verify_uservar
 ## @param        subcommand
 ## @return       return 0 on success
 ## @return       exit 1 on failure
-function hadoop_verify_user
+function hadoop_verify_user_perm
 {
   declare program=$1
   declare command=$2
   declare uvar
 
-  uvar=$(hadoop_get_verify_uservar "${program}" "${command}")
+  uvar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" USER)
 
   if [[ -n ${!uvar} ]]; then
     if [[ ${!uvar} !=  "${USER}" ]]; then
@@ -2204,7 +2258,7 @@ function hadoop_need_reexec
   # otherwise no, don't re-exec and let the system deal with it.
 
   if hadoop_privilege_check; then
-    uvar=$(hadoop_get_verify_uservar "${program}" "${command}")
+    uvar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" USER)
     if [[ -n ${!uvar} ]]; then
       if [[ ${!uvar} !=  "${USER}" ]]; then
         return 0
@@ -2217,7 +2271,7 @@ function hadoop_need_reexec
 ## @description  Add custom (program)_(command)_OPTS to HADOOP_OPTS.
 ## @description  Also handles the deprecated cases from pre-3.x.
 ## @audience     public
-## @stability    stable
+## @stability    evolving
 ## @replaceable  yes
 ## @param        program
 ## @param        subcommand
@@ -2238,6 +2292,10 @@ function hadoop_subcommand_opts
   # bash 4 and up have built-in ways to upper and lower
   # case the contents of vars.  This is faster than
   # calling tr.
+
+  ## We don't call hadoop_build_custom_subcmd_var here
+  ## since we need to construct this for the deprecation
+  ## cases. For Hadoop 4.x, this needs to get cleaned up.
 
   if [[ -z "${BASH_VERSINFO[0]}" ]] \
      || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
@@ -2288,23 +2346,10 @@ function hadoop_subcommand_secure_opts
     return 1
   fi
 
-  # bash 4 and up have built-in ways to upper and lower
-  # case the contents of vars.  This is faster than
-  # calling tr.
-
-  if [[ -z "${BASH_VERSINFO[0]}" ]] \
-     || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
-    uprogram=$(echo "${program}" | tr '[:lower:]' '[:upper:]')
-    ucommand=$(echo "${command}" | tr '[:lower:]' '[:upper:]')
-  else
-    uprogram=${program^^}
-    ucommand=${command^^}
-  fi
-
   # HDFS_DATANODE_SECURE_EXTRA_OPTS
   # HDFS_NFS3_SECURE_EXTRA_OPTS
   # ...
-  uvar="${uprogram}_${ucommand}_SECURE_EXTRA_OPTS"
+  uvar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" SECURE_EXTRA_OPTS)
 
   if [[ -n ${!uvar} ]]; then
     hadoop_debug "Appending ${uvar} onto HADOOP_OPTS"
@@ -2353,7 +2398,6 @@ function hadoop_parse_args
     hadoop_debug "hadoop_parse_args: processing $1"
     case $1 in
       --buildpaths)
-        # shellcheck disable=SC2034
         HADOOP_ENABLE_BUILD_PATHS=true
         shift
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+1))
@@ -2364,7 +2408,6 @@ function hadoop_parse_args
         shift
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
         if [[ -d "${confdir}" ]]; then
-          # shellcheck disable=SC2034
           HADOOP_CONF_DIR="${confdir}"
         elif [[ -z "${confdir}" ]]; then
           hadoop_error "ERROR: No parameter provided for --config "
@@ -2387,7 +2430,6 @@ function hadoop_parse_args
       ;;
       --debug)
         shift
-        # shellcheck disable=SC2034
         HADOOP_SHELL_SCRIPT_DEBUG=true
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+1))
       ;;
@@ -2396,7 +2438,6 @@ function hadoop_parse_args
       ;;
       --hostnames)
         shift
-        # shellcheck disable=SC2034
         HADOOP_WORKER_NAMES="$1"
         shift
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
@@ -2459,4 +2500,100 @@ function hadoop_xml_escape
 function hadoop_sed_escape
 {
   sed -e 's/[\/&]/\\&/g' <<< "$1"
+}
+
+## @description Handle subcommands from main program entries
+## @audience private
+## @stability evolving
+## @replaceable yes
+function hadoop_generic_java_subcmd_handler
+{
+  declare priv_outfile
+  declare priv_errfile
+  declare priv_pidfile
+  declare daemon_outfile
+  declare daemon_pidfile
+  declare secureuser
+
+  # The default/expected way to determine if a daemon is going to run in secure
+  # mode is defined by hadoop_detect_priv_subcmd.  If this returns true
+  # then setup the secure user var and tell the world we're in secure mode
+
+  if hadoop_detect_priv_subcmd "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"; then
+    HADOOP_SUBCMD_SECURESERVICE=true
+    secureuser=$(hadoop_build_custom_subcmd_var "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}" SECURE_USER)
+
+    if ! hadoop_verify_user_resolves "${secureuser}"; then
+      hadoop_error "ERROR: User defined in ${secureuser} (${!secureuser}) does not exist. Aborting."
+      exit 1
+    fi
+
+    HADOOP_SECURE_USER="${!secureuser}"
+  fi
+
+  # check if we're running in secure mode.
+  # breaking this up from the above lets 3rd parties
+  # do things a bit different
+  # secure services require some extra setup
+  # if yes, then we need to define all of the priv and daemon stuff
+  # if not, then we just need to define daemon stuff.
+  # note the daemon vars are purposefully different between the two
+
+  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
+
+    hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
+    hadoop_verify_secure_prereq
+    hadoop_setup_secure_service
+    priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+    priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.err"
+    priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+    daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+    daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+  else
+    daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+    daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+  fi
+
+  # are we actually in daemon mode?
+  # if yes, use the daemon logger and the appropriate log file.
+  if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
+    HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
+    if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
+      HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
+    else
+      HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
+    fi
+  fi
+
+  # finish defining the environment: system properties, env vars, class paths, etc.
+  hadoop_finalize
+
+  # do the hard work of launching a daemon or just executing our interactive
+  # java class
+  if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = true ]]; then
+    if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
+      hadoop_secure_daemon_handler \
+        "${HADOOP_DAEMON_MODE}" \
+        "${HADOOP_SUBCMD}" \
+        "${HADOOP_SECURE_CLASSNAME}" \
+        "${daemon_pidfile}" \
+        "${daemon_outfile}" \
+        "${priv_pidfile}" \
+        "${priv_outfile}" \
+        "${priv_errfile}" \
+        "${HADOOP_SUBCMD_ARGS[@]}"
+    else
+      hadoop_daemon_handler \
+        "${HADOOP_DAEMON_MODE}" \
+        "${HADOOP_SUBCMD}" \
+        "${HADOOP_CLASSNAME}" \
+        "${daemon_pidfile}" \
+        "${daemon_outfile}" \
+        "${HADOOP_SUBCMD_ARGS[@]}"
+    fi
+    exit $?
+  else
+    hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
+  fi
 }

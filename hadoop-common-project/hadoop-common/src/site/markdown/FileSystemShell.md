@@ -626,7 +626,6 @@ Sets an extended attribute name and value for a file or directory.
 
 Options:
 
-* -b: Remove all but the base ACL entries. The entries for user, group and others are retained for compatibility with permission bits.
 * -n name: The extended attribute name.
 * -v value: The extended attribute value. There are three different encoding methods for the value. If the argument is enclosed in double quotes, then the value is the string inside the quotes. If the argument is prefixed with 0x or 0X, then it is taken as a hexadecimal number. If the argument begins with 0s or 0S, then it is taken as a base64 encoding.
 * -x name: Remove the extended attribute.
@@ -647,7 +646,7 @@ setrep
 
 Usage: `hadoop fs -setrep [-R] [-w] <numReplicas> <path> `
 
-Changes the replication factor of a file. If *path* is a directory then the command recursively changes the replication factor of all files under the directory tree rooted at *path*.
+Changes the replication factor of a file. If *path* is a directory then the command recursively changes the replication factor of all files under the directory tree rooted at *path*. The EC files will be ignored when executing this command.
 
 Options:
 

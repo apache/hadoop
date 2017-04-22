@@ -665,4 +665,9 @@ public class FilterFileSystem extends FileSystem {
   public Collection<FileStatus> getTrashRoots(boolean allUsers) {
     return fs.getTrashRoots(allUsers);
   }
+
+  @Override
+  public FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
+    return fs.newFSDataOutputStreamBuilder(path);
+  }
 }

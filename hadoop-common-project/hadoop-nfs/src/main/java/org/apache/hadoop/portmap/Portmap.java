@@ -109,12 +109,15 @@ final class Portmap {
             RpcUtil.STAGE_RPC_TCP_RESPONSE);
       }
     });
+    tcpServer.setOption("reuseAddress", true);
+    tcpServer.setOption("child.reuseAddress", true);
 
     udpServer = new ConnectionlessBootstrap(new NioDatagramChannelFactory(
         Executors.newCachedThreadPool()));
 
     udpServer.setPipeline(Channels.pipeline(RpcUtil.STAGE_RPC_MESSAGE_PARSER,
         handler, RpcUtil.STAGE_RPC_UDP_RESPONSE));
+    udpServer.setOption("reuseAddress", true);
 
     tcpChannel = tcpServer.bind(tcpAddress);
     udpChannel = udpServer.bind(udpAddress);

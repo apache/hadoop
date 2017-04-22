@@ -72,7 +72,16 @@ public class DeleteOpParam extends HttpOpParam<DeleteOpParam.Op> {
    * @param str a string representation of the parameter value.
    */
   public DeleteOpParam(final String str) {
-    super(DOMAIN, DOMAIN.parse(str));
+    super(DOMAIN, getOp(str));
+  }
+
+  private static Op getOp(String str) {
+    try {
+      return DOMAIN.parse(str);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(str + " is not a valid " + Type.DELETE
+          + " operation.");
+    }
   }
 
   @Override

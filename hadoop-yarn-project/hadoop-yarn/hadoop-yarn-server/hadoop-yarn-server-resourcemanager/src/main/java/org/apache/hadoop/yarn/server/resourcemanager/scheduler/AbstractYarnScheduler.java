@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -83,6 +85,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
+
 
 
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
@@ -597,6 +600,8 @@ public abstract class AbstractYarnScheduler
 
     if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       completedContainerInternal(rmContainer, containerStatus, event);
+      completeOustandingUpdatesWhichAreReserved(
+          rmContainer, containerStatus, event);
     } else {
       ContainerId containerId = rmContainer.getContainerId();
       // Inform the container
@@ -620,6 +625,33 @@ public abstract class AbstractYarnScheduler
     // happened. Simply add the ResourceRequest back again so that requester
     // doesn't need to do anything conditionally.
     recoverResourceRequestForContainer(rmContainer);
+  }
+
+  // Optimization:
+  // Check if there are in-flight container updates and complete the
+  // associated temp containers. These are removed when the app completes,
+  // but removing them when the actual container completes would allow the
+  // scheduler to reallocate those resources sooner.
+  private void completeOustandingUpdatesWhichAreReserved(
+      RMContainer rmContainer, ContainerStatus containerStatus,
+      RMContainerEventType event) {
+    N schedulerNode = getSchedulerNode(rmContainer.getNodeId());
+    if (schedulerNode != null &&
+        schedulerNode.getReservedContainer() != null) {
+      RMContainer resContainer = schedulerNode.getReservedContainer();
+      if (resContainer.getReservedSchedulerKey() != null) {
+        ContainerId containerToUpdate = resContainer
+            .getReservedSchedulerKey().getContainerToUpdate();
+        if (containerToUpdate != null &&
+            containerToUpdate.equals(containerStatus.getContainerId())) {
+          completedContainerInternal(resContainer,
+              ContainerStatus.newInstance(resContainer.getContainerId(),
+                  containerStatus.getState(), containerStatus
+                      .getDiagnostics(),
+                  containerStatus.getExitStatus()), event);
+        }
+      }
+    }
   }
 
   // clean up a completed container
@@ -649,28 +681,6 @@ public abstract class AbstractYarnScheduler
           SchedulerUtils.RELEASED_CONTAINER), RMContainerEventType.RELEASED);
     }
   }
-
-  protected void decreaseContainers(
-      List<UpdateContainerRequest> decreaseRequests,
-      SchedulerApplicationAttempt attempt) {
-    if (null == decreaseRequests || decreaseRequests.isEmpty()) {
-      return;
-    }
-    // Pre-process decrease requests
-    List<SchedContainerChangeRequest> schedDecreaseRequests =
-        createSchedContainerChangeRequests(decreaseRequests, false);
-    for (SchedContainerChangeRequest request : schedDecreaseRequests) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Processing decrease request:" + request);
-      }
-      // handle decrease request
-      decreaseContainer(request, attempt);
-    }
-  }
-
-  protected abstract void decreaseContainer(
-      SchedContainerChangeRequest decreaseRequest,
-      SchedulerApplicationAttempt attempt);
 
   @Override
   public N getSchedulerNode(NodeId nodeId) {
@@ -1074,21 +1084,39 @@ public abstract class AbstractYarnScheduler
     }
   }
 
-  protected void handleExecutionTypeUpdates(
-      SchedulerApplicationAttempt appAttempt,
-      List<UpdateContainerRequest> promotionRequests,
-      List<UpdateContainerRequest> demotionRequests) {
+  protected void handleContainerUpdates(
+      SchedulerApplicationAttempt appAttempt, ContainerUpdates updates) {
+    List<UpdateContainerRequest> promotionRequests =
+        updates.getPromotionRequests();
     if (promotionRequests != null && !promotionRequests.isEmpty()) {
       LOG.info("Promotion Update requests : " + promotionRequests);
-      handlePromotionRequests(appAttempt, promotionRequests);
+      // Promotion is technically an increase request from
+      // 0 resources to target resources.
+      handleIncreaseRequests(appAttempt, promotionRequests);
     }
+    List<UpdateContainerRequest> increaseRequests =
+        updates.getIncreaseRequests();
+    if (increaseRequests != null && !increaseRequests.isEmpty()) {
+      LOG.info("Resource increase requests : " + increaseRequests);
+      handleIncreaseRequests(appAttempt, increaseRequests);
+    }
+    List<UpdateContainerRequest> demotionRequests =
+        updates.getDemotionRequests();
     if (demotionRequests != null && !demotionRequests.isEmpty()) {
       LOG.info("Demotion Update requests : " + demotionRequests);
-      handleDemotionRequests(appAttempt, demotionRequests);
+      // Demotion is technically a decrease request from initial
+      // to 0 resources
+      handleDecreaseRequests(appAttempt, demotionRequests);
+    }
+    List<UpdateContainerRequest> decreaseRequests =
+        updates.getDecreaseRequests();
+    if (decreaseRequests != null && !decreaseRequests.isEmpty()) {
+      LOG.info("Resource decrease requests : " + decreaseRequests);
+      handleDecreaseRequests(appAttempt, decreaseRequests);
     }
   }
 
-  private void handlePromotionRequests(
+  private void handleIncreaseRequests(
       SchedulerApplicationAttempt applicationAttempt,
       List<UpdateContainerRequest> updateContainerRequests) {
     for (UpdateContainerRequest uReq : updateContainerRequests) {
@@ -1118,7 +1146,7 @@ public abstract class AbstractYarnScheduler
     }
   }
 
-  private void handleDemotionRequests(SchedulerApplicationAttempt appAttempt,
+  private void handleDecreaseRequests(SchedulerApplicationAttempt appAttempt,
       List<UpdateContainerRequest> demotionRequests) {
     OpportunisticContainerContext oppCntxt =
         appAttempt.getOpportunisticContainerContext();
@@ -1126,22 +1154,57 @@ public abstract class AbstractYarnScheduler
       RMContainer rmContainer =
           rmContext.getScheduler().getRMContainer(uReq.getContainerId());
       if (rmContainer != null) {
-        if (appAttempt.getUpdateContext().checkAndAddToOutstandingDecreases(
-            rmContainer.getContainer())) {
-          RMContainer demotedRMContainer =
-              createDemotedRMContainer(appAttempt, oppCntxt, rmContainer);
-          appAttempt.addToNewlyDemotedContainers(
-              uReq.getContainerId(), demotedRMContainer);
+        SchedulerNode schedulerNode = rmContext.getScheduler()
+            .getSchedulerNode(rmContainer.getContainer().getNodeId());
+        if (appAttempt.getUpdateContext()
+            .checkAndAddToOutstandingDecreases(uReq, schedulerNode,
+                rmContainer.getContainer())) {
+          if (ContainerUpdateType.DEMOTE_EXECUTION_TYPE ==
+              uReq.getContainerUpdateType()) {
+            RMContainer demotedRMContainer =
+                createDemotedRMContainer(appAttempt, oppCntxt, rmContainer);
+            appAttempt.addToNewlyDemotedContainers(
+                uReq.getContainerId(), demotedRMContainer);
+          } else {
+            RMContainer demotedRMContainer = createDecreasedRMContainer(
+                appAttempt, uReq, rmContainer);
+            appAttempt.addToNewlyDecreasedContainers(
+                uReq.getContainerId(), demotedRMContainer);
+          }
         } else {
           appAttempt.addToUpdateContainerErrors(
               UpdateContainerError.newInstance(
               RMServerUtils.UPDATE_OUTSTANDING_ERROR, uReq));
         }
       } else {
-        LOG.warn("Cannot demote non-existent (or completed) Container ["
-            + uReq.getContainerId() + "]");
+        LOG.warn("Cannot demote/decrease non-existent (or completed) " +
+            "Container [" + uReq.getContainerId() + "]");
       }
     }
+  }
+
+  private RMContainer createDecreasedRMContainer(
+      SchedulerApplicationAttempt appAttempt, UpdateContainerRequest uReq,
+      RMContainer rmContainer) {
+    SchedulerRequestKey sk =
+        SchedulerRequestKey.extractFrom(rmContainer.getContainer());
+    Container decreasedContainer = BuilderUtils.newContainer(
+        ContainerId.newContainerId(appAttempt.getApplicationAttemptId(),
+            appAttempt.getNewContainerId()),
+        rmContainer.getContainer().getNodeId(),
+        rmContainer.getContainer().getNodeHttpAddress(),
+        Resources.none(),
+        sk.getPriority(), null, rmContainer.getExecutionType(),
+        sk.getAllocationRequestId());
+    decreasedContainer.setVersion(rmContainer.getContainer().getVersion());
+    RMContainer newRmContainer = new RMContainerImpl(decreasedContainer,
+        sk, appAttempt.getApplicationAttemptId(),
+        decreasedContainer.getNodeId(), appAttempt.getUser(), rmContext,
+        rmContainer.isRemotelyAllocated());
+    appAttempt.addRMContainer(decreasedContainer.getId(), rmContainer);
+    ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(
+        decreasedContainer.getNodeId()).allocateContainer(newRmContainer);
+    return newRmContainer;
   }
 
   private RMContainer createDemotedRMContainer(
@@ -1161,5 +1224,42 @@ public abstract class AbstractYarnScheduler
     demotedContainer.setVersion(rmContainer.getContainer().getVersion());
     return SchedulerUtils.createOpportunisticRmContainer(
         rmContext, demotedContainer, false);
+  }
+
+  /**
+   * Rollback container update after expiry.
+   * @param containerId ContainerId.
+   */
+  protected void rollbackContainerUpdate(
+      ContainerId containerId) {
+    RMContainer rmContainer = getRMContainer(containerId);
+    if (rmContainer == null) {
+      LOG.info("Cannot rollback resource for container " + containerId
+          + ". The container does not exist.");
+      return;
+    }
+    T app = getCurrentAttemptForContainer(containerId);
+    if (getCurrentAttemptForContainer(containerId) == null) {
+      LOG.info("Cannot rollback resource for container " + containerId
+          + ". The application that the container "
+          + "belongs to does not exist.");
+      return;
+    }
+
+    if (Resources.fitsIn(rmContainer.getLastConfirmedResource(),
+        rmContainer.getContainer().getResource())) {
+      LOG.info("Roll back resource for container " + containerId);
+      handleDecreaseRequests(app, Arrays.asList(
+          UpdateContainerRequest.newInstance(
+              rmContainer.getContainer().getVersion(),
+              rmContainer.getContainerId(),
+              ContainerUpdateType.DECREASE_RESOURCE,
+              rmContainer.getLastConfirmedResource(), null)));
+    }
+  }
+
+  @Override
+  public List<NodeId> getNodeIds(String resourceName) {
+    return nodeTracker.getNodeIdsByResourceName(resourceName);
   }
 }

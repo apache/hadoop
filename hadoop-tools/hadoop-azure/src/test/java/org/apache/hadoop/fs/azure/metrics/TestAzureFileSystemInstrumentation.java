@@ -117,7 +117,8 @@ public class TestAzureFileSystemInstrumentation {
     // levels, and then 2 requests for checking/stamping the version of AS,
     // totaling 11.
     // Also, there's the initial 1 request for container check so total is 12.
-    base = assertWebResponsesInRange(base, 1, 12);
+    // The getAncestor call at the very beginning adds another 4 calls, totalling 16.
+    base = assertWebResponsesInRange(base, 1, 16);
     assertEquals(1,
         AzureMetricsTestUtil.getLongCounterValue(getInstrumentation(), WASB_DIRECTORIES_CREATED));
 

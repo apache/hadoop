@@ -32,6 +32,7 @@ import com.microsoft.azure.datalake.store.DirectoryEntry;
 import com.microsoft.azure.datalake.store.DirectoryEntryType;
 import com.microsoft.azure.datalake.store.IfExists;
 import com.microsoft.azure.datalake.store.LatencyTracker;
+import com.microsoft.azure.datalake.store.UserGroupRepresentation;
 import com.microsoft.azure.datalake.store.oauth2.AccessTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.ClientCredsTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.RefreshTokenBasedTokenProvider;
@@ -80,10 +81,16 @@ public class AdlFileSystem extends FileSystem {
   private ADLStoreClient adlClient;
   private Path workingDirectory;
   private boolean aclBitStatus;
+  private UserGroupRepresentation oidOrUpn;
+
 
   // retained for tests
   private AccessTokenProvider tokenProvider;
   private AzureADTokenProvider azureTokenProvider;
+
+  static {
+    AdlConfKeys.addDeprecatedKeys();
+  }
 
   @Override
   public String getScheme() {
@@ -181,6 +188,11 @@ public class AdlFileSystem extends FileSystem {
     if (!trackLatency) {
       LatencyTracker.disable();
     }
+
+    boolean enableUPN = conf.getBoolean(ADL_ENABLEUPN_FOR_OWNERGROUP_KEY,
+        ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT);
+    oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
+        UserGroupRepresentation.OID;
   }
 
   /**
@@ -231,7 +243,8 @@ public class AdlFileSystem extends FileSystem {
     Configuration conf = ProviderUtils.excludeIncompatibleCredentialProviders(
         config, AdlFileSystem.class);
     TokenProviderType type = conf.getEnum(
-        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
+        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_KEY,
+        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_DEFAULT);
 
     switch (type) {
     case RefreshToken:
@@ -439,7 +452,8 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public FileStatus getFileStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
-    DirectoryEntry entry = adlClient.getDirectoryEntry(toRelativeFilePath(f));
+    DirectoryEntry entry =
+        adlClient.getDirectoryEntry(toRelativeFilePath(f), oidOrUpn);
     return toFileStatus(entry, f);
   }
 
@@ -456,7 +470,7 @@ public class AdlFileSystem extends FileSystem {
   public FileStatus[] listStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
     List<DirectoryEntry> entries =
-        adlClient.enumerateDirectory(toRelativeFilePath(f));
+        adlClient.enumerateDirectory(toRelativeFilePath(f), oidOrUpn);
     return toFileStatuses(entries, f);
   }
 
@@ -749,8 +763,8 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public AclStatus getAclStatus(final Path path) throws IOException {
     statistics.incrementReadOps(1);
-    com.microsoft.azure.datalake.store.acl.AclStatus adlStatus = adlClient
-        .getAclStatus(toRelativeFilePath(path));
+    com.microsoft.azure.datalake.store.acl.AclStatus adlStatus =
+        adlClient.getAclStatus(toRelativeFilePath(path), oidOrUpn);
     AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
     aclStatusBuilder.owner(adlStatus.owner);
     aclStatusBuilder.group(adlStatus.group);
@@ -962,5 +976,11 @@ public class AdlFileSystem extends FileSystem {
       throw new IOException("Password " + key + " not found");
     }
     return new String(passchars);
+  }
+
+  @VisibleForTesting
+  public void setUserGroupRepresentationAsUPN(boolean enableUPN) {
+    oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
+        UserGroupRepresentation.OID;
   }
 }

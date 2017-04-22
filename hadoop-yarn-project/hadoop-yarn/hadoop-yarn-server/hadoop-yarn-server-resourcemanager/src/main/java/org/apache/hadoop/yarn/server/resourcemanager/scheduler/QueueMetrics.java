@@ -71,6 +71,8 @@ public class QueueMetrics implements MetricsSource {
   @Metric("Aggregate # of allocated off-switch containers")
     MutableCounterLong aggregateOffSwitchContainersAllocated;
   @Metric("Aggregate # of released containers") MutableCounterLong aggregateContainersReleased;
+  @Metric("Aggregate # of preempted containers") MutableCounterLong
+      aggregateContainersPreempted;
   @Metric("Available memory in MB") MutableGaugeLong availableMB;
   @Metric("Available CPU in virtual cores") MutableGaugeInt availableVCores;
   @Metric("Pending memory allocation in MB") MutableGaugeLong pendingMB;
@@ -476,6 +478,13 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
+  public void preemptContainer() {
+    aggregateContainersPreempted.incr();
+    if (parent != null) {
+      parent.preemptContainer();
+    }
+  }
+
   public void reserveResource(String user, Resource res) {
     reservedContainers.incr();
     reservedMB.incr(res.getMemorySize());
@@ -639,5 +648,9 @@ public class QueueMetrics implements MetricsSource {
 
   public long getAggegatedReleasedContainers() {
     return aggregateContainersReleased.value();
+  }
+
+  public long getAggregatePreemptedContainers() {
+    return aggregateContainersPreempted.value();
   }
 }

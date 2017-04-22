@@ -342,12 +342,6 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   @Override
-  @SuppressWarnings("deprecation")
-  public long getCumulativeVmem(int olderThanAge) {
-    return getVirtualMemorySize(olderThanAge);
-  }
-
-  @Override
   public long getRssMemorySize(int olderThanAge) {
     if (PAGE_SIZE < 0) {
       return UNAVAILABLE;
@@ -366,12 +360,6 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       }
     }
     return isAvailable ? totalPages * PAGE_SIZE : UNAVAILABLE; // convert # pages to byte
-  }
-
-  @Override
-  @SuppressWarnings("deprecation")
-  public long getCumulativeRssmem(int olderThanAge) {
-    return getRssMemorySize(olderThanAge);
   }
 
   /**

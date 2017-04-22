@@ -153,20 +153,6 @@ public class FiCaSchedulerNode extends SchedulerNode {
     }
   }
 
-  @Override
-  protected synchronized void changeContainerResource(ContainerId containerId,
-      Resource deltaResource, boolean increase) {
-    super.changeContainerResource(containerId, deltaResource, increase);
-
-    if (killableContainers.containsKey(containerId)) {
-      if (increase) {
-        Resources.addTo(totalKillableResources, deltaResource);
-      } else {
-        Resources.subtractFrom(totalKillableResources, deltaResource);
-      }
-    }
-  }
-
   public synchronized Resource getTotalKillableResources() {
     return totalKillableResources;
   }

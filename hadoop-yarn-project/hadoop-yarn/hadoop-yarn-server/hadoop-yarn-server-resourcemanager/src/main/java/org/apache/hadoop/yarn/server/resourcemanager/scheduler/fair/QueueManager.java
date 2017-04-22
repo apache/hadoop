@@ -535,6 +535,6 @@ public class QueueManager {
     // use the same white space trim as in QueueMetrics() otherwise things fail
     // guava uses a different definition for whitespace than java.
     return !node.isEmpty() &&
-        node.equals(CharMatcher.WHITESPACE.trimFrom(node));
+        node.equals(CharMatcher.whitespace().trimFrom(node));
   }
 }

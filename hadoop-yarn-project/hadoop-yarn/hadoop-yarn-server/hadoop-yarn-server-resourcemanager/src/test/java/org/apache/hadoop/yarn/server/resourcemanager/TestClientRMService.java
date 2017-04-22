@@ -38,6 +38,7 @@ import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -108,6 +109,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -283,7 +285,8 @@ public class TestClientRMService {
     } catch (ApplicationNotFoundException ex) {
       Assert.assertEquals(ex.getMessage(),
           "Application with id '" + request.getApplicationId()
-              + "' doesn't exist in RM.");
+              + "' doesn't exist in RM. Please check that the "
+              + "job submission was successful.");
     }
   }
 
@@ -395,7 +398,7 @@ public class TestClientRMService {
         mock(ApplicationSubmissionContext.class);
     YarnConfiguration config = new YarnConfiguration();
     RMAppAttemptImpl rmAppAttemptImpl = new RMAppAttemptImpl(attemptId,
-        rmContext, yarnScheduler, null, asContext, config, false, null);
+        rmContext, yarnScheduler, null, asContext, config, null, null);
     ApplicationResourceUsageReport report = rmAppAttemptImpl
         .getApplicationResourceUsageReport();
     assertEquals(report, RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT);
@@ -858,6 +861,17 @@ public class TestClientRMService {
     List<ApplicationReport> applications = queueInfo.getQueueInfo()
         .getApplications();
     Assert.assertEquals(2, applications.size());
+    Map<String, QueueConfigurations> queueConfigsByPartition =
+        queueInfo.getQueueInfo().getQueueConfigurations();
+    Assert.assertEquals(1, queueConfigsByPartition.size());
+    Assert.assertTrue(queueConfigsByPartition.containsKey("*"));
+    QueueConfigurations queueConfigs = queueConfigsByPartition.get("*");
+    Assert.assertEquals(0.5f, queueConfigs.getCapacity(), 0.0001f);
+    Assert.assertEquals(0.1f, queueConfigs.getAbsoluteCapacity(), 0.0001f);
+    Assert.assertEquals(1.0f, queueConfigs.getMaxCapacity(), 0.0001f);
+    Assert.assertEquals(1.0f, queueConfigs.getAbsoluteMaxCapacity(), 0.0001f);
+    Assert.assertEquals(0.2f, queueConfigs.getMaxAMPercentage(), 0.0001f);
+
     request.setQueueName("nonexistentqueue");
     request.setIncludeApplications(true);
     // should not throw exception on nonexistent queue
@@ -1240,8 +1254,21 @@ public class TestClientRMService {
     @SuppressWarnings("unchecked")
     EventHandler<Event> eventHandler = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+
     QueueInfo queInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queInfo.setQueueName("testqueue");
+    QueueConfigurations queueConfigs =
+        recordFactory.newRecordInstance(QueueConfigurations.class);
+    queueConfigs.setCapacity(0.5f);
+    queueConfigs.setAbsoluteCapacity(0.1f);
+    queueConfigs.setMaxCapacity(1.0f);
+    queueConfigs.setAbsoluteMaxCapacity(1.0f);
+    queueConfigs.setMaxAMPercentage(0.2f);
+    Map<String, QueueConfigurations> queueConfigsByPartition =
+        new HashMap<>();
+    queueConfigsByPartition.put("*", queueConfigs);
+    queInfo.setQueueConfigurations(queueConfigsByPartition);
+
     when(yarnScheduler.getQueueInfo(eq("testqueue"), anyBoolean(), anyBoolean()))
         .thenReturn(queInfo);
     when(yarnScheduler.getQueueInfo(eq("nonexistentqueue"), anyBoolean(), anyBoolean()))
@@ -1306,9 +1333,9 @@ public class TestClientRMService {
         spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
             queueName, asContext, yarnScheduler, null,
             System.currentTimeMillis(), "YARN", null,
-            BuilderUtils.newResourceRequest(
+            Collections.singletonList(BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                Resource.newInstance(1024, 1), 1)){
+                Resource.newInstance(1024, 1), 1))){
                   @Override
                   public ApplicationReport createAndGetApplicationReport(
                       String clientUserName, boolean allowAccess) {
@@ -1322,11 +1349,12 @@ public class TestClientRMService {
                     return report;
                   }
               });
-    app.getAMResourceRequest().setNodeLabelExpression(amNodeLabelExpression);
+    app.getAMResourceRequests().get(0)
+        .setNodeLabelExpression(amNodeLabelExpression);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
     RMAppAttemptImpl rmAppAttemptImpl = spy(new RMAppAttemptImpl(attemptId,
-        rmContext, yarnScheduler, null, asContext, config, false, null));
+        rmContext, yarnScheduler, null, asContext, config, null, app));
     Container container = Container.newInstance(
         ContainerId.newContainerId(attemptId, 1), null, "", null, null, null);
     RMContainerImpl containerimpl = spy(new RMContainerImpl(container,
@@ -1799,27 +1827,19 @@ public class TestClientRMService {
     // Get node labels mapping
     GetNodesToLabelsResponse response1 = client
         .getNodeToLabels(GetNodesToLabelsRequest.newInstance());
-    Map<NodeId, Set<NodeLabel>> nodeToLabels = response1.getNodeToLabels();
+    Map<NodeId, Set<String>> nodeToLabels = response1.getNodeToLabels();
     Assert.assertTrue(nodeToLabels.keySet().containsAll(
         Arrays.asList(node1, node2)));
     Assert.assertTrue(nodeToLabels.get(node1)
-        .containsAll(Arrays.asList(labelX)));
+        .containsAll(Arrays.asList(labelX.getName())));
     Assert.assertTrue(nodeToLabels.get(node2)
-        .containsAll(Arrays.asList(labelY)));
-    // Verify whether labelX's exclusivity is false
-    for (NodeLabel x : nodeToLabels.get(node1)) {
-      Assert.assertFalse(x.isExclusive());
-    }
-    // Verify whether labelY's exclusivity is true
-    for (NodeLabel y : nodeToLabels.get(node2)) {
-      Assert.assertTrue(y.isExclusive());
-    }
+        .containsAll(Arrays.asList(labelY.getName())));
     // Below label "x" is not present in the response as exclusivity is true
     Assert.assertFalse(nodeToLabels.get(node1).containsAll(
         Arrays.asList(NodeLabel.newInstance("x"))));
 
     rpc.stopProxy(client, conf);
-    rm.close();
+    rm.stop();
   }
 
   @Test
@@ -1870,18 +1890,14 @@ public class TestClientRMService {
     // Get labels to nodes mapping
     GetLabelsToNodesResponse response1 = client
         .getLabelsToNodes(GetLabelsToNodesRequest.newInstance());
-    Map<NodeLabel, Set<NodeId>> labelsToNodes = response1.getLabelsToNodes();
-    // Verify whether all NodeLabel's exclusivity are false
-    for (Map.Entry<NodeLabel, Set<NodeId>> nltn : labelsToNodes.entrySet()) {
-      Assert.assertFalse(nltn.getKey().isExclusive());
-    }
+    Map<String, Set<NodeId>> labelsToNodes = response1.getLabelsToNodes();
     Assert.assertTrue(labelsToNodes.keySet().containsAll(
-        Arrays.asList(labelX, labelY, labelZ)));
-    Assert.assertTrue(labelsToNodes.get(labelX).containsAll(
+        Arrays.asList(labelX.getName(), labelY.getName(), labelZ.getName())));
+    Assert.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
         Arrays.asList(node1A)));
-    Assert.assertTrue(labelsToNodes.get(labelY).containsAll(
+    Assert.assertTrue(labelsToNodes.get(labelY.getName()).containsAll(
         Arrays.asList(node2A, node3A)));
-    Assert.assertTrue(labelsToNodes.get(labelZ).containsAll(
+    Assert.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
         Arrays.asList(node1B, node3B)));
 
     // Get labels to nodes mapping for specific labels
@@ -1890,17 +1906,13 @@ public class TestClientRMService {
     GetLabelsToNodesResponse response2 = client
         .getLabelsToNodes(GetLabelsToNodesRequest.newInstance(setlabels));
     labelsToNodes = response2.getLabelsToNodes();
-    // Verify whether all NodeLabel's exclusivity are false
-    for (Map.Entry<NodeLabel, Set<NodeId>> nltn : labelsToNodes.entrySet()) {
-      Assert.assertFalse(nltn.getKey().isExclusive());
-    }
     Assert.assertTrue(labelsToNodes.keySet().containsAll(
-        Arrays.asList(labelX, labelZ)));
-    Assert.assertTrue(labelsToNodes.get(labelX).containsAll(
+        Arrays.asList(labelX.getName(), labelZ.getName())));
+    Assert.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
         Arrays.asList(node1A)));
-    Assert.assertTrue(labelsToNodes.get(labelZ).containsAll(
+    Assert.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
         Arrays.asList(node1B, node3B)));
-    Assert.assertEquals(labelsToNodes.get(labelY), null);
+    Assert.assertEquals(labelsToNodes.get(labelY.getName()), null);
 
     rpc.stopProxy(client, conf);
     rm.close();

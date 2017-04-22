@@ -124,6 +124,9 @@ public class JsonUtil {
     if (perm.getEncryptedBit()) {
       m.put("encBit", true);
     }
+    if (perm.getErasureCodedBit()) {
+      m.put("ecBit", true);
+    }
     m.put("accessTime", status.getAccessTime());
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());
@@ -181,6 +184,9 @@ public class JsonUtil {
     if (datanodeinfo.getUpgradeDomain() != null) {
       m.put("upgradeDomain", datanodeinfo.getUpgradeDomain());
     }
+    m.put("lastBlockReportTime", datanodeinfo.getLastBlockReportTime());
+    m.put("lastBlockReportMonotonic",
+        datanodeinfo.getLastBlockReportMonotonic());
     return m;
   }
 
@@ -372,6 +378,9 @@ public class JsonUtil {
       }
       if (perm.getEncryptedBit()) {
         m.put("encBit", true);
+      }
+      if (perm.getErasureCodedBit()) {
+        m.put("ecBit", true);
       }
     }
     final Map<String, Map<String, Object>> finalMap =

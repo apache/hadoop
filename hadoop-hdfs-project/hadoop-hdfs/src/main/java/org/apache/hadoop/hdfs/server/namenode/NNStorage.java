@@ -763,13 +763,13 @@ public class NNStorage extends Storage implements Closeable,
     return new File(sd.getCurrentDir(), getInProgressEditsFileName(startTxId));
   }
   
-  static File getFinalizedEditsFile(StorageDirectory sd,
+  public static File getFinalizedEditsFile(StorageDirectory sd,
       long startTxId, long endTxId) {
     return new File(sd.getCurrentDir(),
         getFinalizedEditsFileName(startTxId, endTxId));
   }
 
-  static File getTemporaryEditsFile(StorageDirectory sd,
+  public static File getTemporaryEditsFile(StorageDirectory sd,
       long startTxId, long endTxId, long timestamp) {
     return new File(sd.getCurrentDir(),
         getTemporaryEditsFileName(startTxId, endTxId, timestamp));
@@ -1106,6 +1106,7 @@ public class NNStorage extends Storage implements Closeable,
     return inspector;
   }
 
+  @Override
   public NamespaceInfo getNamespaceInfo() {
     return new NamespaceInfo(
         getNamespaceID(),

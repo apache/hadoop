@@ -37,8 +37,10 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -99,8 +101,7 @@ class ChRootedFs extends AbstractFileSystem {
 
   public ChRootedFs(final AbstractFileSystem fs, final Path theRoot)
     throws URISyntaxException {
-    super(fs.getUri(), fs.getUri().getScheme(),
-        fs.getUri().getAuthority() != null, fs.getUriDefaultPort());
+    super(fs.getUri(), fs.getUri().getScheme(), false, fs.getUriDefaultPort());
     myFs = fs;
     myFs.checkPath(theRoot);
     chRootPathPart = new Path(myFs.getUriPath(theRoot));
@@ -221,8 +222,14 @@ class ChRootedFs extends AbstractFileSystem {
   }
 
   @Override
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     return myFs.getServerDefaults();
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+    return myFs.getServerDefaults(fullPath(f));
   }
 
   @Override
@@ -234,6 +241,18 @@ class ChRootedFs extends AbstractFileSystem {
   public FileStatus[] listStatus(final Path f) 
       throws IOException, UnresolvedLinkException {
     return myFs.listStatus(fullPath(f));
+  }
+
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(final Path f)
+    throws IOException, UnresolvedLinkException {
+    return myFs.listStatusIterator(fullPath(f));
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
+      throws IOException, UnresolvedLinkException {
+    return myFs.listLocatedStatus(fullPath(f));
   }
 
   @Override

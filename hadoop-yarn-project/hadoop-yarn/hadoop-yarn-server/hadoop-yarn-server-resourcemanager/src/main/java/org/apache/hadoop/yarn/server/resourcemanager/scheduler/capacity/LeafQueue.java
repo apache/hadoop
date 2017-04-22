@@ -95,6 +95,7 @@ public class LeafQueue extends AbstractCSQueue {
   private float maxAMResourcePerQueuePercent;
 
   private volatile int nodeLocalityDelay;
+  private volatile int rackLocalityAdditionalDelay;
   private volatile boolean rackLocalityFullReset;
 
   Map<ApplicationAttemptId, FiCaSchedulerApp> applicationAttemptMap =
@@ -215,6 +216,7 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       nodeLocalityDelay = conf.getNodeLocalityDelay();
+      rackLocalityAdditionalDelay = conf.getRackLocalityAdditionalDelay();
       rackLocalityFullReset = conf.getRackLocalityFullReset();
 
       // re-init this since max allocation could have changed
@@ -271,9 +273,12 @@ public class LeafQueue extends AbstractCSQueue {
               + "numContainers = " + numContainers
               + " [= currentNumContainers ]" + "\n" + "state = " + getState()
               + " [= configuredState ]" + "\n" + "acls = " + aclsString
-              + " [= configuredAcls ]" + "\n" + "nodeLocalityDelay = "
-              + nodeLocalityDelay + "\n" + "labels=" + labelStrBuilder
-              .toString() + "\n" + "reservationsContinueLooking = "
+              + " [= configuredAcls ]" + "\n"
+              + "nodeLocalityDelay = " + nodeLocalityDelay + "\n"
+              + "rackLocalityAdditionalDelay = "
+              + rackLocalityAdditionalDelay + "\n"
+              + "labels=" + labelStrBuilder.toString() + "\n"
+              + "reservationsContinueLooking = "
               + reservationsContinueLooking + "\n" + "preemptionDisabled = "
               + getPreemptionDisabled() + "\n" + "defaultAppPriorityPerQueue = "
               + defaultAppPriorityPerQueue + "\npriority = " + priority);
@@ -1134,12 +1139,7 @@ public class LeafQueue extends AbstractCSQueue {
 
     if (targetLeafQueue == this) {
       // When trying to preempt containers from the same queue
-      if (rmContainer.hasIncreaseReservation()) {
-        // Increased container reservation
-        unreserveIncreasedContainer(clusterResource,
-            schedulerContainer.getSchedulerApplicationAttempt(),
-            schedulerContainer.getSchedulerNode(), rmContainer);
-      } else if (rmContainer.getState() == RMContainerState.RESERVED) {
+      if (rmContainer.getState() == RMContainerState.RESERVED) {
         // For other reserved containers
         // This is a reservation exchange, complete previous reserved container
         completedContainer(clusterResource,
@@ -1212,8 +1212,7 @@ public class LeafQueue extends AbstractCSQueue {
               schedulerContainer.getSchedulerApplicationAttempt(),
               allocation.getAllocatedOrReservedResource(),
               schedulerContainer.getNodePartition(),
-              schedulerContainer.getRmContainer(),
-              allocation.isIncreasedAllocation());
+              schedulerContainer.getRmContainer());
           orderingPolicy.containerAllocated(
               schedulerContainer.getSchedulerApplicationAttempt(),
               schedulerContainer.getRmContainer());
@@ -1353,6 +1352,11 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Lock(NoLock.class)
+  public int getRackLocalityAdditionalDelay() {
+    return rackLocalityAdditionalDelay;
+  }
+
+  @Lock(NoLock.class)
   public boolean getRackLocalityFullReset() {
     return rackLocalityFullReset;
   }
@@ -1446,40 +1450,6 @@ public class LeafQueue extends AbstractCSQueue {
       readLock.unlock();
     }
   }
-  
-  @Override
-  public void unreserveIncreasedContainer(Resource clusterResource,
-      FiCaSchedulerApp app, FiCaSchedulerNode node, RMContainer rmContainer) {
-    boolean removed = false;
-    Priority priority = null;
-
-    try {
-      writeLock.lock();
-      if (rmContainer.getContainer() != null) {
-        priority = rmContainer.getContainer().getPriority();
-      }
-
-      if (null != priority) {
-        removed = app.unreserve(rmContainer.getAllocatedSchedulerKey(), node,
-            rmContainer);
-      }
-
-      if (removed) {
-        // Inform the ordering policy
-        orderingPolicy.containerReleased(app, rmContainer);
-
-        releaseResource(clusterResource, app, rmContainer.getReservedResource(),
-            node.getPartition(), rmContainer, true);
-      }
-    } finally {
-      writeLock.unlock();
-    }
-
-    if (removed) {
-      getParent().unreserveIncreasedContainer(clusterResource, app, node,
-          rmContainer);
-    }
-  }
 
   private void updateSchedulerHealthForCompletedContainer(
       RMContainer rmContainer, ContainerStatus containerStatus) {
@@ -1538,16 +1508,6 @@ public class LeafQueue extends AbstractCSQueue {
     updateSchedulerHealthForCompletedContainer(rmContainer, containerStatus);
 
     if (application != null) {
-      // unreserve container increase request if it previously reserved.
-      if (rmContainer.hasIncreaseReservation()) {
-        unreserveIncreasedContainer(clusterResource, application, node,
-            rmContainer);
-      }
-      
-      // Remove container increase request if it exists
-      application.removeIncreaseRequest(node.getNodeID(),
-          rmContainer.getAllocatedSchedulerKey(), rmContainer.getContainerId());
-
       boolean removed = false;
 
       // Careful! Locking order is important!
@@ -1576,7 +1536,7 @@ public class LeafQueue extends AbstractCSQueue {
           orderingPolicy.containerReleased(application, rmContainer);
 
           releaseResource(clusterResource, application, container.getResource(),
-              node.getPartition(), rmContainer, false);
+              node.getPartition(), rmContainer);
         }
       } finally {
         writeLock.unlock();
@@ -1597,12 +1557,10 @@ public class LeafQueue extends AbstractCSQueue {
 
   void allocateResource(Resource clusterResource,
       SchedulerApplicationAttempt application, Resource resource,
-      String nodePartition, RMContainer rmContainer,
-      boolean isIncreasedAllocation) {
+      String nodePartition, RMContainer rmContainer) {
     try {
       writeLock.lock();
-      super.allocateResource(clusterResource, resource, nodePartition,
-          isIncreasedAllocation);
+      super.allocateResource(clusterResource, resource, nodePartition);
 
       // handle ignore exclusivity container
       if (null != rmContainer && rmContainer.getNodeLabelExpression().equals(
@@ -1643,11 +1601,10 @@ public class LeafQueue extends AbstractCSQueue {
 
   void releaseResource(Resource clusterResource,
       FiCaSchedulerApp application, Resource resource, String nodePartition,
-      RMContainer rmContainer, boolean isChangeResource) {
+      RMContainer rmContainer) {
     try {
       writeLock.lock();
-      super.releaseResource(clusterResource, resource, nodePartition,
-          isChangeResource);
+      super.releaseResource(clusterResource, resource, nodePartition);
 
       // handle ignore exclusivity container
       if (null != rmContainer && rmContainer.getNodeLabelExpression().equals(
@@ -1719,7 +1676,7 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, null);
+          this, labelManager, null);
 
       // queue metrics are updated, more resource may be available
       // activate the pending applications if possible
@@ -1787,7 +1744,7 @@ public class LeafQueue extends AbstractCSQueue {
           rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, attempt,
           rmContainer.getContainer().getResource(), node.getPartition(),
-          rmContainer, false);
+          rmContainer);
     } finally {
       writeLock.unlock();
     }
@@ -1912,7 +1869,7 @@ public class LeafQueue extends AbstractCSQueue {
       FiCaSchedulerNode node =
           scheduler.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, application, rmContainer.getContainer()
-          .getResource(), node.getPartition(), rmContainer, false);
+          .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
           + " resource=" + rmContainer.getContainer().getResource()
           + " queueMoveIn=" + this + " usedCapacity=" + getUsedCapacity()
@@ -1931,7 +1888,7 @@ public class LeafQueue extends AbstractCSQueue {
       FiCaSchedulerNode node =
           scheduler.getNode(rmContainer.getContainer().getNodeId());
       releaseResource(clusterResource, application, rmContainer.getContainer()
-          .getResource(), node.getPartition(), rmContainer, false);
+          .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
           + " resource=" + rmContainer.getContainer().getResource()
           + " queueMoveOut=" + this + " usedCapacity=" + getUsedCapacity()
@@ -1998,85 +1955,6 @@ public class LeafQueue extends AbstractCSQueue {
   @Override
   public Priority getDefaultApplicationPriority() {
     return defaultAppPriorityPerQueue;
-  }
-
-  /**
-   *
-   * @param clusterResource Total cluster resource
-   * @param decreaseRequest The decrease request
-   * @param app The application of interest
-   */
-  @Override
-  public void decreaseContainer(Resource clusterResource,
-      SchedContainerChangeRequest decreaseRequest,
-      FiCaSchedulerApp app) throws InvalidResourceRequestException {
-    // If the container being decreased is reserved, we need to unreserve it
-    // first.
-    RMContainer rmContainer = decreaseRequest.getRMContainer();
-    if (rmContainer.hasIncreaseReservation()) {
-      unreserveIncreasedContainer(clusterResource, app,
-          (FiCaSchedulerNode)decreaseRequest.getSchedulerNode(), rmContainer);
-    }
-    boolean resourceDecreased = false;
-    Resource resourceBeforeDecrease;
-    // Grab queue lock to avoid race condition when getting container resource
-
-    try {
-      writeLock.lock();
-      // Make sure the decrease request is valid in terms of current resource
-      // and target resource. This must be done under the leaf queue lock.
-      // Throws exception if the check fails.
-      RMServerUtils.checkSchedContainerChangeRequest(decreaseRequest, false);
-      // Save resource before decrease for debug log
-      resourceBeforeDecrease = Resources.clone(
-          rmContainer.getAllocatedResource());
-      // Do we have increase request for the same container? If so, remove it
-      boolean hasIncreaseRequest = app.removeIncreaseRequest(
-          decreaseRequest.getNodeId(),
-          decreaseRequest.getRMContainer().getAllocatedSchedulerKey(),
-          decreaseRequest.getContainerId());
-      if (hasIncreaseRequest) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("While processing decrease requests, found an increase"
-              + " request for the same container " + decreaseRequest
-              .getContainerId() + ", removed the increase request");
-        }
-      }
-      // Delta capacity is negative when it's a decrease request
-      Resource absDelta = Resources.negate(decreaseRequest.getDeltaCapacity());
-      if (Resources.equals(absDelta, Resources.none())) {
-        // If delta capacity of this decrease request is 0, this decrease
-        // request serves the purpose of cancelling an existing increase request
-        // if any
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Decrease target resource equals to existing resource for"
-              + " container:" + decreaseRequest.getContainerId()
-              + " ignore this decrease request.");
-        }
-      } else{
-        // Release the delta resource
-        releaseResource(clusterResource, app, absDelta,
-            decreaseRequest.getNodePartition(),
-            decreaseRequest.getRMContainer(), true);
-        // Notify application
-        app.decreaseContainer(decreaseRequest);
-        // Notify node
-        decreaseRequest.getSchedulerNode().decreaseContainer(
-            decreaseRequest.getContainerId(), absDelta);
-        resourceDecreased = true;
-      }
-    } finally {
-      writeLock.unlock();
-    }
-
-    if (resourceDecreased) {
-      // Notify parent queue outside of leaf queue lock
-      getParent().decreaseContainer(clusterResource, decreaseRequest, app);
-      LOG.info("Application attempt " + app.getApplicationAttemptId()
-          + " decreased container:" + decreaseRequest.getContainerId()
-          + " from " + resourceBeforeDecrease + " to "
-          + decreaseRequest.getTargetCapacity());
-    }
   }
 
   public void updateApplicationPriority(SchedulerApplication<FiCaSchedulerApp> app,

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +31,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,8 +43,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
@@ -64,6 +70,38 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     getConf().setInt(
         DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
         minMaintenanceR);
+  }
+
+  /**
+   * Test valid value range for the config namenode.maintenance.replication.min.
+   */
+  @Test (timeout = 60000)
+  public void testMaintenanceMinReplConfigRange() {
+    LOG.info("Setting testMaintenanceMinReplConfigRange");
+
+    // Case 1: Maintenance min replication less allowed minimum 0
+    setMinMaintenanceR(-1);
+    try {
+      startCluster(1, 1);
+      fail("Cluster start should fail when 'dfs.namenode.maintenance" +
+          ".replication.min=-1'");
+    } catch (IOException e) {
+      LOG.info("Expected exception: " + e);
+    }
+
+    // Case 2: Maintenance min replication greater
+    // allowed max of DFSConfigKeys.DFS_REPLICATION_KEY
+    int defaultRepl = getConf().getInt(
+        DFSConfigKeys.DFS_REPLICATION_KEY,
+        DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+    setMinMaintenanceR(defaultRepl + 1);
+    try {
+      startCluster(1, 1);
+      fail("Cluster start should fail when 'dfs.namenode.maintenance" +
+          ".replication.min > " + defaultRepl + "'");
+    } catch (IOException e) {
+      LOG.info("Expected exception: " + e);
+    }
   }
 
   /**
@@ -333,6 +371,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
   private void testExpectedReplication(int replicationFactor,
       int expectedReplicasInRead) throws IOException {
+    setup();
     startCluster(1, 5);
 
     final Path file = new Path("/testExpectedReplication.dat");
@@ -352,6 +391,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
         nodeOutofService));
 
     cleanupFile(fileSys, file);
+    teardown();
   }
 
   /**
@@ -402,6 +442,83 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
         Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
+  }
+
+  /**
+   * Test file block replication lesser than maintenance minimum.
+   */
+  @Test(timeout = 360000)
+  public void testFileBlockReplicationAffectingMaintenance()
+      throws Exception {
+    int defaultReplication = getConf().getInt(DFSConfigKeys
+        .DFS_REPLICATION_KEY, DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+    int defaultMaintenanceMinRepl = getConf().getInt(DFSConfigKeys
+        .DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT);
+
+    // Case 1:
+    //  * Maintenance min larger than default min replication
+    //  * File block replication larger than maintenance min
+    //  * Initial data nodes not sufficient to remove all maintenance nodes
+    //    as file block replication is greater than maintenance min.
+    //  * Data nodes added later for the state transition to progress
+    int maintenanceMinRepl = defaultMaintenanceMinRepl + 1;
+    int fileBlockReplication = maintenanceMinRepl + 1;
+    int numAddedDataNodes = 1;
+    int numInitialDataNodes = (maintenanceMinRepl * 2 - numAddedDataNodes);
+    Assert.assertTrue(maintenanceMinRepl <= defaultReplication);
+    testFileBlockReplicationImpl(maintenanceMinRepl,
+        numInitialDataNodes, numAddedDataNodes, fileBlockReplication);
+
+    // Case 2:
+    //  * Maintenance min larger than default min replication
+    //  * File block replication lesser than maintenance min
+    //  * Initial data nodes after removal of maintenance nodes is still
+    //    sufficient for the file block replication.
+    //  * No new data nodes to be added, still the state transition happens
+    maintenanceMinRepl = defaultMaintenanceMinRepl + 1;
+    fileBlockReplication = maintenanceMinRepl - 1;
+    numAddedDataNodes = 0;
+    numInitialDataNodes = (maintenanceMinRepl * 2 - numAddedDataNodes);
+    testFileBlockReplicationImpl(maintenanceMinRepl,
+        numInitialDataNodes, numAddedDataNodes, fileBlockReplication);
+  }
+
+  private void testFileBlockReplicationImpl(
+      int maintenanceMinRepl, int numDataNodes, int numNewDataNodes,
+      int fileBlockRepl)
+      throws Exception {
+    setup();
+    LOG.info("Starting testLargerMinMaintenanceReplication - maintMinRepl: "
+        + maintenanceMinRepl + ", numDNs: " + numDataNodes + ", numNewDNs: "
+        + numNewDataNodes + ", fileRepl: " + fileBlockRepl);
+    LOG.info("Setting maintenance minimum replication: " + maintenanceMinRepl);
+    setMinMaintenanceR(maintenanceMinRepl);
+    startCluster(1, numDataNodes);
+
+    final Path file = new Path("/testLargerMinMaintenanceReplication.dat");
+
+    FileSystem fileSys = getCluster().getFileSystem(0);
+    writeFile(fileSys, file, fileBlockRepl, 1);
+    final DatanodeInfo[] nodes = getFirstBlockReplicasDatanodeInfos(fileSys,
+        file);
+
+    ArrayList<String> nodeUuids = new ArrayList<>();
+    for (int i = 0; i < maintenanceMinRepl && i < nodes.length; i++) {
+      nodeUuids.add(nodes[i].getDatanodeUuid());
+    }
+
+    List<DatanodeInfo> maintenanceDNs = takeNodeOutofService(0, nodeUuids,
+        Long.MAX_VALUE, null, null, AdminStates.ENTERING_MAINTENANCE);
+
+    for (int i = 0; i < numNewDataNodes; i++) {
+      getCluster().startDataNodes(getConf(), 1, true, null, null);
+    }
+    getCluster().waitActive();
+    refreshNodes(0);
+    waitNodeState(maintenanceDNs, AdminStates.IN_MAINTENANCE);
+    cleanupFile(fileSys, file);
+    teardown();
   }
 
   /**
@@ -492,6 +609,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
   private void testDecommissionDifferentNodeAfterMaintenance(int repl)
       throws Exception {
+    setup();
     startCluster(1, 5);
 
     final Path file =
@@ -519,6 +637,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     assertNull(checkWithRetry(ns, fileSys, file, repl + 1, null));
 
     cleanupFile(fileSys, file);
+    teardown();
   }
 
   /**
@@ -583,6 +702,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    */
   private void testChangeReplicationFactor(int oldFactor, int newFactor,
       int expectedLiveReplicas) throws IOException {
+    setup();
     LOG.info("Starting testChangeReplicationFactor {} {} {}",
         oldFactor, newFactor, expectedLiveReplicas);
     startCluster(1, 5);
@@ -615,6 +735,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     assertNull(checkWithRetry(ns, fileSys, file, newFactor, null));
 
     cleanupFile(fileSys, file);
+    teardown();
   }
 
 
@@ -821,6 +942,53 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     assertNull(checkWithRetry(ns, fileSys, file, 1, nodeOutofService));
 
     cleanupFile(fileSys, file);
+  }
+
+  @Test(timeout = 120000)
+  public void testFileCloseAfterEnteringMaintenance() throws Exception {
+    LOG.info("Starting testFileCloseAfterEnteringMaintenance");
+    int expirationInMs = 30 * 1000;
+    int numDataNodes = 3;
+    int numNameNodes = 1;
+    getConf().setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
+
+    startCluster(numNameNodes, numDataNodes);
+    getCluster().waitActive();
+
+    FSNamesystem fsn = getCluster().getNameNode().getNamesystem();
+    List<String> hosts = new ArrayList<>();
+    for (DataNode dn : getCluster().getDataNodes()) {
+      hosts.add(dn.getDisplayName());
+      putNodeInService(0, dn.getDatanodeUuid());
+    }
+    assertEquals(numDataNodes, fsn.getNumLiveDataNodes());
+
+    Path openFile = new Path("/testClosingFileInMaintenance.dat");
+    // Lets write 2 blocks of data to the openFile
+    writeFile(getCluster().getFileSystem(), openFile, (short) 3);
+
+    // Lets write some more data and keep the file open
+    FSDataOutputStream fsDataOutputStream = getCluster().getFileSystem()
+        .append(openFile);
+    byte[] bytes = new byte[1024];
+    fsDataOutputStream.write(bytes);
+    fsDataOutputStream.hsync();
+
+    LocatedBlocks lbs = NameNodeAdapter.getBlockLocations(
+        getCluster().getNameNode(0), openFile.toString(), 0, 3 * blockSize);
+    DatanodeInfo[] dnInfos4LastBlock = lbs.getLastLocatedBlock().getLocations();
+
+    // Request maintenance for DataNodes 1 and 2 which has the last block.
+    takeNodeOutofService(0,
+        Lists.newArrayList(dnInfos4LastBlock[0].getDatanodeUuid(),
+            dnInfos4LastBlock[1].getDatanodeUuid()),
+        Time.now() + expirationInMs,
+        null, null, AdminStates.ENTERING_MAINTENANCE);
+
+    // Closing the file should succeed even when the
+    // last blocks' nodes are entering maintenance.
+    fsDataOutputStream.close();
+    cleanupFile(getCluster().getFileSystem(), openFile);
   }
 
   static String getFirstBlockFirstReplicaUuid(FileSystem fileSys,

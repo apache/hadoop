@@ -18,53 +18,67 @@
 
 package org.apache.hadoop.yarn.sls;
 
-import org.junit.Assert;
+import net.jcip.annotations.NotThreadSafe;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.*;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
-public class TestSLSRunner {
+/**
+ * This test performs simple runs of the SLS with different trace types and
+ * schedulers.
+ */
+@RunWith(value = Parameterized.class)
+@NotThreadSafe
+public class TestSLSRunner extends BaseSLSRunnerTest {
 
-  @Test
+  @Parameters(name = "Testing with: {1}, {0}, (nodeFile {3})")
+  public static Collection<Object[]> data() {
+
+    String capScheduler =
+        "org.apache.hadoop.yarn.server.resourcemanager.scheduler."
+            + "capacity.CapacityScheduler";
+    String fairScheduler =
+        "org.apache.hadoop.yarn.server.resourcemanager.scheduler."
+            + "fair.FairScheduler";
+    String slsTraceFile = "src/test/resources/inputsls.json";
+    String rumenTraceFile = "src/main/data/2jobs2min-rumen-jh.json";
+    String synthTraceFile = "src/test/resources/syn.json";
+    String nodeFile = "src/test/resources/nodes.json";
+
+    // Test with both schedulers, and all three load producers.
+    return Arrays.asList(new Object[][] {
+
+        // covering old commandline in tests
+        {capScheduler, "OLD_RUMEN", rumenTraceFile, nodeFile },
+        {capScheduler, "OLD_SLS", slsTraceFile, nodeFile },
+
+        // covering the no nodeFile case
+        {capScheduler, "SYNTH", synthTraceFile, null },
+        {capScheduler, "RUMEN", rumenTraceFile, null },
+        {capScheduler, "SLS", slsTraceFile, null },
+
+        // covering new commandline and CapacityScheduler
+        {capScheduler, "SYNTH", synthTraceFile, nodeFile },
+        {capScheduler, "RUMEN", rumenTraceFile, nodeFile },
+        {capScheduler, "SLS", slsTraceFile, nodeFile },
+
+        // covering FairScheduler
+        {fairScheduler, "SYNTH", synthTraceFile, nodeFile },
+        {fairScheduler, "RUMEN", rumenTraceFile, nodeFile },
+        {fairScheduler, "SLS", slsTraceFile, nodeFile }
+    });
+  }
+
+  @Test(timeout = 60000)
   @SuppressWarnings("all")
   public void testSimulatorRunning() throws Exception {
-    File tempDir = new File("target", UUID.randomUUID().toString());
-    final List<Throwable> exceptionList =
-        Collections.synchronizedList(new ArrayList<Throwable>());
-
-    Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-      @Override
-      public void uncaughtException(Thread t, Throwable e) {
-        exceptionList.add(e);
-      }
-    });
-
-    // start the simulator
-    File slsOutputDir = new File(tempDir.getAbsolutePath() + "/slsoutput/");
-    String args[] = new String[]{
-            "-inputrumen", "src/main/data/2jobs2min-rumen-jh.json",
-            "-output", slsOutputDir.getAbsolutePath()};
-    SLSRunner.main(args);
-
-    // wait for 20 seconds before stop
-    int count = 20;
-    while (count >= 0) {
-      Thread.sleep(1000);
-
-      if (! exceptionList.isEmpty()) {
-        SLSRunner.getRunner().stop();
-        Assert.fail("TestSLSRunner catched exception from child thread " +
-            "(TaskRunner.Task): " + exceptionList.get(0).getMessage());
-        break;
-      }
-      count--;
-    }
-
-    SLSRunner.getRunner().stop();
+    Configuration conf = new Configuration(false);
+    long timeTillShutdownInsec = 20L;
+    runSLS(conf, timeTillShutdownInsec);
   }
 
 }

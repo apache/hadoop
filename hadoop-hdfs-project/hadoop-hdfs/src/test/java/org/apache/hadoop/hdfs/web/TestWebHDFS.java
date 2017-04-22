@@ -49,6 +49,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,6 +65,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -76,6 +81,7 @@ import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -379,10 +385,17 @@ public class TestWebHDFS {
   }
 
   @Test(timeout=300000)
-  public void testNumericalUserName() throws Exception {
+  public void testCustomizedUserAndGroupNames() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    // Modify username pattern to allow numeric usernames
     conf.set(HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, "^[A-Za-z0-9_][A-Za-z0-9" +
         "._-]*[$]?$");
+    // Modify acl pattern to allow numeric and "@" characters user/groups in ACL spec
+    conf.set(HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
+        "^(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?" +
+            "(user|group|mask|other):[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?)*$");
     final MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
@@ -391,6 +404,7 @@ public class TestWebHDFS {
           .setPermission(new Path("/"),
               new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 
+      // Test a numeric username
       UserGroupInformation.createUserForTesting("123", new String[]{"my-group"})
         .doAs(new PrivilegedExceptionAction<Void>() {
           @Override
@@ -399,6 +413,21 @@ public class TestWebHDFS {
                 WebHdfsConstants.WEBHDFS_SCHEME);
             Path d = new Path("/my-dir");
             Assert.assertTrue(fs.mkdirs(d));
+            // Test also specifying a default ACL with a numeric username
+            // and another of a groupname with '@'
+            fs.modifyAclEntries(d, ImmutableList.of(
+                new AclEntry.Builder()
+                    .setPermission(FsAction.READ)
+                    .setScope(AclEntryScope.DEFAULT)
+                    .setType(AclEntryType.USER)
+                    .setName("11010")
+                    .build(),
+                new AclEntry.Builder()
+                    .setPermission(FsAction.READ_WRITE)
+                    .setType(AclEntryType.GROUP)
+                    .setName("foo@bar")
+                    .build()
+            ));
             return null;
           }
         });
@@ -479,6 +508,76 @@ public class TestWebHDFS {
         GenericTestUtils.assertExceptionContains(
             "Directory is not a snapshottable directory", e);
       }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test (timeout = 60000)
+  public void testWebHdfsErasureCodingFiles() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        SystemErasureCodingPolicies.getByID(
+            SystemErasureCodingPolicies.XOR_2_1_POLICY_ID).getName());
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final Path ecDir = new Path("/ec");
+      dfs.mkdirs(ecDir);
+      dfs.setErasureCodingPolicy(ecDir,
+          SystemErasureCodingPolicies.getByID(
+              SystemErasureCodingPolicies.XOR_2_1_POLICY_ID).getName());
+      final Path ecFile = new Path(ecDir, "ec-file.log");
+      DFSTestUtil.createFile(dfs, ecFile, 1024 * 10, (short) 1, 0xFEED);
+
+      final Path normalDir = new Path("/dir");
+      dfs.mkdirs(normalDir);
+      final Path normalFile = new Path(normalDir, "file.log");
+      DFSTestUtil.createFile(dfs, normalFile, 1024 * 10, (short) 1, 0xFEED);
+
+      FileStatus expectedECDirStatus = dfs.getFileStatus(ecDir);
+      FileStatus actualECDirStatus = webHdfs.getFileStatus(ecDir);
+      Assert.assertEquals(expectedECDirStatus.isErasureCoded(),
+          actualECDirStatus.isErasureCoded());
+      ContractTestUtils.assertErasureCoded(dfs, ecDir);
+      assertTrue(ecDir+ " should have erasure coding set in " +
+              "FileStatus#toString(): " + actualECDirStatus,
+          actualECDirStatus.toString().contains("isErasureCoded=true"));
+
+      FileStatus expectedECFileStatus = dfs.getFileStatus(ecFile);
+      FileStatus actualECFileStatus = webHdfs.getFileStatus(ecFile);
+      Assert.assertEquals(expectedECFileStatus.isErasureCoded(),
+          actualECFileStatus.isErasureCoded());
+      ContractTestUtils.assertErasureCoded(dfs, ecFile);
+      assertTrue(ecFile+ " should have erasure coding set in " +
+              "FileStatus#toString(): " + actualECFileStatus,
+          actualECFileStatus.toString().contains("isErasureCoded=true"));
+
+      FileStatus expectedNormalDirStatus = dfs.getFileStatus(normalDir);
+      FileStatus actualNormalDirStatus = webHdfs.getFileStatus(normalDir);
+      Assert.assertEquals(expectedNormalDirStatus.isErasureCoded(),
+          actualNormalDirStatus.isErasureCoded());
+      ContractTestUtils.assertNotErasureCoded(dfs, normalDir);
+      assertTrue(normalDir + " should have erasure coding unset in " +
+              "FileStatus#toString(): " + actualNormalDirStatus,
+          actualNormalDirStatus.toString().contains("isErasureCoded=false"));
+
+      FileStatus expectedNormalFileStatus = dfs.getFileStatus(normalFile);
+      FileStatus actualNormalFileStatus = webHdfs.getFileStatus(normalDir);
+      Assert.assertEquals(expectedNormalFileStatus.isErasureCoded(),
+          actualNormalFileStatus.isErasureCoded());
+      ContractTestUtils.assertNotErasureCoded(dfs, normalFile);
+      assertTrue(normalFile + " should have erasure coding unset in " +
+              "FileStatus#toString(): " + actualNormalFileStatus,
+          actualNormalFileStatus.toString().contains("isErasureCoded=false"));
+
     } finally {
       if (cluster != null) {
         cluster.shutdown();

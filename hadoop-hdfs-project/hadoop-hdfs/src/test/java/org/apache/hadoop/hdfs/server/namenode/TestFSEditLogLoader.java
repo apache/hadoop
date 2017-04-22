@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -99,7 +100,7 @@ public class TestFSEditLogLoader {
   private static final int NUM_DATA_NODES = 0;
 
   private final ErasureCodingPolicy testECPolicy
-      = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      = StripedFileTestUtil.getDefaultECPolicy();
 
   @Test
   public void testDisplayRecentEditLogOpCodes() throws IOException {
@@ -457,6 +458,8 @@ public class TestFSEditLogLoader {
   public void testAddNewStripedBlock() throws IOException{
     // start a cluster
     Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        testECPolicy.getName());
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -479,7 +482,7 @@ public class TestFSEditLogLoader {
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
       fs.getClient().getNamenode().setErasureCodingPolicy(
-          testDir, testECPolicy);
+          testDir, testECPolicy.getName());
 
       // Create a file with striped block
       Path p = new Path(testFilePath);
@@ -530,6 +533,8 @@ public class TestFSEditLogLoader {
   public void testUpdateStripedBlocks() throws IOException{
     // start a cluster
     Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        testECPolicy.getName());
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -552,7 +557,7 @@ public class TestFSEditLogLoader {
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
       fs.getClient().getNamenode().setErasureCodingPolicy(
-          testDir, testECPolicy);
+          testDir, testECPolicy.getName());
 
       //create a file with striped blocks
       Path p = new Path(testFilePath);

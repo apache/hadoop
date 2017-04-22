@@ -1033,6 +1033,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       setClosed();
       // shutdown executor of flushAll tasks
       flushAllExecutor.shutdownNow();
+      encoder.release();
     }
   }
 

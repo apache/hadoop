@@ -29,8 +29,8 @@ public class TestXORRawCoderInteroperable1 extends TestXORRawCoderBase {
   @Before
   public void setup() {
     Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
-    this.encoderClass = XORRawEncoder.class;
-    this.decoderClass = NativeXORRawDecoder.class;
+    this.encoderFactoryClass = XORRawErasureCoderFactory.class;
+    this.decoderFactoryClass = NativeXORRawErasureCoderFactory.class;
     setAllowDump(true);
   }
 }

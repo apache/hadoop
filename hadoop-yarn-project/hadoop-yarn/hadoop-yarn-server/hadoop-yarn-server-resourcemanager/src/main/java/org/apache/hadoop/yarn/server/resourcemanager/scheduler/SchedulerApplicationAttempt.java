@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -65,7 +66,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppR
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerChangeResourceEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
@@ -73,6 +73,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRese
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerUpdatesAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode
+    .RMNodeDecreaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
@@ -136,9 +139,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private AtomicLong firstContainerAllocatedTime = new AtomicLong(0);
 
   protected List<RMContainer> newlyAllocatedContainers = new ArrayList<>();
+  protected List<RMContainer> tempContainerToKill = new ArrayList<>();
   protected Map<ContainerId, RMContainer> newlyPromotedContainers = new HashMap<>();
   protected Map<ContainerId, RMContainer> newlyDemotedContainers = new HashMap<>();
-  protected List<RMContainer> tempContainerToKill = new ArrayList<>();
   protected Map<ContainerId, RMContainer> newlyDecreasedContainers = new HashMap<>();
   protected Map<ContainerId, RMContainer> newlyIncreasedContainers = new HashMap<>();
   protected Set<NMToken> updatedNMTokens = new HashSet<>();
@@ -670,6 +673,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       rmContainer.handle(new RMContainerUpdatesAcquiredEvent(
           rmContainer.getContainerId(),
           ContainerUpdateType.INCREASE_RESOURCE == updateType));
+      if (ContainerUpdateType.DECREASE_RESOURCE == updateType) {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeDecreaseContainerEvent(rmContainer.getNodeId(),
+                Collections.singletonList(rmContainer.getContainer())));
+      }
     }
     return container;
   }
@@ -717,9 +725,14 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
   }
 
-  public void addToNewlyDemotedContainers(ContainerId containerId,
+  public synchronized void addToNewlyDemotedContainers(ContainerId containerId,
       RMContainer rmContainer) {
     newlyDemotedContainers.put(containerId, rmContainer);
+  }
+
+  public synchronized void addToNewlyDecreasedContainers(
+      ContainerId containerId, RMContainer rmContainer) {
+    newlyDecreasedContainers.put(containerId, rmContainer);
   }
 
   protected synchronized void addToUpdateContainerErrors(
@@ -729,10 +742,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   protected synchronized void addToNewlyAllocatedContainers(
       SchedulerNode node, RMContainer rmContainer) {
-    if (oppContainerContext == null) {
-      newlyAllocatedContainers.add(rmContainer);
-      return;
-    }
     ContainerId matchedContainerId =
         getUpdateContext().matchContainerToOutstandingIncreaseReq(
             node, rmContainer.getAllocatedSchedulerKey(), rmContainer);
@@ -745,7 +754,21 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         // occurs when using MiniYARNCluster to test).
         tempContainerToKill.add(rmContainer);
       } else {
-        newlyPromotedContainers.put(matchedContainerId, rmContainer);
+        RMContainer existingContainer = getRMContainer(matchedContainerId);
+        // If this container was already GUARANTEED, then it is an
+        // increase, else its a promotion
+        if (existingContainer == null ||
+            EnumSet.of(RMContainerState.COMPLETED, RMContainerState.KILLED,
+                RMContainerState.EXPIRED, RMContainerState.RELEASED).contains(
+                    existingContainer.getState())) {
+          tempContainerToKill.add(rmContainer);
+        } else {
+          if (ExecutionType.GUARANTEED == existingContainer.getExecutionType()) {
+            newlyIncreasedContainers.put(matchedContainerId, rmContainer);
+          } else {
+            newlyPromotedContainers.put(matchedContainerId, rmContainer);
+          }
+        }
       }
     } else {
       newlyAllocatedContainers.add(rmContainer);
@@ -753,13 +776,23 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
 
   public List<Container> pullNewlyPromotedContainers() {
-    return pullContainersWithUpdatedExecType(newlyPromotedContainers,
+    return pullNewlyUpdatedContainers(newlyPromotedContainers,
         ContainerUpdateType.PROMOTE_EXECUTION_TYPE);
   }
 
   public List<Container> pullNewlyDemotedContainers() {
-    return pullContainersWithUpdatedExecType(newlyDemotedContainers,
+    return pullNewlyUpdatedContainers(newlyDemotedContainers,
         ContainerUpdateType.DEMOTE_EXECUTION_TYPE);
+  }
+
+  public List<Container> pullNewlyIncreasedContainers() {
+    return pullNewlyUpdatedContainers(newlyIncreasedContainers,
+        ContainerUpdateType.INCREASE_RESOURCE);
+  }
+
+  public List<Container> pullNewlyDecreasedContainers() {
+    return pullNewlyUpdatedContainers(newlyDecreasedContainers,
+        ContainerUpdateType.DECREASE_RESOURCE);
   }
 
   public List<UpdateContainerError> pullUpdateContainerErrors() {
@@ -775,11 +808,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
    * GUARANTEED to OPPORTUNISTIC.
    * @return Newly Promoted and Demoted containers
    */
-  private List<Container> pullContainersWithUpdatedExecType(
+  private List<Container> pullNewlyUpdatedContainers(
       Map<ContainerId, RMContainer> newlyUpdatedContainers,
       ContainerUpdateType updateTpe) {
     List<Container> updatedContainers = new ArrayList<>();
-    if (oppContainerContext == null) {
+    if (oppContainerContext == null &&
+        (ContainerUpdateType.DEMOTE_EXECUTION_TYPE == updateTpe
+            || ContainerUpdateType.PROMOTE_EXECUTION_TYPE == updateTpe)) {
       return updatedContainers;
     }
     try {
@@ -789,19 +824,22 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       while (i.hasNext()) {
         Map.Entry<ContainerId, RMContainer> entry = i.next();
         ContainerId matchedContainerId = entry.getKey();
-        RMContainer rmContainer = entry.getValue();
+        RMContainer tempRMContainer = entry.getValue();
 
-        // swap containers
-        RMContainer existingRMContainer = swapContainer(
-            rmContainer, matchedContainerId);
-        getUpdateContext().removeFromOutstandingUpdate(
-            rmContainer.getAllocatedSchedulerKey(),
-            existingRMContainer.getContainer());
-        Container updatedContainer = updateContainerAndNMToken(
-            existingRMContainer, updateTpe);
-        updatedContainers.add(updatedContainer);
-
-        tempContainerToKill.add(rmContainer);
+        RMContainer existingRMContainer =
+            getRMContainer(matchedContainerId);
+        if (existingRMContainer != null) {
+          // swap containers
+          existingRMContainer = getUpdateContext().swapContainer(
+              tempRMContainer, existingRMContainer, updateTpe);
+          getUpdateContext().removeFromOutstandingUpdate(
+              tempRMContainer.getAllocatedSchedulerKey(),
+              existingRMContainer.getContainer());
+          Container updatedContainer = updateContainerAndNMToken(
+              existingRMContainer, updateTpe);
+          updatedContainers.add(updatedContainer);
+        }
+        tempContainerToKill.add(tempRMContainer);
         i.remove();
       }
       // Release all temporary containers
@@ -823,68 +861,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
   }
 
-  private RMContainer swapContainer(RMContainer rmContainer, ContainerId
-      matchedContainerId) {
-    RMContainer existingRMContainer =
-        getRMContainer(matchedContainerId);
-    if (existingRMContainer != null) {
-      // Swap updated container with the existing container
-      Container updatedContainer = rmContainer.getContainer();
-
-      Container newContainer = Container.newInstance(matchedContainerId,
-          existingRMContainer.getContainer().getNodeId(),
-          existingRMContainer.getContainer().getNodeHttpAddress(),
-          updatedContainer.getResource(),
-          existingRMContainer.getContainer().getPriority(), null,
-          updatedContainer.getExecutionType());
-      newContainer.setAllocationRequestId(
-          existingRMContainer.getContainer().getAllocationRequestId());
-      newContainer.setVersion(existingRMContainer.getContainer().getVersion());
-
-      rmContainer.getContainer().setResource(
-          existingRMContainer.getContainer().getResource());
-      rmContainer.getContainer().setExecutionType(
-          existingRMContainer.getContainer().getExecutionType());
-
-      ((RMContainerImpl)existingRMContainer).setContainer(newContainer);
-    }
-    return existingRMContainer;
-  }
-
-  private List<Container> pullNewlyUpdatedContainers(
-      Map<ContainerId, RMContainer> updatedContainerMap, boolean increase) {
-    try {
-      writeLock.lock();
-      List <Container> returnContainerList = new ArrayList <Container>(
-          updatedContainerMap.size());
-
-      Iterator<Entry<ContainerId, RMContainer>> i =
-          updatedContainerMap.entrySet().iterator();
-      while (i.hasNext()) {
-        RMContainer rmContainer = i.next().getValue();
-        Container updatedContainer = updateContainerAndNMToken(rmContainer,
-            increase ? ContainerUpdateType.INCREASE_RESOURCE :
-                ContainerUpdateType.DECREASE_RESOURCE);
-        if (updatedContainer != null) {
-          returnContainerList.add(updatedContainer);
-          i.remove();
-        }
-      }
-      return returnContainerList;
-    } finally {
-      writeLock.unlock();
-    }
-
-  }
-
-  public List<Container> pullNewlyIncreasedContainers() {
-    return pullNewlyUpdatedContainers(newlyIncreasedContainers, true);
-  }
-  
-  public List<Container> pullNewlyDecreasedContainers() {
-    return pullNewlyUpdatedContainers(newlyDecreasedContainers, false);
-  }
-  
   public List<NMToken> pullUpdatedNMTokens() {
     try {
       writeLock.lock();
@@ -1093,6 +1069,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       QueueMetrics newMetrics = newQueue.getMetrics();
       String newQueueName = newQueue.getQueueName();
       String user = getUser();
+
       for (RMContainer liveContainer : liveContainers.values()) {
         Resource resource = liveContainer.getContainer().getResource();
         ((RMContainerImpl) liveContainer).setQueueName(newQueueName);
@@ -1108,7 +1085,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         }
       }
 
-      appSchedulingInfo.move(newQueue);
+      if (!isStopped) {
+        appSchedulingInfo.move(newQueue);
+      }
       this.queue = newQueue;
     } finally {
       writeLock.unlock();
@@ -1252,68 +1231,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public ResourceUsage getSchedulingResourceUsage() {
     return attemptResourceUsage;
   }
-  
-  public boolean removeIncreaseRequest(NodeId nodeId,
-      SchedulerRequestKey schedulerKey, ContainerId containerId) {
-    try {
-      writeLock.lock();
-      return appSchedulingInfo.removeIncreaseRequest(nodeId, schedulerKey,
-          containerId);
-    } finally {
-      writeLock.unlock();
-    }
-  }
-  
-  public boolean updateIncreaseRequests(
-      List<SchedContainerChangeRequest> increaseRequests) {
-    try {
-      writeLock.lock();
-      return appSchedulingInfo.updateIncreaseRequests(increaseRequests);
-    } finally {
-      writeLock.unlock();
-    }
-  }
-  
-  private void changeContainerResource(
-      SchedContainerChangeRequest changeRequest, boolean increase) {
-    try {
-      writeLock.lock();
-      if (increase) {
-        appSchedulingInfo.increaseContainer(changeRequest);
-      } else{
-        appSchedulingInfo.decreaseContainer(changeRequest);
-      }
-
-      RMContainer changedRMContainer = changeRequest.getRMContainer();
-      changedRMContainer.handle(
-          new RMContainerChangeResourceEvent(changeRequest.getContainerId(),
-              changeRequest.getTargetCapacity(), increase));
-
-      // remove pending and not pulled by AM newly-increased or
-      // decreased-containers and add the new one
-      if (increase) {
-        newlyDecreasedContainers.remove(changeRequest.getContainerId());
-        newlyIncreasedContainers.put(changeRequest.getContainerId(),
-            changedRMContainer);
-      } else{
-        newlyIncreasedContainers.remove(changeRequest.getContainerId());
-        newlyDecreasedContainers.put(changeRequest.getContainerId(),
-            changedRMContainer);
-      }
-    } finally {
-      writeLock.unlock();
-    }
-  }
-  
-  public void decreaseContainer(
-      SchedContainerChangeRequest decreaseRequest) {
-    changeContainerResource(decreaseRequest, false);
-  }
-  
-  public void increaseContainer(
-      SchedContainerChangeRequest increaseRequest) {
-    changeContainerResource(increaseRequest, true);
-  }
 
   public void setAppAMNodePartitionName(String partitionName) {
     this.appAMNodePartitionName = partitionName;
@@ -1387,6 +1304,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey);
   }
 
+  public Map<String, ResourceRequest> getResourceRequests(
+      SchedulerRequestKey schedulerRequestKey) {
+    return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey)
+        .getResourceRequests();
+  }
 
   public void incUnconfirmedRes(Resource res) {
     unconfirmedAllocatedMem.addAndGet(res.getMemorySize());

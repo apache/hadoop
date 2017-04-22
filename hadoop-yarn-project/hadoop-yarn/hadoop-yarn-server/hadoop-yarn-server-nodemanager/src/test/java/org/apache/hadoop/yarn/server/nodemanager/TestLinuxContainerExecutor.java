@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -305,11 +306,13 @@ public class TestLinuxContainerExecutor {
     return cId;
   }
 
-  private int runAndBlock(String... cmd) throws IOException {
+  private int runAndBlock(String... cmd)
+      throws IOException, ConfigurationException {
     return runAndBlock(getNextContainerId(), cmd);
   }
 
-  private int runAndBlock(ContainerId cId, String... cmd) throws IOException {
+  private int runAndBlock(ContainerId cId, String... cmd)
+      throws IOException, ConfigurationException {
     String appId = "APP_" + getNextId();
     Container container = mock(Container.class);
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
@@ -448,7 +451,7 @@ public class TestLinuxContainerExecutor {
       public void run() {
         try {
           runAndBlock(sleepId, "sleep", "100");
-        } catch (IOException e) {
+        } catch (IOException|ConfigurationException e) {
           LOG.warn("Caught exception while running sleep", e);
         }
       };

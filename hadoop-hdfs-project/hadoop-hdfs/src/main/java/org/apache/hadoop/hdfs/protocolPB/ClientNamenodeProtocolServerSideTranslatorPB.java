@@ -424,7 +424,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           PBHelperClient.convertCreateFlag(req.getCreateFlag()), req.getCreateParent(),
           (short) req.getReplication(), req.getBlockSize(),
           PBHelperClient.convertCryptoProtocolVersions(
-              req.getCryptoProtocolVersionList()));
+              req.getCryptoProtocolVersionList()),
+          req.getEcPolicyName());
 
       if (result != null) {
         return CreateResponseProto.newBuilder().setFs(PBHelperClient.convert(result))
@@ -1442,9 +1443,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, SetErasureCodingPolicyRequestProto req)
       throws ServiceException {
     try {
-      ErasureCodingPolicy ecPolicy = req.hasEcPolicy() ?
-          PBHelperClient.convertErasureCodingPolicy(req.getEcPolicy()) : null;
-      server.setErasureCodingPolicy(req.getSrc(), ecPolicy);
+      server.setErasureCodingPolicy(req.getSrc(), req.getEcPolicyName());
       return SetErasureCodingPolicyResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);

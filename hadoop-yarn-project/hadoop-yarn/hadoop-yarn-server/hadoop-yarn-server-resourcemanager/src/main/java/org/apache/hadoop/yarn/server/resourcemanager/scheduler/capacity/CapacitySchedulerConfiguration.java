@@ -198,6 +198,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final int DEFAULT_NODE_LOCALITY_DELAY = 40;
 
   @Private
+  public static final String RACK_LOCALITY_ADDITIONAL_DELAY =
+          PREFIX + "rack-locality-additional-delay";
+
+  @Private
+  public static final int DEFAULT_RACK_LOCALITY_ADDITIONAL_DELAY = -1;
+
+  @Private
   public static final String RACK_LOCALITY_FULL_RESET =
       PREFIX + "rack-locality-full-reset";
 
@@ -827,6 +834,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public int getNodeLocalityDelay() {
     return getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
+  }
+
+  public int getRackLocalityAdditionalDelay() {
+    return getInt(RACK_LOCALITY_ADDITIONAL_DELAY,
+        DEFAULT_RACK_LOCALITY_ADDITIONAL_DELAY);
   }
 
   public boolean getRackLocalityFullReset() {

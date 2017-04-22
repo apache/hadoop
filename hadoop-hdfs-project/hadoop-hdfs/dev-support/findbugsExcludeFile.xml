@@ -234,4 +234,22 @@
       <Method name="assertAllResultsEqual" />
       <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE" />
     </Match>
+    <!-- Manually verified that signed byte value involved in bitwise OR is not negative -->
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.server.namenode.INodeFile$HeaderFormat" />
+        <Method name="getBlockLayoutRedundancy" />
+        <Bug pattern="BIT_IOR_OF_SIGNED_BYTE" />
+    </Match>
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.server.datanode.checker.AbstractFuture" />
+        <Bug pattern="DLS_DEAD_STORE_OF_CLASS_LITERAL" />
+    </Match>
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.server.datanode.checker.AbstractFuture" />
+        <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+    </Match>
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.server.datanode.checker.AbstractFuture" />
+        <Bug pattern="NS_DANGEROUS_NON_SHORT_CIRCUIT" />
+    </Match>
  </FindBugsFilter>

@@ -48,6 +48,8 @@ public class TestErasureCodeBenchmarkThroughput {
     conf = new HdfsConfiguration();
     int numDN = ErasureCodeBenchmarkThroughput.getEcPolicy().getNumDataUnits() +
         ErasureCodeBenchmarkThroughput.getEcPolicy().getNumParityUnits();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        ErasureCodeBenchmarkThroughput.getEcPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDN).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();

@@ -58,6 +58,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     protobuf-c-compiler \
     python \
     python2.7 \
+    python2.7-dev \
     python-pip \
     rsync \
     snappy \
@@ -81,13 +82,17 @@ RUN apt-get -q install --no-install-recommends -y oracle-java8-installer
 ####
 # Apps that require Java
 ###
-RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
-    ant \
-    maven
+RUN apt-get -q update && apt-get -q install --no-install-recommends -y ant
 
-# Fixing the Apache commons / Maven dependency problem under Ubuntu:
-# See http://wiki.apache.org/commons/VfsProblems
-RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang.jar .
+######
+# Install Apache Maven
+######
+RUN mkdir -p /opt/maven && \
+    curl -L -s -S \
+         http://www-us.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+         -o /opt/maven.tar.gz && \
+    tar xzf /opt/maven.tar.gz --strip-components 1 -C /opt/maven
+ENV MAVEN_HOME /opt/maven
 
 ######
 # Install findbugs

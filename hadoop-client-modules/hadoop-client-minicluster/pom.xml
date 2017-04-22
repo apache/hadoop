@@ -218,10 +218,6 @@
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>xmlenc</groupId>
-          <artifactId>xmlenc</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
     <!-- Add optional runtime dependency on the in-development timeline server module

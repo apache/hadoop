@@ -415,8 +415,9 @@ public class FSEditLogLoader {
       // Update the salient file attributes.
       newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
-          fsDir.getFSNamesystem(), iip);
+      ErasureCodingPolicy ecPolicy =
+          FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+              fsDir.getFSNamesystem(), iip);
       updateBlocks(fsDir, addCloseOp, iip, newFile, ecPolicy);
       break;
     }
@@ -437,8 +438,9 @@ public class FSEditLogLoader {
       // Update the salient file attributes.
       file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
-          fsDir.getFSNamesystem(), iip);
+      ErasureCodingPolicy ecPolicy =
+          FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+              fsDir.getFSNamesystem(), iip);
       updateBlocks(fsDir, addCloseOp, iip, file, ecPolicy);
 
       // Now close the file
@@ -496,8 +498,9 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(path, DirOp.READ);
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // Update in-memory data structures
-      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
-          fsDir.getFSNamesystem(), iip);
+      ErasureCodingPolicy ecPolicy =
+          FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+              fsDir.getFSNamesystem(), iip);
       updateBlocks(fsDir, updateOp, iip, oldFile, ecPolicy);
 
       if (toAddRetryCache) {
@@ -515,8 +518,9 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(path, DirOp.READ);
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // add the new block to the INodeFile
-      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
-          fsDir.getFSNamesystem(), iip);
+      ErasureCodingPolicy ecPolicy =
+          FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+              fsDir.getFSNamesystem(), iip);
       addNewBlock(addBlockOp, oldFile, ecPolicy);
       break;
     }
@@ -742,8 +746,9 @@ public class FSEditLogLoader {
           renameReservedPathsOnUpgrade(createSnapshotOp.snapshotRoot,
               logVersion);
       INodesInPath iip = fsDir.getINodesInPath(snapshotRoot, DirOp.WRITE);
-      String path = fsNamesys.getSnapshotManager().createSnapshot(iip,
-          snapshotRoot, createSnapshotOp.snapshotName);
+      String path = fsNamesys.getSnapshotManager().createSnapshot(
+          fsDir.getFSNamesystem().getLeaseManager(),
+          iip, snapshotRoot, createSnapshotOp.snapshotName);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntryWithPayload(createSnapshotOp.rpcClientId,
             createSnapshotOp.rpcCallId, path);
@@ -1108,8 +1113,7 @@ public class FSEditLogLoader {
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
           if (isStriped) {
-            newBI = new BlockInfoStriped(newBlock,
-                ErasureCodingPolicyManager.getSystemDefaultPolicy());
+            newBI = new BlockInfoStriped(newBlock, ecPolicy);
           } else {
             newBI = new BlockInfoContiguous(newBlock,
                 file.getFileReplication());

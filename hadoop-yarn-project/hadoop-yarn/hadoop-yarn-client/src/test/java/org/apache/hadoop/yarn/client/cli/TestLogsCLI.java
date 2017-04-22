@@ -755,6 +755,23 @@ public class TestLogsCLI {
     Set<String> logTypes1 = capturedRequests.get(1).getLogTypes();
     Assert.assertTrue(logTypes0.contains("ALL") && (logTypes0.size() == 1));
     Assert.assertTrue(logTypes1.contains("ALL") && (logTypes1.size() == 1));
+
+    mockYarnClient = createMockYarnClientWithException(
+        YarnApplicationState.RUNNING, ugi.getShortUserName());
+    LogsCLI cli2 = spy(new LogsCLIForTest(mockYarnClient));
+    doReturn(0).when(cli2).printContainerLogsFromRunningApplication(
+        any(Configuration.class), any(ContainerLogsRequest.class),
+        any(LogCLIHelpers.class), anyBoolean());
+    doReturn("123").when(cli2).getNodeHttpAddressFromRMWebString(
+        any(ContainerLogsRequest.class));
+    cli2.setConf(new YarnConfiguration());
+    ContainerId containerId100 = ContainerId.newContainerId(appAttemptId, 100);
+    exitCode = cli2.run(new String[] {"-applicationId", appId.toString(),
+        "-containerId", containerId100.toString(), "-nodeAddress", "NM:1234"});
+    assertTrue(exitCode == 0);
+    verify(cli2, times(1)).printContainerLogsFromRunningApplication(
+        any(Configuration.class), logsRequestCaptor.capture(),
+        any(LogCLIHelpers.class), anyBoolean());
   }
 
   @Test (timeout = 15000)
@@ -1328,18 +1345,18 @@ public class TestLogsCLI {
     Path path =
         new Path(appDir, LogAggregationUtils.getNodeString(nodeId)
             + System.currentTimeMillis());
-    AggregatedLogFormat.LogWriter writer =
-        new AggregatedLogFormat.LogWriter(configuration, path, ugi);
-    writer.writeApplicationOwner(ugi.getUserName());
+    try (AggregatedLogFormat.LogWriter writer =
+             new AggregatedLogFormat.LogWriter()) {
+      writer.initialize(configuration, path, ugi);
+      writer.writeApplicationOwner(ugi.getUserName());
 
-    Map<ApplicationAccessType, String> appAcls =
-        new HashMap<ApplicationAccessType, String>();
-    appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
-    writer.writeApplicationACLs(appAcls);
-    writer.append(new AggregatedLogFormat.LogKey(containerId),
-      new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
-        UserGroupInformation.getCurrentUser().getShortUserName()));
-    writer.close();
+      Map<ApplicationAccessType, String> appAcls = new HashMap<>();
+      appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
+      writer.writeApplicationACLs(appAcls);
+      writer.append(new AggregatedLogFormat.LogKey(containerId),
+          new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
+              UserGroupInformation.getCurrentUser().getShortUserName()));
+    }
   }
 
   private static void uploadEmptyContainerLogIntoRemoteDir(UserGroupInformation ugi,
@@ -1348,23 +1365,23 @@ public class TestLogsCLI {
     Path path =
         new Path(appDir, LogAggregationUtils.getNodeString(nodeId)
             + System.currentTimeMillis());
-    AggregatedLogFormat.LogWriter writer =
-        new AggregatedLogFormat.LogWriter(configuration, path, ugi);
-    writer.writeApplicationOwner(ugi.getUserName());
+    try (AggregatedLogFormat.LogWriter writer =
+             new AggregatedLogFormat.LogWriter()) {
+      writer.initialize(configuration, path, ugi);
+      writer.writeApplicationOwner(ugi.getUserName());
 
-    Map<ApplicationAccessType, String> appAcls =
-        new HashMap<ApplicationAccessType, String>();
-    appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
-    writer.writeApplicationACLs(appAcls);
-    DataOutputStream out = writer.getWriter().prepareAppendKey(-1);
-    new AggregatedLogFormat.LogKey(containerId).write(out);
-    out.close();
-    out = writer.getWriter().prepareAppendValue(-1);
-    new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
-      UserGroupInformation.getCurrentUser().getShortUserName()).write(out,
-      new HashSet<File>());
-    out.close();
-    writer.close();
+      Map<ApplicationAccessType, String> appAcls = new HashMap<>();
+      appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
+      writer.writeApplicationACLs(appAcls);
+      DataOutputStream out = writer.getWriter().prepareAppendKey(-1);
+      new AggregatedLogFormat.LogKey(containerId).write(out);
+      out.close();
+      out = writer.getWriter().prepareAppendValue(-1);
+      new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
+          UserGroupInformation.getCurrentUser().getShortUserName()).write(out,
+              new HashSet<>());
+      out.close();
+    }
   }
 
   private YarnClient createMockYarnClient(YarnApplicationState appState,
@@ -1388,6 +1405,20 @@ public class TestLogsCLI {
       doReturn(mockContainers).when(mockClient).getContainers(any(
           ApplicationAttemptId.class));
     }
+    return mockClient;
+  }
+
+  private YarnClient createMockYarnClientWithException(
+      YarnApplicationState appState, String user)
+      throws YarnException, IOException {
+    YarnClient mockClient = mock(YarnClient.class);
+    ApplicationReport mockAppReport = mock(ApplicationReport.class);
+    doReturn(user).when(mockAppReport).getUser();
+    doReturn(appState).when(mockAppReport).getYarnApplicationState();
+    doReturn(mockAppReport).when(mockClient).getApplicationReport(
+        any(ApplicationId.class));
+    doThrow(new YarnException()).when(mockClient).getContainerReport(
+        any(ContainerId.class));
     return mockClient;
   }
 

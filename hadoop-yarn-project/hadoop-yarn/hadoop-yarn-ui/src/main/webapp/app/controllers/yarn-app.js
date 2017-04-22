@@ -19,10 +19,13 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
+  queryParams: ["service"],
+  service: undefined,
 
   breadcrumbs: Ember.computed("model.app.id", function () {
     var appId = this.get("model.app.id");
-    return [{
+    var serviceName = this.get('service');
+    var breadcrumbs = [{
       text: "Home",
       routeName: 'application'
     },{
@@ -30,9 +33,21 @@ export default Ember.Controller.extend({
       routeName: 'yarn-apps.apps'
     }, {
       text: `App [${appId}]`,
-      routeName: 'yarn-app',
-      model: appId
+      href: `#/yarn-app/${appId}`
     }];
+    if (serviceName) {
+      breadcrumbs = [{
+        text: "Home",
+        routeName: 'application'
+      }, {
+        text: "Services",
+        routeName: 'yarn-services'
+      }, {
+        text: `${serviceName} [${appId}]`,
+        href: `#/yarn-app/${appId}?service=${serviceName}`
+      }];
+    }
+    return breadcrumbs;
   }),
 
   amHostHttpAddressFormatted: Ember.computed('model.app.amHostHttpAddress', function() {

@@ -38,6 +38,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
@@ -228,16 +229,6 @@ public abstract class AbstractCSQueue implements CSQueue {
             null, null, Server.getRemoteAddress(), null));
   }
 
-  @Override
-  public void setUsedCapacity(float usedCapacity) {
-    queueCapacities.setUsedCapacity(usedCapacity);
-  }
-  
-  @Override
-  public void setAbsoluteUsedCapacity(float absUsedCapacity) {
-    queueCapacities.setAbsoluteUsedCapacity(absUsedCapacity);
-  }
-
   /**
    * Set maximum capacity - used only for testing.
    * @param maximumCapacity new max capacity
@@ -309,7 +300,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, null);
+          this, labelManager, null);
 
       // Check if labels of this queue is a subset of parent queue, only do this
       // when we not root
@@ -411,6 +402,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setCurrentCapacity(getUsedCapacity());
     queueInfo.setQueueStatistics(getQueueStatistics());
     queueInfo.setPreemptionDisabled(preemptionDisabled);
+    queueInfo.setQueueConfigurations(getQueueConfigurations());
     return queueInfo;
   }
 
@@ -442,6 +434,29 @@ public abstract class AbstractCSQueue implements CSQueue {
     return stats;
   }
   
+  public Map<String, QueueConfigurations> getQueueConfigurations() {
+    Map<String, QueueConfigurations> queueConfigurations = new HashMap<>();
+    Set<String> nodeLabels = getNodeLabelsForQueue();
+    for (String nodeLabel : nodeLabels) {
+      QueueConfigurations queueConfiguration =
+          recordFactory.newRecordInstance(QueueConfigurations.class);
+      float capacity = queueCapacities.getCapacity(nodeLabel);
+      float absoluteCapacity = queueCapacities.getAbsoluteCapacity(nodeLabel);
+      float maxCapacity = queueCapacities.getMaximumCapacity(nodeLabel);
+      float absMaxCapacity =
+          queueCapacities.getAbsoluteMaximumCapacity(nodeLabel);
+      float maxAMPercentage =
+          queueCapacities.getMaxAMResourcePercentage(nodeLabel);
+      queueConfiguration.setCapacity(capacity);
+      queueConfiguration.setAbsoluteCapacity(absoluteCapacity);
+      queueConfiguration.setMaxCapacity(maxCapacity);
+      queueConfiguration.setAbsoluteMaxCapacity(absMaxCapacity);
+      queueConfiguration.setMaxAMPercentage(maxAMPercentage);
+      queueConfigurations.put(nodeLabel, queueConfiguration);
+    }
+    return queueConfigurations;
+  }
+
   @Private
   public Resource getMaximumAllocation() {
     return maximumAllocation;
@@ -453,33 +468,30 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   void allocateResource(Resource clusterResource,
-      Resource resource, String nodePartition, boolean changeContainerResource) {
+      Resource resource, String nodePartition) {
     try {
       writeLock.lock();
       queueUsage.incUsed(nodePartition, resource);
 
-      if (!changeContainerResource) {
-        ++numContainers;
-      }
+      ++numContainers;
+
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, nodePartition);
+          this, labelManager, nodePartition);
     } finally {
       writeLock.unlock();
     }
   }
   
   protected void releaseResource(Resource clusterResource,
-      Resource resource, String nodePartition, boolean changeContainerResource) {
+      Resource resource, String nodePartition) {
     try {
       writeLock.lock();
       queueUsage.decUsed(nodePartition, resource);
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, nodePartition);
+          this, labelManager, nodePartition);
 
-      if (!changeContainerResource) {
-        --numContainers;
-      }
+      --numContainers;
     } finally {
       writeLock.unlock();
     }
@@ -738,7 +750,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueUsage.incUsed(nodeLabel, resourceToInc);
     CSQueueUtils.updateUsedCapacity(resourceCalculator,
         labelManager.getResourceByLabel(nodeLabel, Resources.none()),
-        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
+        nodeLabel, this);
     if (null != parent) {
       parent.incUsedResource(nodeLabel, resourceToInc, null);
     }
@@ -754,7 +766,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueUsage.decUsed(nodeLabel, resourceToDec);
     CSQueueUtils.updateUsedCapacity(resourceCalculator,
         labelManager.getResourceByLabel(nodeLabel, Resources.none()),
-        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
+        nodeLabel, this);
     if (null != parent) {
       parent.decUsedResource(nodeLabel, resourceToDec, null);
     }

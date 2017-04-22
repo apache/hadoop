@@ -43,6 +43,7 @@ import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
 @Private
 @Unstable
 public class SLSUtils {
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   // hostname includes the network path and the host name. for example
   // "/default-rack/hostFoo" or "/coreSwitchA/TORSwitchB/hostBar".
@@ -145,6 +146,15 @@ public class SLSUtils {
       }
     } finally {
       input.close();
+    }
+    return nodeSet;
+  }
+
+  public static Set<? extends String> generateNodesFromSynth(
+      int numNodes, int nodesPerRack) {
+    Set<String> nodeSet = new HashSet<String>();
+    for (int i = 0; i < numNodes; i++) {
+      nodeSet.add("/rack" + i % nodesPerRack + "/node" + i);
     }
     return nodeSet;
   }

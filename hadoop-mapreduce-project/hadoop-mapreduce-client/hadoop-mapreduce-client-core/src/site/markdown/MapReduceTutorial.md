@@ -417,7 +417,7 @@ indicates the set of input files
 [FileInputFormat.addInputPath(Job, Path)](../../api/org/apache/hadoop/mapreduce/lib/input/FileInputFormat.html)) and
 ([FileInputFormat.setInputPaths(Job, String...)](../../api/org/apache/hadoop/mapreduce/lib/input/FileInputFormat.html)/
 [FileInputFormat.addInputPaths(Job, String))](../../api/org/apache/hadoop/mapreduce/lib/input/FileInputFormat.html) and where the output files should be written
-([FileOutputFormat.setOutputPath(Path)](../../api/org/apache/hadoop/mapreduce/lib/input/FileOutputFormat.html)).
+([FileOutputFormat.setOutputPath(Path)](../../api/org/apache/hadoop/mapreduce/lib/output/FileOutputFormat.html)).
 
 Optionally, `Job` is used to specify other advanced facets of the job such as the `Comparator` to be used, files to be put in the `DistributedCache`, whether intermediate and/or job outputs are to be compressed (and how), whether job tasks can be executed in a *speculative* manner
 ([setMapSpeculativeExecution(boolean)](../../api/org/apache/hadoop/mapreduce/Job.html))/

@@ -23,6 +23,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
@@ -39,6 +40,10 @@ public class CSQueueMetrics extends QueueMetrics {
   MutableGaugeLong usedAMResourceMB;
   @Metric("Used AM CPU limit in virtual cores")
   MutableGaugeLong usedAMResourceVCores;
+  @Metric("Percent of Capacity Used")
+  MutableGaugeFloat usedCapacity;
+  @Metric("Percent of Absolute Capacity Used")
+  MutableGaugeFloat absoluteUsedCapacity;
 
   CSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
@@ -89,6 +94,22 @@ public class CSQueueMetrics extends QueueMetrics {
     if (userMetrics != null) {
       userMetrics.decAMUsed(user, res);
     }
+  }
+
+  public float getUsedCapacity() {
+    return usedCapacity.value();
+  }
+
+  public void setUsedCapacity(float usedCapacity) {
+    this.usedCapacity.set(usedCapacity);
+  }
+
+  public float getAbsoluteUsedCapacity() {
+    return absoluteUsedCapacity.value();
+  }
+
+  public void setAbsoluteUsedCapacity(Float absoluteUsedCapacity) {
+    this.absoluteUsedCapacity.set(absoluteUsedCapacity);
   }
 
   public synchronized static CSQueueMetrics forQueue(String queueName,

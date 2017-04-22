@@ -13,13 +13,11 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import java.util.Arrays;
+import java.nio.charset.Charset;
 import java.util.Properties;
 import java.util.Random;
 import javax.servlet.ServletContext;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.curator.test.TestingServer;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -37,13 +35,13 @@ public class TestZKSignerSecretProvider {
 
   private TestingServer zkServer;
 
-  // rollover every 2 sec
+  // rollover every 50 msec
   private final int timeout = 100;
   private final long rolloverFrequency = timeout / 2;
 
-  static final Log LOG = LogFactory.getLog(TestZKSignerSecretProvider.class);
   {
-    LogManager.getLogger( RolloverSignerSecretProvider.LOG.getName() ).setLevel(Level.DEBUG);
+    LogManager.getLogger(
+        RolloverSignerSecretProvider.LOG.getName()).setLevel(Level.DEBUG);
   }
 
   @Before
@@ -63,12 +61,12 @@ public class TestZKSignerSecretProvider {
   // Test just one ZKSignerSecretProvider to verify that it works in the
   // simplest case
   public void testOne() throws Exception {
-    // use the same seed so we can predict the RNG
+    // Use the same seed and a "plain" Random so we can predict the RNG
     long seed = System.currentTimeMillis();
     Random rand = new Random(seed);
-    byte[] secret2 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secret1 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secret3 = Long.toString(rand.nextLong()).getBytes();
+    byte[] secret2 = generateNewSecret(rand);
+    byte[] secret1 = generateNewSecret(rand);
+    byte[] secret3 = generateNewSecret(rand);
     MockZKSignerSecretProvider secretProvider =
         spy(new MockZKSignerSecretProvider(seed));
     Properties config = new Properties();
@@ -115,7 +113,7 @@ public class TestZKSignerSecretProvider {
    * A hack to test ZKSignerSecretProvider.
    * We want to test that ZKSignerSecretProvider.rollSecret() is periodically
    * called at the expected frequency, but we want to exclude the
-   * race-condition.
+   * race-condition and not take a long time to run the test.
    */
   private class MockZKSignerSecretProvider extends ZKSignerSecretProvider {
     MockZKSignerSecretProvider(long seed) {
@@ -131,6 +129,116 @@ public class TestZKSignerSecretProvider {
       // the test code manually calls ZKSignerSecretProvider.rollSecret()
       // to update the state
       super.rollSecret();
+    }
+  }
+
+  @Test
+  // HADOOP-14246 increased the length of the secret from 160 bits to 256 bits.
+  // This test verifies that the upgrade goes smoothly.
+  public void testUpgradeChangeSecretLength() throws Exception {
+    // Use the same seed and a "plain" Random so we can predict the RNG
+    long seed = System.currentTimeMillis();
+    Random rand = new Random(seed);
+    byte[] secret2 = Long.toString(rand.nextLong())
+        .getBytes(Charset.forName("UTF-8"));
+    byte[] secret1 = Long.toString(rand.nextLong())
+        .getBytes(Charset.forName("UTF-8"));
+    byte[] secret3 = Long.toString(rand.nextLong())
+        .getBytes(Charset.forName("UTF-8"));
+    rand = new Random(seed);
+    // Secrets 4 and 5 get thrown away by ZK when the new secret provider tries
+    // to init
+    byte[] secret4 = generateNewSecret(rand);
+    byte[] secret5 = generateNewSecret(rand);
+    byte[] secret6 = generateNewSecret(rand);
+    byte[] secret7 = generateNewSecret(rand);
+    // Initialize the znode data with the old secret length
+    MockZKSignerSecretProvider oldSecretProvider =
+        spy(new OldMockZKSignerSecretProvider(seed));
+    Properties config = new Properties();
+    config.setProperty(
+        ZKSignerSecretProvider.ZOOKEEPER_CONNECTION_STRING,
+        zkServer.getConnectString());
+    config.setProperty(ZKSignerSecretProvider.ZOOKEEPER_PATH,
+        "/secret");
+    try {
+      oldSecretProvider.init(config, getDummyServletContext(),
+          rolloverFrequency);
+
+      byte[] currentSecret = oldSecretProvider.getCurrentSecret();
+      byte[][] allSecrets = oldSecretProvider.getAllSecrets();
+      Assert.assertArrayEquals(secret1, currentSecret);
+      Assert.assertEquals(2, allSecrets.length);
+      Assert.assertArrayEquals(secret1, allSecrets[0]);
+      Assert.assertNull(allSecrets[1]);
+      oldSecretProvider.realRollSecret();
+
+      currentSecret = oldSecretProvider.getCurrentSecret();
+      allSecrets = oldSecretProvider.getAllSecrets();
+      Assert.assertArrayEquals(secret2, currentSecret);
+      Assert.assertEquals(2, allSecrets.length);
+      Assert.assertArrayEquals(secret2, allSecrets[0]);
+      Assert.assertArrayEquals(secret1, allSecrets[1]);
+    } finally {
+      oldSecretProvider.destroy();
+    }
+    // Now use a ZKSignerSecretProvider with the newer length
+    MockZKSignerSecretProvider newSecretProvider =
+        spy(new MockZKSignerSecretProvider(seed));
+    try {
+      newSecretProvider.init(config, getDummyServletContext(),
+          rolloverFrequency);
+
+      byte[] currentSecret = newSecretProvider.getCurrentSecret();
+      byte[][] allSecrets = newSecretProvider.getAllSecrets();
+      Assert.assertArrayEquals(secret2, currentSecret);
+      Assert.assertEquals(2, allSecrets.length);
+      Assert.assertArrayEquals(secret2, allSecrets[0]);
+      Assert.assertArrayEquals(secret1, allSecrets[1]);
+      newSecretProvider.realRollSecret();
+
+      currentSecret = newSecretProvider.getCurrentSecret();
+      allSecrets = newSecretProvider.getAllSecrets();
+      Assert.assertArrayEquals(secret3, currentSecret);
+      Assert.assertEquals(2, allSecrets.length);
+      Assert.assertArrayEquals(secret3, allSecrets[0]);
+      Assert.assertArrayEquals(secret2, allSecrets[1]);
+      newSecretProvider.realRollSecret();
+
+      currentSecret = newSecretProvider.getCurrentSecret();
+      allSecrets = newSecretProvider.getAllSecrets();
+      Assert.assertArrayEquals(secret6, currentSecret);
+      Assert.assertEquals(2, allSecrets.length);
+      Assert.assertArrayEquals(secret6, allSecrets[0]);
+      Assert.assertArrayEquals(secret3, allSecrets[1]);
+      newSecretProvider.realRollSecret();
+
+      currentSecret = newSecretProvider.getCurrentSecret();
+      allSecrets = newSecretProvider.getAllSecrets();
+      Assert.assertArrayEquals(secret7, currentSecret);
+      Assert.assertEquals(2, allSecrets.length);
+      Assert.assertArrayEquals(secret7, allSecrets[0]);
+      Assert.assertArrayEquals(secret6, allSecrets[1]);
+    } finally {
+      newSecretProvider.destroy();
+    }
+  }
+
+  /**
+   * A version of {@link MockZKSignerSecretProvider} that uses the old way of
+   * generating secrets (160 bit long).
+   */
+  private class OldMockZKSignerSecretProvider
+      extends MockZKSignerSecretProvider {
+    private Random rand;
+    OldMockZKSignerSecretProvider(long seed) {
+      super(seed);
+      rand = new Random(seed);
+    }
+
+    @Override
+    protected byte[] generateRandomSecret() {
+      return Long.toString(rand.nextLong()).getBytes(Charset.forName("UTF-8"));
     }
   }
 
@@ -151,19 +259,19 @@ public class TestZKSignerSecretProvider {
    * @throws Exception
    */
   public void testMultiple(int order) throws Exception {
+    // Use the same seed and a "plain" Random so we can predict the RNG
     long seedA = System.currentTimeMillis();
     Random rand = new Random(seedA);
-    byte[] secretA2 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretA1 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretA3 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretA4 = Long.toString(rand.nextLong()).getBytes();
-    // use the same seed so we can predict the RNG
+    byte[] secretA2 = generateNewSecret(rand);
+    byte[] secretA1 = generateNewSecret(rand);
+    byte[] secretA3 = generateNewSecret(rand);
+    byte[] secretA4 = generateNewSecret(rand);
     long seedB = System.currentTimeMillis() + rand.nextLong();
     rand = new Random(seedB);
-    byte[] secretB2 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretB1 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretB3 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretB4 = Long.toString(rand.nextLong()).getBytes();
+    byte[] secretB2 = generateNewSecret(rand);
+    byte[] secretB1 = generateNewSecret(rand);
+    byte[] secretB3 = generateNewSecret(rand);
+    byte[] secretB4 = generateNewSecret(rand);
     MockZKSignerSecretProvider secretProviderA =
         spy(new MockZKSignerSecretProvider(seedA));
     MockZKSignerSecretProvider secretProviderB =
@@ -257,5 +365,11 @@ public class TestZKSignerSecretProvider {
         .ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE))
         .thenReturn(null);
     return servletContext;
+  }
+
+  private byte[] generateNewSecret(Random rand) {
+    byte[] secret = new byte[32];
+    rand.nextBytes(secret);
+    return secret;
   }
 }

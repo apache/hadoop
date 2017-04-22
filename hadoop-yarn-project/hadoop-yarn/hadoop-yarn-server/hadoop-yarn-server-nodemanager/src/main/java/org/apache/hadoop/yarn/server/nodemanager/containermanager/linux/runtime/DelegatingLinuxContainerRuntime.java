@@ -35,10 +35,10 @@ import java.util.Map;
 
 /**
  * This class is a {@link ContainerRuntime} implementation that delegates all
- * operations to either a {@link DefaultLinuxContainerRuntime} instance or a
- * {@link DockerLinuxContainerRuntime} instance, depending on whether the
- * {@link DockerLinuxContainerRuntime} instance believes the operation to be
- * requesting a Docker container.
+ * operations to a {@link DefaultLinuxContainerRuntime} instance, a
+ * {@link DockerLinuxContainerRuntime} instance, or a
+ * {@link JavaSandboxLinuxContainerRuntime} instance depending on whether
+ * each instance believes the operation to be within its scope.
  *
  * @see DockerLinuxContainerRuntime#isDockerContainerRequested
  */
@@ -49,6 +49,7 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
       .getLog(DelegatingLinuxContainerRuntime.class);
   private DefaultLinuxContainerRuntime defaultLinuxContainerRuntime;
   private DockerLinuxContainerRuntime dockerLinuxContainerRuntime;
+  private JavaSandboxLinuxContainerRuntime javaSandboxLinuxContainerRuntime;
 
   @Override
   public void initialize(Configuration conf)
@@ -61,15 +62,20 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     dockerLinuxContainerRuntime = new DockerLinuxContainerRuntime(
         privilegedOperationExecutor);
     dockerLinuxContainerRuntime.initialize(conf);
+    javaSandboxLinuxContainerRuntime = new JavaSandboxLinuxContainerRuntime(
+        privilegedOperationExecutor);
+    javaSandboxLinuxContainerRuntime.initialize(conf);
   }
 
-  private LinuxContainerRuntime pickContainerRuntime(Container container) {
-    Map<String, String> env = container.getLaunchContext().getEnvironment();
+  private LinuxContainerRuntime pickContainerRuntime(
+      Map<String, String> environment){
     LinuxContainerRuntime runtime;
 
-    if (DockerLinuxContainerRuntime.isDockerContainerRequested(env)){
+    if (DockerLinuxContainerRuntime.isDockerContainerRequested(environment)){
       runtime = dockerLinuxContainerRuntime;
-    } else  {
+    } else if (javaSandboxLinuxContainerRuntime.isSandboxContainerRequested()) {
+      runtime = javaSandboxLinuxContainerRuntime;
+    } else {
       runtime = defaultLinuxContainerRuntime;
     }
 
@@ -81,12 +87,14 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     return runtime;
   }
 
+  private LinuxContainerRuntime pickContainerRuntime(Container container) {
+    return pickContainerRuntime(container.getLaunchContext().getEnvironment());
+  }
+
   @Override
   public void prepareContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
-    LinuxContainerRuntime runtime = pickContainerRuntime(container);
-
+    LinuxContainerRuntime runtime = pickContainerRuntime(ctx.getContainer());
     runtime.prepareContainer(ctx);
   }
 

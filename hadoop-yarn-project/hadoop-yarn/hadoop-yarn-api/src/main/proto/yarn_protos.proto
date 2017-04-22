@@ -282,13 +282,13 @@ message NodeReportProto {
   optional ResourceUtilizationProto node_utilization = 12;
 }
 
-message NodeIdToLabelsInfoProto {
+message NodeIdToLabelsProto {
   optional NodeIdProto nodeId = 1;
-  repeated NodeLabelProto nodeLabels = 2;
+  repeated string nodeLabels = 2;
 }
 
 message LabelsToNodeIdsProto {
-  optional NodeLabelProto nodeLabels = 1;
+  optional string nodeLabels = 1;
   repeated NodeIdProto nodeId = 2;
 }
 
@@ -378,7 +378,7 @@ message ApplicationSubmissionContextProto {
   optional LogAggregationContextProto log_aggregation_context = 14;
   optional ReservationIdProto reservation_id = 15;
   optional string node_label_expression = 16;
-  optional ResourceRequestProto am_container_resource_request = 17;
+  repeated ResourceRequestProto am_container_resource_request = 17;
   repeated ApplicationTimeoutMapProto application_timeouts = 18;
 }
 
@@ -463,6 +463,20 @@ message QueueInfoProto {
   optional string defaultNodeLabelExpression = 9;
   optional QueueStatisticsProto queueStatistics = 10;
   optional bool preemptionDisabled = 11;
+  repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
+}
+
+message QueueConfigurationsProto {
+    optional float capacity = 1;
+    optional float absoluteCapacity = 2;
+    optional float maxCapacity = 3;
+    optional float absoluteMaxCapacity = 4;
+    optional float maxAMPercentage = 5;
+}
+
+message QueueConfigurationsMapProto {
+    required string partitionName = 1;
+    optional QueueConfigurationsProto queueConfigurations = 2;
 }
 
 enum QueueACLProto {

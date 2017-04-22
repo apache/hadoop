@@ -51,8 +51,8 @@ public class TestGetFileStatus extends AdlMockWebServer {
     getMockServer().enqueue(new MockResponse().setResponseCode(200)
         .setBody(TestADLResponseData.getGetFileStatusJSONResponse()));
     long startTime = Time.monotonicNow();
-    FileStatus fileStatus = getMockAdlFileSystem()
-        .getFileStatus(new Path("/test1/test2"));
+    Path path = new Path("/test1/test2");
+    FileStatus fileStatus = getMockAdlFileSystem().getFileStatus(path);
     long endTime = Time.monotonicNow();
     LOG.debug("Time : " + (endTime - startTime));
     Assert.assertTrue(fileStatus.isFile());
@@ -65,6 +65,11 @@ public class TestGetFileStatus extends AdlMockWebServer {
     Assert.assertEquals(new FsPermission("777"), fileStatus.getPermission());
     Assert.assertEquals("NotSupportYet", fileStatus.getOwner());
     Assert.assertEquals("NotSupportYet", fileStatus.getGroup());
+    Assert.assertTrue(path + " should have Acl!", fileStatus.hasAcl());
+    Assert.assertFalse(path + " should not be encrypted!",
+        fileStatus.isEncrypted());
+    Assert.assertFalse(path + " should not be erasure coded!",
+        fileStatus.isErasureCoded());
   }
 
     @Test
@@ -80,6 +85,8 @@ public class TestGetFileStatus extends AdlMockWebServer {
         LOG.debug("Time : " + (endTime - startTime));
         Assert.assertTrue(fileStatus.isFile());
         Assert.assertEquals(true, fileStatus.getPermission().getAclBit());
+        Assert.assertEquals(fileStatus.hasAcl(),
+            fileStatus.getPermission().getAclBit());
 
         // With ACLBIT set to false
         getMockServer().enqueue(new MockResponse().setResponseCode(200)
@@ -91,5 +98,7 @@ public class TestGetFileStatus extends AdlMockWebServer {
         LOG.debug("Time : " + (endTime - startTime));
         Assert.assertTrue(fileStatus.isFile());
         Assert.assertEquals(false, fileStatus.getPermission().getAclBit());
+        Assert.assertEquals(fileStatus.hasAcl(),
+            fileStatus.getPermission().getAclBit());
     }
 }

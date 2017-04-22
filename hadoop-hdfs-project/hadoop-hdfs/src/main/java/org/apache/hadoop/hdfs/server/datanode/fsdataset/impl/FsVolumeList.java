@@ -371,8 +371,15 @@ class FsVolumeList {
   }
 
   void addVolumeFailureInfo(VolumeFailureInfo volumeFailureInfo) {
-    volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
-        volumeFailureInfo);
+    // There could be redundant requests for adding the same failed
+    // volume because of repeated DataNode reconfigure with same list
+    // of volumes. Ignoring update on failed volume so as to preserve
+    // old failed capacity details in the map.
+    if (!volumeFailureInfos.containsKey(volumeFailureInfo
+        .getFailedStorageLocation())) {
+      volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
+          volumeFailureInfo);
+    }
   }
 
   private void addVolumeFailureInfo(FsVolumeImpl vol) {
@@ -382,7 +389,7 @@ class FsVolumeList {
         vol.getCapacity()));
   }
 
-  private void removeVolumeFailureInfo(StorageLocation location) {
+  void removeVolumeFailureInfo(StorageLocation location) {
     volumeFailureInfos.remove(location);
   }
 

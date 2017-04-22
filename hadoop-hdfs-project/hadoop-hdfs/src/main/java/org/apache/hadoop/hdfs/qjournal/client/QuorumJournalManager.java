@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRe
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
@@ -51,8 +51,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -362,40 +360,16 @@ public class QuorumJournalManager implements JournalManager {
       URI uri, NamespaceInfo nsInfo, AsyncLogger.Factory factory)
           throws IOException {
     List<AsyncLogger> ret = Lists.newArrayList();
-    List<InetSocketAddress> addrs = getLoggerAddresses(uri);
+    List<InetSocketAddress> addrs = Util.getAddressesList(uri);
+    if (addrs.size() % 2 == 0) {
+      LOG.warn("Quorum journal URI '" + uri + "' has an even number " +
+          "of Journal Nodes specified. This is not recommended!");
+    }
     String jid = parseJournalId(uri);
     for (InetSocketAddress addr : addrs) {
       ret.add(factory.createLogger(conf, nsInfo, jid, addr));
     }
     return ret;
-  }
- 
-  private static List<InetSocketAddress> getLoggerAddresses(URI uri)
-      throws IOException {
-    String authority = uri.getAuthority();
-    Preconditions.checkArgument(authority != null && !authority.isEmpty(),
-        "URI has no authority: " + uri);
-    
-    String[] parts = StringUtils.split(authority, ';');
-    for (int i = 0; i < parts.length; i++) {
-      parts[i] = parts[i].trim();
-    }
-
-    if (parts.length % 2 == 0) {
-      LOG.warn("Quorum journal URI '" + uri + "' has an even number " +
-          "of Journal Nodes specified. This is not recommended!");
-    }
-    
-    List<InetSocketAddress> addrs = Lists.newArrayList();
-    for (String addr : parts) {
-      InetSocketAddress isa = NetUtils.createSocketAddr(
-          addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
-      if (isa.isUnresolved()) {
-        throw new UnknownHostException(addr);
-      }
-      addrs.add(isa);
-    }
-    return addrs;
   }
   
   @Override

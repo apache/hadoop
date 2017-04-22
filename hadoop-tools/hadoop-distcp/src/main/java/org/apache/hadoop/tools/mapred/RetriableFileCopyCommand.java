@@ -118,17 +118,21 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           .contains(FileAttribute.CHECKSUMTYPE) ? sourceFS
           .getFileChecksum(sourcePath) : null;
 
-      final long offset = action == FileAction.APPEND ? targetFS.getFileStatus(
-          target).getLen() : 0;
+      long offset = (action == FileAction.APPEND) ?
+          targetFS.getFileStatus(target).getLen() : source.getChunkOffset();
       long bytesRead = copyToFile(targetPath, targetFS, source,
           offset, context, fileAttributes, sourceChecksum);
 
-      compareFileLengths(source, targetPath, configuration, bytesRead
-          + offset);
+      if (!source.isSplit()) {
+        compareFileLengths(source, targetPath, configuration, bytesRead
+            + offset);
+      }
       //At this point, src&dest lengths are same. if length==0, we skip checksum
       if ((bytesRead != 0) && (!skipCrc)) {
-        compareCheckSums(sourceFS, source.getPath(), sourceChecksum,
-            targetFS, targetPath);
+        if (!source.isSplit()) {
+          compareCheckSums(sourceFS, source.getPath(), sourceChecksum,
+              targetFS, targetPath);
+        }
       }
       // it's not append case, thus we first write to a temporary file, rename
       // it to the target path.
@@ -167,6 +171,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         FsPermission.getUMask(targetFS.getConf()));
     final OutputStream outStream;
     if (action == FileAction.OVERWRITE) {
+      // If there is an erasure coding policy set on the target directory,
+      // files will be written to the target directory using the same EC policy.
+      // The replication factor of the source file is ignored and not preserved.
       final short repl = getReplicationFactor(fileAttributes, source,
           targetFS, targetPath);
       final long blockSize = getBlockSize(fileAttributes, source,
@@ -246,16 +253,26 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     ThrottledInputStream inStream = null;
     long totalBytesRead = 0;
 
+    long chunkLength = source2.getChunkLength();
+    boolean finished = false;
     try {
       inStream = getInputStream(source, context.getConfiguration());
       int bytesRead = readBytes(inStream, buf, sourceOffset);
       while (bytesRead >= 0) {
+        if (chunkLength > 0 &&
+            (totalBytesRead + bytesRead) >= chunkLength) {
+          bytesRead = (int)(chunkLength - totalBytesRead);
+          finished = true;
+        }
         totalBytesRead += bytesRead;
         if (action == FileAction.APPEND) {
           sourceOffset += bytesRead;
         }
         outStream.write(buf, 0, bytesRead);
         updateContextStatus(totalBytesRead, context, source2);
+        if (finished) {
+          break;
+        }
         bytesRead = readBytes(inStream, buf, sourceOffset);
       }
       outStream.close();

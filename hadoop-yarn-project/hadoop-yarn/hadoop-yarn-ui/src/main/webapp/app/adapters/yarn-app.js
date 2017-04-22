@@ -23,11 +23,9 @@ export default AbstractAdapter.extend({
   restNameSpace: "cluster",
   serverName: "RM",
 
-  urlForQuery(query/*, modelName*/) {
+  urlForQuery(/*query, modelName*/) {
     var url = this._buildURL();
-    if (query.state) {
-      url = url + '/apps/?state=' + query.state;
-    }
+    url = url + '/apps';
     return url;
   },
 

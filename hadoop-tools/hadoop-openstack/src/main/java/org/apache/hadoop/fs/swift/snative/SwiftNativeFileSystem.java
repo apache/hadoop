@@ -201,6 +201,7 @@ public class SwiftNativeFileSystem extends FileSystem {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public boolean isFile(Path f) throws IOException {
     try {
       FileStatus fileStatus = getFileStatus(f);
@@ -210,6 +211,7 @@ public class SwiftNativeFileSystem extends FileSystem {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public boolean isDirectory(Path f) throws IOException {
 

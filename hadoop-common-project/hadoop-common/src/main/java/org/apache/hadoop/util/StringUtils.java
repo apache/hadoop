@@ -178,6 +178,17 @@ public class StringUtils {
   }
 
   /**
+   * Convert a byte to a hex string.
+   * @see #byteToHexString(byte[])
+   * @see #byteToHexString(byte[], int, int)
+   * @param b byte
+   * @return byte's hex value as a String
+   */
+  public static String byteToHexString(byte b) {
+    return byteToHexString(new byte[] {b});
+  }
+
+  /**
    * Given a hexstring this will return the byte array corresponding to the
    * string
    * @param hex the hex String array
@@ -361,8 +372,8 @@ public class StringUtils {
   
   /**
    * Returns an arraylist of strings.
-   * @param str the comma seperated string values
-   * @return the arraylist of the comma seperated string values
+   * @param str the comma separated string values
+   * @return the arraylist of the comma separated string values
    */
   public static String[] getStrings(String str){
     String delim = ",";
@@ -373,7 +384,7 @@ public class StringUtils {
    * Returns an arraylist of strings.
    * @param str the string values
    * @param delim delimiter to separate the values
-   * @return the arraylist of the seperated string values
+   * @return the arraylist of the separated string values
    */
   public static String[] getStrings(String str, String delim){
     Collection<String> values = getStringCollection(str, delim);
@@ -385,7 +396,7 @@ public class StringUtils {
 
   /**
    * Returns a collection of strings.
-   * @param str comma seperated string values
+   * @param str comma separated string values
    * @return an <code>ArrayList</code> of string values
    */
   public static Collection<String> getStringCollection(String str){

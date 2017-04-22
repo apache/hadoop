@@ -955,7 +955,15 @@ public abstract class Shell {
             line = errReader.readLine();
           }
         } catch(IOException ioe) {
-          LOG.warn("Error reading the error stream", ioe);
+          // Its normal to observe a "Stream closed" I/O error on
+          // command timeouts destroying the underlying process
+          // so only log a WARN if the command didn't time out
+          if (!isTimedOut()) {
+            LOG.warn("Error reading the error stream", ioe);
+          } else {
+            LOG.debug("Error reading the error stream due to shell "
+                + "command timeout", ioe);
+          }
         }
       }
     };
@@ -1178,6 +1186,15 @@ public abstract class Shell {
       }
       timeOutInterval = timeout;
       this.inheritParentEnv = inheritParentEnv;
+    }
+
+    /**
+     * Returns the timeout value set for the executor's sub-commands.
+     * @return The timeout value in seconds
+     */
+    @VisibleForTesting
+    public long getTimeoutInterval() {
+      return timeOutInterval;
     }
 
     /**

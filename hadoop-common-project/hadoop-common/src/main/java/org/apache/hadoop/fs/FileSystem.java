@@ -874,7 +874,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         config.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT),
         false,
         FS_TRASH_INTERVAL_DEFAULT,
-        DataChecksum.Type.CRC32);
+        DataChecksum.Type.CRC32,
+        "");
   }
 
   /**
@@ -1624,6 +1625,11 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /** Check if a path exists.
+   *
+   * It is highly discouraged to call this method back to back with other
+   * {@link #getFileStatus(Path)} calls, as this will involve multiple redundant
+   * RPC calls in HDFS.
+   *
    * @param f source path
    * @return true if the path exists
    * @throws IOException IO failure
@@ -1639,9 +1645,12 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** True iff the named path is a directory.
    * Note: Avoid using this method. Instead reuse the FileStatus
    * returned by getFileStatus() or listStatus() methods.
+   *
    * @param f path to check
    * @throws IOException IO failure
+   * @deprecated Use {@link #getFileStatus(Path)} instead
    */
+  @Deprecated
   public boolean isDirectory(Path f) throws IOException {
     try {
       return getFileStatus(f).isDirectory();
@@ -1653,9 +1662,12 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** True iff the named path is a regular file.
    * Note: Avoid using this method. Instead reuse the FileStatus
    * returned by {@link #getFileStatus(Path)} or listStatus() methods.
+   *
    * @param f path to check
    * @throws IOException IO failure
+   * @deprecated Use {@link #getFileStatus(Path)} instead
    */
+  @Deprecated
   public boolean isFile(Path f) throws IOException {
     try {
       return getFileStatus(f).isFile();
@@ -4126,5 +4138,14 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static GlobalStorageStatistics getGlobalStorageStatistics() {
     return GlobalStorageStatistics.INSTANCE;
+  }
+
+  /**
+   * Create a new FSDataOutputStreamBuilder for the file with path.
+   * @param path file path
+   * @return a FSDataOutputStreamBuilder object to build the file
+   */
+  public FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
+    return new FSDataOutputStreamBuilder(this, path);
   }
 }

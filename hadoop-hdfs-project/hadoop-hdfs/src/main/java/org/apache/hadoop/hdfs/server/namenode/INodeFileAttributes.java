@@ -56,11 +56,13 @@ public interface INodeFileAttributes extends INodeAttributes {
 
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
-        short replication, long preferredBlockSize,
+        Short replication, Byte ecPolicyID, long preferredBlockSize,
         byte storagePolicyID, XAttrFeature xAttrsFeature, BlockType blockType) {
       super(name, permissions, aclFeature, modificationTime, accessTime, 
           xAttrsFeature);
-      header = HeaderFormat.toLong(preferredBlockSize, replication, blockType,
+      final long layoutRedundancy = HeaderFormat.getBlockLayoutRedundancy(
+          blockType, replication, ecPolicyID);
+      header = HeaderFormat.toLong(preferredBlockSize, layoutRedundancy,
           storagePolicyID);
     }
 

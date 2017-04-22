@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -70,6 +71,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -104,15 +106,17 @@ public class TestINodeFile {
         null, replication, preferredBlockSize);
   }
 
-  INodeFile createStripedINodeFile(short replication, long preferredBlockSize) {
+  INodeFile createStripedINodeFile(long preferredBlockSize) {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, replication, preferredBlockSize,
+        null, null,
+        StripedFileTestUtil.getDefaultECPolicy().getId(),
+        preferredBlockSize,
         HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
   }
 
   private static INodeFile createINodeFile(byte storagePolicyID) {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, (short)3, 1024L, storagePolicyID, CONTIGUOUS);
+        null, (short)3, null, 1024L, storagePolicyID, CONTIGUOUS);
   }
 
   @Test
@@ -131,6 +135,61 @@ public class TestINodeFile {
   @Test(expected=IllegalArgumentException.class)
   public void testStoragePolicyIdAboveUpperBound () throws IllegalArgumentException {
     createINodeFile((byte)16);
+  }
+
+  @Test
+  public void testContiguousLayoutRedundancy() {
+    INodeFile inodeFile;
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, new Short((short) 3) /*replication*/,
+          StripedFileTestUtil.getDefaultECPolicy().getId() /*ec policy*/,
+          preferredBlockSize, HdfsConstants.WARM_STORAGE_POLICY_ID, CONTIGUOUS);
+      fail("INodeFile construction should fail when both replication and " +
+          "ECPolicy requested!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, null /*replication*/, null /*ec policy*/,
+          preferredBlockSize, HdfsConstants.WARM_STORAGE_POLICY_ID, CONTIGUOUS);
+      fail("INodeFile construction should fail when replication param not " +
+          "provided for contiguous layout!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, Short.MAX_VALUE /*replication*/,
+          null /*ec policy*/, preferredBlockSize,
+          HdfsConstants.WARM_STORAGE_POLICY_ID, CONTIGUOUS);
+      fail("INodeFile construction should fail when replication param is " +
+          "beyond the range supported!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    final Short replication = new Short((short) 3);
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, replication, null /*ec policy*/,
+          preferredBlockSize, HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
+      fail("INodeFile construction should fail when replication param is " +
+          "provided for striped layout!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    inodeFile = new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+        null, perm, 0L, 0L, null, replication, null /*ec policy*/,
+        preferredBlockSize, HdfsConstants.WARM_STORAGE_POLICY_ID, CONTIGUOUS);
+
+    Assert.assertTrue(!inodeFile.isStriped());
+    Assert.assertEquals(replication.shortValue(),
+        inodeFile.getFileReplication());
   }
 
   /**
@@ -237,7 +296,7 @@ public class TestINodeFile {
     preferredBlockSize = 128*1024*1024;
     INodeFile inf = createINodeFile(replication, preferredBlockSize);
     assertEquals(inf.getBlockType(), CONTIGUOUS);
-    INodeFile striped = createStripedINodeFile(replication, preferredBlockSize);
+    INodeFile striped = createStripedINodeFile(preferredBlockSize);
     assertEquals(striped.getBlockType(), STRIPED);
   }
 

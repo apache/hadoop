@@ -286,6 +286,9 @@ public class AdminService extends CompositeService implements
   @Override
   public synchronized void transitionToActive(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    if (isRMActive()) {
+      return;
+    }
     // call refreshAdminAcls before HA state transition
     // for the case that adminAcls have been updated in previous active RM
     try {
@@ -572,6 +575,15 @@ public class AdminService extends CompositeService implements
 
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
+    String operation = "getGroupsForUser";
+    UserGroupInformation ugi;
+    try {
+      ugi = checkAcls(operation);
+    } catch (YarnException e) {
+      // The interface is from hadoop-common which does not accept YarnException
+      throw new IOException(e);
+    }
+    checkRMStatus(ugi.getShortUserName(), operation, "get groups for user");
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
 
@@ -735,9 +747,10 @@ public class AdminService extends CompositeService implements
     AddToClusterNodeLabelsResponse response =
         recordFactory.newRecordInstance(AddToClusterNodeLabelsResponse.class);
     try {
-      rmContext.getNodeLabelManager().addToCluserNodeLabels(request.getNodeLabels());
-      RMAuditLogger
-          .logSuccess(user.getShortUserName(), operation, "AdminService");
+      rmContext.getNodeLabelManager()
+          .addToCluserNodeLabels(request.getNodeLabels());
+      RMAuditLogger.logSuccess(user.getShortUserName(), operation,
+          "AdminService");
       return response;
     } catch (IOException ioe) {
       throw logAndWrapException(ioe, user.getShortUserName(), operation, msg);

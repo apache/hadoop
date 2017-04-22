@@ -51,6 +51,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
@@ -209,7 +210,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public int launchContainer(ContainerStartContext ctx) throws IOException {
+  public int launchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
     Container container = ctx.getContainer();
     Path nmPrivateContainerScriptPath = ctx.getNmPrivateContainerScriptPath();
     Path nmPrivateTokensPath = ctx.getNmPrivateTokensPath();
@@ -291,8 +293,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       
       if (isContainerActive(containerId)) {
         shExec.execute();
-      }
-      else {
+      } else {
         LOG.info("Container " + containerIdStr +
             " was marked as inactive. Returning terminated error");
         return ExitCode.TERMINATED.getExitCode();

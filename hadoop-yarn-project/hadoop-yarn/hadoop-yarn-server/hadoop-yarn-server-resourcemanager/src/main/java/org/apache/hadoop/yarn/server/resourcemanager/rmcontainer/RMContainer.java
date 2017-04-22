@@ -42,7 +42,8 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
  * when resources are being reserved to fill space for a future container 
  * allocation.
  */
-public interface RMContainer extends EventHandler<RMContainerEvent> {
+public interface RMContainer extends EventHandler<RMContainerEvent>,
+    Comparable<RMContainer> {
 
   ContainerId getContainerId();
 
@@ -91,10 +92,6 @@ public interface RMContainer extends EventHandler<RMContainerEvent> {
   String getNodeHttpAddress();
   
   String getNodeLabelExpression();
-  
-  boolean hasIncreaseReservation();
-  
-  void cancelIncreaseReservation();
 
   String getQueueName();
 

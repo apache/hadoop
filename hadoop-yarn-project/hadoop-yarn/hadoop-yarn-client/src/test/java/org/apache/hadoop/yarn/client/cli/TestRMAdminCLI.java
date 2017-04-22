@@ -187,14 +187,14 @@ public class TestRMAdminCLI {
     dummyNodeLabelsManager.init(conf);
   }
   
-  @Test(timeout=500)
+  @Test
   public void testRefreshQueues() throws Exception {
     String[] args = { "-refreshQueues" };
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshQueues(any(RefreshQueuesRequest.class));
   }
 
-  @Test(timeout=500)
+  @Test
   public void testRefreshUserToGroupsMappings() throws Exception {
     String[] args = { "-refreshUserToGroupsMappings" };
     assertEquals(0, rmAdminCLI.run(args));
@@ -202,7 +202,7 @@ public class TestRMAdminCLI {
         any(RefreshUserToGroupsMappingsRequest.class));
   }
 
-  @Test(timeout=500)
+  @Test
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
     String[] args = { "-refreshSuperUserGroupsConfiguration" };
     assertEquals(0, rmAdminCLI.run(args));
@@ -210,14 +210,14 @@ public class TestRMAdminCLI {
         any(RefreshSuperUserGroupsConfigurationRequest.class));
   }
 
-  @Test(timeout=500)
+  @Test
   public void testRefreshAdminAcls() throws Exception {
     String[] args = { "-refreshAdminAcls" };
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshAdminAcls(any(RefreshAdminAclsRequest.class));
   }
 
-  @Test(timeout = 5000)
+  @Test
   public void testRefreshClusterMaxPriority() throws Exception {
     String[] args = { "-refreshClusterMaxPriority" };
     assertEquals(0, rmAdminCLI.run(args));
@@ -225,14 +225,14 @@ public class TestRMAdminCLI {
         any(RefreshClusterMaxPriorityRequest.class));
   }
 
-  @Test(timeout=500)
+  @Test
   public void testRefreshServiceAcl() throws Exception {
     String[] args = { "-refreshServiceAcl" };
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshServiceAcls(any(RefreshServiceAclsRequest.class));
   }
 
-  @Test(timeout=500)
+  @Test
   public void testUpdateNodeResource() throws Exception {
     String nodeIdStr = "0.0.0.0:0";
     int memSize = 2048;
@@ -256,7 +256,7 @@ public class TestRMAdminCLI {
         resource);
   }
 
-  @Test(timeout=500)
+  @Test
   public void testUpdateNodeResourceWithInvalidValue() throws Exception {
     String nodeIdStr = "0.0.0.0:0";
     int memSize = -2048;
@@ -270,7 +270,7 @@ public class TestRMAdminCLI {
         any(UpdateNodeResourceRequest.class));
   }
 
-  @Test(timeout=500)
+  @Test
   public void testRefreshNodes() throws Exception {
     String[] args = { "-refreshNodes" };
     assertEquals(0, rmAdminCLI.run(args));
@@ -373,7 +373,7 @@ public class TestRMAdminCLI {
     assertEquals(-1, rmAdminCLI.run(invalidTrackingArgs));
   }
 
-  @Test(timeout=500)
+  @Test
   public void testGetGroups() throws Exception {
     when(admin.getGroupsForUser(eq("admin"))).thenReturn(
         new String[] {"group1", "group2"});
@@ -395,7 +395,7 @@ public class TestRMAdminCLI {
     }
   }
 
-  @Test(timeout = 500)
+  @Test
   public void testTransitionToActive() throws Exception {
     String[] args = {"-transitionToActive", "rm1"};
 
@@ -414,7 +414,7 @@ public class TestRMAdminCLI {
     verify(haadmin, times(1)).getServiceStatus();
   }
 
-  @Test(timeout = 500)
+  @Test
   public void testTransitionToStandby() throws Exception {
     String[] args = {"-transitionToStandby", "rm1"};
 
@@ -431,7 +431,7 @@ public class TestRMAdminCLI {
         any(HAServiceProtocol.StateChangeRequestInfo.class));
   }
 
-  @Test(timeout = 500)
+  @Test
   public void testGetServiceState() throws Exception {
     String[] args = {"-getServiceState", "rm1"};
 
@@ -464,7 +464,7 @@ public class TestRMAdminCLI {
     rmAdminCLIWithHAEnabled.setOut(System.out);
   }
 
-  @Test(timeout = 500)
+  @Test
   public void testCheckHealth() throws Exception {
     String[] args = {"-checkHealth", "rm1"};
 
@@ -482,7 +482,7 @@ public class TestRMAdminCLI {
   /**
    * Test printing of help messages
    */
-  @Test(timeout=500)
+  @Test
   public void testHelp() throws Exception {
     PrintStream oldOutPrintStream = System.out;
     PrintStream oldErrPrintStream = System.err;
@@ -624,7 +624,7 @@ public class TestRMAdminCLI {
     }
   }
 
-  @Test(timeout=500)
+  @Test
   public void testException() throws Exception {
     PrintStream oldErrPrintStream = System.err;
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();

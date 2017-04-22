@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -159,7 +160,7 @@ public abstract class SchedulerNode {
    * @param rmContainer Allocated container
    * @param launchedOnNode True if the container has been launched
    */
-  private synchronized void allocateContainer(RMContainer rmContainer,
+  protected synchronized void allocateContainer(RMContainer rmContainer,
       boolean launchedOnNode) {
     Container container = rmContainer.getContainer();
     if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
@@ -177,49 +178,6 @@ public abstract class SchedulerNode {
               + getAllocatedResource() + " used and " + getUnallocatedResource()
               + " available after allocation");
     }
-  }
-
-  /**
-   * Change the resources allocated for a container.
-   * @param containerId Identifier of the container to change.
-   * @param deltaResource Change in the resource allocation.
-   * @param increase True if the change is an increase of allocation.
-   */
-  protected synchronized void changeContainerResource(ContainerId containerId,
-      Resource deltaResource, boolean increase) {
-    if (increase) {
-      deductUnallocatedResource(deltaResource);
-    } else {
-      addUnallocatedResource(deltaResource);
-    }
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug((increase ? "Increased" : "Decreased") + " container "
-              + containerId + " of capacity " + deltaResource + " on host "
-              + rmNode.getNodeAddress() + ", which has " + numContainers
-              + " containers, " + getAllocatedResource() + " used and "
-              + getUnallocatedResource() + " available after allocation");
-    }
-  }
-
-  /**
-   * Increase the resources allocated to a container.
-   * @param containerId Identifier of the container to change.
-   * @param deltaResource Increase of resource allocation.
-   */
-  public synchronized void increaseContainer(ContainerId containerId,
-      Resource deltaResource) {
-    changeContainerResource(containerId, deltaResource, true);
-  }
-
-  /**
-   * Decrease the resources allocated to a container.
-   * @param containerId Identifier of the container to change.
-   * @param deltaResource Decrease of resource allocation.
-   */
-  public synchronized void decreaseContainer(ContainerId containerId,
-      Resource deltaResource) {
-    changeContainerResource(containerId, deltaResource, false);
   }
 
   /**
@@ -280,7 +238,6 @@ public abstract class SchedulerNode {
     if (info == null) {
       return;
     }
-
     if (!releasedByNode && info.launchedOnNode) {
       // wait until node reports container has completed
       return;
@@ -330,7 +287,8 @@ public abstract class SchedulerNode {
    * container.
    * @param resource Resources to deduct.
    */
-  private synchronized void deductUnallocatedResource(Resource resource) {
+  @VisibleForTesting
+  public synchronized void deductUnallocatedResource(Resource resource) {
     if (resource == null) {
       LOG.error("Invalid deduction of null resource for "
           + rmNode.getNodeAddress());

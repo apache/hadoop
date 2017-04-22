@@ -422,7 +422,6 @@ public class ContainersMonitorImpl extends AbstractService implements
         long vmemUsageByAllContainers = 0;
         long pmemByAllContainers = 0;
         long cpuUsagePercentPerCoreByAllContainers = 0;
-        long cpuUsageTotalCoresByAllContainers = 0;
         for (Entry<ContainerId, ProcessTreeInfo> entry : trackingContainers
             .entrySet()) {
           ContainerId containerId = entry.getKey();
@@ -446,8 +445,7 @@ public class ContainersMonitorImpl extends AbstractService implements
             long currentPmemUsage = pTree.getRssMemorySize();
 
             // if machine has 6 cores and 3 are used,
-            // cpuUsagePercentPerCore should be 300% and
-            // cpuUsageTotalCoresPercentage should be 50%
+            // cpuUsagePercentPerCore should be 300%
             float cpuUsagePercentPerCore = pTree.getCpuUsagePercent();
             if (cpuUsagePercentPerCore < 0) {
               // CPU usage is not available likely because the container just
@@ -469,7 +467,6 @@ public class ContainersMonitorImpl extends AbstractService implements
             pmemByAllContainers += currentPmemUsage;
             // Accounting the total cpu usage for all containers
             cpuUsagePercentPerCoreByAllContainers += cpuUsagePercentPerCore;
-            cpuUsageTotalCoresByAllContainers += cpuUsagePercentPerCore;
 
             reportResourceUsage(containerId, currentPmemUsage,
                     cpuUsagePercentPerCore);
@@ -483,8 +480,7 @@ public class ContainersMonitorImpl extends AbstractService implements
           LOG.debug("Total Resource Usage stats in NM by all containers : "
               + "Virtual Memory= " + vmemUsageByAllContainers
               + ", Physical Memory= " + pmemByAllContainers
-              + ", Total CPU usage= " + cpuUsageTotalCoresByAllContainers
-              + ", Total CPU(% per core) usage"
+              + ", Total CPU usage(% per core)= "
               + cpuUsagePercentPerCoreByAllContainers);
         }
 
@@ -572,6 +568,9 @@ public class ContainersMonitorImpl extends AbstractService implements
                              ProcessTreeInfo ptInfo,
                              long currentVmemUsage, long currentPmemUsage,
                              ResourceUtilization trackedContainersUtilization) {
+      // if machine has 6 cores and 3 are used,
+      // cpuUsagePercentPerCore should be 300% and
+      // cpuUsageTotalCoresPercentage should be 50%
       float cpuUsagePercentPerCore = pTree.getCpuUsagePercent();
       float cpuUsageTotalCoresPercentage = cpuUsagePercentPerCore /
               resourceCalculatorPlugin.getNumProcessors();
@@ -867,16 +866,6 @@ public class ContainersMonitorImpl extends AbstractService implements
   @SuppressWarnings("unchecked")
   public void handle(ContainersMonitorEvent monitoringEvent) {
     ContainerId containerId = monitoringEvent.getContainerId();
-    if (!containersMonitorEnabled) {
-      if (monitoringEvent.getType() == ContainersMonitorEventType
-          .CHANGE_MONITORING_CONTAINER_RESOURCE) {
-        // Nothing to enforce. Update container resource immediately.
-        ChangeMonitoringContainerResourceEvent changeEvent =
-            (ChangeMonitoringContainerResourceEvent) monitoringEvent;
-        changeContainerResource(containerId, changeEvent.getResource());
-      }
-      return;
-    }
 
     switch (monitoringEvent.getType()) {
     case START_MONITORING_CONTAINER:
@@ -897,19 +886,23 @@ public class ContainersMonitorImpl extends AbstractService implements
       ContainersMonitorEvent monitoringEvent, ContainerId containerId) {
     ChangeMonitoringContainerResourceEvent changeEvent =
         (ChangeMonitoringContainerResourceEvent) monitoringEvent;
-    ProcessTreeInfo processTreeInfo = trackingContainers.get(containerId);
-    if (processTreeInfo == null) {
-      LOG.warn("Failed to track container "
-          + containerId.toString()
-          + ". It may have already completed.");
-      return;
+    if (containersMonitorEnabled) {
+      ProcessTreeInfo processTreeInfo = trackingContainers.get(containerId);
+      if (processTreeInfo == null) {
+        LOG.warn("Failed to track container "
+            + containerId.toString()
+            + ". It may have already completed.");
+        return;
+      }
+      LOG.info("Changing resource-monitoring for " + containerId);
+      updateContainerMetrics(monitoringEvent);
+      long pmemLimit =
+          changeEvent.getResource().getMemorySize() * 1024L * 1024L;
+      long vmemLimit = (long) (pmemLimit * vmemRatio);
+      int cpuVcores = changeEvent.getResource().getVirtualCores();
+      processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);
     }
-    LOG.info("Changing resource-monitoring for " + containerId);
-    updateContainerMetrics(monitoringEvent);
-    long pmemLimit = changeEvent.getResource().getMemorySize() * 1024L * 1024L;
-    long vmemLimit = (long) (pmemLimit * vmemRatio);
-    int cpuVcores = changeEvent.getResource().getVirtualCores();
-    processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);
+
     changeContainerResource(containerId, changeEvent.getResource());
   }
 

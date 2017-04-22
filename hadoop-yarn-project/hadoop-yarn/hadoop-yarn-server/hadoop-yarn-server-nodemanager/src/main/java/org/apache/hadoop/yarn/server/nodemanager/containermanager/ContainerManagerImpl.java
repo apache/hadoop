@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -229,7 +230,8 @@ public class ContainerManagerImpl extends CompositeService implements
     this.metrics = metrics;
 
     rsrcLocalizationSrvc =
-        createResourceLocalizationService(exec, deletionContext, context);
+        createResourceLocalizationService(exec, deletionContext, context,
+            metrics);
     addService(rsrcLocalizationSrvc);
 
     containersLauncher = createContainersLauncher(context, exec);
@@ -402,8 +404,9 @@ public class ContainerManagerImpl extends CompositeService implements
     LOG.info("Recovering " + containerId + " in state " + rcs.getStatus()
         + " with exit code " + rcs.getExitCode());
 
-    if (context.getApplications().containsKey(appId)) {
-      recoverActiveContainer(launchContext, token, rcs);
+    Application app = context.getApplications().get(appId);
+    if (app != null) {
+      recoverActiveContainer(app, launchContext, token, rcs);
       if (rcs.getRecoveryType() == RecoveredContainerType.KILL) {
         dispatcher.getEventHandler().handle(
             new ContainerKillEvent(containerId, ContainerExitStatus.ABORTED,
@@ -423,7 +426,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * Recover a running container.
    */
   @SuppressWarnings("unchecked")
-  protected void recoverActiveContainer(
+  protected void recoverActiveContainer(Application app,
       ContainerLaunchContext launchContext, ContainerTokenIdentifier token,
       RecoveredContainerState rcs) throws IOException {
     Credentials credentials = YarnServerSecurityUtils.parseCredentials(
@@ -431,8 +434,7 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = new ContainerImpl(getConfig(), dispatcher,
         launchContext, credentials, metrics, token, context, rcs);
     context.getContainers().put(token.getContainerID(), container);
-    dispatcher.getEventHandler().handle(new ApplicationContainerInitEvent(
-        container));
+    app.handle(new ApplicationContainerInitEvent(container));
   }
 
   private void waitForRecoveredContainers() throws InterruptedException {
@@ -476,9 +478,10 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   protected ResourceLocalizationService createResourceLocalizationService(
-      ContainerExecutor exec, DeletionService deletionContext, Context context) {
+      ContainerExecutor exec, DeletionService deletionContext,
+      Context nmContext, NodeManagerMetrics nmMetrics) {
     return new ResourceLocalizationService(this.dispatcher, exec,
-        deletionContext, dirsHandler, context);
+        deletionContext, dirsHandler, nmContext, nmMetrics);
   }
 
   protected SharedCacheUploadService createSharedCacheUploaderService() {
@@ -996,6 +999,15 @@ public class ContainerManagerImpl extends CompositeService implements
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
 
+    // Sanity check for local resources
+    for (Map.Entry<String, LocalResource> rsrc : launchContext
+        .getLocalResources().entrySet()) {
+      if (rsrc.getValue() == null || rsrc.getValue().getResource() == null) {
+        throw new YarnException(
+            "Null resource URL for local resource " + rsrc.getKey() + " : " + rsrc.getValue());
+      }
+    }
+
     Credentials credentials =
         YarnServerSecurityUtils.parseCredentials(launchContext);
 
@@ -1286,6 +1298,10 @@ public class ContainerManagerImpl extends CompositeService implements
           + " is not handled by this NodeManager");
       }
     } else {
+      if (container.isRecovering()) {
+        throw new NMNotYetReadyException("Container " + containerIDStr
+            + " is recovering, try later");
+      }
       context.getNMStateStore().storeContainerKilled(containerID);
       container.sendKillEvent(ContainerExitStatus.KILLED_BY_APPMASTER,
           "Container killed by the ApplicationMaster.");
@@ -1455,6 +1471,21 @@ public class ContainerManagerImpl extends CompositeService implements
               + " FINISH_APPS event");
           continue;
         }
+
+        boolean shouldDropEvent = false;
+        for (Container container : app.getContainers().values()) {
+          if (container.isRecovering()) {
+            LOG.info("drop FINISH_APPS event to " + appID + " because "
+                + "container " + container.getContainerId()
+                + " is recovering");
+            shouldDropEvent = true;
+            break;
+          }
+        }
+        if (shouldDropEvent) {
+          continue;
+        }
+
         String diagnostic = "";
         if (appsFinishedEvent.getReason() == CMgrCompletedAppsEvent.Reason.ON_SHUTDOWN) {
           diagnostic = "Application killed on shutdown";
@@ -1469,10 +1500,32 @@ public class ContainerManagerImpl extends CompositeService implements
     case FINISH_CONTAINERS:
       CMgrCompletedContainersEvent containersFinishedEvent =
           (CMgrCompletedContainersEvent) event;
-      for (ContainerId container : containersFinishedEvent
+      for (ContainerId containerId : containersFinishedEvent
           .getContainersToCleanup()) {
-          this.dispatcher.getEventHandler().handle(
-              new ContainerKillEvent(container,
+        ApplicationId appId =
+            containerId.getApplicationAttemptId().getApplicationId();
+        Application app = this.context.getApplications().get(appId);
+        if (app == null) {
+          LOG.warn("couldn't find app " + appId + " while processing"
+              + " FINISH_CONTAINERS event");
+          continue;
+        }
+
+        Container container = app.getContainers().get(containerId);
+        if (container == null) {
+          LOG.warn("couldn't find container " + containerId
+              + " while processing FINISH_CONTAINERS event");
+          continue;
+        }
+
+        if (container.isRecovering()) {
+          LOG.info("drop FINISH_CONTAINERS event to " + containerId
+              + " because container is recovering");
+          continue;
+        }
+
+        this.dispatcher.getEventHandler().handle(
+              new ContainerKillEvent(containerId,
                   ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
                   "Container Killed by ResourceManager"));
       }

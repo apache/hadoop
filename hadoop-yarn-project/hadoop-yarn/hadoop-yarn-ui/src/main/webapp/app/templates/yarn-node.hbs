@@ -28,7 +28,7 @@
       <div class="row">
         <div class="col-md-12 container-fluid">
           <div class="panel panel-default">
-          <div class="panel-heading">Node Information</div>
+          <div class="panel-heading">Node Information: {{model.rmNode.id}}</div>
           <table class="table">
             <tbody>
             <tr>
@@ -63,10 +63,12 @@
               <td>Node Health Report</td>
               <td>{{model.node.healthReport}}</td>
             </tr>
-            <tr>
-              <td>Node Manager Start Time</td>
-              <td>{{model.node.nmStartupTime}}</td>
-            </tr>
+            {{#if model.node.nmStartupTime}}
+              <tr>
+                <td>Node Manager Start Time</td>
+                <td>{{model.node.nmStartupTime}}</td>
+              </tr>
+            {{/if}}
             <tr>
               <td>Node Manager Version</td>
               <td>{{model.node.nodeManagerBuildVersion}}</td>
@@ -82,22 +84,25 @@
       </div>
 
       <div class="row">
-        <div class="col-lg-5 container-fluid">
+        <div class="col-lg-6 container-fluid">
           <div class="panel panel-default">
             <div class="panel-heading">
-              Resource - Memory (in MB)
+              Resource - Memory
             </div>
             <div class="container-fluid" id="mem-donut-chart">
               {{donut-chart data=model.rmNode.getMemoryDataForDonutChart
               showLabels=true
               parentId="mem-donut-chart"
               ratio=0.6
+              type="memory"
+              colorTargets="good"
+              colorTargetReverse=true
               maxHeight=350}}
             </div>
           </div>
         </div>
 
-        <div class="col-lg-5 container-fluid">
+        <div class="col-lg-6 container-fluid">
           <div class="panel panel-default">
             <div class="panel-heading">
               Resource - VCores
@@ -107,6 +112,8 @@
               showLabels=true
               parentId="vcore-donut-chart"
               ratio=0.6
+              colorTargets="good"
+              colorTargetReverse=true
               maxHeight=350}}
             </div>
           </div>

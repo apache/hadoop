@@ -16,9 +16,12 @@
   limitations under the License.
 --}}
 
-{{#if model.apps}}
-  {{app-table table-id="apps-table" arr=model.apps}}
-  {{simple-table table-id="apps-table" bFilter=true colsOrder="0,desc" colTypes="natural elapsed-time" colTargets="0 7"}}
+{{#if model.apps.isPending}}
+  <h4 align="center">Loading...</h4>
 {{else}}
-  <h4 align="center">Could not find any applications from this cluster</h4>
+  {{#if model.apps}}
+    {{em-table columns=columns rows=model.apps}}
+  {{else}}
+    <h4 align="center">Could not find any applications from this cluster</h4>
+  {{/if}}
 {{/if}}

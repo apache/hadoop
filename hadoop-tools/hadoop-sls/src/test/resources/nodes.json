@@ -1,0 +1,84 @@
+{
+  "rack": "rack1",
+  "nodes": [
+    {
+      "node": "node1"
+    },
+    {
+      "node": "node2"
+    },
+    {
+      "node": "node3"
+    },
+    {
+      "node": "node4"
+    }
+  ]
+}
+{
+  "rack": "rack2",
+  "nodes": [
+    {
+      "node": "node5"
+    },
+    {
+      "node": "node6"
+    },
+    {
+      "node": "node7"
+    },
+    {
+      "node": "node8"
+    }
+  ]
+}
+{
+  "rack": "rack3",
+  "nodes": [
+    {
+      "node": "node9"
+    },
+    {
+      "node": "node10"
+    },
+    {
+      "node": "node11"
+    },
+    {
+      "node": "node12"
+    }
+  ]
+}
+{
+  "rack": "rack4",
+  "nodes": [
+    {
+      "node": "node13"
+    },
+    {
+      "node": "node14"
+    },
+    {
+      "node": "node15"
+    },
+    {
+      "node": "node16"
+    }
+  ]
+}
+{
+  "rack": "rack5",
+  "nodes": [
+    {
+      "node": "node17"
+    },
+    {
+      "node": "node18"
+    },
+    {
+      "node": "node19"
+    },
+    {
+    }
+  ]
+}

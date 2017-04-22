@@ -181,10 +181,11 @@
                   </includes>
                   <excludes>
                     <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
-                    <exclude>**/ITest*Root*.java</exclude>
+                    <exclude>**/ITestS3AContractRootDir.java</exclude>
+                    <exclude>**/ITestS3NContractRootDir.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSE*.java</exclude>
-                    <include>**/ITestS3AHuge*.java</include>
+                    <exclude>**/ITestS3AHuge*.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -209,7 +210,8 @@
                   <!-- parallel execution. -->
                   <includes>
                     <include>**/ITestJets3tNativeS3FileSystemContract.java</include>
-                    <include>**/ITest*Root*.java</include>
+                    <include>**/ITestS3AContractRootDir.java</include>
+                    <include>**/ITestS3NContractRootDir.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>
                     <include>**/ITestS3AEncryptionSSE*.java</include>
@@ -328,6 +330,11 @@
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jets3t</groupId>
+      <artifactId>jets3t</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>

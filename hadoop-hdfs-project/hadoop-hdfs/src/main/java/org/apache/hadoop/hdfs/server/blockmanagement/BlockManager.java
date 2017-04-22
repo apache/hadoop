@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -484,12 +485,12 @@ public class BlockManager implements BlockStatsMXBean {
           + DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY
           + " = " + minMaintenanceR + " < 0");
     }
-    if (minMaintenanceR > minR) {
+    if (minMaintenanceR > defaultReplication) {
       throw new IOException("Unexpected configuration parameters: "
           + DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY
           + " = " + minMaintenanceR + " > "
-          + DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY
-          + " = " + minR);
+          + DFSConfigKeys.DFS_REPLICATION_KEY
+          + " = " + defaultReplication);
     }
     this.minReplicationToBeInMaintenance = (short)minMaintenanceR;
 
@@ -825,7 +826,8 @@ public class BlockManager implements BlockStatsMXBean {
     if (block.isStriped()) {
       return ((BlockInfoStriped) block).getRealDataBlockNum();
     } else {
-      return minReplicationToBeInMaintenance;
+      return (short) Math.min(minReplicationToBeInMaintenance,
+          block.getReplication());
     }
   }
 
@@ -889,7 +891,15 @@ public class BlockManager implements BlockStatsMXBean {
       lastBlock.getUnderConstructionFeature()
           .updateStorageScheduledSize((BlockInfoStriped) lastBlock);
     }
-    if (hasMinStorage(lastBlock)) {
+
+    // Count replicas on decommissioning nodes, as these will not be
+    // decommissioned unless recovery/completing last block has finished
+    NumberReplicas numReplicas = countNodes(lastBlock);
+    int numUsableReplicas = numReplicas.liveReplicas() +
+        numReplicas.decommissioning() +
+        numReplicas.liveEnteringMaintenanceReplicas();
+
+    if (hasMinStorage(lastBlock, numUsableReplicas)) {
       if (committed) {
         addExpectedReplicasToPending(lastBlock);
       }
@@ -1362,13 +1372,9 @@ public class BlockManager implements BlockStatsMXBean {
     if(numBlocks == 0) {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
-    Iterator<BlockInfo> iter = node.getBlockIterator();
     // starting from a random block
     int startBlock = ThreadLocalRandom.current().nextInt(numBlocks);
-    // skip blocks
-    for(int i=0; i<startBlock; i++) {
-      iter.next();
-    }
+    Iterator<BlockInfo> iter = node.getBlockIterator(startBlock);
     List<BlockWithLocations> results = new ArrayList<BlockWithLocations>();
     long totalSize = 0;
     BlockInfo curBlock;
@@ -2376,6 +2382,8 @@ public class BlockManager implements BlockStatsMXBean {
           long leaseId = this.getBlockReportLeaseManager().removeLease(node);
           BlockManagerFaultInjector.getInstance().
               removeBlockReportLease(node, leaseId);
+          node.setLastBlockReportTime(now());
+          node.setLastBlockReportMonotonic(Time.monotonicNow());
         }
         LOG.debug("Processing RPC with index {} out of total {} RPCs in "
                 + "processReport 0x{}", context.getCurRpc(),
@@ -4167,7 +4175,7 @@ public class BlockManager implements BlockStatsMXBean {
     BlockPlacementPolicy placementPolicy = placementPolicies
         .getPolicy(blockType);
     int numReplicas = blockType == STRIPED ? ((BlockInfoStriped) storedBlock)
-        .getRealDataBlockNum() : storedBlock.getReplication();
+        .getRealTotalBlockNum() : storedBlock.getReplication();
     return placementPolicy.verifyBlockPlacement(locs, numReplicas)
         .isPlacementPolicySatisfied();
   }

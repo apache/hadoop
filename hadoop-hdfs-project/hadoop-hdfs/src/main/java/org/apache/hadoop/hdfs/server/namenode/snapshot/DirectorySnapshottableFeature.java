@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,6 +40,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
+import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
@@ -163,7 +166,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   }
 
   /** Add a snapshot. */
-  public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name)
+  public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
+      final LeaseManager leaseManager, final boolean captureOpenFiles)
       throws SnapshotException, QuotaExceededException {
     //check snapshot quota
     final int n = getNumSnapshots();
@@ -188,6 +192,15 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     final long now = Time.now();
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
+
+    if (captureOpenFiles) {
+      Set<INodesInPath> openFilesIIP =
+          leaseManager.getINodeWithLeases(snapshotRoot);
+      for (INodesInPath openFileIIP : openFilesIIP)  {
+        INodeFile openFile = openFileIIP.getLastINode().asFile();
+        openFile.recordModification(openFileIIP.getLatestSnapshotId());
+      }
+    }
     return s;
   }
 

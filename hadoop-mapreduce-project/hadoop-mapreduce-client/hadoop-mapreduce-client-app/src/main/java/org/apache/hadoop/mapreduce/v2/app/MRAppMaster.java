@@ -280,8 +280,6 @@ public class MRAppMaster extends CompositeService {
     // create the job classloader if enabled
     createJobClassLoader(conf);
 
-    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
-
     initJobCredentialsAndUGI(conf);
 
     dispatcher = createDispatcher();

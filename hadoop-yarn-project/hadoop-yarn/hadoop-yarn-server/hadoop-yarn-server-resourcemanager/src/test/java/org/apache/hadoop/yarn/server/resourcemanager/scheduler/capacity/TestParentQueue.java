@@ -171,11 +171,11 @@ public class TestParentQueue {
         final Resource allocatedResource = Resources.createResource(allocation);
         if (queue instanceof ParentQueue) {
           ((ParentQueue)queue).allocateResource(clusterResource, 
-              allocatedResource, RMNodeLabelsManager.NO_LABEL, false);
+              allocatedResource, RMNodeLabelsManager.NO_LABEL);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");
           ((LeafQueue)queue).allocateResource(clusterResource, app1, 
-              allocatedResource, null, null, false);
+              allocatedResource, null, null);
         }
         
         // Next call - nothing
@@ -343,43 +343,43 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B, 70.5F);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    boolean exceptionOccured = false;
+    boolean exceptionOccurred = false;
     try {
       CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
-      exceptionOccured = true;
+      exceptionOccurred = true;
     }
-    if (!exceptionOccured) {
+    if (!exceptionOccurred) {
       Assert.fail("Capacity is more then 100% so should be failed.");
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70);
-    exceptionOccured = false;
+    exceptionOccurred = false;
     queues.clear();
     try {
       CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
-      exceptionOccured = true;
+      exceptionOccurred = true;
     }
-    if (exceptionOccured) {
+    if (exceptionOccurred) {
       Assert.fail("Capacity is 100% so should not be failed.");
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70.005F);
-    exceptionOccured = false;
+    exceptionOccurred = false;
     queues.clear();
     try {
       CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
-      exceptionOccured = true;
+      exceptionOccurred = true;
     }
-    if (exceptionOccured) {
+    if (exceptionOccurred) {
       Assert
           .fail("Capacity is under PRECISION which is .05% so should not be failed.");
     }

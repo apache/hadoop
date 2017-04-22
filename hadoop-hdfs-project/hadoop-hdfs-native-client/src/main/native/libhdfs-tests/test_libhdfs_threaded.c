@@ -145,6 +145,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     int ret, expected, numEntries;
     hdfsFileInfo *fileInfo;
     struct hdfsReadStatistics *readStats = NULL;
+    struct hdfsHedgedReadMetrics *hedgedMetrics = NULL;
 
     if (hdfsExists(fs, paths->prefix) == 0) {
         EXPECT_ZERO(hdfsDelete(fs, paths->prefix, 1));
@@ -163,6 +164,12 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
 
     /* There should not be any file to open for reading. */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0));
+
+    /* Check if the exceptions are stored in the TLS */
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionRootCause(),
+                        "File does not exist");
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionStackTrace(),
+                        "java.io.FileNotFoundException");
 
     /* hdfsOpenFile should not accept mode = 3 */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, 3, 0, 0, 0));
@@ -204,6 +211,15 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalLocalBytesRead);
     EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalShortCircuitBytesRead);
     hdfsFileFreeReadStatistics(readStats);
+
+    /* Verify that we can retrieve the hedged read metrics */
+    EXPECT_ZERO(hdfsGetHedgedReadMetrics(fs, &hedgedMetrics));
+    errno = 0;
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOps);
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOpsWin);
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOpsInCurThread);
+    hdfsFreeHedgedReadMetrics(hedgedMetrics);
+
     /* TODO: implement readFully and use it here */
     ret = hdfsRead(fs, file, tmp, sizeof(tmp));
     if (ret < 0) {

@@ -1246,6 +1246,32 @@ public class TestQuota {
         -1);
   }
 
+  /**
+   * Test to all the commands by passing the fully qualified path.
+   */
+  @Test(timeout = 30000)
+  public void testQuotaCommandsWithURI() throws Exception {
+    DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path("/" + this.getClass().getSimpleName(),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+
+    /* set space quota */
+    testSetAndClearSpaceQuotaRegularInternal(
+        new String[] { "-setSpaceQuota", "1024",
+            dfs.getUri() + "/" + dir.toString() }, dir, 0, 1024);
+
+    /* clear space quota */
+    testSetAndClearSpaceQuotaRegularInternal(
+        new String[] { "-clrSpaceQuota", dfs.getUri() + "/" + dir.toString() },
+        dir, 0, -1);
+    runCommand(dfsAdmin, false, "-setQuota", "1000",
+        dfs.getUri() + "/" + dir.toString());
+
+    runCommand(dfsAdmin, false, "-clrQuota",
+        dfs.getUri() + "/" + dir.toString());
+  }
+
   private void testSetAndClearSpaceQuotaRegularInternal(
       final String[] args,
       final Path dir,

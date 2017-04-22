@@ -28,7 +28,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -366,7 +366,7 @@ final class AclTransformation {
     for (AclEntry entry: aclBuilder) {
       scopeFound.add(entry.getScope());
       if (entry.getType() == GROUP || entry.getName() != null) {
-        FsAction scopeUnionPerms = Objects.firstNonNull(
+        FsAction scopeUnionPerms = MoreObjects.firstNonNull(
           unionPerms.get(entry.getScope()), FsAction.NONE);
         unionPerms.put(entry.getScope(),
           scopeUnionPerms.or(entry.getPermission()));

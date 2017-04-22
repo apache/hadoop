@@ -285,7 +285,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
       throws IOException {
     CreateRequestProto.Builder builder = CreateRequestProto.newBuilder()
         .setSrc(src)
@@ -295,6 +295,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setCreateParent(createParent)
         .setReplication(replication)
         .setBlockSize(blockSize);
+    if (ecPolicyName != null) {
+      builder.setEcPolicyName(ecPolicyName);
+    }
     FsPermission unmasked = masked.getUnmasked();
     if (unmasked != null) {
       builder.setUnmasked(PBHelperClient.convert(unmasked));
@@ -1459,14 +1462,12 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
+  public void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException {
     final SetErasureCodingPolicyRequestProto.Builder builder =
         SetErasureCodingPolicyRequestProto.newBuilder();
     builder.setSrc(src);
-    if (ecPolicy != null) {
-      builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(ecPolicy));
-    }
+    builder.setEcPolicyName(ecPolicyName);
     SetErasureCodingPolicyRequestProto req = builder.build();
     try {
       rpcProxy.setErasureCodingPolicy(null, req);

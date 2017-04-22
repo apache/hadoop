@@ -33,7 +33,6 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerAllocator extends AbstractContainerAllocator {
-  private AbstractContainerAllocator increaseContainerAllocator;
   private AbstractContainerAllocator regularContainerAllocator;
 
   public ContainerAllocator(FiCaSchedulerApp application,
@@ -45,8 +44,6 @@ public class ContainerAllocator extends AbstractContainerAllocator {
       RMContext rmContext, ActivitiesManager activitiesManager) {
     super(application, rc, rmContext);
 
-    increaseContainerAllocator =
-        new IncreaseContainerAllocator(application, rc, rmContext);
     regularContainerAllocator = new RegularContainerAllocator(application, rc,
         rmContext, activitiesManager);
   }
@@ -55,32 +52,8 @@ public class ContainerAllocator extends AbstractContainerAllocator {
   public CSAssignment assignContainers(Resource clusterResource,
       PlacementSet<FiCaSchedulerNode> ps, SchedulingMode schedulingMode,
       ResourceLimits resourceLimits, RMContainer reservedContainer) {
-    if (reservedContainer != null) {
-      if (reservedContainer.getState() == RMContainerState.RESERVED) {
-        // It's a regular container
-        return regularContainerAllocator.assignContainers(clusterResource,
-            ps, schedulingMode, resourceLimits, reservedContainer);
-      } else {
-        // It's a increase container
-        return increaseContainerAllocator.assignContainers(clusterResource,
-            ps, schedulingMode, resourceLimits, reservedContainer);
-      }
-    } else {
-      /*
-       * Try to allocate increase container first, and if we failed to allocate
-       * anything, we will try to allocate regular container
-       */
-      CSAssignment assign =
-          increaseContainerAllocator.assignContainers(clusterResource, ps,
-              schedulingMode, resourceLimits, null);
-      if (Resources.greaterThan(rc, clusterResource, assign.getResource(),
-          Resources.none())) {
-        return assign;
-      }
-
-      return regularContainerAllocator.assignContainers(clusterResource, ps,
-          schedulingMode, resourceLimits, null);
-    }
+    return regularContainerAllocator.assignContainers(clusterResource,
+        ps, schedulingMode, resourceLimits, reservedContainer);
   }
 
 }

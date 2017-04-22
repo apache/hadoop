@@ -35,6 +35,8 @@ public interface HdfsClientConfigKeys {
   String  DFS_WEBHDFS_USER_PATTERN_KEY =
       "dfs.webhdfs.user.provider.user.pattern";
   String  DFS_WEBHDFS_USER_PATTERN_DEFAULT = "^[A-Za-z_][A-Za-z0-9._-]*[$]?$";
+  String  DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY =
+      "dfs.webhdfs.acl.provider.permission.pattern";
   String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
 
@@ -65,6 +67,7 @@ public interface HdfsClientConfigKeys {
 
   String PREFIX = "dfs.client.";
   String  DFS_NAMESERVICES = "dfs.nameservices";
+  String DFS_NAMENODE_RPC_ADDRESS_KEY = "dfs.namenode.rpc-address";
   int     DFS_NAMENODE_HTTP_PORT_DEFAULT = 9870;
   String  DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
   int     DFS_NAMENODE_HTTPS_PORT_DEFAULT = 9871;
@@ -168,6 +171,10 @@ public interface HdfsClientConfigKeys {
       "dfs.data.transfer.client.tcpnodelay";
   boolean DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT = true;
 
+  String DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES =
+      "dfs.namenode.snapshot.capture.openfiles";
+  boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT = false;
+
   /**
    * These are deprecated config keys to client code.
    */
@@ -262,6 +269,8 @@ public interface HdfsClientConfigKeys {
     String  CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_KEY =
         PREFIX + "connection.retries.on.timeouts";
     int     CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT = 0;
+    String  RANDOM_ORDER = PREFIX + "random.order";
+    boolean RANDOM_ORDER_DEFAULT = false;
   }
 
   /** dfs.client.write configuration properties */

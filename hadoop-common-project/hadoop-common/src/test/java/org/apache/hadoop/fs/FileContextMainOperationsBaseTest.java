@@ -36,6 +36,8 @@ import org.junit.Assert;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.apache.hadoop.fs.CreateFlag.*;
@@ -60,6 +62,9 @@ import static org.apache.hadoop.fs.CreateFlag.*;
  * </p>
  */
 public abstract class FileContextMainOperationsBaseTest  {
+
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(FileContextMainOperationsBaseTest.class);
   
   private static String TEST_DIR_AAA2 = "test/hadoop2/aaa";
   private static String TEST_DIR_AAA = "test/hadoop/aaa";
@@ -111,9 +116,19 @@ public abstract class FileContextMainOperationsBaseTest  {
   @After
   public void tearDown() throws Exception {
     if (fc != null) {
-      boolean del = fc.delete(new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test")), true);
-      assertTrue(del);
-      fc.delete(localFsRootPath, true);
+      final Path testRoot = fileContextTestHelper.getAbsoluteTestRootPath(fc);
+      LOG.info("Deleting test root path {}", testRoot);
+      try {
+        fc.delete(testRoot, true);
+      } catch (Exception e) {
+        LOG.error("Error when deleting test root path " + testRoot, e);
+      }
+
+      try {
+        fc.delete(localFsRootPath, true);
+      } catch (Exception e) {
+        LOG.error("Error when deleting localFsRootPath " + localFsRootPath, e);
+      }
     }
   }
   

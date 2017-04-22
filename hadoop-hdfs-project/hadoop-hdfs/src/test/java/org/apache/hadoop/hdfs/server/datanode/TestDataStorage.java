@@ -200,7 +200,7 @@ public class TestDataStorage {
       fail("An IOException should throw: all StorageLocations are NON_EXISTENT");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
-          "All specified directories are failed to load.", e);
+          "All specified directories have failed to load.", e);
     }
     assertEquals(0, storage.getNumStorageDirs());
   }

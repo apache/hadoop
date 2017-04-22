@@ -28,8 +28,36 @@ import org.apache.hadoop.yarn.api.records.Resource;
 @Unstable
 public abstract class ResourceCalculator {
 
-  public abstract int 
-  compare(Resource clusterResource, Resource lhs, Resource rhs);
+  /**
+   * On a cluster with capacity {@code clusterResource}, compare {@code lhs}
+   * and {@code rhs}. Consider all resources unless {@code singleType} is set
+   * to true. When {@code singleType} is set to true, consider only one
+   * resource as per the {@link ResourceCalculator} implementation; the
+   * {@link DefaultResourceCalculator} considers memory and
+   * {@link DominantResourceCalculator} considers the dominant resource.
+   *
+   * @param clusterResource cluster capacity
+   * @param lhs First {@link Resource} to compare
+   * @param rhs Second {@link Resource} to compare
+   * @param singleType Whether to consider a single resource type or all
+   *                   resource types
+   * @return -1 if {@code lhs} is smaller, 0 if equal and 1 if it is larger
+   */
+  public abstract int compare(
+      Resource clusterResource, Resource lhs, Resource rhs, boolean singleType);
+
+  /**
+   * On a cluster with capacity {@code clusterResource}, compare {@code lhs}
+   * and {@code rhs} considering all resources.
+   *
+   * @param clusterResource cluster capacity
+   * @param lhs First {@link Resource} to compare
+   * @param rhs Second {@link Resource} to compare
+   * @return -1 if {@code lhs} is smaller, 0 if equal and 1 if it is larger
+   */
+  public int compare(Resource clusterResource, Resource lhs, Resource rhs) {
+    return compare(clusterResource, lhs, rhs, false);
+  }
 
   public static int divideAndCeil(int a, int b) {
     if (b == 0) {

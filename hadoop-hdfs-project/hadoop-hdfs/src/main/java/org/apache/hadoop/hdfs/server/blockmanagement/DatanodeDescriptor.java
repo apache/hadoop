@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -300,6 +301,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
+  public EnumSet<StorageType> getStorageTypes() {
+    EnumSet<StorageType> storageTypes = EnumSet.noneOf(StorageType.class);
+    for (DatanodeStorageInfo dsi : getStorageInfos()) {
+      storageTypes.add(dsi.getStorageType());
+    }
+    return storageTypes;
+  }
+
   public StorageReport[] getStorageReports() {
     final DatanodeStorageInfo[] infos = getStorageInfos();
     final StorageReport[] reports = new StorageReport[infos.length];
@@ -510,18 +519,35 @@ public class DatanodeDescriptor extends DatanodeInfo {
     private int index = 0;
     private final List<Iterator<BlockInfo>> iterators;
     
-    private BlockIterator(final DatanodeStorageInfo... storages) {
+    private BlockIterator(final int startBlock,
+                          final DatanodeStorageInfo... storages) {
+      if(startBlock < 0) {
+        throw new IllegalArgumentException(
+            "Illegal value startBlock = " + startBlock);
+      }
       List<Iterator<BlockInfo>> iterators = new ArrayList<>();
+      int s = startBlock;
+      int sumBlocks = 0;
       for (DatanodeStorageInfo e : storages) {
-        iterators.add(e.getBlockIterator());
+        int numBlocks = e.numBlocks();
+        sumBlocks += numBlocks;
+        if(sumBlocks <= startBlock) {
+          s -= numBlocks;
+        } else {
+          iterators.add(e.getBlockIterator());
+        }
       }
       this.iterators = Collections.unmodifiableList(iterators);
+      // skip to the storage containing startBlock
+      for(; s > 0 && hasNext(); s--) {
+        next();
+      }
     }
 
     @Override
     public boolean hasNext() {
       update();
-      return !iterators.isEmpty() && iterators.get(index).hasNext();
+      return index < iterators.size() && iterators.get(index).hasNext();
     }
 
     @Override
@@ -543,7 +569,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   Iterator<BlockInfo> getBlockIterator() {
-    return new BlockIterator(getStorageInfos());
+    return getBlockIterator(0);
+  }
+
+  /**
+   * Get iterator, which starts iterating from the specified block.
+   */
+  Iterator<BlockInfo> getBlockIterator(final int startBlock) {
+    return new BlockIterator(startBlock, getStorageInfos());
   }
 
   void incrementPendingReplicationWithoutTargets() {
@@ -678,6 +711,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
     }
     if (requiredSize > remaining - scheduledSize) {
+      LOG.debug(
+          "The node {} does not have enough {} space (required={},"
+          + " scheduled={}, remaining={}).",
+          this, t, requiredSize, scheduledSize, remaining);
       return null;
     }
     return storage;
@@ -927,6 +964,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   public boolean isRegistered() {
     return isAlive() && !forceRegistration;
+  }
+
+  public boolean hasStorageType(StorageType type) {
+    for (DatanodeStorageInfo dnStorage : getStorageInfos()) {
+      if (dnStorage.getStorageType() == type) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

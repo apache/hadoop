@@ -54,6 +54,8 @@ public class FsServerDefaults implements Writable {
   private boolean encryptDataTransfer;
   private long trashInterval;
   private DataChecksum.Type checksumType;
+  private String keyProviderUri;
+  private byte storagepolicyId;
 
   public FsServerDefaults() {
   }
@@ -61,7 +63,17 @@ public class FsServerDefaults implements Writable {
   public FsServerDefaults(long blockSize, int bytesPerChecksum,
       int writePacketSize, short replication, int fileBufferSize,
       boolean encryptDataTransfer, long trashInterval,
-      DataChecksum.Type checksumType) {
+      DataChecksum.Type checksumType, String keyProviderUri) {
+    this(blockSize, bytesPerChecksum, writePacketSize, replication,
+        fileBufferSize, encryptDataTransfer, trashInterval, checksumType,
+        keyProviderUri, (byte) 0);
+  }
+
+  public FsServerDefaults(long blockSize, int bytesPerChecksum,
+      int writePacketSize, short replication, int fileBufferSize,
+      boolean encryptDataTransfer, long trashInterval,
+      DataChecksum.Type checksumType,
+      String keyProviderUri, byte storagepolicy) {
     this.blockSize = blockSize;
     this.bytesPerChecksum = bytesPerChecksum;
     this.writePacketSize = writePacketSize;
@@ -70,6 +82,8 @@ public class FsServerDefaults implements Writable {
     this.encryptDataTransfer = encryptDataTransfer;
     this.trashInterval = trashInterval;
     this.checksumType = checksumType;
+    this.keyProviderUri = keyProviderUri;
+    this.storagepolicyId = storagepolicy;
   }
 
   public long getBlockSize() {
@@ -104,6 +118,18 @@ public class FsServerDefaults implements Writable {
     return checksumType;
   }
 
+  /* null means old style namenode.
+   * "" (empty string) means namenode is upgraded but EZ is not supported.
+   * some string means that value is the key provider.
+   */
+  public String getKeyProviderUri() {
+    return keyProviderUri;
+  }
+
+  public byte getDefaultStoragePolicyId() {
+    return storagepolicyId;
+  }
+
   // /////////////////////////////////////////
   // Writable
   // /////////////////////////////////////////
@@ -116,6 +142,7 @@ public class FsServerDefaults implements Writable {
     out.writeShort(replication);
     out.writeInt(fileBufferSize);
     WritableUtils.writeEnum(out, checksumType);
+    out.writeByte(storagepolicyId);
   }
 
   @Override
@@ -127,5 +154,6 @@ public class FsServerDefaults implements Writable {
     replication = in.readShort();
     fileBufferSize = in.readInt();
     checksumType = WritableUtils.readEnum(in, DataChecksum.Type.class);
+    storagepolicyId = in.readByte();
   }
 }

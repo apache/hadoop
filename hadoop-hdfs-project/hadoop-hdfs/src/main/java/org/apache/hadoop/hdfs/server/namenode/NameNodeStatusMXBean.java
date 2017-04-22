@@ -75,4 +75,12 @@ public interface NameNodeStatusMXBean {
    * enabled. The report is in a JSON format.
    */
   String getSlowPeersReport();
+
+
+  /**
+   *  Gets the topN slow disks in the cluster, if the feature is enabled.
+   *
+   *  @return JSON string of list of diskIDs and latencies
+   */
+  String getSlowDisksReport();
 }

@@ -101,6 +101,7 @@ public class MiniQJMHACluster {
         journalCluster = new MiniJournalCluster.Builder(conf).format(true)
             .build();
         journalCluster.waitActive();
+        journalCluster.setNamenodeSharedEditsConf(NAMESERVICE);
         URI journalURI = journalCluster.getQuorumJournalURI(NAMESERVICE);
 
         // start cluster with specified NameNodes

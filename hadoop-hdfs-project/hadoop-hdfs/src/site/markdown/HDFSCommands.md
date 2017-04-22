@@ -418,7 +418,7 @@ Usage:
          [-query <datanode>]
          [-cancel <planfile>]
          [-cancel <planID> -node <datanode>]
-         [-report -node [<DataNodeID|IP|Hostname>,...]]
+         [-report -node <file://> | [<DataNodeID|IP|Hostname>,...]]
          [-report -node -top <topnum>]
 
 | COMMAND\_OPTION | Description |
@@ -431,13 +431,14 @@ Usage:
 
 Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for more information on this command.
 
-### `erasurecode`
+### `ec`
 
 Usage:
 
-       hdfs erasurecode [generic options]
-         [-setPolicy [-p <policyName>] <path>]
-         [-getPolicy <path>]
+       hdfs ec [generic options]
+         [-setPolicy -policy <policyName> -path <path>]
+         [-getPolicy -path <path>]
+         [-unsetPolicy -path <path>]
          [-listPolicies]
          [-usage [cmd ...]]
          [-help [cmd ...]]
@@ -446,6 +447,7 @@ Usage:
 |:---- |:---- |
 |-setPolicy| Set a specified ErasureCoding policy to a directory|
 |-getPolicy| Get ErasureCoding policy information about a specified path|
+|-unsetPolicy| Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory |
 |-listPolicies| Lists all supported ErasureCoding policies|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.

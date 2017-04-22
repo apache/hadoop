@@ -252,6 +252,10 @@ public class TestCGroupsHandlerImpl {
     String cpuMtabContent =
         "none " + parentDir.getAbsolutePath()
             + "/cpu cgroup rw,relatime,cpu 0 0\n";
+    // Mark an empty directory called 'cp' cgroup. It is processed before 'cpu'
+    String cpuMtabContentMissing =
+        "none " + parentDir.getAbsolutePath()
+            + "/cp cgroup rw,relatime,cpu 0 0\n";
     String blkioMtabContent =
         "none " + parentDir.getAbsolutePath()
             + "/blkio cgroup rw,relatime,blkio 0 0\n";
@@ -264,6 +268,7 @@ public class TestCGroupsHandlerImpl {
       }
     }
     FileWriter mtabWriter = new FileWriter(mockMtab.getAbsoluteFile());
+    mtabWriter.write(cpuMtabContentMissing);
     mtabWriter.write(cpuMtabContent);
     mtabWriter.write(blkioMtabContent);
     mtabWriter.close();

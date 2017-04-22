@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ActiveStandbyElector;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.BasicDiskValidator;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
@@ -627,8 +628,22 @@ public class YarnConfiguration extends Configuration {
       AUTO_FAILOVER_PREFIX + "enabled";
   public static final boolean DEFAULT_AUTO_FAILOVER_ENABLED = true;
 
+  /**
+   * This property controls whether {@link ActiveStandbyElector} leader
+   * election should be used when {@link #CURATOR_LEADER_ELECTOR} is
+   * {@code false}.
+   *
+   * @deprecated This property should never be set to {@code false}.
+   */
+  @Deprecated
   public static final String AUTO_FAILOVER_EMBEDDED =
       AUTO_FAILOVER_PREFIX + "embedded";
+  /**
+   * The default value for {@link #AUTO_FAILOVER_EMBEDDED}.
+   *
+   * @deprecated The {@link #AUTO_FAILOVER_EMBEDDED} property is deprecated.
+   */
+  @Deprecated
   public static final boolean DEFAULT_AUTO_FAILOVER_EMBEDDED = true;
 
   public static final String AUTO_FAILOVER_ZK_BASE_PATH =
@@ -667,7 +682,7 @@ public class YarnConfiguration extends Configuration {
 
 
   /**
-   * Whether to use curator-based elector for leader election.
+   * Whether to use the Curator-based elector for leader election.
    *
    * @deprecated Eventually, we want to default to the curator-based
    * implementation and remove the {@link ActiveStandbyElector} based
@@ -960,7 +975,7 @@ public class YarnConfiguration extends Configuration {
 
   /** Disk Validator. */
   public static final String DISK_VALIDATOR = NM_PREFIX + "disk-validator";
-  public static final String DEFAULT_DISK_VALIDATOR = "basic";
+  public static final String DEFAULT_DISK_VALIDATOR = BasicDiskValidator.NAME;
 
   /**
    * Maximum size of contain's diagnostics to keep for relaunching container
@@ -1465,6 +1480,26 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
 
+  /** The mode in which the Java Container Sandbox should run detailed by
+   *  the JavaSandboxLinuxContainerRuntime. */
+  public static final String YARN_CONTAINER_SANDBOX =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "sandbox-mode";
+  public static final String DEFAULT_YARN_CONTAINER_SANDBOX = "disabled";
+
+  /** Permissions for application local directories.*/
+  public static final String YARN_CONTAINER_SANDBOX_FILE_PERMISSIONS =
+      YARN_CONTAINER_SANDBOX + ".local-dirs.permissions";
+  public static final String DEFAULT_YARN_CONTAINER_SANDBOX_FILE_PERMISSIONS =
+      "read";
+
+  /** Location for non-default java policy file.*/
+  public static final String YARN_CONTAINER_SANDBOX_POLICY =
+      YARN_CONTAINER_SANDBOX + ".policy";
+
+  /** The group which will run by default without the java security manager.*/
+  public static final String YARN_CONTAINER_SANDBOX_WHITELIST_GROUP =
+      YARN_CONTAINER_SANDBOX + ".whitelist-group";
+
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
@@ -1863,7 +1898,7 @@ public class YarnConfiguration extends Configuration {
   public static final float DEFAULT_TIMELINE_SERVICE_VERSION = 1.0f;
 
   /**
-   * Comma seperated list of names for UIs hosted in the timeline server
+   * Comma separated list of names for UIs hosted in the timeline server
    * (For pluggable UIs).
    */
   public static final String TIMELINE_SERVICE_UI_NAMES =
@@ -1889,6 +1924,9 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX =
       TIMELINE_SERVICE_PREFIX + "entity-group-fs-store.";
+
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_CACHE_STORE =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "cache-store-class";
 
   public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR =
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "active-dir";
@@ -2057,6 +2095,16 @@ public class YarnConfiguration extends Configuration {
           + "timeline-client.number-of-async-entities-to-merge";
 
   public static final int DEFAULT_NUMBER_OF_ASYNC_ENTITIES_TO_MERGE = 10;
+
+
+  /**
+   * The time period for which timeline v2 client will wait for draining
+   * leftover entities after stop.
+   */
+  public static final String TIMELINE_V2_CLIENT_DRAIN_TIME_MILLIS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "drain-entities.timeout.ms";
+  public static final long DEFAULT_TIMELINE_V2_CLIENT_DRAIN_TIME_MILLIS
+      = 2000L;
 
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service

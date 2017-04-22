@@ -22,20 +22,29 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,12 +52,13 @@ import org.junit.Test;
  * Tests snapshot deletion.
  */
 public class TestSnapshotDiffReport {
-  protected static final long seed = 0;
-  protected static final short REPLICATION = 3;
-  protected static final short REPLICATION_1 = 2;
-  protected static final long BLOCKSIZE = 1024;
-  public static final int SNAPSHOTNUMBER = 10;
-  
+  private static final long SEED = 0;
+  private static final short REPLICATION = 3;
+  private static final short REPLICATION_1 = 2;
+  private static final long BLOCKSIZE = 1024;
+  private static final long BUFFERLEN = BLOCKSIZE / 2;
+  private static final long FILELEN = BLOCKSIZE * 2;
+
   private final Path dir = new Path("/TestSnapshot");
   private final Path sub1 = new Path(dir, "sub1");
   
@@ -61,6 +71,8 @@ public class TestSnapshotDiffReport {
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .format(true).build();
     cluster.waitActive();
@@ -97,10 +109,10 @@ public class TestSnapshotDiffReport {
     Path link13 = new Path(modifyDir, "link13");
     Path file14 = new Path(modifyDir, "file14");
     Path file15 = new Path(modifyDir, "file15");
-    DFSTestUtil.createFile(hdfs, file10, BLOCKSIZE, REPLICATION_1, seed);
-    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION_1, seed);
-    DFSTestUtil.createFile(hdfs, file12, BLOCKSIZE, REPLICATION_1, seed);
-    DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, REPLICATION_1, seed);
+    DFSTestUtil.createFile(hdfs, file10, BLOCKSIZE, REPLICATION_1, SEED);
+    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION_1, SEED);
+    DFSTestUtil.createFile(hdfs, file12, BLOCKSIZE, REPLICATION_1, SEED);
+    DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, REPLICATION_1, SEED);
     // create link13
     hdfs.createSymlink(file13, link13, false);
     // create snapshot
@@ -118,9 +130,9 @@ public class TestSnapshotDiffReport {
     // delete link13
     hdfs.delete(link13, false);
     // create file14
-    DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, SEED);
     // create file15
-    DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, SEED);
     
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
@@ -128,7 +140,7 @@ public class TestSnapshotDiffReport {
     }
     
     // create file11 again
-    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, SEED);
     // delete file12
     hdfs.delete(file12, true);
     // modify file13
@@ -386,8 +398,8 @@ public class TestSnapshotDiffReport {
     final Path fileInFoo = new Path(foo, "file");
     final Path bar = new Path(dir2, "bar");
     final Path fileInBar = new Path(bar, "file");
-    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, SEED);
+    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPLICATION, SEED);
 
     // create snapshot on /dir1
     SnapshotTestHelper.createSnapshot(hdfs, dir1, "s0");
@@ -421,8 +433,8 @@ public class TestSnapshotDiffReport {
     final Path fileInFoo = new Path(foo, "file");
     final Path bar = new Path(dir2, "bar");
     final Path fileInBar = new Path(bar, "file");
-    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, SEED);
+    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPLICATION, SEED);
 
     SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
     hdfs.rename(fileInFoo, fileInBar, Rename.OVERWRITE);
@@ -454,7 +466,7 @@ public class TestSnapshotDiffReport {
     final Path root = new Path("/");
     final Path foo = new Path(root, "foo");
     final Path fileInFoo = new Path(foo, "file");
-    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, SEED);
 
     SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
     final Path bar = new Path(root, "bar");
@@ -478,7 +490,7 @@ public class TestSnapshotDiffReport {
   public void testDiffReportWithRenameAndAppend() throws Exception {
     final Path root = new Path("/");
     final Path foo = new Path(root, "foo");
-    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPLICATION, SEED);
 
     SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
     final Path bar = new Path(root, "bar");
@@ -504,7 +516,7 @@ public class TestSnapshotDiffReport {
     final Path root = new Path("/");
     final Path foo = new Path(root, "foo");
     final Path bar = new Path(foo, "bar");
-    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, SEED);
 
     SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
     // rename /foo to /foo2
@@ -529,4 +541,140 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo2/bar"),
             DFSUtil.string2Bytes("foo2/bar-new")));
   }
+
+  private void createFile(final Path filePath) throws IOException {
+    DFSTestUtil.createFile(hdfs, filePath, (int) BUFFERLEN,
+        FILELEN, BLOCKSIZE, REPLICATION, SEED);
+  }
+
+  private int writeToStream(final FSDataOutputStream outputStream,
+      byte[] buf) throws IOException {
+    outputStream.write(buf);
+    ((HdfsDataOutputStream)outputStream).hsync(
+        EnumSet.of(SyncFlag.UPDATE_LENGTH));
+    return buf.length;
+  }
+
+  private void restartNameNode() throws Exception {
+    cluster.triggerBlockReports();
+    NameNode nameNode = cluster.getNameNode();
+    NameNodeAdapter.enterSafeMode(nameNode, false);
+    NameNodeAdapter.saveNamespace(nameNode);
+    NameNodeAdapter.leaveSafeMode(nameNode);
+    cluster.restartNameNode(true);
+  }
+
+  /**
+   * Test Snapshot diff report for snapshots with open files captures in them.
+   * Also verify if the diff report remains the same across NameNode restarts.
+   */
+  @Test (timeout = 120000)
+  public void testDiffReportWithOpenFiles() throws Exception {
+    // Construct the directory tree
+    final Path level0A = new Path("/level_0_A");
+    final Path flumeSnapRootDir = level0A;
+    final String flumeFileName = "flume.log";
+    final String flumeSnap1Name = "flume_snap_1";
+    final String flumeSnap2Name = "flume_snap_2";
+
+    // Create files and open a stream
+    final Path flumeFile = new Path(level0A, flumeFileName);
+    createFile(flumeFile);
+    FSDataOutputStream flumeOutputStream = hdfs.append(flumeFile);
+
+    // Create Snapshot S1
+    final Path flumeS1Dir = SnapshotTestHelper.createSnapshot(
+        hdfs, flumeSnapRootDir, flumeSnap1Name);
+    final Path flumeS1Path = new Path(flumeS1Dir, flumeFileName);
+    final long flumeFileLengthAfterS1 = hdfs.getFileStatus(flumeFile).getLen();
+
+    // Verify if Snap S1 file length is same as the the live one
+    Assert.assertEquals(flumeFileLengthAfterS1,
+        hdfs.getFileStatus(flumeS1Path).getLen());
+
+    verifyDiffReport(level0A, flumeSnap1Name, "",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")));
+
+    long flumeFileWrittenDataLength = flumeFileLengthAfterS1;
+    int newWriteLength = (int) (BLOCKSIZE * 1.5);
+    byte[] buf = new byte[newWriteLength];
+    Random random = new Random();
+    random.nextBytes(buf);
+
+    // Write more data to flume file
+    flumeFileWrittenDataLength += writeToStream(flumeOutputStream, buf);
+
+    // Create Snapshot S2
+    final Path flumeS2Dir = SnapshotTestHelper.createSnapshot(
+        hdfs, flumeSnapRootDir, flumeSnap2Name);
+    final Path flumeS2Path = new Path(flumeS2Dir, flumeFileName);
+
+    // Verify live files length is same as all data written till now
+    final long flumeFileLengthAfterS2 = hdfs.getFileStatus(flumeFile).getLen();
+    Assert.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
+
+    // Verify if Snap S2 file length is same as the live one
+    Assert.assertEquals(flumeFileLengthAfterS2,
+        hdfs.getFileStatus(flumeS2Path).getLen());
+
+    verifyDiffReport(level0A, flumeSnap1Name, "",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes(flumeFileName)));
+
+    verifyDiffReport(level0A, flumeSnap2Name, "",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")));
+
+    verifyDiffReport(level0A, flumeSnap1Name, flumeSnap2Name,
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes(flumeFileName)));
+
+    // Write more data to flume file
+    flumeFileWrittenDataLength += writeToStream(flumeOutputStream, buf);
+
+    // Verify old flume snapshots have point-in-time / frozen file lengths
+    // even after the live file have moved forward.
+    Assert.assertEquals(flumeFileLengthAfterS1,
+        hdfs.getFileStatus(flumeS1Path).getLen());
+    Assert.assertEquals(flumeFileLengthAfterS2,
+        hdfs.getFileStatus(flumeS2Path).getLen());
+
+    flumeOutputStream.close();
+
+    // Verify if Snap S2 file length is same as the live one
+    Assert.assertEquals(flumeFileWrittenDataLength,
+        hdfs.getFileStatus(flumeFile).getLen());
+
+    // Verify old flume snapshots have point-in-time / frozen file lengths
+    // even after the live file have moved forward.
+    Assert.assertEquals(flumeFileLengthAfterS1,
+        hdfs.getFileStatus(flumeS1Path).getLen());
+    Assert.assertEquals(flumeFileLengthAfterS2,
+        hdfs.getFileStatus(flumeS2Path).getLen());
+
+    verifyDiffReport(level0A, flumeSnap1Name, "",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes(flumeFileName)));
+
+    verifyDiffReport(level0A, flumeSnap2Name, "",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes(flumeFileName)));
+
+    verifyDiffReport(level0A, flumeSnap1Name, flumeSnap2Name,
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes(flumeFileName)));
+
+    restartNameNode();
+
+    verifyDiffReport(level0A, flumeSnap1Name, flumeSnap2Name,
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes(flumeFileName)));
+
+  }
+
 }

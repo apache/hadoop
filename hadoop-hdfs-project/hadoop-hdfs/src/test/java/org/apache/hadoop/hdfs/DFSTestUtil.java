@@ -68,6 +68,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -111,6 +113,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -276,6 +279,14 @@ public class DFSTestUtil {
     newLog.restart();
     Whitebox.setInternalState(fsn.getFSImage(), "editLog", newLog);
     Whitebox.setInternalState(fsn.getFSDirectory(), "editLog", newLog);
+  }
+
+  public static void enableAllECPolicies(Configuration conf) {
+    // Enable all the available EC policies
+    String policies = SystemErasureCodingPolicies.getPolicies().stream()
+        .map(ErasureCodingPolicy::getName)
+        .collect(Collectors.joining(","));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, policies);
   }
 
   /** class MyFile contains enough information to recreate the contents of
@@ -850,7 +861,27 @@ public class DFSTestUtil {
       out.write(toAppend);
     }
   }
-  
+
+  /**
+   * Append specified length of bytes to a given file, starting with new block.
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param length Length of bytes to append to the file
+   * @throws IOException
+   */
+  public static void appendFileNewBlock(DistributedFileSystem fs,
+      Path p, int length) throws IOException {
+    assert fs.exists(p);
+    assert length >= 0;
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    try (FSDataOutputStream out = fs.append(p,
+        EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
+      out.write(toAppend);
+    }
+  }
+
   /**
    * @return url content as string (UTF-8 encoding assumed)
    */
@@ -1841,7 +1872,11 @@ public class DFSTestUtil {
    */
   public static void setDatanodeDead(DatanodeInfo dn) {
     dn.setLastUpdate(0);
-    dn.setLastUpdateMonotonic(0);
+    // Set this to a large negative value.
+    // On short-lived VMs, the monotonic time can be less than the heartbeat
+    // expiry time. Setting this to 0 will fail to immediately mark the DN as
+    // dead.
+    dn.setLastUpdateMonotonic(Long.MIN_VALUE/2);
   }
 
   /**
@@ -1898,7 +1933,7 @@ public class DFSTestUtil {
       Path dir, int numBlocks, int numStripesPerBlk, boolean toMkdir)
       throws Exception {
     createStripedFile(cluster, file, dir, numBlocks, numStripesPerBlk,
-        toMkdir, null);
+        toMkdir, StripedFileTestUtil.getDefaultECPolicy());
   }
 
   /**
@@ -1922,7 +1957,8 @@ public class DFSTestUtil {
       assert dir != null;
       dfs.mkdirs(dir);
       try {
-        dfs.getClient().setErasureCodingPolicy(dir.toString(), ecPolicy);
+        dfs.getClient()
+            .setErasureCodingPolicy(dir.toString(), ecPolicy.getName());
       } catch (IOException e) {
         if (!e.getMessage().contains("non-empty directory")) {
           throw e;
@@ -1934,7 +1970,7 @@ public class DFSTestUtil {
         .create(file.toString(), new FsPermission((short)0755),
         dfs.getClient().getClientName(),
         new EnumSetWritable<>(EnumSet.of(CreateFlag.CREATE)),
-        false, (short)1, 128*1024*1024L, null);
+        false, (short)1, 128*1024*1024L, null, null);
 
     FSNamesystem ns = cluster.getNamesystem();
     FSDirectory fsdir = ns.getFSDirectory();

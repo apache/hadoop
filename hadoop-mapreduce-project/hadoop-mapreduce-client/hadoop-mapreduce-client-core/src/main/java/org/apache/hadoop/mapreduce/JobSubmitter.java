@@ -458,7 +458,7 @@ class JobSubmitter {
       // resolve any symlinks in the URI path so using a "current" symlink
       // to point to a specific version shows the specific version
       // in the distributed cache configuration
-      FileSystem fs = FileSystem.get(conf);
+      FileSystem fs = FileSystem.get(uri, conf);
       Path frameworkPath = fs.makeQualified(
           new Path(uri.getScheme(), uri.getAuthority(), uri.getPath()));
       FileContext fc = FileContext.getFileContext(frameworkPath.toUri(), conf);

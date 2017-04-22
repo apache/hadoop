@@ -46,13 +46,18 @@
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
-          {{#link-to 'yarn-apps.apps' tagName="li" currentWhen="yarn-apps.apps yarn-apps.services"}}
-            {{#link-to 'yarn-apps.apps' class="navigation-link" currentWhen="yarn-apps.apps yarn-apps.services"}}Applications
+          {{#link-to 'yarn-apps.apps' tagName="li" current-when="yarn-apps.apps yarn-apps.services"}}
+            {{#link-to 'yarn-apps.apps' class="navigation-link"}}Applications
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
-          {{#link-to 'yarn-nodes.table' tagName="li" currentWhen="yarn-nodes.table yarn-nodes.heatmap"}}
-            {{#link-to 'yarn-nodes.table' class="navigation-link" currentWhen="yarn-nodes.table yarn-nodes.heatmap"}}Nodes
+          {{#link-to 'yarn-services' tagName="li"}}
+            {{#link-to 'yarn-services' class="navigation-link"}}Services
+              <span class="sr-only">(current)</span>
+            {{/link-to}}
+          {{/link-to}}
+          {{#link-to 'yarn-nodes.table' tagName="li" current-when="yarn-nodes.table yarn-nodes.heatmap"}}
+            {{#link-to 'yarn-nodes.table' class="navigation-link"}}Nodes
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -78,7 +80,6 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.BlockRecoveryWorker.BlockRecord;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
@@ -137,7 +138,7 @@ public class TestBlockRecovery {
   public TestName currentTestName = new TestName();
 
   private final int cellSize =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy().getCellSize();
+      StripedFileTestUtil.getDefaultECPolicy().getCellSize();
   private final int bytesPerChecksum = 512;
   private final int[][][] blockLengthsSuite = {
       {{11 * cellSize, 10 * cellSize, 9 * cellSize, 8 * cellSize,
@@ -219,7 +220,8 @@ public class TestBlockRecovery {
             Mockito.anyInt(),
             Mockito.any(VolumeFailureSummary.class),
             Mockito.anyBoolean(),
-            Mockito.any(SlowPeerReports.class)))
+            Mockito.any(SlowPeerReports.class),
+            Mockito.any(SlowDiskReports.class)))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],
             new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1),
@@ -800,8 +802,7 @@ public class TestBlockRecovery {
   @Test(timeout=60000)
   public void testSafeLength() throws Exception {
     // hard coded policy to work with hard coded test suite
-    ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager
-        .getSystemPolicies()[0];
+    ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
     RecoveringStripedBlock rBlockStriped = new RecoveringStripedBlock(rBlock,
         new byte[9], ecPolicy);
     BlockRecoveryWorker recoveryWorker = new BlockRecoveryWorker(dn);

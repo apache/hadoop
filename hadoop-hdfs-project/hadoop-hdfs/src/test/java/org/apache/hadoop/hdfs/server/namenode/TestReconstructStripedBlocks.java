@@ -60,7 +60,7 @@ public class TestReconstructStripedBlocks {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestReconstructStripedBlocks.class);
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int cellSize = ecPolicy.getCellSize();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
@@ -108,6 +108,8 @@ public class TestReconstructStripedBlocks {
       throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 1)
         .build();
 
@@ -195,23 +197,28 @@ public class TestReconstructStripedBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1000);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     try {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       BlockManager bm = cluster.getNamesystem().getBlockManager();
-      fs.getClient().setErasureCodingPolicy("/", null);
+      fs.getClient().setErasureCodingPolicy("/",
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       int fileLen = dataBlocks * blockSize;
       Path p = new Path("/test2RecoveryTasksForSameBlockGroup");
       final byte[] data = new byte[fileLen];
       DFSTestUtil.writeFile(fs, p, data);
+      DFSTestUtil.waitForReplication(fs, p, groupSize, 5000);
 
       LocatedStripedBlock lb = (LocatedStripedBlock)fs.getClient()
           .getLocatedBlocks(p.toString(), 0).get(0);
       LocatedBlock[] lbs = StripedBlockUtil.parseStripedBlockGroup(lb,
           cellSize, dataBlocks, parityBlocks);
 
+      BlockManagerTestUtil.getComputedDatanodeWork(bm);
       assertEquals(0, getNumberOfBlocksToBeErasureCoded(cluster));
       assertEquals(0, bm.getPendingReconstructionBlocksCount());
 
@@ -259,6 +266,8 @@ public class TestReconstructStripedBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     cluster.waitActive();
@@ -266,7 +275,8 @@ public class TestReconstructStripedBlocks {
 
     try {
       fs.mkdirs(dirPath);
-      fs.setErasureCodingPolicy(dirPath, null);
+      fs.setErasureCodingPolicy(dirPath,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       DFSTestUtil.createFile(fs, filePath,
           cellSize * dataBlocks * 2, (short) 1, 0L);
 

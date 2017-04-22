@@ -42,8 +42,6 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -327,10 +325,8 @@ public class TestApplicationMasterService {
 
   @Test(timeout=1200000)
   public void  testAllocateAfterUnregister() throws Exception {
-    MyResourceManager rm = new MyResourceManager(conf);
+    MockRM rm = new MockRM(conf);
     rm.start();
-    DrainDispatcher rmDispatcher = (DrainDispatcher) rm.getRMContext()
-            .getDispatcher();
     // Register node1
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
@@ -351,7 +347,7 @@ public class TestApplicationMasterService {
     AllocateResponse alloc1Response = am1.schedule();
 
     nm1.nodeHeartbeat(true);
-    rmDispatcher.await();
+    rm.drainEvents();
     alloc1Response = am1.schedule();
     Assert.assertEquals(0, alloc1Response.getAllocatedContainers().size());
   }
@@ -474,17 +470,6 @@ public class TestApplicationMasterService {
     rm.stop();
   }
 
-  private static class MyResourceManager extends MockRM {
-
-    public MyResourceManager(YarnConfiguration conf) {
-      super(conf);
-    }
-    @Override
-    protected Dispatcher createDispatcher() {
-      return new DrainDispatcher();
-    }
-  }
-  
   private void sentRMContainerLaunched(MockRM rm, ContainerId containerId) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     RMContainer rmContainer = cs.getRMContainer(containerId);

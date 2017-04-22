@@ -580,7 +580,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       activeServiceContext = new RMActiveServiceContext();
       rmContext.setActiveServiceContext(activeServiceContext);
 
-      conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
       rmSecretManagerService = createRMSecretManagerService();
       addService(rmSecretManagerService);
 
@@ -846,7 +845,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private class StandByTransitionRunnable implements Runnable {
     // The atomic variable to make sure multiple threads with the same runnable
     // run only once.
-    private AtomicBoolean hasAlreadyRun = new AtomicBoolean(false);
+    private final AtomicBoolean hasAlreadyRun = new AtomicBoolean(false);
 
     @Override
     public void run() {

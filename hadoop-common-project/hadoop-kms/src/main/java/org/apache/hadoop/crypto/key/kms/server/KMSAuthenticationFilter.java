@@ -20,6 +20,7 @@ package org.apache.hadoop.crypto.key.kms.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
@@ -105,7 +106,7 @@ public class KMSAuthenticationFilter
     public void sendError(int sc, String msg) throws IOException {
       statusCode = sc;
       this.msg = msg;
-      super.sendError(sc, msg);
+      super.sendError(sc, HtmlQuoting.quoteHtmlChars(msg));
     }
 
     @Override

@@ -30,6 +30,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
@@ -108,6 +110,58 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private boolean containerLimitUsers;
   private ResourceHandler resourceHandlerChain;
   private LinuxContainerRuntime linuxContainerRuntime;
+
+  /**
+   * The container exit code.
+   */
+  public enum ExitCode {
+    SUCCESS(0),
+    INVALID_ARGUMENT_NUMBER(1),
+    INVALID_COMMAND_PROVIDED(3),
+    INVALID_NM_ROOT_DIRS(5),
+    SETUID_OPER_FAILED(6),
+    UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
+    UNABLE_TO_SIGNAL_CONTAINER(8),
+    INVALID_CONTAINER_PID(9),
+    OUT_OF_MEMORY(18),
+    INITIALIZE_USER_FAILED(20),
+    PATH_TO_DELETE_IS_NULL(21),
+    INVALID_CONTAINER_EXEC_PERMISSIONS(22),
+    INVALID_CONFIG_FILE(24),
+    SETSID_OPER_FAILED(25),
+    WRITE_PIDFILE_FAILED(26),
+    WRITE_CGROUP_FAILED(27),
+    TRAFFIC_CONTROL_EXECUTION_FAILED(28),
+    DOCKER_RUN_FAILED(29),
+    ERROR_OPENING_DOCKER_FILE(30),
+    ERROR_READING_DOCKER_FILE(31),
+    FEATURE_DISABLED(32),
+    COULD_NOT_CREATE_SCRIPT_COPY(33),
+    COULD_NOT_CREATE_CREDENTIALS_FILE(34),
+    COULD_NOT_CREATE_WORK_DIRECTORIES(35),
+    COULD_NOT_CREATE_APP_LOG_DIRECTORIES(36),
+    COULD_NOT_CREATE_TMP_DIRECTORIES(37),
+    ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS(38);
+
+    private final int code;
+
+    ExitCode(int exitCode) {
+      this.code = exitCode;
+    }
+
+    /**
+     * Get the exit code as an int.
+     * @return the exit code as an int
+     */
+    public int getExitCode() {
+      return code;
+    }
+
+    @Override
+    public String toString() {
+      return String.valueOf(code);
+    }
+  }
 
   /**
    * Default constructor to allow for creation through reflection.
@@ -363,7 +417,30 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public int launchContainer(ContainerStartContext ctx) throws IOException {
+  public void prepareContainer(ContainerPrepareContext ctx) throws IOException {
+
+    ContainerRuntimeContext.Builder builder =
+        new ContainerRuntimeContext.Builder(ctx.getContainer());
+
+    builder.setExecutionAttribute(LOCALIZED_RESOURCES,
+            ctx.getLocalizedResources())
+        .setExecutionAttribute(USER, ctx.getUser())
+        .setExecutionAttribute(CONTAINER_LOCAL_DIRS,
+            ctx.getContainerLocalDirs())
+        .setExecutionAttribute(CONTAINER_RUN_CMDS, ctx.getCommands())
+        .setExecutionAttribute(CONTAINER_ID_STR,
+            ctx.getContainer().getContainerId().toString());
+
+    try {
+      linuxContainerRuntime.prepareContainer(builder.build());
+    } catch (ContainerExecutionException e) {
+      throw new IOException("Unable to prepare container: ", e);
+    }
+  }
+
+  @Override
+  public int launchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
     Container container = ctx.getContainer();
     Path nmPrivateContainerScriptPath = ctx.getNmPrivateContainerScriptPath();
     Path nmPrivateTokensPath = ctx.getNmPrivateTokensPath();
@@ -473,7 +550,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       } else {
         LOG.info(
             "Container was marked as inactive. Returning terminated error");
-        return ExitCode.TERMINATED.getExitCode();
+        return ContainerExecutor.ExitCode.TERMINATED.getExitCode();
       }
     } catch (ContainerExecutionException e) {
       int exitCode = e.getExitCode();
@@ -481,8 +558,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
       // terminated/killed forcefully. In all other cases, log the
       // output
-      if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
-          && exitCode != ExitCode.TERMINATED.getExitCode()) {
+      if (exitCode != ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode()
+          && exitCode != ContainerExecutor.ExitCode.TERMINATED.getExitCode()) {
         LOG.warn("Exception from container-launch with container ID: "
             + containerId + " and exit code: " + exitCode, e);
 
@@ -502,6 +579,23 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         logOutput(diagnostics);
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
+        if (exitCode ==
+                ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
+            exitCode ==
+                ExitCode.INVALID_CONFIG_FILE.getExitCode() ||
+            exitCode ==
+                ExitCode.COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
+            exitCode ==
+                ExitCode.COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
+            exitCode ==
+                ExitCode.COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
+            exitCode ==
+                ExitCode.COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
+            exitCode ==
+                ExitCode.COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
+          throw new ConfigurationException(
+              "Linux Container Executor reached unrecoverable exception", e);
+        }
       } else {
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             "Container killed on request. Exit code is " + exitCode));

@@ -274,7 +274,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster =
         new MiniYARNClusterForHATesting(TestRMFailover.class.getName(), 2,
-            numOfNMs, 1, 1, false, overrideClientRMService, overrideRTS,
+            numOfNMs, 1, 1, overrideClientRMService, overrideRTS,
             overrideApplicationMasterService);
     cluster.resetStartFailoverFlag(false);
     cluster.init(conf);
@@ -304,10 +304,10 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
 
     public MiniYARNClusterForHATesting(String testName,
         int numResourceManagers, int numNodeManagers, int numLocalDirs,
-        int numLogDirs, boolean enableAHS, boolean overrideClientRMService,
+        int numLogDirs, boolean overrideClientRMService,
         boolean overrideRTS, boolean overrideApplicationMasterService) {
       super(testName, numResourceManagers, numNodeManagers, numLocalDirs,
-          numLogDirs, enableAHS);
+          numLogDirs);
       this.overrideClientRMService = overrideClientRMService;
       this.overrideRTS = overrideRTS;
       this.overrideApplicationMasterService = overrideApplicationMasterService;

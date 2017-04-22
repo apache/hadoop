@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -557,5 +558,14 @@ public class StripedFileTestUtil {
                                                DistributedFileSystem fs)
       throws IOException {
     return fs.getClient().getLocatedBlocks(file.toString(), 0, Long.MAX_VALUE);
+  }
+
+  /**
+   * Get system-wide default Erasure Coding Policy, which can be
+   * used by default when no policy is specified for a path.
+   * @return ErasureCodingPolicy
+   */
+  public static ErasureCodingPolicy getDefaultECPolicy() {
+    return SystemErasureCodingPolicies.getPolicies().get(0);
   }
 }

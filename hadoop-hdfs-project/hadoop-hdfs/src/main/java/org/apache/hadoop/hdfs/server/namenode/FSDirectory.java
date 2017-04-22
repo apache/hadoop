@@ -957,7 +957,8 @@ public class FSDirectory implements Closeable {
     final short replicationFactor;
     if (fileINode.isStriped()) {
       final ErasureCodingPolicy ecPolicy =
-          FSDirErasureCodingOp.getErasureCodingPolicy(namesystem, iip);
+          FSDirErasureCodingOp
+              .unprotectedGetErasureCodingPolicy(namesystem, iip);
       final short numDataUnits = (short) ecPolicy.getNumDataUnits();
       final short numParityUnits = (short) ecPolicy.getNumParityUnits();
 

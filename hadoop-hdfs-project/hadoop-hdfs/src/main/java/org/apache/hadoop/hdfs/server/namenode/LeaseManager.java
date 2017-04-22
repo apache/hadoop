@@ -28,9 +28,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -41,6 +47,7 @@ import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files.   
@@ -67,16 +74,14 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class LeaseManager {
   public static final Log LOG = LogFactory.getLog(LeaseManager.class);
-
   private final FSNamesystem fsnamesystem;
-
   private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
   private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
+  static final int INODE_FILTER_WORKER_COUNT_MAX = 4;
+  static final int INODE_FILTER_WORKER_TASK_MIN = 512;
 
-  //
   // Used for handling lock-leases
   // Mapping: leaseHolder -> Lease
-  //
   private final SortedMap<String, Lease> leases = new TreeMap<>();
   // Set of: Lease
   private final PriorityQueue<Lease> sortedLeases = new PriorityQueue<>(512,
@@ -128,6 +133,96 @@ public class LeaseManager {
   }
 
   Collection<Long> getINodeIdWithLeases() {return leasesById.keySet();}
+
+  /**
+   * Get {@link INodesInPath} for all {@link INode} in the system
+   * which has a valid lease.
+   *
+   * @return Set<INodesInPath>
+   */
+  public Set<INodesInPath> getINodeWithLeases() {
+    return getINodeWithLeases(null);
+  }
+
+  private synchronized INode[] getINodesWithLease() {
+    int inodeCount = 0;
+    INode[] inodes = new INode[leasesById.size()];
+    for (long inodeId : leasesById.keySet()) {
+      inodes[inodeCount] = fsnamesystem.getFSDirectory().getInode(inodeId);
+      inodeCount++;
+    }
+    return inodes;
+  }
+
+  /**
+   * Get {@link INodesInPath} for all files under the ancestor directory which
+   * has valid lease. If the ancestor directory is null, then return all files
+   * in the system with valid lease. Callers must hold {@link FSNamesystem}
+   * read or write lock.
+   *
+   * @param ancestorDir the ancestor {@link INodeDirectory}
+   * @return Set<INodesInPath>
+   */
+  public Set<INodesInPath> getINodeWithLeases(final INodeDirectory
+      ancestorDir) {
+    assert fsnamesystem.hasReadLock();
+    final long startTimeMs = Time.monotonicNow();
+    Set<INodesInPath> iipSet = new HashSet<>();
+    final INode[] inodes = getINodesWithLease();
+    int inodeCount = inodes.length;
+    if (inodeCount == 0) {
+      return iipSet;
+    }
+
+    List<Future<List<INodesInPath>>> futureList = Lists.newArrayList();
+    final int workerCount = Math.min(INODE_FILTER_WORKER_COUNT_MAX,
+        (((inodeCount - 1) / INODE_FILTER_WORKER_TASK_MIN) + 1));
+    ExecutorService inodeFilterService =
+        Executors.newFixedThreadPool(workerCount);
+    for (int workerIdx = 0; workerIdx < workerCount; workerIdx++) {
+      final int startIdx = workerIdx;
+      Callable<List<INodesInPath>> c = new Callable<List<INodesInPath>>() {
+        @Override
+        public List<INodesInPath> call() {
+          List<INodesInPath> iNodesInPaths = Lists.newArrayList();
+          for (int idx = startIdx; idx < inodeCount; idx += workerCount) {
+            INode inode = inodes[idx];
+            if (!inode.isFile()) {
+              continue;
+            }
+            INodesInPath inodesInPath = INodesInPath.fromINode(
+                fsnamesystem.getFSDirectory().getRoot(), inode.asFile());
+            if (ancestorDir != null &&
+                !inodesInPath.isDescendant(ancestorDir)) {
+              continue;
+            }
+            iNodesInPaths.add(inodesInPath);
+          }
+          return iNodesInPaths;
+        }
+      };
+
+      // Submit the inode filter task to the Executor Service
+      futureList.add(inodeFilterService.submit(c));
+    }
+    inodeFilterService.shutdown();
+
+    for (Future<List<INodesInPath>> f : futureList) {
+      try {
+        iipSet.addAll(f.get());
+      } catch (Exception e) {
+        LOG.warn("INode filter task encountered exception: ", e);
+      }
+    }
+    final long endTimeMs = Time.monotonicNow();
+    if ((endTimeMs - startTimeMs) > 1000) {
+      LOG.info("Took " + (endTimeMs - startTimeMs) + " ms to collect "
+          + iipSet.size() + " open files with leases" +
+          ((ancestorDir != null) ?
+              " under " + ancestorDir.getFullPathName() : "."));
+    }
+    return iipSet;
+  }
 
   /** @return the lease containing src */
   public synchronized Lease getLease(INodeFile src) {return leasesById.get(src.getId());}

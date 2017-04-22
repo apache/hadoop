@@ -188,6 +188,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.groups.shell.command.timeout</name>
+  <value>0s</value>
+  <description>
+    Used by the ShellBasedUnixGroupsMapping class, this property controls how
+    long to wait for the underlying shell command that is run to fetch groups.
+    Expressed in seconds (e.g. 10s, 1m, etc.), if the running command takes
+    longer than the value configured, the command is aborted and the groups
+    resolver would return a result of no groups found. A value of 0s (default)
+    would mean an infinite wait (i.e. wait until the command exits on its own).
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.connection.timeout.ms</name>
   <value>60000</value>
   <description>
@@ -504,9 +517,19 @@
 
 <property>
   <name>hadoop.security.sensitive-config-keys</name>
-  <value>secret$,password$,ssl.keystore.pass$,fs.s3.*[Ss]ecret.?[Kk]ey,fs.azure.account.key.*,dfs.webhdfs.oauth2.[a-z]+.token,hadoop.security.sensitive-config-keys</value>
-  <description>A comma-separated list of regular expressions to match against
-      configuration keys that should be redacted where appropriate, for
+  <value>
+      secret$
+      password$
+      ssl.keystore.pass$
+      fs.s3.*[Ss]ecret.?[Kk]ey
+      fs.s3a.*.server-side-encryption.key
+      fs.azure.account.key.*
+      credential$
+      oauth.*token$
+      hadoop.security.sensitive-config-keys
+  </value>
+  <description>A comma-separated or multi-line list of regular expressions to
+      match configuration keys that should be redacted where appropriate, for
       example, when logging modified properties during a reconfiguration,
       private credentials should not be logged.
   </description>
@@ -644,34 +667,33 @@
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs-default.rawcoder</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
+  <name>io.erasurecode.codec.rs.rawcoders</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs-default codec. The default value is a
-    pure Java implementation. There is also a native implementation. Its value
-    is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
+    Comma separated raw coder implementations for the rs codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs-legacy.rawcoder</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
+  <name>io.erasurecode.codec.rs-legacy.rawcoders</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSLegacyRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs-legacy codec.
+    Comma separated raw coder implementations for the rs-legacy codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
 <property>
-  <name>io.erasurecode.codec.xor.rawcoder</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
+  <name>io.erasurecode.codec.xor.rawcoders</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the xor codec. The default value is a pure Java
-    implementation. There is also a native implementation. Its value is
-    org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory.
+    Comma separated raw coder implementations for the xor codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
-<!-- file system properties -->
+  <!-- file system properties -->
 
 <property>
   <name>fs.defaultFS</name>
@@ -837,6 +859,12 @@
 </property>
 
 <property>
+  <name>fs.swift.impl</name>
+  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
+  <description>The implementation class of the OpenStack Swift Filesystem</description>
+</property>
+
+<property>
   <name>fs.automatic.close</name>
   <value>true</value>
   <description>By default, FileSystem instances are automatically closed at program
@@ -937,13 +965,8 @@
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    3. org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider:
-        a shared instance of
-        com.amazonaws.auth.InstanceProfileCredentialsProvider from the AWS
-        SDK, which supports use of instance profile credentials if running
-        in an EC2 VM.  Using this shared instance potentially reduces load
-        on the EC2 instance metadata service for multi-threaded
-        applications.
+    3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
+        of instance profile credentials if running in an EC2 VM.
   </description>
 </property>
 
@@ -1138,7 +1161,18 @@
 <property>
   <name>fs.s3a.server-side-encryption-algorithm</name>
   <description>Specify a server-side encryption algorithm for s3a: file system.
-    Unset by default, and the only other currently allowable value is AES256.
+    Unset by default.  It supports the following values: 'AES256' (for SSE-S3),
+    'SSE-KMS' and 'SSE-C'.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.server-side-encryption.key</name>
+  <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
+    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
+    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
+    you'll be using your default's S3 KMS key, otherwise you should set this property to
+    the specific KMS key id.
   </description>
 </property>
 
@@ -1277,6 +1311,16 @@
     Can use the following suffix (case insensitive):
     ms(millis), s(sec), m(min), h(hour), d(day)
     to specify the time (such as 2s, 2m, 1h, etc.).
+  </description>
+</property>
+<property>
+  <name>fs.azure.authorization</name>
+  <value>false</value>
+  <description>
+    Config flag to enable authorization support in WASB. Setting it to "true" enables
+    authorization support to WASB. Currently WASB authorization requires a remote service
+    to provide authorization that needs to be specified via fs.azure.authorization.remote.service.url
+    configuration
   </description>
 </property>
 
@@ -2173,6 +2217,8 @@
   <description>
     The KeyProvider to use when managing zone keys, and interacting with
     encryption keys when reading and writing to an encryption zone.
+    For hdfs clients, the provider path will be same as namenode's
+    provider path.
   </description>
 </property>
 
@@ -2425,6 +2471,7 @@
 
 
   <!-- Azure Data Lake File System Configurations -->
+
   <property>
     <name>fs.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.AdlFileSystem</value>
@@ -2434,6 +2481,68 @@
     <name>fs.AbstractFileSystem.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.Adl</value>
   </property>
+
+  <property>
+    <name>adl.feature.ownerandgroup.enableupn</name>
+    <value>false</value>
+    <description>
+      When true : User and Group in FileStatus/AclStatus response is
+      represented as user friendly name as per Azure AD profile.
+
+      When false (default) : User and Group in FileStatus/AclStatus
+      response is represented by the unique identifier from Azure AD
+      profile (Object ID as GUID).
+
+      For optimal performance, false is recommended.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.access.token.provider.type</name>
+    <value>ClientCredential</value>
+    <description>
+      Defines Azure Active Directory OAuth2 access token provider type.
+      Supported types are ClientCredential, RefreshToken, and Custom.
+      The ClientCredential type requires property fs.adl.oauth2.client.id,
+      fs.adl.oauth2.credential, and fs.adl.oauth2.refresh.url.
+      The RefreshToken type requires property fs.adl.oauth2.client.id and
+      fs.adl.oauth2.refresh.token.
+      The Custom type requires property fs.adl.oauth2.access.token.provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.client.id</name>
+    <value></value>
+    <description>The OAuth2 client id.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.credential</name>
+    <value></value>
+    <description>The OAuth2 access key.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.refresh.url</name>
+    <value></value>
+    <description>The OAuth2 token endpoint.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.refresh.token</name>
+    <value></value>
+    <description>The OAuth2 refresh token.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.access.token.provider</name>
+    <value></value>
+    <description>
+      The class name of the OAuth2 access token provider.
+    </description>
+  </property>
+
   <!-- Azure Data Lake File System Configurations Ends Here-->
 
   <property>
@@ -2461,6 +2570,25 @@
       signature exceeds the maximum allowed bytes in server, the caller context
       will be abandoned, in which case the caller context will not be recorded
       in audit logs.
+    </description>
+  </property>
+<!-- SequenceFile's Sorter properties -->
+  <property>
+    <name>seq.io.sort.mb</name>
+    <value>100</value>
+    <description>
+      The total amount of buffer memory to use while sorting files,
+      while using SequenceFile.Sorter, in megabytes. By default,
+      gives each merge stream 1MB, which should minimize seeks.
+    </description>
+  </property>
+  <property>
+    <name>seq.io.sort.factor</name>
+    <value>100</value>
+    <description>
+      The number of streams to merge at once while sorting
+      files using SequenceFile.Sorter.
+      This determines the number of open file handles.
     </description>
   </property>
 </configuration>

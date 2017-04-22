@@ -1279,6 +1279,26 @@
 </property>
 
 <property>
+  <name>dfs.edit.log.transfer.timeout</name>
+  <value>30000</value>
+  <description>
+    Socket timeout for edit log transfer in milliseconds. This timeout
+    should be configured such that normal edit log transfer for journal
+    node syncing can complete successfully.
+  </description>
+</property>
+
+<property>
+  <name>dfs.edit.log.transfer.bandwidthPerSec</name>
+  <value>0</value>
+  <description>
+    Maximum bandwidth used for transferring edit log to between journal nodes
+    for syncing, in bytes per second.
+    A default value of 0 indicates that throttling is disabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.support.allow.format</name>
   <value>true</value>
   <description>Does HDFS namenode allow itself to be formatted?
@@ -1989,7 +2009,7 @@
 </property>
 
 <property>
-  <name>dfs.datanode.slow.peers.report.interval</name>
+  <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
     This setting controls how frequently DataNodes will report their peer
@@ -2458,6 +2478,14 @@
 </property>
 
 <property>
+  <name>dfs.webhdfs.acl.provider.permission.pattern</name>
+  <value>^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$</value>
+  <description>
+    Valid pattern for user and group names in webhdfs acl operations, it must be a valid java regex.
+  </description>
+</property>
+
+<property>
   <name>dfs.webhdfs.socket.connect-timeout</name>
   <value>60s</value>
   <description>
@@ -2692,7 +2720,7 @@
 
 <property>
   <name>dfs.namenode.write-lock-reporting-threshold-ms</name>
-  <value>1000</value>
+  <value>5000</value>
   <description>When a write lock is held on the namenode for a long time,
     this will be logged as the lock is released. This sets how long the
     lock must be held for logging to occur.
@@ -2712,7 +2740,11 @@
   <name>dfs.namenode.lock.detailed-metrics.enabled</name>
   <value>false</value>
   <description>If true, the namenode will keep track of how long various
-    operations hold the Namesystem lock for and emit this as metrics.
+    operations hold the Namesystem lock for and emit this as metrics. These
+    metrics have names of the form FSN(Read|Write)LockNanosOperationName,
+    where OperationName denotes the name of the operation that initiated the
+    lock hold (this will be OTHER for certain uncategorized operations) and
+    they export the hold time values in nanoseconds.
   </description>
 </property>
 
@@ -2897,6 +2929,16 @@
     Whether enable standby namenode to tail in-progress edit logs.
     Clients might want to turn it on when they want Standby NN to have
     more up-to-date data.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.ec.policies.enabled</name>
+  <value></value>
+  <description>Comma-delimited list of enabled erasure coding policies.
+    The NameNode will enforce this when setting an erasure coding policy
+    on a directory. By default, none of the built-in erasure coding
+    policies are enabled.
   </description>
 </property>
 
@@ -3785,6 +3827,27 @@
 </property>
 
 <property>
+  <name>dfs.journalnode.enable.sync</name>
+  <value>true</value>
+  <description>
+    If true, the journal nodes wil sync with each other. The journal nodes
+    will periodically gossip with other journal nodes to compare edit log
+    manifests and if they detect any missing log segment, they will download
+    it from the other journal nodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.sync.interval</name>
+  <value>120000</value>
+  <description>
+    Time interval, in milliseconds, between two Journal Node syncs.
+    This configuration takes effect only if the journalnode sync is enabled
+    by setting the configuration parameter dfs.journalnode.enable.sync to true.
+  </description>
+</property>
+
+<property>
   <name>dfs.journalnode.kerberos.internal.spnego.principal</name>
   <value></value>
   <description>
@@ -4090,6 +4153,23 @@
     The defragmentation threshold for the StorageInfo.
   </description>
 </property>
+
+  <property>
+    <name>dfs.namenode.snapshot.capture.openfiles</name>
+    <value>false</value>
+    <description>
+      If true, snapshots taken will have an immutable shared copy of
+      the open files that have valid leases. Even after the open files
+      grow or shrink in size, snapshot will always have the previous
+      point-in-time version of the open files, just like all other
+      closed files. Default is false.
+      Note: The file length captured for open files in snapshot is
+      whats recorded in NameNode at the time of snapshot and it may
+      be shorter than what the client has written till then. In order
+      to capture the latest length, the client can call hflush/hsync
+      with the flag SyncFlag.UPDATE_LENGTH on the open files handles.
+    </description>
+  </property>
 
 <property>
   <name>dfs.pipeline.ecn</name>

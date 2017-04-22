@@ -126,7 +126,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     conf.set(SECRET_KEY, "secretkey");
     conf.set(SESSION_TOKEN, "");
     TemporaryAWSCredentialsProvider provider
-        = new TemporaryAWSCredentialsProvider(getFileSystem().getUri(), conf);
+        = new TemporaryAWSCredentialsProvider(conf);
     try {
       AWSCredentials credentials = provider.getCredentials();
       fail("Expected a CredentialInitializationException,"

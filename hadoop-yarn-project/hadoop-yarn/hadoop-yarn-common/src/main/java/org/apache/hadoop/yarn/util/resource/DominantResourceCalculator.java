@@ -51,17 +51,18 @@ public class DominantResourceCalculator extends ResourceCalculator {
       LogFactory.getLog(DominantResourceCalculator.class);
 
   @Override
-  public int compare(Resource clusterResource, Resource lhs, Resource rhs) {
+  public int compare(Resource clusterResource, Resource lhs, Resource rhs,
+      boolean singleType) {
     
     if (lhs.equals(rhs)) {
       return 0;
     }
     
     if (isInvalidDivisor(clusterResource)) {
-      if ((lhs.getMemorySize() < rhs.getMemorySize() && lhs.getVirtualCores() > rhs
-          .getVirtualCores())
-          || (lhs.getMemorySize() > rhs.getMemorySize() && lhs.getVirtualCores() < rhs
-              .getVirtualCores())) {
+      if ((lhs.getMemorySize() < rhs.getMemorySize() &&
+          lhs.getVirtualCores() > rhs.getVirtualCores()) ||
+          (lhs.getMemorySize() > rhs.getMemorySize() &&
+          lhs.getVirtualCores() < rhs.getVirtualCores())) {
         return 0;
       } else if (lhs.getMemorySize() > rhs.getMemorySize()
           || lhs.getVirtualCores() > rhs.getVirtualCores()) {
@@ -79,7 +80,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       return -1;
     } else if (l > r) {
       return 1;
-    } else {
+    } else if (!singleType) {
       l = getResourceAsValue(clusterResource, lhs, false);
       r = getResourceAsValue(clusterResource, rhs, false);
       if (l < r) {

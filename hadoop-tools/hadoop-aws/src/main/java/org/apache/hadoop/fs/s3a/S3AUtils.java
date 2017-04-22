@@ -81,6 +81,22 @@ public final class S3AUtils {
   static final String CREDENTIAL_PROVIDER_PATH =
       "hadoop.security.credential.provider.path";
 
+  /**
+   * Encryption SSE-C used but the config lacks an encryption key.
+   */
+  public static final String SSE_C_NO_KEY_ERROR =
+      S3AEncryptionMethods.SSE_C.getMethod()
+          + " is enabled but no encryption key was declared in "
+          + SERVER_SIDE_ENCRYPTION_KEY;
+  /**
+   * Encryption SSE-S3 is used but the caller also set an encryption key.
+   */
+  public static final String SSE_S3_WITH_KEY_ERROR =
+      S3AEncryptionMethods.SSE_S3.getMethod()
+          + " is enabled but an encryption key was set in "
+          + SERVER_SIDE_ENCRYPTION_KEY;
+
+
   private S3AUtils() {
   }
 
@@ -318,15 +334,12 @@ public final class S3AUtils {
    * Create the AWS credentials from the providers and the URI.
    * @param binding Binding URI, may contain user:pass login details
    * @param conf filesystem configuration
-   * @param fsURI fS URI —after any login details have been stripped.
    * @return a credentials provider list
    * @throws IOException Problems loading the providers (including reading
    * secrets from credential files).
    */
   public static AWSCredentialProviderList createAWSCredentialProviderSet(
-      URI binding,
-      Configuration conf,
-      URI fsURI) throws IOException {
+      URI binding, Configuration conf) throws IOException {
     AWSCredentialProviderList credentials = new AWSCredentialProviderList();
 
     Class<?>[] awsClasses;
@@ -342,20 +355,15 @@ public final class S3AUtils {
       credentials.add(new BasicAWSCredentialsProvider(
               creds.getUser(), creds.getPassword()));
       credentials.add(new EnvironmentVariableCredentialsProvider());
-      credentials.add(
-          SharedInstanceProfileCredentialsProvider.getInstance());
+      credentials.add(InstanceProfileCredentialsProvider.getInstance());
     } else {
       for (Class<?> aClass : awsClasses) {
-        if (aClass == InstanceProfileCredentialsProvider.class) {
-          LOG.debug("Found {}, but will use {} instead.", aClass.getName(),
-              SharedInstanceProfileCredentialsProvider.class.getName());
-          aClass = SharedInstanceProfileCredentialsProvider.class;
-        }
-        credentials.add(createAWSCredentialProvider(conf,
-            aClass,
-            fsURI));
+        credentials.add(createAWSCredentialProvider(conf, aClass));
       }
     }
+    // make sure the logging message strips out any auth details
+    LOG.debug("For URI {}, using credentials {}",
+        S3xLoginHelper.toString(binding), credentials);
     return credentials;
   }
 
@@ -365,8 +373,8 @@ public final class S3AUtils {
    * attempted in order:
    *
    * <ol>
-   * <li>a public constructor accepting java.net.URI and
-   *     org.apache.hadoop.conf.Configuration</li>
+   * <li>a public constructor accepting
+   *    org.apache.hadoop.conf.Configuration</li>
    * <li>a public static method named getInstance that accepts no
    *    arguments and returns an instance of
    *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
@@ -375,14 +383,11 @@ public final class S3AUtils {
    *
    * @param conf configuration
    * @param credClass credential class
-   * @param uri URI of the FS
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
   static AWSCredentialsProvider createAWSCredentialProvider(
-      Configuration conf,
-      Class<?> credClass,
-      URI uri) throws IOException {
+      Configuration conf, Class<?> credClass) throws IOException {
     AWSCredentialsProvider credentials = null;
     String className = credClass.getName();
     if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
@@ -394,11 +399,10 @@ public final class S3AUtils {
     LOG.debug("Credential provider class is {}", className);
 
     try {
-      // new X(uri, conf)
-      Constructor cons = getConstructor(credClass, URI.class,
-          Configuration.class);
+      // new X(conf)
+      Constructor cons = getConstructor(credClass, Configuration.class);
       if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
+        credentials = (AWSCredentialsProvider)cons.newInstance(conf);
         return credentials;
       }
 
@@ -420,16 +424,12 @@ public final class S3AUtils {
       // no supported constructor or factory method found
       throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
           + ".  A class specified in %s must provide a public constructor "
-          + "accepting URI and Configuration, or a public factory method named "
+          + "accepting Configuration, or a public factory method named "
           + "getInstance that accepts no arguments, or a public default "
           + "constructor.", className, AWS_CREDENTIALS_PROVIDER));
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
       throw new IOException(className + " " + INSTANTIATION_EXCEPTION +".", e);
-    } finally {
-      if (credentials != null) {
-        LOG.debug("Using {} for {}.", credentials, uri);
-      }
     }
   }
 
@@ -465,8 +465,27 @@ public final class S3AUtils {
    */
   static String getPassword(Configuration conf, String key, String val)
       throws IOException {
+    String defVal = "";
+    return getPassword(conf, key, val, defVal);
+  }
+
+  /**
+   * Get a password from a configuration, or, if a value is passed in,
+   * pick that up instead.
+   * @param conf configuration
+   * @param key key to look up
+   * @param val current value: if non empty this is used instead of
+   * querying the configuration.
+   * @param defVal default value if nothing is set
+   * @return a password or "".
+   * @throws IOException on any problem
+   */
+  private static String getPassword(Configuration conf,
+      String key,
+      String val,
+      String defVal) throws IOException {
     return StringUtils.isEmpty(val)
-        ? lookupPassword(conf, key, "")
+        ? lookupPassword(conf, key, defVal)
         : val;
   }
 
@@ -724,13 +743,116 @@ public final class S3AUtils {
     }
   }
 
+  /**
+   * Get any SSE key from a configuration/credential provider.
+   * This operation handles the case where the option has been
+   * set in the provider or configuration to the option
+   * {@code OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY}.
+   * @param conf configuration to examine
+   * @return the encryption key or null
+   */
   static String getServerSideEncryptionKey(Configuration conf) {
     try {
-      return getPassword(conf, Constants.SERVER_SIDE_ENCRYPTION_KEY,
-        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY));
+      return lookupPassword(conf, SERVER_SIDE_ENCRYPTION_KEY,
+          getPassword(conf, OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
+              null, null));
     } catch (IOException e) {
       LOG.error("Cannot retrieve SERVER_SIDE_ENCRYPTION_KEY", e);
+      return "";
     }
-    return null;
   }
+
+  /**
+   * Get the server-side encryption algorithm.
+   * This includes validation of the configuration, checking the state of
+   * the encryption key given the chosen algorithm.
+   * @param conf configuration to scan
+   * @return the encryption mechanism (which will be {@code NONE} unless
+   * one is set.
+   * @throws IOException on any validation problem.
+   */
+  static S3AEncryptionMethods getEncryptionAlgorithm(Configuration conf)
+      throws IOException {
+    S3AEncryptionMethods sse = S3AEncryptionMethods.getMethod(
+        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
+    String sseKey = getServerSideEncryptionKey(conf);
+    int sseKeyLen = StringUtils.isBlank(sseKey) ? 0 : sseKey.length();
+    String diagnostics = passwordDiagnostics(sseKey, "key");
+    switch (sse) {
+    case SSE_C:
+      if (sseKeyLen == 0) {
+        throw new IOException(SSE_C_NO_KEY_ERROR);
+      }
+      break;
+
+    case SSE_S3:
+      if (sseKeyLen != 0) {
+        throw new IOException(SSE_S3_WITH_KEY_ERROR
+            + " (" + diagnostics + ")");
+      }
+      break;
+
+    case SSE_KMS:
+      LOG.debug("Using SSE-KMS with {}",
+          diagnostics);
+      break;
+
+    case NONE:
+    default:
+      LOG.debug("Data is unencrypted");
+      break;
+    }
+    LOG.debug("Using SSE-C with {}", diagnostics);
+    return sse;
+  }
+
+  /**
+   * Provide a password diagnostics string.
+   * This aims to help diagnostics without revealing significant password details
+   * @param pass password
+   * @param description description for text, e.g "key" or "password"
+   * @return text for use in messages.
+   */
+  private static String passwordDiagnostics(String pass, String description) {
+    if (pass == null) {
+      return "null " + description;
+    }
+    int len = pass.length();
+    switch (len) {
+    case 0:
+      return "empty " + description;
+    case 1:
+      return description + " of length 1";
+
+    default:
+      return description + " of length " + len + " ending with "
+          + pass.charAt(len - 1);
+    }
+  }
+
+  /**
+   * Close the Closeable objects and <b>ignore</b> any Exception or
+   * null pointers.
+   * (This is the SLF4J equivalent of that in {@code IOUtils}).
+   * @param log the log to log at debug level. Can be null.
+   * @param closeables the objects to close
+   */
+  public static void closeAll(Logger log,
+      java.io.Closeable... closeables) {
+    for (java.io.Closeable c : closeables) {
+      if (c != null) {
+        try {
+          if (log != null) {
+            log.debug("Closing {}", c);
+          }
+          c.close();
+        } catch (Exception e) {
+          if (log != null && log.isDebugEnabled()) {
+            log.debug("Exception in closing {}", c, e);
+          }
+        }
+      }
+    }
+  }
+
 }

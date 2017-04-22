@@ -68,14 +68,16 @@ public class DummyContainerManager extends ContainerManagerImpl {
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
     super(context, exec, deletionContext, nodeStatusUpdater, metrics,
         dirsHandler);
+    dispatcher.disableExitOnDispatchException();
   }
 
   @Override
   @SuppressWarnings("unchecked")
   protected ResourceLocalizationService createResourceLocalizationService(
-      ContainerExecutor exec, DeletionService deletionContext, Context context) {
+      ContainerExecutor exec, DeletionService deletionContext, Context context,
+      NodeManagerMetrics metrics) {
     return new ResourceLocalizationService(super.dispatcher, exec,
-        deletionContext, super.dirsHandler, context) {
+        deletionContext, super.dirsHandler, context, metrics) {
       @Override
       public void handle(LocalizationEvent event) {
         switch (event.getType()) {

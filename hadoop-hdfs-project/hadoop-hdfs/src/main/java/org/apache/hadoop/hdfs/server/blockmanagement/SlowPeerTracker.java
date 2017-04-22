@@ -58,7 +58,7 @@ public class SlowPeerTracker {
 
   /**
    * Time duration after which a report is considered stale. This is
-   * set to DFS_DATANODE_SLOW_PEER_REPORT_INTERVAL_KEY * 3 i.e.
+   * set to DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY * 3 i.e.
    * maintained for at least two successive reports.
    */
   private final long reportValidityMs;
@@ -94,8 +94,8 @@ public class SlowPeerTracker {
     this.timer = timer;
     this.allReports = new ConcurrentHashMap<>();
     this.reportValidityMs = conf.getTimeDuration(
-        DFSConfigKeys.DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_DEFAULT,
+        DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS) * 3;
   }
 

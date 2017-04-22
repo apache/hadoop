@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -35,6 +38,9 @@ public final class ErasureCodingPolicy {
 
   public ErasureCodingPolicy(String name, ECSchema schema,
       int cellSize, byte id) {
+    Preconditions.checkNotNull(name);
+    Preconditions.checkNotNull(schema);
+    Preconditions.checkArgument(cellSize > 0, "cellSize must be positive");
     this.name = name;
     this.schema = schema;
     this.cellSize = cellSize;
@@ -82,31 +88,40 @@ public final class ErasureCodingPolicy {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
+    if (o == null) {
       return false;
     }
-    ErasureCodingPolicy that = (ErasureCodingPolicy) o;
-
-    return that.getName().equals(name) &&
-        that.getCellSize() == cellSize &&
-        that.getSchema().equals(schema);
+    if (o == this) {
+      return true;
+    }
+    if (o.getClass() != getClass()) {
+      return false;
+    }
+    ErasureCodingPolicy rhs = (ErasureCodingPolicy) o;
+    return new EqualsBuilder()
+        .append(name, rhs.name)
+        .append(schema, rhs.schema)
+        .append(cellSize, rhs.cellSize)
+        .append(id, rhs.id)
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    int result = name.hashCode();
-    result = 31 * result + schema.hashCode();
-    result = 31 * result + cellSize;
-    return result;
+    return new HashCodeBuilder(303855623, 582626729)
+        .append(name)
+        .append(schema)
+        .append(cellSize)
+        .append(id)
+        .toHashCode();
   }
 
   @Override
   public String toString() {
     return "ErasureCodingPolicy=[" + "Name=" + name + ", "
         + "Schema=[" + schema.toString() + "], "
-        + "CellSize=" + cellSize + " " + "]";
+        + "CellSize=" + cellSize + ", "
+        + "Id=" + id
+        + "]";
   }
 }

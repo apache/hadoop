@@ -338,4 +338,22 @@ public class TestOfflineEditsViewer {
       }
     }
   }
+
+  @Test
+  public void testProcessorWithSameTypeFormatFile() throws IOException {
+    String edits = nnHelper.generateEdits();
+    LOG.info("Generated edits=" + edits);
+    String binaryEdits = folder.newFile("binaryEdits").getAbsolutePath();
+    String editsParsedXml = folder.newFile("editsParsed.xml").getAbsolutePath();
+    String editsReparsedXml = folder.newFile("editsReparsed.xml")
+        .getAbsolutePath();
+
+    // Binary format input file is not allowed to be processed
+    // by Binary processor.
+    assertEquals(-1, runOev(edits, binaryEdits, "binary", false));
+    // parse to XML then back to XML
+    assertEquals(0, runOev(edits, editsParsedXml, "xml", false));
+    // XML format input file is not allowed to be processed by XML processor.
+    assertEquals(-1, runOev(editsParsedXml, editsReparsedXml, "xml", false));
+  }
 }
