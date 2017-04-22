@@ -844,7 +844,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
-      this.snapshotManager = new SnapshotManager(dir);
+      this.snapshotManager = new SnapshotManager(conf, dir);
       this.cacheManager = new CacheManager(this, conf, blockManager);
       this.ecPolicyManager = new ErasureCodingPolicyManager(conf);
       this.topConf = new TopConf(conf);
