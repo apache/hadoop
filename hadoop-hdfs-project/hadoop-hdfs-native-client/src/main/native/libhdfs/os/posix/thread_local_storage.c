@@ -19,6 +19,7 @@
 #include "os/thread_local_storage.h"
 
 #include <jni.h>
+#include <malloc.h>
 #include <pthread.h>
 #include <stdio.h>
 
@@ -34,23 +35,48 @@ static int gTlsKeyInitialized = 0;
  *
  * @param v         The thread-local data
  */
-static void hdfsThreadDestructor(void *v)
+void hdfsThreadDestructor(void *v)
 {
   JavaVM *vm;
-  JNIEnv *env = v;
+  struct ThreadLocalState *state = (struct ThreadLocalState*)v;
+  JNIEnv *env = state->env;;
   jint ret;
 
-  ret = (*env)->GetJavaVM(env, &vm);
-  if (ret) {
-    fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with error %d\n",
-      ret);
-    (*env)->ExceptionDescribe(env);
-  } else {
-    (*vm)->DetachCurrentThread(vm);
+  /* Detach the current thread from the JVM */
+  if (env) {
+    ret = (*env)->GetJavaVM(env, &vm);
+    if (ret) {
+      fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with error %d\n",
+        ret);
+      (*env)->ExceptionDescribe(env);
+    } else {
+      (*vm)->DetachCurrentThread(vm);
+    }
   }
+
+  /* Free exception strings */
+  if (state->lastExceptionStackTrace) free(state->lastExceptionStackTrace);
+  if (state->lastExceptionRootCause) free(state->lastExceptionRootCause);
+
+  /* Free the state itself */
+  free(state);
 }
 
-int threadLocalStorageGet(JNIEnv **env)
+struct ThreadLocalState* threadLocalStorageCreate()
+{
+  struct ThreadLocalState *state;
+  state = (struct ThreadLocalState*)malloc(sizeof(struct ThreadLocalState));
+  if (state == NULL) {
+    fprintf(stderr,
+      "threadLocalStorageSet: OOM - Unable to allocate thread local state\n");
+    return NULL;
+  }
+  state->lastExceptionStackTrace = NULL;
+  state->lastExceptionRootCause = NULL;
+  return state;
+}
+
+int threadLocalStorageGet(struct ThreadLocalState **state)
 {
   int ret = 0;
   if (!gTlsKeyInitialized) {
@@ -63,18 +89,18 @@ int threadLocalStorageGet(JNIEnv **env)
     }
     gTlsKeyInitialized = 1;
   }
-  *env = pthread_getspecific(gTlsKey);
+  *state = pthread_getspecific(gTlsKey);
   return ret;
 }
 
-int threadLocalStorageSet(JNIEnv *env)
+int threadLocalStorageSet(struct ThreadLocalState *state)
 {
-  int ret = pthread_setspecific(gTlsKey, env);
+  int ret = pthread_setspecific(gTlsKey, state);
   if (ret) {
     fprintf(stderr,
       "threadLocalStorageSet: pthread_setspecific failed with error %d\n",
       ret);
-    hdfsThreadDestructor(env);
+    hdfsThreadDestructor(state);
   }
   return ret;
 }

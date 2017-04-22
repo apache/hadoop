@@ -165,6 +165,12 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     /* There should not be any file to open for reading. */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0));
 
+    /* Check if the exceptions are stored in the TLS */
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionRootCause(),
+                        "File does not exist");
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionStackTrace(),
+                        "java.io.FileNotFoundException");
+
     /* hdfsOpenFile should not accept mode = 3 */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, 3, 0, 0, 0));
 
