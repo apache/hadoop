@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.yarn.api;
 
-import com.google.common.collect.ImmutableSet;
+import java.io.IOException;
+
 import org.apache.commons.lang.math.LongRange;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
@@ -125,6 +126,7 @@ import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.PreemptionResourceRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
@@ -328,7 +330,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.IOException;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Test class for YARN API protocol records.
@@ -402,6 +404,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(CommitResponse.class);
     generateByNewInstance(ApplicationTimeout.class);
     generateByNewInstance(ContainerResourceIncreaseRequest.class);
+    generateByNewInstance(QueueConfigurations.class);
   }
 
   @Test

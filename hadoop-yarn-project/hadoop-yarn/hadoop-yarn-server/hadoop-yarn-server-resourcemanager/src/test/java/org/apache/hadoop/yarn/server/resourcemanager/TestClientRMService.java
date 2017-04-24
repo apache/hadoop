@@ -105,6 +105,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -603,6 +604,17 @@ public class TestClientRMService {
     List<ApplicationReport> applications = queueInfo.getQueueInfo()
         .getApplications();
     Assert.assertEquals(2, applications.size());
+    Map<String, QueueConfigurations> queueConfigsByPartition =
+        queueInfo.getQueueInfo().getQueueConfigurations();
+    Assert.assertEquals(1, queueConfigsByPartition.size());
+    Assert.assertTrue(queueConfigsByPartition.containsKey("*"));
+    QueueConfigurations queueConfigs = queueConfigsByPartition.get("*");
+    Assert.assertEquals(0.5f, queueConfigs.getCapacity(), 0.0001f);
+    Assert.assertEquals(0.1f, queueConfigs.getAbsoluteCapacity(), 0.0001f);
+    Assert.assertEquals(1.0f, queueConfigs.getMaxCapacity(), 0.0001f);
+    Assert.assertEquals(1.0f, queueConfigs.getAbsoluteMaxCapacity(), 0.0001f);
+    Assert.assertEquals(0.2f, queueConfigs.getMaxAMPercentage(), 0.0001f);
+
     request.setQueueName("nonexistentqueue");
     request.setIncludeApplications(true);
     // should not throw exception on nonexistent queue
@@ -974,8 +986,21 @@ public class TestClientRMService {
     when(rmContext.getDispatcher()).thenReturn(dispatcher);
     EventHandler eventHandler = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+
     QueueInfo queInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queInfo.setQueueName("testqueue");
+    QueueConfigurations queueConfigs =
+        recordFactory.newRecordInstance(QueueConfigurations.class);
+    queueConfigs.setCapacity(0.5f);
+    queueConfigs.setAbsoluteCapacity(0.1f);
+    queueConfigs.setMaxCapacity(1.0f);
+    queueConfigs.setAbsoluteMaxCapacity(1.0f);
+    queueConfigs.setMaxAMPercentage(0.2f);
+    Map<String, QueueConfigurations> queueConfigsByPartition =
+        new HashMap<>();
+    queueConfigsByPartition.put("*", queueConfigs);
+    queInfo.setQueueConfigurations(queueConfigsByPartition);
+
     when(yarnScheduler.getQueueInfo(eq("testqueue"), anyBoolean(), anyBoolean()))
         .thenReturn(queInfo);
     when(yarnScheduler.getQueueInfo(eq("nonexistentqueue"), anyBoolean(), anyBoolean()))

@@ -468,6 +468,20 @@ message QueueInfoProto {
   optional string defaultNodeLabelExpression = 9;
   optional QueueStatisticsProto queueStatistics = 10;
   optional bool preemptionDisabled = 11;
+  repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
+}
+
+message QueueConfigurationsProto {
+    optional float capacity = 1;
+    optional float absoluteCapacity = 2;
+    optional float maxCapacity = 3;
+    optional float absoluteMaxCapacity = 4;
+    optional float maxAMPercentage = 5;
+}
+
+message QueueConfigurationsMapProto {
+    required string partitionName = 1;
+    optional QueueConfigurationsProto queueConfigurations = 2;
 }
 
 enum QueueACLProto {
