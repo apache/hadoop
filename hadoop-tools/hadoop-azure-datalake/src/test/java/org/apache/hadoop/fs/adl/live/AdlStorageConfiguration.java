@@ -35,7 +35,7 @@ public final class AdlStorageConfiguration {
   static final String CONTRACT_XML = "adls.xml";
 
   private static final String CONTRACT_ENABLE_KEY =
-      "dfs.adl.test.contract.enable";
+      "fs.adl.test.contract.enable";
   private static final boolean CONTRACT_ENABLE_DEFAULT = false;
 
   private static final String FILE_SYSTEM_KEY =
@@ -48,6 +48,12 @@ public final class AdlStorageConfiguration {
 
   private static boolean isContractTestEnabled = false;
   private static Configuration conf = null;
+
+  static {
+    Configuration.addDeprecation("dfs.adl.test.contract.enable",
+        CONTRACT_ENABLE_KEY);
+    Configuration.reloadExistingConfigurations();
+  }
 
   private AdlStorageConfiguration() {
   }
