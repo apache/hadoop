@@ -18,7 +18,7 @@
 <div class="row">
   <div class="col-md-12">
     {{#if model.nodes}}
-      {{em-table columns=columns rows=model.nodes}}
+      {{em-table columns=columns rows=model.nodes definition=tableDefinition}}
     {{else}}
       <h4 align="center">No nodes found on this cluster</h4>
     {{/if}}
