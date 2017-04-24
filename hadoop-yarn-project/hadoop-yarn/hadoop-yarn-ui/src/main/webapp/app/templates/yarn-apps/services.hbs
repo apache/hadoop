@@ -17,7 +17,7 @@
 --}}
 
 {{#if model.apps}}
-  {{em-table columns=columns rows=model.apps}}
+  {{em-table columns=columns rows=model.apps definition=tableDefinition}}
 {{else}}
   <h4 align="center">Could not find any applications from this cluster</h4>
 {{/if}}
