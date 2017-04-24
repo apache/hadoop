@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Predicate;
 import org.apache.hadoop.shaded.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.shaded.com.google.common.collect.Multimap;
 import org.apache.hadoop.shaded.com.google.common.collect.UnmodifiableIterator;
@@ -41,7 +42,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
 
 import org.apache.hadoop.hdfs.util.CombinedHostsFileReader;
 

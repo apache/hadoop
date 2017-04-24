@@ -34,8 +34,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.Util;
 
 import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.shaded.com.google.common.collect.Collections2;
 import org.apache.hadoop.shaded.com.google.common.base.Predicate;
+import org.apache.hadoop.shaded.com.google.common.collect.Collections2;
 
 /**
  * 

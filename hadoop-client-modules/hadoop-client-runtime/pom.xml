@@ -35,9 +35,7 @@
   </properties>
 
   <dependencies>
-    <!-- shading here instead of using hadoop-shaded-thirdparty to avoid shading Guava
-         completely.
-         -->
+    <!-- Need this until correction of MSHADE-36 -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>

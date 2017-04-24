@@ -581,7 +581,6 @@
                       <exclude>org.apache.hadoop:hadoop-annotations</exclude>
                       <exclude>org.apache.hadoop:hadoop-client-api</exclude>
                       <exclude>org.apache.hadoop:hadoop-client-runtime</exclude>
-                      <exclude>org.apache.hadoop:hadoop-shaded-thirdparty</exclude>
                       <!-- Fine to expose our purposefully not-shaded deps as dependencies -->
                       <exclude>org.apache.htrace:htrace-core4</exclude>
                       <exclude>org.slf4j:slf4j-api</exclude>

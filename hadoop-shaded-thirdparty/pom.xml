@@ -38,6 +38,18 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-recipes</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-framework</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -80,26 +92,14 @@
                 <relocation>
                   <pattern>com.google</pattern>
                   <shadedPattern>${shaded.dependency.prefix}.com.google</shadedPattern>
-                  <excludes>
-                    <!-- * The reason to leave Guava in hadoop-shadded-thirdparty *
-
-                         The following classes are necessary to use Apache Curator
-                         since Curator uses theses classes as Public API.
-
-                         This may confuse you because this jar is for shading Guava,
-                         while we have dependency on Guava.
-                         However, these classes are very stable and rarely causes
-                         problem even if user uses own Guava's version.
-                         -->
-                    <exclude>com.google.common.base.Function</exclude>
-                    <exclude>com.google.common.base.Predicate</exclude>
-                    <exclude>com.google.common.reflect.TypeToken</exclude>
-                  </excludes>
                 </relocation>
               </relocations>
               <artifactSet>
                 <includes>
                   <include>com.google.guava:guava</include>
+                  <include>org.apache.curator:curator-framework</include>
+                  <include>org.apache.curator:curator-client</include>
+                  <include>org.apache.curator:curator-recipes</include>
                 </includes>
               </artifactSet>
             </configuration>
