@@ -1468,6 +1468,52 @@ basis.
 to set fadvise policies on input streams. Once implemented,
 this will become the supported mechanism used for configuring the input IO policy.
 
+
+### <a name="s3a_encryption"></a> Encrypting objects with S3A
+
+Currently, S3A only supports S3's Server Side Encryption for at rest data encryption.
+It is *encouraged* to read up on the [AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html)
+for S3 Server Side Encryption before using these options as each behave differently
+and the documentation will be more up to date on its behavior.  When configuring
+an encryption method in the `core-site.xml`, this will apply cluster wide.  Any
+new files written will be encrypted with this encryption configuration.  Any
+existing files when read, will decrypt using the existing method (if possible)
+and will not be re-encrypted with the new method. It is also possible if mixing
+multiple keys that the user does not have access to decrypt the object. It is
+**NOT** advised to mix and match encryption types in a bucket, and is *strongly*
+recommended to just one type and key per bucket.
+
+SSE-S3 is where S3 will manage the encryption keys for each object. The parameter
+for `fs.s3a.server-side-encryption-algorithm` is `AES256`.
+
+SSE-KMS is where the user specifies a Customer Master Key(CMK) that is used to
+encrypt the objects. The user may specify a specific CMK or leave the
+`fs.s3a.server-side-encryption-key` empty to use the default auto-generated key
+in AWS IAM.  Each CMK configured in AWS IAM is region specific, and cannot be
+used in a in a S3 bucket in a different region.  There is can also be policies
+assigned to the CMK that prohibit or restrict its use for users causing S3A
+requests to fail.
+
+SSE-C is where the user specifies an actual base64 encoded AES-256 key supplied
+and managed by the user.
+
+#### SSE-C Warning
+
+It is strongly recommended to fully understand how SSE-C works in the S3
+environment before using this encryption type.  Please refer to the Server Side
+Encryption documentation available from AWS.  SSE-C is only recommended for
+advanced users with advanced encryption use cases.  Failure to properly manage
+encryption keys can cause data loss.  Currently, the AWS S3 API(and thus S3A)
+only supports one encryption key and cannot support decrypting objects during
+moves under a previous key to a new destination.  It is **NOT** advised to use
+multiple encryption keys in a bucket, and is recommended to use one key per
+bucket and to not change this key.  This is due to when a request is made to S3,
+the actual encryption key must be provided to decrypt the object and access the
+metadata.  Since only one encryption key can be provided at a time, S3A will not
+pass the correct encryption key to decrypt the data. Please see the
+troubleshooting section for more information.
+
+
 ## Troubleshooting S3A
 
 Common problems working with S3A are
@@ -1930,6 +1976,41 @@ Again, this is due to the fact that the data is cached locally until the
 if it is required that the data is persisted durably after every
 `flush()/hflush()` call. This includes resilient logging, HBase-style journalling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
+
+
+### S3 Server Side Encryption
+
+#### Using SSE-KMS
+
+When performing file operations, the user may run into an issue where the KMS
+key arn is invalid.
+```
+com.amazonaws.services.s3.model.AmazonS3Exception:
+Invalid arn (Service: Amazon S3; Status Code: 400; Error Code: KMS.NotFoundException; Request ID: 708284CF60EE233F),
+S3 Extended Request ID: iHUUtXUSiNz4kv3Bdk/hf9F+wjPt8GIVvBHx/HEfCBYkn7W6zmpvbA3XT7Y5nTzcZtfuhcqDunw=:
+Invalid arn (Service: Amazon S3; Status Code: 400; Error Code: KMS.NotFoundException; Request ID: 708284CF60EE233F)
+```
+
+This is due to either, the KMS key id is entered incorrectly, or the KMS key id
+is in a different region than the S3 bucket being used.
+
+#### Using SSE-C
+When performing file operations the user may run into an unexpected 400/403
+error such as
+```
+org.apache.hadoop.fs.s3a.AWSS3IOException: getFileStatus on fork-4/: com.amazonaws.services.s3.model.AmazonS3Exception:
+Bad Request (Service: Amazon S3; Status Code: 400;
+Error Code: 400 Bad Request; Request ID: 42F9A1987CB49A99),
+S3 Extended Request ID: jU2kcwaXnWj5APB14Cgb1IKkc449gu2+dhIsW/+7x9J4D+VUkKvu78mBo03oh9jnOT2eoTLdECU=:
+Bad Request (Service: Amazon S3; Status Code: 400; Error Code: 400 Bad Request; Request ID: 42F9A1987CB49A99)
+```
+
+This can happen in the cases of not specifying the correct SSE-C encryption key.
+Such cases can be as follows:
+1. An object is encrypted using SSE-C on S3 and either the wrong encryption type
+is used, no encryption is specified, or the SSE-C specified is incorrect.
+2. A directory is encrypted with a SSE-C keyA and the user is trying to move a
+file using configured SSE-C keyB into that structure.
 
 ### Other issues
 

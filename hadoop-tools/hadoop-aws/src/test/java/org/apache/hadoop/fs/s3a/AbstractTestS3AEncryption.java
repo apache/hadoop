@@ -85,6 +85,10 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     return String.format("%s-%04x", methodName.getMethodName(), len);
   }
 
+  protected String createFilename(String name) {
+    return String.format("%s-%s", methodName.getMethodName(), name);
+  }
+
   /**
    * Assert that at path references an encrypted blob.
    * @param path path
