@@ -33,7 +33,10 @@ import org.junit.Before;
 import org.mockito.Mockito;
 
 import java.io.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 
@@ -342,4 +345,30 @@ public class TestCgroupsLCEResourcesHandler {
     FileUtils.deleteQuietly(cgroupDir);
   }
 
+  @Test
+  public void testSelectCgroup() {
+    File cpu = new File(cgroupDir, "cpu");
+    File cpuNoExist = new File(cgroupDir, "cpuNoExist");
+    File memory = new File(cgroupDir, "memory");
+    try {
+      CgroupsLCEResourcesHandler handler = new CgroupsLCEResourcesHandler();
+      Map<String, List<String>> cgroups = new LinkedHashMap<>();
+
+      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
+      Assert.assertTrue("temp dir should be created", memory.mkdirs());
+      Assert.assertFalse("temp dir should not be created", cpuNoExist.exists());
+
+      cgroups.put(
+          memory.getAbsolutePath(), Collections.singletonList("memory"));
+      cgroups.put(
+          cpuNoExist.getAbsolutePath(), Collections.singletonList("cpu"));
+      cgroups.put(cpu.getAbsolutePath(), Collections.singletonList("cpu"));
+      String selectedCPU = handler.findControllerInMtab("cpu", cgroups);
+      Assert.assertEquals("Wrong CPU mount point selected",
+          cpu.getAbsolutePath(), selectedCPU);
+    } finally {
+      FileUtils.deleteQuietly(cpu);
+      FileUtils.deleteQuietly(memory);
+    }
+  }
 }
