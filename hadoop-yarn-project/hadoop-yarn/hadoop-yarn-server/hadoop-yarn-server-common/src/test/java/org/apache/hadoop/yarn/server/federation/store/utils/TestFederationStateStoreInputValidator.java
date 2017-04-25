@@ -145,7 +145,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -155,7 +155,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       SubClusterRegisterRequest request = null;
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -170,7 +170,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -188,7 +188,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -206,7 +206,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -224,7 +224,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -242,7 +242,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -257,7 +257,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -276,7 +276,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -294,7 +294,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -315,7 +315,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -332,7 +332,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -350,7 +350,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -368,7 +368,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -386,7 +386,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -404,7 +404,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -421,7 +421,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -438,7 +438,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -460,7 +460,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -477,7 +477,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -494,7 +494,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -510,7 +510,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -526,7 +526,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -543,7 +543,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -560,7 +560,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -576,7 +576,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterRegisterRequest request =
           SubClusterRegisterRequest.newInstance(subClusterInfo);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterRegisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -594,7 +594,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterDeregisterRequest request =
           SubClusterDeregisterRequest.newInstance(subClusterId, stateLost);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterDeregisterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -604,7 +604,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       SubClusterDeregisterRequest request = null;
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterDeregisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -618,7 +618,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterDeregisterRequest request =
           SubClusterDeregisterRequest.newInstance(subClusterIdNull, stateLost);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterDeregisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -632,7 +632,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterDeregisterRequest request = SubClusterDeregisterRequest
           .newInstance(subClusterIdInvalid, stateLost);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterDeregisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -646,7 +646,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterDeregisterRequest request =
           SubClusterDeregisterRequest.newInstance(subClusterId, stateNull);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterDeregisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -660,7 +660,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterDeregisterRequest request =
           SubClusterDeregisterRequest.newInstance(subClusterId, stateNew);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterDeregisterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -677,7 +677,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest
           .newInstance(subClusterId, lastHeartBeat, stateLost, capability);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -687,7 +687,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       SubClusterHeartbeatRequest request = null;
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -701,7 +701,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest
           .newInstance(subClusterIdNull, lastHeartBeat, stateLost, capability);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -716,7 +716,7 @@ public class TestFederationStateStoreInputValidator {
           SubClusterHeartbeatRequest.newInstance(subClusterIdInvalid,
               lastHeartBeat, stateLost, capability);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -730,7 +730,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest
           .newInstance(subClusterId, lastHeartBeat, stateNull, capability);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -745,7 +745,7 @@ public class TestFederationStateStoreInputValidator {
           SubClusterHeartbeatRequest.newInstance(subClusterId,
               lastHeartBeatNegative, stateLost, capability);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -759,7 +759,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest
           .newInstance(subClusterId, lastHeartBeat, stateLost, capabilityNull);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -773,7 +773,7 @@ public class TestFederationStateStoreInputValidator {
       SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest
           .newInstance(subClusterId, lastHeartBeat, stateLost, capabilityEmpty);
       FederationMembershipStateStoreInputValidator
-          .validateSubClusterHeartbeatRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -791,7 +791,7 @@ public class TestFederationStateStoreInputValidator {
       GetSubClusterInfoRequest request =
           GetSubClusterInfoRequest.newInstance(subClusterId);
       FederationMembershipStateStoreInputValidator
-          .validateGetSubClusterInfoRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -801,7 +801,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       GetSubClusterInfoRequest request = null;
       FederationMembershipStateStoreInputValidator
-          .validateGetSubClusterInfoRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -815,7 +815,7 @@ public class TestFederationStateStoreInputValidator {
       GetSubClusterInfoRequest request =
           GetSubClusterInfoRequest.newInstance(subClusterIdNull);
       FederationMembershipStateStoreInputValidator
-          .validateGetSubClusterInfoRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -829,7 +829,7 @@ public class TestFederationStateStoreInputValidator {
       GetSubClusterInfoRequest request =
           GetSubClusterInfoRequest.newInstance(subClusterIdInvalid);
       FederationMembershipStateStoreInputValidator
-          .validateGetSubClusterInfoRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -850,7 +850,7 @@ public class TestFederationStateStoreInputValidator {
           AddApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateAddApplicationHomeSubClusterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -860,7 +860,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       AddApplicationHomeSubClusterRequest request = null;
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateAddApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage()
@@ -875,7 +875,7 @@ public class TestFederationStateStoreInputValidator {
           AddApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateAddApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(
@@ -891,7 +891,7 @@ public class TestFederationStateStoreInputValidator {
           AddApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateAddApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -908,7 +908,7 @@ public class TestFederationStateStoreInputValidator {
           AddApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateAddApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -925,7 +925,7 @@ public class TestFederationStateStoreInputValidator {
           AddApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateAddApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Application Id."));
@@ -944,7 +944,7 @@ public class TestFederationStateStoreInputValidator {
           UpdateApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateUpdateApplicationHomeSubClusterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -954,7 +954,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       UpdateApplicationHomeSubClusterRequest request = null;
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateUpdateApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage()
@@ -969,7 +969,7 @@ public class TestFederationStateStoreInputValidator {
           UpdateApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateUpdateApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(
@@ -985,7 +985,7 @@ public class TestFederationStateStoreInputValidator {
           UpdateApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateUpdateApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -1002,7 +1002,7 @@ public class TestFederationStateStoreInputValidator {
           UpdateApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateUpdateApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       LOG.info(e.getMessage());
@@ -1019,7 +1019,7 @@ public class TestFederationStateStoreInputValidator {
           UpdateApplicationHomeSubClusterRequest
               .newInstance(applicationHomeSubCluster);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateUpdateApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Application Id."));
@@ -1035,7 +1035,7 @@ public class TestFederationStateStoreInputValidator {
       GetApplicationHomeSubClusterRequest request =
           GetApplicationHomeSubClusterRequest.newInstance(appId);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateGetApplicationHomeSubClusterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -1045,7 +1045,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       GetApplicationHomeSubClusterRequest request = null;
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateGetApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage()
@@ -1058,7 +1058,7 @@ public class TestFederationStateStoreInputValidator {
       GetApplicationHomeSubClusterRequest request =
           GetApplicationHomeSubClusterRequest.newInstance(appIdNull);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateGetApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Application Id."));
@@ -1075,7 +1075,7 @@ public class TestFederationStateStoreInputValidator {
       DeleteApplicationHomeSubClusterRequest request =
           DeleteApplicationHomeSubClusterRequest.newInstance(appId);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateDeleteApplicationHomeSubClusterRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -1085,7 +1085,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       DeleteApplicationHomeSubClusterRequest request = null;
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateDeleteApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage()
@@ -1098,7 +1098,7 @@ public class TestFederationStateStoreInputValidator {
       DeleteApplicationHomeSubClusterRequest request =
           DeleteApplicationHomeSubClusterRequest.newInstance(appIdNull);
       FederationApplicationHomeSubClusterStoreInputValidator
-          .validateDeleteApplicationHomeSubClusterRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Application Id."));
@@ -1115,7 +1115,7 @@ public class TestFederationStateStoreInputValidator {
       GetSubClusterPolicyConfigurationRequest request =
           GetSubClusterPolicyConfigurationRequest.newInstance(queue);
       FederationPolicyStoreInputValidator
-          .validateGetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -1125,7 +1125,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       GetSubClusterPolicyConfigurationRequest request = null;
       FederationPolicyStoreInputValidator
-          .validateGetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage()
@@ -1138,7 +1138,7 @@ public class TestFederationStateStoreInputValidator {
       GetSubClusterPolicyConfigurationRequest request =
           GetSubClusterPolicyConfigurationRequest.newInstance(queueNull);
       FederationPolicyStoreInputValidator
-          .validateGetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Queue."));
@@ -1150,7 +1150,7 @@ public class TestFederationStateStoreInputValidator {
       GetSubClusterPolicyConfigurationRequest request =
           GetSubClusterPolicyConfigurationRequest.newInstance(queueEmpty);
       FederationPolicyStoreInputValidator
-          .validateGetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Queue."));
@@ -1169,7 +1169,7 @@ public class TestFederationStateStoreInputValidator {
       SetSubClusterPolicyConfigurationRequest request =
           SetSubClusterPolicyConfigurationRequest.newInstance(policy);
       FederationPolicyStoreInputValidator
-          .validateSetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.fail(e.getMessage());
     }
@@ -1179,7 +1179,7 @@ public class TestFederationStateStoreInputValidator {
     try {
       SetSubClusterPolicyConfigurationRequest request = null;
       FederationPolicyStoreInputValidator
-          .validateSetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage()
@@ -1193,7 +1193,7 @@ public class TestFederationStateStoreInputValidator {
       SetSubClusterPolicyConfigurationRequest request =
           SetSubClusterPolicyConfigurationRequest.newInstance(policy);
       FederationPolicyStoreInputValidator
-          .validateSetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(
@@ -1208,7 +1208,7 @@ public class TestFederationStateStoreInputValidator {
       SetSubClusterPolicyConfigurationRequest request =
           SetSubClusterPolicyConfigurationRequest.newInstance(policy);
       FederationPolicyStoreInputValidator
-          .validateSetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Queue."));
@@ -1222,7 +1222,7 @@ public class TestFederationStateStoreInputValidator {
       SetSubClusterPolicyConfigurationRequest request =
           SetSubClusterPolicyConfigurationRequest.newInstance(policy);
       FederationPolicyStoreInputValidator
-          .validateSetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Queue."));
@@ -1236,7 +1236,7 @@ public class TestFederationStateStoreInputValidator {
       SetSubClusterPolicyConfigurationRequest request =
           SetSubClusterPolicyConfigurationRequest.newInstance(policy);
       FederationPolicyStoreInputValidator
-          .validateSetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Policy Type."));
@@ -1250,7 +1250,7 @@ public class TestFederationStateStoreInputValidator {
       SetSubClusterPolicyConfigurationRequest request =
           SetSubClusterPolicyConfigurationRequest.newInstance(policy);
       FederationPolicyStoreInputValidator
-          .validateSetSubClusterPolicyConfigurationRequest(request);
+          .validate(request);
       Assert.fail();
     } catch (FederationStateStoreInvalidInputException e) {
       Assert.assertTrue(e.getMessage().startsWith("Missing Policy Type."));

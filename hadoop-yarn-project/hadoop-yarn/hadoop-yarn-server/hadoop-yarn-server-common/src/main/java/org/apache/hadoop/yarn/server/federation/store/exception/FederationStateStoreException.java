@@ -31,15 +31,20 @@ public class FederationStateStoreException extends YarnException {
    */
   private static final long serialVersionUID = -6453353714832159296L;
 
-  private FederationStateStoreErrorCode code;
-
-  public FederationStateStoreException(FederationStateStoreErrorCode code) {
+  public FederationStateStoreException() {
     super();
-    this.code = code;
   }
 
-  public FederationStateStoreErrorCode getCode() {
-    return code;
+  public FederationStateStoreException(String message) {
+    super(message);
+  }
+
+  public FederationStateStoreException(Throwable cause) {
+    super(cause);
+  }
+
+  public FederationStateStoreException(String message, Throwable cause) {
+    super(message, cause);
   }
 
 }
