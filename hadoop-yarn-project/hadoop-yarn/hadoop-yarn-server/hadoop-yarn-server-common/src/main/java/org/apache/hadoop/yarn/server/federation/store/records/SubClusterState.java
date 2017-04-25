@@ -19,6 +19,8 @@ package org.apache.hadoop.yarn.server.federation.store.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -60,5 +62,24 @@ public enum SubClusterState {
   public boolean isFinal() {
     return (this == SC_UNREGISTERED || this == SC_DECOMMISSIONED
         || this == SC_LOST);
+  }
+
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SubClusterState.class);
+
+  /**
+   * Convert a string into {@code SubClusterState}.
+   *
+   * @param x the string to convert in SubClusterState
+   * @return the respective {@code SubClusterState}
+   */
+  public static SubClusterState fromString(String x) {
+    try {
+      return SubClusterState.valueOf(x);
+    } catch (Exception e) {
+      LOG.error("Invalid SubCluster State value in the StateStore does not"
+          + " match with the YARN Federation standard.");
+      return null;
+    }
   }
 }

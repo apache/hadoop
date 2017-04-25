@@ -53,8 +53,7 @@ public final class FederationMembershipStateStoreInputValidator {
    * @param request the {@link SubClusterRegisterRequest} to validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateSubClusterRegisterRequest(
-      SubClusterRegisterRequest request)
+  public static void validate(SubClusterRegisterRequest request)
       throws FederationStateStoreInvalidInputException {
 
     // check if the request is present
@@ -79,8 +78,7 @@ public final class FederationMembershipStateStoreInputValidator {
    * @param request the {@link SubClusterDeregisterRequest} to validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateSubClusterDeregisterRequest(
-      SubClusterDeregisterRequest request)
+  public static void validate(SubClusterDeregisterRequest request)
       throws FederationStateStoreInvalidInputException {
 
     // check if the request is present
@@ -111,8 +109,7 @@ public final class FederationMembershipStateStoreInputValidator {
    * @param request the {@link SubClusterHeartbeatRequest} to validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateSubClusterHeartbeatRequest(
-      SubClusterHeartbeatRequest request)
+  public static void validate(SubClusterHeartbeatRequest request)
       throws FederationStateStoreInvalidInputException {
 
     // check if the request is present
@@ -143,8 +140,7 @@ public final class FederationMembershipStateStoreInputValidator {
    * @param request the {@link GetSubClusterInfoRequest} to validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateGetSubClusterInfoRequest(
-      GetSubClusterInfoRequest request)
+  public static void validate(GetSubClusterInfoRequest request)
       throws FederationStateStoreInvalidInputException {
 
     // check if the request is present
@@ -169,7 +165,7 @@ public final class FederationMembershipStateStoreInputValidator {
    * @throws FederationStateStoreInvalidInputException if the SubCluster Info
    *           are invalid
    */
-  private static void checkSubClusterInfo(SubClusterInfo subClusterInfo)
+  public static void checkSubClusterInfo(SubClusterInfo subClusterInfo)
       throws FederationStateStoreInvalidInputException {
     if (subClusterInfo == null) {
       String message = "Missing SubCluster Information."

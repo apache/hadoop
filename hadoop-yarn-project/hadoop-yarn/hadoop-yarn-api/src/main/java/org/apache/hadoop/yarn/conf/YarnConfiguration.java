@@ -2614,6 +2614,29 @@ public class YarnConfiguration extends Configuration {
 
   public static final String DEFAULT_FEDERATION_POLICY_MANAGER_PARAMS = "";
 
+  private static final String FEDERATION_STATESTORE_SQL_PREFIX =
+      FEDERATION_PREFIX + "state-store.sql.";
+
+  public static final String FEDERATION_STATESTORE_SQL_USERNAME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "username";
+
+  public static final String FEDERATION_STATESTORE_SQL_PASSWORD =
+      FEDERATION_STATESTORE_SQL_PREFIX + "password";
+
+  public static final String FEDERATION_STATESTORE_SQL_URL =
+      FEDERATION_STATESTORE_SQL_PREFIX + "url";
+
+  public static final String FEDERATION_STATESTORE_SQL_JDBC_CLASS =
+      FEDERATION_STATESTORE_SQL_PREFIX + "jdbc-class";
+
+  public static final String DEFAULT_FEDERATION_STATESTORE_SQL_JDBC_CLASS =
+      "org.hsqldb.jdbc.JDBCDataSource";
+
+  public static final String FEDERATION_STATESTORE_SQL_MAXCONNECTIONS =
+      FEDERATION_STATESTORE_SQL_PREFIX + "max-connections";
+
+  public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////

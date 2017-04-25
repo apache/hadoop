@@ -100,6 +100,8 @@
 
     <jcache.version>1.0.0</jcache.version>
     <ehcache.version>3.0.3</ehcache.version>
+    <hikari.version>2.4.11</hikari.version>
+    <mssql.version>6.1.0.jre7</mssql.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
@@ -1283,6 +1285,16 @@
           <groupId>org.ehcache</groupId>
           <artifactId>ehcache</artifactId>
           <version>${ehcache.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.zaxxer</groupId>
+          <artifactId>HikariCP-java7</artifactId>
+          <version>${hikari.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.microsoft.sqlserver</groupId>
+          <artifactId>mssql-jdbc</artifactId>
+          <version>${mssql.version}</version>
         </dependency>
     </dependencies>
   </dependencyManagement>

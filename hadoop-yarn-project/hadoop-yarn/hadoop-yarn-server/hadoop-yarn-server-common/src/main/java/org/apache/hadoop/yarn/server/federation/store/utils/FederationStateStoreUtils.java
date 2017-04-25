@@ -20,15 +20,17 @@ package org.apache.hadoop.yarn.server.federation.store.utils;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreErrorCode;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * Common utility methods used by the store implementations.
@@ -39,19 +41,22 @@ public final class FederationStateStoreUtils {
   public static final Logger LOG =
       LoggerFactory.getLogger(FederationStateStoreUtils.class);
 
+  public final static String FEDERATION_STORE_URL = "url";
+
   private FederationStateStoreUtils() {
   }
 
   /**
-   * Returns the SQL <code>FederationStateStore</code> connection to the pool.
+   * Returns the SQL <code>FederationStateStore</code> connections to the pool.
    *
    * @param log the logger interface
    * @param cstmt the interface used to execute SQL stored procedures
    * @param conn the SQL connection
+   * @param rs the ResultSet interface used to execute SQL stored procedures
    * @throws YarnException on failure
    */
   public static void returnToPool(Logger log, CallableStatement cstmt,
-      Connection conn) throws YarnException {
+      Connection conn, ResultSet rs) throws YarnException {
     if (cstmt != null) {
       try {
         cstmt.close();
@@ -69,6 +74,28 @@ public final class FederationStateStoreUtils {
             e);
       }
     }
+
+    if (rs != null) {
+      try {
+        rs.close();
+      } catch (SQLException e) {
+        logAndThrowException(log, "Exception while trying to close ResultSet",
+            e);
+      }
+    }
+  }
+
+  /**
+   * Returns the SQL <code>FederationStateStore</code> connections to the pool.
+   *
+   * @param log the logger interface
+   * @param cstmt the interface used to execute SQL stored procedures
+   * @param conn the SQL connection
+   * @throws YarnException on failure
+   */
+  public static void returnToPool(Logger log, CallableStatement cstmt,
+      Connection conn) throws YarnException {
+    returnToPool(log, cstmt, conn, null);
   }
 
   /**
@@ -95,28 +122,13 @@ public final class FederationStateStoreUtils {
    * <code>FederationStateStore</code>.
    *
    * @param log the logger interface
-   * @param code FederationStateStoreErrorCode of the error
    * @param errMsg the error message
    * @throws YarnException on failure
    */
-  public static void logAndThrowStoreException(Logger log,
-      FederationStateStoreErrorCode code, String errMsg) throws YarnException {
-    log.error(errMsg + " " + code.toString());
-    throw new FederationStateStoreException(code);
-  }
-
-  /**
-   * Throws an <code>FederationStateStoreException</code> due to an error in
-   * <code>FederationStateStore</code>.
-   *
-   * @param log the logger interface
-   * @param code FederationStateStoreErrorCode of the error
-   * @throws YarnException on failure
-   */
-  public static void logAndThrowStoreException(Logger log,
-      FederationStateStoreErrorCode code) throws YarnException {
-    log.error(code.toString());
-    throw new FederationStateStoreException(code);
+  public static void logAndThrowStoreException(Logger log, String errMsg)
+      throws YarnException {
+    log.error(errMsg);
+    throw new FederationStateStoreException(errMsg);
   }
 
   /**
@@ -129,7 +141,7 @@ public final class FederationStateStoreUtils {
    */
   public static void logAndThrowInvalidInputException(Logger log, String errMsg)
       throws YarnException {
-    LOG.error(errMsg);
+    log.error(errMsg);
     throw new FederationStateStoreInvalidInputException(errMsg);
   }
 
@@ -145,11 +157,58 @@ public final class FederationStateStoreUtils {
   public static void logAndThrowRetriableException(Logger log, String errMsg,
       Throwable t) throws YarnException {
     if (t != null) {
-      LOG.error(errMsg, t);
+      log.error(errMsg, t);
       throw new FederationStateStoreRetriableException(errMsg, t);
     } else {
-      LOG.error(errMsg);
+      log.error(errMsg);
       throw new FederationStateStoreRetriableException(errMsg);
+    }
+  }
+
+  /**
+   * Sets a specific value for a specific property of
+   * <code>HikariDataSource</code> SQL connections.
+   *
+   * @param dataSource the <code>HikariDataSource</code> connections
+   * @param property the property to set
+   * @param value the value to set
+   */
+  public static void setProperty(HikariDataSource dataSource, String property,
+      String value) {
+    LOG.debug("Setting property {} with value {}", property, value);
+    if (property != null && !property.isEmpty() && value != null) {
+      dataSource.addDataSourceProperty(property, value);
+    }
+  }
+
+  /**
+   * Sets a specific username for <code>HikariDataSource</code> SQL connections.
+   *
+   * @param dataSource the <code>HikariDataSource</code> connections
+   * @param userNameDB the value to set
+   */
+  public static void setUsername(HikariDataSource dataSource,
+      String userNameDB) {
+    if (userNameDB != null) {
+      dataSource.setUsername(userNameDB);
+      LOG.debug("Setting non NULL Username for Store connection");
+    } else {
+      LOG.debug("NULL Username specified for Store connection, so ignoring");
+    }
+  }
+
+  /**
+   * Sets a specific password for <code>HikariDataSource</code> SQL connections.
+   *
+   * @param dataSource the <code>HikariDataSource</code> connections
+   * @param password the value to set
+   */
+  public static void setPassword(HikariDataSource dataSource, String password) {
+    if (password != null) {
+      dataSource.setPassword(password);
+      LOG.debug("Setting non NULL Credentials for Store connection");
+    } else {
+      LOG.debug("NULL Credentials specified for Store connection, so ignoring");
     }
   }
 }
