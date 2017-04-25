@@ -30,9 +30,9 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private String name;
   private String units;
   private ResourceTypes resourceType;
-  private Long value;
-  private Long minimumAllocation;
-  private Long maximumAllocation;
+  private long value;
+  private long minimumAllocation;
+  private long maximumAllocation;
 
   private static final String MEMORY_URI = "memory-mb";
   private static final String VCORES_URI = "vcores";
@@ -106,7 +106,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
    *
    * @return the resource value
    */
-  public Long getValue() {
+  public long getValue() {
     return value;
   }
 
@@ -115,7 +115,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
    *
    * @param rValue the resource value
    */
-  public void setValue(Long rValue) {
+  public void setValue(long rValue) {
     this.value = rValue;
   }
 
@@ -124,7 +124,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
    *
    * @return the minimum allocation for the resource
    */
-  public Long getMinimumAllocation() {
+  public long getMinimumAllocation() {
     return minimumAllocation;
   }
 
@@ -133,7 +133,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
    *
    * @param minimumAllocation the minimum allocation for the resource
    */
-  public void setMinimumAllocation(Long minimumAllocation) {
+  public void setMinimumAllocation(long minimumAllocation) {
     this.minimumAllocation = minimumAllocation;
   }
 
@@ -142,7 +142,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
    *
    * @return the maximum allocation for the resource
    */
-  public Long getMaximumAllocation() {
+  public long getMaximumAllocation() {
     return maximumAllocation;
   }
 
@@ -151,7 +151,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
    *
    * @param maximumAllocation the maximum allocation for the resource
    */
-  public void setMaximumAllocation(Long maximumAllocation) {
+  public void setMaximumAllocation(long maximumAllocation) {
     this.maximumAllocation = maximumAllocation;
   }
 
@@ -163,18 +163,13 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
    */
   public static ResourceInformation newInstance(ResourceInformation other) {
     ResourceInformation ret = new ResourceInformation();
-    ret.setName(other.getName());
-    ret.setResourceType(other.getResourceType());
-    ret.setUnits(other.getUnits());
-    ret.setValue(other.getValue());
-    ret.setMinimumAllocation(other.getMinimumAllocation());
-    ret.setMaximumAllocation(other.getMaximumAllocation());
+    copy(other, ret);
     return ret;
   }
 
   public static ResourceInformation newInstance(String name, String units,
-      Long value, ResourceTypes type, Long minimumAllocation,
-      Long maximumAllocation) {
+      long value, ResourceTypes type, long minimumAllocation,
+      long maximumAllocation) {
     ResourceInformation ret = new ResourceInformation();
     ret.setName(name);
     ret.setResourceType(type);
@@ -186,7 +181,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   }
 
   public static ResourceInformation newInstance(String name, String units,
-      Long value) {
+      long value) {
     return ResourceInformation
         .newInstance(name, units, value, ResourceTypes.COUNTABLE, 0L,
             Long.MAX_VALUE);
@@ -198,7 +193,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
             Long.MAX_VALUE);
   }
 
-  public static ResourceInformation newInstance(String name, Long value) {
+  public static ResourceInformation newInstance(String name, long value) {
     return ResourceInformation
         .newInstance(name, "", value, ResourceTypes.COUNTABLE, 0L,
             Long.MAX_VALUE);
@@ -206,6 +201,22 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
 
   public static ResourceInformation newInstance(String name) {
     return ResourceInformation.newInstance(name, "");
+  }
+
+  /**
+   * Copies the content of the source ResourceInformation object to the
+   * destination object, overwriting all properties of the destination object.
+   * @param src Source ResourceInformation object
+   * @param dst Destination ResourceInformation object
+   */
+
+  public static void copy(ResourceInformation src, ResourceInformation dst) {
+    dst.setName(src.getName());
+    dst.setResourceType(src.getResourceType());
+    dst.setUnits(src.getUnits());
+    dst.setValue(src.getValue());
+    dst.setMinimumAllocation(src.getMinimumAllocation());
+    dst.setMaximumAllocation(src.getMaximumAllocation());
   }
 
   @Override
@@ -244,7 +255,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
         939769357 + name.hashCode(); // prime * result = 939769357 initially
     result = prime * result + resourceType.hashCode();
     result = prime * result + units.hashCode();
-    result = prime * result + value.hashCode();
+    result = prime * result + Long.hashCode(value);
     return result;
   }
 

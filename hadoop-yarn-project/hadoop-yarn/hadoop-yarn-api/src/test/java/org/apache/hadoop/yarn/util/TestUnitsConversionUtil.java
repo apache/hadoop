@@ -27,62 +27,62 @@ public class TestUnitsConversionUtil {
   public void testUnitsConversion() {
     int value = 5;
     String fromUnit = "";
-    Long test = Long.valueOf(value);
+    long test = value;
     Assert.assertEquals("pico test failed",
-        Long.valueOf(value * 1000l * 1000l * 1000l * 1000l),
+        value * 1000L * 1000L * 1000L * 1000L,
         UnitsConversionUtil.convert(fromUnit, "p", test));
     Assert.assertEquals("nano test failed",
-        Long.valueOf(value * 1000l * 1000l * 1000l),
+        value * 1000L * 1000L * 1000L,
         UnitsConversionUtil.convert(fromUnit, "n", test));
     Assert
-        .assertEquals("micro test failed", Long.valueOf(value * 1000l * 1000l),
+        .assertEquals("micro test failed", value * 1000L * 1000L,
             UnitsConversionUtil.convert(fromUnit, "u", test));
-    Assert.assertEquals("milli test failed", Long.valueOf(value * 1000l),
+    Assert.assertEquals("milli test failed", value * 1000L,
         UnitsConversionUtil.convert(fromUnit, "m", test));
 
-    test = Long.valueOf(value * 1000l * 1000l * 1000l * 1000l * 1000l);
+    test = value * 1000L * 1000L * 1000L * 1000L * 1000L;
     fromUnit = "";
-    Assert.assertEquals("kilo test failed", Long.valueOf(test / 1000l),
+    Assert.assertEquals("kilo test failed", test / 1000L,
         UnitsConversionUtil.convert(fromUnit, "k", test));
 
     Assert
-        .assertEquals("mega test failed", Long.valueOf(test / (1000l * 1000l)),
+        .assertEquals("mega test failed", test / (1000L * 1000L),
             UnitsConversionUtil.convert(fromUnit, "M", test));
     Assert.assertEquals("giga test failed",
-        Long.valueOf(test / (1000l * 1000l * 1000l)),
+        test / (1000L * 1000L * 1000L),
         UnitsConversionUtil.convert(fromUnit, "G", test));
     Assert.assertEquals("tera test failed",
-        Long.valueOf(test / (1000l * 1000l * 1000l * 1000l)),
+        test / (1000L * 1000L * 1000L * 1000L),
         UnitsConversionUtil.convert(fromUnit, "T", test));
     Assert.assertEquals("peta test failed",
-        Long.valueOf(test / (1000l * 1000l * 1000l * 1000l * 1000l)),
+        test / (1000L * 1000L * 1000L * 1000L * 1000L),
         UnitsConversionUtil.convert(fromUnit, "P", test));
 
-    Assert.assertEquals("nano to pico test failed", Long.valueOf(value * 1000l),
-        UnitsConversionUtil.convert("n", "p", Long.valueOf(value)));
+    Assert.assertEquals("nano to pico test failed", value * 1000L,
+        UnitsConversionUtil.convert("n", "p", value));
 
-    Assert.assertEquals("mega to giga test failed", Long.valueOf(value),
-        UnitsConversionUtil.convert("M", "G", Long.valueOf(value * 1000l)));
+    Assert.assertEquals("mega to giga test failed", value,
+        UnitsConversionUtil.convert("M", "G", value * 1000L));
 
-    Assert.assertEquals("Mi to Gi test failed", Long.valueOf(value),
-        UnitsConversionUtil.convert("Mi", "Gi", Long.valueOf(value * 1024l)));
+    Assert.assertEquals("Mi to Gi test failed", value,
+        UnitsConversionUtil.convert("Mi", "Gi", value * 1024L));
 
-    Assert.assertEquals("Mi to Ki test failed", Long.valueOf(value * 1024),
-        UnitsConversionUtil.convert("Mi", "Ki", Long.valueOf(value)));
+    Assert.assertEquals("Mi to Ki test failed", value * 1024,
+        UnitsConversionUtil.convert("Mi", "Ki", value));
 
-    Assert.assertEquals("Ki to base units test failed", Long.valueOf(5 * 1024),
-        UnitsConversionUtil.convert("Ki", "", Long.valueOf(5)));
+    Assert.assertEquals("Ki to base units test failed", 5 * 1024,
+        UnitsConversionUtil.convert("Ki", "", 5));
 
-    Assert.assertEquals("Mi to k test failed", Long.valueOf(1073741),
-        UnitsConversionUtil.convert("Mi", "k", Long.valueOf(1024)));
+    Assert.assertEquals("Mi to k test failed", 1073741,
+        UnitsConversionUtil.convert("Mi", "k", 1024));
 
-    Assert.assertEquals("M to Mi test failed", Long.valueOf(953),
-        UnitsConversionUtil.convert("M", "Mi", Long.valueOf(1000)));
+    Assert.assertEquals("M to Mi test failed", 953,
+        UnitsConversionUtil.convert("M", "Mi", 1000));
   }
 
   @Test
   public void testOverflow() {
-    Long test = Long.valueOf(5 * 1000l * 1000l * 1000l * 1000l * 1000l);
+    long test = 5 * 1000L * 1000L * 1000L * 1000L * 1000L;
     try {
       UnitsConversionUtil.convert("P", "p", test);
       Assert.fail("this operation should result in an overflow");
@@ -100,9 +100,9 @@ public class TestUnitsConversionUtil {
   @Test
   public void testCompare() {
     String unitA = "P";
-    Long valueA = Long.valueOf(1);
+    long valueA = 1;
     String unitB = "p";
-    Long valueB = Long.valueOf(2);
+    long valueB = 2;
     Assert.assertEquals(1,
         UnitsConversionUtil.compare(unitA, valueA, unitB, valueB));
     Assert.assertEquals(-1,
@@ -120,7 +120,7 @@ public class TestUnitsConversionUtil {
     Assert.assertEquals(-1,
         UnitsConversionUtil.compare(unitB, valueB, unitA, valueA));
     Assert.assertEquals(0,
-        UnitsConversionUtil.compare(unitA, valueA, unitB, 1000l));
+        UnitsConversionUtil.compare(unitA, valueA, unitB, 1000L));
 
     unitA = "p";
     unitB = "n";
@@ -129,7 +129,7 @@ public class TestUnitsConversionUtil {
     Assert.assertEquals(1,
         UnitsConversionUtil.compare(unitB, valueB, unitA, valueA));
     Assert.assertEquals(0,
-        UnitsConversionUtil.compare(unitA, 1000l, unitB, valueA));
+        UnitsConversionUtil.compare(unitA, 1000L, unitB, valueA));
 
   }
 }
