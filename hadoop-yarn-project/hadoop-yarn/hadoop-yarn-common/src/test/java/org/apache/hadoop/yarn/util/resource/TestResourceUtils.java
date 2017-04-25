@@ -283,6 +283,7 @@ public class TestResourceUtils {
       Map<String, ResourceInformation> actual =
           ResourceUtils.getNodeResourceInformation(conf);
       Assert.assertEquals(entry.getValue().getResources(), actual);
+      dest.delete();
     }
   }
 

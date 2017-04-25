@@ -154,7 +154,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
             clusterResource.getResourceInformation(rName);
         ResourceInformation resourceInformation =
             resource.getResourceInformation(rName);
-        Long resourceValue = UnitsConversionUtil
+        long resourceValue = UnitsConversionUtil
             .convert(resourceInformation.getUnits(),
                 clusterResourceResourceInformation.getUnits(),
                 resourceInformation.getValue());
@@ -180,11 +180,11 @@ public class DominantResourceCalculator extends ResourceCalculator {
             available.getResourceInformation(resource);
         ResourceInformation requiredResource =
             required.getResourceInformation(resource);
-        Long requiredResourceValue = UnitsConversionUtil
+        long requiredResourceValue = UnitsConversionUtil
             .convert(requiredResource.getUnits(), availableResource.getUnits(),
                 requiredResource.getValue());
         if (requiredResourceValue != 0) {
-          Long tmp = availableResource.getValue() / requiredResourceValue;
+          long tmp = availableResource.getValue() / requiredResourceValue;
           min = min < tmp ? min : tmp;
         }
       } catch (YarnException ye) {
@@ -228,7 +228,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
             a.getResourceInformation(resource);
         ResourceInformation bResourceInformation =
             b.getResourceInformation(resource);
-        Long bResourceValue = UnitsConversionUtil
+        long bResourceValue = UnitsConversionUtil
             .convert(bResourceInformation.getUnits(),
                 aResourceInformation.getUnits(),
                 bResourceInformation.getValue());
@@ -249,14 +249,13 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   public Resource divideAndCeil(Resource numerator, long denominator) {
-    Resource ret = Resources.createResource(0, 0);
+    Resource ret = Resource.newInstance(numerator);
     for (String resource : resourceNames) {
       try {
-        ResourceInformation resourceInformation = ResourceInformation
-            .newInstance(numerator.getResourceInformation(resource));
+        ResourceInformation resourceInformation =
+            ret.getResourceInformation(resource);
         resourceInformation.setValue(
             divideAndCeil(resourceInformation.getValue(), denominator));
-        ret.setResourceInformation(resource, resourceInformation);
       } catch (YarnException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
@@ -276,7 +275,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public Resource normalize(Resource r, Resource minimumResource,
       Resource maximumResource, Resource stepFactor) {
-    Resource ret = Resources.createResource(0, 0);
+    Resource ret = Resource.newInstance(r);
     for (String resource : resourceNames) {
       try {
         ResourceInformation rResourceInformation =
@@ -287,28 +286,26 @@ public class DominantResourceCalculator extends ResourceCalculator {
             maximumResource.getResourceInformation(resource);
         ResourceInformation stepFactorResourceInformation =
             stepFactor.getResourceInformation(resource);
-        ResourceInformation tmp =
-            ResourceInformation.newInstance(rResourceInformation);
+        ResourceInformation tmp = ret.getResourceInformation(resource);
 
-        Long rValue = rResourceInformation.getValue();
-        Long minimumValue = UnitsConversionUtil
+        long rValue = rResourceInformation.getValue();
+        long minimumValue = UnitsConversionUtil
             .convert(minimumResourceInformation.getUnits(),
                 rResourceInformation.getUnits(),
                 minimumResourceInformation.getValue());
-        Long maximumValue = UnitsConversionUtil
+        long maximumValue = UnitsConversionUtil
             .convert(maximumResourceInformation.getUnits(),
                 rResourceInformation.getUnits(),
                 maximumResourceInformation.getValue());
-        Long stepFactorValue = UnitsConversionUtil
+        long stepFactorValue = UnitsConversionUtil
             .convert(stepFactorResourceInformation.getUnits(),
                 rResourceInformation.getUnits(),
                 stepFactorResourceInformation.getValue());
-        Long value = Math.max(rValue, minimumValue);
+        long value = Math.max(rValue, minimumValue);
         if (stepFactorValue != 0) {
           value = roundUp(value, stepFactorValue);
         }
         tmp.setValue(Math.min(value, maximumValue));
-        ret.setResourceInformation(resource, tmp);
       } catch (YarnException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
@@ -328,28 +325,27 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   private Resource rounding(Resource r, Resource stepFactor, boolean roundUp) {
-    Resource ret = Resources.createResource(0, 0);
+    Resource ret = Resource.newInstance(r);
     for (String resource : resourceNames) {
       try {
         ResourceInformation rResourceInformation =
             r.getResourceInformation(resource);
         ResourceInformation stepFactorResourceInformation =
             stepFactor.getResourceInformation(resource);
-        ResourceInformation tmp =
-            ResourceInformation.newInstance(rResourceInformation);
 
-        Long rValue = rResourceInformation.getValue();
-        Long stepFactorValue = UnitsConversionUtil
+        long rValue = rResourceInformation.getValue();
+        long stepFactorValue = UnitsConversionUtil
             .convert(stepFactorResourceInformation.getUnits(),
                 rResourceInformation.getUnits(),
                 stepFactorResourceInformation.getValue());
-        Long value = rValue;
+        long value = rValue;
         if (stepFactorValue != 0) {
           value = roundUp ? roundUp(rValue, stepFactorValue) :
               roundDown(rValue, stepFactorValue);
         }
-        tmp.setValue(value);
-        ret.setResourceInformation(resource, tmp);
+        ResourceInformation
+            .copy(rResourceInformation, ret.getResourceInformation(resource));
+        ret.getResourceInformation(resource).setValue(value);
       } catch (YarnException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
@@ -372,15 +368,14 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   private Resource multiplyAndNormalize(Resource r, double by,
       Resource stepFactor, boolean roundUp) {
-    Resource ret = Resources.createResource(0, 0);
+    Resource ret = Resource.newInstance(r);
     for (String resource : resourceNames) {
       try {
         ResourceInformation rResourceInformation =
             r.getResourceInformation(resource);
         ResourceInformation stepFactorResourceInformation =
             stepFactor.getResourceInformation(resource);
-        ResourceInformation tmp =
-            ResourceInformation.newInstance(rResourceInformation);
+        ResourceInformation tmp = ret.getResourceInformation(resource);
 
         Long rValue = rResourceInformation.getValue();
         Long stepFactorValue = UnitsConversionUtil
@@ -397,7 +392,6 @@ public class DominantResourceCalculator extends ResourceCalculator {
               roundUp ? (long) Math.ceil(rValue * by) : (long) (rValue * by);
         }
         tmp.setValue(value);
-        ret.setResourceInformation(resource, tmp);
       } catch (YarnException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
@@ -414,7 +408,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
             smaller.getResourceInformation(resource);
         ResourceInformation bResourceInformation =
             bigger.getResourceInformation(resource);
-        Long sResourceValue = UnitsConversionUtil
+        long sResourceValue = UnitsConversionUtil
             .convert(sResourceInformation.getUnits(),
                 bResourceInformation.getUnits(),
                 sResourceInformation.getValue());

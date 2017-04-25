@@ -131,7 +131,8 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
         continue;
       }
       if (resourceName.equals(VCORES)) {
-        resource.setVirtualCores(resourceValue.getValue().intValue());
+        resource
+            .setVirtualCores(Long.valueOf(resourceValue.getValue()).intValue());
         continue;
       }
       if (resourceTypes.containsKey(resourceName)) {
