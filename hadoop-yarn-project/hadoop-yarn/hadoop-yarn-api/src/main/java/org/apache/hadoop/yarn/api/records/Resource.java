@@ -107,12 +107,23 @@ public abstract class Resource implements Comparable<Resource> {
   @InterfaceStability.Unstable
   public static Resource newInstance(Resource resource) {
     Resource ret = Resource.newInstance(0, 0);
-    for (Map.Entry<String, ResourceInformation> entry : resource.getResources()
-        .entrySet()) {
-      ret.setResourceInformation(entry.getKey(),
-          ResourceInformation.newInstance(entry.getValue()));
-    }
+    Resource.copy(resource, ret);
     return ret;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static void copy(Resource source, Resource dest) {
+    for (Map.Entry<String, ResourceInformation> entry : source.getResources()
+        .entrySet()) {
+      try {
+        ResourceInformation.copy(entry.getValue(),
+            dest.getResourceInformation(entry.getKey()));
+      } catch (YarnException ye) {
+        dest.setResourceInformation(entry.getKey(),
+            ResourceInformation.newInstance(entry.getValue()));
+      }
+    }
   }
 
   /**

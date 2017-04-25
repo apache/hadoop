@@ -1334,15 +1334,7 @@ public abstract class AbstractYarnScheduler
    * @return a Resource object with the minimum allocation for the scheduler
    */
   public Resource getMinimumAllocation() {
-    boolean profilesEnabled = getConfig()
-        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
-            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
-    Resource ret;
-    if (!profilesEnabled) {
-      ret = ResourceUtils.getResourceTypesMinimumAllocation();
-    } else {
-      ret = rmContext.getResourceProfilesManager().getMinimumProfile();
-    }
+    Resource ret = ResourceUtils.getResourceTypesMinimumAllocation();
     LOG.info("Minimum allocation = " + ret);
     return ret;
   }
@@ -1356,15 +1348,7 @@ public abstract class AbstractYarnScheduler
    */
 
   public Resource getMaximumAllocation() {
-    boolean profilesEnabled = getConfig()
-        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
-            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
-    Resource ret;
-    if (!profilesEnabled) {
-      ret = ResourceUtils.getResourceTypesMaximumAllocation();
-    } else {
-      ret = rmContext.getResourceProfilesManager().getMaximumProfile();
-    }
+    Resource ret = ResourceUtils.getResourceTypesMaximumAllocation();
     LOG.info("Maximum allocation = " + ret);
     return ret;
   }
