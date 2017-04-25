@@ -185,7 +185,7 @@
                     <exclude>**/ITestS3NContractRootDir.java</exclude>
                     <exclude>**/ITestS3ContractRootDir.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
-                    <exclude>**/ITestS3AEncryptionSSE*.java</exclude>
+                    <exclude>**/ITestS3AEncryptionSSEC*.java</exclude>
                     <exclude>**/ITestS3AHuge*.java</exclude>
                   </excludes>
                 </configuration>
@@ -216,7 +216,7 @@
                     <include>**/ITestS3ContractRootDir.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>
-                    <include>**/ITestS3AEncryptionSSE*.java</include>
+                    <include>**/ITestS3AEncryptionSSEC*.java</include>
                   </includes>
                 </configuration>
               </execution>
