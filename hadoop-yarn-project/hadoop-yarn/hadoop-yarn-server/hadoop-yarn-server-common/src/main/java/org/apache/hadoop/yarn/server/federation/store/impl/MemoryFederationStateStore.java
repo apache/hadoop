@@ -18,21 +18,17 @@
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreErrorCode;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
@@ -52,8 +48,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfo
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
@@ -98,16 +99,18 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public SubClusterRegisterResponse registerSubCluster(
       SubClusterRegisterRequest request) throws YarnException {
-    FederationMembershipStateStoreInputValidator
-        .validateSubClusterRegisterRequest(request);
+    FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = request.getSubClusterInfo();
+
+    long currentTime =
+        Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
 
     SubClusterInfo subClusterInfoToSave =
         SubClusterInfo.newInstance(subClusterInfo.getSubClusterId(),
             subClusterInfo.getAMRMServiceAddress(),
             subClusterInfo.getClientRMServiceAddress(),
             subClusterInfo.getRMAdminServiceAddress(),
-            subClusterInfo.getRMWebServiceAddress(), clock.getTime(),
+            subClusterInfo.getRMWebServiceAddress(), currentTime,
             subClusterInfo.getState(), subClusterInfo.getLastStartTime(),
             subClusterInfo.getCapability());
 
@@ -118,15 +121,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest request) throws YarnException {
-    FederationMembershipStateStoreInputValidator
-        .validateSubClusterDeregisterRequest(request);
+    FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = membership.get(request.getSubClusterId());
     if (subClusterInfo == null) {
       String errMsg =
           "SubCluster " + request.getSubClusterId().toString() + " not found";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG,
-          FederationStateStoreErrorCode.MEMBERSHIP_UPDATE_DEREGISTER_FAIL,
-          errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     } else {
       subClusterInfo.setState(request.getState());
     }
@@ -138,20 +138,20 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public SubClusterHeartbeatResponse subClusterHeartbeat(
       SubClusterHeartbeatRequest request) throws YarnException {
 
-    FederationMembershipStateStoreInputValidator
-        .validateSubClusterHeartbeatRequest(request);
+    FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
     SubClusterInfo subClusterInfo = membership.get(subClusterId);
 
     if (subClusterInfo == null) {
-      String errMsg = "Subcluster " + subClusterId.toString()
+      String errMsg = "SubCluster " + subClusterId.toString()
           + " does not exist; cannot heartbeat";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG,
-          FederationStateStoreErrorCode.MEMBERSHIP_UPDATE_HEARTBEAT_FAIL,
-          errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
-    subClusterInfo.setLastHeartBeat(clock.getTime());
+    long currentTime =
+        Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
+
+    subClusterInfo.setLastHeartBeat(currentTime);
     subClusterInfo.setState(request.getState());
     subClusterInfo.setCapability(request.getCapability());
 
@@ -162,14 +162,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest request) throws YarnException {
 
-    FederationMembershipStateStoreInputValidator
-        .validateGetSubClusterInfoRequest(request);
+    FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
     if (!membership.containsKey(subClusterId)) {
       String errMsg =
-          "Subcluster " + subClusterId.toString() + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG,
-          FederationStateStoreErrorCode.MEMBERSHIP_SINGLE_SELECT_FAIL, errMsg);
+          "SubCluster " + subClusterId.toString() + " does not exist";
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
     return GetSubClusterInfoResponse.newInstance(membership.get(subClusterId));
@@ -195,8 +193,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
 
-    FederationApplicationHomeSubClusterStoreInputValidator
-        .validateAddApplicationHomeSubClusterRequest(request);
+    FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId =
         request.getApplicationHomeSubCluster().getApplicationId();
 
@@ -213,14 +210,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
 
-    FederationApplicationHomeSubClusterStoreInputValidator
-        .validateUpdateApplicationHomeSubClusterRequest(request);
+    FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId =
         request.getApplicationHomeSubCluster().getApplicationId();
     if (!applications.containsKey(appId)) {
       String errMsg = "Application " + appId + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG,
-          FederationStateStoreErrorCode.APPLICATIONS_UPDATE_FAIL, errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
     applications.put(appId,
@@ -232,14 +227,11 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
 
-    FederationApplicationHomeSubClusterStoreInputValidator
-        .validateGetApplicationHomeSubClusterRequest(request);
+    FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
     if (!applications.containsKey(appId)) {
       String errMsg = "Application " + appId + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG,
-          FederationStateStoreErrorCode.APPLICATIONS_SINGLE_SELECT_FAIL,
-          errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
     return GetApplicationHomeSubClusterResponse.newInstance(
@@ -264,13 +256,11 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
 
-    FederationApplicationHomeSubClusterStoreInputValidator
-        .validateDeleteApplicationHomeSubClusterRequest(request);
+    FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
     if (!applications.containsKey(appId)) {
       String errMsg = "Application " + appId + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG,
-          FederationStateStoreErrorCode.APPLICATIONS_DELETE_FAIL, errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
     applications.remove(appId);
@@ -281,13 +271,11 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
 
-    FederationPolicyStoreInputValidator
-        .validateGetSubClusterPolicyConfigurationRequest(request);
+    FederationPolicyStoreInputValidator.validate(request);
     String queue = request.getQueue();
     if (!policies.containsKey(queue)) {
       String errMsg = "Policy for queue " + queue + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG,
-          FederationStateStoreErrorCode.POLICY_SINGLE_SELECT_FAIL, errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
     return GetSubClusterPolicyConfigurationResponse
@@ -298,8 +286,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
 
-    FederationPolicyStoreInputValidator
-        .validateSetSubClusterPolicyConfigurationRequest(request);
+    FederationPolicyStoreInputValidator.validate(request);
     policies.put(request.getPolicyConfiguration().getQueue(),
         request.getPolicyConfiguration());
     return SetSubClusterPolicyConfigurationResponse.newInstance();

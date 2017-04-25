@@ -582,6 +582,7 @@ For:
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-1.10.2.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/jquery.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jquery
+Microsoft SQLServer - JDBC version 6.1.0.jre7
 --------------------------------------------------------------------------------
 
 Copyright jQuery Foundation and other contributors, https://jquery.org/
@@ -659,6 +660,7 @@ The binary distribution of this product bundles these dependencies under the
 following license:
 HSQLDB Database 2.3.4
 --------------------------------------------------------------------------------
+(HSQL License)
 "COPYRIGHTS AND LICENSES (based on BSD License)
 
 For work developed by the HSQL Development Group:

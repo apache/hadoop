@@ -48,8 +48,7 @@ public final class FederationPolicyStoreInputValidator {
    *          validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateGetSubClusterPolicyConfigurationRequest(
-      GetSubClusterPolicyConfigurationRequest request)
+  public static void validate(GetSubClusterPolicyConfigurationRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing GetSubClusterPolicyConfiguration Request."
@@ -72,8 +71,7 @@ public final class FederationPolicyStoreInputValidator {
    *          validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateSetSubClusterPolicyConfigurationRequest(
-      SetSubClusterPolicyConfigurationRequest request)
+  public static void validate(SetSubClusterPolicyConfigurationRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing SetSubClusterPolicyConfiguration Request."

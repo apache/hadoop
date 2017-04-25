@@ -51,8 +51,7 @@ public final class FederationApplicationHomeSubClusterStoreInputValidator {
    *          against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateAddApplicationHomeSubClusterRequest(
-      AddApplicationHomeSubClusterRequest request)
+  public static void validate(AddApplicationHomeSubClusterRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing AddApplicationHomeSubCluster Request."
@@ -75,8 +74,7 @@ public final class FederationApplicationHomeSubClusterStoreInputValidator {
    *          validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateUpdateApplicationHomeSubClusterRequest(
-      UpdateApplicationHomeSubClusterRequest request)
+  public static void validate(UpdateApplicationHomeSubClusterRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing UpdateApplicationHomeSubCluster Request."
@@ -99,8 +97,7 @@ public final class FederationApplicationHomeSubClusterStoreInputValidator {
    *          against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateGetApplicationHomeSubClusterRequest(
-      GetApplicationHomeSubClusterRequest request)
+  public static void validate(GetApplicationHomeSubClusterRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing GetApplicationHomeSubCluster Request."
@@ -122,8 +119,7 @@ public final class FederationApplicationHomeSubClusterStoreInputValidator {
    *          validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateDeleteApplicationHomeSubClusterRequest(
-      DeleteApplicationHomeSubClusterRequest request)
+  public static void validate(DeleteApplicationHomeSubClusterRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing DeleteApplicationHomeSubCluster Request."

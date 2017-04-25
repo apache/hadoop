@@ -17,19 +17,33 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 
 /**
- * Unit tests for MemoryFederationStateStore.
+ * Unit tests for SQLFederationStateStore.
  */
-public class TestMemoryFederationStateStore
-    extends FederationStateStoreBaseTest {
+public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
+
+  private static final String HSQLDB_DRIVER = "org.hsqldb.jdbc.JDBCDataSource";
+  private static final String DATABASE_URL = "jdbc:hsqldb:mem:state";
+  private static final String DATABASE_USERNAME = "SA";
+  private static final String DATABASE_PASSWORD = "";
 
   @Override
   protected FederationStateStore createStateStore() {
-    Configuration conf = new Configuration();
+
+    YarnConfiguration conf = new YarnConfiguration();
+
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS,
+        HSQLDB_DRIVER);
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME,
+        DATABASE_USERNAME);
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_PASSWORD,
+        DATABASE_PASSWORD);
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
+        DATABASE_URL + System.currentTimeMillis());
     super.setConf(conf);
-    return new MemoryFederationStateStore();
+    return new HSQLDBFederationStateStore();
   }
 }
