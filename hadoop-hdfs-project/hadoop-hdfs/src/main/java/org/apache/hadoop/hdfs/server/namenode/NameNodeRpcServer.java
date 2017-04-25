@@ -525,7 +525,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   /** Allow access to the client RPC server for testing */
   @VisibleForTesting
-  RPC.Server getClientRpcServer() {
+  public RPC.Server getClientRpcServer() {
     return clientRpcServer;
   }
   

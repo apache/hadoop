@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.management.ObjectName;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDoubleArray;
@@ -162,6 +164,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private final String namespace;
   private final int topUsersCount; // e.g., report top 10 users' metrics
   private static final double PRECISION = 0.0001;
+  private MetricsProxy metricsProxy;
 
   /**
    * This TimerTask will call decayCurrentCounts until
@@ -230,9 +233,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     DecayTask task = new DecayTask(this, timer);
     timer.scheduleAtFixedRate(task, decayPeriodMillis, decayPeriodMillis);
 
-    MetricsProxy prox = MetricsProxy.getInstance(ns, numLevels);
-    prox.setDelegate(this);
-    prox.registerMetrics2Source(ns);
+    metricsProxy = MetricsProxy.getInstance(ns, numLevels);
+    metricsProxy.setDelegate(this);
   }
 
   // Load configs
@@ -671,11 +673,14 @@ public class DecayRpcScheduler implements RpcScheduler,
     private WeakReference<DecayRpcScheduler> delegate;
     private double[] averageResponseTimeDefault;
     private long[] callCountInLastWindowDefault;
+    private ObjectName decayRpcSchedulerInfoBeanName;
 
     private MetricsProxy(String namespace, int numLevels) {
       averageResponseTimeDefault = new double[numLevels];
       callCountInLastWindowDefault = new long[numLevels];
-      MBeans.register(namespace, "DecayRpcScheduler", this);
+      decayRpcSchedulerInfoBeanName =
+          MBeans.register(namespace, "DecayRpcScheduler", this);
+      this.registerMetrics2Source(namespace);
     }
 
     public static synchronized MetricsProxy getInstance(String namespace,
@@ -689,6 +694,10 @@ public class DecayRpcScheduler implements RpcScheduler,
       return mp;
     }
 
+    public static synchronized void removeInstance(String namespace) {
+      MetricsProxy.INSTANCES.remove(namespace);
+    }
+
     public void setDelegate(DecayRpcScheduler obj) {
       this.delegate = new WeakReference<DecayRpcScheduler>(obj);
     }
@@ -696,6 +705,14 @@ public class DecayRpcScheduler implements RpcScheduler,
     void registerMetrics2Source(String namespace) {
       final String name = "DecayRpcSchedulerMetrics2." + namespace;
       DefaultMetricsSystem.instance().register(name, name, this);
+    }
+
+    void unregisterSource(String namespace) {
+      final String name = "DecayRpcSchedulerMetrics2." + namespace;
+      DefaultMetricsSystem.instance().unregisterSource(name);
+      if (decayRpcSchedulerInfoBeanName != null) {
+        MBeans.unregister(decayRpcSchedulerInfoBeanName);
+      }
     }
 
     @Override
@@ -920,5 +937,11 @@ public class DecayRpcScheduler implements RpcScheduler,
       }
     }
     return decayedCallCounts;
+  }
+
+  @Override
+  public void stop() {
+    metricsProxy.unregisterSource(namespace);
+    MetricsProxy.removeInstance(namespace);
   }
 }
