@@ -50,7 +50,7 @@ public class TestResourceInformation {
   @Test
   public void testValue() {
     String name = "yarn.io/test";
-    Long value = 1l;
+    long value = 1L;
     ResourceInformation ri = ResourceInformation.newInstance(name, value);
     Assert.assertEquals("Resource name incorrect", name, ri.getName());
     Assert.assertEquals("Resource value incorrect", value, ri.getValue());
@@ -59,7 +59,7 @@ public class TestResourceInformation {
   @Test
   public void testResourceInformation() {
     String name = "yarn.io/test";
-    Long value = 1l;
+    long value = 1L;
     String units = "m";
     ResourceInformation ri =
         ResourceInformation.newInstance(name, units, value);
