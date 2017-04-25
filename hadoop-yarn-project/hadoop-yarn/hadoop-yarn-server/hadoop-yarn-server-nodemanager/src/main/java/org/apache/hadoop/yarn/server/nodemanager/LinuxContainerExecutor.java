@@ -62,7 +62,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
@@ -442,24 +441,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
     Container container = ctx.getContainer();
-    Path nmPrivateContainerScriptPath = ctx.getNmPrivateContainerScriptPath();
-    Path nmPrivateTokensPath = ctx.getNmPrivateTokensPath();
     String user = ctx.getUser();
-    String appId = ctx.getAppId();
-    Path containerWorkDir = ctx.getContainerWorkDir();
-    List<String> localDirs = ctx.getLocalDirs();
-    List<String> logDirs = ctx.getLogDirs();
-    List<String> filecacheDirs = ctx.getFilecacheDirs();
-    List<String> userLocalDirs = ctx.getUserLocalDirs();
-    List<String> containerLocalDirs = ctx.getContainerLocalDirs();
-    List<String> containerLogDirs = ctx.getContainerLogDirs();
-    Map<Path, List<String>> localizedResources = ctx.getLocalizedResources();
 
     verifyUsernamePattern(user);
-    String runAsUser = getRunAsUser(user);
 
     ContainerId containerId = container.getContainerId();
-    String containerIdStr = containerId.toString();
 
     resourcesHandler.preExecute(containerId,
             container.getResource());
@@ -514,39 +500,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     try {
       Path pidFilePath = getPidFilePath(containerId);
       if (pidFilePath != null) {
-        List<String> prefixCommands = new ArrayList<>();
-        ContainerRuntimeContext.Builder builder = new ContainerRuntimeContext
-            .Builder(container);
 
-        addSchedPriorityCommand(prefixCommands);
-        if (prefixCommands.size() > 0) {
-          builder.setExecutionAttribute(CONTAINER_LAUNCH_PREFIX_COMMANDS,
-              prefixCommands);
-        }
+        ContainerRuntimeContext runtimeContext = buildContainerRuntimeContext(
+            ctx, pidFilePath, resourcesOptions, tcCommandFile);
 
-        builder.setExecutionAttribute(LOCALIZED_RESOURCES, localizedResources)
-            .setExecutionAttribute(RUN_AS_USER, runAsUser)
-            .setExecutionAttribute(USER, user)
-            .setExecutionAttribute(APPID, appId)
-            .setExecutionAttribute(CONTAINER_ID_STR, containerIdStr)
-            .setExecutionAttribute(CONTAINER_WORK_DIR, containerWorkDir)
-            .setExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH,
-                nmPrivateContainerScriptPath)
-            .setExecutionAttribute(NM_PRIVATE_TOKENS_PATH, nmPrivateTokensPath)
-            .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
-            .setExecutionAttribute(LOCAL_DIRS, localDirs)
-            .setExecutionAttribute(LOG_DIRS, logDirs)
-            .setExecutionAttribute(FILECACHE_DIRS, filecacheDirs)
-            .setExecutionAttribute(USER_LOCAL_DIRS, userLocalDirs)
-            .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
-            .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)
-            .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
-
-        if (tcCommandFile != null) {
-          builder.setExecutionAttribute(TC_COMMAND_FILE, tcCommandFile);
-        }
-
-        linuxContainerRuntime.launchContainer(builder.build());
+        linuxContainerRuntime.launchContainer(runtimeContext);
       } else {
         LOG.info(
             "Container was marked as inactive. Returning terminated error");
@@ -615,6 +573,51 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
 
     return 0;
+  }
+
+  private ContainerRuntimeContext buildContainerRuntimeContext(
+      ContainerStartContext ctx, Path pidFilePath,
+      String resourcesOptions, String tcCommandFile) {
+
+    List<String> prefixCommands = new ArrayList<>();
+    addSchedPriorityCommand(prefixCommands);
+
+    Container container = ctx.getContainer();
+    String runAsUser = getRunAsUser(ctx.getUser());
+
+    ContainerRuntimeContext.Builder builder = new ContainerRuntimeContext
+            .Builder(container);
+    if (prefixCommands.size() > 0) {
+      builder.setExecutionAttribute(CONTAINER_LAUNCH_PREFIX_COMMANDS,
+              prefixCommands);
+    }
+
+    builder.setExecutionAttribute(LOCALIZED_RESOURCES,
+        ctx.getLocalizedResources())
+      .setExecutionAttribute(RUN_AS_USER, runAsUser)
+      .setExecutionAttribute(USER, ctx.getUser())
+      .setExecutionAttribute(APPID, ctx.getAppId())
+      .setExecutionAttribute(CONTAINER_ID_STR,
+        container.getContainerId().toString())
+      .setExecutionAttribute(CONTAINER_WORK_DIR, ctx.getContainerWorkDir())
+      .setExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH,
+        ctx.getNmPrivateContainerScriptPath())
+      .setExecutionAttribute(NM_PRIVATE_TOKENS_PATH,
+        ctx.getNmPrivateTokensPath())
+      .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
+      .setExecutionAttribute(LOCAL_DIRS, ctx.getLocalDirs())
+      .setExecutionAttribute(LOG_DIRS, ctx.getLogDirs())
+      .setExecutionAttribute(FILECACHE_DIRS, ctx.getFilecacheDirs())
+      .setExecutionAttribute(USER_LOCAL_DIRS, ctx.getUserLocalDirs())
+      .setExecutionAttribute(CONTAINER_LOCAL_DIRS, ctx.getContainerLocalDirs())
+      .setExecutionAttribute(CONTAINER_LOG_DIRS, ctx.getContainerLogDirs())
+      .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
+
+    if (tcCommandFile != null) {
+      builder.setExecutionAttribute(TC_COMMAND_FILE, tcCommandFile);
+    }
+
+    return builder.build();
   }
 
   @Override
