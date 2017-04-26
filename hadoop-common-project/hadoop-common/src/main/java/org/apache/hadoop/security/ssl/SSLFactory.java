@@ -39,7 +39,6 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -75,9 +74,9 @@ public class SSLFactory implements ConnectionConfigurator {
   public static final String KEYSTORES_FACTORY_CLASS_KEY =
     "hadoop.ssl.keystores.factory.class";
 
-  public static final String SSL_ENABLED_PROTOCOLS =
+  public static final String SSL_ENABLED_PROTOCOLS_KEY =
       "hadoop.ssl.enabled.protocols";
-  public static final String DEFAULT_SSL_ENABLED_PROTOCOLS = "TLSv1";
+  public static final String SSL_ENABLED_PROTOCOLS_DEFAULT = "TLSv1";
   public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
       "ssl.server.exclude.cipher.list";
 
@@ -113,15 +112,13 @@ public class SSLFactory implements ConnectionConfigurator {
                       FileBasedKeyStoresFactory.class, KeyStoresFactory.class);
     keystoresFactory = ReflectionUtils.newInstance(klass, sslConf);
 
-    enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS,
-        DEFAULT_SSL_ENABLED_PROTOCOLS);
-    String excludeCiphersConf =
-        sslConf.get(SSL_SERVER_EXCLUDE_CIPHER_LIST, "");
-    if (excludeCiphersConf.isEmpty()) {
-      excludeCiphers = new LinkedList<String>();
-    } else {
-      LOG.debug("will exclude cipher suites: {}", excludeCiphersConf);
-      excludeCiphers = Arrays.asList(excludeCiphersConf.split(","));
+    enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS_KEY,
+        SSL_ENABLED_PROTOCOLS_DEFAULT);
+    excludeCiphers = Arrays.asList(
+        sslConf.getTrimmedStrings(SSL_SERVER_EXCLUDE_CIPHER_LIST));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("will exclude cipher suites: {}",
+          StringUtils.join(",", excludeCiphers));
     }
   }
 

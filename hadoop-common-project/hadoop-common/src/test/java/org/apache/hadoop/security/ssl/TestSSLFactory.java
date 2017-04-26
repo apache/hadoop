@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
@@ -57,10 +58,10 @@ public class TestSSLFactory {
     new File(BASEDIR).getAbsolutePath();
   private String sslConfsDir;
   private static final String excludeCiphers = "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
-      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,"
+      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,  \n"
       + "SSL_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,"
+      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
+      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
       + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
       + "SSL_RSA_WITH_RC4_128_MD5";
 
@@ -190,7 +191,8 @@ public class TestSSLFactory {
     SSLEngine serverSSLEngine = serverSSLFactory.createSSLEngine();
     SSLEngine clientSSLEngine = clientSSLFactory.createSSLEngine();
     // client selects cipher suites excluded by server
-    clientSSLEngine.setEnabledCipherSuites(excludeCiphers.split(","));
+    clientSSLEngine.setEnabledCipherSuites(
+        StringUtils.getTrimmedStrings(excludeCiphers));
 
     // use the same buffer size for server and client.
     SSLSession session = clientSSLEngine.getSession();
