@@ -1283,15 +1283,15 @@ public class BlockManager implements BlockStatsMXBean {
           internalBlock.setBlockId(b.getBlock().getBlockId() + indices[i]);
           blockTokens[i] = blockTokenSecretManager.generateToken(
               NameNode.getRemoteUser().getShortUserName(),
-              internalBlock, EnumSet.of(mode));
+              internalBlock, EnumSet.of(mode), b.getStorageTypes());
         }
         sb.setBlockTokens(blockTokens);
       } else {
         b.setBlockToken(blockTokenSecretManager.generateToken(
             NameNode.getRemoteUser().getShortUserName(),
-            b.getBlock(), EnumSet.of(mode)));
+            b.getBlock(), EnumSet.of(mode), b.getStorageTypes()));
       }
-    }    
+    }
   }
 
   void addKeyUpdateCommand(final List<DatanodeCommand> cmds,

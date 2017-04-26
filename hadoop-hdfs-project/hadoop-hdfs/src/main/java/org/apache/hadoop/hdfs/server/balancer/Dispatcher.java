@@ -355,7 +355,8 @@ public class Dispatcher {
         ExtendedBlock eb = new ExtendedBlock(nnc.getBlockpoolID(),
             reportedBlock.getBlock());
         final KeyManager km = nnc.getKeyManager(); 
-        Token<BlockTokenIdentifier> accessToken = km.getAccessToken(eb);
+        Token<BlockTokenIdentifier> accessToken = km.getAccessToken(eb,
+            new StorageType[]{target.storageType});
         IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
             unbufIn, km, accessToken, target.getDatanodeInfo());
         unbufOut = saslStreams.out;

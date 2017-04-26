@@ -28,6 +28,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.fs.StorageType;
 
 /**
  * Manages a {@link BlockTokenSecretManager} per block pool. Routes the requests
@@ -81,21 +82,27 @@ public class BlockPoolTokenSecretManager extends
   }
 
   /**
-   * See {@link BlockTokenSecretManager#checkAccess(BlockTokenIdentifier, 
-   *                String, ExtendedBlock, BlockTokenIdentifier.AccessMode)}
+   * See {@link BlockTokenSecretManager#checkAccess(BlockTokenIdentifier,
+   *                String, ExtendedBlock, BlockTokenIdentifier.AccessMode,
+   *                StorageType[])}
    */
   public void checkAccess(BlockTokenIdentifier id, String userId,
-      ExtendedBlock block, AccessMode mode) throws InvalidToken {
-    get(block.getBlockPoolId()).checkAccess(id, userId, block, mode);
+      ExtendedBlock block, AccessMode mode,
+      StorageType[] storageTypes) throws InvalidToken {
+    get(block.getBlockPoolId()).checkAccess(id, userId, block, mode,
+        storageTypes);
   }
 
   /**
-   * See {@link BlockTokenSecretManager#checkAccess(Token, String, 
-   *                ExtendedBlock, BlockTokenIdentifier.AccessMode)}
+   * See {@link BlockTokenSecretManager#checkAccess(Token, String,
+   *                ExtendedBlock, BlockTokenIdentifier.AccessMode,
+   *                StorageType[])}.
    */
   public void checkAccess(Token<BlockTokenIdentifier> token,
-      String userId, ExtendedBlock block, AccessMode mode) throws InvalidToken {
-    get(block.getBlockPoolId()).checkAccess(token, userId, block, mode);
+      String userId, ExtendedBlock block, AccessMode mode,
+      StorageType[] storageTypes) throws InvalidToken {
+    get(block.getBlockPoolId()).checkAccess(token, userId, block, mode,
+        storageTypes);
   }
 
   /**
@@ -107,11 +114,12 @@ public class BlockPoolTokenSecretManager extends
   }
 
   /**
-   * See {@link BlockTokenSecretManager#generateToken(ExtendedBlock, EnumSet)}
+   * See {@link BlockTokenSecretManager#generateToken(ExtendedBlock, EnumSet,
+   *  StorageType[])}
    */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock b,
-      EnumSet<AccessMode> of) throws IOException {
-    return get(b.getBlockPoolId()).generateToken(b, of);
+      EnumSet<AccessMode> of, StorageType[] storageTypes) throws IOException {
+    return get(b.getBlockPoolId()).generateToken(b, of, storageTypes);
   }
   
   @VisibleForTesting

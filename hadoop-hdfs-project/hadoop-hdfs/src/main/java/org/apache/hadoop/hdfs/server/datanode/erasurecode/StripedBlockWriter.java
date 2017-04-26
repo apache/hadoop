@@ -116,7 +116,8 @@ class StripedBlockWriter {
 
       Token<BlockTokenIdentifier> blockToken =
           datanode.getBlockAccessToken(block,
-              EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
+              EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
+              new StorageType[]{storageType});
 
       long writeTimeout = datanode.getDnConf().getSocketWriteTimeout();
       OutputStream unbufOut = NetUtils.getOutputStream(socket, writeTimeout);

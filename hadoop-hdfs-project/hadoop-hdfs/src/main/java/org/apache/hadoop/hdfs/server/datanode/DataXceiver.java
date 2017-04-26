@@ -573,9 +573,9 @@ class DataXceiver extends Receiver implements Runnable {
     updateCurrentThreadName("Sending block " + block);
     OutputStream baseStream = getOutputStream();
     DataOutputStream out = getBufferedOutputStream();
-    checkAccess(out, true, block, blockToken,
-        Op.READ_BLOCK, BlockTokenIdentifier.AccessMode.READ);
-  
+    checkAccess(out, true, block, blockToken, Op.READ_BLOCK,
+        BlockTokenIdentifier.AccessMode.READ);
+
     // send the block
     BlockSender blockSender = null;
     DatanodeRegistration dnR = 
@@ -685,9 +685,17 @@ class DataXceiver extends Receiver implements Runnable {
     long size = 0;
     // reply to upstream datanode or client 
     final DataOutputStream replyOut = getBufferedOutputStream();
-    checkAccess(replyOut, isClient, block, blockToken,
-        Op.WRITE_BLOCK, BlockTokenIdentifier.AccessMode.WRITE);
-    // check single target for transfer-RBW/Finalized 
+
+    int nst = targetStorageTypes.length;
+    StorageType[] storageTypes = new StorageType[nst + 1];
+    storageTypes[0] = storageType;
+    if (targetStorageTypes.length > 0) {
+      System.arraycopy(targetStorageTypes, 0, storageTypes, 1, nst);
+    }
+    checkAccess(replyOut, isClient, block, blockToken, Op.WRITE_BLOCK,
+        BlockTokenIdentifier.AccessMode.WRITE, storageTypes);
+
+    // check single target for transfer-RBW/Finalized
     if (isTransfer && targets.length > 0) {
       throw new IOException(stage + " does not support multiple targets "
           + Arrays.asList(targets));
@@ -927,8 +935,8 @@ class DataXceiver extends Receiver implements Runnable {
 
     final DataOutputStream out = new DataOutputStream(
         getOutputStream());
-    checkAccess(out, true, blk, blockToken,
-        Op.TRANSFER_BLOCK, BlockTokenIdentifier.AccessMode.COPY);
+    checkAccess(out, true, blk, blockToken, Op.TRANSFER_BLOCK,
+        BlockTokenIdentifier.AccessMode.COPY, targetStorageTypes);
     try {
       datanode.transferReplicaForPipelineRecovery(blk, targets,
           targetStorageTypes, clientName);
@@ -949,9 +957,8 @@ class DataXceiver extends Receiver implements Runnable {
     updateCurrentThreadName("Getting checksum for block " + block);
     final DataOutputStream out = new DataOutputStream(
         getOutputStream());
-    checkAccess(out, true, block, blockToken,
-        Op.BLOCK_CHECKSUM, BlockTokenIdentifier.AccessMode.READ);
-
+    checkAccess(out, true, block, blockToken, Op.BLOCK_CHECKSUM,
+        BlockTokenIdentifier.AccessMode.READ);
     BlockChecksumComputer maker =
         new ReplicatedBlockChecksumComputer(datanode, block);
 
@@ -985,11 +992,12 @@ class DataXceiver extends Receiver implements Runnable {
   public void blockGroupChecksum(final StripedBlockInfo stripedBlockInfo,
       final Token<BlockTokenIdentifier> blockToken, long requestedNumBytes)
       throws IOException {
+    final ExtendedBlock block = stripedBlockInfo.getBlock();
     updateCurrentThreadName("Getting checksum for block group" +
-        stripedBlockInfo.getBlock());
+        block);
     final DataOutputStream out = new DataOutputStream(getOutputStream());
-    checkAccess(out, true, stripedBlockInfo.getBlock(), blockToken,
-        Op.BLOCK_GROUP_CHECKSUM, BlockTokenIdentifier.AccessMode.READ);
+    checkAccess(out, true, block, blockToken, Op.BLOCK_GROUP_CHECKSUM,
+        BlockTokenIdentifier.AccessMode.READ);
 
     AbstractBlockChecksumComputer maker =
         new BlockGroupNonStripedChecksumComputer(datanode, stripedBlockInfo,
@@ -1027,8 +1035,8 @@ class DataXceiver extends Receiver implements Runnable {
       final Token<BlockTokenIdentifier> blockToken) throws IOException {
     updateCurrentThreadName("Copying block " + block);
     DataOutputStream reply = getBufferedOutputStream();
-    checkAccess(reply, true, block, blockToken,
-        Op.COPY_BLOCK, BlockTokenIdentifier.AccessMode.COPY);
+    checkAccess(reply, true, block, blockToken, Op.COPY_BLOCK,
+        BlockTokenIdentifier.AccessMode.COPY);
 
     if (datanode.data.getPinning(block)) {
       String msg = "Not able to copy block " + block.getBlockId() + " " +
@@ -1101,7 +1109,8 @@ class DataXceiver extends Receiver implements Runnable {
     updateCurrentThreadName("Replacing block " + block + " from " + delHint);
     DataOutputStream replyOut = new DataOutputStream(getOutputStream());
     checkAccess(replyOut, true, block, blockToken,
-        Op.REPLACE_BLOCK, BlockTokenIdentifier.AccessMode.REPLACE);
+        Op.REPLACE_BLOCK, BlockTokenIdentifier.AccessMode.REPLACE,
+        new StorageType[]{ storageType });
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
       String msg = "Not able to receive block " + block.getBlockId() +
@@ -1353,11 +1362,18 @@ class DataXceiver extends Receiver implements Runnable {
     throw new IOException("Not ready to serve the block pool, " + bpId + ".");
   }
 
-  private void checkAccess(OutputStream out, final boolean reply, 
+  private void checkAccess(OutputStream out, final boolean reply,
+      ExtendedBlock blk, Token<BlockTokenIdentifier> t, Op op,
+      BlockTokenIdentifier.AccessMode mode) throws IOException {
+    checkAccess(out, reply, blk, t, op, mode, null);
+  }
+
+  private void checkAccess(OutputStream out, final boolean reply,
       final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> t,
       final Op op,
-      final BlockTokenIdentifier.AccessMode mode) throws IOException {
+      final BlockTokenIdentifier.AccessMode mode,
+      final StorageType[] storageTypes) throws IOException {
     checkAndWaitForBP(blk);
     if (datanode.isBlockTokenEnabled) {
       if (LOG.isDebugEnabled()) {
@@ -1365,7 +1381,8 @@ class DataXceiver extends Receiver implements Runnable {
             + "' with mode '" + mode + "'");
       }
       try {
-        datanode.blockPoolTokenSecretManager.checkAccess(t, null, blk, mode);
+        datanode.blockPoolTokenSecretManager.checkAccess(t, null, blk, mode,
+            storageTypes);
       } catch(InvalidToken e) {
         try {
           if (reply) {

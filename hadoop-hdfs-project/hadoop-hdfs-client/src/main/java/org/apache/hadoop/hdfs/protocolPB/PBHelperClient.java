@@ -635,6 +635,9 @@ public class PBHelperClient {
         blockTokenSecret.getAccessModes()) {
       builder.addModes(convert(aMode));
     }
+    for (StorageType storageType : blockTokenSecret.getStorageTypes()) {
+      builder.addStorageTypes(convertStorageType(storageType));
+    }
     return builder.build();
   }
 

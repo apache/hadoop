@@ -22,10 +22,13 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Optional;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenSecretProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -49,21 +52,24 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private String blockPoolId;
   private long blockId;
   private final EnumSet<AccessMode> modes;
+  private StorageType[] storageTypes;
   private boolean useProto;
 
   private byte [] cache;
 
   public BlockTokenIdentifier() {
-    this(null, null, 0, EnumSet.noneOf(AccessMode.class), false);
+    this(null, null, 0, EnumSet.noneOf(AccessMode.class), null, false);
   }
 
   public BlockTokenIdentifier(String userId, String bpid, long blockId,
-      EnumSet<AccessMode> modes, boolean useProto) {
+      EnumSet<AccessMode> modes, StorageType[] storageTypes, boolean useProto) {
     this.cache = null;
     this.userId = userId;
     this.blockPoolId = bpid;
     this.blockId = blockId;
     this.modes = modes == null ? EnumSet.noneOf(AccessMode.class) : modes;
+    this.storageTypes = Optional.ofNullable(storageTypes)
+                                .orElse(StorageType.EMPTY_ARRAY);
     this.useProto = useProto;
   }
 
@@ -115,13 +121,18 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return modes;
   }
 
+  public StorageType[] getStorageTypes(){
+    return storageTypes;
+  }
+
   @Override
   public String toString() {
     return "block_token_identifier (expiryDate=" + this.getExpiryDate()
         + ", keyId=" + this.getKeyId() + ", userId=" + this.getUserId()
         + ", blockPoolId=" + this.getBlockPoolId()
         + ", blockId=" + this.getBlockId() + ", access modes="
-        + this.getAccessModes() + ")";
+        + this.getAccessModes() + ", storageTypes= "
+        + Arrays.toString(this.getStorageTypes()) + ")";
   }
 
   static boolean isEqual(Object a, Object b) {
@@ -139,7 +150,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
           && isEqual(this.userId, that.userId)
           && isEqual(this.blockPoolId, that.blockPoolId)
           && this.blockId == that.blockId
-          && isEqual(this.modes, that.modes);
+          && isEqual(this.modes, that.modes)
+          && Arrays.equals(this.storageTypes, that.storageTypes);
     }
     return false;
   }
@@ -148,7 +160,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   public int hashCode() {
     return (int) expiryDate ^ keyId ^ (int) blockId ^ modes.hashCode()
         ^ (userId == null ? 0 : userId.hashCode())
-        ^ (blockPoolId == null ? 0 : blockPoolId.hashCode());
+        ^ (blockPoolId == null ? 0 : blockPoolId.hashCode())
+        ^ (storageTypes == null ? 0 : Arrays.hashCode(storageTypes));
   }
 
   /**
@@ -200,6 +213,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (int i = 0; i < length; i++) {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
+
+    length = WritableUtils.readVInt(in);
+    StorageType[] readStorageTypes = new StorageType[length];
+    for (int i = 0; i < length; i++) {
+      readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
+    }
+    storageTypes = readStorageTypes;
     useProto = false;
   }
 
@@ -224,6 +244,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
       AccessModeProto accessModeProto = blockTokenSecretProto.getModes(i);
       modes.add(PBHelperClient.convert(accessModeProto));
     }
+
+    storageTypes = blockTokenSecretProto.getStorageTypesList().stream()
+        .map(PBHelperClient::convertStorageType)
+        .toArray(StorageType[]::new);
     useProto = true;
   }
 
@@ -246,6 +270,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     WritableUtils.writeVInt(out, modes.size());
     for (AccessMode aMode : modes) {
       WritableUtils.writeEnum(out, aMode);
+    }
+    WritableUtils.writeVInt(out, storageTypes.length);
+    for (StorageType type: storageTypes){
+      WritableUtils.writeEnum(out, type);
     }
   }
 

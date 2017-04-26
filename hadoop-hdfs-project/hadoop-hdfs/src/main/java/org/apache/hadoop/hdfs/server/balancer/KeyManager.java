@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
@@ -93,8 +94,8 @@ public class KeyManager implements Closeable, DataEncryptionKeyFactory {
   }
 
   /** Get an access token for a block. */
-  public Token<BlockTokenIdentifier> getAccessToken(ExtendedBlock eb
-      ) throws IOException {
+  public Token<BlockTokenIdentifier> getAccessToken(ExtendedBlock eb,
+      StorageType[] storageTypes) throws IOException {
     if (!isBlockTokenEnabled) {
       return BlockTokenSecretManager.DUMMY_TOKEN;
     } else {
@@ -103,7 +104,8 @@ public class KeyManager implements Closeable, DataEncryptionKeyFactory {
             "Cannot get access token since BlockKeyUpdater is not running");
       }
       return blockTokenSecretManager.generateToken(null, eb,
-          EnumSet.of(BlockTokenIdentifier.AccessMode.REPLACE, BlockTokenIdentifier.AccessMode.COPY));
+          EnumSet.of(BlockTokenIdentifier.AccessMode.REPLACE,
+              BlockTokenIdentifier.AccessMode.COPY), storageTypes);
     }
   }
 

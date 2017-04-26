@@ -1929,8 +1929,9 @@ public class DataNode extends ReconfigurableBase
     return fis;
   }
 
-  private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,
-      AccessMode accessMode) throws IOException {
+  private void checkBlockToken(ExtendedBlock block,
+      Token<BlockTokenIdentifier> token, AccessMode accessMode)
+      throws IOException {
     if (isBlockTokenEnabled) {
       BlockTokenIdentifier id = new BlockTokenIdentifier();
       ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
@@ -1939,7 +1940,8 @@ public class DataNode extends ReconfigurableBase
       if (LOG.isDebugEnabled()) {
         LOG.debug("Got: " + id.toString());
       }
-      blockPoolTokenSecretManager.checkAccess(id, null, block, accessMode);
+      blockPoolTokenSecretManager.checkAccess(id, null, block, accessMode,
+          null);
     }
   }
 
@@ -2450,8 +2452,9 @@ public class DataNode extends ReconfigurableBase
         //
         // Header info
         //
-        Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(b, 
-            EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
+        Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(b,
+            EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
+            targetStorageTypes);
 
         long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
@@ -2534,11 +2537,13 @@ public class DataNode extends ReconfigurableBase
    * Use BlockTokenSecretManager to generate block token for current user.
    */
   public Token<BlockTokenIdentifier> getBlockAccessToken(ExtendedBlock b,
-      EnumSet<AccessMode> mode) throws IOException {
+      EnumSet<AccessMode> mode,
+      StorageType[] storageTypes) throws IOException {
     Token<BlockTokenIdentifier> accessToken = 
         BlockTokenSecretManager.DUMMY_TOKEN;
     if (isBlockTokenEnabled) {
-      accessToken = blockPoolTokenSecretManager.generateToken(b, mode);
+      accessToken = blockPoolTokenSecretManager.generateToken(b, mode,
+          storageTypes);
     }
     return accessToken;
   }
@@ -2911,7 +2916,7 @@ public class DataNode extends ReconfigurableBase
           LOG.debug("Got: " + id.toString());
         }
         blockPoolTokenSecretManager.checkAccess(id, null, block,
-            BlockTokenIdentifier.AccessMode.READ);
+            BlockTokenIdentifier.AccessMode.READ, null);
       }
     }
   }
