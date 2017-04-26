@@ -372,6 +372,7 @@ public class TestSystemMetricsPublisherForV2 {
         .thenReturn(Collections.singletonList("java -Xmx1024m"));
     when(appSubmissionContext.getAMContainerSpec())
         .thenReturn(containerLaunchContext);
+    when(app.getApplicationPriority()).thenReturn(Priority.newInstance(10));
 
     when(app.getApplicationSubmissionContext())
         .thenReturn(appSubmissionContext);

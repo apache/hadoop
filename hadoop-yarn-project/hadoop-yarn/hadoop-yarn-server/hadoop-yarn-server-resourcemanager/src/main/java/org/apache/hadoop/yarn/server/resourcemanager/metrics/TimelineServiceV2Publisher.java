@@ -118,7 +118,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         ApplicationMetricsConstants.UNMANAGED_APPLICATION_ENTITY_INFO,
         app.getApplicationSubmissionContext().getUnmanagedAM());
     entityInfo.put(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO,
-        app.getApplicationSubmissionContext().getPriority().getPriority());
+        app.getApplicationPriority().getPriority());
     entity.getConfigs().put(
         ApplicationMetricsConstants.AM_NODE_LABEL_EXPRESSION,
         app.getAmNodeLabelExpression());
