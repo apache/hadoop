@@ -419,7 +419,7 @@ public class TestProcfsBasedProcessTree {
           new ProcessStatInfo(new String[]{"200", "process two", "100", "100",
               "100", "200000", "200", "2000", "400"});
       procInfos[2] =
-          new ProcessStatInfo(new String[]{"300", "proc3", "200", "100",
+          new ProcessStatInfo(new String[]{"300", "proc(3)", "200", "100",
               "100", "300000", "300", "3000", "600"});
       procInfos[3] =
           new ProcessStatInfo(new String[]{"400", "proc4", "1", "400", "400",
@@ -555,7 +555,7 @@ public class TestProcfsBasedProcessTree {
           new ProcessStatInfo(new String[]{"200", "process two", "100", "100",
               "100", "200000", "200"});
       procInfos[2] =
-          new ProcessStatInfo(new String[]{"300", "proc3", "1", "300", "300",
+          new ProcessStatInfo(new String[]{"300", "proc(3)", "1", "300", "300",
               "300000", "300"});
       procInfos[3] =
           new ProcessStatInfo(new String[]{"400", "proc4", "100", "100",
@@ -748,7 +748,7 @@ public class TestProcfsBasedProcessTree {
           new ProcessStatInfo(new String[]{"200", "process two", "100", "100",
               "100", "200000", "200", "2000", "400"});
       procInfos[2] =
-          new ProcessStatInfo(new String[]{"300", "proc3", "200", "100",
+          new ProcessStatInfo(new String[]{"300", "proc(3)", "200", "100",
               "100", "300000", "300", "3000", "600"});
       procInfos[3] =
           new ProcessStatInfo(new String[]{"400", "proc4", "200", "100",
@@ -771,7 +771,7 @@ public class TestProcfsBasedProcessTree {
       String[] cmdLines = new String[numProcesses];
       cmdLines[0] = "proc1 arg1 arg2";
       cmdLines[1] = "process two arg3 arg4";
-      cmdLines[2] = "proc3 arg5 arg6";
+      cmdLines[2] = "proc(3) arg5 arg6";
       cmdLines[3] = "proc4 arg7 arg8";
       cmdLines[4] = "proc5 arg9 arg10";
       cmdLines[5] = "proc6 arg11 arg12";
