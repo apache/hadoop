@@ -214,6 +214,7 @@ public interface StateAccessForProviders {
 
   /**
    * Find out about the nodes for specific roles
+   * Component_name -> ContainerId -> ClusterNode
    * @return 
    */
   Map<String, Map<String, ClusterNode>> getRoleClusterNodeMapping();

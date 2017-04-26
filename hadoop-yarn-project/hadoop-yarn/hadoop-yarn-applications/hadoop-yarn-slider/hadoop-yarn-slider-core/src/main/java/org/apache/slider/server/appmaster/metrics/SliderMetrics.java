@@ -39,24 +39,34 @@ public class SliderMetrics implements MetricsSource {
 
   @Metric("containers requested")
   public MutableGaugeInt containersRequested;
+
   @Metric("anti-affinity containers pending")
   public MutableGaugeInt pendingAAContainers;
+
   @Metric("containers running")
   public MutableGaugeInt containersRunning;
+
   @Metric("containers desired")
   public MutableGaugeInt containersDesired;
+
   @Metric("containers completed")
   public MutableGaugeInt containersCompleted;
+
   @Metric("containers failed")
   public MutableGaugeInt containersFailed;
+
   @Metric("containers failed since last threshold")
   public MutableGaugeInt failedSinceLastThreshold;
+
   @Metric("containers preempted")
   public MutableGaugeInt containersPreempted;
+
   @Metric("containers exceeded limits")
   public MutableGaugeInt containersLimitsExceeded;
+
   @Metric("containers surplus")
   public MutableGaugeInt surplusContainers;
+
   @Metric("containers failed due to disk failure")
   public MutableGaugeInt containersDiskFailure;
 
@@ -79,6 +89,19 @@ public class SliderMetrics implements MetricsSource {
 
   public void tag(String name, String description, String value) {
     registry.tag(name, description, value);
+  }
+
+  @Override public String toString() {
+    return "SliderMetrics{"
+        + "containersRequested=" + containersRequested.value()
+        + ", pendingAAContainers=" + pendingAAContainers.value()
+        + ", containersRunning=" + containersRunning.value()
+        + ", containersDesired=" + containersDesired.value()
+        + ", containersCompleted=" + containersCompleted.value()
+        + ", containersFailed=" + containersFailed.value()
+        + ", failedSinceLastThreshold=" + failedSinceLastThreshold.value()
+        + ", containersPreempted=" + containersPreempted.value()
+        + ", surplusContainers=" + surplusContainers.value() + '}';
   }
 }
 

@@ -17,8 +17,11 @@
 
 package org.apache.slider.api.resource;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -26,10 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.lang.StringUtils;
 
 /**
  * Set of configuration properties that can be injected into the application
@@ -156,6 +155,13 @@ public class Configuration implements Serializable {
     return properties.get(name.trim());
   }
 
+  public String getEnv(String name) {
+    if (name == null) {
+      return null;
+    }
+    return env.get(name.trim());
+  }
+
   @Override
   public boolean equals(java.lang.Object o) {
     if (this == o) {
@@ -197,5 +203,30 @@ public class Configuration implements Serializable {
       return "null";
     }
     return o.toString().replace("\n", "\n    ");
+  }
+
+  /**
+   * Merge all properties and envs from that configuration to this configration.
+   * For ConfigFiles, all properties and envs of that ConfigFile are merged into
+   * this ConfigFile.
+   */
+  public synchronized void mergeFrom(Configuration that) {
+    this.properties.putAll(that.getProperties());
+    this.env.putAll(that.getEnv());
+    Map<String, ConfigFile> thatMap = new HashMap<>();
+    for (ConfigFile file : that.getFiles()) {
+      thatMap.put(file.getDestFile(), file.copy());
+    }
+    for (ConfigFile thisFile : files) {
+      if(thatMap.containsKey(thisFile.getDestFile())) {
+        ConfigFile thatFile = thatMap.get(thisFile.getDestFile());
+        thisFile.getProps().putAll(thatFile.getProps());
+        thatMap.remove(thisFile.getDestFile());
+      }
+    }
+    // add remaining new files from that Configration
+    for (ConfigFile thatFile : thatMap.values()) {
+      files.add(thatFile.copy());
+    }
   }
 }
