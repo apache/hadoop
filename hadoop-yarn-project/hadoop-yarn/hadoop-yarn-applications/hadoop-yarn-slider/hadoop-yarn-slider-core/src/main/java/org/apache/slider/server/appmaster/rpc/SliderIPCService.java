@@ -283,7 +283,7 @@ public class SliderIPCService extends AbstractService
     //throws NoSuchNodeException if it is missing
     RoleInstance instance =
         state.getLiveInstanceByContainerID(containerID);
-    queue(new ActionKillContainer(instance.getId(), 0, TimeUnit.MILLISECONDS,
+    queue(new ActionKillContainer(instance.getContainerId(), 0, TimeUnit.MILLISECONDS,
         amOperations));
     Messages.KillContainerResponseProto.Builder builder =
         Messages.KillContainerResponseProto.newBuilder();

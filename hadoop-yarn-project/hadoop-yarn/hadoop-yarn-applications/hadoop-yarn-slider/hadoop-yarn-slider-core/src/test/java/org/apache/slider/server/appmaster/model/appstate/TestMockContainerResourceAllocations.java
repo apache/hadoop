@@ -27,6 +27,7 @@ import org.apache.slider.server.appmaster.model.mock.MockAppState;
 import org.apache.slider.server.appmaster.model.mock.MockRoles;
 import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.operations.ContainerRequestOperation;
+import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -47,6 +48,11 @@ public class TestMockContainerResourceAllocations extends BaseMockAppStateTest {
     Component role0 = appState.getClusterStatus().getComponent(MockRoles.ROLE0);
     role0.resource(new org.apache.slider.api.resource.Resource().memory("512")
         .cpus(2));
+    // hack - because role0 is created before the test run
+    RoleStatus role0Status =
+        appState.getRoleStatusMap().get(appState.getRoleMap().get(ROLE0).id);
+    role0Status.setResourceRequirements(
+        appState.buildResourceRequirements(role0Status));
     appState.updateComponents(Collections.singletonMap(role0.getName(),
         role0.getNumberOfContainers()));
     List<AbstractRMOperation> ops = appState.reviewRequestAndReleaseNodes();
@@ -58,12 +64,17 @@ public class TestMockContainerResourceAllocations extends BaseMockAppStateTest {
     assertEquals(2, requirements.getVirtualCores());
   }
 
+  //TODO replace with resource profile feature in yarn
   @Test
   public void testMaxMemAllocations() throws Throwable {
     // max core allocations no longer supported
     Component role0 = appState.getClusterStatus().getComponent(MockRoles.ROLE0);
     role0.resource(new org.apache.slider.api.resource.Resource()
         .memory(ResourceKeys.YARN_RESOURCE_MAX).cpus(2));
+    RoleStatus role0Status =
+        appState.getRoleStatusMap().get(appState.getRoleMap().get(ROLE0).id);
+    role0Status.setResourceRequirements(
+        appState.buildResourceRequirements(role0Status));
     appState.updateComponents(Collections.singletonMap(role0.getName(),
         role0.getNumberOfContainers()));
     List<AbstractRMOperation> ops = appState.reviewRequestAndReleaseNodes();

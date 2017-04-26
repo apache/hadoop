@@ -20,17 +20,30 @@ package org.apache.slider.util;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.api.resource.Component;
+import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.api.resource.Configuration;
 import org.apache.slider.api.resource.Resource;
 import org.apache.slider.common.tools.SliderUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class ServiceApiUtil {
-
+  private static final Logger log =
+      LoggerFactory.getLogger(ServiceApiUtil.class);
   @VisibleForTesting
-  public static void validateApplicationPostPayload(Application application) {
+  public static void validateApplicationPayload(Application application,
+      FileSystem fs) throws IOException {
     if (StringUtils.isEmpty(application.getName())) {
       throw new IllegalArgumentException(
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID);
@@ -64,11 +77,13 @@ public class ServiceApiUtil {
           application.getArtifact().getType());
 
       // container size
-      if (application.getNumberOfContainers() == null) {
+      if (application.getNumberOfContainers() == null
+          || application.getNumberOfContainers() < 0) {
         throw new IllegalArgumentException(
-            RestApiErrorMessages.ERROR_CONTAINERS_COUNT_INVALID);
+            RestApiErrorMessages.ERROR_CONTAINERS_COUNT_INVALID + ": "
+                + application.getNumberOfContainers());
       }
-
+      validateConfigFile(application.getConfiguration().getFiles(), fs);
       // Since it is a simple app with no components, create a default component
       application.getComponents().add(createDefaultComponent(application));
     } else {
@@ -114,11 +129,13 @@ public class ServiceApiUtil {
         if (comp.getNumberOfContainers() == null) {
           comp.setNumberOfContainers(globalNumberOfContainers);
         }
-        if (comp.getNumberOfContainers() == null) {
+        if (comp.getNumberOfContainers() == null
+            || comp.getNumberOfContainers() < 0) {
           throw new IllegalArgumentException(String.format(
-              RestApiErrorMessages.ERROR_CONTAINERS_COUNT_FOR_COMP_INVALID,
-              comp.getName()));
+              RestApiErrorMessages.ERROR_CONTAINERS_COUNT_FOR_COMP_INVALID
+                  + ": " + comp.getNumberOfContainers(), comp.getName()));
         }
+        validateConfigFile(comp.getConfiguration().getFiles(), fs);
       }
     }
 
@@ -127,6 +144,46 @@ public class ServiceApiUtil {
       application.setLifetime(RestApiConstants.DEFAULT_UNLIMITED_LIFETIME);
     }
   }
+
+  // 1) Verify the src_file exists and non-empty for template
+  // 2) dest_file is absolute path
+  private static void validateConfigFile(List<ConfigFile> list, FileSystem fs)
+      throws IOException {
+    Set<String> destFileSet = new HashSet<>();
+
+    for (ConfigFile file : list) {
+      if (file.getType().equals(ConfigFile.TypeEnum.TEMPLATE) && StringUtils
+          .isEmpty(file.getSrcFile())) {
+        throw new IllegalArgumentException(
+            "Src_file is empty for " + ConfigFile.TypeEnum.TEMPLATE);
+
+      }
+      if (!StringUtils.isEmpty(file.getSrcFile())) {
+        Path p = new Path(file.getSrcFile());
+        if (!fs.exists(p)) {
+          throw new IllegalArgumentException(
+              "Src_file does not exist for config file: " + file
+                  .getSrcFile());
+        }
+      }
+
+      if (StringUtils.isEmpty(file.getDestFile())) {
+        throw new IllegalArgumentException("Dest_file is empty.");
+      }
+      // validate dest_file is absolute
+      if (!Paths.get(file.getDestFile()).isAbsolute()) {
+        throw new IllegalArgumentException(
+            "Dest_file must be absolute path: " + file.getDestFile());
+      }
+
+      if (destFileSet.contains(file.getDestFile())) {
+        throw new IllegalArgumentException(
+            "Duplicated ConfigFile exists: " + file.getDestFile());
+      }
+      destFileSet.add(file.getDestFile());
+    }
+  }
+
 
   private static void validateApplicationResource(Resource resource,
       Component comp, Artifact.TypeEnum artifactType) {
@@ -199,5 +256,9 @@ public class ServiceApiUtil {
     comp.setNumberOfContainers(app.getNumberOfContainers());
     comp.setLaunchCommand(app.getLaunchCommand());
     return comp;
+  }
+
+  public static String $(String s) {
+    return "${" + s +"}";
   }
 }

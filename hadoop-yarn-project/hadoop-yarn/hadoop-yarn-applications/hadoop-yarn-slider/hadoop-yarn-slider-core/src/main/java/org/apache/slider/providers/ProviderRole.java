@@ -20,6 +20,13 @@ package org.apache.slider.providers;
 
 import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.resource.Component;
+import org.apache.slider.server.appmaster.state.AppState;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Provider role and key for use in app requests.
@@ -36,7 +43,9 @@ public final class ProviderRole {
   public final long placementTimeoutSeconds;
   public final String labelExpression;
   public final Component component;
-
+  public AtomicLong componentIdCounter = null;
+  public AppState appState;
+  public Queue<String> failedInstanceName = new ConcurrentLinkedQueue<String>();
   public ProviderRole(String name, int id) {
     this(name,
         id,
@@ -69,7 +78,7 @@ public final class ProviderRole {
         nodeFailureThreshold,
         placementTimeoutSeconds,
         labelExpression,
-        new Component().name(name).numberOfContainers(0L));
+        new Component().name(name).numberOfContainers(0L), null);
   }
 
   /**
@@ -79,18 +88,13 @@ public final class ProviderRole {
    * @param id ID. This becomes the YARN priority
    * @param policy placement policy
    * @param nodeFailureThreshold threshold for node failures (within a reset interval)
-   * after which a node failure is considered an app failure
+* after which a node failure is considered an app failure
    * @param placementTimeoutSeconds for lax placement, timeout in seconds before
    * @param labelExpression label expression for requests; may be null
    */
-  public ProviderRole(String name,
-      String group,
-      int id,
-      int policy,
-      int nodeFailureThreshold,
-      long placementTimeoutSeconds,
-      String labelExpression,
-      Component component) {
+  public ProviderRole(String name, String group, int id, int policy,
+      int nodeFailureThreshold, long placementTimeoutSeconds,
+      String labelExpression, Component component, AppState state) {
     this.name = name;
     if (group == null) {
       this.group = name;
@@ -103,8 +107,12 @@ public final class ProviderRole {
     this.placementTimeoutSeconds = placementTimeoutSeconds;
     this.labelExpression = labelExpression;
     this.component = component;
-
+    if(component.getUniqueComponentSupport()) {
+      componentIdCounter = new AtomicLong(0);
+    }
+    this.appState = state;
   }
+
 
   @Override
   public boolean equals(Object o) {

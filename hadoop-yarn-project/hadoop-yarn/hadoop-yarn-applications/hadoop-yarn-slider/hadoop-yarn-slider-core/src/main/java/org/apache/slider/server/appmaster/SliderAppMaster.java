@@ -25,6 +25,7 @@ import com.google.protobuf.BlockingService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -86,6 +87,7 @@ import org.apache.slider.api.RoleKeys;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.proto.SliderClusterAPI;
 import org.apache.slider.api.resource.Application;
+import org.apache.slider.api.resource.Component;
 import org.apache.slider.common.SliderExitCodes;
 import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.params.AbstractActionArgs;
@@ -109,7 +111,6 @@ import org.apache.slider.core.main.ServiceLauncher;
 import org.apache.slider.core.persist.JsonSerDeser;
 import org.apache.slider.core.registry.info.CustomRegistryConstants;
 import org.apache.slider.providers.ProviderCompleted;
-import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.providers.ProviderService;
 import org.apache.slider.providers.SliderProviderFactory;
 import org.apache.slider.server.appmaster.actions.ActionHalt;
@@ -136,7 +137,6 @@ import org.apache.slider.server.appmaster.operations.RMOperationHandler;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
 import org.apache.slider.server.appmaster.rpc.SliderClusterProtocolPBImpl;
 import org.apache.slider.server.appmaster.rpc.SliderIPCService;
-import org.apache.slider.server.appmaster.security.SecurityConfiguration;
 import org.apache.slider.server.appmaster.state.AppState;
 import org.apache.slider.server.appmaster.state.AppStateBindingInfo;
 import org.apache.slider.server.appmaster.state.ContainerAssignment;
@@ -170,7 +170,6 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -701,10 +700,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       registryOperations = startRegistryOperationsService();
       log.info(registryOperations.toString());
 
-      //build the role map
-      List<ProviderRole> providerRoles = Collections.EMPTY_LIST;
       // Start up the WebApp and track the URL for it
-
       // Web service endpoints: initialize
       WebAppApiImpl webAppApi =
           new WebAppApiImpl(
@@ -815,7 +811,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       //build the instance
       AppStateBindingInfo binding = new AppStateBindingInfo();
       binding.serviceConfig = serviceConf;
-      binding.roles = providerRoles;
       binding.fs = fs.getFileSystem();
       binding.historyPath = historyDir;
       binding.liveContainers = liveContainers;
@@ -872,6 +867,11 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     scheduleFailureWindowResets(application.getConfiguration());
     scheduleEscalation(application.getConfiguration());
+
+    for (Component component : application.getComponents()) {
+      // Merge app-level configuration into component level configuration
+      component.getConfiguration().mergeFrom(application.getConfiguration());
+    }
 
     try {
       // schedule YARN Registry registration
@@ -1170,22 +1170,22 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * Handler for {@link RegisterComponentInstance action}
    * Register/re-register an ephemeral container that is already in the application state
    * @param id the component
-   * @param description component description
-   * @param type component type
    * @return true if the component is registered
    */
-  public boolean registerComponent(ContainerId id, String description,
-      String type) throws IOException {
+  public boolean registerComponent(ContainerId id, RoleInstance roleInstance)
+      throws IOException {
     RoleInstance instance = appState.getOwnedContainer(id);
     if (instance == null) {
       return false;
     }
     // this is where component registrations  go
-    log.info("Registering component {}", id);
     String cid = RegistryPathUtils.encodeYarnID(id.toString());
     ServiceRecord record = new ServiceRecord();
     record.set(YarnRegistryAttributes.YARN_ID, cid);
-    record.description = description;
+
+    record.description = roleInstance.getCompInstanceName();
+    log.info("Registering component " + roleInstance.getCompInstanceName()
+        + ", containerId = " + id);
     record.set(YarnRegistryAttributes.YARN_PERSISTENCE,
         PersistencePolicies.CONTAINER);
     setUserProvidedServiceRecordAttributes(
@@ -1194,7 +1194,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       yarnRegistryOperations.putComponent(cid, record);
     } catch (IOException e) {
       log.warn("Failed to register container {}/{}: {}",
-          id, description, e, e);
+          id, roleInstance.role, e, e);
       return false;
     }
     org.apache.slider.api.resource.Container container =
@@ -1203,6 +1203,8 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     container.setLaunchTime(new Date());
     container.setState(org.apache.slider.api.resource.ContainerState.INIT);
     container.setBareHost(instance.host);
+    // TODO differentiate component name and component instance name ?
+    container.setComponentName(roleInstance.getCompInstanceName());
     instance.providerRole.component.addContainer(container);
 
     if (timelineServiceEnabled) {
@@ -1228,20 +1230,38 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * 
    * unregister a component. At the time this message is received,
    * the component may not have been registered
-   * @param id the component
    */
-  public void unregisterComponent(ContainerId id) {
-    log.info("Unregistering component {}", id);
+  public void unregisterComponent(RoleInstance roleInstance) {
+    ContainerId containerId = roleInstance.getContainerId();
+    log.info(
+        "Unregistering component instance " + roleInstance.getCompInstanceName()
+            + ", ContainerId = " + containerId);
     if (yarnRegistryOperations == null) {
-      log.warn("Processing unregister component event before initialization " +
-               "completed; init flag ={}", initCompleted);
+      log.warn("Processing unregister component event before initialization "
+          + "completed; init flag ={}", initCompleted);
       return;
     }
-    String cid = RegistryPathUtils.encodeYarnID(id.toString());
+    String cid = RegistryPathUtils.encodeYarnID(containerId.toString());
     try {
       yarnRegistryOperations.deleteComponent(cid);
     } catch (IOException e) {
-      log.warn("Failed to delete container {} : {}", id, e, e);
+      log.warn("Failed to delete container {} : {}", containerId, e, e);
+    }
+
+    // remove component instance dir
+    try {
+      FileSystem fs = getClusterFS().getFileSystem();
+      if (roleInstance.compInstanceDir != null && fs
+          .exists(roleInstance.compInstanceDir)) {
+        boolean deleted = fs.delete(roleInstance.compInstanceDir, true);
+        if (!deleted) {
+          log.warn("Failed to delete component instance dir: "
+              + roleInstance.compInstanceDir);
+        }
+      }
+    } catch (IOException e) {
+      log.error("Failed to delete component instance dir: "
+          + roleInstance.compInstanceDir, e);
     }
   }
 
@@ -1395,13 +1415,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     return exitCode;
   }
 
-    /**
-     * Get diagnostics info about containers
-     */
-  private String getContainerDiagnosticInfo() {
-
-    return appState.getContainerDiagnosticInfo();
-  }
 
   public Object getProxy(Class protocol, InetSocketAddress addr) {
     return yarnRPC.getProxy(protocol, addr, getConfig());
@@ -1492,7 +1505,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     //for all the operations, exec them
     execute(operations);
-    log.info("Diagnostics: {}", getContainerDiagnosticInfo());
   }
 
   @Override //AMRMClientAsync
@@ -1519,8 +1531,9 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
       //  known nodes trigger notifications
       if(!result.unknownNode) {
-        queue(new UnregisterComponentInstance(containerId, 0,
-            TimeUnit.MILLISECONDS));
+        queue(new UnregisterComponentInstance(0,
+            TimeUnit.MILLISECONDS,  result.roleInstance));
+
         if (timelineServiceEnabled && result.roleInstance != null) {
           serviceTimelinePublisher
               .componentInstanceFinished(result.roleInstance);
@@ -1936,7 +1949,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       nmClientAsync.getContainerStatusAsync(containerId,
                                             cinfo.container.getNodeId());
       // push out a registration
-      queue(new RegisterComponentInstance(containerId, cinfo.role, cinfo.group,
+      queue(new RegisterComponentInstance(containerId, cinfo,
           0, TimeUnit.MILLISECONDS));
       
     } else {

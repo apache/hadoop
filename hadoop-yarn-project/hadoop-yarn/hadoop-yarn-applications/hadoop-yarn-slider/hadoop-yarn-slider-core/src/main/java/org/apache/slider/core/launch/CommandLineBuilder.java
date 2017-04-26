@@ -32,7 +32,6 @@ import java.util.List;
 public class CommandLineBuilder {
   protected final List<String> argumentList = new ArrayList<>(20);
 
-
   /**
    * Add an entry to the command list
    * @param args arguments -these will be converted strings
@@ -41,15 +40,6 @@ public class CommandLineBuilder {
     for (Object arg : args) {
       argumentList.add(arg.toString());
     }
-  }
-
-  /**
-   * Get the value at an offset
-   * @param offset offset
-   * @return the value at that point
-   */
-  public String elt(int offset) {
-    return argumentList.get(offset);
   }
 
   /**
@@ -96,9 +86,4 @@ public class CommandLineBuilder {
   public String build() {
     return SliderUtils.join(argumentList, " ");
   }
-
-  public List<String> getArgumentList() {
-    return argumentList;
-  }
-
 }

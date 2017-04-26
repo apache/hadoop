@@ -77,7 +77,7 @@ public class ChaosKillContainer implements ChaosTarget {
       RoleInstance roleInstance = liveContainers.get(target);
       log.info("Killing {}", roleInstance);
 
-      queues.schedule(new ActionKillContainer(roleInstance.getId(),
+      queues.schedule(new ActionKillContainer(roleInstance.getContainerId(),
           DELAY, TimeUnit.MILLISECONDS, operationHandler));
     }
   }

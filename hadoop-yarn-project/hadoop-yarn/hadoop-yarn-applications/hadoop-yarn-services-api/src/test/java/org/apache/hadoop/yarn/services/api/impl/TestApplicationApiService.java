@@ -63,7 +63,7 @@ public class TestApplicationApiService {
 
     // no name
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(EXCEPTION_PREFIX + "application with no name");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals(ERROR_APPLICATION_NAME_INVALID, e.getMessage());
@@ -74,7 +74,7 @@ public class TestApplicationApiService {
     for (String badName : badNames) {
       app.setName(badName);
       try {
-        ServiceApiUtil.validateApplicationPostPayload(app);
+        ServiceApiUtil.validateApplicationPayload(app, null);
         Assert.fail(EXCEPTION_PREFIX + "application with bad name " + badName);
       } catch (IllegalArgumentException e) {
         Assert.assertEquals(ERROR_APPLICATION_NAME_INVALID_FORMAT,
@@ -85,7 +85,7 @@ public class TestApplicationApiService {
     // no artifact
     app.setName("finance_home");
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(EXCEPTION_PREFIX + "application with no artifact");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals(ERROR_ARTIFACT_INVALID, e.getMessage());
@@ -95,7 +95,7 @@ public class TestApplicationApiService {
     Artifact artifact = new Artifact();
     app.setArtifact(artifact);
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(EXCEPTION_PREFIX + "application with no artifact id");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals(ERROR_ARTIFACT_ID_INVALID, e.getMessage());
@@ -106,7 +106,7 @@ public class TestApplicationApiService {
     artifact.setId("app.io/hbase:facebook_0.2");
     app.setNumberOfContainers(5l);
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
     } catch (IllegalArgumentException e) {
       logger.error("application attributes specified should be valid here", e);
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
@@ -128,7 +128,7 @@ public class TestApplicationApiService {
     // resource not specified
     artifact.setId("docker.io/centos:centos7");
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(EXCEPTION_PREFIX + "application with no resource");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals(ERROR_RESOURCE_INVALID, e.getMessage());
@@ -138,7 +138,7 @@ public class TestApplicationApiService {
     Resource res = new Resource();
     app.setResource(res);
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(EXCEPTION_PREFIX + "application with no memory");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals(ERROR_RESOURCE_MEMORY_INVALID, e.getMessage());
@@ -149,7 +149,7 @@ public class TestApplicationApiService {
     res.setMemory("100mb");
     res.setCpus(-2);
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(
           EXCEPTION_PREFIX + "application with invalid no of cpups");
     } catch (IllegalArgumentException e) {
@@ -159,17 +159,17 @@ public class TestApplicationApiService {
     // number of containers not specified
     res.setCpus(2);
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(
           EXCEPTION_PREFIX + "application with no container count");
     } catch (IllegalArgumentException e) {
-      Assert.assertEquals(ERROR_CONTAINERS_COUNT_INVALID, e.getMessage());
+      Assert.assertTrue(e.getMessage().contains(ERROR_CONTAINERS_COUNT_INVALID));
     }
 
     // specifying profile along with cpus/memory raises exception
     res.setProfile("hbase_finance_large");
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(EXCEPTION_PREFIX
           + "application with resource profile along with cpus/memory");
     } catch (IllegalArgumentException e) {
@@ -182,7 +182,7 @@ public class TestApplicationApiService {
     res.setCpus(null);
     res.setMemory(null);
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
       Assert.fail(EXCEPTION_PREFIX
           + "application with resource profile only - NOT SUPPORTED");
     } catch (IllegalArgumentException e) {
@@ -198,7 +198,7 @@ public class TestApplicationApiService {
     // everything valid here
     app.setNumberOfContainers(5l);
     try {
-      ServiceApiUtil.validateApplicationPostPayload(app);
+      ServiceApiUtil.validateApplicationPayload(app, null);
     } catch (IllegalArgumentException e) {
       logger.error("application attributes specified should be valid here", e);
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
