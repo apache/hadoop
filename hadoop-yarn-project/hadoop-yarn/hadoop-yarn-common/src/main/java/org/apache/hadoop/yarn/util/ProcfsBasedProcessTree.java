@@ -58,7 +58,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   private static final String PROCFS = "/proc/";
 
   private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern.compile(
-      "^([\\d-]+)\\s\\(([^)]+)\\)\\s[^\\s]\\s([\\d-]+)\\s([\\d-]+)\\s" +
+      "^([\\d-]+)\\s\\((.*)\\)\\s[^\\s]\\s([\\d-]+)\\s([\\d-]+)\\s" +
       "([\\d-]+)\\s([\\d-]+\\s){7}(\\d+)\\s(\\d+)\\s([\\d-]+\\s){7}(\\d+)\\s" +
       "(\\d+)(\\s[\\d-]+){15}");
 
