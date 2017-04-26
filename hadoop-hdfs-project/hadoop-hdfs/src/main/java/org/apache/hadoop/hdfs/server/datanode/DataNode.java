@@ -80,6 +80,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -121,6 +122,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -3380,5 +3382,30 @@ public class DataNode extends ReconfigurableBase
     }
     Set<String> slowDisks = diskMetrics.getDiskOutliersStats().keySet();
     return JSON.toString(slowDisks);
+  }
+
+
+  @Override
+  public List<DatanodeVolumeInfo> getVolumeReport() throws IOException {
+    checkSuperuserPrivilege();
+    Map<String, Object> volumeInfoMap = data.getVolumeInfoMap();
+    if (volumeInfoMap == null) {
+      LOG.warn("DataNode volume info not available.");
+      return new ArrayList<>(0);
+    }
+    List<DatanodeVolumeInfo> volumeInfoList = new ArrayList<>();
+    for (Entry<String, Object> volume : volumeInfoMap.entrySet()) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> volumeInfo = (Map<String, Object>) volume.getValue();
+      DatanodeVolumeInfo dnStorageInfo = new DatanodeVolumeInfo(
+          volume.getKey(), (Long) volumeInfo.get("usedSpace"),
+          (Long) volumeInfo.get("freeSpace"),
+          (Long) volumeInfo.get("reservedSpace"),
+          (Long) volumeInfo.get("reservedSpaceForReplicas"),
+          (Long) volumeInfo.get("numBlocks"),
+          (StorageType) volumeInfo.get("storageType"));
+      volumeInfoList.add(dnStorageInfo);
+    }
+    return volumeInfoList;
   }
 }

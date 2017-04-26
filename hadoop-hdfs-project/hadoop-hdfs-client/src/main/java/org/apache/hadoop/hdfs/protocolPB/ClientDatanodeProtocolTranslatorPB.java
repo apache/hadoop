@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -49,6 +50,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetVolumeReportRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetVolumeReportResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeVolumeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
@@ -72,6 +76,7 @@ import com.google.common.primitives.Longs;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +100,9 @@ public class ClientDatanodeProtocolTranslatorPB implements
       RefreshNamenodesRequestProto.newBuilder().build();
   private final static GetDatanodeInfoRequestProto VOID_GET_DATANODE_INFO =
       GetDatanodeInfoRequestProto.newBuilder().build();
+  private final static GetVolumeReportRequestProto
+      VOID_GET_DATANODE_STORAGE_INFO =
+      GetVolumeReportRequestProto.newBuilder().build();
   private final static GetReconfigurationStatusRequestProto VOID_GET_RECONFIG_STATUS =
       GetReconfigurationStatusRequestProto.newBuilder().build();
   private final static StartReconfigurationRequestProto VOID_START_RECONFIG =
@@ -365,6 +373,26 @@ public class ClientDatanodeProtocolTranslatorPB implements
       response = rpcProxy.getBalancerBandwidth(NULL_CONTROLLER,
           VOID_GET_BALANCER_BANDWIDTH);
       return response.getBandwidth();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public List<DatanodeVolumeInfo> getVolumeReport() throws IOException {
+    try {
+      List<DatanodeVolumeInfo> volumeInfoList = new ArrayList<>();
+      GetVolumeReportResponseProto volumeReport = rpcProxy.getVolumeReport(
+          NULL_CONTROLLER, VOID_GET_DATANODE_STORAGE_INFO);
+      List<DatanodeVolumeInfoProto> volumeProtoList = volumeReport
+          .getVolumeInfoList();
+      for (DatanodeVolumeInfoProto proto : volumeProtoList) {
+        volumeInfoList.add(new DatanodeVolumeInfo(proto.getPath(), proto
+            .getUsedSpace(), proto.getFreeSpace(), proto.getReservedSpace(),
+            proto.getReservedSpaceForReplicas(), proto.getNumBlocks(),
+            PBHelperClient.convertStorageType(proto.getStorageType())));
+      }
+      return volumeInfoList;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

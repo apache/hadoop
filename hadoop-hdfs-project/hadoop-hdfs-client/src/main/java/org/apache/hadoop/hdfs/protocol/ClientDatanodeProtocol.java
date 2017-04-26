@@ -182,4 +182,9 @@ public interface ClientDatanodeProtocol {
    * @return balancer bandwidth
    */
   long getBalancerBandwidth() throws IOException;
+
+  /**
+   * Get volume report of datanode.
+   */
+  List<DatanodeVolumeInfo> getVolumeReport() throws IOException;
 }

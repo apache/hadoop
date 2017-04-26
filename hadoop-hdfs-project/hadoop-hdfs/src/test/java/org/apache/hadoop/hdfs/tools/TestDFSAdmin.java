@@ -216,6 +216,26 @@ public class TestDFSAdmin {
     }
   }
 
+  @Test(timeout = 30000)
+  public void testGetVolumeReport() throws Exception {
+    redirectStream();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+
+    for (int i = 0; i < cluster.getDataNodes().size(); i++) {
+      resetStream();
+      final DataNode dn = cluster.getDataNodes().get(i);
+      final String addr = String.format("%s:%d", dn.getXferAddress()
+          .getHostString(), dn.getIpcPort());
+      final int ret = ToolRunner.run(dfsAdmin, new String[] {
+          "-getVolumeReport", addr });
+      assertEquals(0, ret);
+
+      /* collect outputs */
+      final List<String> outs = Lists.newArrayList();
+      scanIntoList(out, outs);
+      assertEquals(outs.get(0), "Active Volumes : 2");
+    }
+  }
   /**
    * Test that if datanode is not reachable, some DFSAdmin commands will fail
    * elegantly with non-zero ret error code along with exception error message.

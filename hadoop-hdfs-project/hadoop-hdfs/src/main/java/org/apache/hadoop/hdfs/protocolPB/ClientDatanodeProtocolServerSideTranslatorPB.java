@@ -20,13 +20,13 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
+import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.EvictWritersRequestProto;
@@ -44,6 +44,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetRe
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetVolumeReportRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetVolumeReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
@@ -60,6 +62,7 @@ import org.apache.hadoop.security.token.Token;
 
 import com.google.common.primitives.Longs;
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeVolumeInfoProto;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -275,5 +278,29 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
     }
     return GetBalancerBandwidthResponseProto.newBuilder()
         .setBandwidth(bandwidth).build();
+  }
+
+  @Override
+  public GetVolumeReportResponseProto getVolumeReport(RpcController controller,
+      GetVolumeReportRequestProto request) throws ServiceException {
+    try {
+      org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.
+          GetVolumeReportResponseProto.Builder builder =
+          GetVolumeReportResponseProto.newBuilder();
+      List<DatanodeVolumeInfo> volumeReport = impl.getVolumeReport();
+      for (DatanodeVolumeInfo info : volumeReport) {
+        builder.addVolumeInfo(DatanodeVolumeInfoProto.newBuilder()
+            .setPath(info.getPath()).setFreeSpace(info.getFreeSpace())
+            .setNumBlocks(info.getNumBlocks())
+            .setReservedSpace(info.getReservedSpace())
+            .setReservedSpaceForReplicas(info.getReservedSpaceForReplicas())
+            .setStorageType(
+                PBHelperClient.convertStorageType(info.getStorageType()))
+            .setUsedSpace(info.getUsedSpace()));
+      }
+      return builder.build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
   }
 }

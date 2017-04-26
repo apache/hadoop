@@ -70,6 +70,19 @@ message DatanodeLocalInfoProto {
 }
 
 /**
+ * Datanode volume information
+ */
+message DatanodeVolumeInfoProto {
+  required string path = 1;
+  required StorageTypeProto storageType = 2;
+  required uint64 usedSpace = 3;
+  required uint64 freeSpace = 4;
+  required uint64 reservedSpace = 5;
+  required uint64 reservedSpaceForReplicas = 6;
+  required uint64 numBlocks = 7;
+}
+
+/**
  * DatanodeInfo array
  */
 message DatanodeInfosProto {
