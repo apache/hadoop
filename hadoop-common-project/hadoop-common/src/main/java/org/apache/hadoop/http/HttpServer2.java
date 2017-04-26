@@ -67,6 +67,7 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.mortbay.io.Buffer;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
@@ -377,7 +378,8 @@ public final class HttpServer2 implements FilterContainer {
       }
 
       if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
-        c.setExcludeCipherSuites(excludeCiphers.split(","));
+        c.setExcludeCipherSuites(
+            StringUtils.getTrimmedStrings(excludeCiphers));
         LOG.info("Excluded Cipher List:" + excludeCiphers);
       }
       return c;
