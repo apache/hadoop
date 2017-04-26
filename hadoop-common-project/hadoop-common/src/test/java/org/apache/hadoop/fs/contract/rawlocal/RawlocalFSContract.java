@@ -34,7 +34,7 @@ public class RawlocalFSContract extends LocalFSContract {
     super(conf);
   }
 
-  public static final String RAW_CONTRACT_XML = "contract/localfs.xml";
+  public static final String RAW_CONTRACT_XML = "contract/rawlocal.xml";
 
   @Override
   protected String getContractXml() {
