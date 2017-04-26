@@ -179,11 +179,11 @@ public class AsyncBlockWriter {
             block.getBlockID(), endTime - startTime, datahash);
       }
       block.clearData();
-      if (blockIDBuffer.remaining() <= (Long.SIZE / Byte.SIZE)) {
-        writeBlockBufferToFile(blockIDBuffer);
-      }
       parentCache.getTargetMetrics().incNumDirtyLogBlockUpdated();
       blockIDBuffer.putLong(block.getBlockID());
+      if (blockIDBuffer.remaining() == 0) {
+        writeBlockBufferToFile(blockIDBuffer);
+      }
     } else {
       Pipeline pipeline = parentCache.getPipeline(block.getBlockID());
       String containerName = pipeline.getContainerName();

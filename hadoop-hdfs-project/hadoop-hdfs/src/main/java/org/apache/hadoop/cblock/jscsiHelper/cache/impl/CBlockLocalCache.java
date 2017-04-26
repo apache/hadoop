@@ -69,10 +69,9 @@ public class CBlockLocalCache implements CacheModule {
 
   private final Configuration conf;
   /**
-   * LevelDB cache file, we use an off-heap cache in LevelDB for 256 MB for now.
+   * LevelDB cache file.
    */
   private final LevelDBStore cacheDB;
-  private final int cacheSizeMb = 256;
 
   /**
    * Asyncblock writer updates the cacheDB and writes the blocks async to
@@ -158,9 +157,10 @@ public class CBlockLocalCache implements CacheModule {
       throw new IllegalArgumentException("Unable to create paths. Path: " +
           dbPath);
     }
-    cacheDB = flusher.openDB(dbPath.toString(), cacheSizeMb);
+    cacheDB = flusher.openDB(dbPath.toString());
     this.containerList = containerPipelines.toArray(new
         Pipeline[containerPipelines.size()]);
+    flusher.register(dbPath.toString(), containerList);
     this.ipAddressString = getHostIP();
     this.tracePrefix = ipAddressString + ":" + this.volumeName;
     this.volumeSize = volumeSize;

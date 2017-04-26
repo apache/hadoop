@@ -156,6 +156,10 @@ public final class CBlockConfigKeys {
   public static final int DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT =
       5;
 
+  // LevelDB cache file uses an off-heap cache in LevelDB of 256 MB.
+  public static final String DFS_CBLOCK_CACHE_LEVELDB_CACHE_SIZE_MB_KEY =
+      "dfs.cblock.cache.leveldb.cache.size.mb";
+  public static final int DFS_CBLOCK_CACHE_LEVELDB_CACHE_SIZE_MB_DEFAULT = 256;
 
   private CBlockConfigKeys() {
 

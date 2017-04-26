@@ -34,19 +34,26 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
  * as well as the latency time of read and write ops.
  */
 public class CBlockTargetMetrics {
-  // Counter based Metrics
+  // IOPS based Metrics
   @Metric private MutableCounterLong numReadOps;
   @Metric private MutableCounterLong numWriteOps;
   @Metric private MutableCounterLong numReadCacheHits;
   @Metric private MutableCounterLong numReadCacheMiss;
-  @Metric private MutableCounterLong numReadLostBlocks;
-  @Metric private MutableCounterLong numBlockBufferFlush;
+
+  // Cblock internal Metrics
   @Metric private MutableCounterLong numDirectBlockWrites;
-  @Metric private MutableCounterLong numFailedDirectBlockWrites;
+  @Metric private MutableCounterLong numBlockBufferFlush;
   @Metric private MutableCounterLong numDirtyLogBlockRead;
-  @Metric private MutableCounterLong numBytesDirtyLogRead;
   @Metric private MutableCounterLong numDirtyLogBlockUpdated;
+  @Metric private MutableCounterLong numBytesDirtyLogRead;
   @Metric private MutableCounterLong numBytesDirtyLogWritten;
+
+  // Failure Metrics
+  @Metric private MutableCounterLong numReadLostBlocks;
+  @Metric private MutableCounterLong numFailedReadBlocks;
+  @Metric private MutableCounterLong numWriteIOExceptionRetryBlocks;
+  @Metric private MutableCounterLong numWriteGenericExceptionRetryBlocks;
+  @Metric private MutableCounterLong numFailedDirectBlockWrites;
   @Metric private MutableCounterLong numFailedDirtyBlockFlushes;
 
   // Latency based Metrics
@@ -91,8 +98,20 @@ public class CBlockTargetMetrics {
     numDirectBlockWrites.incr();
   }
 
+  public void incNumWriteIOExceptionRetryBlocks() {
+    numWriteIOExceptionRetryBlocks.incr();
+  }
+
+  public void incNumWriteGenericExceptionRetryBlocks() {
+    numWriteGenericExceptionRetryBlocks.incr();
+  }
+
   public void incNumFailedDirectBlockWrites() {
     numFailedDirectBlockWrites.incr();
+  }
+
+  public void incNumFailedReadBlocks() {
+    numFailedReadBlocks.incr();
   }
 
   public void incNumBlockBufferFlush() {
@@ -176,6 +195,21 @@ public class CBlockTargetMetrics {
   @VisibleForTesting
   public long getNumFailedDirectBlockWrites() {
     return numFailedDirectBlockWrites.value();
+  }
+
+  @VisibleForTesting
+  public long getNumFailedReadBlocks() {
+    return numFailedReadBlocks.value();
+  }
+
+  @VisibleForTesting
+  public long getNumWriteIOExceptionRetryBlocks() {
+    return numWriteIOExceptionRetryBlocks.value();
+  }
+
+  @VisibleForTesting
+  public long getNumWriteGenericExceptionRetryBlocks() {
+    return numWriteGenericExceptionRetryBlocks.value();
   }
 
   @VisibleForTesting

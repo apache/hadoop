@@ -136,6 +136,10 @@ public class SyncBlockReader {
           .acquireClient(parentCache.getPipeline(blockID));
       LogicalBlock block = getBlockFromContainer(blockID, client);
       return block;
+    } catch (Exception ex) {
+      parentCache.getTargetMetrics().incNumFailedReadBlocks();
+      LOG.error("read failed for BlockId: {}", blockID, ex);
+      throw ex;
     } finally {
       if (client != null) {
         parentCache.getClientManager().releaseClient(client);
