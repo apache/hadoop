@@ -20,7 +20,7 @@ package org.apache.hadoop.registry.server.services;
 
 import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
-import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
+import org.apache.hadoop.shaded.org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;

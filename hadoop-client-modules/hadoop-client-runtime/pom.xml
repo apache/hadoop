@@ -35,13 +35,6 @@
   </properties>
 
   <dependencies>
-    <!-- Need this until correction of MSHADE-36 -->
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>

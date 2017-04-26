@@ -22,7 +22,7 @@ import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.shaded.com.google.common.base.Splitter;
 import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
-import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;

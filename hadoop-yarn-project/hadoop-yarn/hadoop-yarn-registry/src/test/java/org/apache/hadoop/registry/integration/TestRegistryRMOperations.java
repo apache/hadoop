@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.registry.integration;
 
-import org.apache.curator.framework.api.BackgroundCallback;
+import org.apache.hadoop.shaded.org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.registry.AbstractRegistryTest;
 import org.apache.hadoop.registry.client.api.BindFlags;

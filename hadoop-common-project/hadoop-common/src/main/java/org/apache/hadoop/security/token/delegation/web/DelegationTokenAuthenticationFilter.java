@@ -19,7 +19,7 @@ package org.apache.hadoop.security.token.delegation.web;
 
 import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
-import org.apache.curator.framework.CuratorFramework;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;

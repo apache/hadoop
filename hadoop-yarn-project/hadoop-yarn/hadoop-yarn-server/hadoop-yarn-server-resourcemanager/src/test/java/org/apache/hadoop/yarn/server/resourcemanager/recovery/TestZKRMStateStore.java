@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.RetryNTimes;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFramework;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.hadoop.shaded.org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

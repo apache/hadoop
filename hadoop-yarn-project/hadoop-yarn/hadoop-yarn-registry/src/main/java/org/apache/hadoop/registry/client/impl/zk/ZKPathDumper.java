@@ -20,8 +20,8 @@ package org.apache.hadoop.registry.client.impl.zk;
 
 import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.GetChildrenBuilder;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFramework;
+import org.apache.hadoop.shaded.org.apache.curator.framework.api.GetChildrenBuilder;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 

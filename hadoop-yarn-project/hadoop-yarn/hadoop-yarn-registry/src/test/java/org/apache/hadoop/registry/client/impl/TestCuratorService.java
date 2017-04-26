@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.registry.client.impl;
 
-import org.apache.curator.framework.api.CuratorEvent;
+import org.apache.hadoop.shaded.org.apache.curator.framework.api.CuratorEvent;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;

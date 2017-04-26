@@ -19,12 +19,12 @@
 package org.apache.hadoop.util.curator;
 
 import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
-import org.apache.curator.framework.recipes.locks.Reaper;
-import org.apache.curator.utils.CloseableUtils;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.CloseableScheduledExecutorService;
-import org.apache.curator.utils.ThreadUtils;
-import org.apache.curator.utils.ZKPaths;
+import org.apache.hadoop.shaded.org.apache.curator.framework.recipes.locks.Reaper;
+import org.apache.hadoop.shaded.org.apache.curator.utils.CloseableUtils;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFramework;
+import org.apache.hadoop.shaded.org.apache.curator.utils.CloseableScheduledExecutorService;
+import org.apache.hadoop.shaded.org.apache.curator.utils.ThreadUtils;
+import org.apache.hadoop.shaded.org.apache.curator.utils.ZKPaths;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.zookeeper.data.Stat;
@@ -41,7 +41,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.curator.utils.PathUtils;
+import org.apache.hadoop.shaded.org.apache.curator.utils.PathUtils;
 
 /**
  * This is a copy of Curator 2.7.1's ChildReaper class, modified to work with

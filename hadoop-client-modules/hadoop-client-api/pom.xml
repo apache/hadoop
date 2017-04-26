@@ -35,21 +35,6 @@
   </properties>
 
   <dependencies>
-    <!-- Need this until correction of MSHADE-36 -->
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <!-- Need this to comment out until correction of MSHADE-36 -->
-    <!--
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-shaded-thirdparty</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    -->
-
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
@@ -66,6 +51,10 @@
         <exclusion>
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-shaded-thirdparty</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

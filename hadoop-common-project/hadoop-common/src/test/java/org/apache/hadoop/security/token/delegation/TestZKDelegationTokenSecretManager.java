@@ -25,11 +25,11 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.shaded.com.google.common.base.Supplier;
-import org.apache.curator.RetryPolicy;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.api.ACLProvider;
-import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.hadoop.shaded.org.apache.curator.RetryPolicy;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFramework;
+import org.apache.hadoop.shaded.org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.hadoop.shaded.org.apache.curator.framework.api.ACLProvider;
+import org.apache.hadoop.shaded.org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;

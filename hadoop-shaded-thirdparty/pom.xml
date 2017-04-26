@@ -88,12 +88,36 @@
             <phase>package</phase>
             <configuration>
               <createDependencyReducedPom>true</createDependencyReducedPom>
-              <relocations>
+              <filters>
+                <filter>
+                  <artifact>org.apache.curator:curator-client</artifact>
+                  <excludes>
+                    <exclude>com/google/guava/**</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>org.apache.curator:curator-framework</artifact>
+                  <excludes>
+                    <exclude>com/google/guava/**</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>org.apache.curator:curator-recipes</artifact>
+                  <excludes>
+                    <exclude>com/google/guava/**</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+               <relocations>
                 <relocation>
                   <pattern>com.google</pattern>
                   <shadedPattern>${shaded.dependency.prefix}.com.google</shadedPattern>
                 </relocation>
-              </relocations>
+                <relocation>
+                  <pattern>org.apache.curator</pattern>
+                  <shadedPattern>${shaded.dependency.prefix}.org.apache.curator</shadedPattern>
+                </relocation>
+               </relocations>
               <artifactSet>
                 <includes>
                   <include>com.google.guava:guava</include>
