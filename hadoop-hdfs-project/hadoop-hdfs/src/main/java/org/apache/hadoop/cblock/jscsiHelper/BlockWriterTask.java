@@ -79,6 +79,7 @@ public class BlockWriterTask implements Runnable {
       incTryCount();
       Pipeline pipeline = flusher.getPipeline(this.dbPath, block.getBlockID());
       client = flusher.getXceiverClientManager().acquireClient(pipeline);
+      containerName = pipeline.getContainerName();
       byte[] keybuf = Longs.toByteArray(block.getBlockID());
       byte[] data;
       long startTime = Time.monotonicNow();
@@ -97,11 +98,16 @@ public class BlockWriterTask implements Runnable {
 
       flusher.incrementRemoteIO();
 
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       flusher.getLOG().error("Writing of block failed, We have attempted " +
               "to write this block {} times to the container {}.Trace ID:{}",
           this.getTryCount(), containerName, "", ex);
       writeRetryBlock(block);
+      if (ex instanceof IOException) {
+        flusher.getTargetMetrics().incNumWriteIOExceptionRetryBlocks();
+      } else {
+        flusher.getTargetMetrics().incNumWriteGenericExceptionRetryBlocks();
+      }
     } finally {
       flusher.incFinishCount(fileName);
       if(client != null) {
