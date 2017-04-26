@@ -26,6 +26,7 @@ import org.apache.slider.api.resource.Application;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.launch.ContainerLauncher;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 
@@ -38,7 +39,8 @@ public interface ProviderService extends Service {
    */
   void buildContainerLaunchContext(ContainerLauncher containerLauncher,
       Application application, Container container, ProviderRole providerRole,
-      SliderFileSystem sliderFileSystem) throws IOException, SliderException;
+      SliderFileSystem sliderFileSystem, RoleInstance roleInstance)
+      throws IOException, SliderException;
 
 
   void setAMState(StateAccessForProviders stateAccessForProviders);

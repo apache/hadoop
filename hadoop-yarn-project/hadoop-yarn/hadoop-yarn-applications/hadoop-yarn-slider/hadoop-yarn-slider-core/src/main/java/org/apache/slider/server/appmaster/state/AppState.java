@@ -20,7 +20,13 @@ package org.apache.slider.server.appmaster.state;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -42,6 +48,7 @@ import org.apache.slider.api.proto.Messages.ComponentCountProto;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.ApplicationState;
 import org.apache.slider.api.resource.Component;
+import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.RoleStatistics;
@@ -79,6 +86,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.slider.api.ResourceKeys.*;
@@ -99,7 +107,6 @@ public class AppState {
   private final AbstractClusterServices recordFactory;
 
   private final MetricsAndMonitoring metricsAndMonitoring;
-
   /**
    * Flag set to indicate the application is live -this only happens
    * after the buildInstance operation
@@ -108,9 +115,11 @@ public class AppState {
 
   private Application app;
 
+  // priority_id -> RoleStatus
   private final Map<Integer, RoleStatus> roleStatusMap =
     new ConcurrentSkipListMap<>();
 
+  // component_name -> ProviderRole
   private final Map<String, ProviderRole> roles =
     new ConcurrentHashMap<>();
 
@@ -202,6 +211,10 @@ public class AppState {
   private SliderMetrics appMetrics;
 
   private ServiceTimelinePublisher serviceTimelinePublisher;
+
+  // A cache for loading config files from remote such as hdfs
+  public LoadingCache<ConfigFile, Object> configFileCache = null;
+
   /**
    * Create an instance
    * @param recordFactory factory for YARN records
@@ -304,8 +317,6 @@ public class AppState {
   public synchronized void buildInstance(AppStateBindingInfo binding)
       throws BadClusterStateException, BadConfigException, IOException {
     binding.validate();
-
-    log.debug("Building application state");
     containerReleaseSelector = binding.releaseSelector;
 
     // set the cluster specification (once its dependency the client properties
@@ -313,10 +324,8 @@ public class AppState {
     this.app = binding.application;
     appMetrics = SliderMetrics.register(app.getName(),
         "Metrics for service");
-    appMetrics
-        .tag("type", "Metrics type [component or service]", "service");
-    appMetrics
-        .tag("appId", "Application id for service", app.getId());
+    appMetrics.tag("type", "Metrics type [component or service]", "service");
+    appMetrics.tag("appId", "Application id for service", app.getId());
 
     org.apache.slider.api.resource.Configuration conf = app.getConfiguration();
     startTimeThreshold =
@@ -327,12 +336,7 @@ public class AppState {
     nodeFailureThreshold = conf.getPropertyInt(NODE_FAILURE_THRESHOLD,
         DEFAULT_NODE_FAILURE_THRESHOLD);
 
-    //build the initial role list
-    List<ProviderRole> roleList = new ArrayList<>(binding.roles);
-    for (ProviderRole providerRole : roleList) {
-      buildRole(providerRole);
-    }
-
+    //build the initial component list
     int priority = 1;
     for (Component component : app.getComponents()) {
       priority = getNewPriority(priority);
@@ -340,25 +344,18 @@ public class AppState {
       if (roles.containsKey(name)) {
         continue;
       }
-      if (component.getUniqueComponentSupport()) {
-        log.info("Skipping group " + name + ", as it's unique component");
-        continue;
-      }
       log.info("Adding component: " + name);
-      ProviderRole dynamicRole =
-          createComponent(name, name, component, priority);
-      buildRole(dynamicRole);
-      roleList.add(dynamicRole);
+      createComponent(name, name, component, priority++);
     }
+
     //then pick up the requirements
-    buildRoleRequirementsFromResources();
+//    buildRoleRequirementsFromResources();
 
     // set up the role history
     roleHistory = new RoleHistory(roleStatusMap.values(), recordFactory);
     roleHistory.onStart(binding.fs, binding.historyPath);
     // trigger first node update
     roleHistory.onNodesUpdated(binding.nodeReports);
-
     //rebuild any live containers
     rebuildModelFromRestart(binding.liveContainers);
 
@@ -367,9 +364,39 @@ public class AppState {
     //mark as live
     applicationLive = true;
     app.setState(STARTED);
+    createConfigFileCache(binding.fs);
   }
 
-  //TODO WHY do we need to create the component for AM ?
+  private void createConfigFileCache(final FileSystem fileSystem) {
+    this.configFileCache =
+        CacheBuilder.newBuilder().expireAfterAccess(10, TimeUnit.MINUTES)
+            .build(new CacheLoader<ConfigFile, Object>() {
+              @Override public Object load(ConfigFile key) throws Exception {
+                switch (key.getType()) {
+                case HADOOP_XML:
+                  try (FSDataInputStream input = fileSystem
+                      .open(new Path(key.getSrcFile()))) {
+                    org.apache.hadoop.conf.Configuration confRead =
+                        new org.apache.hadoop.conf.Configuration(false);
+                    confRead.addResource(input);
+                    Map<String, String> map = new HashMap<>(confRead.size());
+                    for (Map.Entry<String, String> entry : confRead) {
+                      map.put(entry.getKey(), entry.getValue());
+                    }
+                    return map;
+                  }
+                case TEMPLATE:
+                  try (FSDataInputStream fileInput = fileSystem
+                      .open(new Path(key.getSrcFile()))) {
+                    return IOUtils.toString(fileInput);
+                  }
+                default:
+                  return null;
+                }
+              }
+            });
+  }
+
   public ProviderRole createComponent(String name, String group,
       Component component, int priority) throws BadConfigException {
     org.apache.slider.api.resource.Configuration conf =
@@ -384,26 +411,28 @@ public class AppState {
         DEF_YARN_LABEL_EXPRESSION);
     ProviderRole newRole =
         new ProviderRole(name, group, priority, (int)placementPolicy, threshold,
-            placementTimeout, label, component);
-
+            placementTimeout, label, component, this);
+    buildRole(newRole, component);
     log.info("Created a new role " + newRole);
     return newRole;
   }
 
   @VisibleForTesting
-  public synchronized List<ProviderRole> updateComponents(Map<String, Long>
+  public synchronized void updateComponents(Map<String, Long>
       componentCounts) throws BadConfigException {
     for (Component component : app.getComponents()) {
       if (componentCounts.containsKey(component.getName())) {
-        component.setNumberOfContainers(componentCounts.get(component
-            .getName()));
+        long count = componentCounts.get(component.getName());
+        component.setNumberOfContainers(count);
+        ProviderRole role = roles.get(component.getName());
+        if (role != null && roleStatusMap.get(role.id) != null) {
+          setDesiredContainers(roleStatusMap.get(role.id), (int) count);
+        }
       }
     }
-    //TODO update cluster description
-    return buildRoleRequirementsFromResources();
   }
 
-  public synchronized List<ProviderRole> updateComponents(
+  public synchronized void updateComponents(
       Messages.FlexComponentsRequestProto requestProto)
       throws BadConfigException {
     Map<String, Long> componentCounts = new HashMap<>();
@@ -412,116 +441,119 @@ public class AppState {
       componentCounts.put(componentCount.getName(), componentCount
           .getNumberOfContainers());
     }
-    return updateComponents(componentCounts);
+    updateComponents(componentCounts);
   }
 
   /**
    * build the role requirements from the cluster specification
    * @return a list of any dynamically added provider roles
    */
-  private List<ProviderRole> buildRoleRequirementsFromResources()
-      throws BadConfigException {
 
-    List<ProviderRole> newRoles = new ArrayList<>(0);
-
-    // now update every role's desired count.
-    // if there are no instance values, that role count goes to zero
-    // Add all the existing roles
-    // component name -> number of containers
-    Map<String, Integer> groupCounts = new HashMap<>();
-
-    for (RoleStatus roleStatus : getRoleStatusMap().values()) {
-      if (roleStatus.isExcludeFromFlexing()) {
-        // skip inflexible roles, e.g AM itself
-        continue;
-      }
-      long currentDesired = roleStatus.getDesired();
-      String role = roleStatus.getName();
-      String roleGroup = roleStatus.getGroup();
-      Component component = roleStatus.getProviderRole().component;
-      int desiredInstanceCount = component.getNumberOfContainers().intValue();
-
-      int newDesired = desiredInstanceCount;
-      if (component.getUniqueComponentSupport()) {
-        Integer groupCount = 0;
-        if (groupCounts.containsKey(roleGroup)) {
-          groupCount = groupCounts.get(roleGroup);
-        }
-
-        newDesired = desiredInstanceCount - groupCount;
-
-        if (newDesired > 0) {
-          newDesired = 1;
-          groupCounts.put(roleGroup, groupCount + newDesired);
-        } else {
-          newDesired = 0;
-        }
-      }
-
-      if (newDesired == 0) {
-        log.info("Role {} has 0 instances specified", role);
-      }
-      if (currentDesired != newDesired) {
-        log.info("Role {} flexed from {} to {}", role, currentDesired,
-            newDesired);
-        setDesiredContainers(roleStatus, newDesired);
-      }
-    }
-
-    // now the dynamic ones. Iterate through the the cluster spec and
-    // add any role status entries not in the role status
-
-    for (Component component : app.getComponents()) {
-      String name = component.getName();
-      if (roles.containsKey(name)) {
-        continue;
-      }
-      if (component.getUniqueComponentSupport()) {
-        // THIS NAME IS A GROUP
-        int desiredInstanceCount = component.getNumberOfContainers().intValue();
-        Integer groupCount = 0;
-        if (groupCounts.containsKey(name)) {
-          groupCount = groupCounts.get(name);
-        }
-        for (int i = groupCount + 1; i <= desiredInstanceCount; i++) {
-          // this is a new instance of an existing group
-          String newName = String.format("%s%d", name, i);
-          if (roles.containsKey(newName)) {
-            continue;
-          }
-          int newPriority = getNewPriority(i);
-          log.info("Adding new role {}", newName);
-          ProviderRole dynamicRole =
-              createComponent(newName, name, component, newPriority);
-          RoleStatus newRole = buildRole(dynamicRole);
-          incDesiredContainers(newRole);
-          log.info("New role {}", newRole);
-          if (roleHistory != null) {
-            roleHistory.addNewRole(newRole);
-          }
-          newRoles.add(dynamicRole);
-        }
-      } else {
-        // this is a new value
-        log.info("Adding new role {}, num containers {}", name,
-            component.getNumberOfContainers());
-        ProviderRole dynamicRole =
-            createComponent(name, name, component, getNewPriority(1));
-        RoleStatus newRole = buildRole(dynamicRole);
-        incDesiredContainers(newRole,
-            component.getNumberOfContainers().intValue());
-        log.info("New role {}", newRole);
-        if (roleHistory != null) {
-          roleHistory.addNewRole(newRole);
-        }
-        newRoles.add(dynamicRole);
-      }
-    }
-    // and fill in all those roles with their requirements
-    buildRoleResourceRequirements();
-
-    return newRoles;
-  }
+//  private List<ProviderRole> buildRoleRequirementsFromResources()
+//      throws BadConfigException {
+//
+//    List<ProviderRole> newRoles = new ArrayList<>(0);
+//
+//    // now update every role's desired count.
+//    // if there are no instance values, that role count goes to zero
+//    // Add all the existing roles
+//    // component name -> number of containers
+//    Map<String, Integer> groupCounts = new HashMap<>();
+//
+//    for (RoleStatus roleStatus : getRoleStatusMap().values()) {
+//      if (roleStatus.isExcludeFromFlexing()) {
+//        // skip inflexible roles, e.g AM itself
+//        continue;
+//      }
+//      long currentDesired = roleStatus.getDesired();
+//      String role = roleStatus.getName();
+//      String roleGroup = roleStatus.getGroup();
+//      Component component = roleStatus.getProviderRole().component;
+//      int desiredInstanceCount = component.getNumberOfContainers().intValue();
+//
+//      int newDesired = desiredInstanceCount;
+//      if (component.getUniqueComponentSupport()) {
+//        Integer groupCount = 0;
+//        if (groupCounts.containsKey(roleGroup)) {
+//          groupCount = groupCounts.get(roleGroup);
+//        }
+//
+//        newDesired = desiredInstanceCount - groupCount;
+//
+//        if (newDesired > 0) {
+//          newDesired = 1;
+//          groupCounts.put(roleGroup, groupCount + newDesired);
+//        } else {
+//          newDesired = 0;
+//        }
+//      }
+//
+//      if (newDesired == 0) {
+//        log.info("Role {} has 0 instances specified", role);
+//      }
+//      if (currentDesired != newDesired) {
+//        log.info("Role {} flexed from {} to {}", role, currentDesired,
+//            newDesired);
+//        setDesiredContainers(roleStatus, newDesired);
+//      }
+//    }
+//
+//    log.info("Counts per component: " + groupCounts);
+//    // now the dynamic ones. Iterate through the the cluster spec and
+//    // add any role status entries not in the role status
+//
+//    List<RoleStatus> list = new ArrayList<>(getRoleStatusMap().values());
+//    for (RoleStatus roleStatus : list) {
+//      String name = roleStatus.getName();
+//      Component component = roleStatus.getProviderRole().component;
+//      if (roles.containsKey(name)) {
+//        continue;
+//      }
+//      if (component.getUniqueComponentSupport()) {
+//        // THIS NAME IS A GROUP
+//        int desiredInstanceCount = component.getNumberOfContainers().intValue();
+//        Integer groupCount = 0;
+//        if (groupCounts.containsKey(name)) {
+//          groupCount = groupCounts.get(name);
+//        }
+//        log.info("Component " + component.getName() + ", current count = "
+//            + groupCount + ", desired count = " + desiredInstanceCount);
+//        for (int i = groupCount + 1; i <= desiredInstanceCount; i++) {
+//          int priority = roleStatus.getPriority();
+//          // this is a new instance of an existing group
+//          String newName = String.format("%s%d", name, i);
+//          int newPriority = getNewPriority(priority + i - 1);
+//          log.info("Adding new role {}", newName);
+//          ProviderRole dynamicRole =
+//              createComponent(newName, name, component, newPriority);
+//          RoleStatus newRole = buildRole(dynamicRole);
+//          incDesiredContainers(newRole);
+//          log.info("New role {}", newRole);
+//          if (roleHistory != null) {
+//            roleHistory.addNewRole(newRole);
+//          }
+//          newRoles.add(dynamicRole);
+//        }
+//      } else {
+//        // this is a new value
+//        log.info("Adding new role {}", name);
+//        ProviderRole dynamicRole =
+//            createComponent(name, name, component, roleStatus.getPriority());
+//        RoleStatus newRole = buildRole(dynamicRole);
+//        incDesiredContainers(roleStatus,
+//            component.getNumberOfContainers().intValue());
+//        log.info("New role {}", newRole);
+//        if (roleHistory != null) {
+//          roleHistory.addNewRole(newRole);
+//        }
+//        newRoles.add(dynamicRole);
+//      }
+//    }
+//    // and fill in all those roles with their requirements
+//    buildRoleResourceRequirements();
+//
+//    return newRoles;
+//  }
 
   private int getNewPriority(int start) {
     if (!rolePriorityMap.containsKey(start)) {
@@ -539,16 +571,20 @@ public class AppState {
    * @return the role status built up
    * @throws BadConfigException if a role of that priority already exists
    */
-  public RoleStatus buildRole(ProviderRole providerRole) throws BadConfigException {
+  public RoleStatus buildRole(ProviderRole providerRole, Component component)
+      throws BadConfigException {
     // build role status map
     int priority = providerRole.id;
     if (roleStatusMap.containsKey(priority)) {
-      throw new BadConfigException("Duplicate Provider Key: %s and %s",
-                                   providerRole,
-                                   roleStatusMap.get(priority)
-                                       .getProviderRole());
+      throw new BadConfigException("Duplicate component priority Key: %s and %s",
+          providerRole, roleStatusMap.get(priority));
     }
     RoleStatus roleStatus = new RoleStatus(providerRole);
+    roleStatus.setResourceRequirements(buildResourceRequirements(roleStatus));
+    long prev = roleStatus.getDesired();
+    setDesiredContainers(roleStatus, component.getNumberOfContainers().intValue());
+    log.info("Set desired containers for component " + component.getName() +
+        " from " + prev + " to " + roleStatus.getDesired());
     roleStatusMap.put(priority, roleStatus);
     String name = providerRole.name;
     roles.put(name, providerRole);
@@ -558,16 +594,6 @@ public class AppState {
     return roleStatus;
   }
 
-  /**
-   * Build up the requirements of every resource
-   */
-  private void buildRoleResourceRequirements() {
-    for (RoleStatus role : roleStatusMap.values()) {
-      role.setResourceRequirements(buildResourceRequirements(role));
-      log.info("Setting resource requirements for {} to {}", role.getName(),
-          role.getResourceRequirements());
-    }
-  }
   /**
    * Look up the status entry of a role or raise an exception
    * @param key role ID
@@ -731,7 +757,7 @@ public class AppState {
   }
 
   /**
-   * Enum all nodes by role. 
+   * Enum all nodes by role.
    * @param role role, or "" for all roles
    * @return a list of nodes, may be empty
    */
@@ -785,7 +811,7 @@ public class AppState {
   }
 
   /**
-   * Build a map of role->nodename->node-info
+   * Build a map of Component_name -> ContainerId -> ClusterNode
    * 
    * @return the map of Role name to list of Cluster Nodes
    */
@@ -850,7 +876,7 @@ public class AppState {
 
   /**
    * Create a container request.
-   * Update internal state, such as the role request count. 
+   * Update internal state, such as the role request count.
    * Anti-Affine: the {@link RoleStatus#outstandingAArequest} is set here.
    * This is where role history information will be used for placement decisions.
    * @param role role
@@ -942,18 +968,9 @@ public class AppState {
   }
 
   private void setDesiredContainers(RoleStatus role, int n) {
+    int delta = n - role.getComponentMetrics().containersDesired.value();
     role.getComponentMetrics().containersDesired.set(n);
-    appMetrics.containersDesired.set(n);
-  }
-
-  private void incDesiredContainers(RoleStatus role) {
-    role.getComponentMetrics().containersDesired.incr();
-    appMetrics.containersDesired.incr();
-  }
-
-  private void incDesiredContainers(RoleStatus role, int n) {
-    role.getComponentMetrics().containersDesired.incr(n);
-    appMetrics.containersDesired.incr(n);
+    appMetrics.containersDesired.incr(delta);
   }
 
   private void incCompletedContainers(RoleStatus role) {
@@ -1001,7 +1018,8 @@ public class AppState {
    * Build up the resource requirements for this role from the cluster
    * specification, including substituting max allowed values if the
    * specification asked for it (except when
-   * {@link ResourceKeys#YARN_RESOURCE_NORMALIZATION_ENABLED} is set to false).
+   * {@link org.apache.slider.api.ResourceKeys#YARN_RESOURCE_NORMALIZATION_ENABLED}
+   * is set to false).
    * @param role role
    * during normalization
    */
@@ -1009,11 +1027,6 @@ public class AppState {
     // Set up resource requirements from role values
     String name = role.getName();
     Component component = role.getProviderRole().component;
-    if (component == null) {
-      // this is for AM container
-      // TODO why do we need to create the component for AM ?
-      return Resource.newInstance(1, 512);
-    }
     int cores = DEF_YARN_CORES;
     if (component.getResource() != null && component.getResource().getCpus()
         != null) {
@@ -1282,10 +1295,13 @@ public class AppState {
       if (roleInstance != null) {
         int roleId = roleInstance.roleId;
         String rolename = roleInstance.role;
-        log.info("Failed container in role[{}] : {}", roleId, rolename);
+        log.info("Failed container in role[{}] : {}", roleId,
+            roleInstance.getCompInstanceName());
         try {
           RoleStatus roleStatus = lookupRoleStatus(roleInstance.roleId);
           decRunningContainers(roleStatus);
+          roleStatus.getProviderRole().failedInstanceName
+              .offer(roleInstance.compInstanceName);
           boolean shortLived = isShortLived(roleInstance);
           String message;
           Container failedContainer = roleInstance.container;
@@ -1571,7 +1587,7 @@ public class AppState {
 
   /**
    * Look at the allocation status of one role, and trigger add/release
-   * actions if the number of desired role instances doesn't equal 
+   * actions if the number of desired role instances doesn't equal
    * (actual + pending).
    * <p>
    * MUST be executed from within a synchronized method
@@ -1584,7 +1600,6 @@ public class AppState {
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   private List<AbstractRMOperation> reviewOneRole(RoleStatus role)
       throws SliderInternalStateException, TriggerClusterTeardownException {
-    log.info("review one role " + role.getName());
     List<AbstractRMOperation> operations = new ArrayList<>();
     long delta;
     long expected;
@@ -1594,9 +1609,7 @@ public class AppState {
       expected = role.getDesired();
     }
 
-    log.info("Reviewing {} : ", role);
-    log.debug("Expected {}, Requested/Running {}, Delta: {}", expected,
-        role.getActualAndRequested(), delta);
+    log.info("Reviewing " + role.getName() + ": " + role.getComponentMetrics());
     checkFailureThreshold(role);
 
     if (expected < 0 ) {
@@ -1729,7 +1742,9 @@ public class AppState {
         for (RoleInstance possible : finalCandidates) {
           log.info("Targeting for release: {}", possible);
           containerReleaseSubmitted(possible.container);
-          operations.add(new ContainerReleaseOperation(possible.getId()));
+          role.getProviderRole().failedInstanceName
+              .offer(possible.compInstanceName);
+          operations.add(new ContainerReleaseOperation(possible.getContainerId()));
         }
       }
 
@@ -1783,7 +1798,7 @@ public class AppState {
     for (RoleInstance role : activeRoleInstances) {
       if (role.container.getId().equals(containerId)) {
         containerReleaseSubmitted(role.container);
-        operations.add(new ContainerReleaseOperation(role.getId()));
+        operations.add(new ContainerReleaseOperation(role.getContainerId()));
       }
     }
 
@@ -1907,17 +1922,6 @@ public class AppState {
   }
 
   /**
-   * Get diagnostics info about containers
-   */
-  public String getContainerDiagnosticInfo() {
-    StringBuilder builder = new StringBuilder();
-    for (RoleStatus roleStatus : getRoleStatusMap().values()) {
-      builder.append(roleStatus).append('\n');
-    }
-    return builder.toString();
-  }
-
-  /**
    * Event handler for the list of active containers on restart.
    * Sets the info key {@link StatusKeys#INFO_CONTAINERS_AM_RESTART}
    * to the size of the list passed down (and does not set it if none were)
@@ -1965,10 +1969,10 @@ public class AppState {
 
     //update app state internal structures and maps
 
+    //TODO recover the component instance name from zk registry ?
     RoleInstance instance = new RoleInstance(container);
     instance.command = roleName;
     instance.role = roleName;
-    instance.group = role.getGroup();
     instance.roleId = roleId;
     instance.environment = new String[0];
     instance.container = container;

@@ -21,31 +21,31 @@ package org.apache.slider.server.appmaster.actions;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.state.AppState;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 
 import java.util.concurrent.TimeUnit;
 
 /**
  * Tell AM to unregister this component instance
- * {@link SliderAppMaster#unregisterComponent(ContainerId)}
  */
 public class UnregisterComponentInstance extends AsyncAction {
   
 
-  public final ContainerId containerId;
+  public final RoleInstance roleInstance;
 
-  public UnregisterComponentInstance(ContainerId containerId,
-      long delay,
-      TimeUnit timeUnit) {
-    super("UnregisterComponentInstance :" + containerId.toString(),
+  public UnregisterComponentInstance(long delay, TimeUnit timeUnit,
+      RoleInstance roleInstance) {
+    super("UnregisterComponentInstance :" + roleInstance.getCompInstanceName()
+            + ", ContainerId = " + roleInstance.getContainerId(),
         delay, timeUnit);
-    this.containerId = containerId;
+    this.roleInstance = roleInstance;
   }
 
   @Override
   public void execute(SliderAppMaster appMaster,
       QueueAccess queueService,
       AppState appState) throws Exception {
-    appMaster.unregisterComponent(containerId);
+    appMaster.unregisterComponent(roleInstance);
 
   }
 }

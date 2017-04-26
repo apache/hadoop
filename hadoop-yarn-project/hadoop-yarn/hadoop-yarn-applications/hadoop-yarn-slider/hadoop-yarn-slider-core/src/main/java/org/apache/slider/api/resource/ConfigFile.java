@@ -17,19 +17,18 @@
 
 package org.apache.slider.api.resource;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-
-import java.io.Serializable;
-import java.util.Map;
-import java.util.Objects;
-
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * A config file that needs to be created and made available as a volume in an
@@ -45,7 +44,7 @@ public class ConfigFile implements Serializable {
 
   public enum TypeEnum {
     XML("XML"), PROPERTIES("PROPERTIES"), JSON("JSON"), YAML("YAML"), TEMPLATE(
-        "TEMPLATE"), ENV("ENV"), HADOOP_XML("HADOOP_XML");
+        "TEMPLATE"), ENV("ENV"), HADOOP_XML("HADOOP_XML"),;
 
     private String value;
 
@@ -63,7 +62,18 @@ public class ConfigFile implements Serializable {
   private TypeEnum type = null;
   private String destFile = null;
   private String srcFile = null;
-  private Map<String, String> props = null;
+  private Map<String, String> props = new HashMap<>();
+
+  public ConfigFile copy() {
+    ConfigFile copy = new ConfigFile();
+    copy.setType(this.getType());
+    copy.setSrcFile(this.getSrcFile());
+    copy.setDestFile(this.getDestFile());
+    if (this.getProps() != null && !this.getProps().isEmpty()) {
+      copy.getProps().putAll(this.getProps());
+    }
+    return copy;
+  }
 
   /**
    * Config file in the standard format like xml, properties, json, yaml,
@@ -105,19 +115,20 @@ public class ConfigFile implements Serializable {
   }
 
   /**
-   * TODO this probably is not required for non-template configs. It is now used as symlink for localization for non-template configs - we could infer the name from destFile instead
-   *
-   * Required for type template. This provides the source location of the
-   * template which needs to be mounted as dest_file post property
-   * substitutions. Typically the src_file would point to a source controlled
-   * network accessible file maintained by tools like puppet, chef, etc.
+   * This provides the source location of the configuration file, the content
+   * of which is dumped to dest_file post property substitutions, in the format
+   * as specified in type. Typically the src_file would point to a source
+   * controlled network accessible file maintained by tools like puppet, chef,
+   * or hdfs etc. Currently, only hdfs is supported.
    **/
   public ConfigFile srcFile(String srcFile) {
     this.srcFile = srcFile;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Required for type template. This provides the source location of the template which needs to be mounted as dest_file post property substitutions. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, etc.")
+  @ApiModelProperty(example = "null", value = "This provides the source location of the configuration file, "
+      + "the content of which is dumped to dest_file post property substitutions, in the format as specified in type. "
+      + "Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.")
   @JsonProperty("src_file")
   public String getSrcFile() {
     return srcFile;
@@ -129,17 +140,19 @@ public class ConfigFile implements Serializable {
   }
 
   /**
-   * A blob of key value pairs that will be dumped in the dest_file in the
-   * format as specified in type. If the type is template then the attribute
-   * src_file is mandatory and the src_file content is dumped to dest_file post
-   * property substitutions.
+   A blob of key value pairs that will be dumped in the dest_file in the format
+   as specified in type. If src_file is specified, src_file content are dumped
+   in the dest_file and these properties will overwrite, if any, existing
+   properties in src_file or be added as new properties in src_file.
    **/
   public ConfigFile props(Map<String, String> props) {
     this.props = props;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If the type is template then the attribute src_file is mandatory and the src_file content is dumped to dest_file post property substitutions.")
+  @ApiModelProperty(example = "null", value = "A blob of key value pairs that will be dumped in the dest_file in the format as specified in type."
+      + " If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any,"
+      + " existing properties in src_file or be added as new properties in src_file.")
   @JsonProperty("props")
   public Map<String, String> getProps() {
     return props;
@@ -175,8 +188,7 @@ public class ConfigFile implements Serializable {
     ConfigFile configFile = (ConfigFile) o;
     return Objects.equals(this.type, configFile.type)
         && Objects.equals(this.destFile, configFile.destFile)
-        && Objects.equals(this.srcFile, configFile.srcFile)
-        && Objects.equals(this.props, configFile.props);
+        && Objects.equals(this.srcFile, configFile.srcFile);
   }
 
   @Override

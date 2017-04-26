@@ -272,6 +272,7 @@ public final class RoleStatus implements MetricSet {
       // containers -- maybe we need releasing
       //if we are releasing, remove the number that are already released.
       //but never switch to a positive
+      // TODO, WHY is this min operation even needed ??? if delta is negative, it's always < 0 ???
       delta = Math.min(delta, 0);
     }
     return delta;

@@ -67,7 +67,7 @@ public class TestMockAppStateDynamicHistory extends BaseMockAppStateTest
     return new MockYarnEngine(8, 1);
   }
 
-  @Test
+  // TODO does not support adding new components dynamically
   public void testDynamicRoleHistory() throws Throwable {
 
     String dynamic = "dynamicRole";
@@ -81,12 +81,8 @@ public class TestMockAppStateDynamicHistory extends BaseMockAppStateTest
         .COMPONENT_PLACEMENT_POLICY, "" + placementPolicy);
     application.getComponents().add(component);
 
-    // write the definitions
-    List<ProviderRole> updates = appState.updateComponents(
+    appState.updateComponents(
         Collections.singletonMap(dynamic, desired));
-    assertEquals(1, updates.size());
-    ProviderRole updatedRole = updates.get(0);
-    assertEquals(updatedRole.placementPolicy, placementPolicy);
 
     // now look at the role map
     assertNotNull(appState.getRoleMap().get(dynamic));

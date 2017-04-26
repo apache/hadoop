@@ -240,7 +240,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String STDERR_AM = "slider-err.txt";
   String DEFAULT_GC_OPTS = "";
 
-  String HADOOP_USER_NAME = ApplicationConstants.Environment.USER.toString();
+  String HADOOP_USER_NAME = "HADOOP_USER_NAME";
   String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
   String SLIDER_PASSPHRASE = "SLIDER_PASSPHRASE";
 
@@ -306,7 +306,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String CERT_FILE_LOCALIZATION_PATH = INFRA_RUN_SECURITY_DIR + "ca.crt";
 
   String AM_CONFIG_GENERATION = "am.config.generation";
-  String APP_CONF_DIR = "app/conf";
+  String APP_CONF_DIR = "conf";
 
   String APP_RESOURCES = "application.resources";
   String APP_RESOURCES_DIR = "app/resources";

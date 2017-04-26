@@ -87,7 +87,7 @@ public class TestMockAppStateFlexDynamicRoles extends BaseMockAppStateTest
     createAndStartNodes();
   }
 
-  @Test
+  // TODO does not support adding new components dynamically
   public void testDynamicFlexAddRole() throws Throwable {
     Application application = appState.getClusterStatus();
     Component component = new Component().name("dynamicAdd7")
@@ -96,16 +96,12 @@ public class TestMockAppStateFlexDynamicRoles extends BaseMockAppStateTest
     appState.updateComponents(Collections.singletonMap(component.getName(),
         component.getNumberOfContainers()));
     createAndStartNodes();
-    dumpClusterDescription("updated CD", appState.getClusterStatus());
     appState.lookupRoleStatus("dynamicAdd7");
   }
 
   @Test
   public void testDynamicFlexDropRole() throws Throwable {
     appState.updateComponents(Collections.singletonMap("dynamic-6", 0L));
-
-    Application getCD = appState.getClusterStatus();
-    dumpClusterDescription("updated CD", getCD);
     //status is retained for future
     appState.lookupRoleStatus("dynamic-6");
   }

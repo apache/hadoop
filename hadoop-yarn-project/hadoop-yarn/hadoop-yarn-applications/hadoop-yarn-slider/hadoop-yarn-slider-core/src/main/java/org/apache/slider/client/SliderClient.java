@@ -653,7 +653,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   public ApplicationId actionCreate(Application application)
       throws IOException, YarnException {
-    ServiceApiUtil.validateApplicationPostPayload(application);
+    ServiceApiUtil.validateApplicationPayload(application,
+        sliderFileSystem.getFileSystem());
     String appName = application.getName();
     validateClusterName(appName);
     verifyNoLiveApp(appName, "Create");
@@ -692,7 +693,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     boolean hasSliderAMLog4j =
         addAMLog4jResource(appName, conf, localResources);
     // copy jars to hdfs and add to localResources
-    Path tempPath = addJarResource(appName, localResources);
+    addJarResource(appName, localResources);
     // add keytab if in secure env
     addKeytabResourceIfSecure(sliderFileSystem, localResources, conf, appName);
     printLocalResources(localResources);
@@ -700,7 +701,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     //TODO SliderAMClientProvider#copyEnvVars
     //TODO localResource putEnv
 
-    Map<String, String> env = addAMEnv(conf, tempPath);
+    Map<String, String> env = addAMEnv(conf);
 
     // create AM CLI
     String cmdStr =
@@ -805,7 +806,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return cmdStr;
   }
 
-  private Map<String, String> addAMEnv(Configuration conf, Path tempPath)
+  private Map<String, String> addAMEnv(Configuration conf)
       throws IOException {
     Map<String, String> env = new HashMap<>();
     ClasspathConstructor classpath =
@@ -818,6 +819,13 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     String jaas = System.getenv(HADOOP_JAAS_DEBUG);
     if (jaas != null) {
       env.put(HADOOP_JAAS_DEBUG, jaas);
+    }
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      String userName = UserGroupInformation.getCurrentUser().getUserName();
+      log.info("Run as user " + userName);
+      // HADOOP_USER_NAME env is used by UserGroupInformation when log in
+      // This env makes AM run as this user
+      env.put("HADOOP_USER_NAME", userName);
     }
     env.putAll(getAmLaunchEnv(conf));
     log.info("AM env: \n{}", stringifyMap(env));

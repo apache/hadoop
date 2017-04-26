@@ -19,6 +19,7 @@
 package org.apache.slider.server.appmaster.state;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
 import org.apache.hadoop.registry.client.types.Endpoint;
 import org.apache.hadoop.registry.client.types.ProtocolTypes;
@@ -27,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.proto.Messages;
+import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.providers.ProviderRole;
@@ -42,6 +44,8 @@ public final class RoleInstance implements Cloneable {
 
   public Container container;
   public ProviderRole providerRole;
+  public long componentId = -1;
+  public String compInstanceName = null;
   /**
    * Container ID
    */
@@ -58,7 +62,6 @@ public final class RoleInstance implements Cloneable {
    * Name of the role
    */
   public String role;
-  public String group;
 
   /**
    * Version of the app
@@ -106,7 +109,7 @@ public final class RoleInstance implements Cloneable {
   public String host;
   public String hostURL;
   public ContainerAllocationOutcome placement;
-
+  public Path compInstanceDir;
 
   /**
    * A list of registered endpoints.
@@ -114,10 +117,24 @@ public final class RoleInstance implements Cloneable {
   private List<Endpoint> endpoints =
       new ArrayList<>(2);
 
-  public RoleInstance(ContainerAssignment assignment) {
-    this(assignment.container);
-    placement = assignment.placement;
+  public RoleInstance(Container container, ProviderRole role) {
+    this(container);
+    if (role.componentIdCounter != null) {
+      componentId = role.componentIdCounter.getAndIncrement();
+      compInstanceName = role.name + componentId;
+    } else {
+      compInstanceName = role.name;
+    }
+    this.providerRole = role;
   }
+
+  public RoleInstance(Container container, ProviderRole role,
+      String compInstanceName) {
+    this(container);
+    this.compInstanceName = compInstanceName;
+    this.providerRole = role;
+  }
+
   /**
    * Create an instance to track an allocated container
    * @param container a container which must be non null, and have a non-null Id field.
@@ -136,10 +153,6 @@ public final class RoleInstance implements Cloneable {
       hostURL = "http://" + container.getNodeHttpAddress();
     }
   }
-
-  public ContainerId getId() {
-    return container.getId();
-  }
   
   public NodeId getHost() {
     return container.getNodeId();
@@ -151,6 +164,7 @@ public final class RoleInstance implements Cloneable {
       new StringBuilder("RoleInstance{");
     sb.append("role='").append(role).append('\'');
     sb.append(", id='").append(id).append('\'');
+    sb.append(", instanceName='").append(compInstanceName).append('\'');
     sb.append(", container=").append(SliderUtils.containerToString(container));
     sb.append(", createTime=").append(createTime);
     sb.append(", startTime=").append(startTime);
@@ -170,7 +184,7 @@ public final class RoleInstance implements Cloneable {
   }
 
   public ContainerId getContainerId() {
-    return container != null ? container.getId() : null;
+    return container.getId();
   }
 
   /**
@@ -321,5 +335,9 @@ public final class RoleInstance implements Cloneable {
       info.output = output;
     }
     return info;
+  }
+
+  public String getCompInstanceName() {
+    return compInstanceName;
   }
 }

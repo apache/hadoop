@@ -30,6 +30,7 @@ import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.launch.ContainerLauncher;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.providers.ProviderService;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 
@@ -118,7 +119,8 @@ public class MockProviderService implements ProviderService {
   @Override
   public void buildContainerLaunchContext(ContainerLauncher containerLauncher,
       Application application, Container container, ProviderRole providerRole,
-      SliderFileSystem sliderFileSystem) throws IOException, SliderException {
+      SliderFileSystem sliderFileSystem, RoleInstance roleInstance)
+      throws IOException, SliderException {
 
   }
 

@@ -176,7 +176,14 @@ public abstract class BaseMockAppStateTest extends SliderTestBase implements
    */
   public RoleInstance roleInstance(ContainerAssignment assigned) {
     Container target = assigned.container;
-    RoleInstance ri = new RoleInstance(target);
+    String failedInstance =
+        assigned.role.getProviderRole().failedInstanceName.poll();
+    RoleInstance ri;
+    if (failedInstance != null) {
+      ri = new RoleInstance(target,  assigned.role.getProviderRole(), failedInstance);
+    } else {
+      ri = new RoleInstance(target, assigned.role.getProviderRole());
+    }
     ri.roleId = assigned.role.getPriority();
     ri.role = assigned.role.getName();
     return ri;

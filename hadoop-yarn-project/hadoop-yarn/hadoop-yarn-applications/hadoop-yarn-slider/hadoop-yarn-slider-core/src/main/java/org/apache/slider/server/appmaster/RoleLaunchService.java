@@ -150,24 +150,26 @@ public class RoleLaunchService
         containerLauncher.setupUGI();
         containerLauncher.putEnv(envVars);
 
-        log.info("Launching container {} into RoleName = {}, RoleGroup = {}",
-            container.getId(), role.name, role.group);
-
-        provider.buildContainerLaunchContext(containerLauncher, application,
-            container, role, fs);
-
-        RoleInstance instance = new RoleInstance(container);
+        String failedInstance = role.failedInstanceName.poll();
+        RoleInstance instance;
+        if (failedInstance != null) {
+          instance = new RoleInstance(container, role, failedInstance);
+        } else {
+          instance = new RoleInstance(container, role);
+        }
         String[] envDescription = containerLauncher.dumpEnvToString();
-
         String commandsAsString = containerLauncher.getCommandsAsString();
+        log.info("Launching container {} for component instance = {}",
+            container.getId(), instance.getCompInstanceName());
         log.info("Starting container with command: {}", commandsAsString);
-
-        instance.providerRole = role;
         instance.command = commandsAsString;
         instance.role = role.name;
-        instance.group = role.group;
         instance.roleId = role.id;
         instance.environment = envDescription;
+
+        provider.buildContainerLaunchContext(containerLauncher, application,
+            container, role, fs, instance);
+
         long delay = role.component.getConfiguration()
             .getPropertyLong(AgentKeys.KEY_CONTAINER_LAUNCH_DELAY, 0);
         long maxDelay = getConfig()

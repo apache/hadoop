@@ -59,7 +59,7 @@ public interface RestApiErrorMessages {
       ERROR_RESOURCE_CPUS_INVALID_RANGE
           + " for component %s (or at the global level)";
   String ERROR_CONTAINERS_COUNT_INVALID =
-      "Required no of containers not specified";
+      "Invalid no of containers specified";
   String ERROR_CONTAINERS_COUNT_FOR_COMP_INVALID =
       ERROR_CONTAINERS_COUNT_INVALID + ERROR_SUFFIX_FOR_COMPONENT;
 

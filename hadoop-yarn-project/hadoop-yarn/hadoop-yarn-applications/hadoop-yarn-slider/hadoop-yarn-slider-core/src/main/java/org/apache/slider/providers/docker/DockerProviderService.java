@@ -46,6 +46,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.apache.slider.util.ServiceApiUtil.$;
+
 public class DockerProviderService extends AbstractService
     implements ProviderService, DockerKeys, SliderKeys {
 
@@ -70,14 +72,11 @@ public class DockerProviderService extends AbstractService
     this.yarnRegistry = yarnRegistry;
   }
 
+
   public void buildContainerLaunchContext(ContainerLauncher launcher,
       Application application, Container container, ProviderRole providerRole,
-      SliderFileSystem fileSystem)
+      SliderFileSystem fileSystem, RoleInstance roleInstance)
       throws IOException, SliderException {
-
-    String roleName = providerRole.name;
-    String roleGroup = providerRole.group;
-
     Component component = providerRole.component;
     launcher.setYarnDockerMode(true);
     launcher.setDockerImage(component.getArtifact().getId());
@@ -86,16 +85,12 @@ public class DockerProviderService extends AbstractService
     launcher.setRunPrivilegedContainer(component.getRunPrivilegedContainer());
 
     // Generate tokens (key-value pair) for config substitution.
-    Map<String, String> standardTokens = providerUtils
-        .getStandardTokenMap(application.getConfiguration(),
-            component.getConfiguration(), roleName, roleGroup,
-            container.getId().toString(), application.getName());
-    Map<String, String> tokensForSubstitution = providerUtils.substituteConfigs(
-            component.getConfiguration().getProperties(), standardTokens);
+    // Get pre-defined tokens
+    Map<String, String> tokensForSubstitution = providerUtils
+        .getStandardTokenMap(application.getConfiguration(), roleInstance,
+            application.getName());
 
-    tokensForSubstitution.putAll(standardTokens);
-
-    // Set the environment variables
+    // Set the environment variables in launcher
     launcher.putEnv(SliderUtils
         .buildEnvMap(component.getConfiguration(), tokensForSubstitution));
     launcher.setEnv("WORK_DIR", ApplicationConstants.Environment.PWD.$());
@@ -108,33 +103,26 @@ public class DockerProviderService extends AbstractService
     launcher.setEnv("LANGUAGE", "en_US.UTF-8");
 
     for (Entry<String, String> entry : launcher.getEnv().entrySet()) {
-      tokensForSubstitution.put("${" + entry.getKey() + "}", entry.getValue());
+      tokensForSubstitution.put($(entry.getKey()), entry.getValue());
     }
-
-    providerUtils.addRoleHostTokens(tokensForSubstitution, amState);
-
-    log.info("Token for substitution: " + tokensForSubstitution);
-
-    if (SliderUtils.isHadoopClusterSecure(getConfig())) {
-      //TODO localize key tabs, WHY is this code needed ? WHY DOES CONTAINER REQUIRE AM KEYTAB??
-      providerUtils.localizeServiceKeytabs(launcher, fileSystem, application);
-    }
+    providerUtils.addComponentHostTokens(tokensForSubstitution, amState);
 
     // create config file on hdfs and add local resource
     providerUtils.createConfigFileAndAddLocalResource(launcher, fileSystem,
-        component, tokensForSubstitution, amState);
+        component, tokensForSubstitution, roleInstance);
 
+    // substitute launch command
+    String launchCommand = ProviderUtils
+        .substituteStrWithTokens(component.getLaunchCommand(),
+            tokensForSubstitution);
     CommandLineBuilder operation = new CommandLineBuilder();
-    operation.add(component.getLaunchCommand());
-    operation.add("> " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/"
-        + OUT_FILE + " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/"
-        + ERR_FILE);
+    operation.add(launchCommand);
+    operation.addOutAndErrFiles(OUT_FILE, ERR_FILE);
     launcher.addCommand(operation.build());
 
     // publish exports
-    // TODO move this to app level, no need to do this for every container launch
     providerUtils
-        .substituteConfigs(application.getQuicklinks(), tokensForSubstitution);
+        .substituteMapWithTokens(application.getQuicklinks(), tokensForSubstitution);
     PublishedConfiguration pubconf = new PublishedConfiguration(QUICK_LINKS,
         application.getQuicklinks().entrySet());
     amState.getPublishedSliderConfigurations().put(QUICK_LINKS, pubconf);
