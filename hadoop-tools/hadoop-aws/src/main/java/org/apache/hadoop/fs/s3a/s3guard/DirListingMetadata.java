@@ -81,6 +81,16 @@ public class DirListingMetadata {
   }
 
   /**
+   * Copy constructor.
+   * @param d the existing {@link DirListingMetadata} object.
+   */
+  public DirListingMetadata(DirListingMetadata d) {
+    path = d.path;
+    isAuthoritative = d.isAuthoritative;
+    listMap = new ConcurrentHashMap<>(d.listMap);
+  }
+
+  /**
    * @return {@code Path} of the directory that contains this listing.
    */
   public Path getPath() {

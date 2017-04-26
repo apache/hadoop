@@ -169,7 +169,8 @@ public class LocalMetadataStore implements MetadataStore {
       LOG.debug("listChildren({}) -> {}", path,
           listing == null ? "null" : listing.prettyPrint());
     }
-    return listing;
+    // Make a copy so callers can mutate without affecting our state
+    return listing == null ? null : new DirListingMetadata(listing);
   }
 
   @Override

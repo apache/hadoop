@@ -27,10 +27,12 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.junit.Assume;
 import org.junit.Test;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -265,6 +267,49 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     }
   }
 
+  private static S3AFileSystem asS3AFS(FileSystem fs) {
+    assertTrue("Not a S3AFileSystem: " + fs, fs instanceof S3AFileSystem);
+    return (S3AFileSystem)fs;
+  }
+
+  /** Create a separate S3AFileSystem instance for testing. */
+  private S3AFileSystem createTestFS(URI fsURI, boolean disableS3Guard,
+      boolean authoritativeMeta)
+      throws IOException {
+    Configuration conf;
+
+    // Create a FileSystem that is S3-backed only
+    conf = createConfiguration();
+    S3ATestUtils.disableFilesystemCaching(conf);
+    if (disableS3Guard) {
+      conf.set(Constants.S3_METADATA_STORE_IMPL,
+          Constants.S3GUARD_METASTORE_NULL);
+    } else {
+      S3ATestUtils.maybeEnableS3Guard(conf);
+      conf.setBoolean(Constants.METADATASTORE_AUTHORITATIVE, authoritativeMeta);
+    }
+    FileSystem fs = FileSystem.get(fsURI, conf);
+    return asS3AFS(fs);
+  }
+
+  private static void assertPathDoesntExist(FileSystem fs, Path p)
+      throws IOException {
+    try {
+      FileStatus s = fs.getFileStatus(p);
+    } catch (FileNotFoundException e) {
+      return;
+    }
+    fail("Path should not exist: " + p);
+  }
+
+  /**
+   * In listStatus(), when S3Guard is enabled, the full listing for a
+   * directory is "written back" to the MetadataStore before the listing is
+   * returned.  Currently this "write back" behavior occurs when
+   * fs.s3a.metadatastore.authoritative is true.  This test validates this
+   * behavior.
+   * @throws Exception on failure
+   */
   @Test
   public void testListStatusWriteBack() throws Exception {
     Assume.assumeTrue(getFileSystem().hasMetadataStore());
@@ -272,33 +317,23 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     Configuration conf;
     Path directory = path("ListStatusWriteBack");
 
-    // Create a FileSystem that is S3-backed only
-    conf = createConfiguration();
-    conf.setBoolean("fs.s3a.impl.disable.cache", true);
-    conf.set(Constants.S3_METADATA_STORE_IMPL,
-        Constants.S3GUARD_METASTORE_NULL);
-    FileSystem noS3Guard = FileSystem.get(directory.toUri(), conf);
+    // "raw" S3AFileSystem without S3Guard
+    S3AFileSystem noS3Guard = createTestFS(directory.toUri(), true, false);
 
-    // Create a FileSystem with S3Guard and write-back disabled
-    conf = createConfiguration();
-    S3ATestUtils.maybeEnableS3Guard(conf);
-    conf.setBoolean("fs.s3a.impl.disable.cache", true);
-    conf.setBoolean(Constants.METADATASTORE_AUTHORITATIVE, false);
-    FileSystem noWriteBack = FileSystem.get(directory.toUri(), conf);
+    // Another with S3Guard and write-back disabled
+    S3AFileSystem noWriteBack = createTestFS(directory.toUri(), false, false);
 
-    // Create a FileSystem with S3Guard and write-back enabled
-    conf = createConfiguration();
-    S3ATestUtils.maybeEnableS3Guard(conf);
-    conf.setBoolean("fs.s3a.impl.disable.cache", true);
-    conf.setBoolean(Constants.METADATASTORE_AUTHORITATIVE, true);
-    FileSystem yesWriteBack = FileSystem.get(directory.toUri(), conf);
+    // Another S3Guard and write-back enabled
+    S3AFileSystem yesWriteBack = createTestFS(directory.toUri(), false, true);
 
     // delete the existing directory (in case of last test failure)
     noS3Guard.delete(directory, true);
     // Create a directory on S3 only
     noS3Guard.mkdirs(new Path(directory, "OnS3"));
     // Create a directory on both S3 and metadata store
-    noWriteBack.mkdirs(new Path(directory, "OnS3AndMS"));
+    Path p = new Path(directory, "OnS3AndMS");
+    assertPathDoesntExist(noWriteBack, p);
+    noWriteBack.mkdirs(p);
 
     FileStatus[] fsResults;
     DirListingMetadata mdResults;
@@ -311,7 +346,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
     // Metadata store without write-back should still only contain /OnS3AndMS,
     // because newly discovered /OnS3 is not written back to metadata store
-    mdResults = S3Guard.getMetadataStore(noWriteBack).listChildren(directory);
+    mdResults = noWriteBack.getMetadataStore().listChildren(directory);
     assertEquals("Metadata store without write back should still only know "
             + "about /OnS3AndMS, but it has: " + mdResults,
         1, mdResults.numEntries());
@@ -324,7 +359,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
     // Metadata store with write-back should contain both because the newly
     // discovered /OnS3 should have been written back to metadata store
-    mdResults = S3Guard.getMetadataStore(yesWriteBack).listChildren(directory);
+    mdResults = yesWriteBack.getMetadataStore().listChildren(directory);
     assertEquals("Unexpected number of results from metadata store. "
             + "Should have /OnS3 and /OnS3AndMS: " + mdResults,
         2, mdResults.numEntries());
