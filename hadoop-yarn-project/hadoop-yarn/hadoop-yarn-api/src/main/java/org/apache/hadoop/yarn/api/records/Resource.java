@@ -59,7 +59,7 @@ public abstract class Resource implements Comparable<Resource> {
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(0);
-    resource.setGPULocality(0);
+    resource.setGPUAttribute(0);
     return resource;
   }
 
@@ -70,18 +70,18 @@ public abstract class Resource implements Comparable<Resource> {
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(GPUs);
-    resource.setGPULocality(0);
+    resource.setGPUAttribute(0);
     return resource;
   }
 
   @Public
   @Stable
-  public static Resource newInstance(int memory, int vCores, int GPUs, int GPULocality) {
+  public static Resource newInstance(int memory, int vCores, int GPUs, int GPUAttribute) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(GPUs);
-    resource.setGPULocality(GPULocality);
+    resource.setGPUAttribute(GPUAttribute);
     return resource;
   }
 
@@ -159,17 +159,17 @@ public abstract class Resource implements Comparable<Resource> {
   public abstract void setGPUs(int GPUs);
 
   /**
-   * Get <em> GPU locality information </em>.
+   * Get <em> GPU locality preference information </em>.
    *
    * This abstracts GPU locality preference. Now, we have two types supported.
    * 0 means that GPUs can be placed anywhere in the machine, and
    * 1 means that GPUs are preferred to be placed in the same socket of the machine.
    *
-   * @return <em>GPU locality information</em>
+   * @return <em>GPU locality preference information</em>
    */
   @Public
   @Evolving
-  public abstract int getGPULocality();
+  public abstract int getGPUAttribute();
 
   /**
    * Set <em>GPU allocation information</em>.
@@ -179,11 +179,11 @@ public abstract class Resource implements Comparable<Resource> {
    * Bits set as 0 mean that corresponding GPUs are not unassigned.
    * The sum of 1s should equal to the number of GPUs.
    *
-   * @param GPULocality <em>GPU locality information</em>
+   * @param GPUAttribute <em>GPU locality preference information</em>
    */
   @Public
   @Evolving
-  public abstract void setGPULocality(int GPULocality);
+  public abstract void setGPUAttribute(int GPUAttribute);
 
   @Override
   public int hashCode() {
@@ -207,7 +207,7 @@ public abstract class Resource implements Comparable<Resource> {
     if (getMemory() != other.getMemory() ||
         getVirtualCores() != other.getVirtualCores() ||
         getGPUs() != other.getGPUs() ||
-        getGPULocality() != other.getGPULocality()) {
+        getGPUAttribute() != other.getGPUAttribute()) {
       return false;
     }
     return true;
@@ -215,6 +215,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPULocality:" + getGPULocality() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPUAttribute:" + getGPUAttribute() + ">";
   }
 }

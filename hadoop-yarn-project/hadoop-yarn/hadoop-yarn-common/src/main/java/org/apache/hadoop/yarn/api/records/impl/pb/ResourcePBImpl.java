@@ -92,15 +92,15 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
-  public int getGPULocality() {
+  public int getGPUAttribute() {
     ResourceProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getGPULocality());
+    return (p.getGPUAttribute());
   }
 
   @Override
-  public void setGPULocality(int GPULocality) {
+  public void setGPUAttribute(int GPUAttribute) {
     maybeInitBuilder();
-    builder.setGPULocality((GPULocality));
+    builder.setGPUAttribute((GPUAttribute));
   }
 
   @Override

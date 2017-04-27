@@ -210,7 +210,7 @@ public class ContainerPBImpl extends Container {
     maybeInitBuilder();
     if (resource == null)
       builder.clearResource();
-    this.resource.setGPULocality(GPULocation);
+    this.resource.setGPUAttribute(GPULocation);
   }
   
   @Override

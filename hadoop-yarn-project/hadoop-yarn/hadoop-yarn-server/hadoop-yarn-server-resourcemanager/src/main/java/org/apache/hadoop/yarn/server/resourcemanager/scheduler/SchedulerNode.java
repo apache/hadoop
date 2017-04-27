@@ -231,8 +231,8 @@ public abstract class SchedulerNode {
     Resources.subtractFromWithLocality(usedResource, resource);
     Resources.addToWithLocality(availableResource, resource);
 
-    //assert Integer.bitCount(availableResource.getGPULocality()) == availableResource.getGPUs();
-    //assert Integer.bitCount(usedResource.getGPULocality()) == usedResource.getGPUs();
+    //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
+    //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
   }
 
   private synchronized void deductAvailableResource(Resource resource) {
@@ -244,8 +244,8 @@ public abstract class SchedulerNode {
     Resources.addToWithLocality(usedResource, resource);
     Resources.subtractFromWithLocality(availableResource, resource);
 
-    //assert Integer.bitCount(availableResource.getGPULocality()) == availableResource.getGPUs();
-    //assert Integer.bitCount(usedResource.getGPULocality()) == usedResource.getGPUs();
+    //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
+    //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
   }
 
   /**

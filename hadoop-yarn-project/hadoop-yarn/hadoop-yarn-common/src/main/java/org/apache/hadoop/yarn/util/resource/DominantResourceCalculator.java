@@ -147,7 +147,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         divideAndCeil(numerator.getMemory(), denominator),
         divideAndCeil(numerator.getVirtualCores(), denominator),
         divideAndCeil(numerator.getGPUs(), denominator),
-        numerator.getGPULocality()
+        numerator.getGPUAttribute()
         );
   }
 
@@ -171,7 +171,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       maximumResource.getGPUs());
 
     return Resources.createResource(normalizedMemory,
-      normalizedCores, normalizedGPUs, r.getGPULocality());
+      normalizedCores, normalizedGPUs, r.getGPUAttribute());
   }
 
   @Override
@@ -180,7 +180,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundUp(r.getMemory(), stepFactor.getMemory()), 
         roundUp(r.getVirtualCores(), stepFactor.getVirtualCores()),
         roundUp(r.getGPUs(), stepFactor.getGPUs()),
-        r.getGPULocality()
+        r.getGPUAttribute()
         );
   }
 
@@ -190,7 +190,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundDown(r.getMemory(), stepFactor.getMemory()),
         roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()),
         roundDown(r.getGPUs(), stepFactor.getGPUs()),
-        r.getGPULocality()
+        r.getGPUAttribute()
         );
   }
 
@@ -206,7 +206,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundUp(
             (int)Math.ceil(r.getGPUs() * by),
             stepFactor.getGPUs()),
-        r.getGPULocality()
+        r.getGPUAttribute()
         );
   }
 
@@ -226,7 +226,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
             (int)(r.getGPUs() * by),
             stepFactor.getGPUs()
             ),
-        r.getGPULocality()
+        r.getGPUAttribute()
         );
   }
 

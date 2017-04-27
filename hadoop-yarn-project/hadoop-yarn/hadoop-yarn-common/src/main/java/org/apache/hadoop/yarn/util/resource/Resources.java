@@ -61,12 +61,12 @@ public class Resources {
     }
 
     @Override
-    public int getGPULocality() {
+    public int getGPUAttribute() {
       return 0;
     }
 
     @Override
-    public void setGPULocality(int GPULocality) {
+    public void setGPUAttribute(int GPUAttribute) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -117,12 +117,12 @@ public class Resources {
     }
 
     @Override
-    public int getGPULocality() {
+    public int getGPUAttribute() {
       return Integer.MAX_VALUE;
     }
 
     @Override
-    public void setGPULocality(int GPULocality) {
+    public void setGPUAttribute(int GPUAttribute) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -149,7 +149,7 @@ public class Resources {
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
     resource.setGPUs(0);
-    resource.setGPULocality(0);
+    resource.setGPUAttribute(0);
     return resource;
   }
 
@@ -158,16 +158,16 @@ public class Resources {
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
     resource.setGPUs(GPUs);
-    resource.setGPULocality(0);
+    resource.setGPUAttribute(0);
     return resource;
   }
 
-  public static Resource createResource(int memory, int cores, int GPUs, int GPULocality) {
+  public static Resource createResource(int memory, int cores, int GPUs, int GPUAttribute) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
     resource.setGPUs(GPUs);
-    resource.setGPULocality(GPULocality);
+    resource.setGPUAttribute(GPUAttribute);
     return resource;
   }
 
@@ -180,7 +180,7 @@ public class Resources {
   }
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPULocality());
+    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
@@ -201,8 +201,8 @@ public class Resources {
 
     // MJTHIS: FIXME: not clear what to do with recovery
     // Must uncomment it when you are running test cases
-    assert (lhs.getGPULocality() & rhs.getGPULocality()) == 0 : "lhs GPU locality is " + lhs.getGPULocality() + "; rhs GPU locality is " + rhs.getGPULocality();
-    lhs.setGPULocality(lhs.getGPULocality() | rhs.getGPULocality());
+    assert (lhs.getGPUAttribute() & rhs.getGPUAttribute()) == 0 : "lhs GPU attribute is " + lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
+    lhs.setGPUAttribute(lhs.getGPUAttribute() | rhs.getGPUAttribute());
 
     return lhs;
   }
@@ -229,8 +229,8 @@ public class Resources {
 
     // MJTHIS: FIXME: not clear what to do with recovery
     // Must uncomment it when you are running test cases
-    assert (lhs.getGPULocality() | rhs.getGPULocality()) == lhs.getGPULocality() : "lhs GPU locality is " + lhs.getGPULocality() + "; rhs GPU locality is " + rhs.getGPULocality();
-    lhs.setGPULocality(lhs.getGPULocality() & ~rhs.getGPULocality());
+    assert (lhs.getGPUAttribute() | rhs.getGPUAttribute()) == lhs.getGPUAttribute() : "lhs GPU attribute is " + lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
+    lhs.setGPUAttribute(lhs.getGPUAttribute() & ~rhs.getGPUAttribute());
 
     return lhs;
   }
@@ -364,8 +364,8 @@ public class Resources {
   public static boolean fitsInWithLocality(Resource smaller, Resource bigger, Resource all) {
     boolean fitsIn = fitsIn(smaller, bigger);
     if (fitsIn == true) {
-      if (smaller.getGPULocality() > 0) {
-        if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), true, false) != 0) {
+      if (smaller.getGPUAttribute() > 0) {
+        if(searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), true, false) != 0) {
           return true;
         }
         else {
@@ -373,7 +373,7 @@ public class Resources {
         }
       }
       else {
-        if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), false, false) != 0) {
+        if(searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), false, false) != 0) {
           return true;
         }
         else {
@@ -399,11 +399,11 @@ public class Resources {
   }
 
   public static int allocateGPUs(Resource smaller, Resource bigger, Resource all) {
-    if (smaller.getGPULocality() > 0) {
-      return searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), true, true);
+    if (smaller.getGPUAttribute() > 0) {
+      return searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), true, true);
     }
     else {
-      return searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), false, true);
+      return searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), false, true);
     }
   }
 
