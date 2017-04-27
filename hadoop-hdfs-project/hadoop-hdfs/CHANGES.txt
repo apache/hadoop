@@ -244,6 +244,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10455. Logging the username when deny the setOwner operation.
     (Tianyi Xu and Rakesh R via Brahma Reddy Battula)
 
+    HDFS-11709. StandbyCheckpointer should handle an non-existing legacyOivImageDir
+    gracefully. (Erik Krogen via zhz)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
