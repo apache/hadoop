@@ -214,7 +214,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
-          NativeRSRawErasureCoderFactory.class.getCanonicalName());
+          NativeRSRawErasureCoderFactory.CODER_NAME);
     }
     DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
