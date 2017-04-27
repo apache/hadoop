@@ -85,10 +85,6 @@ public abstract class TimelineCollector extends CompositeService {
     this.writer = w;
   }
 
-  protected TimelineWriter getWriter() {
-    return writer;
-  }
-
   protected Map<String, AggregationStatusTable> getAggregationGroups() {
     return aggregationGroups;
   }
