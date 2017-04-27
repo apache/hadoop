@@ -495,48 +495,58 @@ public class TestNativeIO {
   public void testRenameTo() throws Exception {
     final File TEST_DIR = GenericTestUtils.getTestDir("renameTest") ;
     assumeTrue(TEST_DIR.mkdirs());
-    File nonExistentFile = new File(TEST_DIR, "nonexistent");
-    File targetFile = new File(TEST_DIR, "target");
-    // Test attempting to rename a nonexistent file.
+
     try {
-      NativeIO.renameTo(nonExistentFile, targetFile);
-      Assert.fail();
-    } catch (NativeIOException e) {
-      if (Path.WINDOWS) {
-        Assert.assertEquals(
-          String.format("The system cannot find the file specified.%n"),
-          e.getMessage());
-      } else {
-        Assert.assertEquals(Errno.ENOENT, e.getErrno());
+      File nonExistentFile = new File(TEST_DIR, "nonexistent");
+      File targetFile = new File(TEST_DIR, "target");
+      // Test attempting to rename a nonexistent file.
+      try {
+        NativeIO.renameTo(nonExistentFile, targetFile);
+        Assert.fail();
+      } catch (NativeIOException e) {
+        if (Path.WINDOWS) {
+          Assert.assertEquals(
+              String.format("The system cannot find the file specified.%n"),
+              e.getMessage());
+        } else {
+          Assert.assertEquals(Errno.ENOENT, e.getErrno());
+        }
       }
-    }
-    
-    // Test renaming a file to itself.  It should succeed and do nothing.
-    File sourceFile = new File(TEST_DIR, "source");
-    Assert.assertTrue(sourceFile.createNewFile());
-    NativeIO.renameTo(sourceFile, sourceFile);
 
-    // Test renaming a source to a destination.
-    NativeIO.renameTo(sourceFile, targetFile);
+      // Test renaming a file to itself.  It should succeed and do nothing.
+      File sourceFile = new File(TEST_DIR, "source");
+      Assert.assertTrue(sourceFile.createNewFile());
+      NativeIO.renameTo(sourceFile, sourceFile);
 
-    // Test renaming a source to a path which uses a file as a directory.
-    sourceFile = new File(TEST_DIR, "source");
-    Assert.assertTrue(sourceFile.createNewFile());
-    File badTarget = new File(targetFile, "subdir");
-    try {
-      NativeIO.renameTo(sourceFile, badTarget);
-      Assert.fail();
-    } catch (NativeIOException e) {
-      if (Path.WINDOWS) {
-        Assert.assertEquals(
-          String.format("The parameter is incorrect.%n"),
-          e.getMessage());
-      } else {
-        Assert.assertEquals(Errno.ENOTDIR, e.getErrno());
+      // Test renaming a source to a destination.
+      NativeIO.renameTo(sourceFile, targetFile);
+
+      // Test renaming a source to a path which uses a file as a directory.
+      sourceFile = new File(TEST_DIR, "source");
+      Assert.assertTrue(sourceFile.createNewFile());
+      File badTarget = new File(targetFile, "subdir");
+      try {
+        NativeIO.renameTo(sourceFile, badTarget);
+        Assert.fail();
+      } catch (NativeIOException e) {
+        if (Path.WINDOWS) {
+          Assert.assertEquals(
+              String.format("The parameter is incorrect.%n"),
+              e.getMessage());
+        } else {
+          Assert.assertEquals(Errno.ENOTDIR, e.getErrno());
+        }
       }
-    }
 
-    FileUtils.deleteQuietly(TEST_DIR);
+      // Test renaming to an existing file
+      assertTrue(targetFile.exists());
+      NativeIO.renameTo(sourceFile, targetFile);
+
+    } catch (Exception e) {
+      fail(e.toString());
+    } finally {
+      FileUtils.deleteQuietly(TEST_DIR);
+    }
   }
 
   @Test(timeout=10000)
