@@ -190,7 +190,12 @@ public class StandbyCheckpointer {
       // Save the legacy OIV image, if the output dir is defined.
       String outputDir = checkpointConf.getLegacyOivImageDir();
       if (outputDir != null && !outputDir.isEmpty()) {
-        img.saveLegacyOIVImage(namesystem, outputDir, canceler);
+        try {
+          img.saveLegacyOIVImage(namesystem, outputDir, canceler);
+        } catch (IOException ioe) {
+          LOG.error("Exception encountered while saving legacy OIV image; "
+                  + "continuing with other checkpointing steps", ioe);
+        }
       }
     } finally {
       namesystem.cpUnlock();
