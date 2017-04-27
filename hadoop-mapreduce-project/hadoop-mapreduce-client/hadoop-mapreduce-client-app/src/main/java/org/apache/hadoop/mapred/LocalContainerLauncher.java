@@ -27,6 +27,8 @@ import java.lang.management.ThreadMXBean;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -81,7 +83,7 @@ public class LocalContainerLauncher extends AbstractService implements
   private static final Log LOG = LogFactory.getLog(LocalContainerLauncher.class);
 
   private FileContext curFC = null;
-  private final HashSet<File> localizedFiles;
+  private Set<File> localizedFiles = new HashSet<File>();
   private final AppContext context;
   private final TaskUmbilicalProtocol umbilical;
   private final ClassLoader jobClassLoader;
@@ -121,9 +123,12 @@ public class LocalContainerLauncher extends AbstractService implements
     // users who do that get what they deserve (and will have to disable
     // uberization in order to run correctly).
     File[] curLocalFiles = curDir.listFiles();
-    localizedFiles = new HashSet<File>(curLocalFiles.length);
-    for (int j = 0; j < curLocalFiles.length; ++j) {
-      localizedFiles.add(curLocalFiles[j]);
+    if (curLocalFiles != null) {
+      HashSet<File> lf = new HashSet<File>(curLocalFiles.length);
+      for (int j = 0; j < curLocalFiles.length; ++j) {
+        lf.add(curLocalFiles[j]);
+      }
+      localizedFiles = Collections.unmodifiableSet(lf);
     }
 
     // Relocalization note/future FIXME (per chrisdo, 20110315):  At moment,
@@ -521,26 +526,29 @@ public class LocalContainerLauncher extends AbstractService implements
      */
     private void relocalize() {
       File[] curLocalFiles = curDir.listFiles();
-      for (int j = 0; j < curLocalFiles.length; ++j) {
-        if (!localizedFiles.contains(curLocalFiles[j])) {
-          // found one that wasn't there before:  delete it
-          boolean deleted = false;
-          try {
-            if (curFC != null) {
-              // this is recursive, unlike File delete():
-              deleted = curFC.delete(new Path(curLocalFiles[j].getName()),true);
+      if (curLocalFiles != null) {
+        for (int j = 0; j < curLocalFiles.length; ++j) {
+          if (!localizedFiles.contains(curLocalFiles[j])) {
+            // found one that wasn't there before:  delete it
+            boolean deleted = false;
+            try {
+              if (curFC != null) {
+                // this is recursive, unlike File delete():
+                deleted =
+                    curFC.delete(new Path(curLocalFiles[j].getName()), true);
+              }
+            } catch (IOException e) {
+              deleted = false;
             }
-          } catch (IOException e) {
-            deleted = false;
-          }
-          if (!deleted) {
-            LOG.warn("Unable to delete unexpected local file/dir "
-                + curLocalFiles[j].getName() + ": insufficient permissions?");
+            if (!deleted) {
+              LOG.warn("Unable to delete unexpected local file/dir "
+                  + curLocalFiles[j].getName()
+                  + ": insufficient permissions?");
+            }
           }
         }
       }
     }
-
   } // end EventHandler
 
   /**
