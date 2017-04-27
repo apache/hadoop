@@ -18,24 +18,24 @@
 
 package org.apache.hadoop.fs.swift.http;
 
-import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 
 /**
  * Implementation for SwiftRestClient to make copy requests.
  * COPY is a method that came with WebDAV (RFC2518), and is not something that
  * can be handled by all proxies en-route to a filesystem.
  */
-class CopyMethod extends EntityEnclosingMethod {
+class CopyRequest extends HttpEntityEnclosingRequestBase {
 
-  public CopyMethod(String uri) {
-    super(uri);
+  CopyRequest() {
+    super();
   }
 
   /**
    * @return http method name
    */
   @Override
-  public String getName() {
+  public String getMethod() {
     return "COPY";
   }
 }
