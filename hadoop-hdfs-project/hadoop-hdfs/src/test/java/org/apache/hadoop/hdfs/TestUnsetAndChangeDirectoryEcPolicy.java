@@ -68,7 +68,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
-          NativeRSRawErasureCoderFactory.CODER_NAME);
+          NativeRSRawErasureCoderFactory.class.getCanonicalName());
     }
     DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(

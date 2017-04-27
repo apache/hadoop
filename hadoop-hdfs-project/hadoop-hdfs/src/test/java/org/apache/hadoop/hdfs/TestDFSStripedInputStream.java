@@ -98,7 +98,7 @@ public class TestDFSStripedInputStream {
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
-          NativeRSRawErasureCoderFactory.CODER_NAME);
+          NativeRSRawErasureCoderFactory.class.getCanonicalName());
     }
     SimulatedFSDataset.setFactory(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(

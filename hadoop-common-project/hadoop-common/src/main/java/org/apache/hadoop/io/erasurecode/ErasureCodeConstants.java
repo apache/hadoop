@@ -25,7 +25,6 @@ public final class ErasureCodeConstants {
   private ErasureCodeConstants() {
   }
 
-  public static final String DUMMY_CODEC_NAME = "dummy";
   public static final String RS_CODEC_NAME = "rs";
   public static final String RS_LEGACY_CODEC_NAME = "rs-legacy";
   public static final String XOR_CODEC_NAME = "xor";

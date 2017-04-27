@@ -117,15 +117,11 @@ Deployment
   be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as
   there are at least 14 DataNodes in the cluster.
 
-  The codec implementations for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
-  `io.erasurecode.codec.rs.rawcoders` for the default RS codec,
-  `io.erasurecode.codec.rs-legacy.rawcoders` for the legacy RS codec,
-  `io.erasurecode.codec.xor.rawcoders` for the XOR codec.
-  User can also configure self-defined codec with configuration key like:
-  `io.erasurecode.codec.self-defined-codec.rawcoders`.
-  The values for these key are lists of coder names with a fall-back mechanism.
-  All these codecs have implementations in pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
-  The default implementation for RS Legacy is pure Java, and the default implementations for default RS and XOR are native implementations using Intel ISA-L library.
+  The codec implementation for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
+  `io.erasurecode.codec.rs.rawcoder` for the default RS codec,
+  `io.erasurecode.codec.rs-legacy.rawcoder` for the legacy RS codec,
+  `io.erasurecode.codec.xor.rawcoder` for the XOR codec.
+  The default implementations for all of these codecs are pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
 
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 

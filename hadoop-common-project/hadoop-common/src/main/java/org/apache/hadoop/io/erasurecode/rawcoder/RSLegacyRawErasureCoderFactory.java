@@ -18,7 +18,6 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
@@ -26,8 +25,6 @@ import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
  */
 @InterfaceAudience.Private
 public class RSLegacyRawErasureCoderFactory implements RawErasureCoderFactory {
-
-  public static final String CODER_NAME = "rs-legacy_java";
 
   @Override
   public RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions) {
@@ -37,15 +34,5 @@ public class RSLegacyRawErasureCoderFactory implements RawErasureCoderFactory {
   @Override
   public RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions) {
     return new RSLegacyRawDecoder(coderOptions);
-  }
-
-  @Override
-  public String getCoderName() {
-    return CODER_NAME;
-  }
-
-  @Override
-  public String getCodecName() {
-    return ErasureCodeConstants.RS_LEGACY_CODEC_NAME;
   }
 }

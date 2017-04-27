@@ -41,16 +41,4 @@ public interface RawErasureCoderFactory {
    * @return raw erasure decoder
    */
   RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions);
-
-  /**
-   * Get the name of the coder.
-   * @return coder name
-   */
-  String getCoderName();
-
-  /**
-   * Get the name of its codec.
-   * @return codec name
-   */
-  String getCodecName();
 }
