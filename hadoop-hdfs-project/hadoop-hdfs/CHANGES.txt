@@ -83,6 +83,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11634. Optimize BlockIterator when iterating starts in the middle.
     (shv)
 
+    HDFS-11384. Balancer disperses getBlocks calls to avoid NameNode's rpc queue
+    saturation. (shv)
+
   BUG FIXES
    
     HDFS-8307. Spurious DNS Queries from hdfs shell. (Andres Perez via aengineer)
