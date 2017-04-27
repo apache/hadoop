@@ -103,8 +103,13 @@ public class TimelineConnector extends AbstractService {
     ClientConfig cc = new DefaultClientConfig();
     cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
 
-    sslFactory = getSSLFactory(conf);
-    connConfigurator = getConnConfigurator(sslFactory);
+    if (YarnConfiguration.useHttps(conf)) {
+      // If https is chosen, configures SSL client.
+      sslFactory = getSSLFactory(conf);
+      connConfigurator = getConnConfigurator(sslFactory);
+    } else {
+      connConfigurator = DEFAULT_TIMEOUT_CONN_CONFIGURATOR;
+    }
 
     if (UserGroupInformation.isSecurityEnabled()) {
       authenticator = new KerberosDelegationTokenAuthenticator();
