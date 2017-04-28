@@ -907,6 +907,8 @@ service ClientNamenodeProtocol {
       returns(GetEditsFromTxidResponseProto);
   rpc getErasureCodingPolicies(GetErasureCodingPoliciesRequestProto)
       returns(GetErasureCodingPoliciesResponseProto);
+  rpc addErasureCodingPolicies(AddErasureCodingPoliciesRequestProto)
+      returns(AddErasureCodingPoliciesResponseProto);
   rpc getErasureCodingPolicy(GetErasureCodingPolicyRequestProto)
       returns(GetErasureCodingPolicyResponseProto);
   rpc getQuotaUsage(GetQuotaUsageRequestProto)

@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -2528,6 +2529,18 @@ public class DistributedFileSystem extends FileSystem {
   public Collection<ErasureCodingPolicy> getAllErasureCodingPolicies()
       throws IOException {
     return Arrays.asList(dfs.getErasureCodingPolicies());
+  }
+
+  /**
+   * Add Erasure coding policies to HDFS.
+   *
+   * @param policies The user defined ec policy list to add.
+   * @return Return the response list of adding operations.
+   * @throws IOException
+   */
+  public AddingECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies)  throws IOException {
+    return dfs.addErasureCodingPolicies(policies);
   }
 
   /**

@@ -178,3 +178,7 @@ Below are the details about each command.
  *  `[-listPolicies]`
 
      Lists the set of enabled erasure coding policies. These names are suitable for use with the `setPolicy` command.
+
+ *  `[-addPolicies -policyFile <file>]`
+
+     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file.

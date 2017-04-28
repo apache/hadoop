@@ -83,6 +83,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AclException;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -2259,6 +2260,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     } finally {
       RetryCache.setState(cacheEntry, success);
     }
+  }
+
+  @Override
+  public AddingECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies) throws IOException {
+    checkNNStartup();
+    return namesystem.addECPolicies(policies);
   }
 
   @Override // ReconfigurationProtocol

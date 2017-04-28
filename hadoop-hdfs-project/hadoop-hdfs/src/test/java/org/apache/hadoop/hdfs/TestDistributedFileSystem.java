@@ -49,6 +49,8 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -75,14 +77,18 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ScriptBasedMapping;
@@ -1437,6 +1443,39 @@ public class TestDistributedFileSystem {
 
       ContractTestUtils.verifyFileContents(fs, testFilePath,
           content.getBytes());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testAddErasureCodingPolicies() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      ErasureCodingPolicy policy1 =
+          SystemErasureCodingPolicies.getPolicies().get(0);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+          Stream.of(policy1).map(ErasureCodingPolicy::getName)
+          .collect(Collectors.joining(", ")));
+
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      ECSchema toAddSchema = new ECSchema("testcodec", 3, 2);
+      ErasureCodingPolicy toAddPolicy =
+          new ErasureCodingPolicy(toAddSchema, 128 * 1024, (byte) 254);
+      ErasureCodingPolicy[] policies = new ErasureCodingPolicy[]{
+          policy1, toAddPolicy};
+      AddingECPolicyResponse[] responses =
+          fs.addErasureCodingPolicies(policies);
+      assertEquals(2, responses.length);
+      assertFalse(responses[0].isSucceed());
+      assertTrue(responses[1].isSucceed());
+      assertTrue(responses[1].getPolicy().getId() > 0);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

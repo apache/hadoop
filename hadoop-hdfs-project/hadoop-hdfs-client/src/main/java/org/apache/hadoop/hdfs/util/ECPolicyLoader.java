@@ -32,6 +32,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 import java.util.List;
@@ -59,17 +60,16 @@ public class ECPolicyLoader {
    * @return all valid EC policies in EC policy file
    */
   public List<ErasureCodingPolicy> loadPolicy(String policyFilePath) {
-    File policyFile = getPolicyFile(policyFilePath);
-    if (policyFile == null) {
-      LOG.warn("Not found any EC policy file");
-      return Collections.emptyList();
-    }
-
     try {
+      File policyFile = getPolicyFile(policyFilePath);
+      if (!policyFile.exists()) {
+        LOG.warn("Not found any EC policy file");
+        return Collections.emptyList();
+      }
       return loadECPolicies(policyFile);
     } catch (ParserConfigurationException | IOException | SAXException e) {
       throw new RuntimeException("Failed to load EC policy file: "
-          + policyFile);
+          + policyFilePath);
     }
   }
 
@@ -220,15 +220,12 @@ public class ECPolicyLoader {
    * @param policyFilePath path of EC policy file
    * @return EC policy file
    */
-  private File getPolicyFile(String policyFilePath) {
+  private File getPolicyFile(String policyFilePath)
+      throws MalformedURLException {
     File policyFile = new File(policyFilePath);
     if (!policyFile.isAbsolute()) {
-      URL url = Thread.currentThread().getContextClassLoader()
-          .getResource(policyFilePath);
-      if (url == null) {
-        LOG.warn(policyFilePath + " not found on the classpath.");
-        policyFile = null;
-      } else if (!url.getProtocol().equalsIgnoreCase("file")) {
+      URL url = new URL(policyFilePath);
+      if (!url.getProtocol().equalsIgnoreCase("file")) {
         throw new RuntimeException(
             "EC policy file " + url
                 + " found on the classpath is not on the local filesystem.");

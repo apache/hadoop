@@ -50,7 +50,7 @@ public class TestEnabledECPolicies {
     conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
         value);
     try {
-      new ErasureCodingPolicyManager(conf);
+      ErasureCodingPolicyManager.getInstance().init(conf);
       fail("Expected exception when instantiating ECPolicyManager");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("is not a valid policy", e);
@@ -62,7 +62,9 @@ public class TestEnabledECPolicies {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
         value);
-    ErasureCodingPolicyManager manager = new ErasureCodingPolicyManager(conf);
+    ErasureCodingPolicyManager manager =
+        ErasureCodingPolicyManager.getInstance();
+    manager.init(conf);
     assertEquals("Incorrect number of enabled policies",
         numEnabled, manager.getEnabledPolicies().length);
   }
@@ -130,8 +132,9 @@ public class TestEnabledECPolicies {
         Arrays.asList(enabledPolicies).stream()
             .map(ErasureCodingPolicy::getName)
             .collect(Collectors.joining(", ")));
-    ErasureCodingPolicyManager manager = new ErasureCodingPolicyManager(conf);
-
+    ErasureCodingPolicyManager manager =
+        ErasureCodingPolicyManager.getInstance();
+    manager.init(conf);
     // Check that returned values are unique
     Set<String> found = new HashSet<>();
     for (ErasureCodingPolicy p : manager.getEnabledPolicies()) {
