@@ -532,6 +532,10 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_ZK_TIMEOUT_MS = RM_ZK_PREFIX + "timeout-ms";
   public static final int DEFAULT_RM_ZK_TIMEOUT_MS = 10000;
 
+  public static final  String ZK_APPID_NODE_SPLIT_INDEX =
+      RM_ZK_PREFIX + "appid-node.split-index";
+  public static final int DEFAULT_ZK_APPID_NODE_SPLIT_INDEX = 0;
+
   public static final String RM_ZK_ACL = RM_ZK_PREFIX + "acl";
   public static final String DEFAULT_RM_ZK_ACL = "world:anyone:rwcda";
 
