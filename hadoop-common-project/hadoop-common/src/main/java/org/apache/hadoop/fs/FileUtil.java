@@ -492,11 +492,12 @@ public class FileUtil {
     if (null != sdst) {
       if (sdst.isDirectory()) {
         if (null == srcName) {
-          throw new IOException("Target " + dst + " is a directory");
+          throw new PathIsDirectoryException(dst.toString());
         }
         return checkDest(null, dstFS, new Path(dst, srcName), overwrite);
       } else if (!overwrite) {
-        throw new IOException("Target " + dst + " already exists");
+        throw new PathExistsException(dst.toString(),
+            "Target " + dst + " already exists");
       }
     }
     return dst;

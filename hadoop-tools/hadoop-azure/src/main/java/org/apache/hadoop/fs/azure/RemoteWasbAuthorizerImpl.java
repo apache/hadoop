@@ -31,8 +31,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.Authenticator;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -42,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Iterator;
 
 import static org.apache.hadoop.fs.azure.WasbRemoteCallHelper.REMOTE_CALL_SUCCESS_CODE;
 
@@ -104,15 +101,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   public void init(Configuration conf)
       throws WasbAuthorizationException, IOException {
     LOG.debug("Initializing RemoteWasbAuthorizerImpl instance");
-    Iterator<Token<? extends TokenIdentifier>> tokenIterator = null;
-    try {
-          delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
-    } catch (IOException e) {
-      final String msg = "Error in fetching the WASB delegation token";
-      LOG.error(msg, e);
-      throw new IOException(msg, e);
-    }
-
+    setDelegationToken();
     remoteAuthorizerServiceUrl = SecurityUtils
         .getRemoteAuthServiceUrls(conf);
 
@@ -140,6 +129,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
           return true;
         }
 
+        setDelegationToken();
         URIBuilder uriBuilder = new URIBuilder(remoteAuthorizerServiceUrl);
         uriBuilder.setPath("/" + CHECK_AUTHORIZATION_OP);
         uriBuilder.addParameter(WASB_ABSOLUTE_PATH_QUERY_PARAM_NAME,
@@ -159,10 +149,6 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
         } else {
           uriBuilder.addParameter(Constants.DOAS_PARAM, ugi.getShortUserName());
         }
-        if (isSecurityEnabled && !connectUgi.hasKerberosCredentials()) {
-          connectUgi = UserGroupInformation.getLoginUser();
-        }
-        connectUgi.checkTGTAndReloginFromKeytab();
 
         try {
           responseBody = connectUgi
@@ -217,6 +203,10 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
           | JsonParseException | JsonMappingException ex) {
         throw new WasbAuthorizationException(ex);
       }
+  }
+
+  private void setDelegationToken() throws IOException {
+    this.delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
   }
 }
 

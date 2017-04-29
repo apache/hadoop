@@ -256,9 +256,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
     getDirectorySnapshottableFeature().setSnapshotQuota(snapshotQuota);
   }
 
-  public Snapshot addSnapshot(int id, String name) throws SnapshotException,
-      QuotaExceededException {
-    return getDirectorySnapshottableFeature().addSnapshot(this, id, name);
+  public Snapshot addSnapshot(int id, String name,
+      final LeaseManager leaseManager, final boolean captureOpenFiles)
+      throws SnapshotException, QuotaExceededException {
+    return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
+        leaseManager, captureOpenFiles);
   }
 
   public Snapshot removeSnapshot(

@@ -572,13 +572,15 @@ public class MRAppMaster extends CompositeService {
   private boolean isJobNamePatternMatch(JobConf conf, String jobTempDir) {
     // Matched staging files should be preserved after job is finished.
     if (conf.getKeepTaskFilesPattern() != null && jobTempDir != null) {
-      String jobFileName = Paths.get(jobTempDir).getFileName().toString();
-      Pattern pattern = Pattern.compile(conf.getKeepTaskFilesPattern());
-      Matcher matcher = pattern.matcher(jobFileName);
-      return matcher.find();
-    } else {
-      return false;
+      java.nio.file.Path pathName = Paths.get(jobTempDir).getFileName();
+      if (pathName != null) {
+        String jobFileName = pathName.toString();
+        Pattern pattern = Pattern.compile(conf.getKeepTaskFilesPattern());
+        Matcher matcher = pattern.matcher(jobFileName);
+        return matcher.find();
+      }
     }
+    return false;
   }
 
   private boolean isKeepFailedTaskFiles(JobConf conf) {

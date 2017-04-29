@@ -22,13 +22,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -100,6 +101,25 @@ import com.google.common.annotations.VisibleForTesting;
 public class YARNRunner implements ClientProtocol {
 
   private static final Log LOG = LogFactory.getLog(YARNRunner.class);
+
+  private static final String RACK_GROUP = "rack";
+  private static final String NODE_IF_RACK_GROUP = "node1";
+  private static final String NODE_IF_NO_RACK_GROUP = "node2";
+
+  /**
+   * Matches any of the following patterns with capturing groups:
+   * <ul>
+   *  <li>/rack</li>
+   *  <li>/rack/node</li>
+   *  <li>node (assumes /default-rack)</li>
+   * </ul>
+   * The groups can be retrieved using the RACK_GROUP, NODE_IF_RACK_GROUP,
+   * and/or NODE_IF_NO_RACK_GROUP group keys.
+   */
+  private static final Pattern RACK_NODE_PATTERN =
+      Pattern.compile(
+          String.format("(?<%s>[^/]+?)|(?<%s>/[^/]+?)(?:/(?<%s>[^/]+?))?",
+          NODE_IF_NO_RACK_GROUP, RACK_GROUP, NODE_IF_RACK_GROUP));
 
   private final static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -503,20 +523,6 @@ public class YARNRunner implements ClientProtocol {
       throws IOException {
     ApplicationId applicationId = resMgrDelegate.getApplicationId();
 
-    // Setup resource requirements
-    Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemorySize(
-        conf.getInt(
-            MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
-        )
-    );
-    capability.setVirtualCores(
-        conf.getInt(
-            MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
-        )
-    );
-    LOG.debug("AppMaster capability = " + capability);
-
     // Setup LocalResources
     Map<String, LocalResource> localResources =
         setupLocalResources(jobConf, jobSubmitDir);
@@ -577,21 +583,18 @@ public class YARNRunner implements ClientProtocol {
     appContext.setMaxAppAttempts(
         conf.getInt(MRJobConfig.MR_AM_MAX_ATTEMPTS,
             MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS));
-    appContext.setResource(capability);
 
-    // set labels for the AM container request if present
+    // Setup the AM ResourceRequests
+    List<ResourceRequest> amResourceRequests = generateResourceRequests();
+    appContext.setAMContainerResourceRequests(amResourceRequests);
+
+    // set labels for the AM container requests if present
     String amNodelabelExpression = conf.get(MRJobConfig.AM_NODE_LABEL_EXP);
     if (null != amNodelabelExpression
         && amNodelabelExpression.trim().length() != 0) {
-      ResourceRequest amResourceRequest =
-          recordFactory.newRecordInstance(ResourceRequest.class);
-      amResourceRequest.setPriority(AM_CONTAINER_PRIORITY);
-      amResourceRequest.setResourceName(ResourceRequest.ANY);
-      amResourceRequest.setCapability(capability);
-      amResourceRequest.setNumContainers(1);
-      amResourceRequest.setNodeLabelExpression(amNodelabelExpression.trim());
-      appContext.setAMContainerResourceRequests(
-          Collections.singletonList(amResourceRequest));
+      for (ResourceRequest amResourceRequest : amResourceRequests) {
+        amResourceRequest.setNodeLabelExpression(amNodelabelExpression.trim());
+      }
     }
     // set labels for the Job containers
     appContext.setNodeLabelExpression(jobConf
@@ -614,6 +617,83 @@ public class YARNRunner implements ClientProtocol {
     }
 
     return appContext;
+  }
+
+  private List<ResourceRequest> generateResourceRequests() throws IOException {
+    Resource capability = recordFactory.newRecordInstance(Resource.class);
+    capability.setMemorySize(
+        conf.getInt(
+            MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
+        )
+    );
+    capability.setVirtualCores(
+        conf.getInt(
+            MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
+        )
+    );
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("AppMaster capability = " + capability);
+    }
+
+    List<ResourceRequest> amResourceRequests = new ArrayList<>();
+    // Always have an ANY request
+    ResourceRequest amAnyResourceRequest =
+        createAMResourceRequest(ResourceRequest.ANY, capability);
+    Map<String, ResourceRequest> rackRequests = new HashMap<>();
+    amResourceRequests.add(amAnyResourceRequest);
+    Collection<String> amStrictResources = conf.getStringCollection(
+        MRJobConfig.AM_STRICT_LOCALITY);
+    for (String amStrictResource : amStrictResources) {
+      amAnyResourceRequest.setRelaxLocality(false);
+      Matcher matcher = RACK_NODE_PATTERN.matcher(amStrictResource);
+      if (matcher.matches()) {
+        String nodeName;
+        String rackName = matcher.group(RACK_GROUP);
+        if (rackName == null) {
+          rackName = "/default-rack";
+          nodeName = matcher.group(NODE_IF_NO_RACK_GROUP);
+        } else {
+          nodeName = matcher.group(NODE_IF_RACK_GROUP);
+        }
+        ResourceRequest amRackResourceRequest = rackRequests.get(rackName);
+        if (amRackResourceRequest == null) {
+          amRackResourceRequest = createAMResourceRequest(rackName, capability);
+          amResourceRequests.add(amRackResourceRequest);
+          rackRequests.put(rackName, amRackResourceRequest);
+        }
+        if (nodeName != null) {
+          amRackResourceRequest.setRelaxLocality(false);
+          ResourceRequest amNodeResourceRequest =
+              createAMResourceRequest(nodeName, capability);
+          amResourceRequests.add(amNodeResourceRequest);
+        }
+      } else {
+        String errMsg =
+            "Invalid resource name: " + amStrictResource + " specified.";
+        LOG.warn(errMsg);
+        throw new IOException(errMsg);
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      for (ResourceRequest amResourceRequest : amResourceRequests) {
+        LOG.debug("ResourceRequest: resource = "
+            + amResourceRequest.getResourceName() + ", locality = "
+            + amResourceRequest.getRelaxLocality());
+      }
+    }
+    return amResourceRequests;
+  }
+
+  private ResourceRequest createAMResourceRequest(String resource,
+      Resource capability) {
+    ResourceRequest resourceRequest =
+        recordFactory.newRecordInstance(ResourceRequest.class);
+    resourceRequest.setPriority(AM_CONTAINER_PRIORITY);
+    resourceRequest.setResourceName(resource);
+    resourceRequest.setCapability(capability);
+    resourceRequest.setNumContainers(1);
+    resourceRequest.setRelaxLocality(true);
+    return resourceRequest;
   }
 
   private void setTokenRenewerConf(ContainerLaunchContext context,

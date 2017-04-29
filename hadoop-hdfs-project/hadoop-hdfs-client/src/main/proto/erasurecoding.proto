@@ -46,6 +46,14 @@ message GetErasureCodingPolicyResponseProto {
   optional ErasureCodingPolicyProto ecPolicy = 1;
 }
 
+message AddErasureCodingPoliciesRequestProto {
+  repeated ErasureCodingPolicyProto ecPolicies = 1;
+}
+
+message AddErasureCodingPoliciesResponseProto {
+  repeated AddingECPolicyResponseProto responses = 1;
+}
+
 message UnsetErasureCodingPolicyRequestProto {
   required string src = 1;
 }

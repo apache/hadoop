@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -2763,6 +2764,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  public AddingECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies) throws IOException {
+    checkOpen();
+    return namenode.addErasureCodingPolicies(policies);
+  }
+
   public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
     checkOpen();
     return new DFSInotifyEventInputStream(namenode, tracer);
@@ -2944,10 +2951,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Probe for encryption enabled on this filesystem.
+   * Note (see HDFS-11689):
+   * Not to throw exception in this method since it would break hive.
+   * Hive accesses this method and assumes no exception would be thrown.
+   * Hive should not access DFSClient since it is InterfaceAudience.Private.
+   * Deprecated annotation is added to trigger build warning at hive side.
+   * Request has been made to Hive to remove access to DFSClient.
    * @return true if encryption is enabled
    */
-  public boolean isHDFSEncryptionEnabled() throws IOException{
-    return getKeyProviderUri() != null;
+  @Deprecated
+  public boolean isHDFSEncryptionEnabled() {
+    boolean result = false;
+    try {
+      result = (getKeyProviderUri() != null);
+    } catch (IOException ioe) {
+      DFSClient.LOG.warn("Exception while checking whether encryption zone "
+            + "is supported, assumes it is not supported", ioe);
+    }
+    return result;
   }
 
   /**

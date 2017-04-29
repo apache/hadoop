@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 
 import com.google.protobuf.UninitializedMessageException;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
@@ -905,6 +906,40 @@ public class TestPBHelper {
     Assert.assertNotNull("FsServerDefaults is null", fsServerDefaults);
     Assert.assertNull("KeyProviderUri should be null",
         fsServerDefaults.getKeyProviderUri());
+  }
+
+  @Test
+  public void testConvertAddingECPolicyResponse() throws Exception {
+    // Check conversion of the built-in policies.
+    for (ErasureCodingPolicy policy :
+        SystemErasureCodingPolicies.getPolicies()) {
+      AddingECPolicyResponse response = new AddingECPolicyResponse(policy);
+      HdfsProtos.AddingECPolicyResponseProto proto = PBHelperClient
+          .convertAddingECPolicyResponse(response);
+      // Optional fields should not be set.
+      assertFalse("Unnecessary field is set.", proto.hasErrorMsg());
+      // Convert proto back to an object and check for equality.
+      AddingECPolicyResponse convertedResponse = PBHelperClient
+          .convertAddingECPolicyResponse(proto);
+      assertEquals("Converted policy not equal", response.getPolicy(),
+          convertedResponse.getPolicy());
+      assertEquals("Converted policy not equal", response.isSucceed(),
+          convertedResponse.isSucceed());
+    }
+
+    ErasureCodingPolicy policy = SystemErasureCodingPolicies
+        .getPolicies().get(0);
+    AddingECPolicyResponse response =
+        new AddingECPolicyResponse(policy, "failed");
+    HdfsProtos.AddingECPolicyResponseProto proto = PBHelperClient
+        .convertAddingECPolicyResponse(response);
+    // Convert proto back to an object and check for equality.
+    AddingECPolicyResponse convertedResponse = PBHelperClient
+        .convertAddingECPolicyResponse(proto);
+    assertEquals("Converted policy not equal", response.getPolicy(),
+        convertedResponse.getPolicy());
+    assertEquals("Converted policy not equal", response.getErrorMsg(),
+        convertedResponse.getErrorMsg());
   }
 
   @Test

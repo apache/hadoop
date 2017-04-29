@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.junit.Before;
+package org.apache.hadoop.service.launcher.testservices;
 
 /**
- * Test the legacy raw Reed-solomon coder implemented in Java.
+ * Service which fails in its start() operation.
  */
-public class TestRSRawCoderLegacy extends TestRSRawCoderBase {
+public class FailInStartService extends FailureTestService {
+  public static final String NAME =
+      "org.apache.hadoop.service.launcher.testservices.FailInStartService";
+  public static final int EXIT_CODE = -2;
 
-  @Before
-  public void setup() {
-    this.encoderClass = RSRawEncoderLegacy.class;
-    this.decoderClass = RSRawDecoderLegacy.class;
-    setAllowDump(false); // Change to true to allow verbose dump for debugging
+  public FailInStartService() {
+    super(false, true, false, 0);
+  }
+
+  @Override
+  int getExitCode() {
+    return EXIT_CODE;
   }
 }

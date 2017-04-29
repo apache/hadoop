@@ -141,8 +141,6 @@ public class JavaSandboxLinuxContainerRuntime
             this.configuration.get(YarnConfiguration.YARN_CONTAINER_SANDBOX,
                 YarnConfiguration.DEFAULT_YARN_CONTAINER_SANDBOX));
 
-    initializePolicyDir();
-
     super.initialize(conf);
   }
 
@@ -223,6 +221,7 @@ public class JavaSandboxLinuxContainerRuntime
       OutputStream policyOutputStream = null;
       try {
         String containerID = ctx.getExecutionAttribute(CONTAINER_ID_STR);
+        initializePolicyDir();
 
         Path policyFilePath = Files.createFile(
             Paths.get(policyFileDir.toString(),
@@ -368,8 +367,12 @@ public class JavaSandboxLinuxContainerRuntime
 
     static final String STRIP_POLICY_FLAG = POLICY_APPEND_FLAG + "[^ ]+";
     static final String CONTAINS_JAVA_CMD = "\\$" + JAVA_HOME + JAVA_CMD + ".*";
-    static final String CHAINED_COMMAND_REGEX =
-        "^.*(&&.+$)|(\\|\\|.+$).*$";  //Matches any occurrences of '||' or '&&'
+    static final String MULTI_COMMAND_REGEX =
+        "(?s).*(" + //command read as single line
+        "(&[^>]|&&)|(\\|{1,2})|(\\|&)|" + //Matches '&','&&','|','||' and '|&'
+        "(`[^`]+`)|(\\$\\([^)]+\\))|" + //Matches occurrences of $() or ``
+        "(;)" + //Matches end of statement ';'
+        ").*";
     static final String CLEAN_CMD_REGEX =
         "(" + SECURITY_FLAG + ")|" +
             "(" + STRIP_POLICY_FLAG + ")";
@@ -459,7 +462,7 @@ public class JavaSandboxLinuxContainerRuntime
         String command = commands.get(i);
         if(validateJavaHome(env.get(JAVA_HOME.name()))
             && command.matches(CONTAINS_JAVA_CMD)
-            && !command.matches(CHAINED_COMMAND_REGEX)){
+            && !command.matches(MULTI_COMMAND_REGEX)){
           command = command.replaceAll(CLEAN_CMD_REGEX, "");
           String securityString = JVM_SECURITY_CMD + policyPath + " ";
           if(LOG.isDebugEnabled()) {

@@ -1042,6 +1042,38 @@ extern  "C" {
     LIBHDFS_EXTERNAL
     void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer);
 
+    /**
+     * Get the last exception root cause that happened in the context of the
+     * current thread, i.e. the thread that called into libHDFS.
+     *
+     * The pointer returned by this function is guaranteed to be valid until
+     * the next call into libHDFS by the current thread.
+     * Users of this function should not free the pointer.
+     *
+     * A NULL will be returned if no exception information could be retrieved
+     * for the previous call.
+     *
+     * @return           The root cause as a C-string.
+     */
+    LIBHDFS_EXTERNAL
+    char* hdfsGetLastExceptionRootCause();
+
+    /**
+     * Get the last exception stack trace that happened in the context of the
+     * current thread, i.e. the thread that called into libHDFS.
+     *
+     * The pointer returned by this function is guaranteed to be valid until
+     * the next call into libHDFS by the current thread.
+     * Users of this function should not free the pointer.
+     *
+     * A NULL will be returned if no exception information could be retrieved
+     * for the previous call.
+     *
+     * @return           The stack trace as a C-string.
+     */
+    LIBHDFS_EXTERNAL
+    char* hdfsGetLastExceptionStackTrace();
+
 #ifdef __cplusplus
 }
 #endif

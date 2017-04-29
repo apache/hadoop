@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -2531,6 +2532,18 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Add Erasure coding policies to HDFS.
+   *
+   * @param policies The user defined ec policy list to add.
+   * @return Return the response list of adding operations.
+   * @throws IOException
+   */
+  public AddingECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies)  throws IOException {
+    return dfs.addErasureCodingPolicies(policies);
+  }
+
+  /**
    * Unset the erasure coding policy from the source path.
    *
    * @param path     The directory to unset the policy
@@ -2570,13 +2583,7 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    try {
-      if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
-        return super.getTrashRoot(path);
-      }
-    } catch (IOException ioe) {
-      DFSClient.LOG.warn("Exception while checking whether encryption zone is "
-          + "supported", ioe);
+    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
       return super.getTrashRoot(path);
     }
 

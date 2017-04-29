@@ -668,7 +668,7 @@
 
 <property>
   <name>io.erasurecode.codec.rs.rawcoders</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
+  <value>rs_native,rs_java</value>
   <description>
     Comma separated raw coder implementations for the rs codec. The earlier
     factory is prior to followings in case of failure of creating raw coders.
@@ -677,7 +677,7 @@
 
 <property>
   <name>io.erasurecode.codec.rs-legacy.rawcoders</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
+  <value>rs-legacy_java</value>
   <description>
     Comma separated raw coder implementations for the rs-legacy codec. The earlier
     factory is prior to followings in case of failure of creating raw coders.
@@ -686,7 +686,7 @@
 
 <property>
   <name>io.erasurecode.codec.xor.rawcoders</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
+  <value>xor_native,xor_java</value>
   <description>
     Comma separated raw coder implementations for the xor codec. The earlier
     factory is prior to followings in case of failure of creating raw coders.

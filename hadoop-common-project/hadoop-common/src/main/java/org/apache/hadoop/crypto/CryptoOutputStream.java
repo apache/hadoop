@@ -252,7 +252,9 @@ public class CryptoOutputStream extends FilterOutputStream implements
    */
   @Override
   public synchronized void flush() throws IOException {
-    checkStream();
+    if (closed) {
+      return;
+    }
     encrypt();
     super.flush();
   }

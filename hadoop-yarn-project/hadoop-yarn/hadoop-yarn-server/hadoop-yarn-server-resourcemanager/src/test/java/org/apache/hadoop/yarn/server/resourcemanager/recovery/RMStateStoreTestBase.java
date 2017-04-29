@@ -156,8 +156,7 @@ public class RMStateStoreTestBase {
   }
 
   protected RMApp storeApp(RMStateStore store, ApplicationId appId,
-      long submitTime,
-      long startTime) throws Exception {
+      long submitTime, long startTime) throws Exception {
     ApplicationSubmissionContext context =
         new ApplicationSubmissionContextPBImpl();
     context.setApplicationId(appId);
@@ -198,6 +197,13 @@ public class RMStateStoreTestBase {
     store.storeNewApplicationAttempt(mockAttempt);
     waitNotify(dispatcher);
     return mockAttempt;
+  }
+
+  protected void updateAttempt(RMStateStore store, TestDispatcher dispatcher,
+      ApplicationAttemptStateData attemptState) {
+    dispatcher.attemptId = attemptState.getAttemptId();
+    store.updateApplicationAttemptState(attemptState);
+    waitNotify(dispatcher);
   }
 
   void testRMAppStateStore(RMStateStoreHelper stateStoreHelper)

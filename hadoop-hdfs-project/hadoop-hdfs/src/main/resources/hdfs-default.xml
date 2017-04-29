@@ -4154,6 +4154,23 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.namenode.snapshot.capture.openfiles</name>
+    <value>false</value>
+    <description>
+      If true, snapshots taken will have an immutable shared copy of
+      the open files that have valid leases. Even after the open files
+      grow or shrink in size, snapshot will always have the previous
+      point-in-time version of the open files, just like all other
+      closed files. Default is false.
+      Note: The file length captured for open files in snapshot is
+      whats recorded in NameNode at the time of snapshot and it may
+      be shorter than what the client has written till then. In order
+      to capture the latest length, the client can call hflush/hsync
+      with the flag SyncFlag.UPDATE_LENGTH on the open files handles.
+    </description>
+  </property>
+
 <property>
   <name>dfs.pipeline.ecn</name>
   <value>false</value>

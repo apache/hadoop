@@ -199,6 +199,7 @@ public final class ECSchema {
     return sb.toString();
   }
 
+  // Todo: Further use `extraOptions` to compare ECSchemas
   @Override
   public boolean equals(Object o) {
     if (o == null) {

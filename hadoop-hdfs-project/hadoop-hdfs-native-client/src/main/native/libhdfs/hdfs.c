@@ -2956,6 +2956,7 @@ done:
     destroyLocalReference(env, jFileBlockHosts);
     destroyLocalReference(env, jHost);
     if (ret) {
+        errno = ret;
         if (blockHosts) {
             hdfsFreeHosts(blockHosts);
         }
@@ -3512,7 +3513,15 @@ int hdfsFileIsEncrypted(hdfsFileInfo *fileInfo)
     return !!(extInfo->flags & HDFS_EXTENDED_FILE_INFO_ENCRYPTED);
 }
 
+char* hdfsGetLastExceptionRootCause()
+{
+  return getLastTLSExceptionRootCause();
+}
 
+char* hdfsGetLastExceptionStackTrace()
+{
+  return getLastTLSExceptionStackTrace();
+}
 
 /**
  * vim: ts=4: sw=4: et:

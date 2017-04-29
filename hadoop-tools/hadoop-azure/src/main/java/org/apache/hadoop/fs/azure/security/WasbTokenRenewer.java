@@ -81,9 +81,6 @@ public class WasbTokenRenewer extends TokenRenewer {
     if (connectUgi == null) {
       connectUgi = ugi;
     }
-    if (!connectUgi.hasKerberosCredentials()) {
-      connectUgi = UserGroupInformation.getLoginUser();
-    }
     connectUgi.checkTGTAndReloginFromKeytab();
     final DelegationTokenAuthenticatedURL.Token authToken = new DelegationTokenAuthenticatedURL.Token();
     authToken
@@ -122,9 +119,6 @@ public class WasbTokenRenewer extends TokenRenewer {
     final UserGroupInformation proxyUser = connectUgi;
     if (connectUgi == null) {
       connectUgi = ugi;
-    }
-    if (!connectUgi.hasKerberosCredentials()) {
-      connectUgi = UserGroupInformation.getLoginUser();
     }
     connectUgi.checkTGTAndReloginFromKeytab();
     final DelegationTokenAuthenticatedURL.Token authToken = new DelegationTokenAuthenticatedURL.Token();

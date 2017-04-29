@@ -783,12 +783,12 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
   @Override
   public void hflush() {
-    throw new UnsupportedOperationException();
+    // not supported yet
   }
 
   @Override
   public void hsync() {
-    throw new UnsupportedOperationException();
+    // not supported yet
   }
 
   @Override

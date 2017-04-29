@@ -19,10 +19,14 @@ package org.apache.hadoop.yarn.sls.scheduler;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 @Private
 @Unstable
 public interface SchedulerWrapper {
   SchedulerMetrics getSchedulerMetrics();
+
   Tracker getTracker();
+
+  String getRealQueueName(String queue) throws YarnException;
 }

@@ -73,6 +73,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
@@ -383,6 +384,7 @@ public final class HttpServer2 implements FilterContainer {
           getPassword(sslConf, SSLFactory.SSL_SERVER_TRUSTSTORE_PASSWORD),
           sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE,
               SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT));
+      excludeCiphers(sslConf.get(SSLFactory.SSL_SERVER_EXCLUDE_CIPHER_LIST));
     }
 
     public HttpServer2 build() throws IOException {
@@ -471,7 +473,8 @@ public final class HttpServer2 implements FilterContainer {
         sslContextFactory.setTrustStorePassword(trustStorePassword);
       }
       if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
-        sslContextFactory.setExcludeCipherSuites(excludeCiphers.split(","));
+        sslContextFactory.setExcludeCipherSuites(
+            StringUtils.getTrimmedStrings(excludeCiphers));
         LOG.info("Excluded Cipher List:" + excludeCiphers);
       }
 

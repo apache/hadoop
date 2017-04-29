@@ -826,6 +826,7 @@ public class TestAppManager{
     when(app.getQueue()).thenReturn("Multiline\n\n\r\rQueueName");
     when(app.getState()).thenReturn(RMAppState.RUNNING);
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
+    when(app.getSubmitTime()).thenReturn(1000L);
     RMAppMetrics metrics =
         new RMAppMetrics(Resource.newInstance(1234, 56),
             10, 1, 16384, 64, 0, 0);
@@ -842,6 +843,7 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("Multiline" + escaped +"AppName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
+    Assert.assertTrue(msg.contains("submitTime=1000"));
     Assert.assertTrue(msg.contains("memorySeconds=16384"));
     Assert.assertTrue(msg.contains("vcoreSeconds=64"));
     Assert.assertTrue(msg.contains("preemptedAMContainers=1"));

@@ -78,6 +78,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -122,6 +123,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
@@ -1929,8 +1931,9 @@ public class DataNode extends ReconfigurableBase
     return fis;
   }
 
-  private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,
-      AccessMode accessMode) throws IOException {
+  private void checkBlockToken(ExtendedBlock block,
+      Token<BlockTokenIdentifier> token, AccessMode accessMode)
+      throws IOException {
     if (isBlockTokenEnabled) {
       BlockTokenIdentifier id = new BlockTokenIdentifier();
       ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
@@ -1939,7 +1942,8 @@ public class DataNode extends ReconfigurableBase
       if (LOG.isDebugEnabled()) {
         LOG.debug("Got: " + id.toString());
       }
-      blockPoolTokenSecretManager.checkAccess(id, null, block, accessMode);
+      blockPoolTokenSecretManager.checkAccess(id, null, block, accessMode,
+          null);
     }
   }
 
@@ -2450,8 +2454,9 @@ public class DataNode extends ReconfigurableBase
         //
         // Header info
         //
-        Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(b, 
-            EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
+        Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(b,
+            EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
+            targetStorageTypes);
 
         long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
@@ -2534,11 +2539,13 @@ public class DataNode extends ReconfigurableBase
    * Use BlockTokenSecretManager to generate block token for current user.
    */
   public Token<BlockTokenIdentifier> getBlockAccessToken(ExtendedBlock b,
-      EnumSet<AccessMode> mode) throws IOException {
+      EnumSet<AccessMode> mode,
+      StorageType[] storageTypes) throws IOException {
     Token<BlockTokenIdentifier> accessToken = 
         BlockTokenSecretManager.DUMMY_TOKEN;
     if (isBlockTokenEnabled) {
-      accessToken = blockPoolTokenSecretManager.generateToken(b, mode);
+      accessToken = blockPoolTokenSecretManager.generateToken(b, mode,
+          storageTypes);
     }
     return accessToken;
   }
@@ -2911,7 +2918,7 @@ public class DataNode extends ReconfigurableBase
           LOG.debug("Got: " + id.toString());
         }
         blockPoolTokenSecretManager.checkAccess(id, null, block,
-            BlockTokenIdentifier.AccessMode.READ);
+            BlockTokenIdentifier.AccessMode.READ, null);
       }
     }
   }
@@ -3533,5 +3540,30 @@ public class DataNode extends ReconfigurableBase
     }
     Set<String> slowDisks = diskMetrics.getDiskOutliersStats().keySet();
     return JSON.toString(slowDisks);
+  }
+
+
+  @Override
+  public List<DatanodeVolumeInfo> getVolumeReport() throws IOException {
+    checkSuperuserPrivilege();
+    Map<String, Object> volumeInfoMap = data.getVolumeInfoMap();
+    if (volumeInfoMap == null) {
+      LOG.warn("DataNode volume info not available.");
+      return new ArrayList<>(0);
+    }
+    List<DatanodeVolumeInfo> volumeInfoList = new ArrayList<>();
+    for (Entry<String, Object> volume : volumeInfoMap.entrySet()) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> volumeInfo = (Map<String, Object>) volume.getValue();
+      DatanodeVolumeInfo dnStorageInfo = new DatanodeVolumeInfo(
+          volume.getKey(), (Long) volumeInfo.get("usedSpace"),
+          (Long) volumeInfo.get("freeSpace"),
+          (Long) volumeInfo.get("reservedSpace"),
+          (Long) volumeInfo.get("reservedSpaceForReplicas"),
+          (Long) volumeInfo.get("numBlocks"),
+          (StorageType) volumeInfo.get("storageType"));
+      volumeInfoList.add(dnStorageInfo);
+    }
+    return volumeInfoList;
   }
 }

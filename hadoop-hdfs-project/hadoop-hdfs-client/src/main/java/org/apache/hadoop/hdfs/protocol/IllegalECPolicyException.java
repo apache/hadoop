@@ -15,27 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.protocol;
 
-package org.apache.hadoop.fs.swift.http;
-
-import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Implementation for SwiftRestClient to make copy requests.
- * COPY is a method that came with WebDAV (RFC2518), and is not something that
- * can be handled by all proxies en-route to a filesystem.
+ * An Exception indicates the error when adding an ErasureCoding policy.
  */
-class CopyMethod extends EntityEnclosingMethod {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public class IllegalECPolicyException extends Exception {
+  static final long serialVersionUID = 1L;
 
-  public CopyMethod(String uri) {
-    super(uri);
-  }
-
-  /**
-   * @return http method name
-   */
-  @Override
-  public String getName() {
-    return "COPY";
+  public IllegalECPolicyException(String msg) {
+    super(msg);
   }
 }
