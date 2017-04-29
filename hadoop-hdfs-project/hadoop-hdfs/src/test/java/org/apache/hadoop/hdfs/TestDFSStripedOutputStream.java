@@ -17,15 +17,21 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.fail;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
@@ -170,12 +176,33 @@ public class TestDFSStripedOutputStream {
         blockSize * dataBlocks + cellSize+ 123);
   }
 
-
   @Test
   public void testFileMoreThanABlockGroup3() throws Exception {
     testOneFile("/MoreThanABlockGroup3",
         blockSize * dataBlocks * 3 + cellSize * dataBlocks
         + cellSize + 123);
+  }
+
+  /**
+   * {@link DFSStripedOutputStream} doesn't support hflush() or hsync() yet.
+   * This test is to make sure that DFSStripedOutputStream doesn't throw any
+   * {@link UnsupportedOperationException} on hflush() or hsync() so as to
+   * comply with output stream spec.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testStreamFlush() throws Exception {
+    final byte[] bytes = StripedFileTestUtil.generateBytes(blockSize *
+        dataBlocks * 3 + cellSize * dataBlocks + cellSize + 123);
+    try (FSDataOutputStream os = fs.create(new Path("/ec-file-1"))) {
+      InputStream is = new ByteArrayInputStream(bytes);
+      IOUtils.copyBytes(is, os, bytes.length);
+      os.hflush();
+      os.hsync();
+    } catch (Exception e) {
+      fail("hflush()/hsync() on striped file output stream failed!", e);
+    }
   }
 
   private void testOneFile(String src, int writeBytes) throws Exception {
