@@ -19,7 +19,7 @@
 #include "os/thread_local_storage.h"
 
 #include <jni.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <stdio.h>
 
