@@ -792,7 +792,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * The default implementation returns an array containing one element:
    * <pre>
-   * BlockLocation( { "localhost:9866" },  { "localhost" }, 0, file.getLen())
+   * BlockLocation( { "localhost:50010" },  { "localhost" }, 0, file.getLen())
    * </pre>>
    *
    * @param file FilesStatus to get data from
