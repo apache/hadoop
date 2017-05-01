@@ -1630,7 +1630,8 @@ public class BlockManager {
    *
    * We prefer nodes that are in DECOMMISSION_INPROGRESS state to other nodes
    * since the former do not have write traffic and hence are less busy.
-   * We do not use already decommissioned nodes as a source.
+   * We do not use already decommissioned nodes as a source, unless there no
+   * other choice.
    * Otherwise we choose a random node among those that did not reach their
    * replication limits.  However, if the replication is of the highest priority
    * and all nodes have reached their replication limits, we will choose a
@@ -1662,6 +1663,7 @@ public class BlockManager {
     containingNodes.clear();
     nodesContainingLiveReplicas.clear();
     DatanodeDescriptor srcNode = null;
+    DatanodeDescriptor decommissionedSrc = null;
     int live = 0;
     int decommissioned = 0;
     int decommissioning = 0;
@@ -1704,9 +1706,16 @@ public class BlockManager {
       // the block must not be scheduled for removal on srcNode
       if(excessBlocks != null && excessBlocks.contains(block))
         continue;
-      // never use already decommissioned nodes
-      if(node.isDecommissioned())
+      // Save the live decommissioned replica in case we need it. Such replicas
+      // are normally not used for replication, but if nothing else is
+      // available, one can be selected as a source.
+      if (node.isDecommissioned()) {
+        if (decommissionedSrc == null ||
+            DFSUtil.getRandom().nextBoolean()) {
+          decommissionedSrc = node;
+        }
         continue;
+      }
 
       // We got this far, current node is a reasonable choice
       if (srcNode == null) {
@@ -1722,6 +1731,10 @@ public class BlockManager {
     if(numReplicas != null)
       numReplicas.initialize(live, decommissioned, decommissioning, corrupt,
           excess, 0);
+    // Pick a live decommissioned replica, if nothing else is available.
+    if (live == 0 && srcNode == null && decommissionedSrc != null) {
+      return decommissionedSrc;
+    }
     return srcNode;
   }
 
@@ -2549,7 +2562,7 @@ public class BlockManager {
 
     int curReplicaDelta;
     if (result == AddBlockResult.ADDED) {
-      curReplicaDelta = 1;
+      curReplicaDelta = (node.isDecommissioned()) ? 0 : 1;
       if (logEveryBlock) {
         logAddStoredBlock(storedBlock, node);
       }

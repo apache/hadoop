@@ -253,6 +253,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11709. StandbyCheckpointer should handle an non-existing legacyOivImageDir
     gracefully. (Erik Krogen via zhz)
 
+    HDFS-11609. Some blocks can be permanently lost if nodes are decommissioned
+    while dead. (kihwal)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
