@@ -246,6 +246,32 @@ public final class ContainerProtocolCalls {
   }
 
   /**
+   * Deletes a container from a pipeline.
+   *
+   * @param client
+   * @param force whether or not to forcibly delete the container.
+   * @param traceID
+   * @throws IOException
+   */
+  public static void deleteContainer(XceiverClientSpi client,
+      boolean force, String traceID) throws IOException {
+    ContainerProtos.DeleteContainerRequestProto.Builder deleteRequest =
+        ContainerProtos.DeleteContainerRequestProto.newBuilder();
+    deleteRequest.setName(client.getPipeline().getContainerName());
+    deleteRequest.setPipeline(client.getPipeline().getProtobufMessage());
+    deleteRequest.setForceDelete(force);
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.DeleteContainer);
+    request.setDeleteContainer(deleteRequest);
+    request.setTraceID(traceID);
+    ContainerCommandResponseProto response =
+        client.sendCommand(request.build());
+    validateContainerResponse(response);
+  }
+
+  /**
    * Reads the data given the container name and key.
    *
    * @param client - client

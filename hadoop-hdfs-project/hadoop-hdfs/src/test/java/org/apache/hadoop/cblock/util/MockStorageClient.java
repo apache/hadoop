@@ -55,7 +55,8 @@ public class MockStorageClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public void deleteContainer(Pipeline pipeline) throws IOException {
+  public void deleteContainer(Pipeline pipeline, boolean force)
+      throws IOException {
 
   }
 

@@ -84,6 +84,14 @@ message ContainerResponseProto {
   optional string errorMessage = 3;
 }
 
+message GetContainerRequestProto {
+  required string containerName = 1;
+}
+
+message GetContainerResponseProto {
+  required hadoop.hdfs.ozone.Pipeline pipeline = 1;
+}
+
 // SCM Block protocol
 /**
  * keys - batch of block keys to find
@@ -146,10 +154,14 @@ service StorageContainerLocationProtocolService {
       returns(GetStorageContainerLocationsResponseProto);
 
   /**
-   Creates a container entry in SCM.
+   * Creates a container entry in SCM.
    */
   rpc allocateContainer(ContainerRequestProto) returns (ContainerResponseProto);
 
+  /**
+   * Returns the pipeline for a given container.
+   */
+  rpc getContainer(GetContainerRequestProto) returns (GetContainerResponseProto);
 
   /**
    * Find the set of nodes that currently host the block, as

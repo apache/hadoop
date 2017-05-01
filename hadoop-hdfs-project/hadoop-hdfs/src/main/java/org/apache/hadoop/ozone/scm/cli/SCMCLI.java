@@ -38,8 +38,6 @@ import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSi
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -62,8 +60,6 @@ import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB;
  * This class is the CLI of SCM.
  */
 public class SCMCLI extends OzoneBaseCLI {
-
-  private static final Logger LOG = LoggerFactory.getLogger(SCMCLI.class);
 
   public static final String HELP_OP = "help";
   public static final int CMD_WIDTH = 80;
@@ -203,7 +199,7 @@ public class SCMCLI extends OzoneBaseCLI {
       BasicParser parser = new BasicParser();
       return parser.parse(opts, argv);
     } catch (ParseException ex) {
-      LOG.error(ex.getMessage());
+      err.println(ex.getMessage());
     }
     return null;
   }
@@ -216,6 +212,7 @@ public class SCMCLI extends OzoneBaseCLI {
       if (cmd.hasOption(CONTAINER_CMD)) {
         handler = new ContainerCommandHandler(scmClient);
       }
+
       if (handler == null) {
         if (cmd.hasOption(HELP_OP)) {
           displayHelp();
@@ -226,6 +223,9 @@ public class SCMCLI extends OzoneBaseCLI {
           return UNRECOGNIZED_CMD;
         }
       } else {
+        // Redirect stdout and stderr if necessary.
+        handler.setOut(this.out);
+        handler.setErr(this.err);
         handler.execute(cmd);
         return SUCCESS;
       }

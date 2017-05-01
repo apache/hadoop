@@ -111,6 +111,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -1574,7 +1575,12 @@ public class DataNode extends ReconfigurableBase
     
     registerBlockPoolWithSecretManager(bpRegistration, blockPoolId);
   }
-  
+
+  @VisibleForTesting
+  public OzoneContainer getOzoneContainerManager() {
+    return this.datanodeStateMachine.getContainer();
+  }
+
   /**
    * After the block pool has contacted the NN, registers that block pool
    * with the secret manager, updating it with the secrets provided by the NN.

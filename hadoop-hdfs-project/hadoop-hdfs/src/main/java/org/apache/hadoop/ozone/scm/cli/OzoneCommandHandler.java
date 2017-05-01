@@ -19,10 +19,9 @@ package org.apache.hadoop.ozone.scm.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.scm.client.ScmClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  * The abstract class of all SCM CLI commands.
@@ -30,8 +29,8 @@ import java.io.IOException;
 public abstract class OzoneCommandHandler {
 
   private ScmClient scmClient;
-  protected static final Logger LOG =
-      LoggerFactory.getLogger(OzoneCommandHandler.class);
+  protected PrintStream out = System.out;
+  protected PrintStream err = System.err;
 
   /**
    * Constructs a handler object.
@@ -42,6 +41,26 @@ public abstract class OzoneCommandHandler {
 
   protected ScmClient getScmClient() {
     return scmClient;
+  }
+
+  /**
+   * Sets customized output stream to redirect the stdout to somewhere else.
+   * @param out
+   */
+  public void setOut(PrintStream out) {
+    this.out = out;
+  }
+
+  /**
+   * Sets customized error stream to redirect the stderr to somewhere else.
+   * @param err
+   */
+  public void setErr(PrintStream err) {
+    this.err = err;
+  }
+
+  public void logOut(String msg, String ... variable) {
+    this.out.println(String.format(msg, variable));
   }
 
   /**

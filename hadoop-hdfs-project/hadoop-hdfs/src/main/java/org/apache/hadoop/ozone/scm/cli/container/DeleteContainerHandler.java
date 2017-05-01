@@ -15,65 +15,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.ozone.scm.cli.container;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.ozone.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 
 import static org.apache.hadoop.ozone.scm.cli.SCMCLI.CMD_WIDTH;
-import static org.apache.hadoop.ozone.scm.cli.SCMCLI.HELP_OP;
 
 /**
- * This is the handler that process container creation command.
+ * This is the handler that process delete container command.
  */
-public class CreateContainerHandler extends OzoneCommandHandler {
+public class DeleteContainerHandler extends OzoneCommandHandler {
 
-  public static final String CONTAINER_CREATE = "create";
-  public static final String PIPELINE_ID = "p";
+  protected static final String CONTAINER_DELETE = "del";
+  protected static final String OPT_FORCE = "f";
 
-  public CreateContainerHandler(ScmClient scmClient) {
+  public DeleteContainerHandler(ScmClient scmClient) {
     super(scmClient);
   }
 
   @Override
   public void execute(CommandLine cmd) throws IOException {
-    if (!cmd.hasOption(CONTAINER_CREATE)) {
-      throw new IOException("Expecting container create");
-    }
-    // TODO requires pipeline id (instead of optional as in the design) for now
-    if (!cmd.hasOption(PIPELINE_ID)) {
-      displayHelp();
-      if (!cmd.hasOption(HELP_OP)) {
-        throw new IOException("Expecting container ID");
-      } else {
-        return;
-      }
-    }
-    String pipelineID = cmd.getOptionValue(PIPELINE_ID);
+    Preconditions.checkArgument(cmd.hasOption(CONTAINER_DELETE),
+        "Expecting command del");
 
-    logOut("Creating container : %s.", pipelineID);
-    getScmClient().createContainer(pipelineID);
-    logOut("Container created.");
+    String containerName = cmd.getOptionValue(CONTAINER_DELETE);
+
+    Pipeline pipeline = getScmClient().getContainer(containerName);
+    if (pipeline == null) {
+      throw new IOException("Cannot delete an non-exist container "
+          + containerName);
+    }
+
+    logOut("Deleting container : %s.", containerName);
+    getScmClient().deleteContainer(pipeline, cmd.hasOption(OPT_FORCE));
+    logOut("Container %s deleted.", containerName);
   }
 
-  @Override
-  public void displayHelp() {
-    // TODO : may need to change this if we decide to make -p optional later
+  @Override public void displayHelp() {
     Options options = new Options();
     addOptions(options);
     HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.printHelp(CMD_WIDTH, "hdfs scm -container -create <option>",
+    helpFormatter.printHelp(CMD_WIDTH, "hdfs scm -container -del <option>",
         "where <option> is", options, "");
   }
 
   public static void addOptions(Options options) {
-    Option pipelineID = new Option(PIPELINE_ID, true, "Specify pipeline ID");
-    options.addOption(pipelineID);
+    Option forceOpt = new Option(OPT_FORCE,
+        false,
+        "forcibly delete a container");
+    options.addOption(forceOpt);
   }
 }
