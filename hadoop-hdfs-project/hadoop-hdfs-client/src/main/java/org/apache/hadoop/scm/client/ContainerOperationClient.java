@@ -82,9 +82,11 @@ public class ContainerOperationClient implements ScmClient {
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ContainerProtocolCalls.createContainer(client, traceID);
-      LOG.info("Created container " + containerId +
-          " leader:" + pipeline.getLeader() +
-          " machines:" + pipeline.getMachines());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Created container " + containerId
+            + " leader:" + pipeline.getLeader()
+            + " machines:" + pipeline.getMachines());
+      }
       return pipeline;
     } finally {
       if (client != null) {
@@ -128,11 +130,26 @@ public class ContainerOperationClient implements ScmClient {
   /**
    * Delete the container, this will release any resource it uses.
    * @param pipeline - Pipeline that represents the container.
+   * @param force - True to forcibly delete the container.
    * @throws IOException
    */
   @Override
-  public void deleteContainer(Pipeline pipeline) throws IOException {
-    // TODO
+  public void deleteContainer(Pipeline pipeline, boolean force)
+      throws IOException {
+    XceiverClientSpi client = null;
+    try {
+      client = xceiverClientManager.acquireClient(pipeline);
+      String traceID = UUID.randomUUID().toString();
+      ContainerProtocolCalls.deleteContainer(client, force, traceID);
+      LOG.info("Deleted container {}, leader: {}, machines: {} ",
+          pipeline.getContainerName(),
+          pipeline.getLeader(),
+          pipeline.getMachines());
+    } finally {
+      if (client != null) {
+        xceiverClientManager.releaseClient(client);
+      }
+    }
   }
 
   /**
@@ -144,8 +161,7 @@ public class ContainerOperationClient implements ScmClient {
   @Override
   public Pipeline getContainer(String containerId) throws
       IOException {
-    // TODO
-    return null;
+    return storageContainerLocationClient.getContainer(containerId);
   }
 
   /**

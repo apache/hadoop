@@ -53,9 +53,10 @@ public interface ScmClient {
   /**
    * Delets an existing container.
    * @param pipeline - Pipeline that represents the container.
+   * @param force - true to forcibly delete the container.
    * @throws IOException
    */
-  void deleteContainer(Pipeline pipeline) throws IOException;
+  void deleteContainer(Pipeline pipeline, boolean force) throws IOException;
 
   /**
    * Gets the container size -- Computed by SCM from Container Reports.

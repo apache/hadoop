@@ -365,8 +365,11 @@ public class StorageContainerManager
         ScmClient.ReplicationFactor.ONE);
   }
 
-  @VisibleForTesting
-  Pipeline getContainer(String containerName) throws IOException {
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public Pipeline getContainer(String containerName) throws IOException {
     return scmContainerManager.getContainer(containerName);
   }
 

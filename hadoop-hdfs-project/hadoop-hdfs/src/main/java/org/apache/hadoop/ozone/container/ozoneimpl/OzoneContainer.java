@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -192,5 +193,10 @@ public class OzoneContainer {
    */
   public List<ContainerData> getContainerReports() throws IOException {
     return this.manager.getContainerReports();
+  }
+
+  @VisibleForTesting
+  public ContainerManager getContainerManager() {
+    return this.manager;
   }
 }

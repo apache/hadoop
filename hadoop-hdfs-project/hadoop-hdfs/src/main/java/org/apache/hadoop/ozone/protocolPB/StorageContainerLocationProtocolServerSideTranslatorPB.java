@@ -54,6 +54,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.GetScmBlockLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.GetScmBlockLocationsResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.GetContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.GetContainerResponseProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 
@@ -125,6 +129,20 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
           .setErrorCode(ContainerResponseProto.Error.success)
           .build();
 
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetContainerResponseProto getContainer(
+      RpcController controller, GetContainerRequestProto request)
+      throws ServiceException {
+    try {
+      Pipeline pipeline = impl.getContainer(request.getContainerName());
+      return GetContainerResponseProto.newBuilder()
+          .setPipeline(pipeline.getProtobufMessage())
+          .build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

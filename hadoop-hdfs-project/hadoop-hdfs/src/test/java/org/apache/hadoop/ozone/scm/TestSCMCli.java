@@ -20,6 +20,9 @@ package org.apache.hadoop.ozone.scm;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.scm.cli.ResultCode;
 import org.apache.hadoop.ozone.scm.cli.SCMCLI;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -27,7 +30,7 @@ import org.apache.hadoop.scm.client.ContainerOperationClient;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -52,6 +55,7 @@ public class TestSCMCli {
       storageContainerLocationClient;
 
   private static StorageContainerManager scm;
+  private static ContainerManager containerManager;
 
   private static ByteArrayOutputStream outContent;
   private static PrintStream outStream;
@@ -73,10 +77,29 @@ public class TestSCMCli {
     errStream = new PrintStream(errContent);
     cli = new SCMCLI(client, outStream, errStream);
     scm = cluster.getStorageContainerManager();
+    containerManager = cluster.getDataNodes().get(0)
+        .getOzoneContainerManager().getContainerManager();
   }
 
-  @After
-  public void shutdown() throws InterruptedException {
+  private int runCommandAndGetOutput(String[] cmd,
+      ByteArrayOutputStream out,
+      ByteArrayOutputStream err) throws Exception {
+    PrintStream cmdOutStream = System.out;
+    PrintStream cmdErrStream = System.err;
+    if(out != null) {
+      cmdOutStream = new PrintStream(out);
+    }
+    if (err != null) {
+      cmdErrStream = new PrintStream(err);
+    }
+    ScmClient client = new ContainerOperationClient(
+        storageContainerLocationClient, new XceiverClientManager(conf));
+    SCMCLI scmCLI = new SCMCLI(client, cmdOutStream, cmdErrStream);
+    return scmCLI.run(cmd);
+  }
+
+  @AfterClass
+  public static void shutdown() throws InterruptedException {
     IOUtils.cleanup(null, storageContainerLocationClient, cluster);
   }
 
@@ -96,6 +119,60 @@ public class TestSCMCli {
     Pipeline container = scm.getContainer(containerName);
     assertNotNull(container);
     assertEquals(containerName, container.getContainerName());
+  }
+
+
+  @Test
+  public void testDeleteContainer() throws Exception {
+    final String cname1 = "cname1";
+    final String cname2 = "cname2";
+
+    // ****************************************
+    // 1. Test to delete a non-empty container.
+    // ****************************************
+    // Create an non-empty container
+    Pipeline pipeline1 = scm.allocateContainer(cname1);
+    ContainerData data1 = new ContainerData(cname1);
+    containerManager.createContainer(pipeline1, data1);
+    ContainerData cdata = containerManager.readContainer(cname1);
+    KeyUtils.getDB(cdata, conf).put(cname1.getBytes(),
+        "someKey".getBytes());
+
+    // Gracefully delete a container should fail because it is not empty.
+    String[] del1 = {"-container", "-del", cname1};
+    ByteArrayOutputStream testErr1 = new ByteArrayOutputStream();
+    int exitCode1 = runCommandAndGetOutput(del1, null, testErr1);
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode1);
+    assertTrue(testErr1.toString()
+        .contains("Container cannot be deleted because it is not empty."));
+
+    // Delete should fail when attempts to delete an open container.
+    // Even with the force tag.
+    String[] del2 = {"-container", "-del", cname1, "-f"};
+    ByteArrayOutputStream testErr2 = new ByteArrayOutputStream();
+    int exitCode2 = runCommandAndGetOutput(del2, null, testErr2);
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode2);
+    assertTrue(testErr2.toString()
+        .contains("Attempting to force delete an open container."));
+
+    // Close the container and try force delete again.
+    containerManager.closeContainer(cname1);
+    int exitCode3 = runCommandAndGetOutput(del2, null, null);
+    assertEquals(ResultCode.SUCCESS, exitCode3);
+
+
+    // ****************************************
+    // 2. Test to delete an empty container.
+    // ****************************************
+    // Create an empty container
+    Pipeline pipeline2 = scm.allocateContainer(cname2);
+    ContainerData data2 = new ContainerData(cname2);
+    containerManager.createContainer(pipeline2, data2);
+
+    // Successfully delete an empty container.
+    String[] del3 = {"-container", "-del", cname2};
+    int exitCode4 = runCommandAndGetOutput(del3, null, null);
+    assertEquals(ResultCode.SUCCESS, exitCode4);
   }
 
   @Test
@@ -139,7 +216,8 @@ public class TestSCMCli {
     String expected1 =
         "usage: hdfs scm -container <commands> <options>\n" +
         "where <commands> can be one of the following\n" +
-        " -create   Create container\n";
+        " -create      Create container\n" +
+        " -del <arg>   Delete container\n";
     assertEquals(expected1, testContent.toString());
     testContent.reset();
 

@@ -224,7 +224,7 @@ public class StorageManager {
     for (String containerID : volume.getContainerIDsList()) {
       try {
         Pipeline pipeline = storageClient.getContainer(containerID);
-        storageClient.deleteContainer(pipeline);
+        storageClient.deleteContainer(pipeline, force);
       } catch (IOException e) {
         LOGGER.error("Error deleting container Container:{} error:{}",
             containerID, e);

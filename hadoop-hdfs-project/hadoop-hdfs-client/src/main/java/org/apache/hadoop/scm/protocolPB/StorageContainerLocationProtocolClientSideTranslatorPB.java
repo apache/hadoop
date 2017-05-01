@@ -35,6 +35,8 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.LocatedContainerProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerResponseProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
@@ -144,6 +146,24 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
           response.getErrorMessage() : "Allocate container failed.");
     }
     return Pipeline.getFromProtoBuf(response.getPipeline());
+  }
+
+  public Pipeline getContainer(String containerName) throws IOException {
+    Preconditions.checkNotNull(containerName,
+        "Container Name cannot be Null");
+    Preconditions.checkState(!containerName.isEmpty(),
+        "Container name cannot be empty");
+    GetContainerRequestProto request = GetContainerRequestProto
+        .newBuilder()
+        .setContainerName(containerName)
+        .build();
+    try {
+      GetContainerResponseProto response =
+          rpcProxy.getContainer(NULL_RPC_CONTROLLER, request);
+      return Pipeline.getFromProtoBuf(response.getPipeline());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Override
