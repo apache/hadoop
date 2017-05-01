@@ -687,4 +687,15 @@ public class InMemoryPlan implements Plan {
       readLock.unlock();
     }
   }
+
+  @Override
+  public RLESparseResourceAllocation getCumulativeLoadOverTime(
+      long start, long end) {
+    readLock.lock();
+    try {
+      return rleSparseVector.getRangeOverlapping(start, end);
+    } finally {
+      readLock.unlock();
+    }
+  }
 }

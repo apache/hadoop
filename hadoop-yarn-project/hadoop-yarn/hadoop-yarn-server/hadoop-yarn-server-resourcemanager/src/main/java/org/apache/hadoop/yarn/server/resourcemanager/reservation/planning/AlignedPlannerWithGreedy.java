@@ -39,6 +39,8 @@ public class AlignedPlannerWithGreedy implements ReservationAgent {
   public static final int DEFAULT_SMOOTHNESS_FACTOR = 10;
   public static final String SMOOTHNESS_FACTOR =
       "yarn.resourcemanager.reservation-system.smoothness-factor";
+  private boolean allocateLeft = false;
+
 
   // Log
   private static final Logger LOG = LoggerFactory
@@ -49,26 +51,31 @@ public class AlignedPlannerWithGreedy implements ReservationAgent {
 
   // Constructor
   public AlignedPlannerWithGreedy() {
+
   }
 
   @Override
   public void init(Configuration conf) {
     int smoothnessFactor =
         conf.getInt(SMOOTHNESS_FACTOR, DEFAULT_SMOOTHNESS_FACTOR);
+    allocateLeft = conf.getBoolean(FAVOR_EARLY_ALLOCATION,
+            DEFAULT_GREEDY_FAVOR_EARLY_ALLOCATION);
 
     // List of algorithms
     List<ReservationAgent> listAlg = new LinkedList<ReservationAgent>();
 
     // LowCostAligned planning algorithm
     ReservationAgent algAligned =
-        new IterativePlanner(new StageEarliestStartByDemand(),
-            new StageAllocatorLowCostAligned(smoothnessFactor), false);
+        new IterativePlanner(new StageExecutionIntervalByDemand(),
+            new StageAllocatorLowCostAligned(smoothnessFactor, allocateLeft),
+            allocateLeft);
+
     listAlg.add(algAligned);
 
     // Greedy planning algorithm
     ReservationAgent algGreedy =
-        new IterativePlanner(new StageEarliestStartByJobArrival(),
-            new StageAllocatorGreedy(), false);
+        new IterativePlanner(new StageExecutionIntervalUnconstrained(),
+            new StageAllocatorGreedyRLE(allocateLeft), allocateLeft);
     listAlg.add(algGreedy);
 
     // Set planner:

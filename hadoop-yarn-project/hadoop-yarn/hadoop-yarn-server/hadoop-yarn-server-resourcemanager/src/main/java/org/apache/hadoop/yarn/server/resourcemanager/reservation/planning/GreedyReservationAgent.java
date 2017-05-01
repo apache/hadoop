@@ -47,9 +47,6 @@ public class GreedyReservationAgent implements ReservationAgent {
 
   // Greedy planner
   private ReservationAgent planner;
-  public final static String GREEDY_FAVOR_EARLY_ALLOCATION =
-      "yarn.resourcemanager.reservation-system.favor-early-allocation";
-  public final static boolean DEFAULT_GREEDY_FAVOR_EARLY_ALLOCATION = true;
   private boolean allocateLeft;
 
   public GreedyReservationAgent() {
@@ -57,20 +54,20 @@ public class GreedyReservationAgent implements ReservationAgent {
 
   @Override
   public void init(Configuration conf) {
-    allocateLeft = conf.getBoolean(GREEDY_FAVOR_EARLY_ALLOCATION,
+    allocateLeft = conf.getBoolean(FAVOR_EARLY_ALLOCATION,
         DEFAULT_GREEDY_FAVOR_EARLY_ALLOCATION);
     if (allocateLeft) {
       LOG.info("Initializing the GreedyReservationAgent to favor \"early\""
           + " (left) allocations (controlled by parameter: "
-          + GREEDY_FAVOR_EARLY_ALLOCATION + ")");
+          + FAVOR_EARLY_ALLOCATION + ")");
     } else {
       LOG.info("Initializing the GreedyReservationAgent to favor \"late\""
           + " (right) allocations (controlled by parameter: "
-          + GREEDY_FAVOR_EARLY_ALLOCATION + ")");
+          + FAVOR_EARLY_ALLOCATION + ")");
     }
 
     planner =
-        new IterativePlanner(new StageEarliestStartByJobArrival(),
+        new IterativePlanner(new StageExecutionIntervalUnconstrained(),
             new StageAllocatorGreedyRLE(allocateLeft), allocateLeft);
   }
 
