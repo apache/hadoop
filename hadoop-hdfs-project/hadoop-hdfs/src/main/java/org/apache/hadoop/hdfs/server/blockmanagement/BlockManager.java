@@ -1804,7 +1804,8 @@ public class BlockManager implements BlockStatsMXBean {
    *
    * We prefer nodes that are in DECOMMISSION_INPROGRESS state to other nodes
    * since the former do not have write traffic and hence are less busy.
-   * We do not use already decommissioned nodes as a source.
+   * We do not use already decommissioned nodes as a source, unless there is
+   * no other choice.
    * Otherwise we choose a random node among those that did not reach their
    * replication limits.  However, if the replication is of the highest priority
    * and all nodes have reached their replication limits, we will choose a
@@ -1836,6 +1837,7 @@ public class BlockManager implements BlockStatsMXBean {
     containingNodes.clear();
     nodesContainingLiveReplicas.clear();
     DatanodeDescriptor srcNode = null;
+    DatanodeDescriptor decommissionedSrc = null;
     int live = 0;
     int readonly = 0;
     int decommissioned = 0;
@@ -1889,9 +1891,16 @@ public class BlockManager implements BlockStatsMXBean {
       // the block must not be scheduled for removal on srcNode
       if(excessBlocks != null && excessBlocks.contains(block))
         continue;
-      // never use already decommissioned nodes
-      if(node.isDecommissioned())
+      // Save the live decommissioned replica in case we need it. Such replicas
+      // are normally not used for replication, but if nothing else is
+      // available, one can be selected as a source.
+      if (node.isDecommissioned()) {
+        if (decommissionedSrc == null ||
+            ThreadLocalRandom.current().nextBoolean()) {
+          decommissionedSrc = node;
+        }
         continue;
+      }
       // Don't use dead ENTERING_MAINTENANCE or IN_MAINTENANCE nodes.
       if((!node.isAlive() && node.isEnteringMaintenance()) ||
           node.isInMaintenance()) {
@@ -1912,6 +1921,10 @@ public class BlockManager implements BlockStatsMXBean {
     if(numReplicas != null)
       numReplicas.set(live, readonly, decommissioned, decommissioning, corrupt,
           excess, 0, maintenanceNotForRead, maintenanceForRead);
+    // Pick a live decommissioned replica, if nothing else is available.
+    if (live == 0 && srcNode == null && decommissionedSrc != null) {
+      return decommissionedSrc;
+    }
     return srcNode;
   }
 
@@ -2795,7 +2808,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     int curReplicaDelta;
     if (result == AddBlockResult.ADDED) {
-      curReplicaDelta = 1;
+      curReplicaDelta = (node.isDecommissioned()) ? 0 : 1;
       if (logEveryBlock) {
         blockLog.debug("BLOCK* addStoredBlock: {} is added to {} (size={})",
             node, storedBlock, storedBlock.getNumBytes());
