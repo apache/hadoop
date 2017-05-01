@@ -52,7 +52,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -306,16 +305,12 @@ public class ProportionalCapacityPreemptionPolicy
 
   private void cleanupStaledPreemptionCandidates(long currentTime) {
     // Keep the preemptionCandidates list clean
-    for (Iterator<RMContainer> i = preemptionCandidates.keySet().iterator();
-         i.hasNext(); ) {
-      RMContainer id = i.next();
-      // garbage collect containers that are irrelevant for preemption
-      // And avoid preempt selected containers for *this execution*
-      // or within 1 ms
-      if (preemptionCandidates.get(id) + 2 * maxWaitTime < currentTime) {
-        i.remove();
-      }
-    }
+    // garbage collect containers that are irrelevant for preemption
+    // And avoid preempt selected containers for *this execution*
+    // or within 1 ms
+    preemptionCandidates.entrySet()
+        .removeIf(candidate ->
+            candidate.getValue() + 2 * maxWaitTime < currentTime);
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
