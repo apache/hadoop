@@ -36,6 +36,6 @@ public interface CanSetDropBehind {
    *         UnsupportedOperationException  If this stream doesn't support
    *                                        setting the drop-behind.
    */
-  public void setDropBehind(Boolean dropCache) 
+  void setDropBehind(Boolean dropCache)
       throws IOException, UnsupportedOperationException;
 }
