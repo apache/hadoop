@@ -964,48 +964,38 @@ public class LogsCLI extends Configured implements Tool {
       request.setNodeId(nodeId);
       request.setContainerState(report.getContainerState());
     } catch (IOException | YarnException ex) {
-      if (isAppFinished) {
-        return printContainerLogsForFinishedApplicationWithoutNodeId(
-            request, logCliHelper, useRegex);
+      nodeHttpAddress = getNodeHttpAddressFromRMWebString(request);
+      if (nodeHttpAddress != null && !nodeHttpAddress.isEmpty()) {
+        request.setNodeHttpAddress(nodeHttpAddress);
       } else {
-        nodeHttpAddress = getNodeHttpAddressFromRMWebString(request);
-        if (nodeHttpAddress != null && !nodeHttpAddress.isEmpty()) {
-          request.setNodeHttpAddress(nodeHttpAddress);
+        // for the case, we have already uploaded partial logs in HDFS
+        int result = -1;
+        if (nodeAddress != null && !nodeAddress.isEmpty()) {
+          result = printAggregatedContainerLogs(request,
+              logCliHelper, useRegex);
         } else {
-          // for the case, we have already uploaded partial logs in HDFS
-          int result = -1;
-          if (nodeAddress != null && !nodeAddress.isEmpty()) {
-            result =  printAggregatedContainerLogs(
-                request, logCliHelper, useRegex);
-          } else {
-            result = printAggregatedContainerLogsWithoutNodeId(
-                request, logCliHelper, useRegex);
-          }
-          if (result == -1) {
-            System.err.println("Unable to get logs for this container:"
-                + containerIdStr + " for the application:" + appIdStr
-                + " with the appOwner: " + appOwner);
-            System.err.println("The application: " + appIdStr
-                + " is still running, and we can not get Container report "
-                + "for the container: " + containerIdStr +". Please try later "
-                + "or after the application finishes.");
-          }
-          return result;
+          result = printAggregatedContainerLogsWithoutNodeId(request,
+              logCliHelper,
+                  useRegex);
         }
+        if (result == -1) {
+          System.err.println(
+              "Unable to get logs for this container:"
+                  + containerIdStr + " for the application:"
+                  + appIdStr + " with the appOwner: " + appOwner);
+          System.err.println("The application: " + appIdStr
+              + " is still running, and we can not get Container report "
+              + "for the container: " + containerIdStr + ". Please try later "
+              + "or after the application finishes.");
+        }
+        return result;
       }
     }
     // If the application is not in the final state,
     // we will provide the NodeHttpAddress and get the container logs
     // by calling NodeManager webservice.
-    if (!isAppFinished) {
-      resultCode = printContainerLogsFromRunningApplication(getConf(), request,
-          logCliHelper, useRegex);
-    } else {
-      // If the application is in the final state, we will directly
-      // get the container logs from HDFS.
-      resultCode = printContainerLogsForFinishedApplication(
-          request, logCliHelper, useRegex);
-    }
+    resultCode = printContainerLogsFromRunningApplication(getConf(), request,
+        logCliHelper, useRegex);
     return resultCode;
   }
 

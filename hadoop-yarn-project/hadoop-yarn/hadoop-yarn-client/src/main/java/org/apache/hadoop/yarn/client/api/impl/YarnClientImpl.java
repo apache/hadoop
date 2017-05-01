@@ -362,9 +362,13 @@ public class YarnClientImpl extends YarnClient {
       if (timelineClient == null) {
         synchronized (this) {
           if (timelineClient == null) {
-            timelineClient = createTimelineClient();
-            timelineClient.init(getConfig());
-            timelineClient.start();
+            TimelineClient tlClient = createTimelineClient();
+            tlClient.init(getConfig());
+            tlClient.start();
+            // Assign value to timeline client variable only
+            // when it is fully initiated. In order to avoid
+            // other threads to see partially initialized object.
+            this.timelineClient = tlClient;
           }
         }
       }
