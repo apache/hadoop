@@ -202,21 +202,21 @@ directory contains many thousands of files.
 
 Consider a directory `"/d"` with the contents:
 
-	a
-	part-0000001
-	part-0000002
-	...
-	part-9999999
+    a
+    part-0000001
+    part-0000002
+    ...
+    part-9999999
 
 
 If the number of files is such that HDFS returns a partial listing in each
 response, then, if a listing `listStatus("/d")` takes place concurrently with the operation
 `rename("/d/a","/d/z"))`, the result may be one of:
 
-	[a, part-0000001, ... , part-9999999]
-	[part-0000001, ... , part-9999999, z]
-	[a, part-0000001, ... , part-9999999, z]
-	[part-0000001, ... , part-9999999]
+    [a, part-0000001, ... , part-9999999]
+    [part-0000001, ... , part-9999999, z]
+    [a, part-0000001, ... , part-9999999, z]
+    [part-0000001, ... , part-9999999]
 
 While this situation is likely to be a rare occurrence, it MAY happen. In HDFS
 these inconsistent views are only likely when listing a directory with many children.
@@ -604,7 +604,7 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
 until the output stream `close()` operation is completed.
 This is a significant difference between the behavior of object stores
 and that of filesystems, as it allows >1 client to create a file with `overwrite==false`,
-and potentially confuse file/directory logic. In particular, using create() to acquire
+and potentially confuse file/directory logic. In particular, using `create()` to acquire
 an exclusive lock on a file (whoever creates the file without an error is considered
 the holder of the lock) is not a valid algorithm when working with object stores.
 
