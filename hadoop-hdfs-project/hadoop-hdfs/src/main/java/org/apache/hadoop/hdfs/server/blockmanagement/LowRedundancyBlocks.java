@@ -346,9 +346,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
         " curPri  " + curPri +
         " oldPri  " + oldPri);
     }
-    if(oldPri != curPri) {
-      remove(block, oldPri);
-    }
+    // oldPri is mostly correct, but not always. If not found with oldPri,
+    // other levels will be searched until the block is found & removed.
+    remove(block, oldPri);
     if(priorityQueues.get(curPri).add(block)) {
       NameNode.blockStateChangeLog.debug(
           "BLOCK* NameSystem.LowRedundancyBlock.update: {} has only {} "
