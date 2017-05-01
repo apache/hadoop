@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.util.Canceler;
@@ -41,6 +42,7 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ThreadUtil;
 import org.junit.After;
 import org.junit.Before;
@@ -165,6 +167,44 @@ public class TestStandbyCheckpoints {
     // The standby should never try to purge edit logs on shared storage.
     Mockito.verify(standbyJournalSet, Mockito.never()).
       purgeLogsOlderThan(Mockito.anyLong());
+  }
+
+  @Test
+  public void testNewDirInitAfterCheckpointing() throws Exception {
+    File hdfsDir = new File(PathUtils.getTestDir(TestStandbyCheckpoints.class),
+        "testNewDirInitAfterCheckpointing");
+    File nameDir = new File(hdfsDir, "name1");
+    assert nameDir.mkdirs();
+
+    // Restart nn0 with an additional name dir.
+    String existingDir = cluster.getConfiguration(0).
+        get(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+    cluster.getConfiguration(0).set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        existingDir + "," + Util.fileAsURI(nameDir).toString());
+    cluster.restartNameNode(0);
+    nn0 = cluster.getNameNode(0);
+    cluster.transitionToActive(0);
+
+    // "current" is created, but current/VERSION isn't.
+    File currDir = new File(nameDir, "current");
+    File versionFile = new File(currDir, "VERSION");
+    assert currDir.exists();
+    assert !versionFile.exists();
+
+    // Trigger a checkpointing and upload.
+    doEdits(0, 10);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+
+    // The version file will be created if a checkpoint is uploaded.
+    // Wait for it to happen up to 10 seconds.
+    for (int i = 0; i < 20; i++) {
+      if (versionFile.exists()) {
+        break;
+      }
+      Thread.sleep(500);
+    }
+    // VERSION must have been created.
+    assert versionFile.exists();
   }
 
   /**

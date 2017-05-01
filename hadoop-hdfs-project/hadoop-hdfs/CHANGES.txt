@@ -256,6 +256,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11609. Some blocks can be permanently lost if nodes are decommissioned
     while dead. (kihwal)
 
+    HDFS-11714. Newly added NN storage directory won't get initialized
+    and cause space exhaustion. (kihwal)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
