@@ -3107,4 +3107,19 @@
     The size buffer to be used when creating or opening httpfs filesystem IO stream.
     </description>
   </property>
+
+<property>
+  <name>dfs.namenode.hosts.provider.classname</name>
+  <value>org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager</value>
+  <description>
+    The class that provides access for host files.
+    org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager is used
+    by default which loads files specified by dfs.hosts and dfs.hosts.exclude.
+    If org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager is
+    used, it will load the JSON file defined in dfs.hosts.
+    To change class name, nn restart is required. "dfsadmin -refreshNodes" only
+    refreshes the configuration files used by the class.
+  </description>
+</property>
+
 </configuration>

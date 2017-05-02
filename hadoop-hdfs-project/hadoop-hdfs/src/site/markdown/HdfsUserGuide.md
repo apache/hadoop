@@ -142,12 +142,16 @@ The `bin/hdfs dfsadmin` command supports a few HDFS administration related opera
   during last upgrade.
 
 * `-refreshNodes`: Updates the namenode with the set of datanodes
-  allowed to connect to the namenode. Namenodes re-read datanode
+  allowed to connect to the namenode. By default, Namenodes re-read datanode
   hostnames in the file defined by `dfs.hosts`, `dfs.hosts.exclude`
    Hosts defined in `dfs.hosts` are the datanodes that are part of the
    cluster. If there are entries in `dfs.hosts`, only the hosts in it
    are allowed to register with the namenode. Entries in
    `dfs.hosts.exclude` are datanodes that need to be decommissioned.
+   Alternatively if `dfs.namenode.hosts.provider.classname` is set to
+   `org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager`,
+   all include and exclude hosts are specified in the JSON file defined by
+   `dfs.hosts`.
    Datanodes complete decommissioning when all the replicas from them
    are replicated to other datanodes. Decommissioned nodes are not
    automatically shutdown and are not chosen for writing for new
