@@ -409,8 +409,8 @@ public class NetworkTopology {
           "Not allow to add an inner node: "+NodeBase.getPath(node));
       }
       if ((depthOfAllLeaves != -1) && (depthOfAllLeaves != newDepth)) {
-        LOG.error("Error: can't add leaf node " + NodeBase.getPath(node) +
-            " at depth " + newDepth + " to topology:\n" + this.toString());
+        LOG.error("Error: can't add leaf node {} at depth {} to topology:{}\n",
+            NodeBase.getPath(node), newDepth, this);
         throw new InvalidTopologyException("Failed to add " + NodeBase.getPath(node) +
             ": You cannot have a rack and a non-rack node at the same " +
             "level of the network topology.");
@@ -432,7 +432,7 @@ public class NetworkTopology {
           }
         }
       }
-      LOG.debug("NetworkTopology became:\n{}", this.toString());
+      LOG.debug("NetworkTopology became:\n{}", this);
     } finally {
       netlock.writeLock().unlock();
     }
@@ -505,7 +505,7 @@ public class NetworkTopology {
           numOfRacks--;
         }
       }
-      LOG.debug("NetworkTopology became:\n{}", this.toString());
+      LOG.debug("NetworkTopology became:\n{}", this);
     } finally {
       netlock.writeLock().unlock();
     }
@@ -764,7 +764,7 @@ public class NetworkTopology {
     }
     if (numOfDatanodes == 0) {
       LOG.debug("Failed to find datanode (scope=\"{}\" excludedScope=\"{}\").",
-          String.valueOf(scope), String.valueOf(excludedScope));
+          scope, excludedScope);
       return null;
     }
     Node ret = null;
@@ -777,7 +777,7 @@ public class NetworkTopology {
     }
     LOG.debug("Choosing random from {} available nodes on node {},"
         + " scope={}, excludedScope={}, excludeNodes={}", availableNodes,
-        innerNode.toString(), scope, excludedScope, excludedNodes);
+        innerNode, scope, excludedScope, excludedNodes);
     if (availableNodes > 0) {
       do {
         int leaveIndex = r.nextInt(numOfDatanodes);
