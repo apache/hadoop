@@ -61,6 +61,13 @@ static void detachCurrentThreadFromJvm()
   free(state);
 }
 
+void hdfsThreadDestructor(void *v)
+{
+  // Ignore 'v' since it will contain the state and we will obtain it in the below
+  // call anyway.
+  detachCurrentThreadFromJvm();
+}
+
 /**
  * Unlike pthreads, the Windows API does not seem to provide a convenient way to
  * hook a callback onto thread shutdown.  However, the Windows portable
