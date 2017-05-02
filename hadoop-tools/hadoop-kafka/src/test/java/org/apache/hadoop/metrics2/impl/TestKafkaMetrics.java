@@ -155,7 +155,7 @@ public class TestKafkaMetrics {
     Date currDate = new Date(timestamp);
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     String date = dateFormat.format(currDate);
-    SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss");
+    SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
     String time = timeFormat.format(currDate);
     String hostname = new String("null");
     try {
