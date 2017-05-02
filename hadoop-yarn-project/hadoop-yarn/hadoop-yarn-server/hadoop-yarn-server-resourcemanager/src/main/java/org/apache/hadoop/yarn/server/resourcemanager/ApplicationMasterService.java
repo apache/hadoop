@@ -390,7 +390,7 @@ public class ApplicationMasterService extends AbstractService implements
     return hasApplicationMasterRegistered;
   }
 
-  protected final static List<Container> EMPTY_CONTAINER_LIST =
+  private final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();
   protected static final Allocation EMPTY_ALLOCATION = new Allocation(
       EMPTY_CONTAINER_LIST, Resources.createResource(0), null, null, null);

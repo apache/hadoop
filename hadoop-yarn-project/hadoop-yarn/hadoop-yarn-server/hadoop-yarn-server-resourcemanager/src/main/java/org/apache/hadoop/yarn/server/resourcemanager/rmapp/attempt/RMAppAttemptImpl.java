@@ -1001,9 +1001,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // if am crashed and not received this response, we should resend
     // this msg again after am restart
     if (!this.finishedContainersSentToAM.isEmpty()) {
-      for (NodeId nodeId : this.finishedContainersSentToAM.keySet()) {
+      for (Map.Entry<NodeId, List<ContainerStatus>> finishedContainer
+          : this.finishedContainersSentToAM.entrySet()) {
         List<ContainerStatus> containerStatuses =
-            this.finishedContainersSentToAM.get(nodeId);
+            finishedContainer.getValue();
+        NodeId nodeId = finishedContainer.getKey();
         this.justFinishedContainers.putIfAbsent(nodeId,
             new ArrayList<ContainerStatus>());
         this.justFinishedContainers.get(nodeId).addAll(containerStatuses);

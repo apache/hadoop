@@ -68,9 +68,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       new Comparator<CSQueue>() {
     @Override
     public int compare(CSQueue q1, CSQueue q2) {
-      if (q1.getUsedCapacity() < q2.getUsedCapacity()) {
+      int result = Float.compare(q1.getUsedCapacity(),
+          q2.getUsedCapacity());
+      if (result < 0) {
         return -1;
-      } else if (q1.getUsedCapacity() > q2.getUsedCapacity()) {
+      } else if (result > 0) {
         return 1;
       }
 

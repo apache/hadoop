@@ -155,10 +155,10 @@ public class FSSchedulerNode extends SchedulerNode {
    * Remove apps that have their preemption requests fulfilled.
    */
   private synchronized void cleanupPreemptionList() {
-    Iterator<FSAppAttempt> iterator =
-        resourcesPreemptedForApp.keySet().iterator();
-    while (iterator.hasNext()) {
-      FSAppAttempt app = iterator.next();
+    Iterator<Map.Entry<FSAppAttempt, Resource>> iterator =
+        resourcesPreemptedForApp.entrySet().iterator();
+    while(iterator.hasNext()) {
+      FSAppAttempt app = iterator.next().getKey();
       if (app.isStopped() || !app.isStarved()) {
         // App does not need more resources
         Resources.subtractFrom(totalResourcesPreempted,
