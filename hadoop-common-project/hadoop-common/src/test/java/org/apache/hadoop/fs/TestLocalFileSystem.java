@@ -41,7 +41,9 @@ import static org.mockito.Mockito.*;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.internal.util.reflection.Whitebox;
 
 
@@ -56,6 +58,17 @@ public class TestLocalFileSystem {
   private final Path TEST_PATH = new Path(TEST_ROOT_DIR, "test-file");
   private Configuration conf;
   private LocalFileSystem fileSys;
+
+  /**
+   * standard test timeout: {@value}.
+   */
+  public static final int DEFAULT_TEST_TIMEOUT = 60 * 1000;
+
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(DEFAULT_TEST_TIMEOUT);
 
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
@@ -82,7 +95,7 @@ public class TestLocalFileSystem {
   /**
    * Test the capability of setting the working directory.
    */
-  @Test(timeout = 10000)
+  @Test
   public void testWorkingDirectory() throws IOException {
     Path origDir = fileSys.getWorkingDirectory();
     Path subdir = new Path(TEST_ROOT_DIR, "new");
@@ -136,7 +149,7 @@ public class TestLocalFileSystem {
    * test Syncable interface on raw local file system
    * @throws IOException
    */
-  @Test(timeout = 1000)
+  @Test
   public void testSyncable() throws IOException {
     FileSystem fs = fileSys.getRawFileSystem();
     Path file = new Path(TEST_ROOT_DIR, "syncable");
@@ -169,7 +182,7 @@ public class TestLocalFileSystem {
     }
   }
   
-  @Test(timeout = 10000)
+  @Test
   public void testCopy() throws IOException {
     Path src = new Path(TEST_ROOT_DIR, "dingo");
     Path dst = new Path(TEST_ROOT_DIR, "yak");
@@ -195,7 +208,7 @@ public class TestLocalFileSystem {
     }
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testHomeDirectory() throws IOException {
     Path home = new Path(System.getProperty("user.home"))
       .makeQualified(fileSys);
@@ -203,7 +216,7 @@ public class TestLocalFileSystem {
     assertEquals(home, fsHome);
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testPathEscapes() throws IOException {
     Path path = new Path(TEST_ROOT_DIR, "foo%bar");
     writeFile(fileSys, path, 1);
@@ -212,7 +225,7 @@ public class TestLocalFileSystem {
     cleanupFile(fileSys, path);
   }
   
-  @Test(timeout = 1000)
+  @Test
   public void testCreateFileAndMkdirs() throws IOException {
     Path test_dir = new Path(TEST_ROOT_DIR, "test_dir");
     Path test_file = new Path(test_dir, "file1");
@@ -248,7 +261,7 @@ public class TestLocalFileSystem {
   }
 
   /** Test deleting a file, directory, and non-existent path */
-  @Test(timeout = 1000)
+  @Test
   public void testBasicDelete() throws IOException {
     Path dir1 = new Path(TEST_ROOT_DIR, "dir1");
     Path file1 = new Path(TEST_ROOT_DIR, "file1");
@@ -263,7 +276,7 @@ public class TestLocalFileSystem {
     assertTrue("Did not delete non-empty dir", fileSys.delete(dir1));
   }
   
-  @Test(timeout = 1000)
+  @Test
   public void testStatistics() throws Exception {
     int fileSchemeCount = 0;
     for (Statistics stats : FileSystem.getAllStatistics()) {
@@ -274,7 +287,7 @@ public class TestLocalFileSystem {
     assertEquals(1, fileSchemeCount);
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testHasFileDescriptor() throws IOException {
     Path path = new Path(TEST_ROOT_DIR, "test-file");
     writeFile(fileSys, path, 1);
@@ -288,7 +301,7 @@ public class TestLocalFileSystem {
     }
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testListStatusWithColons() throws IOException {
     assumeNotWindows();
     File colonFile = new File(TEST_ROOT_DIR, "foo:bar");
@@ -314,7 +327,7 @@ public class TestLocalFileSystem {
         stats[0].getPath().toUri().getPath());
   }
   
-  @Test(timeout = 10000)
+  @Test
   public void testReportChecksumFailure() throws IOException {
     base.mkdirs();
     assertTrue(base.exists() && base.isDirectory());
@@ -394,7 +407,7 @@ public class TestLocalFileSystem {
     assertEquals(expectedAccTime, status.getAccessTime());
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testSetTimes() throws Exception {
     Path path = new Path(TEST_ROOT_DIR, "set-times");
     writeFile(fileSys, path, 1);
