@@ -64,7 +64,6 @@ public final class OzoneConsts {
   public static final String CONTAINER_DATA_PATH = "data";
   public static final String CONTAINER_ROOT_PREFIX = "repository";
 
-  public static final String CONTAINER_DB = "container.db";
   public static final String FILE_HASH = "SHA-256";
   public final static String CHUNK_OVERWRITE = "OverWriteRequested";
 
@@ -73,6 +72,14 @@ public final class OzoneConsts {
   public static final long MB = KB * 1024L;
   public static final long GB = MB * 1024L;
   public static final long TB = GB * 1024L;
+
+  /**
+   * level DB names used by SCM and data nodes.
+   */
+  public static final String CONTAINER_DB = "container.db";
+  public static final String BLOCK_DB = "block.db";
+  public static final String NODEPOOL_DB = "nodepool.db";
+  public static final String OPEN_CONTAINERS_DB = "openContainers.db";
 
   /**
    * Supports Bucket Versioning.

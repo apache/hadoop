@@ -47,6 +47,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.UUID;
 
+import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException
     .ResultCodes.CHILL_MODE_EXCEPTION;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException
@@ -105,7 +107,7 @@ public class BlockManagerImpl implements BlockManager {
     options.createIfMissing();
 
     // Write the block key to container name mapping.
-    File blockContainerDbPath = new File(scmMetaDataDir, "block.db");
+    File blockContainerDbPath = new File(scmMetaDataDir, BLOCK_DB);
     blockStore = new LevelDBStore(blockContainerDbPath, options);
 
     this.containerSize = OzoneConsts.GB * conf.getInt(
@@ -113,7 +115,7 @@ public class BlockManagerImpl implements BlockManager {
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
 
     // Load store of all open contains for block allocation
-    File openContainsDbPath = new File(scmMetaDataDir, "openContainers.db");
+    File openContainsDbPath = new File(scmMetaDataDir, OPEN_CONTAINERS_DB);
     openContainerStore = new LevelDBStore(openContainsDbPath, options);
     openContainers = new HashMap<>();
     loadOpenContainers();
