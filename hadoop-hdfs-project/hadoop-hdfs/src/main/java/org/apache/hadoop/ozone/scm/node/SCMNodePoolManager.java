@@ -43,6 +43,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 import static org.apache.hadoop.ozone.scm
     .exceptions.SCMException.ResultCodes.FAILED_TO_LOAD_NODEPOOL;
 import static org.apache.hadoop.ozone.scm
@@ -90,7 +91,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
     options.cacheSize(cacheSize * OzoneConsts.MB);
     options.createIfMissing();
 
-    File nodePoolDBPath = new File(scmMetaDataDir, "nodepool.db");
+    File nodePoolDBPath = new File(scmMetaDataDir, NODEPOOL_DB);
     nodePoolStore = new LevelDBStore(nodePoolDBPath, options);
     nodePools = new HashMap<>();
     lock = new ReentrantReadWriteLock();

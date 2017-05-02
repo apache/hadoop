@@ -43,6 +43,8 @@ import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
+
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This is
  * used by SCM when allocating new locations and when looking up a key.
@@ -88,7 +90,7 @@ public class ContainerMapping implements Mapping {
     options.createIfMissing();
 
     // Write the container name to pipeline mapping.
-    File containerDBPath = new File(scmMetaDataDir, "container.db");
+    File containerDBPath = new File(scmMetaDataDir, CONTAINER_DB);
     containerStore = new LevelDBStore(containerDBPath, options);
 
     this.lock = new ReentrantLock();
