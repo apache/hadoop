@@ -105,8 +105,9 @@ public class TestNameNodeStatusMXBean {
   @Test (timeout = 120000L)
   public void testNameNodeMXBeanSlowDisksEnabled() throws Exception {
     Configuration conf = new Configuration();
-    conf.setDouble(
-        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY, 1.0);
+    conf.setInt(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
+        100);
     conf.setTimeDuration(
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         1000, TimeUnit.MILLISECONDS);
