@@ -193,7 +193,7 @@ public class StandbyCheckpointer {
         try {
           img.saveLegacyOIVImage(namesystem, outputDir, canceler);
         } catch (IOException ioe) {
-          LOG.error("Exception encountered while saving legacy OIV image; "
+          LOG.warn("Exception encountered while saving legacy OIV image; "
                   + "continuing with other checkpointing steps", ioe);
         }
       }
