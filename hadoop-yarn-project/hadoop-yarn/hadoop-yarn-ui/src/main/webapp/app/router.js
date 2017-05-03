@@ -48,6 +48,7 @@ Router.map(function() {
   this.route('yarn-container-log', { path:
       '/yarn-container-log/:node_id/:node_addr/:container_id/:filename' });
 
+  this.route('yarn-deploy-service');
   this.route('cluster-overview');
   this.route('yarn-app', function() {
     this.route('info', {path: '/:app_id/info'});

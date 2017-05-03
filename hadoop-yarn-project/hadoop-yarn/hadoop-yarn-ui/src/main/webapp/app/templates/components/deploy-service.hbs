@@ -1,0 +1,157 @@
+{{!
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+}}
+
+<div class="container-fluid deploy-service">
+  {{#if serviceResp}}
+    <div class="row">
+      <div class="col-md-12">
+        <div class="panel panel-default service-resp">
+          <div class="panel-body {{if (eq serviceResp.type 'error') 'bg-danger' 'bg-success'}}">
+            <span class="glyphicon glyphicon-remove pull-right remove-icon" {{action "clearServiceResponse"}}></span>
+            <strong class="{{if (eq serviceResp.type 'error') 'text-danger' 'text-success'}}">{{serviceResp.message}}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+  <div class="panel panel-default {{if isLoading 'loading-state'}}">
+    {{#if isLoading}}
+      <img src="assets/images/spinner.gif" alt="Loading...">
+    {{/if}}
+    <div class="row">
+      <div class="col-md-12">
+        <div class="col-md-2 savedlist-column">
+          <label>Saved Templates</label>
+          <div class="panel panel-default saved-list">
+            <ul class="list-group">
+              {{#each getSavedList as |list|}}
+                <a href="#" class="list-group-item {{if list.active 'active'}}" {{action "updateServiceDef" list}}>
+                  {{list.name}}
+                  <span class="glyphicon glyphicon-remove pull-right remove-icon" {{action "removeFromSavedList" list}}></span>
+                </a>
+              {{else}}
+                <li class="list-group-item align-center">No saved templates</li>
+              {{/each}}
+            </ul>
+          </div>
+        </div>
+
+        <div class="col-md-10 definition-column">
+          <label>Service Definition</label>
+          <div class="btn-group pull-right" data-toggle="buttons">
+            <label class="btn btn-default btn-sm toggle-btn active" {{action "updateViewType" "standard"}}>
+              <input type="radio" name="custom" checked><b>Standard</b>
+            </label>
+            <label class="btn btn-default btn-sm toggle-btn" {{action "updateViewType" "custom"}}>
+              <input type="radio" name="custom"><b>Custom</b>
+            </label>
+          </div>
+
+          <div class="col-md-12 content-area">
+            {{#if isStandardViewType}}
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group shrink-height">
+                    <label class="required">Service Name</label>
+                    <span class="glyphicon glyphicon-info-sign info-icon" data-info="serviceName"></span>
+                    {{input type="text" class="form-control" placeholder="Service Name" value=serviceDef.name}}
+                  </div>
+                  <br>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group shrink-height">
+                    <label class="required">Queue Name</label>
+                    <span class="glyphicon glyphicon-info-sign info-icon" data-info="queueName"></span>
+                    {{input type="text" class="form-control" placeholder="Queue Name" value=serviceDef.queue}}
+                  </div>
+                  <br>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Service Lifetime</label>
+                    <span class="glyphicon glyphicon-info-sign info-icon" data-info="lifetime"></span>
+                    {{input type="number" min="0" class="form-control" placeholder="Service Lifetime (Seconds)" value=serviceDef.lifetime}}
+                  </div>
+                  <br>
+                </div>
+              </div>
+
+              <div class="row">
+                {{service-component-table serviceDef=serviceDef applicationCtrl=applicationCtrl}}
+              </div>
+
+              <div class="row">
+                {{service-config-table serviceDef=serviceDef}}
+              </div>
+
+              <div class="row">
+                {{service-fileconfig-table serviceDef=serviceDef}}
+              </div>
+            {{/if}}
+
+            {{#if isCustomViewType}}
+            <div class="form-group custom-json-area">
+              {{textarea class="form-control" rows="29" cols="120" value=customServiceDef placeholder="Service JSON configuration here..."}}
+            </div>
+            {{/if}}
+          </div>
+
+          <div class="col-md-12 action-btns">
+            <button class="btn btn-default btn-sm" {{action "clearConfigs"}} disabled={{if isLoading "disabled"}}>
+              Reset
+            </button>
+            <button class="btn btn-primary btn-sm" disabled={{unless enableSaveOrDeployBtn "disabled"}} {{action "showSaveTemplateModal"}}>
+              Save
+            </button>
+            <button class="btn btn-success btn-sm" disabled={{unless enableSaveOrDeployBtn "disabled"}} {{action "deployService"}}>
+              Deploy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade deploy-service-modal" tabindex="-1" role="dialog" id="saveListModal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Save Template As</h4>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Template Name</label>
+          {{input type="text" class="form-control" id="templateNameInput" value=savedTemplateName}}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" {{action "addToSavedList"}} disabled={{unless isValidTemplateName "disabled"}}>Add</button>
+      </div>
+    </div>
+  </div>
+</div>
