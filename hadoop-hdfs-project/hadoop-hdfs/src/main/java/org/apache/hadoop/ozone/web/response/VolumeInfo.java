@@ -19,18 +19,21 @@
 package org.apache.hadoop.ozone.web.response;
 
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import org.codehaus.jackson.annotate.JsonMethod;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.codehaus.jackson.map.annotate.JsonFilter;
-import org.codehaus.jackson.map.ser.FilterProvider;
-import org.codehaus.jackson.map.ser.impl.SimpleBeanPropertyFilter;
-import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
-import java.io.IOException;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 /**
  * VolumeInfo Class is the Java class that represents
@@ -40,6 +43,23 @@ import java.io.IOException;
 public class VolumeInfo implements Comparable<VolumeInfo> {
 
   static final String VOLUME_INFO = "VOLUME_INFO_FILTER";
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(VolumeInfo.class);
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    String[] ignorableFieldNames = {"bytesUsed", "bucketCount"};
+
+    FilterProvider filters = new SimpleFilterProvider()
+        .addFilter(VOLUME_INFO, SimpleBeanPropertyFilter
+            .serializeAllExcept(ignorableFieldNames));
+    mapper.setVisibility(PropertyAccessor.FIELD,
+        JsonAutoDetect.Visibility.ANY);
+    mapper.addMixIn(Object.class, MixIn.class);
+
+    WRITER = mapper.writer(filters);
+  }
 
   /**
    * Custom Json Filter Class.
@@ -174,19 +194,7 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
    * @throws IOException
    */
   public String toJsonString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    String[] ignorableFieldNames = {"bytesUsed", "bucketCount"};
-
-    FilterProvider filters = new SimpleFilterProvider()
-        .addFilter(VOLUME_INFO, SimpleBeanPropertyFilter
-            .serializeAllExcept(ignorableFieldNames));
-
-    mapper.setVisibility(JsonMethod.FIELD, JsonAutoDetect.Visibility.ANY);
-    mapper.getSerializationConfig()
-        .addMixInAnnotations(Object.class, MixIn.class);
-    ObjectWriter writer = mapper.writer(filters);
-
-    return writer.writeValueAsString(this);
+    return WRITER.writeValueAsString(this);
   }
 
   /**
@@ -200,8 +208,7 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
    * @throws IOException
    */
   public String toDBString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return JsonUtils.toJsonString(this);
   }
 
 
@@ -243,8 +250,7 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
    * @throws IOException
    */
   public static VolumeInfo parse(String data) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(data, VolumeInfo.class);
+    return READER.readValue(data);
   }
 
   /**

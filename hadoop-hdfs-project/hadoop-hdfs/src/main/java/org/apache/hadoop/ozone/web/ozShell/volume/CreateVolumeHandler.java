@@ -24,7 +24,7 @@ import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -89,13 +89,10 @@ public class CreateVolumeHandler extends Handler {
     client.setEndPointURI(ozoneURI);
     client.setUserAuth(rootName);
 
-
     OzoneVolume vol = client.createVolume(volumeName, userName, quota);
     if (cmd.hasOption(Shell.VERBOSE)) {
-      ObjectMapper mapper = new ObjectMapper();
-      Object json = mapper.readValue(vol.getJsonString(), Object.class);
-      System.out.printf("%s%n", mapper.writerWithDefaultPrettyPrinter()
-          .writeValueAsString(json));
+      System.out.printf("%s%n",
+          JsonUtils.toJsonStringWithDefaultPrettyPrinter(vol.getJsonString()));
     }
   }
 }

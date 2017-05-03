@@ -18,25 +18,46 @@
 package org.apache.hadoop.ozone.web.response;
 
 
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import org.codehaus.jackson.annotate.JsonMethod;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.codehaus.jackson.map.annotate.JsonFilter;
-import org.codehaus.jackson.map.ser.FilterProvider;
-import org.codehaus.jackson.map.ser.impl.SimpleBeanPropertyFilter;
-import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 /**
  * List Bucket is the response for the ListBucket Query.
  */
 public class ListBuckets {
   static final String BUCKET_LIST = "BUCKET_LIST_FILTER";
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(ListBuckets.class);
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    String[] ignorableFieldNames = {"dataFileName"};
+
+    FilterProvider filters = new SimpleFilterProvider()
+        .addFilter(BUCKET_LIST, SimpleBeanPropertyFilter
+            .serializeAllExcept(ignorableFieldNames));
+    mapper.setVisibility(PropertyAccessor.FIELD,
+        JsonAutoDetect.Visibility.ANY);
+    mapper.addMixIn(Object.class, MixIn.class);
+
+    WRITER = mapper.writer(filters);
+  }
+
   private List<BucketInfo> buckets;
 
   /**
@@ -65,8 +86,7 @@ public class ListBuckets {
    * @throws IOException
    */
   public static ListBuckets parse(String data) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(data, ListBuckets.class);
+    return READER.readValue(data);
   }
 
   /**
@@ -95,27 +115,14 @@ public class ListBuckets {
    * @return String
    */
   public String toJsonString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    String[] ignorableFieldNames = {"bytesUsed", "keyCount"};
-
-    FilterProvider filters = new SimpleFilterProvider()
-        .addFilter(BUCKET_LIST, SimpleBeanPropertyFilter
-        .serializeAllExcept(ignorableFieldNames));
-
-    mapper.setVisibility(JsonMethod.FIELD, JsonAutoDetect.Visibility.ANY);
-    mapper.getSerializationConfig()
-        .addMixInAnnotations(Object.class, MixIn.class);
-    ObjectWriter writer = mapper.writer(filters);
-
-    return writer.writeValueAsString(this);
+    return WRITER.writeValueAsString(this);
   }
 
   /**
    * Returns the Object as a Json String.
    */
   public String toDBString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return JsonUtils.toJsonString(this);
   }
 
   /**

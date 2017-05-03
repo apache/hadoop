@@ -19,12 +19,14 @@
 package org.apache.hadoop.ozone.web.exceptions;
 
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.ObjectMapper;
-
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 
 /**
  * Class the represents various errors returned by the
@@ -32,6 +34,20 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class OzoneException extends Exception {
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(OzoneException.class);
+  private static final ObjectMapper MAPPER;
+
+  static {
+    MAPPER = new ObjectMapper();
+    MAPPER.setVisibility(
+        MAPPER.getSerializationConfig().getDefaultVisibilityChecker()
+            .withCreatorVisibility(JsonAutoDetect.Visibility.NONE)
+            .withFieldVisibility(JsonAutoDetect.Visibility.NONE)
+            .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
+            .withIsGetterVisibility(JsonAutoDetect.Visibility.NONE)
+            .withSetterVisibility(JsonAutoDetect.Visibility.NONE));
+  }
 
   @JsonProperty("httpCode")
   private long httpCode;
@@ -211,15 +227,7 @@ public class OzoneException extends Exception {
    */
   public String toJsonString() {
     try {
-      ObjectMapper mapper = new ObjectMapper();
-      mapper.setVisibilityChecker(
-          mapper.getSerializationConfig().getDefaultVisibilityChecker()
-              .withCreatorVisibility(JsonAutoDetect.Visibility.NONE)
-              .withFieldVisibility(JsonAutoDetect.Visibility.NONE)
-              .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
-              .withIsGetterVisibility(JsonAutoDetect.Visibility.NONE)
-              .withSetterVisibility(JsonAutoDetect.Visibility.NONE));
-      return mapper.writeValueAsString(this);
+      return MAPPER.writeValueAsString(this);
     } catch (IOException ex) {
       // TODO : Log this error on server side.
     }
@@ -237,7 +245,6 @@ public class OzoneException extends Exception {
    * @throws IOException
    */
   public static OzoneException parse(String jsonString) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(jsonString, OzoneException.class);
+    return READER.readValue(jsonString);
   }
 }

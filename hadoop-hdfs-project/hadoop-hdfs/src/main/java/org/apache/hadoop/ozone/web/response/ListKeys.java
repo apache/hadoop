@@ -17,28 +17,50 @@
  */
 package org.apache.hadoop.ozone.web.response;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.ListArgs;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import org.codehaus.jackson.annotate.JsonMethod;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.codehaus.jackson.map.annotate.JsonFilter;
-import org.codehaus.jackson.map.ser.FilterProvider;
-import org.codehaus.jackson.map.ser.impl.SimpleBeanPropertyFilter;
-import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.apache.hadoop.ozone.web.handlers.BucketArgs;
+import org.apache.hadoop.ozone.web.handlers.ListArgs;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import com.google.common.base.Preconditions;
 
 /**
  * This class the represents the list of keys (Objects) in a bucket.
  */
 public class ListKeys {
   static final String OBJECT_LIST = "OBJECT_LIST_FILTER";
+
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(ListKeys.class);
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    String[] ignorableFieldNames = {"dataFileName"};
+
+    FilterProvider filters = new SimpleFilterProvider()
+        .addFilter(OBJECT_LIST, SimpleBeanPropertyFilter
+            .serializeAllExcept(ignorableFieldNames));
+    mapper.setVisibility(PropertyAccessor.FIELD,
+        JsonAutoDetect.Visibility.ANY);
+    mapper.addMixIn(Object.class, MixIn.class);
+
+    WRITER = mapper.writer(filters);
+  }
+
   private String name;
   private String prefix;
   private long maxKeys;
@@ -73,8 +95,7 @@ public class ListKeys {
    * @throws IOException - Json conversion error.
    */
   public static ListKeys parse(String jsonString) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(jsonString, ListKeys.class);
+    return READER.readValue(jsonString);
   }
 
   /**
@@ -148,17 +169,7 @@ public class ListKeys {
    * @throws  IOException - On json Errors.
    */
   public String toJsonString() throws IOException {
-    String[] ignorableFieldNames = {"dataFileName"};
-
-    FilterProvider filters = new SimpleFilterProvider().addFilter(OBJECT_LIST,
-        SimpleBeanPropertyFilter.serializeAllExcept(ignorableFieldNames));
-
-    ObjectMapper mapper = new ObjectMapper()
-        .setVisibility(JsonMethod.FIELD, JsonAutoDetect.Visibility.ANY);
-    mapper.getSerializationConfig()
-        .addMixInAnnotations(Object.class, MixIn.class);
-    ObjectWriter writer = mapper.writer(filters);
-    return writer.writeValueAsString(this);
+    return WRITER.writeValueAsString(this);
   }
 
   /**
@@ -168,8 +179,7 @@ public class ListKeys {
    * @throws IOException - on json errors.
    */
   public String toDBString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return JsonUtils.toJsonString(this);
   }
 
   /**
