@@ -70,13 +70,17 @@ Release 2.7.4 - UNRELEASED
     HDFS-10534. NameNode WebUI should display DataNode usage histogram.
     (Kai Sasaki via zhz)
 
-    HDFS-11333. Print a user friendly error message when plugins are not found. (Wei-Chiu Chuang)
+    HDFS-11333. Print a user friendly error message when plugins are not found.
+    (Wei-Chiu Chuang)
 
     HDFS-11466. Change dfs.namenode.write-lock-reporting-threshold-ms default
     from 1000ms to 5000ms. (wang via zhz)
 
     HDFS-8873. Allow the directoryScanner to be rate-limited (Daniel Templeton
     via Colin P. McCabe)
+
+    HDFS-11717. Add unit test for HDFS-11709 StandbyCheckpointer should handle
+    non-existing legacyOivImageDir gracefully. (Erik Krogen via shv)
 
   OPTIMIZATIONS
 
