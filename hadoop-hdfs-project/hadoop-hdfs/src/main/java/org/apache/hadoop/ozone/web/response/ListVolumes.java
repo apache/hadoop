@@ -17,20 +17,23 @@
  */
 package org.apache.hadoop.ozone.web.response;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import org.codehaus.jackson.annotate.JsonMethod;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.codehaus.jackson.map.annotate.JsonFilter;
-import org.codehaus.jackson.map.ser.FilterProvider;
-import org.codehaus.jackson.map.ser.impl.SimpleBeanPropertyFilter;
-import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 /**
  * List Volume Class is the class that is returned in JSON format to
@@ -41,6 +44,23 @@ public class ListVolumes {
   private List<VolumeInfo> volumes;
 
   static final String VOLUME_LIST = "VOLUME_LIST_FILTER";
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(ListVolumes.class);
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    String[] ignorableFieldNames = {"bytesUsed", "bucketCount"};
+
+    FilterProvider filters = new SimpleFilterProvider()
+        .addFilter(VOLUME_LIST, SimpleBeanPropertyFilter
+            .serializeAllExcept(ignorableFieldNames));
+    mapper.setVisibility(PropertyAccessor.FIELD,
+        JsonAutoDetect.Visibility.ANY);
+    mapper.addMixIn(Object.class, MixIn.class);
+
+    WRITER = mapper.writer(filters);
+  }
 
   /**
    * Used for json filtering.
@@ -82,19 +102,7 @@ public class ListVolumes {
    * @return String
    */
   public String toJsonString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    String[] ignorableFieldNames = {"bytesUsed", "bucketCount"};
-
-    FilterProvider filters = new SimpleFilterProvider()
-        .addFilter(VOLUME_LIST,
-            SimpleBeanPropertyFilter.serializeAllExcept(ignorableFieldNames));
-
-    mapper.setVisibility(JsonMethod.FIELD, JsonAutoDetect.Visibility.ANY);
-    mapper.getSerializationConfig()
-        .addMixInAnnotations(Object.class, MixIn.class);
-    ObjectWriter writer = mapper.writer(filters);
-
-    return writer.writeValueAsString(this);
+    return WRITER.writeValueAsString(this);
   }
 
   /**
@@ -108,8 +116,7 @@ public class ListVolumes {
    * @throws IOException
    */
   public String toDBString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return JsonUtils.toJsonString(this);
   }
 
   /**
@@ -122,8 +129,7 @@ public class ListVolumes {
    * @throws IOException
    */
   public static ListVolumes parse(String data) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(data, ListVolumes.class);
+    return READER.readValue(data);
   }
 
   /**

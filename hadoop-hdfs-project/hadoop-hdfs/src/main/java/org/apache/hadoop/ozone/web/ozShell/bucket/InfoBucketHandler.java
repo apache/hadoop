@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -87,11 +87,8 @@ public class InfoBucketHandler extends Handler {
     OzoneVolume vol = client.getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
 
-    ObjectMapper mapper = new ObjectMapper();
-    Object json =
-        mapper.readValue(bucket.getBucketInfo().toJsonString(), Object.class);
-    System.out.printf("%s%n", mapper.writerWithDefaultPrettyPrinter()
-        .writeValueAsString(json));
+    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+        bucket.getBucketInfo().toJsonString()));
   }
 
 }

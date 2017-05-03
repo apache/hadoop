@@ -17,22 +17,25 @@
  */
 package org.apache.hadoop.ozone.web.response;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.ozone.web.request.OzoneAcl;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import org.codehaus.jackson.annotate.JsonMethod;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.codehaus.jackson.map.annotate.JsonFilter;
-import org.codehaus.jackson.map.ser.FilterProvider;
-import org.codehaus.jackson.map.ser.impl.SimpleBeanPropertyFilter;
-import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
-
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.web.request.OzoneAcl;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import com.google.common.base.Preconditions;
 
 /**
  * BucketInfo class, this is used as response class to send
@@ -40,6 +43,22 @@ import java.util.List;
  */
 public class BucketInfo implements Comparable<BucketInfo> {
   static final String BUCKET_INFO = "BUCKET_INFO_FILTER";
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(BucketInfo.class);
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    String[] ignorableFieldNames = {"bytesUsed", "keyCount"};
+
+    FilterProvider filters = new SimpleFilterProvider().addFilter(BUCKET_INFO,
+        SimpleBeanPropertyFilter.serializeAllExcept(ignorableFieldNames));
+    mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+    mapper.addMixIn(Object.class, MixIn.class);
+
+    WRITER = mapper.writer(filters);
+  }
+
   private String volumeName;
   private String bucketName;
   private List<OzoneAcl> acls;
@@ -77,8 +96,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
    * @throws IOException
    */
   public static BucketInfo parse(String jsonString) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(jsonString, BucketInfo.class);
+    return READER.readValue(jsonString);
   }
 
   /**
@@ -161,18 +179,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
    * @return String
    */
   public String toJsonString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    String[] ignorableFieldNames = {"bytesUsed", "keyCount"};
-
-    FilterProvider filters = new SimpleFilterProvider().addFilter(
-        BUCKET_INFO,
-        SimpleBeanPropertyFilter.serializeAllExcept(ignorableFieldNames));
-
-    mapper.setVisibility(JsonMethod.FIELD, JsonAutoDetect.Visibility.ANY);
-    mapper.getSerializationConfig()
-        .addMixInAnnotations(Object.class, MixIn.class);
-    ObjectWriter writer = mapper.writer(filters);
-    return writer.writeValueAsString(this);
+    return WRITER.writeValueAsString(this);
   }
 
   /**
@@ -185,8 +192,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
    * fields vs. only fields that are part of REST protocol.
    */
   public String toDBString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return JsonUtils.toJsonString(this);
   }
 
   /**

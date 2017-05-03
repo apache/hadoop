@@ -17,24 +17,46 @@
  */
 package org.apache.hadoop.ozone.web.response;
 
+import java.io.IOException;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.codehaus.jackson.annotate.JsonAutoDetect;
-import org.codehaus.jackson.annotate.JsonMethod;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.codehaus.jackson.map.annotate.JsonFilter;
-import org.codehaus.jackson.map.ser.FilterProvider;
-import org.codehaus.jackson.map.ser.impl.SimpleBeanPropertyFilter;
-import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
-import java.io.IOException;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 /**
  * Represents an Ozone key Object.
  */
 public class KeyInfo implements Comparable<KeyInfo> {
   static final String OBJECT_INFO = "OBJECT_INFO_FILTER";
+
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(KeyInfo.class);
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    String[] ignorableFieldNames = {"dataFileName"};
+
+    FilterProvider filters = new SimpleFilterProvider()
+        .addFilter(OBJECT_INFO, SimpleBeanPropertyFilter
+            .serializeAllExcept(ignorableFieldNames));
+    mapper.setVisibility(PropertyAccessor.FIELD,
+        JsonAutoDetect.Visibility.ANY);
+    mapper.addMixIn(Object.class, MixIn.class);
+
+    WRITER = mapper.writer(filters);
+  }
+
   /**
    * This class allows us to create custom filters
    * for the Json serialization.
@@ -225,8 +247,7 @@ public class KeyInfo implements Comparable<KeyInfo> {
    * @throws IOException
    */
   public static KeyInfo parse(String jsonString) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(jsonString, KeyInfo.class);
+    return READER.readValue(jsonString);
   }
 
 
@@ -237,25 +258,13 @@ public class KeyInfo implements Comparable<KeyInfo> {
    * @return String
    */
   public String toJsonString() throws IOException {
-    String[] ignorableFieldNames = {"dataFileName"};
-
-    FilterProvider filters = new SimpleFilterProvider()
-        .addFilter(OBJECT_INFO, SimpleBeanPropertyFilter
-            .serializeAllExcept(ignorableFieldNames));
-
-    ObjectMapper mapper = new ObjectMapper()
-        .setVisibility(JsonMethod.FIELD, JsonAutoDetect.Visibility.ANY);
-    mapper.getSerializationConfig()
-        .addMixInAnnotations(Object.class, MixIn.class);
-    ObjectWriter writer = mapper.writer(filters);
-    return writer.writeValueAsString(this);
+    return WRITER.writeValueAsString(this);
   }
 
   /**
    * Returns the Object as a Json String.
    */
   public String toDBString() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return JsonUtils.toJsonString(this);
   }
 }
