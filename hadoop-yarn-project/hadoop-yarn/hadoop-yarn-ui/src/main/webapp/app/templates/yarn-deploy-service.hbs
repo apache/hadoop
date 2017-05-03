@@ -16,9 +16,18 @@
  * limitations under the License.
 }}
 
-<div class="col-md-12 container-fluid breadcrumb-bar">
-  {{em-breadcrumbs items=breadcrumbs}}
-  {{#unless hideRefresh}}
-    <button type="button" class="btn btn-sm btn-primary refresh" {{action "refresh"}}>Refresh</button>
-  {{/unless}}
+{{breadcrumb-bar breadcrumbs=breadcrumbs hideRefresh=true}}
+
+<div class="col-md-12 container-fluid">
+  <div class="row">
+    {{deploy-service
+      savedStandardTemplates=savedStandardTemplates
+      savedJsonTemplates=savedJsonTemplates
+      serviceDef=model
+      serviceResp=serviceResponse
+      isLoading=isLoading
+      deployServiceDef="deployServiceDef"
+      deployServiceJson="deployServiceJson"
+    }}
+  </div>
 </div>

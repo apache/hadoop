@@ -17,16 +17,28 @@
  */
 
 import Ember from 'ember';
+import InfoSeeder from 'yarn-ui/utils/info-seeder';
 
 export default Ember.Component.extend({
+  classNames: ['tooltip', 'info-tooltip'],
+  elementId: 'info_tooltip_wrapper',
 
-  breadcrumbs: null,
-  hideRefresh: false,
+  didInsertElement() {
+    var $tooltip = Ember.$('#info_tooltip_wrapper');
+    Ember.$('body').on('mouseenter', '.info-icon', function() {
+      var $elem = Ember.$(this);
+      var info = InfoSeeder[$elem.data('info')];
+      var offset = $elem.offset();
+      $tooltip.show();
+      $tooltip.find("#tooltip_content").text(info);
+      $tooltip.offset({top: offset.top + 20, left: offset.left - 10});
+    }).on('mouseleave', '.info-icon', function() {
+      $tooltip.find("#tooltip_content").text('');
+      $tooltip.hide();
+    });
+  },
 
-  actions:{
-    refresh: function () {
-      this.get("targetObject").send("refresh");
-    }
+  WillDestroyElement() {
+    Ember.$('body').off('hover');
   }
-
 });
