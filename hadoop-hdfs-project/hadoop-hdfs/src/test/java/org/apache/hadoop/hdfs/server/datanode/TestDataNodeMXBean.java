@@ -218,8 +218,8 @@ public class TestDataNodeMXBean {
   @Test
   public void testDataNodeMXBeanSlowDisksEnabled() throws Exception {
     Configuration conf = new Configuration();
-    conf.setDouble(DFSConfigKeys
-        .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY, 1.0);
+    conf.setInt(DFSConfigKeys
+        .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY, 100);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
