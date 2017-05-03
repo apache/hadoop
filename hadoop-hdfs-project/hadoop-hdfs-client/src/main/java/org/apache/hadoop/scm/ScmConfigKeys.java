@@ -131,7 +131,8 @@ public final class ScmConfigKeys {
   // able to send back a new list to the datanodes.
   public static final String OZONE_SCM_NAMES = "ozone.scm.names";
 
-  public static final int OZONE_SCM_DEFAULT_PORT = 9862;
+  public static final int OZONE_SCM_DEFAULT_PORT =
+      OZONE_SCM_DATANODE_PORT_DEFAULT;
   // File Name and path where datanode ID is to written to.
   // if this value is not set then container startup will fail.
   public static final String OZONE_SCM_DATANODE_ID = "ozone.scm.datanode.id";
