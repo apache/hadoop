@@ -19,14 +19,36 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+  dialogId: "config_upload_modal",
+  title: "Upload Configuration",
+  configJson: '',
+  parseErrorMsg: '',
 
-  breadcrumbs: null,
-  hideRefresh: false,
-
-  actions:{
-    refresh: function () {
-      this.get("targetObject").send("refresh");
+  actions: {
+    uploadConfig() {
+      var json = this.get('configJson');
+      try {
+        JSON.parse(json);
+        this.upateParseResults("");
+      } catch (ex) {
+        this.upateParseResults("Invalid JSON: " + ex.message);
+        throw ex;
+      }
+      if (!this.get('parseErrorMsg')) {
+        this.sendAction("uploadConfig", json);
+      }
     }
-  }
+  },
 
+  didInsertElement() {
+    this.$('#' + this.get('dialogId')).on('shown.bs.modal', function() {
+      this.upateParseResults("");
+    }.bind(this));
+  },
+
+  isValidConfigJson: Ember.computed.notEmpty('configJson'),
+
+  upateParseResults(message) {
+    this.set('parseErrorMsg', message);
+  }
 });

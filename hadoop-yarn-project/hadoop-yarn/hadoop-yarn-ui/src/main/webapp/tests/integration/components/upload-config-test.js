@@ -1,4 +1,4 @@
-{{!
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,11 +14,30 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-}}
+ */
 
-<div class="col-md-12 container-fluid breadcrumb-bar">
-  {{em-breadcrumbs items=breadcrumbs}}
-  {{#unless hideRefresh}}
-    <button type="button" class="btn btn-sm btn-primary refresh" {{action "refresh"}}>Refresh</button>
-  {{/unless}}
-</div>
+import { moduleForComponent, test } from 'ember-qunit';
+import hbs from 'htmlbars-inline-precompile';
+
+moduleForComponent('upload-config', 'Integration | Component | upload config', {
+  integration: true
+});
+
+test('it renders', function(assert) {
+
+  // Set any properties with this.set('myProperty', 'value');
+  // Handle any actions with this.on('myAction', function(val) { ... });" + EOL + EOL +
+
+  this.render(hbs`{{upload-config}}`);
+
+  assert.equal(this.$().text().trim(), '');
+
+  // Template block usage:" + EOL +
+  this.render(hbs`
+    {{#upload-config}}
+      template block text
+    {{/upload-config}}
+  `);
+
+  assert.equal(this.$().text().trim(), 'template block text');
+});

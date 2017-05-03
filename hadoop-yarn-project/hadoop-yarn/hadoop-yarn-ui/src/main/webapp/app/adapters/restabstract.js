@@ -16,17 +16,35 @@
  * limitations under the License.
  */
 
+import DS from 'ember-data';
 import Ember from 'ember';
 
-export default Ember.Component.extend({
+export default DS.RESTAdapter.extend({
+  address: null, //Must be set by inheriting classes
+  restNameSpace: null, //Must be set by inheriting classes
+  serverName: null, //Must be set by inheriting classes
 
-  breadcrumbs: null,
-  hideRefresh: false,
+  headers: {
+    Accept: 'application/json'
+  },
 
-  actions:{
-    refresh: function () {
-      this.get("targetObject").send("refresh");
-    }
+  host: Ember.computed("address", function() {
+    var address = this.get("address");
+    return this.get(`hosts.${address}`);
+  }),
+
+  namespace: Ember.computed("restNameSpace", function() {
+    var nameSpace = this.get("restNameSpace");
+    return this.get(`env.app.namespaces.${nameSpace}`);
+  }),
+
+  ajax(url, method, options) {
+    options = options || {};
+    options.crossDomain = true;
+    options.xhrFields = {
+      withCredentials: true
+    };
+    options.targetServer = this.get('serverName');
+    return this._super(url, method, options);
   }
-
 });

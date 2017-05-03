@@ -75,4 +75,8 @@ export default Ember.Service.extend({
   rmWebAddress: Ember.computed(function () {
     return this.normalizeURL(this.get("env.app.hosts.rmWebAddress"));
   }),
+
+  dashWebAddress: Ember.computed(function () {
+    return this.normalizeURL(this.get("env.app.hosts.dashWebAddress"));
+  })
 });

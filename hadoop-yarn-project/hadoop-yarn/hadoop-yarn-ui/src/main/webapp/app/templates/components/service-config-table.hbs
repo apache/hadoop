@@ -1,0 +1,130 @@
+{{!
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+}}
+
+<div class="col-md-12">
+  <div class="form-group">
+    <label>Service Configurations</label>
+    <span class="glyphicon glyphicon-info-sign info-icon" data-info="configurations"></span>
+    <button class="btn btn-primary btn-xs pull-right" {{action "showNewConfigurationModal"}}>
+      <span class="glyphicon glyphicon-plus"></span>
+    </button>
+    <button class="btn btn-primary btn-xs pull-right" style="margin-right: 5px;" {{action "showServiceConfigUploadModal"}}>
+      <span class="glyphicon glyphicon-open"></span>
+    </button>
+    <div class="panel panel-default">
+      <table class="table table-hover table-custom-bordered table-custom-striped table-custom-action">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Type</th>
+            <th>Scope</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each serviceDef.serviceConfigs as |config|}}
+            <tr>
+              <td>{{config.name}}</td>
+              <td>{{config.value}}</td>
+              <td>{{config.capitalizedType}}</td>
+              <td>{{config.formattedScope}}</td>
+              <td>
+                <span class="glyphicon glyphicon-remove remove-icon" {{action "removeConfiguration" config}}></span>
+              </td>
+            </tr>
+          {{else}}
+            <tr class="align-center">
+              <td colspan="5">No data available</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade deploy-service-modal" tabindex="-1" role="dialog" id="addConfigurationModal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title bold-text">Add Configuration</h4>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="required">Name</label>
+          {{input type="text" class="form-control" value=currentConfig.name}}
+        </div>
+        <div class="form-group">
+          <label class="required">Value</label>
+          {{input type="text" class="form-control" value=currentConfig.value}}
+        </div>
+        <div class="form-group">
+          <label class="required">Type</label>
+          <div>
+            <label class="radio-inline">
+              <input type="radio" name="type" value="property" checked={{eq currentConfig.type "property"}} onchange={{action "configTypeChanged" "property"}}>Property
+            </label>
+            <label class="radio-inline">
+              <input type="radio" name="type" value="env" checked={{eq currentConfig.type "env"}} onchange={{action "configTypeChanged" "env"}}>Env
+            </label>
+            <label class="radio-inline">
+              <input type="radio" name="type" value="quicklink" checked={{eq currentConfig.type "quicklink"}} onchange={{action "configTypeChanged" "quicklink"}}>Quicklink
+            </label>
+          </div>
+        </div>
+        {{#if isNotQuicklink}}
+          <div class="form-group">
+            <label class="required">Scope</label>
+            <div>
+              <label class="radio-inline">
+                <input type="radio" name="scope" value="service" checked={{eq currentConfig.scope "service"}} onchange={{action "configScopeChanged" "service"}}>Service
+              </label>
+              {{#if isNonEmptyComponents}}
+                <label class="radio-inline">
+                  <input type="radio" name="scope" value="component" checked={{eq currentConfig.scope "component"}} onchange={{action "configScopeChanged" "component"}}>Component
+                </label>
+              {{/if}}
+            </div>
+          </div>
+          {{#if (eq currentConfig.scope "component")}}
+            <div class="form-group">
+              <select class="form-control" onchange={{action "scopeComponentChanged" value="target.value"}}>
+                {{#each componentNames as |name|}}
+                  <option value="{{name}}" selected={{eq currentConfig.componentName name}}>{{name}}</option>
+                {{/each}}
+              </select>
+            </div>
+          {{/if}}
+        {{/if}}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" {{action "addNewConfiguration"}} disabled={{unless isValidCurrentConfig "disabled"}}>Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{upload-config
+  dialogId="service_config_upload_modal"
+  title="Upload Service Configurations"
+  configJson=serviceConfigJson
+  uploadConfig="uploadServiceConfig"
+}}
