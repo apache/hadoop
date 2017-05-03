@@ -113,9 +113,8 @@ public class TestSCMCli {
       assertTrue(ioe.getMessage().contains(
           "Specified key does not exist. key : " + containerName));
     }
-    String[] args = {"-container", "-create", "-p", containerName};
+    String[] args = {"-container", "-create", "-c", containerName};
     assertEquals(ResultCode.SUCCESS, cli.run(args));
-    Thread.sleep(3000);
     Pipeline container = scm.getContainer(containerName);
     assertNotNull(container);
     assertEquals(containerName, container.getContainerName());
@@ -226,7 +225,7 @@ public class TestSCMCli {
     String expected2 =
         "usage: hdfs scm -container -create <option>\n" +
         "where <option> is\n" +
-        " -p <arg>   Specify pipeline ID\n";
+        " -c <arg>   Specify container name\n";
     assertEquals(expected2, testContent.toString());
     System.setOut(init);
   }
