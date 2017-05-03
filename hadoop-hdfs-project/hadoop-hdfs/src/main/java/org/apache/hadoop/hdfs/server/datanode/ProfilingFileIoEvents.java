@@ -44,19 +44,18 @@ class ProfilingFileIoEvents {
 
   public ProfilingFileIoEvents(@Nullable Configuration conf) {
     if (conf != null) {
-      int fileIOSamplingPercentage = conf.getInt(
-          DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
+      double fileIOSamplingFraction = conf.getDouble(
+          DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
           DFSConfigKeys
-              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT);
-      isEnabled = Util.isDiskStatsEnabled(fileIOSamplingPercentage);
-      if (fileIOSamplingPercentage > 100) {
+              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT);
+      isEnabled = Util.isDiskStatsEnabled(fileIOSamplingFraction);
+      if (fileIOSamplingFraction > 1) {
         LOG.warn(DFSConfigKeys
-            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY +
-            " value cannot be more than 100. Setting value to 100");
-        fileIOSamplingPercentage = 100;
+            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY +
+            " value cannot be more than 1. Setting value to 1");
+        fileIOSamplingFraction = 1;
       }
-      sampleRangeMax = (int) ((double) fileIOSamplingPercentage / 100 *
-          Integer.MAX_VALUE);
+      sampleRangeMax = (int) (fileIOSamplingFraction * Integer.MAX_VALUE);
     } else {
       isEnabled = false;
       sampleRangeMax = 0;

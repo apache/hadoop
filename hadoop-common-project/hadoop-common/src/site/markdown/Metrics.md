@@ -334,8 +334,8 @@ FsVolume
 
 Per-volume metrics contain Datanode Volume IO related statistics. Per-volume
 metrics are off by default. They can be enabled by setting `dfs.datanode
-.fileio.profiling.percentage.fraction` to an integer value between 1 and 100.
-Setting this value to 0 would mean profiling is not enabled. But enabling
+.fileio.profiling.sampling.fraction` to a fraction between 0.0 and 1.0.
+Setting this value to 0.0 would mean profiling is not enabled. But enabling
 per-volume metrics may have a performance impact. Each metrics record
 contains tags such as Hostname as additional information along with metrics.
 

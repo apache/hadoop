@@ -175,10 +175,9 @@ public class DNConf {
     this.peerStatsEnabled = getConf().getBoolean(
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
-    this.diskStatsEnabled = Util.isDiskStatsEnabled(getConf().getInt(
-        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
-        DFSConfigKeys.
-            DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT));
+    this.diskStatsEnabled = Util.isDiskStatsEnabled(getConf().getDouble(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT));
     this.outliersReportIntervalMs = getConf().getTimeDuration(
         DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,
