@@ -38,6 +38,10 @@ public final class ExitUtil {
   private static volatile boolean systemHaltDisabled = false;
   private static volatile ExitException firstExitException;
   private static volatile HaltException firstHaltException;
+  /** Message raised from an exit exception if none were provided: {@value}. */
+  public static final String EXIT_EXCEPTION_MESSAGE = "ExitException";
+  /** Message raised from a halt exception if none were provided: {@value}. */
+  public static final String HALT_EXCEPTION_MESSAGE = "HaltException";
 
   private ExitUtil() {
   }
@@ -285,7 +289,7 @@ public final class ExitUtil {
    * @throws ExitException if {@link System#exit(int)} is disabled.
    */
   public static void terminate(int status) throws ExitException {
-    terminate(status, "");
+    terminate(status, EXIT_EXCEPTION_MESSAGE);
   }
 
   /**
@@ -306,7 +310,7 @@ public final class ExitUtil {
    * @throws HaltException if {@link Runtime#halt(int)} is disabled.
    */
   public static void halt(int status) throws HaltException {
-    halt(status, "");
+    halt(status, HALT_EXCEPTION_MESSAGE);
   }
 
   /**
