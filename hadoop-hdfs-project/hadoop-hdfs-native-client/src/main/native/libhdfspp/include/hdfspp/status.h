@@ -44,6 +44,8 @@ class Status {
   static Status Error(const char *error_message);
   static Status AuthenticationFailed();
   static Status AuthenticationFailed(const char *msg);
+  static Status AuthorizationFailed();
+  static Status AuthorizationFailed(const char *msg);
   static Status Canceled();
   static Status PathNotFound(const char *msg);
   static Status InvalidOffset(const char *msg);

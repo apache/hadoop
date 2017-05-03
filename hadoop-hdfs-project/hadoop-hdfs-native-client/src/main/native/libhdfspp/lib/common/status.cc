@@ -143,6 +143,19 @@ Status Status::AuthenticationFailed(const char *msg) {
   return Status(kAuthenticationFailed, formatted.c_str());
 }
 
+Status Status::AuthorizationFailed() {
+  return Status::AuthorizationFailed(nullptr);
+}
+
+Status Status::AuthorizationFailed(const char *msg) {
+  std::string formatted = "AuthorizationFailed";
+  if(msg) {
+    formatted += ": ";
+    formatted += msg;
+  }
+  return Status(kPermissionDenied, formatted.c_str());
+}
+
 Status Status::Canceled() {
   return Status(kOperationCanceled, "Operation canceled");
 }
