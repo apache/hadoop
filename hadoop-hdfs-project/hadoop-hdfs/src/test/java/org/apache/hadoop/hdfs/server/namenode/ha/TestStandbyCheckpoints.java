@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -482,6 +483,25 @@ public class TestStandbyCheckpoints {
         answerer.getFireCount() == 1 && answerer.getResultCount() == 1);
     
     t.join();
+  }
+
+  /**
+   * Test that checkpointing is still successful even if an issue
+   * was encountered while writing the legacy OIV image.
+   */
+  @Test(timeout=300000)
+  public void testCheckpointSucceedsWithLegacyOIVException() throws Exception {
+    // Delete the OIV image dir to cause an IOException while saving
+    FileUtil.fullyDelete(tmpOivImgDir);
+
+    doEdits(0, 10);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+    // Once the standby catches up, it should notice that it needs to
+    // do a checkpoint and save one to its local directories.
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
+
+    // It should also upload it back to the active.
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
   }
 
   private void doEdits(int start, int stop) throws IOException {
