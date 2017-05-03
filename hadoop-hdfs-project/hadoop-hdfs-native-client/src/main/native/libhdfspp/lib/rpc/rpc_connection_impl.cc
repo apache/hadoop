@@ -175,9 +175,11 @@ Status RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
 
   auto req = RemoveFromRunningQueue(h.callid());
   if (!req) {
-    LOG_WARN(kRPC, << "RPC response with Unknown call id " << h.callid());
+    LOG_WARN(kRPC, << "RPC response with Unknown call id " << (int32_t)h.callid());
     if((int32_t)h.callid() == RpcEngine::kCallIdSasl) {
       return Status::AuthenticationFailed("You have an unsecured client connecting to a secured server");
+    } else if((int32_t)h.callid() == RpcEngine::kCallIdAuthorizationFailed) {
+      return Status::AuthorizationFailed("RPC call id indicates an authorization failure");
     } else {
       return Status::Error("Rpc response with unknown call id");
     }
