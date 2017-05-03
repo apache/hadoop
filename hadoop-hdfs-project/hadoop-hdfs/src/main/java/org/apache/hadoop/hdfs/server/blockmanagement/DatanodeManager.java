@@ -207,9 +207,10 @@ public class DatanodeManager {
     this.dataNodePeerStatsEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
-    this.dataNodeDiskStatsEnabled = Util.isDiskStatsEnabled(conf.getDouble(
-        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
-        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT));
+    this.dataNodeDiskStatsEnabled = Util.isDiskStatsEnabled(conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
+        DFSConfigKeys.
+            DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT));
 
     final Timer timer = new Timer();
     this.slowPeerTracker = dataNodePeerStatsEnabled ?

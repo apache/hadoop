@@ -104,17 +104,18 @@ public final class Util {
     return uris;
   }
 
-  public static boolean isDiskStatsEnabled(double fileIOSamplingFraction) {
+
+  public static boolean isDiskStatsEnabled(int fileIOSamplingPercentage) {
     final boolean isEnabled;
-    if (fileIOSamplingFraction < 0.000001) {
+    if (fileIOSamplingPercentage <= 0) {
       LOG.info(DFSConfigKeys
-          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
-          + fileIOSamplingFraction + ". Disabling file IO profiling");
+          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY + " set to "
+          + fileIOSamplingPercentage + ". Disabling file IO profiling");
       isEnabled = false;
     } else {
       LOG.info(DFSConfigKeys
-          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
-          + fileIOSamplingFraction + ". Enabling file IO profiling");
+          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY + " set to "
+          + fileIOSamplingPercentage + ". Enabling file IO profiling");
       isEnabled = true;
     }
 

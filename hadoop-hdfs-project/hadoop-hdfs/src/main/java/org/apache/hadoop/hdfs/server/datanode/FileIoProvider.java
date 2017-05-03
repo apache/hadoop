@@ -62,8 +62,8 @@ import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.*;
  *
  * Behavior can be injected into these events by enabling the
  * profiling and/or fault injection event hooks through
- * {@link DFSConfigKeys#DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY} and
- * {@link DFSConfigKeys#DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY}.
+ * {@link DFSConfigKeys#DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY}
+ * and {@link DFSConfigKeys#DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY}.
  * These event hooks are disabled by default.
  *
  * Most functions accept an optional {@link FsVolumeSpi} parameter for
