@@ -58,6 +58,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -192,6 +193,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   private String username;
 
   private RetryPolicy dataAccessRetryPolicy;
+  private S3AInstrumentation.S3GuardInstrumentation instrumentation;
 
   /**
    * A utility function to create DynamoDB instance.
@@ -217,6 +219,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
         "DynamoDBMetadataStore only supports S3A filesystem.");
     final S3AFileSystem s3afs = (S3AFileSystem) fs;
+    instrumentation = s3afs.getInstrumentation().getS3GuardInstrumentation();
     final String bucket = s3afs.getBucket();
     String confRegion = s3afs.getConf().getTrimmed(S3GUARD_DDB_REGION_KEY);
     if (!StringUtils.isEmpty(confRegion)) {
@@ -236,6 +239,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
     setMaxRetries(conf);
 
     initTable();
+
+    instrumentation.initialized();
   }
 
   /**
@@ -605,6 +610,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   @Override
   public synchronized void close() {
+    if (instrumentation != null) {
+      instrumentation.storeClosed();
+    }
     if (dynamoDB != null) {
       LOG.debug("Shutting down {}", this);
       dynamoDB.shutdown();

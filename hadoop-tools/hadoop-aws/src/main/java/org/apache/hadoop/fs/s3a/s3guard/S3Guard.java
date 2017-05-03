@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
@@ -40,6 +41,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -124,13 +126,18 @@ public final class S3Guard {
    * returns the same S3AFileStatus.
    * @param ms MetadataStore to put() into.
    * @param status status to store
+   * @param instrumentation instrumentation of the s3a file system
    * @return The same status as passed in
    * @throws IOException if metadata store update failed
    */
   public static S3AFileStatus putAndReturn(MetadataStore ms,
-      S3AFileStatus status) throws IOException {
-
+      S3AFileStatus status,
+      S3AInstrumentation instrumentation) throws IOException {
+    long startTimeNano = System.nanoTime();
     ms.put(new PathMetadata(status));
+    instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
+        (System.nanoTime() - startTimeNano));
+    instrumentation.incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
     return status;
   }
 

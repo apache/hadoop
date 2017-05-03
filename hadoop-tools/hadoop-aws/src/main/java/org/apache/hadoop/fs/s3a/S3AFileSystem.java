@@ -31,8 +31,8 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -1745,7 +1745,8 @@ public class S3AFileSystem extends FileSystem {
         return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
       }
     }
-    return S3Guard.putAndReturn(metadataStore, s3GetFileStatus(path, key));
+    return S3Guard.putAndReturn(metadataStore, s3GetFileStatus(path, key),
+        instrumentation);
   }
 
   /**
@@ -2127,7 +2128,7 @@ public class S3AFileSystem extends FileSystem {
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username);
-        metadataStore.put(new PathMetadata(status));
+        S3Guard.putAndReturn(metadataStore, status, instrumentation);
       }
     } catch (IOException e) {
       LOG.error("s3guard: Error updating MetadataStore for write to {}:",

@@ -140,7 +140,18 @@ public enum Statistic {
   STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
       "Count of total data uploaded in block output"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
-      "Total queue duration of all block uploads");
+      "Total queue duration of all block uploads"),
+
+  // S3guard stats
+  S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
+      "s3guard_metadatastore_put_path_request",
+      "s3guard metadata store put one metadata path request"),
+  S3GUARD_METADATASTORE_PUT_PATH_LATENCY(
+      "s3guard_metadatastore_put_path_latency",
+      "s3guard metadata store put one metadata path lantency"),
+  S3GUARD_METADATASTORE_INITIALIZATION("s3guard_metadatastore_initialization",
+      "s3guard metadata store initialization times");
+
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);
