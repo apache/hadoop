@@ -35,7 +35,9 @@ import static org.apache.hadoop.ozone.scm.cli.SCMCLI.HELP_OP;
 public class CreateContainerHandler extends OzoneCommandHandler {
 
   public static final String CONTAINER_CREATE = "create";
-  public static final String PIPELINE_ID = "p";
+  public static final String OPT_CONTAINER_NAME = "c";
+  // TODO Support an optional -p <pipelineID> option to create
+  // container on given datanodes.
 
   public CreateContainerHandler(ScmClient scmClient) {
     super(scmClient);
@@ -46,25 +48,23 @@ public class CreateContainerHandler extends OzoneCommandHandler {
     if (!cmd.hasOption(CONTAINER_CREATE)) {
       throw new IOException("Expecting container create");
     }
-    // TODO requires pipeline id (instead of optional as in the design) for now
-    if (!cmd.hasOption(PIPELINE_ID)) {
+    if (!cmd.hasOption(OPT_CONTAINER_NAME)) {
       displayHelp();
       if (!cmd.hasOption(HELP_OP)) {
-        throw new IOException("Expecting container ID");
+        throw new IOException("Expecting container name");
       } else {
         return;
       }
     }
-    String pipelineID = cmd.getOptionValue(PIPELINE_ID);
+    String containerName = cmd.getOptionValue(OPT_CONTAINER_NAME);
 
-    logOut("Creating container : %s.", pipelineID);
-    getScmClient().createContainer(pipelineID);
+    logOut("Creating container : %s.", containerName);
+    getScmClient().createContainer(containerName);
     logOut("Container created.");
   }
 
   @Override
   public void displayHelp() {
-    // TODO : may need to change this if we decide to make -p optional later
     Options options = new Options();
     addOptions(options);
     HelpFormatter helpFormatter = new HelpFormatter();
@@ -73,7 +73,8 @@ public class CreateContainerHandler extends OzoneCommandHandler {
   }
 
   public static void addOptions(Options options) {
-    Option pipelineID = new Option(PIPELINE_ID, true, "Specify pipeline ID");
-    options.addOption(pipelineID);
+    Option containerNameOpt = new Option(OPT_CONTAINER_NAME,
+        true, "Specify container name");
+    options.addOption(containerNameOpt);
   }
 }
