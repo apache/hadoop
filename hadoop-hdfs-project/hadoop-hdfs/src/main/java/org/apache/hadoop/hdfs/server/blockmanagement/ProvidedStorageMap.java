@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -119,6 +120,11 @@ public class ProvidedStorageMap {
       LOG.warn("Reserved storage {} reported as non-provided from {}", s, dn);
     }
     return dn.getStorageInfo(s.getStorageID());
+  }
+
+  @VisibleForTesting
+  public DatanodeStorageInfo getProvidedStorageInfo() {
+    return providedStorageInfo;
   }
 
   public LocatedBlockBuilder newLocatedBlocks(int maxValue) {
