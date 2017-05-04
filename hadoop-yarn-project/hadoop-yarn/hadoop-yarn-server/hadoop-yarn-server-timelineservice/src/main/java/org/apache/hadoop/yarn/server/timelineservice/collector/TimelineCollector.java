@@ -310,13 +310,15 @@ public abstract class TimelineCollector extends CompositeService {
         // Update aggregateTable
         Map<String, TimelineMetric> aggrRow = aggregateTable.get(m);
         if (aggrRow == null) {
-          Map<String, TimelineMetric> tempRow = new ConcurrentHashMap<>();
+          Map<String, TimelineMetric> tempRow = new HashMap<>();
           aggrRow = aggregateTable.putIfAbsent(m, tempRow);
           if (aggrRow == null) {
             aggrRow = tempRow;
           }
         }
-        aggrRow.put(entityId, m);
+        synchronized (aggrRow) {
+          aggrRow.put(entityId, m);
+        }
       }
     }
 
@@ -335,14 +337,17 @@ public abstract class TimelineCollector extends CompositeService {
         }
         aggrMetric.setRealtimeAggregationOp(TimelineMetricOperation.NOP);
         Map<Object, Object> status = new HashMap<>();
-        for (TimelineMetric m : aggrRow.values()) {
-          TimelineMetric.aggregateTo(m, aggrMetric, status);
-          // getRealtimeAggregationOp returns an enum so we can directly
-          // compare with "!=".
-          if (m.getRealtimeAggregationOp()
-              != aggrMetric.getRealtimeAggregationOp()) {
-            aggrMetric.setRealtimeAggregationOp(m.getRealtimeAggregationOp());
+        synchronized (aggrRow) {
+          for (TimelineMetric m : aggrRow.values()) {
+            TimelineMetric.aggregateTo(m, aggrMetric, status);
+            // getRealtimeAggregationOp returns an enum so we can directly
+            // compare with "!=".
+            if (m.getRealtimeAggregationOp()
+                != aggrMetric.getRealtimeAggregationOp()) {
+              aggrMetric.setRealtimeAggregationOp(m.getRealtimeAggregationOp());
+            }
           }
+          aggrRow.clear();
         }
         Set<TimelineMetric> metrics = e.getMetrics();
         metrics.remove(aggrMetric);
