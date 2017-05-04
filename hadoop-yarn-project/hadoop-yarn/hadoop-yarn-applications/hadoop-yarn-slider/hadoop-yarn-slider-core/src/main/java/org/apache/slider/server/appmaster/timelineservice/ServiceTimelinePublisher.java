@@ -31,7 +31,6 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.slider.api.resource.Application;
@@ -107,6 +106,13 @@ public class ServiceTimelinePublisher extends CompositeService {
 
     // publish component as separate entity.
     publishComponents(application.getComponents());
+  }
+
+  public void serviceAttemptUpdated(Application application) {
+    TimelineEntity entity = createServiceAttemptEntity(application.getId());
+    entity.addInfo(SliderTimelineMetricsConstants.QUICK_LINKS,
+        application.getQuicklinks());
+    putEntity(entity);
   }
 
   public void serviceAttemptUnregistered(AppState appState,
