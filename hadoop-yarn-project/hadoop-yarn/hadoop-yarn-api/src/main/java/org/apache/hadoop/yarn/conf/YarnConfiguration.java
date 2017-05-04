@@ -2637,6 +2637,27 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
 
+  public static final String ROUTER_PREFIX = YARN_PREFIX + "router.";
+
+  public static final String ROUTER_CLIENTRM_PREFIX =
+      ROUTER_PREFIX + "clientrm.";
+
+  public static final String ROUTER_CLIENTRM_ADDRESS =
+      ROUTER_CLIENTRM_PREFIX + ".address";
+  public static final int DEFAULT_ROUTER_CLIENTRM_PORT = 8050;
+  public static final String DEFAULT_ROUTER_CLIENTRM_ADDRESS =
+      "0.0.0.0:" + DEFAULT_ROUTER_CLIENTRM_PORT;
+
+  public static final String ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE =
+      ROUTER_CLIENTRM_PREFIX + "interceptor-class.pipeline";
+  public static final String DEFAULT_ROUTER_CLIENTRM_INTERCEPTOR_CLASS =
+      "org.apache.hadoop.yarn.server.router.clientrm."
+          + "DefaultClientRequestInterceptor";
+
+  public static final String ROUTER_CLIENTRM_PIPELINE_CACHE_MAX_SIZE =
+      ROUTER_CLIENTRM_PREFIX + "cache-max-size";
+  public static final int DEFAULT_ROUTER_CLIENTRM_PIPELINE_CACHE_MAX_SIZE = 25;
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
