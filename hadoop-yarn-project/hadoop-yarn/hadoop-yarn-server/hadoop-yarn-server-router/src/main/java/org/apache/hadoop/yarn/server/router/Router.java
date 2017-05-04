@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * The router is a stateless YARN component which is the entry point to the
  * cluster. It can be deployed on multiple nodes behind a Virtual IP (VIP) with
@@ -33,6 +47,88 @@ package org.apache.hadoop.yarn.server.router;
  * This provides a placeholder for throttling mis-behaving clients (YARN-1546)
  * and masks the access to multiple RMs (YARN-3659).
  */
-public class Router{
+public class Router extends CompositeService {
 
+  private static final Logger LOG = LoggerFactory.getLogger(Router.class);
+  private static CompositeServiceShutdownHook routerShutdownHook;
+  private Configuration conf;
+  private AtomicBoolean isStopping = new AtomicBoolean(false);
+  private RouterClientRMService clientRMProxyService;
+
+  /**
+   * Priority of the Router shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+
+  public Router() {
+    super(Router.class.getName());
+  }
+
+  protected void doSecureLogin() throws IOException {
+    // TODO YARN-6539 Create SecureLogin inside Router
+  }
+
+  @Override
+  protected void serviceInit(Configuration config) throws Exception {
+    this.conf = config;
+    clientRMProxyService = createClientRMProxyService();
+    addService(clientRMProxyService);
+    super.serviceInit(conf);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    try {
+      doSecureLogin();
+    } catch (IOException e) {
+      throw new YarnRuntimeException("Failed Router login", e);
+    }
+    super.serviceStart();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    if (isStopping.getAndSet(true)) {
+      return;
+    }
+    super.serviceStop();
+  }
+
+  protected void shutDown() {
+    new Thread() {
+      @Override
+      public void run() {
+        Router.this.stop();
+      }
+    }.start();
+  }
+
+  protected RouterClientRMService createClientRMProxyService() {
+    return new RouterClientRMService();
+  }
+
+  public static void main(String[] argv) {
+    Configuration conf = new YarnConfiguration();
+    Thread
+        .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
+    StringUtils.startupShutdownMessage(Router.class, argv, LOG);
+    Router router = new Router();
+    try {
+
+      // Remove the old hook if we are rebooting.
+      if (null != routerShutdownHook) {
+        ShutdownHookManager.get().removeShutdownHook(routerShutdownHook);
+      }
+
+      routerShutdownHook = new CompositeServiceShutdownHook(router);
+      ShutdownHookManager.get().addShutdownHook(routerShutdownHook,
+          SHUTDOWN_HOOK_PRIORITY);
+
+      router.init(conf);
+      router.start();
+    } catch (Throwable t) {
+      LOG.error("Error starting Router", t);
+      System.exit(-1);
+    }
+  }
 }

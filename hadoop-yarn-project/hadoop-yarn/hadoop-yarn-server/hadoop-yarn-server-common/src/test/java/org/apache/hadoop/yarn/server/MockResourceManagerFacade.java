@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
+package org.apache.hadoop.yarn.server;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,11 +24,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.google.common.base.Strings;
-import org.apache.commons.lang.NotImplementedException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -93,8 +94,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerResponsePBImpl;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -106,7 +106,10 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
@@ -116,16 +119,22 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
-import org.eclipse.jetty.util.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
 
 /**
  * Mock Resource Manager facade implementation that exposes all the methods
  * implemented by the YARN RM. The behavior and the values returned by this mock
- * implementation is expected by the unit test cases. So please change the
- * implementation with care.
+ * implementation is expected by the Router/AMRMProxy unit test cases. So please
+ * change the implementation with care.
  */
-public class MockResourceManagerFacade implements
-    ApplicationMasterProtocol, ApplicationClientProtocol {
+public class MockResourceManagerFacade
+    implements ApplicationClientProtocol, ApplicationMasterProtocol {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MockResourceManagerFacade.class);
 
   private HashMap<String, List<ContainerId>> applicationContainerIdMap =
       new HashMap<String, List<ContainerId>>();
@@ -150,49 +159,48 @@ public class MockResourceManagerFacade implements
         break;
       }
     }
-    return result != null ? result.getApplicationAttemptId().toString()
-        : "";
+    return result != null ? result.getApplicationAttemptId().toString() : "";
   }
 
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
-      RegisterApplicationMasterRequest request) throws YarnException,
-      IOException {
+      RegisterApplicationMasterRequest request)
+      throws YarnException, IOException {
     String amrmToken = getAppIdentifier();
-    Log.getLog().info("Registering application attempt: " + amrmToken);
+    LOG.info("Registering application attempt: " + amrmToken);
 
     synchronized (applicationContainerIdMap) {
-      Assert.assertFalse("The application id is already registered: "
-          + amrmToken, applicationContainerIdMap.containsKey(amrmToken));
+      Assert.assertFalse(
+          "The application id is already registered: " + amrmToken,
+          applicationContainerIdMap.containsKey(amrmToken));
       // Keep track of the containers that are returned to this application
-      applicationContainerIdMap.put(amrmToken,
-          new ArrayList<ContainerId>());
+      applicationContainerIdMap.put(amrmToken, new ArrayList<ContainerId>());
     }
 
-    return RegisterApplicationMasterResponse.newInstance(null, null, null,
-        null, null, request.getHost(), null);
+    return RegisterApplicationMasterResponse.newInstance(null, null, null, null,
+        null, request.getHost(), null);
   }
 
   @Override
   public FinishApplicationMasterResponse finishApplicationMaster(
-      FinishApplicationMasterRequest request) throws YarnException,
-      IOException {
+      FinishApplicationMasterRequest request)
+      throws YarnException, IOException {
     String amrmToken = getAppIdentifier();
-    Log.getLog().info("Finishing application attempt: " + amrmToken);
+    LOG.info("Finishing application attempt: " + amrmToken);
 
     synchronized (applicationContainerIdMap) {
       // Remove the containers that were being tracked for this application
-      Assert.assertTrue("The application id is NOT registered: "
-          + amrmToken, applicationContainerIdMap.containsKey(amrmToken));
+      Assert.assertTrue("The application id is NOT registered: " + amrmToken,
+          applicationContainerIdMap.containsKey(amrmToken));
       List<ContainerId> ids = applicationContainerIdMap.remove(amrmToken);
       for (ContainerId c : ids) {
         allocatedContainerMap.remove(c);
       }
     }
 
-    return FinishApplicationMasterResponse
-        .newInstance(request.getFinalApplicationStatus() == FinalApplicationStatus.SUCCEEDED ? true
-            : false);
+    return FinishApplicationMasterResponse.newInstance(
+        request.getFinalApplicationStatus() == FinalApplicationStatus.SUCCEEDED
+            ? true : false);
   }
 
   protected ApplicationId getApplicationId(int id) {
@@ -220,9 +228,8 @@ public class MockResourceManagerFacade implements
     if (request.getAskList() != null) {
       for (ResourceRequest rr : request.getAskList()) {
         for (int i = 0; i < rr.getNumContainers(); i++) {
-          ContainerId containerId =
-              ContainerId.newInstance(getApplicationAttemptId(1),
-                  containerIndex.incrementAndGet());
+          ContainerId containerId = ContainerId.newInstance(
+              getApplicationAttemptId(1), containerIndex.incrementAndGet());
           Container container = Records.newRecord(Container.class);
           container.setId(containerId);
           container.setPriority(rr.getPriority());
@@ -230,9 +237,8 @@ public class MockResourceManagerFacade implements
           // We don't use the node for running containers in the test cases. So
           // it is OK to hard code it to some dummy value
           NodeId nodeId =
-              NodeId.newInstance(
-                  !Strings.isNullOrEmpty(rr.getResourceName()) ? rr
-                      .getResourceName() : "dummy", 1000);
+              NodeId.newInstance(!Strings.isNullOrEmpty(rr.getResourceName())
+                  ? rr.getResourceName() : "dummy", 1000);
           container.setNodeId(nodeId);
           container.setResource(rr.getCapability());
           containerList.add(container);
@@ -244,8 +250,7 @@ public class MockResourceManagerFacade implements
                 "The application id is Not registered before allocate(): "
                     + amrmToken,
                 applicationContainerIdMap.containsKey(amrmToken));
-            List<ContainerId> ids =
-                applicationContainerIdMap.get(amrmToken);
+            List<ContainerId> ids = applicationContainerIdMap.get(amrmToken);
             ids.add(containerId);
             this.allocatedContainerMap.put(containerId, container);
           }
@@ -255,13 +260,13 @@ public class MockResourceManagerFacade implements
 
     if (request.getReleaseList() != null
         && request.getReleaseList().size() > 0) {
-      Log.getLog().info("Releasing containers: "
-          + request.getReleaseList().size());
+      LOG.info("Releasing containers: " + request.getReleaseList().size());
       synchronized (applicationContainerIdMap) {
-        Assert.assertTrue(
-            "The application id is not registered before allocate(): "
-                + amrmToken,
-            applicationContainerIdMap.containsKey(amrmToken));
+        Assert
+            .assertTrue(
+                "The application id is not registered before allocate(): "
+                    + amrmToken,
+                applicationContainerIdMap.containsKey(amrmToken));
         List<ContainerId> ids = applicationContainerIdMap.get(amrmToken);
 
         for (ContainerId id : request.getReleaseList()) {
@@ -273,10 +278,9 @@ public class MockResourceManagerFacade implements
             }
           }
 
-          Assert.assertTrue(
-              "ContainerId " + id
-                  + " being released is not valid for application: "
-                  + conf.get("AMRMTOKEN"), found);
+          Assert.assertTrue("ContainerId " + id
+              + " being released is not valid for application: "
+              + conf.get("AMRMTOKEN"), found);
 
           ids.remove(id);
 
@@ -286,9 +290,8 @@ public class MockResourceManagerFacade implements
           // returning of fake containers is ONLY done for testing purpose - for
           // the test code to get confirmation that the sub-cluster resource
           // managers received the release request
-          ContainerId fakeContainerId =
-              ContainerId.newInstance(getApplicationAttemptId(1),
-                  containerIndex.incrementAndGet());
+          ContainerId fakeContainerId = ContainerId.newInstance(
+              getApplicationAttemptId(1), containerIndex.incrementAndGet());
           Container fakeContainer = allocatedContainerMap.get(id);
           fakeContainer.setId(fakeContainerId);
           containerList.add(fakeContainer);
@@ -296,46 +299,44 @@ public class MockResourceManagerFacade implements
       }
     }
 
-    Log.getLog().info("Allocating containers: " + containerList.size()
+    LOG.info("Allocating containers: " + containerList.size()
         + " for application attempt: " + conf.get("AMRMTOKEN"));
 
     // Always issue a new AMRMToken as if RM rolled master key
     Token newAMRMToken = Token.newInstance(new byte[0], "", new byte[0], "");
 
-    return AllocateResponse.newInstance(0,
-        new ArrayList<ContainerStatus>(), containerList,
-        new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC, 1, null,
-        new ArrayList<NMToken>(), newAMRMToken,
+    return AllocateResponse.newInstance(0, new ArrayList<ContainerStatus>(),
+        containerList, new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC,
+        1, null, new ArrayList<NMToken>(), newAMRMToken,
         new ArrayList<UpdatedContainer>());
   }
 
   @Override
   public GetApplicationReportResponse getApplicationReport(
-      GetApplicationReportRequest request) throws YarnException,
-      IOException {
+      GetApplicationReportRequest request) throws YarnException, IOException {
 
     GetApplicationReportResponse response =
         Records.newRecord(GetApplicationReportResponse.class);
     ApplicationReport report = Records.newRecord(ApplicationReport.class);
     report.setYarnApplicationState(YarnApplicationState.ACCEPTED);
     report.setApplicationId(request.getApplicationId());
-    report.setCurrentApplicationAttemptId(ApplicationAttemptId
-        .newInstance(request.getApplicationId(), 1));
+    report.setCurrentApplicationAttemptId(
+        ApplicationAttemptId.newInstance(request.getApplicationId(), 1));
     response.setApplicationReport(report);
     return response;
   }
 
   @Override
   public GetApplicationAttemptReportResponse getApplicationAttemptReport(
-      GetApplicationAttemptReportRequest request) throws YarnException,
-      IOException {
+      GetApplicationAttemptReportRequest request)
+      throws YarnException, IOException {
+
     GetApplicationAttemptReportResponse response =
         Records.newRecord(GetApplicationAttemptReportResponse.class);
     ApplicationAttemptReport report =
         Records.newRecord(ApplicationAttemptReport.class);
     report.setApplicationAttemptId(request.getApplicationAttemptId());
-    report
-        .setYarnApplicationAttemptState(YarnApplicationAttemptState.LAUNCHED);
+    report.setYarnApplicationAttemptState(YarnApplicationAttemptState.LAUNCHED);
     response.setApplicationAttemptReport(report);
     return response;
   }
@@ -343,172 +344,168 @@ public class MockResourceManagerFacade implements
   @Override
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request) throws YarnException, IOException {
-    return null;
+    return GetNewApplicationResponse.newInstance(null, null, null);
   }
 
   @Override
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) throws YarnException, IOException {
-    return null;
+    return SubmitApplicationResponse.newInstance();
   }
 
   @Override
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return KillApplicationResponse.newInstance(true);
   }
 
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return GetClusterMetricsResponse.newInstance(null);
   }
 
   @Override
-  public GetApplicationsResponse getApplications(
-      GetApplicationsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+  public GetApplicationsResponse getApplications(GetApplicationsRequest request)
+      throws YarnException, IOException {
+    return GetApplicationsResponse.newInstance(null);
   }
 
   @Override
-  public GetClusterNodesResponse getClusterNodes(
-      GetClusterNodesRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+  public GetClusterNodesResponse getClusterNodes(GetClusterNodesRequest request)
+      throws YarnException, IOException {
+    return GetClusterNodesResponse.newInstance(null);
   }
 
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    return GetQueueInfoResponse.newInstance(null);
   }
 
   @Override
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
-      GetQueueUserAclsInfoRequest request) throws YarnException,
-      IOException {
-    throw new NotImplementedException();
+      GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
+    return GetQueueUserAclsInfoResponse.newInstance(null);
   }
 
   @Override
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return GetDelegationTokenResponse.newInstance(null);
   }
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
-      RenewDelegationTokenRequest request) throws YarnException,
-      IOException {
-    throw new NotImplementedException();
+      RenewDelegationTokenRequest request) throws YarnException, IOException {
+    return RenewDelegationTokenResponse.newInstance(0);
   }
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
-      CancelDelegationTokenRequest request) throws YarnException,
-      IOException {
-    throw new NotImplementedException();
+      CancelDelegationTokenRequest request) throws YarnException, IOException {
+    return CancelDelegationTokenResponse.newInstance();
   }
 
   @Override
   public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
-      MoveApplicationAcrossQueuesRequest request) throws YarnException,
-      IOException {
-    throw new NotImplementedException();
+      MoveApplicationAcrossQueuesRequest request)
+      throws YarnException, IOException {
+    return MoveApplicationAcrossQueuesResponse.newInstance();
   }
 
   @Override
   public GetApplicationAttemptsResponse getApplicationAttempts(
-      GetApplicationAttemptsRequest request) throws YarnException,
-      IOException {
-    throw new NotImplementedException();
+      GetApplicationAttemptsRequest request) throws YarnException, IOException {
+    return GetApplicationAttemptsResponse.newInstance(null);
   }
 
   @Override
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return GetContainerReportResponse.newInstance(null);
   }
 
   @Override
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public GetNewReservationResponse getNewReservation(
-      GetNewReservationRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return GetContainersResponse.newInstance(null);
   }
 
   @Override
   public ReservationSubmissionResponse submitReservation(
-      ReservationSubmissionRequest request) throws YarnException,
-      IOException {
-    throw new NotImplementedException();
+      ReservationSubmissionRequest request) throws YarnException, IOException {
+    return ReservationSubmissionResponse.newInstance();
   }
 
   @Override
   public ReservationListResponse listReservations(
-          ReservationListRequest request) throws YarnException,
-          IOException {
-      throw new NotImplementedException();
+      ReservationListRequest request) throws YarnException, IOException {
+    return ReservationListResponse
+        .newInstance(new ArrayList<ReservationAllocationState>());
   }
 
   @Override
   public ReservationUpdateResponse updateReservation(
       ReservationUpdateRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return ReservationUpdateResponse.newInstance();
   }
 
   @Override
   public ReservationDeleteResponse deleteReservation(
       ReservationDeleteRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return ReservationDeleteResponse.newInstance();
   }
 
   @Override
   public GetNodesToLabelsResponse getNodeToLabels(
       GetNodesToLabelsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return GetNodesToLabelsResponse
+        .newInstance(new HashMap<NodeId, Set<String>>());
   }
 
   @Override
   public GetClusterNodeLabelsResponse getClusterNodeLabels(
-      GetClusterNodeLabelsRequest request) throws YarnException,
-      IOException {
-    throw new NotImplementedException();
+      GetClusterNodeLabelsRequest request) throws YarnException, IOException {
+    return GetClusterNodeLabelsResponse.newInstance(new ArrayList<NodeLabel>());
   }
 
   @Override
   public GetLabelsToNodesResponse getLabelsToNodes(
       GetLabelsToNodesRequest request) throws YarnException, IOException {
-    return null;
+    return GetLabelsToNodesResponse.newInstance(null);
   }
 
   @Override
-  public UpdateApplicationPriorityResponse updateApplicationPriority(
-      UpdateApplicationPriorityRequest request) throws YarnException,
-      IOException {
-    return null;
+  public GetNewReservationResponse getNewReservation(
+      GetNewReservationRequest request) throws YarnException, IOException {
+    return GetNewReservationResponse
+        .newInstance(ReservationId.newInstance(0, 0));
   }
-
-  @Override
-  public SignalContainerResponse signalToContainer(
-      SignalContainerRequest request) throws IOException {
-return null;
-}
 
   @Override
   public FailApplicationAttemptResponse failApplicationAttempt(
       FailApplicationAttemptRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    return FailApplicationAttemptResponse.newInstance();
+  }
+
+  @Override
+  public UpdateApplicationPriorityResponse updateApplicationPriority(
+      UpdateApplicationPriorityRequest request)
+      throws YarnException, IOException {
+    return UpdateApplicationPriorityResponse.newInstance(null);
+  }
+
+  @Override
+  public SignalContainerResponse signalToContainer(
+      SignalContainerRequest request) throws YarnException, IOException {
+    return new SignalContainerResponsePBImpl();
   }
 
   @Override
   public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    return UpdateApplicationTimeoutsResponse.newInstance();
   }
 }

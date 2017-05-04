@@ -3167,6 +3167,24 @@
 
   <property>
     <description>
+      The comma separated list of class names that implement the
+      RequestInterceptor interface. This is used by the RouterClientRMService
+      to create the request processing pipeline for users.
+    </description>
+    <name>yarn.router.clientrm.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.router.clientrm.DefaultClientRequestInterceptor</value>
+  </property>
+
+  <property>
+    <description>
+      Size of LRU cache for Router ClientRM Service.
+    </description>
+    <name>yarn.router.clientrm.cache-max-size</name>
+    <value>25</value>
+  </property>
+
+  <property>
+    <description>
       Comma-separated list of PlacementRules to determine how applications
       submitted by certain users get mapped to certain queues. Default is
       user-group, which corresponds to UserGroupMappingPlacementRule.
