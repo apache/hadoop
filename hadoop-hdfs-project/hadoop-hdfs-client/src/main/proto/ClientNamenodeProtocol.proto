@@ -68,6 +68,7 @@ enum CreateFlagProto {
   APPEND = 0x04;    // Append to a file
   LAZY_PERSIST = 0x10; // File with reduced durability guarantees.
   NEW_BLOCK = 0x20; // Write data to a new block when appending
+  SHOULD_REPLICATE = 0x80; // Enforce to create a replicate file
 }
 
 message CreateRequestProto {
