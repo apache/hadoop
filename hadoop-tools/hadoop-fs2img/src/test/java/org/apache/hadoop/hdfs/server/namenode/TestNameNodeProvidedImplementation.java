@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockFormatProvider;
@@ -69,6 +70,10 @@ public class TestNameNodeProvidedImplementation {
   final Path BLOCKFILE = new Path(NNDIRPATH, "blocks.csv");
   final String SINGLEUSER = "usr1";
   final String SINGLEGROUP = "grp1";
+  private final int numFiles = 10;
+  private final String filePrefix = "file";
+  private final String fileSuffix = ".dat";
+  private final int baseFileLen = 1024;
 
   Configuration conf;
   MiniDFSCluster cluster;
@@ -114,15 +119,16 @@ public class TestNameNodeProvidedImplementation {
     }
 
     // create 10 random files under BASE
-    for (int i=0; i < 10; i++) {
-      File newFile = new File(new Path(NAMEPATH, "file" + i).toUri());
+    for (int i=0; i < numFiles; i++) {
+      File newFile = new File(
+          new Path(NAMEPATH, filePrefix + i + fileSuffix).toUri());
       if(!newFile.exists()) {
         try {
           LOG.info("Creating " + newFile.toString());
           newFile.createNewFile();
           Writer writer = new OutputStreamWriter(
               new FileOutputStream(newFile.getAbsolutePath()), "utf-8");
-          for(int j=0; j < 10*i; j++) {
+          for(int j=0; j < baseFileLen*i; j++) {
             writer.write("0");
           }
           writer.flush();
@@ -161,29 +167,30 @@ public class TestNameNodeProvidedImplementation {
 
   void startCluster(Path nspath, int numDatanodes,
       StorageType[] storageTypes,
-      StorageType[][] storageTypesPerDatanode)
+      StorageType[][] storageTypesPerDatanode,
+      boolean doFormat)
       throws IOException {
     conf.set(DFS_NAMENODE_NAME_DIR_KEY, nspath.toString());
 
     if (storageTypesPerDatanode != null) {
       cluster = new MiniDFSCluster.Builder(conf)
-          .format(false)
-          .manageNameDfsDirs(false)
+          .format(doFormat)
+          .manageNameDfsDirs(doFormat)
           .numDataNodes(numDatanodes)
           .storageTypes(storageTypesPerDatanode)
           .build();
     } else if (storageTypes != null) {
       cluster = new MiniDFSCluster.Builder(conf)
-          .format(false)
-          .manageNameDfsDirs(false)
+          .format(doFormat)
+          .manageNameDfsDirs(doFormat)
           .numDataNodes(numDatanodes)
           .storagesPerDatanode(storageTypes.length)
           .storageTypes(storageTypes)
           .build();
     } else {
       cluster = new MiniDFSCluster.Builder(conf)
-          .format(false)
-          .manageNameDfsDirs(false)
+          .format(doFormat)
+          .manageNameDfsDirs(doFormat)
           .numDataNodes(numDatanodes)
           .build();
     }
@@ -195,7 +202,8 @@ public class TestNameNodeProvidedImplementation {
     final long seed = r.nextLong();
     LOG.info("NAMEPATH: " + NAMEPATH);
     createImage(new RandomTreeWalk(seed), NNDIRPATH, FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 0, new StorageType[] {StorageType.PROVIDED}, null);
+    startCluster(NNDIRPATH, 0, new StorageType[] {StorageType.PROVIDED},
+        null, false);
 
     FileSystem fs = cluster.getFileSystem();
     for (TreePath e : new RandomTreeWalk(seed)) {
@@ -220,7 +228,8 @@ public class TestNameNodeProvidedImplementation {
         SingleUGIResolver.class, UGIResolver.class);
     createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
         FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 1, new StorageType[] {StorageType.PROVIDED}, null);
+    startCluster(NNDIRPATH, 1, new StorageType[] {StorageType.PROVIDED},
+        null, false);
   }
 
   @Test(timeout=500000)
@@ -232,10 +241,10 @@ public class TestNameNodeProvidedImplementation {
     // make the last Datanode with only DISK
     startCluster(NNDIRPATH, 3, null,
         new StorageType[][] {
-          {StorageType.PROVIDED},
-          {StorageType.PROVIDED},
-          {StorageType.DISK}}
-        );
+            {StorageType.PROVIDED},
+            {StorageType.PROVIDED},
+            {StorageType.DISK}},
+        false);
     // wait for the replication to finish
     Thread.sleep(50000);
 
@@ -290,7 +299,8 @@ public class TestNameNodeProvidedImplementation {
         FsUGIResolver.class, UGIResolver.class);
     createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
         FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 3, new StorageType[] {StorageType.PROVIDED}, null);
+    startCluster(NNDIRPATH, 3, new StorageType[] {StorageType.PROVIDED},
+        null, false);
     FileSystem fs = cluster.getFileSystem();
     Thread.sleep(2000);
     int count = 0;
@@ -341,5 +351,31 @@ public class TestNameNodeProvidedImplementation {
         }
       }
     }
+  }
+
+  private BlockLocation[] createFile(Path path, short replication,
+      long fileLen, long blockLen) throws IOException {
+    FileSystem fs = cluster.getFileSystem();
+    //create a sample file that is not provided
+    DFSTestUtil.createFile(fs, path, false, (int) blockLen,
+        fileLen, blockLen, replication, 0, true);
+    return fs.getFileBlockLocations(path, 0, fileLen);
+  }
+
+  @Test
+  public void testClusterWithEmptyImage() throws IOException {
+    // start a cluster with 2 datanodes without any provided storage
+    startCluster(NNDIRPATH, 2, null,
+        new StorageType[][] {
+            {StorageType.DISK},
+            {StorageType.DISK}},
+        true);
+    assertTrue(cluster.isClusterUp());
+    assertTrue(cluster.isDataNodeUp());
+
+    BlockLocation[] locations = createFile(new Path("/testFile1.dat"),
+        (short) 2, 1024*1024, 1024*1024);
+    assertEquals(1, locations.length);
+    assertEquals(2, locations[0].getHosts().length);
   }
 }
