@@ -134,11 +134,13 @@ public class ProvidedStorageMap {
   class ProvidedBlocksBuilder extends LocatedBlockBuilder {
 
     private ShadowDatanodeInfoWithStorage pending;
+    private boolean hasProvidedLocations;
 
     ProvidedBlocksBuilder(int maxBlocks) {
       super(maxBlocks);
       pending = new ShadowDatanodeInfoWithStorage(
           providedDescriptor, storageId);
+      hasProvidedLocations = false;
     }
 
     @Override
@@ -154,6 +156,7 @@ public class ProvidedStorageMap {
         types[i] = storages[i].getStorageType();
         if (StorageType.PROVIDED.equals(storages[i].getStorageType())) {
           locs[i] = pending;
+          hasProvidedLocations = true;
         } else {
           locs[i] = new DatanodeInfoWithStorage(
               storages[i].getDatanodeDescriptor(), sids[i], types[i]);
@@ -165,25 +168,28 @@ public class ProvidedStorageMap {
     @Override
     LocatedBlocks build(DatanodeDescriptor client) {
       // TODO: to support multiple provided storages, need to pass/maintain map
-      // set all fields of pending DatanodeInfo
-      List<String> excludedUUids = new ArrayList<String>();
-      for (LocatedBlock b: blocks) {
-        DatanodeInfo[] infos = b.getLocations();
-        StorageType[] types = b.getStorageTypes();
+      if (hasProvidedLocations) {
+        // set all fields of pending DatanodeInfo
+        List<String> excludedUUids = new ArrayList<String>();
+        for (LocatedBlock b : blocks) {
+          DatanodeInfo[] infos = b.getLocations();
+          StorageType[] types = b.getStorageTypes();
 
-        for (int i = 0; i < types.length; i++) {
-          if (!StorageType.PROVIDED.equals(types[i])) {
-            excludedUUids.add(infos[i].getDatanodeUuid());
+          for (int i = 0; i < types.length; i++) {
+            if (!StorageType.PROVIDED.equals(types[i])) {
+              excludedUUids.add(infos[i].getDatanodeUuid());
+            }
           }
         }
+
+        DatanodeDescriptor dn =
+                providedDescriptor.choose(client, excludedUUids);
+        if (dn == null) {
+          dn = providedDescriptor.choose(client);
+        }
+        pending.replaceInternal(dn);
       }
 
-      DatanodeDescriptor dn = providedDescriptor.choose(client, excludedUUids);
-      if (dn == null) {
-        dn = providedDescriptor.choose(client);
-      }
-
-      pending.replaceInternal(dn);
       return new LocatedBlocks(
           flen, isUC, blocks, last, lastComplete, feInfo, ecPolicy);
     }
@@ -278,7 +284,8 @@ public class ProvidedStorageMap {
 
     DatanodeDescriptor choose(DatanodeDescriptor client) {
       // exact match for now
-      DatanodeDescriptor dn = dns.get(client.getDatanodeUuid());
+      DatanodeDescriptor dn = client != null ?
+              dns.get(client.getDatanodeUuid()) : null;
       if (null == dn) {
         dn = chooseRandom();
       }
@@ -288,7 +295,8 @@ public class ProvidedStorageMap {
     DatanodeDescriptor choose(DatanodeDescriptor client,
         List<String> excludedUUids) {
       // exact match for now
-      DatanodeDescriptor dn = dns.get(client.getDatanodeUuid());
+      DatanodeDescriptor dn = client != null ?
+              dns.get(client.getDatanodeUuid()) : null;
 
       if (null == dn || excludedUUids.contains(client.getDatanodeUuid())) {
         dn = null;
