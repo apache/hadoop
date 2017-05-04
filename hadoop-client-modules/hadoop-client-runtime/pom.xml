@@ -96,7 +96,6 @@
     </dependency>
     <!-- Move log4j to optional, since it is needed for some pieces folks might not use:
          * one of the three custom log4j appenders we have
-         * JobConf (?!) (so essentially any user of MapReduce)
       -->
     <dependency>
       <groupId>log4j</groupId>

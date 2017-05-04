@@ -650,12 +650,12 @@ public class MRApps extends Apps {
     if (isMap) {
       return conf.get(
           MRJobConfig.MAP_LOG_LEVEL,
-          JobConf.DEFAULT_LOG_LEVEL.toString()
+          JobConf.DEFAULT_LOG_LEVEL
       );
     } else {
       return conf.get(
           MRJobConfig.REDUCE_LOG_LEVEL,
-          JobConf.DEFAULT_LOG_LEVEL.toString()
+          JobConf.DEFAULT_LOG_LEVEL
       );
     }
   }
