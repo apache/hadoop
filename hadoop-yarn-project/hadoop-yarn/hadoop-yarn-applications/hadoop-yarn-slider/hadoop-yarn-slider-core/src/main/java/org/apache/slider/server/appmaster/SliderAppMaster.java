@@ -661,11 +661,13 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         asyncRMClient.registerTimelineV2Client(timelineClient);
         timelineClient.init(getConfig());
         timelineClient.start();
-        log.info("Timeline client started.");
+        log.info("Timeline v2 client started.");
 
         serviceTimelinePublisher = new ServiceTimelinePublisher(timelineClient);
         serviceTimelinePublisher.init(getConfig());
         serviceTimelinePublisher.start();
+
+        providerService.setServiceTimelinePublisher(serviceTimelinePublisher);
         appState.setServiceTimelinePublisher(serviceTimelinePublisher);
         log.info("ServiceTimelinePublisher started.");
       }

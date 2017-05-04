@@ -38,6 +38,7 @@ import org.apache.slider.providers.ProviderService;
 import org.apache.slider.providers.ProviderUtils;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
+import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,7 @@ public class DockerProviderService extends AbstractService
   private static final String QUICK_LINKS = "quicklinks";
   protected StateAccessForProviders amState;
   protected YarnRegistryViewForProviders yarnRegistry;
+  private ServiceTimelinePublisher serviceTimelinePublisher;
 
   protected DockerProviderService() {
     super("DockerProviderService");
@@ -126,6 +128,9 @@ public class DockerProviderService extends AbstractService
     PublishedConfiguration pubconf = new PublishedConfiguration(QUICK_LINKS,
         application.getQuicklinks().entrySet());
     amState.getPublishedSliderConfigurations().put(QUICK_LINKS, pubconf);
+    if (serviceTimelinePublisher != null) {
+      serviceTimelinePublisher.serviceAttemptUpdated(application);
+    }
   }
 
   public boolean processContainerStatus(ContainerId containerId,
@@ -154,5 +159,10 @@ public class DockerProviderService extends AbstractService
       log.warn(containerId + " not found in Application!");
     }
     return false;
+  }
+
+  @Override
+  public void setServiceTimelinePublisher(ServiceTimelinePublisher publisher) {
+    this.serviceTimelinePublisher = publisher;
   }
 }

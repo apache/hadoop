@@ -28,6 +28,7 @@ import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.launch.ContainerLauncher;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
+import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 
 import java.io.IOException;
@@ -57,4 +58,11 @@ public interface ProviderService extends Service {
    */
   boolean processContainerStatus(ContainerId containerId,
       ContainerStatus status);
+
+  /**
+   * Set service publisher.
+   * @param serviceTimelinePublisher service publisher.
+   */
+  void setServiceTimelinePublisher(
+      ServiceTimelinePublisher serviceTimelinePublisher);
 }

@@ -37,6 +37,8 @@ public final class SliderTimelineMetricsConstants {
 
   public static final String LAUNCH_TIME = "LAUNCH_TIME";
 
+  public static final String QUICK_LINKS = "QUICK_LINKS";
+
   public static final String LAUNCH_COMMAND = "LAUNCH_COMMAND";
 
   public static final String TOTAL_CONTAINERS = "NUMBER_OF_CONTAINERS";

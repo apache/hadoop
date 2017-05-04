@@ -23,10 +23,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
-import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.client.api.impl.TimelineV2ClientImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.ApplicationState;
@@ -77,6 +76,8 @@ public class TestServiceTimelinePublisher {
   @Before
   public void setUp() throws Exception {
     config = new Configuration();
+    config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
     timelineClient =
         new DummyTimelineClient(ApplicationId.fromString(SERVICEID));
     serviceTimelinePublisher = new ServiceTimelinePublisher(timelineClient);
@@ -88,8 +89,12 @@ public class TestServiceTimelinePublisher {
 
   @After
   public void tearDown() throws Exception {
-    serviceTimelinePublisher.stop();
-    timelineClient.stop();
+    if (serviceTimelinePublisher != null) {
+      serviceTimelinePublisher.stop();
+    }
+    if (timelineClient != null) {
+      timelineClient.stop();
+    }
   }
 
   @Test
@@ -263,6 +268,12 @@ public class TestServiceTimelinePublisher {
 
     @Override
     public void putEntitiesAsync(TimelineEntity... entities)
+        throws IOException, YarnException {
+      putEntities(entities);
+    }
+
+    @Override
+    public void putEntities(TimelineEntity... entities)
         throws IOException, YarnException {
       for (TimelineEntity timelineEntity : entities) {
         TimelineEntity entity =
