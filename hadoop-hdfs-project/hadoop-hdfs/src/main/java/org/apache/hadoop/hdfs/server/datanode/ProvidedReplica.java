@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -98,7 +100,8 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     if (remoteFS != null) {
       FSDataInputStream ins = remoteFS.open(new Path(fileURI));
       ins.seek(fileOffset + seekOffset);
-      return new FSDataInputStream(ins);
+      return new BoundedInputStream(
+          new FSDataInputStream(ins), getBlockDataLength());
     } else {
       throw new IOException("Remote filesystem for provided replica " + this +
           " does not exist");
