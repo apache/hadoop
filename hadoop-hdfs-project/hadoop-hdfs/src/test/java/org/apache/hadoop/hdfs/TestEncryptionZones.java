@@ -349,6 +349,7 @@ public class TestEncryptionZones {
   @Test
   public void testBasicOperations() throws Exception {
 
+    assertNotNull("key provider is not present", dfsAdmin.getKeyProvider());
     int numZones = 0;
     /* Number of EZs should be 0 if no EZ is created */
     assertEquals("Unexpected number of encryption zones!", numZones,
