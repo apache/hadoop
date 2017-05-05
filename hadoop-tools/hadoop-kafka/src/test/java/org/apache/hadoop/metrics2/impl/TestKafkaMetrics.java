@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -40,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.StringJoiner;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
@@ -74,8 +74,10 @@ public class TestKafkaMetrics {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this).add("name", name())
-          .add("description", desc).toString();
+      return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+          .add("name=" + name())
+          .add("description=" + desc)
+          .toString();
     }
   }
 
