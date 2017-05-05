@@ -32,6 +32,7 @@ import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
+import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 
 import java.io.IOException;
@@ -138,5 +139,11 @@ public class MockProviderService implements ProviderService {
   public boolean processContainerStatus(ContainerId containerId,
       ContainerStatus status) {
     return false;
+  }
+
+  @Override
+  public void setServiceTimelinePublisher(
+      ServiceTimelinePublisher serviceTimelinePublisher) {
+
   }
 }
