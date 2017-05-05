@@ -328,18 +328,24 @@ Appendix
 Here we provide an example format of the sls json file, which contains 2 jobs. The first job has 3 map tasks and the second one has 2 map tasks.
 
     {
-      "am.type" : "mapreduce",
-      "job.start.ms" : 0,
-      "job.end.ms" : 95375,
-      "job.queue.name" : "sls_queue_1",
-      "job.id" : "job_1",
-      "job.user" : "default",
+      "num.nodes": 3,  // total number of nodes in the cluster
+      "num.racks": 1   // total number of racks in the cluster, it divides num.nodes into the racks evenly, optional, the default value is 1
+    }
+    {
+      "am.type" : "mapreduce", // type of AM, optional, the default value is "mapreduce"
+      "job.start.ms" : 0,      // job start time
+      "job.end.ms" : 95375,    // job finish time, optional, the default value is 0
+      "job.queue.name" : "sls_queue_1", // the queue job will be submitted to
+      "job.id" : "job_1",      // the job id used to track the job, optional, the default value is an zero-based integer increasing with number of jobs
+      "job.user" : "default",  // user, optional, the default value is "default"
       "job.tasks" : [ {
-        "container.host" : "/default-rack/node1",
-        "container.start.ms" : 6664,
-        "container.end.ms" : 23707,
-        "container.priority" : 20,
-        "container.type" : "map"
+        "count": 1,    // number of tasks, optional, the default value is 1
+        "container.host" : "/default-rack/node1",  // host the container asks for
+        "container.start.ms" : 6664,  // container start time, optional
+        "container.end.ms" : 23707,   // container finish time, optional
+        "duration.ms":  50000,        // duration of the container, optional if start and end time is specified
+        "container.priority" : 20,    // priority of the container, optional, the default value is 20
+        "container.type" : "map"      // type of the container, could be "map" or "reduce", optional, the default value is "map"
       }, {
         "container.host" : "/default-rack/node3",
         "container.start.ms" : 6665,

@@ -400,26 +400,28 @@ public abstract class AMSimulator extends TaskRunner.Task {
     Map<String, ResourceRequest> nodeLocalRequestMap = new HashMap<String, ResourceRequest>();
     ResourceRequest anyRequest = null;
     for (ContainerSimulator cs : csList) {
-      String rackHostNames[] = SLSUtils.getRackHostName(cs.getHostname());
-      // check rack local
-      String rackname = "/" + rackHostNames[0];
-      if (rackLocalRequestMap.containsKey(rackname)) {
-        rackLocalRequestMap.get(rackname).setNumContainers(
-            rackLocalRequestMap.get(rackname).getNumContainers() + 1);
-      } else {
-        ResourceRequest request = createResourceRequest(
-                cs.getResource(), rackname, priority, 1);
-        rackLocalRequestMap.put(rackname, request);
-      }
-      // check node local
-      String hostname = rackHostNames[1];
-      if (nodeLocalRequestMap.containsKey(hostname)) {
-        nodeLocalRequestMap.get(hostname).setNumContainers(
-            nodeLocalRequestMap.get(hostname).getNumContainers() + 1);
-      } else {
-        ResourceRequest request = createResourceRequest(
-                cs.getResource(), hostname, priority, 1);
-        nodeLocalRequestMap.put(hostname, request);
+      if (cs.getHostname() != null) {
+        String[] rackHostNames = SLSUtils.getRackHostName(cs.getHostname());
+        // check rack local
+        String rackname = "/" + rackHostNames[0];
+        if (rackLocalRequestMap.containsKey(rackname)) {
+          rackLocalRequestMap.get(rackname).setNumContainers(
+              rackLocalRequestMap.get(rackname).getNumContainers() + 1);
+        } else {
+          ResourceRequest request =
+              createResourceRequest(cs.getResource(), rackname, priority, 1);
+          rackLocalRequestMap.put(rackname, request);
+        }
+        // check node local
+        String hostname = rackHostNames[1];
+        if (nodeLocalRequestMap.containsKey(hostname)) {
+          nodeLocalRequestMap.get(hostname).setNumContainers(
+              nodeLocalRequestMap.get(hostname).getNumContainers() + 1);
+        } else {
+          ResourceRequest request =
+              createResourceRequest(cs.getResource(), hostname, priority, 1);
+          nodeLocalRequestMap.put(hostname, request);
+        }
       }
       // any
       if (anyRequest == null) {
