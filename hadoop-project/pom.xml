@@ -146,6 +146,12 @@
         <version>2.4.0</version>
       </dependency>
       <dependency>
+        <groupId>com.squareup.okhttp3</groupId>
+        <artifactId>mockwebserver</artifactId>
+        <version>3.7.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>jdiff</groupId>
         <artifactId>jdiff</artifactId>
         <version>${jdiff.version}</version>
