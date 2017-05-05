@@ -320,6 +320,10 @@ public class AMRMProxyService extends AbstractService implements
       LOG.info("Request to stop an application that does not exist. Id:"
           + applicationId);
     } else {
+      // Remove the appAttempt in AMRMTokenSecretManager
+      this.secretManager
+          .applicationMasterFinished(pipeline.getApplicationAttemptId());
+
       LOG.info("Stopping the request processing pipeline for application: "
           + applicationId);
       try {
@@ -548,7 +552,7 @@ public class AMRMProxyService extends AbstractService implements
               event.getApplicationID());
       if (app != null) {
         switch (event.getType()) {
-        case FINISH_APPLICATION:
+        case APPLICATION_RESOURCES_CLEANEDUP:
           LOG.info("Application stop event received for stopping AppId:"
               + event.getApplicationID().toString());
           AMRMProxyService.this.stopApplication(event.getApplicationID());
