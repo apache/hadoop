@@ -16,9 +16,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# Apache Hadoop  0.20.204.1 Release Notes
+# Apache Hadoop  2.8.1 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [YARN-6709](https://issues.apache.org/jira/browse/YARN-6709) | *Blocker* | **Root privilege escalation in experimental Docker support**
+
+CVE-2017-7669 / YARN's Docker support did not do enough input validation.  This allowed a root level escalation from an ordinary user account.
 
 
 

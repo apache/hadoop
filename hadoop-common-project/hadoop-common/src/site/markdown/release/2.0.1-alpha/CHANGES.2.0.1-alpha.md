@@ -27,46 +27,10 @@
 | [HADOOP-8552](https://issues.apache.org/jira/browse/HADOOP-8552) | Conflict: Same security.log.file for multiple users. |  Major | conf, security | Karthik Kambatla | Karthik Kambatla |
 
 
-### IMPORTANT ISSUES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### NEW FEATURES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
 ### IMPROVEMENTS:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
 | [HDFS-3667](https://issues.apache.org/jira/browse/HDFS-3667) | Add retry support to WebHdfsFileSystem |  Major | webhdfs | Tsz Wo Nicholas Sze | Tsz Wo Nicholas Sze |
-
-
-### BUG FIXES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### TESTS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### SUB-TASKS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### OTHER:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
 
 

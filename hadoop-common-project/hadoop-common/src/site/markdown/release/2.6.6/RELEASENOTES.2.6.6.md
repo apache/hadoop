@@ -16,9 +16,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# Apache Hadoop  0.13.1 Release Notes
+# Apache Hadoop  2.6.6 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
+---
 
+* [HADOOP-13812](https://issues.apache.org/jira/browse/HADOOP-13812) | *Blocker* | **Upgrade Tomcat to 6.0.48**
+
+Tomcat 6.0.46 starts to filter weak ciphers. Some old SSL clients may be affected. It is recommended to upgrade the SSL client. Run the SSL client against https://www.howsmyssl.com/a/check to find out its TLS version and cipher suites.

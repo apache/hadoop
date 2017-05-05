@@ -23,30 +23,23 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-5225](https://issues.apache.org/jira/browse/HADOOP-5225) | *Blocker* | **workaround for tmp file handling on DataNodes in 0.19.1 (HADOOP-4663)**
+* [HADOOP-4061](https://issues.apache.org/jira/browse/HADOOP-4061) | *Major* | **Large number of decommission freezes the Namenode**
 
-Work around for tmp file handling. sync() does not work as a result.
-
-
----
-
-* [HADOOP-5224](https://issues.apache.org/jira/browse/HADOOP-5224) | *Blocker* | **Disable append**
-
-HDFS append() is disabled. It throws UnsupportedOperationException.
+Added a new conf property dfs.namenode.decommission.nodes.per.interval so that NameNode checks decommission status of x nodes for every y seconds, where x is the value of dfs.namenode.decommission.nodes.per.interval and y is the value of dfs.namenode.decommission.interval.
 
 
 ---
 
-* [HADOOP-5034](https://issues.apache.org/jira/browse/HADOOP-5034) | *Major* | **NameNode should send both replication and deletion requests to DataNode in one reply to a heartbeat**
+* [HADOOP-4635](https://issues.apache.org/jira/browse/HADOOP-4635) | *Blocker* | **Memory leak ?**
 
-This patch changes the DatanodeProtocoal version number from 18 to 19. The patch allows NameNode to send both block replication and deletion request to a DataNode in response to a heartbeat.
+fix memory leak of user/group information in fuse-dfs
 
 
 ---
 
-* [HADOOP-5002](https://issues.apache.org/jira/browse/HADOOP-5002) | *Blocker* | **2 core tests TestFileOutputFormat and TestHarFileSystem are failing in branch 19**
+* [HADOOP-4797](https://issues.apache.org/jira/browse/HADOOP-4797) | *Blocker* | **RPC Server can leave a lot of direct buffers**
 
-This patch solves the null pointer exception issue in the 2 core tests TestFileOutputFormat and TestHarFileSystem in branch 19.
+Improve how RPC server reads and writes large buffers. Avoids soft-leak of direct buffers and excess copies in NIO layer.
 
 
 ---
@@ -65,6 +58,13 @@ Fix the tasktracker for OOM exception by sharing the jobconf properties across t
 
 ---
 
+* [HADOOP-5002](https://issues.apache.org/jira/browse/HADOOP-5002) | *Blocker* | **2 core tests TestFileOutputFormat and TestHarFileSystem are failing in branch 19**
+
+This patch solves the null pointer exception issue in the 2 core tests TestFileOutputFormat and TestHarFileSystem in branch 19.
+
+
+---
+
 * [HADOOP-4862](https://issues.apache.org/jira/browse/HADOOP-4862) | *Blocker* | **A spurious IOException log on DataNode is not completely removed**
 
 Minor : HADOOP-3678 did not remove all the cases of spurious IOExceptions logged by DataNode.
@@ -72,16 +72,9 @@ Minor : HADOOP-3678 did not remove all the cases of spurious IOExceptions logged
 
 ---
 
-* [HADOOP-4797](https://issues.apache.org/jira/browse/HADOOP-4797) | *Blocker* | **RPC Server can leave a lot of direct buffers**
+* [HADOOP-5034](https://issues.apache.org/jira/browse/HADOOP-5034) | *Major* | **NameNode should send both replication and deletion requests to DataNode in one reply to a heartbeat**
 
-Improve how RPC server reads and writes large buffers. Avoids soft-leak of direct buffers and excess copies in NIO layer.
-
-
----
-
-* [HADOOP-4635](https://issues.apache.org/jira/browse/HADOOP-4635) | *Blocker* | **Memory leak ?**
-
-fix memory leak of user/group information in fuse-dfs
+This patch changes the DatanodeProtocoal version number from 18 to 19. The patch allows NameNode to send both block replication and deletion request to a DataNode in response to a heartbeat.
 
 
 ---
@@ -93,9 +86,16 @@ libhdfs supports O\_APPEND flag
 
 ---
 
-* [HADOOP-4061](https://issues.apache.org/jira/browse/HADOOP-4061) | *Major* | **Large number of decommission freezes the Namenode**
+* [HADOOP-5225](https://issues.apache.org/jira/browse/HADOOP-5225) | *Blocker* | **workaround for tmp file handling on DataNodes in 0.19.1 (HADOOP-4663)**
 
-Added a new conf property dfs.namenode.decommission.nodes.per.interval so that NameNode checks decommission status of x nodes for every y seconds, where x is the value of dfs.namenode.decommission.nodes.per.interval and y is the value of dfs.namenode.decommission.interval.
+Work around for tmp file handling. sync() does not work as a result.
+
+
+---
+
+* [HADOOP-5224](https://issues.apache.org/jira/browse/HADOOP-5224) | *Blocker* | **Disable append**
+
+HDFS append() is disabled. It throws UnsupportedOperationException.
 
 
 

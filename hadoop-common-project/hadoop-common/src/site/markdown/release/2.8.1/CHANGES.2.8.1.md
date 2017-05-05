@@ -18,47 +18,14 @@
 -->
 # Apache Hadoop Changelog
 
-## Release 0.20.204.1 - Unreleased
-
-### INCOMPATIBLE CHANGES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
+## Release 2.8.1 - 2017-06-08
 
 
-### NEW FEATURES:
+
+### IMPORTANT ISSUES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### IMPROVEMENTS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### BUG FIXES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### TESTS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### SUB-TASKS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### OTHER:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
+| [YARN-6709](https://issues.apache.org/jira/browse/YARN-6709) | Root privilege escalation in experimental Docker support |  Blocker | nodemanager, security | Allen Wittenauer | Varun Vasudev |
 
 
