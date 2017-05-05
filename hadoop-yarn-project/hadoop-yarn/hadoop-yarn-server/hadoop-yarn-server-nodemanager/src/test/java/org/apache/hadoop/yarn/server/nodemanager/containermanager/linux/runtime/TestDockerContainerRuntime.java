@@ -816,7 +816,7 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(USER, user)
         .setExecutionAttribute(PID, signalPid)
         .setExecutionAttribute(SIGNAL, ContainerExecutor.Signal.NULL);
-    runtime.initialize(getConfigurationWithMockContainerExecutor());
+    runtime.initialize(enableMockContainerExecutor(conf));
     runtime.signalContainer(builder.build());
 
     PrivilegedOperation op = capturePrivilegedOperation();
@@ -870,7 +870,7 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(USER, user)
         .setExecutionAttribute(PID, signalPid)
         .setExecutionAttribute(SIGNAL, signal);
-    runtime.initialize(getConfigurationWithMockContainerExecutor());
+    runtime.initialize(enableMockContainerExecutor(conf));
     runtime.signalContainer(builder.build());
 
     PrivilegedOperation op = capturePrivilegedOperation();
@@ -881,7 +881,14 @@ public class TestDockerContainerRuntime {
         Charset.forName("UTF-8"));
   }
 
-  private Configuration getConfigurationWithMockContainerExecutor() {
+  /**
+   * Return a configuration object with the mock container executor binary
+   * preconfigured.
+   *
+   * @param conf The hadoop configuration.
+   * @return The hadoop configuration.
+   */
+  public static Configuration enableMockContainerExecutor(Configuration conf) {
     File f = new File("./src/test/resources/mock-container-executor");
     if(!FileUtil.canExecute(f)) {
       FileUtil.setExecutable(f, true);

@@ -41,19 +41,21 @@ public interface StageAllocator {
    * @param planModifications the allocations performed by the planning
    *          algorithm which are not yet reflected by plan
    * @param rr the stage
-   * @param stageEarliestStart the arrival time (earliest starting time) set for
+   * @param stageArrival the arrival time (earliest starting time) set for
    *          the stage by the two phase planning algorithm
    * @param stageDeadline the deadline of the stage set by the two phase
    *          planning algorithm
+   * @param user name of the user
+   * @param oldId identifier of the old reservation
    *
    * @return The computed allocation (or null if the stage could not be
    *         allocated)
    * @throws PlanningException
    */
   Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
-      Map<Long, Resource> planLoads,
+      RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageEarliestStart, long stageDeadline, String user,
+      long stageArrival, long stageDeadline, String user,
       ReservationId oldId) throws PlanningException;
 
 }

@@ -1753,6 +1753,9 @@ public class PBHelperClient {
     if (flag.contains(CreateFlag.NEW_BLOCK)) {
       value |= CreateFlagProto.NEW_BLOCK.getNumber();
     }
+    if (flag.contains(CreateFlag.SHOULD_REPLICATE)) {
+      value |= CreateFlagProto.SHOULD_REPLICATE.getNumber();
+    }
     return value;
   }
 
@@ -1965,6 +1968,10 @@ public class PBHelperClient {
     if ((flag & CreateFlagProto.NEW_BLOCK_VALUE)
         == CreateFlagProto.NEW_BLOCK_VALUE) {
       result.add(CreateFlag.NEW_BLOCK);
+    }
+    if ((flag & CreateFlagProto.SHOULD_REPLICATE.getNumber())
+        == CreateFlagProto.SHOULD_REPLICATE.getNumber()) {
+      result.add(CreateFlag.SHOULD_REPLICATE);
     }
     return new EnumSetWritable<>(result, CreateFlag.class);
   }

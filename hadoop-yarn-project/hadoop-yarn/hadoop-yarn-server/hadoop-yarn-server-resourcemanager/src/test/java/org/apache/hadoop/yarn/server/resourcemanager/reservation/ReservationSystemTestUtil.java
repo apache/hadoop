@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.Assert;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -412,6 +413,19 @@ public class ReservationSystemTestUtil {
               .newInstance(Resource.newInstance(1024, 1), alloc[i])));
     }
     return req;
+  }
+
+  public static RLESparseResourceAllocation
+      generateRLESparseResourceAllocation(int[] alloc, long[] timeSteps) {
+    TreeMap<Long, Resource> allocationsMap = new TreeMap<>();
+    for (int i = 0; i < alloc.length; i++) {
+      allocationsMap.put(timeSteps[i],
+          Resource.newInstance(alloc[i], alloc[i]));
+    }
+    RLESparseResourceAllocation rleVector =
+        new RLESparseResourceAllocation(allocationsMap,
+            new DefaultResourceCalculator());
+    return rleVector;
   }
 
   public static Resource calculateClusterResource(int numContainers) {

@@ -152,7 +152,7 @@ public class RMAppAttemptMetrics {
 
   public void incNumAllocatedContainers(NodeType containerType,
       NodeType requestType) {
-    localityStatistics[containerType.index][requestType.index]++;
+    localityStatistics[containerType.getIndex()][requestType.getIndex()]++;
     totalAllocatedContainers++;
   }
 

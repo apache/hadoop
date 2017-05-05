@@ -25,15 +25,18 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -241,7 +244,15 @@ public class NameNodeConnector implements Closeable {
         IOUtils.closeStream(fs.append(idPath));
         fs.delete(idPath, true);
       }
-      final FSDataOutputStream fsout = fs.create(idPath, false);
+
+      final FSDataOutputStream fsout = fs.newFSDataOutputStreamBuilder(idPath)
+          .replicate()
+          .setFlags(EnumSet.of(CreateFlag.CREATE))
+          .build();
+
+      Preconditions.checkState(!fs.getFileStatus(idPath).isErasureCoded(),
+          "Id File should be a replicate file");
+
       // mark balancer idPath to be deleted during filesystem closure
       fs.deleteOnExit(idPath);
       if (write2IdFile) {

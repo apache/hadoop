@@ -1946,7 +1946,9 @@ public class TestBalancer {
   public void testBalancerWithStripedFile() throws Exception {
     Configuration conf = new Configuration();
     initConfWithStripe(conf);
+    NameNodeConnector.setWrite2IdFile(true);
     doTestBalancerWithStripedFile(conf);
+    NameNodeConnector.setWrite2IdFile(false);
   }
 
   private void doTestBalancerWithStripedFile(Configuration conf) throws Exception {

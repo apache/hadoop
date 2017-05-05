@@ -144,7 +144,9 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    LOG.info("Proxy for " + uri + " failed. cause: ", cause);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Proxy for " + uri + " failed. cause: ", cause);
+    }
     if (proxiedChannel != null) {
       proxiedChannel.close();
       proxiedChannel = null;

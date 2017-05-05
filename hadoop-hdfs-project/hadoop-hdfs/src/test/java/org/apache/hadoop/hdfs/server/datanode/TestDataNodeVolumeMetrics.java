@@ -121,8 +121,8 @@ public class TestDataNodeVolumeMetrics {
 
   private MiniDFSCluster setupClusterForVolumeMetrics() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setDouble(DFSConfigKeys
-        .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY, 1.0);
+    conf.setInt(DFSConfigKeys
+        .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY, 100);
     SimulatedFSDataset.setFactory(conf);
     return new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_DATANODES)

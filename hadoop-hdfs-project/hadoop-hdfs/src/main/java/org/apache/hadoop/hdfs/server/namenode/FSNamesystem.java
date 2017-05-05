@@ -2225,6 +2225,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new InvalidPathException(src);
     }
 
+    boolean shouldReplicate = flag.contains(CreateFlag.SHOULD_REPLICATE);
+    if (shouldReplicate &&
+        (!org.apache.commons.lang.StringUtils.isEmpty(ecPolicyName))) {
+      throw new HadoopIllegalArgumentException("SHOULD_REPLICATE flag and " +
+          "ecPolicyName are exclusive parameters. Set both is not allowed!");
+    }
+
     FSPermissionChecker pc = getPermissionChecker();
     INodesInPath iip = null;
     boolean skipSync = true; // until we do something that might create edits
@@ -2240,7 +2247,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       iip = FSDirWriteFileOp.resolvePathForStartFile(
           dir, pc, src, flag, createParent);
 
-      if (!FSDirErasureCodingOp.hasErasureCodingPolicy(this, iip)) {
+      if (shouldReplicate ||
+          (org.apache.commons.lang.StringUtils.isEmpty(ecPolicyName) &&
+          !FSDirErasureCodingOp.hasErasureCodingPolicy(this, iip))) {
         blockManager.verifyReplication(src, replication, clientMachine);
       }
 
@@ -2272,7 +2281,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         stat = FSDirWriteFileOp.startFile(this, iip, permissions, holder,
             clientMachine, flag, createParent, replication, blockSize, feInfo,
-            toRemoveBlocks, ecPolicyName, logRetryCache);
+            toRemoveBlocks, shouldReplicate, ecPolicyName, logRetryCache);
       } catch (IOException e) {
         skipSync = e instanceof StandbyException;
         throw e;

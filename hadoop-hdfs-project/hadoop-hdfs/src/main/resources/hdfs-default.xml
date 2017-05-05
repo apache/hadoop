@@ -2022,6 +2022,17 @@
 </property>
 
 <property>
+  <name>dfs.datanode.fileio.profiling.sampling.percentage</name>
+  <value>0</value>
+  <description>
+    This setting controls the percentage of file I/O events which will be
+    profiled for DataNode disk statistics. The default value of 0 disables
+    disk statistics. Set to an integer value between 1 and 100 to enable disk
+    statistics.
+  </description>
+</property>
+
+<property>
   <name>hadoop.user.group.metrics.percentiles.intervals</name>
   <value></value>
   <description>
@@ -4491,6 +4502,14 @@
       then the disk is declared as failed. This setting supports
       multiple time unit suffixes as described in dfs.heartbeat.interval.
       If no suffix is specified then milliseconds is assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.use.dfs.network.topology</name>
+    <value>false</value>
+    <description>
+      Enables DFSNetworkTopology to choose nodes for placing replicas.
     </description>
   </property>
 

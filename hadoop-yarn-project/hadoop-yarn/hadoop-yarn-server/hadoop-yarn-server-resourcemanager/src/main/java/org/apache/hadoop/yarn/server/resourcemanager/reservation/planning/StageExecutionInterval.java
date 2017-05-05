@@ -21,26 +21,27 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 
 /**
- * Interface for setting the earliest start time of a stage in IterativePlanner.
+ * An auxiliary class used to compute the time interval in which the stage can
+ * be allocated resources by {@link IterativePlanner}.
  */
-public interface StageEarliestStart {
-
+public interface StageExecutionInterval {
   /**
    * Computes the earliest allowed starting time for a given stage.
    *
    * @param plan the Plan to which the reservation must be fitted
    * @param reservation the job contract
-   * @param index the index of the stage in the job contract
    * @param currentReservationStage the stage
-   * @param stageDeadline the deadline of the stage set by the two phase
-   *          planning algorithm
-   *
-   * @return the earliest allowed starting time for the stage.
+   * @param allocateLeft is the job allocated from left to right
+   * @param allocations Existing resource assignments for the job
+   * @return the time interval in which the stage can get resources.
    */
-  long setEarliestStartTime(Plan plan, ReservationDefinition reservation,
-          int index, ReservationRequest currentReservationStage,
-          long stageDeadline);
+  ReservationInterval computeExecutionInterval(Plan plan,
+      ReservationDefinition reservation,
+      ReservationRequest currentReservationStage, boolean allocateLeft,
+      RLESparseResourceAllocation allocations);
 
 }

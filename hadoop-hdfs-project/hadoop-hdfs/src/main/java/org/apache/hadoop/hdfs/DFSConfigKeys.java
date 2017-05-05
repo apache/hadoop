@@ -731,10 +731,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_DEFAULT = false;
   public static final String
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY =
-      "dfs.datanode.fileio.profiling.sampling.fraction";
-  public static final double
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT = 0.0;
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY =
+      "dfs.datanode.fileio.profiling.sampling.percentage";
+  public static final int
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT = 0;
 
   //Keys with no defaults
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
@@ -1084,6 +1084,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String HTTPFS_BUFFER_SIZE_KEY =
       "httpfs.buffer.size";
   public static final int HTTP_BUFFER_SIZE_DEFAULT = 4096;
+
+  public static final String DFS_USE_DFS_NETWORK_TOPOLOGY_KEY =
+      "dfs.use.dfs.network.topology";
+  public static final boolean DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT = false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated
