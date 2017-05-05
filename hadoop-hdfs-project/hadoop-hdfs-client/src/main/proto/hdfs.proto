@@ -570,4 +570,5 @@ message BlockTokenSecretProto {
   optional uint64 blockId = 5;
   repeated AccessModeProto modes = 6;
   repeated StorageTypeProto storageTypes = 7;
+  repeated string storageIds = 8;
 }

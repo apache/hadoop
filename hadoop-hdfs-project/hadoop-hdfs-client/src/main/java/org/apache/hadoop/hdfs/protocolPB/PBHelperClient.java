@@ -345,6 +345,16 @@ public class PBHelperClient {
     return pinnings;
   }
 
+  public static List<String> convert(String[] targetIds, int idx) {
+    List<String> ids = new ArrayList<>();
+    if (targetIds != null) {
+      for (; idx < targetIds.length; ++idx) {
+        ids.add(targetIds[idx]);
+      }
+    }
+    return ids;
+  }
+
   public static ExtendedBlock convert(ExtendedBlockProto eb) {
     if (eb == null) return null;
     return new ExtendedBlock( eb.getPoolId(), eb.getBlockId(), eb.getNumBytes(),
@@ -639,6 +649,9 @@ public class PBHelperClient {
     }
     for (StorageType storageType : blockTokenSecret.getStorageTypes()) {
       builder.addStorageTypes(convertStorageType(storageType));
+    }
+    for (String storageId : blockTokenSecret.getStorageIds()) {
+      builder.addStorageIds(storageId);
     }
     return builder.build();
   }

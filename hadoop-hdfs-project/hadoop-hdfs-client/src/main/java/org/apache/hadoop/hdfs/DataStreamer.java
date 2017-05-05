@@ -174,10 +174,12 @@ class DataStreamer extends Daemon {
 
     void sendTransferBlock(final DatanodeInfo[] targets,
         final StorageType[] targetStorageTypes,
+        final String[] targetStorageIDs,
         final Token<BlockTokenIdentifier> blockToken) throws IOException {
       //send the TRANSFER_BLOCK request
       new Sender(out).transferBlock(block.getCurrentBlock(), blockToken,
-          dfsClient.clientName, targets, targetStorageTypes);
+          dfsClient.clientName, targets, targetStorageTypes,
+          targetStorageIDs);
       out.flush();
       //ack
       BlockOpResponseProto transferResponse = BlockOpResponseProto
@@ -1367,9 +1369,11 @@ class DataStreamer extends Daemon {
       final DatanodeInfo src = original[tried % original.length];
       final DatanodeInfo[] targets = {nodes[d]};
       final StorageType[] targetStorageTypes = {storageTypes[d]};
+      final String[] targetStorageIDs = {storageIDs[d]};
 
       try {
-        transfer(src, targets, targetStorageTypes, lb.getBlockToken());
+        transfer(src, targets, targetStorageTypes, targetStorageIDs,
+            lb.getBlockToken());
       } catch (IOException ioe) {
         DFSClient.LOG.warn("Error transferring data from " + src + " to " +
             nodes[d] + ": " + ioe.getMessage());
@@ -1400,6 +1404,7 @@ class DataStreamer extends Daemon {
 
   private void transfer(final DatanodeInfo src, final DatanodeInfo[] targets,
                         final StorageType[] targetStorageTypes,
+                        final String[] targetStorageIDs,
                         final Token<BlockTokenIdentifier> blockToken)
       throws IOException {
     //transfer replica to the new datanode
@@ -1412,7 +1417,8 @@ class DataStreamer extends Daemon {
 
         streams = new StreamerStreams(src, writeTimeout, readTimeout,
             blockToken);
-        streams.sendTransferBlock(targets, targetStorageTypes, blockToken);
+        streams.sendTransferBlock(targets, targetStorageTypes,
+            targetStorageIDs, blockToken);
         return;
       } catch (InvalidEncryptionKeyException e) {
         policy.recordFailure(e);
@@ -1440,11 +1446,12 @@ class DataStreamer extends Daemon {
       streamerClosed = true;
       return;
     }
-    setupPipelineInternal(nodes, storageTypes);
+    setupPipelineInternal(nodes, storageTypes, storageIDs);
   }
 
   protected void setupPipelineInternal(DatanodeInfo[] datanodes,
-      StorageType[] nodeStorageTypes) throws IOException {
+      StorageType[] nodeStorageTypes, String[] nodeStorageIDs)
+      throws IOException {
     boolean success = false;
     long newGS = 0L;
     while (!success && !streamerClosed && dfsClient.clientRunning) {
@@ -1465,7 +1472,8 @@ class DataStreamer extends Daemon {
       accessToken = lb.getBlockToken();
 
       // set up the pipeline again with the remaining nodes
-      success = createBlockOutputStream(nodes, storageTypes, newGS, isRecovery);
+      success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
+          isRecovery);
 
       failPacket4Testing();
 
@@ -1601,7 +1609,8 @@ class DataStreamer extends Daemon {
   protected LocatedBlock nextBlockOutputStream() throws IOException {
     LocatedBlock lb;
     DatanodeInfo[] nodes;
-    StorageType[] storageTypes;
+    StorageType[] nextStorageTypes;
+    String[] nextStorageIDs;
     int count = dfsClient.getConf().getNumBlockWriteRetry();
     boolean success;
     final ExtendedBlock oldBlock = block.getCurrentBlock();
@@ -1617,10 +1626,12 @@ class DataStreamer extends Daemon {
       bytesSent = 0;
       accessToken = lb.getBlockToken();
       nodes = lb.getLocations();
-      storageTypes = lb.getStorageTypes();
+      nextStorageTypes = lb.getStorageTypes();
+      nextStorageIDs = lb.getStorageIDs();
 
       // Connect to first DataNode in the list.
-      success = createBlockOutputStream(nodes, storageTypes, 0L, false);
+      success = createBlockOutputStream(nodes, nextStorageTypes, nextStorageIDs,
+          0L, false);
 
       if (!success) {
         LOG.warn("Abandoning " + block);
@@ -1643,7 +1654,8 @@ class DataStreamer extends Daemon {
   // Returns true if success, otherwise return failure.
   //
   boolean createBlockOutputStream(DatanodeInfo[] nodes,
-      StorageType[] nodeStorageTypes, long newGS, boolean recoveryFlag) {
+      StorageType[] nodeStorageTypes, String[] nodeStorageIDs,
+      long newGS, boolean recoveryFlag) {
     if (nodes.length == 0) {
       LOG.info("nodes are empty for write pipeline of " + block);
       return false;
@@ -1696,7 +1708,8 @@ class DataStreamer extends Daemon {
             dfsClient.clientName, nodes, nodeStorageTypes, null, bcs,
             nodes.length, block.getNumBytes(), bytesSent, newGS,
             checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile,
-            (targetPinnings != null && targetPinnings[0]), targetPinnings);
+            (targetPinnings != null && targetPinnings[0]), targetPinnings,
+            nodeStorageIDs[0], nodeStorageIDs);
 
         // receive ack for connect
         BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(

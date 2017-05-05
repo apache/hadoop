@@ -36,8 +36,11 @@ public interface VolumeChoosingPolicy<V extends FsVolumeSpi> {
    * 
    * @param volumes - a list of available volumes.
    * @param replicaSize - the size of the replica for which a volume is sought.
+   * @param storageId - the storage id of the Volume nominated by the namenode.
+   *                  This can usually be ignored by the VolumeChoosingPolicy.
    * @return the chosen volume.
    * @throws IOException when disks are unavailable or are full.
    */
-  public V chooseVolume(List<V> volumes, long replicaSize) throws IOException;
+  V chooseVolume(List<V> volumes, long replicaSize, String storageId)
+      throws IOException;
 }

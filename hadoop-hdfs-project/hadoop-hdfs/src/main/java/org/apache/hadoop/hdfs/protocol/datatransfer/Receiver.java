@@ -25,7 +25,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.StripedBlockInfo;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
@@ -185,7 +187,9 @@ public abstract class Receiver implements DataTransferProtocol {
             CachingStrategy.newDefaultStrategy()),
           (proto.hasAllowLazyPersist() ? proto.getAllowLazyPersist() : false),
           (proto.hasPinning() ? proto.getPinning(): false),
-          (PBHelperClient.convertBooleanList(proto.getTargetPinningsList())));
+          (PBHelperClient.convertBooleanList(proto.getTargetPinningsList())),
+          proto.getStorageId(),
+          proto.getTargetStorageIdsList().toArray(new String[0]));
     } finally {
      if (traceScope != null) traceScope.close();
     }
@@ -199,11 +203,18 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-      transferBlock(PBHelperClient.convert(proto.getHeader().getBaseHeader().getBlock()),
+      final ExtendedBlock block =
+          PBHelperClient.convert(proto.getHeader().getBaseHeader().getBlock());
+      final StorageType[] targetStorageTypes =
+          PBHelperClient.convertStorageTypes(proto.getTargetStorageTypesList(),
+              targets.length);
+      transferBlock(block,
           PBHelperClient.convert(proto.getHeader().getBaseHeader().getToken()),
           proto.getHeader().getClientName(),
           targets,
-          PBHelperClient.convertStorageTypes(proto.getTargetStorageTypesList(), targets.length));
+          targetStorageTypes,
+          proto.getTargetStorageIdsList().toArray(new String[0])
+      );
     } finally {
       if (traceScope != null) traceScope.close();
     }
@@ -264,7 +275,8 @@ public abstract class Receiver implements DataTransferProtocol {
           PBHelperClient.convertStorageType(proto.getStorageType()),
           PBHelperClient.convert(proto.getHeader().getToken()),
           proto.getDelHint(),
-          PBHelperClient.convert(proto.getSource()));
+          PBHelperClient.convert(proto.getSource()),
+          proto.getStorageId());
     } finally {
       if (traceScope != null) traceScope.close();
     }

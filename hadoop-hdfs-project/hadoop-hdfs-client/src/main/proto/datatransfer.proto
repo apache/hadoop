@@ -125,12 +125,15 @@ message OpWriteBlockProto {
   //whether to pin the block, so Balancer won't move it.
   optional bool pinning = 14 [default = false];
   repeated bool targetPinnings = 15;
+  optional string storageId = 16;
+  repeated string targetStorageIds = 17;
 }
   
 message OpTransferBlockProto {
   required ClientOperationHeaderProto header = 1;
   repeated DatanodeInfoProto targets = 2;
   repeated StorageTypeProto targetStorageTypes = 3;
+  repeated string targetStorageIds = 4;
 }
 
 message OpReplaceBlockProto {
@@ -138,6 +141,7 @@ message OpReplaceBlockProto {
   required string delHint = 2;
   required DatanodeInfoProto source = 3;
   optional StorageTypeProto storageType = 4 [default = DISK];
+  optional string storageId = 5;
 }
 
 message OpCopyBlockProto {

@@ -247,18 +247,19 @@ public class BlockTokenSecretManager extends
   /** Generate an block token for current user */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
       EnumSet<BlockTokenIdentifier.AccessMode> modes,
-      StorageType[] storageTypes) throws IOException {
+      StorageType[] storageTypes, String[] storageIds) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String userID = (ugi == null ? null : ugi.getShortUserName());
-    return generateToken(userID, block, modes, storageTypes);
+    return generateToken(userID, block, modes, storageTypes, storageIds);
   }
 
   /** Generate a block token for a specified user */
   public Token<BlockTokenIdentifier> generateToken(String userId,
       ExtendedBlock block, EnumSet<BlockTokenIdentifier.AccessMode> modes,
-      StorageType[] storageTypes) throws IOException {
+      StorageType[] storageTypes, String[] storageIds) throws IOException {
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
-        .getBlockPoolId(), block.getBlockId(), modes, storageTypes, useProto);
+        .getBlockPoolId(), block.getBlockId(), modes, storageTypes,
+        storageIds, useProto);
     return new Token<BlockTokenIdentifier>(id, this);
   }
 
@@ -272,10 +273,13 @@ public class BlockTokenSecretManager extends
    */
   public void checkAccess(BlockTokenIdentifier id, String userId,
       ExtendedBlock block, BlockTokenIdentifier.AccessMode mode,
-      StorageType[] storageTypes) throws InvalidToken {
+      StorageType[] storageTypes, String[] storageIds) throws InvalidToken {
     checkAccess(id, userId, block, mode);
     if (storageTypes != null && storageTypes.length > 0) {
-      checkAccess(id.getStorageTypes(), storageTypes);
+      checkAccess(id.getStorageTypes(), storageTypes, "StorageTypes");
+    }
+    if (storageIds != null && storageIds.length > 0) {
+      checkAccess(id.getStorageIds(), storageIds, "StorageIDs");
     }
   }
 
@@ -309,30 +313,31 @@ public class BlockTokenSecretManager extends
   }
 
   /**
-   * Check if the requested StorageTypes match the StorageTypes in the
-   * BlockTokenIdentifier.
-   * Empty candidateStorageTypes specifiers mean 'all is permitted'. They
-   * would otherwise be nonsensical.
+   * Check if the requested values can be satisfied with the values in the
+   * BlockToken. This is intended for use with StorageTypes and StorageIDs.
+   *
+   * The current node can only verify that one of the storage [Type|ID] is
+   * available. The rest will be on different nodes.
    */
-  public static void checkAccess(StorageType[] candidateStorageTypes,
-      StorageType[] storageTypesRequested) throws InvalidToken {
-    if (storageTypesRequested.length == 0) {
-      throw new InvalidToken("The request has no StorageTypes. "
+  public static <T> void checkAccess(T[] candidates, T[] requested, String msg)
+      throws InvalidToken {
+    if (requested.length == 0) {
+      throw new InvalidToken("The request has no " + msg + ". "
           + "This is probably a configuration error.");
     }
-    if (candidateStorageTypes.length == 0) {
+    if (candidates.length == 0) {
       return;
     }
 
-    List<StorageType> unseenCandidates = new ArrayList<StorageType>();
-    unseenCandidates.addAll(Arrays.asList(candidateStorageTypes));
-    for (StorageType storageType : storageTypesRequested) {
-      final int index = unseenCandidates.indexOf(storageType);
+    List unseenCandidates = new ArrayList<T>();
+    unseenCandidates.addAll(Arrays.asList(candidates));
+    for (T req : requested) {
+      final int index = unseenCandidates.indexOf(req);
       if (index == -1) {
-        throw new InvalidToken("Block token with StorageTypes "
-            + Arrays.toString(candidateStorageTypes)
-            + " not valid for access with StorageTypes "
-            + Arrays.toString(storageTypesRequested));
+        throw new InvalidToken("Block token with " + msg + " "
+            + Arrays.toString(candidates)
+            + " not valid for access with " + msg + " "
+            + Arrays.toString(requested));
       }
       Collections.swap(unseenCandidates, index, unseenCandidates.size()-1);
       unseenCandidates.remove(unseenCandidates.size()-1);
@@ -342,7 +347,7 @@ public class BlockTokenSecretManager extends
   /** Check if access should be allowed. userID is not checked if null */
   public void checkAccess(Token<BlockTokenIdentifier> token, String userId,
       ExtendedBlock block, BlockTokenIdentifier.AccessMode mode,
-      StorageType[] storageTypes) throws InvalidToken {
+      StorageType[] storageTypes, String[] storageIds) throws InvalidToken {
     BlockTokenIdentifier id = new BlockTokenIdentifier();
     try {
       id.readFields(new DataInputStream(new ByteArrayInputStream(token
@@ -352,7 +357,7 @@ public class BlockTokenSecretManager extends
           "Unable to de-serialize block token identifier for user=" + userId
               + ", block=" + block + ", access mode=" + mode);
     }
-    checkAccess(id, userId, block, mode, storageTypes);
+    checkAccess(id, userId, block, mode, storageTypes, storageIds);
     if (!Arrays.equals(retrievePassword(id), token.getPassword())) {
       throw new InvalidToken("Block token with " + id.toString()
           + " doesn't have the correct token password");
