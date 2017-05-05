@@ -4505,4 +4505,12 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.use.dfs.network.topology</name>
+    <value>false</value>
+    <description>
+      Enables DFSNetworkTopology to choose nodes for placing replicas.
+    </description>
+  </property>
+
 </configuration>
