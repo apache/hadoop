@@ -622,6 +622,7 @@ public class SCMNodeManager
   @Override
   public void close() throws IOException {
     unregisterMXBean();
+    nodePoolManager.close();
     executorService.shutdown();
     try {
       if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
