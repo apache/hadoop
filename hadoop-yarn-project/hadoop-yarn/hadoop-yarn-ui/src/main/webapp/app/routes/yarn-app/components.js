@@ -18,30 +18,32 @@
 
 import Ember from 'ember';
 import AbstractRoute from '../abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
+export default AbstractRoute.extend({
   model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service);
+    transition.send('updateBreadcrumbs', param.app_id, param.service, [{text: 'Components'}]);
     return Ember.RSVP.hash({
       appId: param.app_id,
       serviceName: param.service,
-      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
-
-      quicklinks: this.store.queryRecord('yarn-service-info', {appId: param.app_id}).then(function(info) {
-        if (info && info.get('quicklinks')) {
-          return info.get('quicklinks');
-        }
+      components: this.store.query('yarn-service-component', {appId: param.app_id, type: 'COMPONENT'}).catch(function() {
         return [];
-      }, function() {
+      }),
+      instances: this.store.query('yarn-component-instance', {appId: param.app_id}).catch(function() {
         return [];
       })
     });
   },
 
+  afterModel(model) {
+    let instances = model.instances;
+    model.components.forEach(function(component) {
+      var num = instances.filterBy('component', component.get('name')).length;
+      component.set('instances', num);
+    });
+  },
+
   unloadAll() {
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-app-timeline');
-    this.store.unloadAll('yarn-service-info');
+    this.store.unloadAll('yarn-service-component');
+    this.store.unloadAll('yarn-component-instance');
   }
 });

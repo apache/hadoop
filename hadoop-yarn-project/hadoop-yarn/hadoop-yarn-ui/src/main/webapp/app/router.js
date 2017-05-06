@@ -53,7 +53,16 @@ Router.map(function() {
   this.route('yarn-app', function() {
     this.route('info', {path: '/:app_id/info'});
     this.route('attempts', {path: '/:app_id/attempts'});
+    this.route('components', {path: '/:app_id/components'});
     this.route('charts', {path: '/:app_id/charts'});
+    this.route('configs', {path: '/:app_id/configs'});
+  });
+  this.route('yarn-component-instances', function() {
+    this.route('info', {path: '/:component_name/info'});
+    this.route('configs', {path: '/:component_name/configs'});
+  });
+  this.route('yarn-component-instance', function() {
+    this.route('info', {path: '/:component_name/instances/:instance_name/info'});
   });
   this.route('yarn-app-attempt', { path: '/yarn-app-attempt/:app_attempt_id'});
   this.route('error');

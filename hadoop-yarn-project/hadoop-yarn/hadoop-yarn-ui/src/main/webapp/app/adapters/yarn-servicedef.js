@@ -27,5 +27,18 @@ export default RESTAbstractAdapter.extend({
   deployService(request) {
     var url = this.buildURL();
     return this.ajax(url, "POST", {data: request});
+  },
+
+  stopService(serviceName) {
+    var url = this.buildURL();
+    url += "/" + serviceName;
+    var data = {"state": "STOPPED", "name": serviceName};
+    return this.ajax(url, "PUT", {data: data});
+  },
+
+  deleteService(serviceName) {
+    var url = this.buildURL();
+    url += "/" + serviceName;
+    return this.ajax(url, "DELETE", {data: {}});
   }
 });

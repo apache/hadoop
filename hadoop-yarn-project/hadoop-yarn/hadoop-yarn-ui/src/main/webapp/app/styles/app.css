@@ -544,7 +544,7 @@ table.table-custom-action > thead > tr > th:last-of-type, table.table-custom-act
 
 table.table-custom-bordered {
   border: 1px solid #ddd !important;
-  border-radius: 3px !important;
+  border-radius: 4px !important;
 }
 
 table.table-custom-bordered > thead > tr > th, table.table-custom-bordered > tbody > tr > td {
@@ -554,6 +554,18 @@ table.table-custom-bordered > thead > tr > th, table.table-custom-bordered > tbo
 
 table.table-custom-striped > thead > tr, .table-custom-striped > tbody > tr:nth-of-type(even) {
   background-color: #f9f9f9 !important;
+}
+
+table.table-custom-header > thead > tr > th {
+  background-color: #f5f5f5 !important;
+}
+
+table.table-radius-none {
+  border-radius: 0 !important;
+}
+
+table.table-border-none {
+  border: none !important;
 }
 
 .deploy-service label.required:after, .deploy-service-modal label.required:after {
