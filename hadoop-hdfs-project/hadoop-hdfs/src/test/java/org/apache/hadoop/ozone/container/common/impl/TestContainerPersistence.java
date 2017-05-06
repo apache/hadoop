@@ -256,6 +256,35 @@ public class TestContainerPersistence {
         .containsKey(containerName1));
   }
 
+  @Test
+  public void testGetContainerReports() throws Exception{
+    final int count = 10;
+    List<String> containerNames = new ArrayList<String>();
+
+    for (int i = 0; i < count; i++) {
+      String containerName = OzoneUtils.getRequestID();
+      ContainerData data = new ContainerData(containerName);
+      containerManager.createContainer(createSingleNodePipeline(containerName),
+          data);
+
+      // Close a bunch of containers.
+      // Put closed container names to a list.
+      if (i%3 == 0) {
+        containerManager.closeContainer(containerName);
+        containerNames.add(containerName);
+      }
+    }
+
+    // The container report only returns reports of closed containers.
+    List<ContainerData> reports = containerManager.getContainerReports();
+    Assert.assertEquals(4, reports.size());
+    for(ContainerData report : reports) {
+      String actualName = report.getContainerName();
+      Assert.assertTrue(containerNames.remove(actualName));
+    }
+    Assert.assertTrue(containerNames.isEmpty());
+  }
+
   /**
    * This test creates 1000 containers and reads them back 5 containers at a
    * time and verifies that we did get back all containers.
