@@ -16,21 +16,15 @@
  * limitations under the License.
  */
 
-module.exports = { // YARN UI App configurations
-    hosts: {
-      localBaseAddress: "",
-      timelineWebAddress: "localhost:8188",
-      rmWebAddress: "localhost:8088",
-      dashWebAddress: "localhost:9191",
-      protocolScheme: "http:"
-    },
-    namespaces: {
-      timeline: 'ws/v1/applicationhistory',
-      timelineService: 'ws/v2/timeline/apps',
-      cluster: 'ws/v1/cluster',
-      metrics: 'ws/v1/cluster/metrics',
-      timelineV2: 'ws/v2/timeline',
-      dashService: 'services/v1/applications',
-      node: '{nodeAddress}/ws/v1/node'
-    },
-};
+import { moduleFor, test } from 'ember-qunit';
+
+moduleFor('adapter:yarn-component-instance', 'Unit | Adapter | yarn component instance', {
+  // Specify the other units that are required for this test.
+  // needs: ['serializer:foo']
+});
+
+// Replace this with your real tests.
+test('it exists', function(assert) {
+  let adapter = this.subject();
+  assert.ok(adapter);
+});

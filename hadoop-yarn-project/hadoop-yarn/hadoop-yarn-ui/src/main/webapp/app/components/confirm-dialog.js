@@ -16,21 +16,16 @@
  * limitations under the License.
  */
 
-module.exports = { // YARN UI App configurations
-    hosts: {
-      localBaseAddress: "",
-      timelineWebAddress: "localhost:8188",
-      rmWebAddress: "localhost:8088",
-      dashWebAddress: "localhost:9191",
-      protocolScheme: "http:"
-    },
-    namespaces: {
-      timeline: 'ws/v1/applicationhistory',
-      timelineService: 'ws/v2/timeline/apps',
-      cluster: 'ws/v1/cluster',
-      metrics: 'ws/v1/cluster/metrics',
-      timelineV2: 'ws/v2/timeline',
-      dashService: 'services/v1/applications',
-      node: '{nodeAddress}/ws/v1/node'
-    },
-};
+import Ember from 'ember';
+
+export default Ember.Component.extend({
+  dialogId: "confirmModalDialog",
+  title: "Confirm",
+  message: "Are you sure?",
+
+  actions: {
+    yesConfirmed() {
+      this.sendAction();
+    }
+  }
+});

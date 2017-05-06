@@ -16,21 +16,14 @@
  * limitations under the License.
  */
 
-module.exports = { // YARN UI App configurations
-    hosts: {
-      localBaseAddress: "",
-      timelineWebAddress: "localhost:8188",
-      rmWebAddress: "localhost:8088",
-      dashWebAddress: "localhost:9191",
-      protocolScheme: "http:"
-    },
-    namespaces: {
-      timeline: 'ws/v1/applicationhistory',
-      timelineService: 'ws/v2/timeline/apps',
-      cluster: 'ws/v1/cluster',
-      metrics: 'ws/v1/cluster/metrics',
-      timelineV2: 'ws/v2/timeline',
-      dashService: 'services/v1/applications',
-      node: '{nodeAddress}/ws/v1/node'
-    },
-};
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
+  actions: {
+    updateBreadcrumbs(appId, serviceName, componentName, instanceName) {
+      var controller = this.controllerFor('yarn-component-instance');
+      controller.setProperties({appId: appId, serviceName: serviceName, componentName: componentName, instanceName: instanceName});
+      controller.updateBreadcrumbs(appId, serviceName, componentName, instanceName);
+    }
+  }
+});

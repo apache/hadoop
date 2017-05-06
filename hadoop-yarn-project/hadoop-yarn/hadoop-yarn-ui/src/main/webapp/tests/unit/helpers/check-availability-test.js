@@ -16,21 +16,13 @@
  * limitations under the License.
  */
 
-module.exports = { // YARN UI App configurations
-    hosts: {
-      localBaseAddress: "",
-      timelineWebAddress: "localhost:8188",
-      rmWebAddress: "localhost:8088",
-      dashWebAddress: "localhost:9191",
-      protocolScheme: "http:"
-    },
-    namespaces: {
-      timeline: 'ws/v1/applicationhistory',
-      timelineService: 'ws/v2/timeline/apps',
-      cluster: 'ws/v1/cluster',
-      metrics: 'ws/v1/cluster/metrics',
-      timelineV2: 'ws/v2/timeline',
-      dashService: 'services/v1/applications',
-      node: '{nodeAddress}/ws/v1/node'
-    },
-};
+import { checkAvailability } from '../../../helpers/check-availability';
+import { module, test } from 'qunit';
+
+module('Unit | Helper | check availability');
+
+// Replace this with your real tests.
+test('it works', function(assert) {
+  let result = checkAvailability(42);
+  assert.ok(result);
+});

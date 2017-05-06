@@ -16,21 +16,31 @@
  * limitations under the License.
  */
 
-module.exports = { // YARN UI App configurations
-    hosts: {
-      localBaseAddress: "",
-      timelineWebAddress: "localhost:8188",
-      rmWebAddress: "localhost:8088",
-      dashWebAddress: "localhost:9191",
-      protocolScheme: "http:"
-    },
-    namespaces: {
-      timeline: 'ws/v1/applicationhistory',
-      timelineService: 'ws/v2/timeline/apps',
-      cluster: 'ws/v1/cluster',
-      metrics: 'ws/v1/cluster/metrics',
-      timelineV2: 'ws/v2/timeline',
-      dashService: 'services/v1/applications',
-      node: '{nodeAddress}/ws/v1/node'
-    },
-};
+import DS from 'ember-data';
+import Ember from 'ember';
+import Converter from 'yarn-ui/utils/converter';
+
+export default DS.Model.extend({
+  name: DS.attr('string'),
+  vcores: DS.attr('string'),
+  memory: DS.attr('string'),
+  priority: DS.attr('string'),
+  instances: DS.attr('string'),
+  createdTimestamp: DS.attr('number'),
+
+  configs: DS.attr({defaultValue: function() {
+    return Ember.A();
+  }}),
+
+  metrics: DS.attr({defaultValue: function() {
+    return Ember.Object.create();
+  }}),
+
+  createdDate: Ember.computed('createdTimestamp', function() {
+    var timestamp = this.get('createdTimestamp');
+    if (timestamp > 0) {
+      return Converter.timeStampToDate(timestamp);
+    }
+    return 'N/A';
+  })
+});

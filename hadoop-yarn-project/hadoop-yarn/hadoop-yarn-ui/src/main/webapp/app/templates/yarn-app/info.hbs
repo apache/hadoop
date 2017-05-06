@@ -22,11 +22,34 @@
   </div>
 </div>
 
+{{#if actionResponse}}
+  <div class="row">
+    <div class="col-md-12">
+      <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
+        <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
+        <strong>{{actionResponse.msg}}</strong>
+      </div>
+    </div>
+  </div>
+{{/if}}
+
+{{#if isLoading}}
+  <div class="panel panel-default service-action-mask">
+    <img src="assets/images/spinner.gif" alt="Loading...">
+  </div>
+{{/if}}
+
 <div class="row">
   <div class="col-md-12 container-fluid">
     <div class="panel panel-default">
       <div class="panel-heading">
         Basic Info
+        {{#if isRunningService}}
+          <div class="pull-right" style="display: inline-block; margin: -4px -10px 0 0;">
+            <button class="btn btn-sm btn-danger" disabled="{{if isLoading 'disabled'}}" {{action "showStopServiceConfirm"}}> Stop </button>
+            <button class="btn btn-sm btn-danger" disabled="{{if isLoading 'disabled'}}" {{action "showDeleteServiceConfirm"}}> Delete </button>
+          </div>
+        {{/if}}
       </div>
       <div class="x-scroll">
         <table class="display table table-striped table-bordered"
@@ -116,24 +139,25 @@
       <table class="display table table-striped table-bordered"
              cellspacing="0" width="100%">
         <thead>
-          <tr>
-            <th>Allocated Resource</th>
-            <th>Running Containers</th>
-            <th>Preempted Resource</th>
-            <th>Num Non-AM container preempted</th>
-            <th>Num AM container preempted</th>
-            <th>Aggregated Resource Usage</th>
-          </tr>
+        <tr>
+          <th>Allocated Resource</th>
+          <th>Running Containers</th>
+          <th>Preempted Resource</th>
+          <th>Num Non-AM container preempted</th>
+          <th>Num AM container preempted</th>
+          <th>Aggregated Resource Usage</th>
+        </tr>
         </thead>
+
         <tbody>
-          <tr>
-            <td>{{model.app.allocatedResource}}</td>
-            <td>{{model.app.runningContainersNumber}}</td>
-            <td>{{model.app.preemptedResource}}</td>
-            <td>{{model.app.numAMContainerPreempted}}</td>
-            <td>{{model.app.numAMContainerPreempted}}</td>
-            <td>{{model.app.aggregatedResourceUsage}}</td>
-          </tr>
+        <tr>
+          <td>{{model.app.allocatedResource}}</td>
+          <td>{{model.app.runningContainersNumber}}</td>
+          <td>{{model.app.preemptedResource}}</td>
+          <td>{{model.app.numAMContainerPreempted}}</td>
+          <td>{{model.app.numAMContainerPreempted}}</td>
+          <td>{{model.app.aggregatedResourceUsage}}</td>
+        </tr>
         </tbody>
       </table>
     </div>
@@ -148,20 +172,55 @@
       <table class="display table table-striped table-bordered"
              cellspacing="0" width="100%">
         <thead>
-          <tr>
-            <th>Master Container Log</th>
-            <th>Master Node</th>
-            <th>Master Node Label Expression</th>
-          </tr>
+        <tr>
+          <th>Master Container Log</th>
+          <th>Master Node</th>
+          <th>Master Node Label Expression</th>
+        </tr>
         </thead>
+
         <tbody>
-          <tr>
-            <td><a href="{{model.app.amContainerLogs}}" target="_blank">Link</a></td>
-            <td><a href="{{amHostHttpAddressFormatted}}" target="_blank">Link</a></td>
-            <td>{{model.app.amNodeLabelExpression}}</td>
-          </tr>
+        <tr>
+          <td><a href="{{model.app.amContainerLogs}}" target="_blank">Link</a></td>
+          <td><a href="{{amHostHttpAddressFormatted}}" target="_blank">Link</a></td>
+          <td>{{model.app.amNodeLabelExpression}}</td>
+        </tr>
         </tbody>
       </table>
     </div>
   </div>
+
+  {{#if model.serviceName}}
+    <div class="col-md-6 container-fluid">
+      <div class="panel panel-default">
+        <div class="panel-heading">Quick Links</div>
+        <table class="display table table-striped table-bordered">
+          <tbody>
+            {{#each model.quicklinks as |link|}}
+              <tr>
+                <td>{{link.name}}</td>
+                <td><a href="{{link.value}}" target="_blank">{{link.value}}</a></td>
+              </tr>
+            {{else}}
+              <tr class="align-center">
+                <td colspan="2">No quicklinks available!</td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {{/if}}
 </div>
+
+{{confirm-dialog
+  dialogId="stopServiceConfirmDialog"
+  message=(concat 'Are you sure you want to stop service "' model.serviceName '" ?')
+  action="stopService"
+}}
+
+{{confirm-dialog
+  dialogId="deleteServiceConfirmDialog"
+  message=(concat 'Are you sure you want to delete service "' model.serviceName '" ?')
+  action="deleteService"
+}}
