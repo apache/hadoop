@@ -746,7 +746,7 @@ public class ContainerManagerImpl implements ContainerManager {
     // after we iterate a point.
     return containerMap.entrySet().stream()
         .filter(containerStatus ->
-            containerStatus.getValue().getContainer().isOpen())
+            !containerStatus.getValue().getContainer().isOpen())
         .map(containerStatus -> containerStatus.getValue().getContainer())
         .collect(Collectors.toList());
   }
