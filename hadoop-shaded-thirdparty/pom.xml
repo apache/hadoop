@@ -45,6 +45,12 @@
     <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-client</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.curator</groupId>
@@ -71,61 +77,31 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-maven-plugins</artifactId>
-            <version>${project.version}</version>
-          </dependency>
-        </dependencies>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>jarjar-maven-plugin</artifactId>
         <executions>
           <execution>
+            <phase>process-classes</phase>
             <goals>
-              <goal>shade</goal>
+              <goal>jarjar</goal>
             </goals>
-            <phase>package</phase>
             <configuration>
-              <createDependencyReducedPom>true</createDependencyReducedPom>
-              <filters>
-                <filter>
-                  <artifact>org.apache.curator:curator-client</artifact>
-                  <excludes>
-                    <exclude>com/google/guava/**</exclude>
-                  </excludes>
-                </filter>
-                <filter>
-                  <artifact>org.apache.curator:curator-framework</artifact>
-                  <excludes>
-                    <exclude>com/google/guava/**</exclude>
-                  </excludes>
-                </filter>
-                <filter>
-                  <artifact>org.apache.curator:curator-recipes</artifact>
-                  <excludes>
-                    <exclude>com/google/guava/**</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-               <relocations>
-                <relocation>
-                  <pattern>com.google</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.com.google</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.curator</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.org.apache.curator</shadedPattern>
-                </relocation>
-               </relocations>
-              <artifactSet>
-                <includes>
-                  <include>com.google.guava:guava</include>
-                  <include>org.apache.curator:curator-framework</include>
-                  <include>org.apache.curator:curator-client</include>
-                  <include>org.apache.curator:curator-recipes</include>
-                </includes>
-              </artifactSet>
+              <includes>
+                <include>com.google.guava:guava</include>
+                <include>org.apache.curator:curator-framework</include>
+                <include>org.apache.curator:curator-client</include>
+                <include>org.apache.curator:curator-recipes</include>
+              </includes>
+              <rules>
+                <rule>
+                  <pattern>com.google.**</pattern>
+                  <result>${shaded.dependency.prefix}.com.google.@1</result>
+                </rule>
+                <rule>
+                  <pattern>org.apache.curator.**</pattern>
+                  <result>${shaded.dependency.prefix}.org.apache.curator.@1</result>
+                </rule>
+              </rules>
             </configuration>
           </execution>
         </executions>
