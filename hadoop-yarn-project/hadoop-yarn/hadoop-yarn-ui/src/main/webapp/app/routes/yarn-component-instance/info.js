@@ -18,30 +18,28 @@
 
 import Ember from 'ember';
 import AbstractRoute from '../abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service);
+export default AbstractRoute.extend({
+  model(params, transition) {
+    var instanceName = params.instance_name;
+    transition.send('updateBreadcrumbs', params.appid, params.service, params.component_name, instanceName);
     return Ember.RSVP.hash({
-      appId: param.app_id,
-      serviceName: param.service,
-      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
-
-      quicklinks: this.store.queryRecord('yarn-service-info', {appId: param.app_id}).then(function(info) {
-        if (info && info.get('quicklinks')) {
-          return info.get('quicklinks');
+      appId: params.appid,
+      serviceName: params.service,
+      componentName: params.component_name,
+      instanceName: instanceName,
+      container: this.store.query('yarn-component-instance', {appId: params.appid}).then(function(instances) {
+        if (instances && instances.findBy('instanceName', instanceName)) {
+          return instances.findBy('instanceName', instanceName);
         }
-        return [];
+        return null;
       }, function() {
-        return [];
-      })
+        return null;
+      }),
     });
   },
 
   unloadAll() {
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-app-timeline');
-    this.store.unloadAll('yarn-service-info');
+    this.store.unloadAll('yarn-component-instance');
   }
 });

@@ -18,30 +18,36 @@
 
 import Ember from 'ember';
 import AbstractRoute from '../abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service);
+export default AbstractRoute.extend({
+  model(params, transition) {
+    var componentName = params.component_name;
+    transition.send('updateBreadcrumbs', params.appid, params.service, componentName);
     return Ember.RSVP.hash({
-      appId: param.app_id,
-      serviceName: param.service,
-      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
-
-      quicklinks: this.store.queryRecord('yarn-service-info', {appId: param.app_id}).then(function(info) {
-        if (info && info.get('quicklinks')) {
-          return info.get('quicklinks');
+      appId: params.appid,
+      serviceName: params.service,
+      componentName: componentName,
+      instances: this.store.query('yarn-component-instance', {appId: params.appid}).then(function(instances) {
+        if (instances && instances.filterBy('component', componentName)) {
+          return instances.filterBy('component', componentName);
         }
         return [];
       }, function() {
         return [];
+      }),
+      metrics: this.store.query('yarn-service-component', {appId: params.appid}).then(function(components) {
+        if (components && components.findBy('name', componentName)) {
+          return components.findBy('name', componentName).get('metrics');
+        }
+        return null;
+      }, function() {
+        return null;
       })
     });
   },
 
   unloadAll() {
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-app-timeline');
-    this.store.unloadAll('yarn-service-info');
+    this.store.unloadAll('yarn-service-component');
+    this.store.unloadAll('yarn-component-instance');
   }
 });
