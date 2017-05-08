@@ -728,6 +728,13 @@ public class TestRMWebServices extends JerseyTestBase {
     waitforLogDump(50);
     checkSchedulerLogFileAndCleanup();
   }
+  
+  @Test
+  public void test(){
+    boolean acep= true;
+ 		assertTrue(acep);
+  }
+ 
 
   private void checkSchedulerLogFileAndCleanup() {
     String targetFile;
