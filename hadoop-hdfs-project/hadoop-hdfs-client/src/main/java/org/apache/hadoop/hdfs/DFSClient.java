@@ -232,7 +232,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final int smallBufferSize;
-  private URI keyProviderUri = null;
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -2901,10 +2900,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   URI getKeyProviderUri() throws IOException {
-    if (keyProviderUri != null) {
-      return keyProviderUri;
-    }
-
+    URI keyProviderUri = null;
     // Lookup the secret in credentials object for namenodeuri.
     Credentials credentials = ugi.getCredentials();
     byte[] keyProviderUriBytes = credentials.getSecretKey(getKeyProviderMapKey());
@@ -2934,14 +2930,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   public KeyProvider getKeyProvider() throws IOException {
     return clientContext.getKeyProviderCache().get(conf, getKeyProviderUri());
-  }
-
-  /*
-   * Should be used only for testing.
-   */
-  @VisibleForTesting
-  public void setKeyProviderUri(URI providerUri) {
-    this.keyProviderUri = providerUri;
   }
 
   @VisibleForTesting
