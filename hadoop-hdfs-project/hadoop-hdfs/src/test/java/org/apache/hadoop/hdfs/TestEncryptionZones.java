@@ -1685,7 +1685,6 @@ public class TestEncryptionZones {
     credentials.addSecretKey(lookUpKey,
         DFSUtilClient.string2Bytes(dummyKeyProvider));
     client.ugi.addCredentials(credentials);
-    client.setKeyProviderUri(null);
     Assert.assertEquals("Client Key provider is different from provider in "
         + "credentials map", dummyKeyProvider,
         client.getKeyProviderUri().toString());
@@ -1707,7 +1706,6 @@ public class TestEncryptionZones {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         dummyKeyProviderUri1);
     DFSClient mockClient = Mockito.spy(cluster.getFileSystem().getClient());
-    mockClient.setKeyProviderUri(null);
     // Namenode returning null as keyProviderUri in FSServerDefaults.
     FsServerDefaults serverDefaultsWithKeyProviderNull =
         getTestServerDefaults(null);
@@ -1719,7 +1717,6 @@ public class TestEncryptionZones {
     Mockito.verify(mockClient, Mockito.times(1)).getServerDefaults();
 
     String dummyKeyProviderUri2 = "dummy://foo:bar@test_provider2";
-    mockClient.setKeyProviderUri(null);
     FsServerDefaults serverDefaultsWithDummyKeyProvider =
         getTestServerDefaults(dummyKeyProviderUri2);
     // Namenode returning dummyKeyProvider2 in serverDefaults.
@@ -1748,8 +1745,6 @@ public class TestEncryptionZones {
     // Unset the provider path in conf
     clusterConf.unset(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
-    // Nullify the cached value for key provider uri on client
-    cluster.getFileSystem().getClient().setKeyProviderUri(null);
     // Even after unsetting the local conf, the client key provider should be
     // the same as namenode's provider.
     Assert.assertEquals("Key Provider for client and namenode are different",
@@ -1760,8 +1755,6 @@ public class TestEncryptionZones {
     clusterConf.set(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "dummy://foo:bar@test_provider1");
-    // Nullify the cached value for key provider uri on client
-    cluster.getFileSystem().getClient().setKeyProviderUri(null);
     // Even after pointing the conf to some dummy provider, the client key
     // provider should be the same as namenode's provider.
     Assert.assertEquals("Key Provider for client and namenode are different",
@@ -1796,8 +1789,6 @@ public class TestEncryptionZones {
     // Creating a fake serverdefaults so that we can simulate namenode not
     // being upgraded.
     DFSClient spyClient = Mockito.spy(cluster.getFileSystem().getClient());
-    // Clear the cache value of keyProviderUri on client side.
-    spyClient.setKeyProviderUri(null);
     Mockito.doReturn(spyServerDefaults).when(spyClient).getServerDefaults();
 
     // Since FsServerDefaults#keyProviderUri is null, the client
