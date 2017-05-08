@@ -127,11 +127,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
       createContainerManager(DeletionService delSrvc) {
     return new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
       metrics, dirsHandler) {
-      @Override
-      public void
-          setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-        // do nothing
-      }
 
       @Override
       protected UserGroupInformation getRemoteUgi() throws YarnException {

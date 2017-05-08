@@ -544,11 +544,6 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     return new ContainerManagerImpl(context, exec, delSrvc,
         mock(NodeStatusUpdater.class), metrics, dirsHandler) {
       @Override
-      public void
-      setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-        // do nothing
-      }
-      @Override
       protected void authorizeGetAndStopContainerRequest(
           ContainerId containerId, Container container,
           boolean stopRequest, NMTokenIdentifier identifier)
@@ -753,12 +748,6 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
           protected ContainersLauncher createContainersLauncher(
               Context context, ContainerExecutor exec) {
             return launcher;
-          }
-
-          @Override
-          public void setBlockNewContainerRequests(
-              boolean blockNewContainerRequests) {
-            // do nothing
           }
     };
   }
