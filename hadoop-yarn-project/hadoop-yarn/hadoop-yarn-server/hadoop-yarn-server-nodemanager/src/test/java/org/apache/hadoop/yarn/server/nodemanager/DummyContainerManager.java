@@ -191,11 +191,6 @@ public class DummyContainerManager extends ContainerManagerImpl {
   }
 
   @Override
-  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-    // do nothing
-  }
-  
-  @Override
   protected void authorizeStartAndResourceIncreaseRequest(
       NMTokenIdentifier nmTokenIdentifier,
       ContainerTokenIdentifier containerTokenIdentifier,

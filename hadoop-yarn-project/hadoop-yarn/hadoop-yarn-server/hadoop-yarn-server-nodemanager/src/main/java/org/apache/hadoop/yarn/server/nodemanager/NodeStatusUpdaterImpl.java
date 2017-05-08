@@ -428,8 +428,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         .verifyRMRegistrationResponseForNodeLabels(regNMResponse));
 
     LOG.info(successfullRegistrationMsg);
-    LOG.info("Notifying ContainerManager to unblock new container-requests");
-    this.context.getContainerManager().setBlockNewContainerRequests(false);
   }
 
   private List<ApplicationId> createKeepAliveApplicationList() {

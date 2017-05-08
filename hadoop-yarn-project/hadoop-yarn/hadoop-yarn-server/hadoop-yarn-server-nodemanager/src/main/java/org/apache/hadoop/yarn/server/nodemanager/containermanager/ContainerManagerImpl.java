@@ -166,7 +166,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -204,7 +203,6 @@ public class ContainerManagerImpl extends CompositeService implements
   protected final AsyncDispatcher dispatcher;
 
   private final DeletionService deletionService;
-  private AtomicBoolean blockNewContainerRequests = new AtomicBoolean(false);
   private boolean serviceStopped = false;
   private final ReadLock readLock;
   private final WriteLock writeLock;
@@ -550,10 +548,6 @@ public class ContainerManagerImpl extends CompositeService implements
       refreshServiceAcls(conf, new NMPolicyProvider());
     }
     
-    LOG.info("Blocking new container-requests as container manager rpc" +
-    		" server is still starting.");
-    this.setBlockNewContainerRequests(true);
-
     String bindHost = conf.get(YarnConfiguration.NM_BIND_HOST);
     String nmAddress = conf.getTrimmed(YarnConfiguration.NM_ADDRESS);
     String hostOverride = null;
@@ -617,7 +611,6 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public void serviceStop() throws Exception {
-    setBlockNewContainerRequests(true);
     this.writeLock.lock();
     try {
       serviceStopped = true;
@@ -852,11 +845,6 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public StartContainersResponse startContainers(
       StartContainersRequest requests) throws YarnException, IOException {
-    if (blockNewContainerRequests.get()) {
-      throw new NMNotYetReadyException(
-          "Rejecting new containers as NodeManager has not"
-              + " yet connected with ResourceManager");
-    }
     UserGroupInformation remoteUgi = getRemoteUgi();
     NMTokenIdentifier nmTokenIdentifier = selectNMTokenIdentifier(remoteUgi);
     authorizeUser(remoteUgi, nmTokenIdentifier);
@@ -1113,11 +1101,6 @@ public class ContainerManagerImpl extends CompositeService implements
   public IncreaseContainersResourceResponse increaseContainersResource(
       IncreaseContainersResourceRequest requests)
           throws YarnException, IOException {
-    if (blockNewContainerRequests.get()) {
-      throw new NMNotYetReadyException(
-          "Rejecting container resource increase as NodeManager has not"
-              + " yet connected with ResourceManager");
-    }
     UserGroupInformation remoteUgi = getRemoteUgi();
     NMTokenIdentifier nmTokenIdentifier = selectNMTokenIdentifier(remoteUgi);
     authorizeUser(remoteUgi, nmTokenIdentifier);
@@ -1559,17 +1542,6 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
-  @Override
-  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-    this.blockNewContainerRequests.set(blockNewContainerRequests);
-  }
-
-  @Private
-  @VisibleForTesting
-  public boolean getBlockNewContainerRequestsStatus() {
-    return this.blockNewContainerRequests.get();
-  }
-  
   @Override
   public void stateChanged(Service service) {
     // TODO Auto-generated method stub
