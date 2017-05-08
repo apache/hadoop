@@ -270,18 +270,40 @@ public class AMRMProxyService extends AbstractService implements
    * @param user
    * @param amrmToken
    */
-  protected void initializePipeline(
-      ApplicationAttemptId applicationAttemptId, String user,
-      Token<AMRMTokenIdentifier> amrmToken,
+  protected void initializePipeline(ApplicationAttemptId applicationAttemptId,
+      String user, Token<AMRMTokenIdentifier> amrmToken,
       Token<AMRMTokenIdentifier> localToken) {
     RequestInterceptorChainWrapper chainWrapper = null;
     synchronized (applPipelineMap) {
-      if (applPipelineMap.containsKey(applicationAttemptId.getApplicationId())) {
+      if (applPipelineMap
+          .containsKey(applicationAttemptId.getApplicationId())) {
         LOG.warn("Request to start an already existing appId was received. "
             + " This can happen if an application failed and a new attempt "
             + "was created on this machine.  ApplicationId: "
             + applicationAttemptId.toString());
-        return;
+
+        RequestInterceptorChainWrapper chainWrapperBackup =
+            this.applPipelineMap.get(applicationAttemptId.getApplicationId());
+        if (chainWrapperBackup != null
+            && chainWrapperBackup.getApplicationAttemptId() != null
+            && !chainWrapperBackup.getApplicationAttemptId()
+                .equals(applicationAttemptId)) {
+          // Remove the existing pipeline
+          LOG.info("Remove the previous pipeline for ApplicationId: "
+              + applicationAttemptId.toString());
+          RequestInterceptorChainWrapper pipeline =
+              applPipelineMap.remove(applicationAttemptId.getApplicationId());
+          try {
+            pipeline.getRootInterceptor().shutdown();
+          } catch (Throwable ex) {
+            LOG.warn(
+                "Failed to shutdown the request processing pipeline for app:"
+                    + applicationAttemptId.getApplicationId(),
+                ex);
+          }
+        } else {
+          return;
+        }
       }
 
       chainWrapper = new RequestInterceptorChainWrapper();

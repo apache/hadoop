@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,10 +28,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService.RequestInterceptorChainWrapper;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -378,6 +383,37 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       finishApplicationMaster(testAppId.intValue(),
           FinalApplicationStatus.SUCCEEDED);
     }
+  }
+
+  @Test
+  public void testMultipleAttemptsSameNode()
+      throws YarnException, IOException, Exception {
+
+    String user = "hadoop";
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId applicationAttemptId;
+
+    // First Attempt
+
+    RegisterApplicationMasterResponse response1 =
+        registerApplicationMaster(appId.getId());
+    Assert.assertNotNull(response1);
+
+    AllocateResponse allocateResponse = allocate(appId.getId());
+    Assert.assertNotNull(allocateResponse);
+
+    // Second Attempt
+
+    applicationAttemptId = ApplicationAttemptId.newInstance(appId, 2);
+    getAMRMProxyService().initializePipeline(applicationAttemptId, user, null,
+        null);
+
+    RequestInterceptorChainWrapper chain2 =
+        getAMRMProxyService().getPipelines().get(appId);
+    Assert.assertEquals(applicationAttemptId, chain2.getApplicationAttemptId());
+
+    allocateResponse = allocate(appId.getId());
+    Assert.assertNotNull(allocateResponse);
   }
 
   private List<Container> getContainersAndAssert(int appId,
