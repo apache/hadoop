@@ -1517,14 +1517,22 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
       int numberOfFailure = app.getNumFailedAppAttempts();
-      LOG.info("The number of failed attempts"
-          + (app.attemptFailuresValidityInterval > 0 ? " in previous "
-              + app.attemptFailuresValidityInterval + " milliseconds " : " ")
-          + "is " + numberOfFailure + ". The max attempts is "
-          + app.maxAppAttempts);
+      if (app.maxAppAttempts == 1) {
+        // If the user explicitly set the attempts to 1 then there are likely
+        // correctness issues if the AM restarts for any reason.
+        LOG.info("Max app attempts is 1 for " + app.applicationId
+            + ", preventing further attempts.");
+        numberOfFailure = app.maxAppAttempts;
+      } else {
+        LOG.info("The number of failed attempts"
+            + (app.attemptFailuresValidityInterval > 0 ? " in previous "
+            + app.attemptFailuresValidityInterval + " milliseconds " : " ")
+            + "is " + numberOfFailure + ". The max attempts is "
+            + app.maxAppAttempts);
 
-      if (app.attemptFailuresValidityInterval > 0) {
-        removeExcessAttempts(app);
+        if (app.attemptFailuresValidityInterval > 0) {
+          removeExcessAttempts(app);
+        }
       }
 
       if (!app.submissionContext.getUnmanagedAM()

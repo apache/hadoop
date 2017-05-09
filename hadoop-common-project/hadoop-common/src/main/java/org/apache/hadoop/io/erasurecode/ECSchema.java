@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -197,36 +199,34 @@ public final class ECSchema {
     return sb.toString();
   }
 
+  // Todo: Further use `extraOptions` to compare ECSchemas
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
+    if (o == null) {
+      return false;
+    }
+    if (o == this) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (o.getClass() != getClass()) {
       return false;
     }
-
-    ECSchema ecSchema = (ECSchema) o;
-
-    if (numDataUnits != ecSchema.numDataUnits) {
-      return false;
-    }
-    if (numParityUnits != ecSchema.numParityUnits) {
-      return false;
-    }
-    if (!codecName.equals(ecSchema.codecName)) {
-      return false;
-    }
-    return extraOptions.equals(ecSchema.extraOptions);
+    ECSchema rhs = (ECSchema) o;
+    return new EqualsBuilder()
+        .append(codecName, rhs.codecName)
+        .append(extraOptions, rhs.extraOptions)
+        .append(numDataUnits, rhs.numDataUnits)
+        .append(numParityUnits, rhs.numParityUnits)
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    int result = codecName.hashCode();
-    result = 31 * result + extraOptions.hashCode();
-    result = 31 * result + numDataUnits;
-    result = 31 * result + numParityUnits;
-
-    return result;
+    return new HashCodeBuilder(1273158869, 1555022101)
+        .append(codecName)
+        .append(extraOptions)
+        .append(numDataUnits)
+        .append(numParityUnits)
+        .toHashCode();
   }
 }

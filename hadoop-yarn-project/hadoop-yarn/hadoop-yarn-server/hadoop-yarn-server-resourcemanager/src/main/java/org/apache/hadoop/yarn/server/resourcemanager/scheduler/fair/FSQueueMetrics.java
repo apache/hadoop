@@ -206,7 +206,7 @@ public class FSQueueMetrics extends QueueMetrics {
   public synchronized
   static FSQueueMetrics forQueue(MetricsSystem ms, String queueName,
       Queue parent, boolean enableUserMetrics, Configuration conf) {
-    QueueMetrics metrics = queueMetrics.get(queueName);
+    QueueMetrics metrics = QueueMetrics.getQueueMetrics().get(queueName);
     if (metrics == null) {
       metrics = new FSQueueMetrics(ms, queueName, parent, enableUserMetrics, conf)
           .tag(QUEUE_INFO, queueName);
@@ -217,7 +217,7 @@ public class FSQueueMetrics extends QueueMetrics {
             sourceName(queueName).toString(),
             "Metrics for queue: " + queueName, metrics);
       }
-      queueMetrics.put(queueName, metrics);
+      QueueMetrics.getQueueMetrics().put(queueName, metrics);
     }
 
     return (FSQueueMetrics)metrics;

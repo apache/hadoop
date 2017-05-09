@@ -270,18 +270,40 @@ public class AMRMProxyService extends AbstractService implements
    * @param user
    * @param amrmToken
    */
-  protected void initializePipeline(
-      ApplicationAttemptId applicationAttemptId, String user,
-      Token<AMRMTokenIdentifier> amrmToken,
+  protected void initializePipeline(ApplicationAttemptId applicationAttemptId,
+      String user, Token<AMRMTokenIdentifier> amrmToken,
       Token<AMRMTokenIdentifier> localToken) {
     RequestInterceptorChainWrapper chainWrapper = null;
     synchronized (applPipelineMap) {
-      if (applPipelineMap.containsKey(applicationAttemptId.getApplicationId())) {
+      if (applPipelineMap
+          .containsKey(applicationAttemptId.getApplicationId())) {
         LOG.warn("Request to start an already existing appId was received. "
             + " This can happen if an application failed and a new attempt "
             + "was created on this machine.  ApplicationId: "
             + applicationAttemptId.toString());
-        return;
+
+        RequestInterceptorChainWrapper chainWrapperBackup =
+            this.applPipelineMap.get(applicationAttemptId.getApplicationId());
+        if (chainWrapperBackup != null
+            && chainWrapperBackup.getApplicationAttemptId() != null
+            && !chainWrapperBackup.getApplicationAttemptId()
+                .equals(applicationAttemptId)) {
+          // Remove the existing pipeline
+          LOG.info("Remove the previous pipeline for ApplicationId: "
+              + applicationAttemptId.toString());
+          RequestInterceptorChainWrapper pipeline =
+              applPipelineMap.remove(applicationAttemptId.getApplicationId());
+          try {
+            pipeline.getRootInterceptor().shutdown();
+          } catch (Throwable ex) {
+            LOG.warn(
+                "Failed to shutdown the request processing pipeline for app:"
+                    + applicationAttemptId.getApplicationId(),
+                ex);
+          }
+        } else {
+          return;
+        }
       }
 
       chainWrapper = new RequestInterceptorChainWrapper();
@@ -297,11 +319,16 @@ public class AMRMProxyService extends AbstractService implements
         + " ApplicationId:" + applicationAttemptId + " for the user: "
         + user);
 
-    RequestInterceptor interceptorChain =
-        this.createRequestInterceptorChain();
-    interceptorChain.init(createApplicationMasterContext(
-        applicationAttemptId, user, amrmToken, localToken));
-    chainWrapper.init(interceptorChain, applicationAttemptId);
+    try {
+      RequestInterceptor interceptorChain =
+          this.createRequestInterceptorChain();
+      interceptorChain.init(createApplicationMasterContext(this.nmContext,
+          applicationAttemptId, user, amrmToken, localToken));
+      chainWrapper.init(interceptorChain, applicationAttemptId);
+    } catch (Exception e) {
+      this.applPipelineMap.remove(applicationAttemptId.getApplicationId());
+      throw e;
+    }
   }
 
   /**
@@ -317,9 +344,15 @@ public class AMRMProxyService extends AbstractService implements
         this.applPipelineMap.remove(applicationId);
 
     if (pipeline == null) {
-      LOG.info("Request to stop an application that does not exist. Id:"
-          + applicationId);
+      LOG.info(
+          "No interceptor pipeline for application {},"
+              + " likely because its AM is not run in this node.",
+          applicationId);
     } else {
+      // Remove the appAttempt in AMRMTokenSecretManager
+      this.secretManager
+          .applicationMasterFinished(pipeline.getApplicationAttemptId());
+
       LOG.info("Stopping the request processing pipeline for application: "
           + applicationId);
       try {
@@ -387,11 +420,11 @@ public class AMRMProxyService extends AbstractService implements
   }
 
   private AMRMProxyApplicationContext createApplicationMasterContext(
-      ApplicationAttemptId applicationAttemptId, String user,
+      Context context, ApplicationAttemptId applicationAttemptId, String user,
       Token<AMRMTokenIdentifier> amrmToken,
       Token<AMRMTokenIdentifier> localToken) {
     AMRMProxyApplicationContextImpl appContext =
-        new AMRMProxyApplicationContextImpl(this.nmContext, getConfig(),
+        new AMRMProxyApplicationContextImpl(context, getConfig(),
             applicationAttemptId, user, amrmToken, localToken);
     return appContext;
   }
@@ -548,7 +581,7 @@ public class AMRMProxyService extends AbstractService implements
               event.getApplicationID());
       if (app != null) {
         switch (event.getType()) {
-        case FINISH_APPLICATION:
+        case APPLICATION_RESOURCES_CLEANEDUP:
           LOG.info("Application stop event received for stopping AppId:"
               + event.getApplicationID().toString());
           AMRMProxyService.this.stopApplication(event.getApplicationID());

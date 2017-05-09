@@ -89,10 +89,12 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // than the threshold of 1MB.
     volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(1024L * 1024L * 3);
-    
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
   }
   
   @Test(timeout=60000)
@@ -115,21 +117,29 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // Third volume, again with 3MB free space.
     volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(2).getAvailable()).thenReturn(1024L * 1024L * 3);
-    
+
     // We should alternate assigning between the two volumes with a lot of free
     // space.
     initPolicy(policy, 1.0f);
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+        null));
 
     // All writes should be assigned to the volume with the least free space.
     initPolicy(policy, 0.0f);
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100));
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+        null));
   }
   
   @Test(timeout=60000)
@@ -156,22 +166,30 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // Fourth volume, again with 3MB free space.
     volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(3).getAvailable()).thenReturn(1024L * 1024L * 3);
-    
+
     // We should alternate assigning between the two volumes with a lot of free
     // space.
     initPolicy(policy, 1.0f);
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100));
+    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
+        null));
 
     // We should alternate assigning between the two volumes with less free
     // space.
     initPolicy(policy, 0.0f);
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+         null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
   }
   
   @Test(timeout=60000)
@@ -190,13 +208,14 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // than the threshold of 1MB.
     volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(1024L * 1024L * 3);
-    
+
     // All writes should be assigned to the volume with the least free space.
     // However, if the volume with the least free space doesn't have enough
     // space to accept the replica size, and another volume does have enough
     // free space, that should be chosen instead.
     initPolicy(policy, 0.0f);
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 1024L * 1024L * 2));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes,
+        1024L * 1024L * 2, null));
   }
   
   @Test(timeout=60000)
@@ -220,10 +239,11 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
         .thenReturn(1024L * 1024L * 3)
         .thenReturn(1024L * 1024L * 3)
         .thenReturn(1024L * 1024L * 1); // After the third check, return 1MB.
-    
+
     // Should still be able to get a volume for the replica even though the
     // available space on the second volume changed.
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes,
+        100, null));
   }
   
   @Test(timeout=60000)
@@ -271,12 +291,12 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
       Mockito.when(volume.getAvailable()).thenReturn(1024L * 1024L * 3);
       volumes.add(volume);
     }
-    
+
     initPolicy(policy, preferencePercent);
     long lowAvailableSpaceVolumeSelected = 0;
     long highAvailableSpaceVolumeSelected = 0;
     for (int i = 0; i < RANDOMIZED_ITERATIONS; i++) {
-      FsVolumeSpi volume = policy.chooseVolume(volumes, 100);
+      FsVolumeSpi volume = policy.chooseVolume(volumes, 100, null);
       for (int j = 0; j < volumes.size(); j++) {
         // Note how many times the first low available volume was selected
         if (volume == volumes.get(j) && j == 0) {

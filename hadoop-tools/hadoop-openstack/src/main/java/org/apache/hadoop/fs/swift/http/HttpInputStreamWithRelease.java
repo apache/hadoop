@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.fs.swift.http;
 
-import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.swift.exceptions.SwiftConnectionClosedException;
 import org.apache.hadoop.fs.swift.util.SwiftUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpRequestBase;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -46,7 +47,8 @@ public class HttpInputStreamWithRelease extends InputStream {
   private static final Log LOG =
     LogFactory.getLog(HttpInputStreamWithRelease.class);
   private final URI uri;
-  private HttpMethod method;
+  private HttpRequestBase req;
+  private HttpResponse resp;
   //flag to say the stream is released -volatile so that read operations
   //pick it up even while unsynchronized.
   private volatile boolean released;
@@ -64,16 +66,17 @@ public class HttpInputStreamWithRelease extends InputStream {
    */
   private String reasonClosed = "unopened";
 
-  public HttpInputStreamWithRelease(URI uri, HttpMethod method) throws
-                                                                IOException {
+  public HttpInputStreamWithRelease(URI uri, HttpRequestBase req,
+      HttpResponse resp) throws IOException {
     this.uri = uri;
-    this.method = method;
+    this.req = req;
+    this.resp = resp;
     constructionStack = LOG.isDebugEnabled() ? new Exception("stack") : null;
-    if (method == null) {
-      throw new IllegalArgumentException("Null 'method' parameter ");
+    if (req == null) {
+      throw new IllegalArgumentException("Null 'request' parameter ");
     }
     try {
-      inStream = method.getResponseBodyAsStream();
+      inStream = resp.getEntity().getContent();
     } catch (IOException e) {
       inStream = new ByteArrayInputStream(new byte[]{});
       throw releaseAndRethrow("getResponseBodyAsStream() in constructor -" + e, e);
@@ -100,11 +103,11 @@ public class HttpInputStreamWithRelease extends InputStream {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Releasing connection to " + uri + ":  " + reason, ex);
         }
-        if (method != null) {
+        if (req != null) {
           if (!dataConsumed) {
-            method.abort();
+            req.abort();
           }
-          method.releaseConnection();
+          req.releaseConnection();
         }
         if (inStream != null) {
           //this guard may seem un-needed, but a stack trace seen

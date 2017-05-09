@@ -59,6 +59,7 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   private final TimelineCollectorContext context;
   private ScheduledThreadPoolExecutor appAggregationExecutor;
   private AppLevelAggregator appAggregator;
+  private UserGroupInformation currentUser;
 
   public AppLevelTimelineCollector(ApplicationId appId) {
     super(AppLevelTimelineCollector.class.getName() + " - " + appId.toString());
@@ -82,7 +83,8 @@ public class AppLevelTimelineCollector extends TimelineCollector {
     // Set the default values, which will be updated with an RPC call to get the
     // context info from NM.
     // Current user usually is not the app user, but keep this field non-null
-    context.setUserId(UserGroupInformation.getCurrentUser().getShortUserName());
+    currentUser = UserGroupInformation.getCurrentUser();
+    context.setUserId(currentUser.getShortUserName());
     context.setAppId(appId.toString());
     super.serviceInit(conf);
   }
@@ -149,9 +151,7 @@ public class AppLevelTimelineCollector extends TimelineCollector {
             TimelineEntityType.YARN_APPLICATION.toString());
         TimelineEntities entities = new TimelineEntities();
         entities.addEntity(resultEntity);
-        getWriter().write(currContext.getClusterId(), currContext.getUserId(),
-            currContext.getFlowName(), currContext.getFlowVersion(),
-            currContext.getFlowRunId(), currContext.getAppId(), entities);
+        putEntitiesAsync(entities, currentUser);
       } catch (Exception e) {
         LOG.error("Error aggregating timeline metrics", e);
       }

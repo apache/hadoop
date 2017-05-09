@@ -552,7 +552,7 @@ public class RawLocalFileSystem extends FileSystem {
       }
     }
     if (p2f.exists() && !p2f.isDirectory()) {
-      throw new FileNotFoundException("Destination exists" +
+      throw new FileAlreadyExistsException("Destination exists" +
               " and is not a directory: " + p2f.getCanonicalPath());
     }
     return (parent == null || parent2f.exists() || mkdirs(parent)) &&

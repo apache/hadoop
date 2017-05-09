@@ -428,11 +428,18 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     return ret;
   }
 
-  private String findControllerInMtab(String controller,
+  @VisibleForTesting
+  String findControllerInMtab(String controller,
                                       Map<String, List<String>> entries) {
     for (Entry<String, List<String>> e : entries.entrySet()) {
-      if (e.getValue().contains(controller))
-        return e.getKey();
+      if (e.getValue().contains(controller)) {
+        if (new File(e.getKey()).canRead()) {
+          return e.getKey();
+        } else {
+          LOG.warn(String.format(
+              "Skipping inaccessible cgroup mount point %s", e.getKey()));
+        }
+      }
     }
 
     return null;

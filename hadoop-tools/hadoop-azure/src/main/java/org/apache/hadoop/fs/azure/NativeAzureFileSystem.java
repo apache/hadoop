@@ -2987,9 +2987,6 @@ public class NativeAzureFileSystem extends FileSystem {
         if (connectUgi == null) {
           connectUgi = ugi;
         }
-        if (!connectUgi.hasKerberosCredentials()) {
-          connectUgi = UserGroupInformation.getLoginUser();
-        }
         connectUgi.checkTGTAndReloginFromKeytab();
         return connectUgi.doAs(new PrivilegedExceptionAction<Token<?>>() {
           @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,24 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+package org.apache.hadoop.service.launcher.testservices;
+
+import org.apache.hadoop.service.launcher.AbstractLaunchableService;
 
 /**
- * A raw coder factory for the legacy raw Reed-Solomon coder in Java.
+ * Service that only has one constructor that takes a string.
+ * This is the standard base class of a YARN service, so handle it
+ * in the launch
  */
-@InterfaceAudience.Private
-public class RSRawErasureCoderFactoryLegacy implements RawErasureCoderFactory {
+public class StringConstructorOnlyService extends AbstractLaunchableService {
+  
 
-  @Override
-  public RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions) {
-    return new RSRawEncoderLegacy(coderOptions);
+  public StringConstructorOnlyService(String name) {
+    super(name);
   }
 
-  @Override
-  public RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions) {
-    return new RSRawDecoderLegacy(coderOptions);
-  }
+  public static final String NAME =
+      "org.apache.hadoop.service.launcher.testservices.StringConstructorOnlyService";
+  
+
 }

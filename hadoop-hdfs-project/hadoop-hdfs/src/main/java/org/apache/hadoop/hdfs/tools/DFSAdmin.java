@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -440,7 +441,8 @@ public class DFSAdmin extends FsShell {
     "\t[-reconfig <namenode|datanode> <host:ipc_port> " +
       "<start|status|properties>]\n" +
     "\t[-printTopology]\n" +
-    "\t[-refreshNamenodes datanode_host:ipc_port]\n"+
+      "\t[-refreshNamenodes datanode_host:ipc_port]\n" +
+      "\t[-getVolumeReport datanode_host:ipc_port]\n" +
     "\t[-deleteBlockPool datanode_host:ipc_port blockpoolId [force]]\n"+
     "\t[-setBalancerBandwidth <bandwidth in bytes per second>]\n" +
     "\t[-getBalancerBandwidth <datanode_host:ipc_port>]\n" +
@@ -1073,6 +1075,9 @@ public class DFSAdmin extends FsShell {
                               "\t\tstops serving the removed block-pools\n"+
                               "\t\tand starts serving new block-pools\n";
     
+    String getVolumeReport = "-getVolumeReport: Takes a datanodehost:port as "
+        + "argument,\n\t\tFor the given datanode, get the volume report\n";
+
     String deleteBlockPool = "-deleteBlockPool: Arguments are datanodehost:port, blockpool id\n"+
                              "\t\t and an optional argument \"force\". If force is passed,\n"+
                              "\t\t block pool directory for the given blockpool id on the given\n"+
@@ -1173,6 +1178,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(printTopology);
     } else if ("refreshNamenodes".equals(cmd)) {
       System.out.println(refreshNamenodes);
+    } else if ("getVolumeReport".equals(cmd)) {
+      System.out.println(getVolumeReport);
     } else if ("deleteBlockPool".equals(cmd)) {
       System.out.println(deleteBlockPool);
     } else if ("setBalancerBandwidth".equals(cmd)) {
@@ -1839,6 +1846,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-refreshNamenodes".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshNamenodes datanode-host:port]");
+    } else if ("-getVolumeReport".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-getVolumeReport datanode-host:port]");
     } else if ("-deleteBlockPool".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-deleteBlockPool datanode-host:port blockpoolId [force]]");
@@ -1971,6 +1981,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-getVolumeReport".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-reconfig".equals(cmd)) {
       if (argv.length != 4) {
         printUsage(cmd);
@@ -2072,6 +2087,8 @@ public class DFSAdmin extends FsShell {
         exitCode = printTopology();
       } else if ("-refreshNamenodes".equals(cmd)) {
         exitCode = refreshNamenodes(argv, i);
+      } else if ("-getVolumeReport".equals(cmd)) {
+        exitCode = getVolumeReport(argv, i);
       } else if ("-deleteBlockPool".equals(cmd)) {
         exitCode = deleteBlockPool(argv, i);
       } else if ("-setBalancerBandwidth".equals(cmd)) {
@@ -2132,6 +2149,17 @@ public class DFSAdmin extends FsShell {
       LOG.debug("Exception encountered:", debugException);
     }
     return exitCode;
+  }
+
+  private int getVolumeReport(String[] argv, int i) throws IOException {
+    ClientDatanodeProtocol datanode = getDataNodeProxy(argv[i]);
+    List<DatanodeVolumeInfo> volumeReport = datanode
+        .getVolumeReport();
+    System.out.println("Active Volumes : " + volumeReport.size());
+    for (DatanodeVolumeInfo info : volumeReport) {
+      System.out.println("\n" + info.getDatanodeVolumeReport());
+    }
+    return 0;
   }
 
   private ClientDatanodeProtocol getDataNodeProxy(String datanode)

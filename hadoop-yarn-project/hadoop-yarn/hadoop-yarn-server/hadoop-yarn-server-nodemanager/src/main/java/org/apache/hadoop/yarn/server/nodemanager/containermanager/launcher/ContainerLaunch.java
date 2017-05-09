@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
@@ -200,23 +201,23 @@ public class ContainerLaunch implements Callable<Integer> {
       FileContext lfs = FileContext.getLocalFSFileContext();
 
       Path nmPrivateContainerScriptPath = dirsHandler.getLocalPathForWrite(
-              getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-                  + CONTAINER_SCRIPT);
+          getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+              + CONTAINER_SCRIPT);
       Path nmPrivateTokensPath = dirsHandler.getLocalPathForWrite(
-              getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-                  + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
-                      containerIdStr));
+          getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+              containerIdStr));
       Path nmPrivateClasspathJarDir = dirsHandler.getLocalPathForWrite(
-              getContainerPrivateDir(appIdStr, containerIdStr));
+          getContainerPrivateDir(appIdStr, containerIdStr));
       DataOutputStream containerScriptOutStream = null;
       DataOutputStream tokensOutStream = null;
 
       // Select the working directory for the container
       Path containerWorkDir =
           dirsHandler.getLocalPathForWrite(ContainerLocalizer.USERCACHE
-              + Path.SEPARATOR + user + Path.SEPARATOR
-              + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
-              + Path.SEPARATOR + containerIdStr,
+                  + Path.SEPARATOR + user + Path.SEPARATOR
+                  + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
+                  + Path.SEPARATOR + containerIdStr,
               LocalDirAllocator.SIZE_UNKNOWN, false);
       recordContainerWorkDir(containerID, containerWorkDir.toString());
 
@@ -246,12 +247,12 @@ public class ContainerLaunch implements Callable<Integer> {
           appDirs.add(new Path(appsdir, appIdStr));
         }
         containerScriptOutStream =
-          lfs.create(nmPrivateContainerScriptPath,
-              EnumSet.of(CREATE, OVERWRITE));
+            lfs.create(nmPrivateContainerScriptPath,
+                EnumSet.of(CREATE, OVERWRITE));
 
         // Set the token location too.
         environment.put(
-            ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME, 
+            ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME,
             new Path(containerWorkDir,
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
         // Sanitize the container's environment
@@ -266,7 +267,7 @@ public class ContainerLaunch implements Callable<Integer> {
             .setCommands(launchContext.getCommands()).build());
         // Write out the environment
         exec.writeLaunchEnv(containerScriptOutStream, environment,
-          localResources, launchContext.getCommands(),
+            localResources, launchContext.getCommands(),
             new Path(containerLogDirs.get(0)), user);
         // /////////// End of writing out container-script
 
@@ -294,6 +295,14 @@ public class ContainerLaunch implements Callable<Integer> {
           .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs).build());
+    } catch (ConfigurationException e) {
+      LOG.error("Failed to launch container due to configuration error.", e);
+      dispatcher.getEventHandler().handle(new ContainerExitEvent(
+          containerID, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+          e.getMessage()));
+      // Mark the node as unhealthy
+      context.getNodeStatusUpdater().reportException(e);
+      return ret;
     } catch (Throwable e) {
       LOG.warn("Failed to launch container.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
@@ -396,7 +405,8 @@ public class ContainerLaunch implements Callable<Integer> {
   }
 
   @SuppressWarnings("unchecked")
-  protected int launchContainer(ContainerStartContext ctx) throws IOException {
+  protected int launchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
     ContainerId containerId = container.getContainerId();
     if (container.isMarkedForKilling()) {
       LOG.info("Container " + containerId + " not launched as it has already "

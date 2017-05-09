@@ -58,6 +58,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     protobuf-c-compiler \
     python \
     python2.7 \
+    python2.7-dev \
     python-pip \
     rsync \
     snappy \
@@ -92,6 +93,7 @@ RUN mkdir -p /opt/maven && \
          -o /opt/maven.tar.gz && \
     tar xzf /opt/maven.tar.gz --strip-components 1 -C /opt/maven
 ENV MAVEN_HOME /opt/maven
+ENV PATH "$PATH:/opt/maven/bin"
 
 ######
 # Install findbugs

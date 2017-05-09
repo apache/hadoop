@@ -60,7 +60,7 @@ public final class RawErasureCoderBenchmark {
   private static final List<RawErasureCoderFactory> CODER_MAKERS =
       Collections.unmodifiableList(
           Arrays.asList(new DummyRawErasureCoderFactory(),
-              new RSRawErasureCoderFactoryLegacy(),
+              new RSLegacyRawErasureCoderFactory(),
               new RSRawErasureCoderFactory(),
               new NativeRSRawErasureCoderFactory()));
 

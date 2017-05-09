@@ -41,6 +41,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -62,21 +63,21 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
   private static final String excludeCiphers = "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
-      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,"
+      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
       + "SSL_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,"
+      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
+      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
       + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
-      + "SSL_RSA_WITH_RC4_128_MD5";
+      + "SSL_RSA_WITH_RC4_128_MD5 \t";
   private static final String oneEnabledCiphers = excludeCiphers
       + ",TLS_RSA_WITH_AES_128_CBC_SHA";
   private static final String exclusiveEnabledCiphers
-      = "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
+      = "\tTLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, \n"
       + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_RSA_WITH_AES_128_CBC_SHA,"
-      + "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,"
+      + "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,  "
       + "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,"
-      + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,"
+      + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
 
   @BeforeClass
@@ -169,7 +170,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-            excludeCiphers.split(","));
+        StringUtils.getTrimmedStrings(excludeCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty", excludeCiphers.isEmpty());
     try {
@@ -193,7 +194,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-            oneEnabledCiphers.split(","));
+        StringUtils.getTrimmedStrings(oneEnabledCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty", oneEnabledCiphers.isEmpty());
     try {
@@ -219,7 +220,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
     PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
         = new PrefferedCipherSSLSocketFactory(sslSocketF,
-            exclusiveEnabledCiphers.split(","));
+        StringUtils.getTrimmedStrings(exclusiveEnabledCiphers));
     conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
     assertFalse("excludedCipher list is empty",
         exclusiveEnabledCiphers.isEmpty());

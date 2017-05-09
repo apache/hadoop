@@ -19,8 +19,16 @@
 
 import Ember from 'ember';
 import ColumnDef from 'em-table/utils/column-definition';
+import TableDefinition from 'em-table/utils/table-definition';
 
 export default Ember.Controller.extend({
+    queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
+    tableDefinition: TableDefinition.create(),
+    searchText: Ember.computed.alias('tableDefinition.searchText'),
+    sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),
+    sortOrder: Ember.computed.alias('tableDefinition.sortOrder'),
+    pageNum: Ember.computed.alias('tableDefinition.pageNum'),
+    rowCount: Ember.computed.alias('tableDefinition.rowCount'),
     columns: function() {
         var colums = [];
         colums.push({

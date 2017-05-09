@@ -232,11 +232,17 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    * @param entries map of paths to mount options
    * @return the first mount path that has the requested subsystem
    */
-  private static String findControllerInMtab(String controller,
+  @VisibleForTesting
+  static String findControllerInMtab(String controller,
       Map<String, List<String>> entries) {
     for (Map.Entry<String, List<String>> e : entries.entrySet()) {
       if (e.getValue().contains(controller)) {
-        return e.getKey();
+        if (new File(e.getKey()).canRead()) {
+          return e.getKey();
+        } else {
+          LOG.warn(String.format(
+              "Skipping inaccessible cgroup mount point %s", e.getKey()));
+        }
       }
     }
 

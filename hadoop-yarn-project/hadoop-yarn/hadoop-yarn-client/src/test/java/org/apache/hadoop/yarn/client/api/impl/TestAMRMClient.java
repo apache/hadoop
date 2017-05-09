@@ -1208,7 +1208,7 @@ public class TestAMRMClient {
         && receivedNMTokens.size() <= nodeCount);
 
     assertEquals(allocatedContainerCount, containersRequestedAny);
-    assertEquals(2, amClient.release.size());
+    assertEquals(2, releases.size());
     assertEquals(0, amClient.ask.size());
 
     // need to tell the AMRMClient that we dont need these resources anymore

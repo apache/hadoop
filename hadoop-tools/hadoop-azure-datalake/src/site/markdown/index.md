@@ -253,7 +253,7 @@ Add the following properties to `core-site.xml`
 ```
 ## Testing the azure-datalake-store Module
 The `hadoop-azure` module includes a full suite of unit tests.
-Most of the tests will run without additional configuration by running mvn test.
+Most of the tests will run without additional configuration by running `mvn test`.
 This includes tests against mocked storage, which is an in-memory emulation of Azure Data Lake Storage.
 
 A selection of tests can run against the Azure Data Lake Storage. To run these
@@ -262,7 +262,7 @@ information mentioned in the above sections and the following properties.
 
 ```xml
 <property>
-    <name>dfs.adl.test.contract.enable</name>
+    <name>fs.adl.test.contract.enable</name>
     <value>true</value>
 </property>
 

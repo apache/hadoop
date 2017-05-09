@@ -111,7 +111,8 @@ public final class ErasureCodingWorker {
             new StripedReconstructionInfo(
             reconInfo.getExtendedBlock(), reconInfo.getErasureCodingPolicy(),
             reconInfo.getLiveBlockIndices(), reconInfo.getSourceDnInfos(),
-            reconInfo.getTargetDnInfos(), reconInfo.getTargetStorageTypes());
+            reconInfo.getTargetDnInfos(), reconInfo.getTargetStorageTypes(),
+            reconInfo.getTargetStorageIDs());
         final StripedBlockReconstructor task =
             new StripedBlockReconstructor(this, stripedReconInfo);
         if (task.hasValidTargets()) {

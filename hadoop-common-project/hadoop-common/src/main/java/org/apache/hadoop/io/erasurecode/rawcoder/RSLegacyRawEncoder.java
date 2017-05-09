@@ -30,10 +30,10 @@ import java.util.Arrays;
  * when possible.
  */
 @InterfaceAudience.Private
-public class RSRawEncoderLegacy extends RawErasureEncoder {
+public class RSLegacyRawEncoder extends RawErasureEncoder {
   private int[] generatingPolynomial;
 
-  public RSRawEncoderLegacy(ErasureCoderOptions coderOptions) {
+  public RSLegacyRawEncoder(ErasureCoderOptions coderOptions) {
     super(coderOptions);
 
     assert (getNumDataUnits() + getNumParityUnits() < RSUtil.GF.getFieldSize());

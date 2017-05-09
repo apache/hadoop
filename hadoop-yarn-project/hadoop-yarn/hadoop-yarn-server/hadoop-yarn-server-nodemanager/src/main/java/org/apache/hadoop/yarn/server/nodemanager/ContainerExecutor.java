@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
@@ -164,9 +165,10 @@ public abstract class ContainerExecutor implements Configurable {
    * @param ctx Encapsulates information necessary for launching containers.
    * @return the return status of the launch
    * @throws IOException if the container launch fails
+   * @throws ConfigurationException if config error was found
    */
   public abstract int launchContainer(ContainerStartContext ctx) throws
-      IOException;
+      IOException, ConfigurationException;
 
   /**
    * Signal container with the specified signal.

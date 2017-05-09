@@ -15,27 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants;
 
-package org.apache.hadoop.fs.swift.http;
 
-import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
- * Implementation for SwiftRestClient to make copy requests.
- * COPY is a method that came with WebDAV (RFC2518), and is not something that
- * can be handled by all proxies en-route to a filesystem.
+ * This exception represents the violation of an internal invariant.
  */
-class CopyMethod extends EntityEnclosingMethod {
+public class InvariantViolationException extends YarnRuntimeException {
 
-  public CopyMethod(String uri) {
-    super(uri);
+  public InvariantViolationException(String s) {
+    super(s);
   }
 
-  /**
-   * @return http method name
-   */
-  @Override
-  public String getName() {
-    return "COPY";
+  public InvariantViolationException(String s, Exception e) {
+    super(s, e);
   }
 }

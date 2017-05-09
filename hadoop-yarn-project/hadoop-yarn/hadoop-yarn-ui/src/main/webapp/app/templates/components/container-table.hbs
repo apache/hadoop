@@ -51,7 +51,7 @@
     {{#if container.nodeHttpAddress}}
     <tr>
       <td>NodeManager UI</td>
-      <td><a href="{{prepend-protocol container.nodeHttpAddress}}" target="_blank">{{container.nodeHttpAddress}}</a></td>
+      <td title="{{container.nodeHttpAddress}}"><a href="{{prepend-protocol container.nodeHttpAddress}}" target="_blank">{{container.nodeHttpAddress}}</a></td>
     </tr>
     {{/if}}
     {{#if container.logUrl}}

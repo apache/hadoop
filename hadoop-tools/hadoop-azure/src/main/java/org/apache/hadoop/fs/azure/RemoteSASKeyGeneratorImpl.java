@@ -97,7 +97,7 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
   private static final String RELATIVE_PATH_QUERY_PARAM_NAME =
       "relative_path";
 
-  private String delegationToken = "";
+  private String delegationToken;
   private String credServiceUrl = "";
   private WasbRemoteCallHelper remoteCallHelper = null;
   private boolean isSecurityEnabled;
@@ -110,14 +110,7 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
   public void initialize(Configuration conf) throws IOException {
 
     LOG.debug("Initializing RemoteSASKeyGeneratorImpl instance");
-    try {
-      delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
-    } catch (IOException e) {
-      final String msg = "Error in fetching the WASB delegation token";
-      LOG.error(msg, e);
-      throw new IOException(msg, e);
-    }
-
+    setDelegationToken();
     try {
       credServiceUrl = SecurityUtils.getCredServiceUrls(conf);
     } catch (UnknownHostException e) {
@@ -146,6 +139,7 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
     try {
       LOG.debug("Generating Container SAS Key for Container {} "
           + "inside Storage Account {} ", container, storageAccount);
+      setDelegationToken();
       URIBuilder uriBuilder = new URIBuilder(credServiceUrl);
       uriBuilder.setPath("/" + CONTAINER_SAS_OP);
       uriBuilder.addParameter(STORAGE_ACCOUNT_QUERY_PARAM_NAME,
@@ -166,10 +160,6 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
       } else {
         uriBuilder.addParameter(Constants.DOAS_PARAM, ugi.getShortUserName());
       }
-
-      if (isSecurityEnabled && !connectUgi.hasKerberosCredentials()) {
-        connectUgi = UserGroupInformation.getLoginUser();
-      }
       return getSASKey(uriBuilder.build(), connectUgi);
     } catch (URISyntaxException uriSyntaxEx) {
       throw new SASKeyGenerationException("Encountered URISyntaxException "
@@ -188,6 +178,7 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
       LOG.debug("Generating RelativePath SAS Key for relativePath {} inside"
               + " Container {} inside Storage Account {} ",
           relativePath, container, storageAccount);
+      setDelegationToken();
       URIBuilder uriBuilder = new URIBuilder(credServiceUrl);
       uriBuilder.setPath("/" + BLOB_SAS_OP);
       uriBuilder.addParameter(STORAGE_ACCOUNT_QUERY_PARAM_NAME,
@@ -212,10 +203,6 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
       } else {
         uriBuilder.addParameter(Constants.DOAS_PARAM, ugi.getShortUserName());
       }
-
-      if (isSecurityEnabled && !connectUgi.hasKerberosCredentials()) {
-        connectUgi = UserGroupInformation.getLoginUser();
-      }
       return getSASKey(uriBuilder.build(), connectUgi);
     } catch (URISyntaxException uriSyntaxEx) {
       throw new SASKeyGenerationException("Encountered URISyntaxException"
@@ -231,7 +218,6 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
       throws URISyntaxException, SASKeyGenerationException {
     final RemoteSASKeyGenerationResponse sasKeyResponse;
     try {
-      connectUgi.checkTGTAndReloginFromKeytab();
       sasKeyResponse = connectUgi.doAs(
           new PrivilegedExceptionAction<RemoteSASKeyGenerationResponse>() {
             @Override
@@ -310,6 +296,10 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
       throw new SASKeyGenerationException("Encountered IOException while "
           + "accessing remote service to retrieve SAS Key", ioEx);
     }
+  }
+
+  private void setDelegationToken() throws IOException {
+    this.delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
   }
 }
 

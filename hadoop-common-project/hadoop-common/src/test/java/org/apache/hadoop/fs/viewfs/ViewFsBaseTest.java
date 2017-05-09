@@ -232,7 +232,7 @@ abstract public class ViewFsBaseTest {
         isFile(fcTarget, new Path(targetTestRoot,"dir2/foo")));
     
     // Delete the created file
-    Assert.assertTrue("Delete should suceed",
+    Assert.assertTrue("Delete should succeed",
         fcView.delete(new Path("/internalDir/linkToDir2/foo"),false));
     Assert.assertFalse("File should not exist after deletion",
         exists(fcView, new Path("/internalDir/linkToDir2/foo")));

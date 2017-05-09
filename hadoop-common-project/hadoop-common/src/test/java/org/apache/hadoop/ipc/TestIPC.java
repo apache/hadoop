@@ -807,7 +807,7 @@ public class TestIPC {
       }
       // wait until reader put a call to callQueue, to make sure all readers
       // are blocking on the queue after initialClients threads are started.
-      verify(spy, timeout(100).times(i + 1)).put(Mockito.<Call>anyObject());
+      verify(spy, timeout(5000).times(i + 1)).put(Mockito.<Call>anyObject());
     }
 
     try {

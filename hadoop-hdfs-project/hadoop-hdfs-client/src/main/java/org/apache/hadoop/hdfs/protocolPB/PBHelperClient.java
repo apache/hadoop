@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.inotify.Event;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.BlockType;
@@ -123,6 +124,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmS
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AddingECPolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
@@ -343,6 +345,16 @@ public class PBHelperClient {
       }
     }
     return pinnings;
+  }
+
+  public static List<String> convert(String[] targetIds, int idx) {
+    List<String> ids = new ArrayList<>();
+    if (targetIds != null) {
+      for (; idx < targetIds.length; ++idx) {
+        ids.add(targetIds[idx]);
+      }
+    }
+    return ids;
   }
 
   public static ExtendedBlock convert(ExtendedBlockProto eb) {
@@ -636,6 +648,12 @@ public class PBHelperClient {
     for (BlockTokenIdentifier.AccessMode aMode :
         blockTokenSecret.getAccessModes()) {
       builder.addModes(convert(aMode));
+    }
+    for (StorageType storageType : blockTokenSecret.getStorageTypes()) {
+      builder.addStorageTypes(convertStorageType(storageType));
+    }
+    for (String storageId : blockTokenSecret.getStorageIds()) {
+      builder.addStorageIds(storageId);
     }
     return builder.build();
   }
@@ -1750,6 +1768,9 @@ public class PBHelperClient {
     if (flag.contains(CreateFlag.NEW_BLOCK)) {
       value |= CreateFlagProto.NEW_BLOCK.getNumber();
     }
+    if (flag.contains(CreateFlag.SHOULD_REPLICATE)) {
+      value |= CreateFlagProto.SHOULD_REPLICATE.getNumber();
+    }
     return value;
   }
 
@@ -1962,6 +1983,10 @@ public class PBHelperClient {
     if ((flag & CreateFlagProto.NEW_BLOCK_VALUE)
         == CreateFlagProto.NEW_BLOCK_VALUE) {
       result.add(CreateFlag.NEW_BLOCK);
+    }
+    if ((flag & CreateFlagProto.SHOULD_REPLICATE.getNumber())
+        == CreateFlagProto.SHOULD_REPLICATE.getNumber()) {
+      result.add(CreateFlag.SHOULD_REPLICATE);
     }
     return new EnumSetWritable<>(result, CreateFlag.class);
   }
@@ -2689,6 +2714,28 @@ public class PBHelperClient {
           .setCellSize(policy.getCellSize());
     }
     return builder.build();
+  }
+
+  public static AddingECPolicyResponseProto convertAddingECPolicyResponse(
+      AddingECPolicyResponse response) {
+    AddingECPolicyResponseProto.Builder builder =
+        AddingECPolicyResponseProto.newBuilder()
+        .setPolicy(convertErasureCodingPolicy(response.getPolicy()))
+        .setSucceed(response.isSucceed());
+    if (!response.isSucceed()) {
+      builder.setErrorMsg(response.getErrorMsg());
+    }
+    return builder.build();
+  }
+
+  public static AddingECPolicyResponse convertAddingECPolicyResponse(
+      AddingECPolicyResponseProto proto) {
+    ErasureCodingPolicy policy = convertErasureCodingPolicy(proto.getPolicy());
+    if (proto.getSucceed()) {
+      return new AddingECPolicyResponse(policy);
+    } else {
+      return new AddingECPolicyResponse(policy, proto.getErrorMsg());
+    }
   }
 
   public static HdfsProtos.DatanodeInfosProto convertToProto(

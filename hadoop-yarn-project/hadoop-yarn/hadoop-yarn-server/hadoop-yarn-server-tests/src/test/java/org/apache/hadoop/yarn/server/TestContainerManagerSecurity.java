@@ -66,7 +66,6 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -178,7 +177,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     
     NodeManager nm = yarnCluster.getNodeManager(0);
     
-    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerNM, nm);
+    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerNM);
     
     // Both id should be equal.
     Assert.assertEquals(nmTokenSecretManagerNM.getCurrentKey().getKeyId(),
@@ -412,13 +411,10 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
   }
 
   protected void waitForNMToReceiveNMTokenKey(
-      NMTokenSecretManagerInNM nmTokenSecretManagerNM, NodeManager nm)
+      NMTokenSecretManagerInNM nmTokenSecretManagerNM)
       throws InterruptedException {
     int attempt = 60;
-    ContainerManagerImpl cm =
-        ((ContainerManagerImpl) nm.getNMContext().getContainerManager());
-    while ((cm.getBlockNewContainerRequestsStatus() || nmTokenSecretManagerNM
-        .getNodeId() == null) && attempt-- > 0) {
+    while (nmTokenSecretManagerNM.getNodeId() == null && attempt-- > 0) {
       Thread.sleep(2000);
     }
   }
@@ -627,7 +623,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
         nm.getNMContext().getNMTokenSecretManager();
     String user = "test";
     
-    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerInNM, nm);
+    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerInNM);
 
     NodeId nodeId = nm.getNMContext().getNodeId();
     
@@ -722,7 +718,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
         nm.getNMContext().getNMTokenSecretManager();
     String user = "test";
 
-    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerInNM, nm);
+    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerInNM);
 
     NodeId nodeId = nm.getNMContext().getNodeId();
 

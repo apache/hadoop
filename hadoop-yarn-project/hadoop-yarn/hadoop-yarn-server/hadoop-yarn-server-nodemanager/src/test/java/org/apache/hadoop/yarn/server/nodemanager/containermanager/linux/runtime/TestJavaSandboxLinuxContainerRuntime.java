@@ -47,7 +47,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.yarn.api.ApplicationConstants.Environment.JAVA_HOME;
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.CHAINED_COMMAND_REGEX;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.LOG;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.MULTI_COMMAND_REGEX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.CLEAN_CMD_REGEX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.CONTAINS_JAVA_CMD;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.POLICY_FILE;
@@ -293,8 +294,21 @@ public class TestJavaSandboxLinuxContainerRuntime {
 
   @Test
   public void testChainedCmdRegex(){
-    Assert.assertTrue("cmd1 && cmd2 || cmd3".matches(CHAINED_COMMAND_REGEX));
-    Assert.assertFalse("cmd1 &> logfile".matches(CHAINED_COMMAND_REGEX));
+    String[] multiCmds = {
+        "cmd1 && cmd2",
+        "cmd1 || cmd2",
+        "cmd1 `cmd2`",
+        "cmd1 $(cmd2)",
+        "cmd1; \\\n cmd2",
+        "cmd1; cmd2",
+        "cmd1|&cmd2",
+        "cmd1|cmd2",
+        "cmd1&cmd2"
+    };
+
+    Arrays.stream(multiCmds)
+        .forEach(cmd -> Assert.assertTrue(cmd.matches(MULTI_COMMAND_REGEX)));
+    Assert.assertFalse("cmd1 &> logfile".matches(MULTI_COMMAND_REGEX));
   }
 
   @Test

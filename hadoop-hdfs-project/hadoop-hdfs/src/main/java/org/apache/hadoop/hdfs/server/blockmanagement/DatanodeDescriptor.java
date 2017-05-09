@@ -35,6 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.net.DFSTopologyNodeImpl;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -494,7 +495,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
       // blocks.
       for (final DatanodeStorageInfo storageInfo : excessStorages.values()) {
         if (storageInfo.numBlocks() == 0) {
-          storageMap.remove(storageInfo.getStorageID());
+          DatanodeStorageInfo info =
+              storageMap.remove(storageInfo.getStorageID());
+          if (!hasStorageType(info.getStorageType())) {
+            // we removed a storage, and as result there is no more such storage
+            // type, inform the parent about this.
+            if (getParent() instanceof DFSTopologyNodeImpl) {
+              ((DFSTopologyNodeImpl) getParent()).childRemoveStorage(getName(),
+                  info.getStorageType());
+            }
+          }
           LOG.info("Removed storage {} from DataNode {}", storageInfo, this);
         } else {
           // This can occur until all block reports are received.
@@ -519,18 +529,35 @@ public class DatanodeDescriptor extends DatanodeInfo {
     private int index = 0;
     private final List<Iterator<BlockInfo>> iterators;
     
-    private BlockIterator(final DatanodeStorageInfo... storages) {
+    private BlockIterator(final int startBlock,
+                          final DatanodeStorageInfo... storages) {
+      if(startBlock < 0) {
+        throw new IllegalArgumentException(
+            "Illegal value startBlock = " + startBlock);
+      }
       List<Iterator<BlockInfo>> iterators = new ArrayList<>();
+      int s = startBlock;
+      int sumBlocks = 0;
       for (DatanodeStorageInfo e : storages) {
-        iterators.add(e.getBlockIterator());
+        int numBlocks = e.numBlocks();
+        sumBlocks += numBlocks;
+        if(sumBlocks <= startBlock) {
+          s -= numBlocks;
+        } else {
+          iterators.add(e.getBlockIterator());
+        }
       }
       this.iterators = Collections.unmodifiableList(iterators);
+      // skip to the storage containing startBlock
+      for(; s > 0 && hasNext(); s--) {
+        next();
+      }
     }
 
     @Override
     public boolean hasNext() {
       update();
-      return !iterators.isEmpty() && iterators.get(index).hasNext();
+      return index < iterators.size() && iterators.get(index).hasNext();
     }
 
     @Override
@@ -552,7 +579,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   Iterator<BlockInfo> getBlockIterator() {
-    return new BlockIterator(getStorageInfos());
+    return getBlockIterator(0);
+  }
+
+  /**
+   * Get iterator, which starts iterating from the specified block.
+   */
+  Iterator<BlockInfo> getBlockIterator(final int startBlock) {
+    return new BlockIterator(startBlock, getStorageInfos());
   }
 
   void incrementPendingReplicationWithoutTargets() {
@@ -887,9 +921,20 @@ public class DatanodeDescriptor extends DatanodeInfo {
   DatanodeStorageInfo updateStorage(DatanodeStorage s) {
     synchronized (storageMap) {
       DatanodeStorageInfo storage = storageMap.get(s.getStorageID());
+      DFSTopologyNodeImpl parent = null;
+      if (getParent() instanceof DFSTopologyNodeImpl) {
+        parent = (DFSTopologyNodeImpl) getParent();
+      }
+
       if (storage == null) {
         LOG.info("Adding new storage ID {} for DN {}", s.getStorageID(),
             getXferAddr());
+        StorageType type = s.getStorageType();
+        if (!hasStorageType(type) && parent != null) {
+          // we are about to add a type this node currently does not have,
+          // inform the parent that a new type is added to this datanode
+          parent.childAddStorage(getName(), s.getStorageType());
+        }
         storage = new DatanodeStorageInfo(this, s);
         storageMap.put(s.getStorageID(), storage);
       } else if (storage.getState() != s.getState() ||
@@ -897,8 +942,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
         // For backwards compatibility, make sure that the type and
         // state are updated. Some reports from older datanodes do
         // not include these fields so we may have assumed defaults.
+        StorageType oldType = storage.getStorageType();
+        StorageType newType = s.getStorageType();
+        if (oldType != newType && !hasStorageType(newType) && parent != null) {
+          // we are about to add a type this node currently does not have
+          // inform the parent that a new type is added to this datanode
+          // if old == new, nothing's changed. don't bother
+          parent.childAddStorage(getName(), newType);
+        }
         storage.updateFromStorage(s);
         storageMap.put(storage.getStorageID(), storage);
+        if (oldType != newType && !hasStorageType(oldType) && parent != null) {
+          // there is no more old type storage on this datanode, inform parent
+          // about this change.
+          parent.childRemoveStorage(getName(), oldType);
+        }
       }
       return storage;
     }

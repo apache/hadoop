@@ -34,42 +34,67 @@
  * operating systems that support it.
  */
 #ifdef HAVE_BETTER_TLS
-  #define THREAD_LOCAL_STORAGE_GET_QUICK() \
-    static __thread JNIEnv *quickTlsEnv = NULL; \
+  #define THREAD_LOCAL_STORAGE_GET_QUICK(state) \
+    static __thread struct ThreadLocalState *quickTlsEnv = NULL; \
     { \
       if (quickTlsEnv) { \
-        return quickTlsEnv; \
+        *state = quickTlsEnv; \
       } \
     }
 
-  #define THREAD_LOCAL_STORAGE_SET_QUICK(env) \
+  #define THREAD_LOCAL_STORAGE_SET_QUICK(state) \
     { \
-      quickTlsEnv = (env); \
+      quickTlsEnv = (state); \
     }
 #else
-  #define THREAD_LOCAL_STORAGE_GET_QUICK()
-  #define THREAD_LOCAL_STORAGE_SET_QUICK(env)
+  #define THREAD_LOCAL_STORAGE_GET_QUICK(state)
+  #define THREAD_LOCAL_STORAGE_SET_QUICK(state)
 #endif
 
-/**
- * Gets the JNIEnv in thread-local storage for the current thread.  If the call
- * succeeds, and there is a JNIEnv associated with this thread, then returns 0
- * and populates env.  If the call succeeds, but there is no JNIEnv associated
- * with this thread, then returns 0 and sets JNIEnv to NULL.  If the call fails,
- * then returns non-zero.  Only one thread at a time may execute this function.
- * The caller is responsible for enforcing mutual exclusion.
- *
- * @param env JNIEnv out parameter
- * @return 0 if successful, non-zero otherwise
- */
-int threadLocalStorageGet(JNIEnv **env);
+struct ThreadLocalState {
+  /* The JNIEnv associated with the current thread */
+  JNIEnv *env;
+  /* The last exception stack trace that occured on this thread */
+  char *lastExceptionStackTrace;
+  /* The last exception root cause that occured on this thread */
+  char *lastExceptionRootCause;
+};
 
 /**
- * Sets the JNIEnv in thread-local storage for the current thread.
+ * The function that is called whenever a thread with libhdfs thread local data
+ * is destroyed.
  *
- * @param env JNIEnv to set
+ * @param v         The thread-local data
+ */
+void hdfsThreadDestructor(void *v);
+
+/**
+ * Creates an object of ThreadLocalState.
+ *
+ * @return The newly created object if successful, NULL otherwise.
+ */
+struct ThreadLocalState* threadLocalStorageCreate();
+
+/**
+ * Gets the ThreadLocalState in thread-local storage for the current thread.
+ * If the call succeeds, and there is a ThreadLocalState associated with this
+ * thread, then returns 0 and populates 'state'.  If the call succeeds, but
+ * there is no ThreadLocalState associated with this thread, then returns 0
+ * and sets ThreadLocalState to NULL. If the call fails, then returns non-zero.
+ * Only one thread at a time may execute this function. The caller is
+ * responsible for enforcing mutual exclusion.
+ *
+ * @param env ThreadLocalState out parameter
  * @return 0 if successful, non-zero otherwise
  */
-int threadLocalStorageSet(JNIEnv *env);
+int threadLocalStorageGet(struct ThreadLocalState **state);
+
+/**
+ * Sets the ThreadLocalState in thread-local storage for the current thread.
+ *
+ * @param env ThreadLocalState to set
+ * @return 0 if successful, non-zero otherwise
+ */
+int threadLocalStorageSet(struct ThreadLocalState *state);
 
 #endif

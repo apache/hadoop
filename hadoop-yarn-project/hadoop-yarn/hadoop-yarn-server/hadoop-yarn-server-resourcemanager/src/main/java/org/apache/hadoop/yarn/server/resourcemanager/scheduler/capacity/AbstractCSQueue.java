@@ -38,6 +38,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
@@ -401,6 +402,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setCurrentCapacity(getUsedCapacity());
     queueInfo.setQueueStatistics(getQueueStatistics());
     queueInfo.setPreemptionDisabled(preemptionDisabled);
+    queueInfo.setQueueConfigurations(getQueueConfigurations());
     return queueInfo;
   }
 
@@ -432,6 +434,29 @@ public abstract class AbstractCSQueue implements CSQueue {
     return stats;
   }
   
+  public Map<String, QueueConfigurations> getQueueConfigurations() {
+    Map<String, QueueConfigurations> queueConfigurations = new HashMap<>();
+    Set<String> nodeLabels = getNodeLabelsForQueue();
+    for (String nodeLabel : nodeLabels) {
+      QueueConfigurations queueConfiguration =
+          recordFactory.newRecordInstance(QueueConfigurations.class);
+      float capacity = queueCapacities.getCapacity(nodeLabel);
+      float absoluteCapacity = queueCapacities.getAbsoluteCapacity(nodeLabel);
+      float maxCapacity = queueCapacities.getMaximumCapacity(nodeLabel);
+      float absMaxCapacity =
+          queueCapacities.getAbsoluteMaximumCapacity(nodeLabel);
+      float maxAMPercentage =
+          queueCapacities.getMaxAMResourcePercentage(nodeLabel);
+      queueConfiguration.setCapacity(capacity);
+      queueConfiguration.setAbsoluteCapacity(absoluteCapacity);
+      queueConfiguration.setMaxCapacity(maxCapacity);
+      queueConfiguration.setAbsoluteMaxCapacity(absMaxCapacity);
+      queueConfiguration.setMaxAMPercentage(maxAMPercentage);
+      queueConfigurations.put(nodeLabel, queueConfiguration);
+    }
+    return queueConfigurations;
+  }
+
   @Private
   public Resource getMaximumAllocation() {
     return maximumAllocation;

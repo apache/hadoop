@@ -15,25 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.protocol;
 
-package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
-
-import org.apache.hadoop.yarn.api.records.ReservationDefinition;
-import org.apache.hadoop.yarn.api.records.ReservationRequest;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Sets the earliest start time of a stage as the job arrival time.
+ * An Exception indicates the error when adding an ErasureCoding policy.
  */
-public class StageEarliestStartByJobArrival implements StageEarliestStart {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public class IllegalECPolicyException extends Exception {
+  static final long serialVersionUID = 1L;
 
-  @Override
-  public long setEarliestStartTime(Plan plan,
-      ReservationDefinition reservation, int index, ReservationRequest current,
-      long stageDeadline) {
-
-    return reservation.getArrival();
-
+  public IllegalECPolicyException(String msg) {
+    super(msg);
   }
-
 }

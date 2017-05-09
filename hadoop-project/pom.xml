@@ -88,8 +88,9 @@
     <zookeeper.version>3.4.9</zookeeper.version>
     <curator.version>2.12.0</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
+    <spotbugs.version>3.1.0-RC1</spotbugs.version>
 
-    <tomcat.version>6.0.48</tomcat.version>
+    <guava.version>21.0</guava.version>
     <guice.version>4.0</guice.version>
     <joda-time.version>2.9.4</joda-time.version>
 
@@ -146,6 +147,12 @@
         <groupId>com.squareup.okhttp</groupId>
         <artifactId>okhttp</artifactId>
         <version>2.4.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.okhttp3</groupId>
+        <artifactId>mockwebserver</artifactId>
+        <version>3.7.0</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>jdiff</groupId>
@@ -488,7 +495,7 @@
         <artifactId>hadoop-openstack</artifactId>
         <version>${project.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-azure</artifactId>
@@ -522,7 +529,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>21.0</version>
+        <version>${guava.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -675,7 +682,7 @@
         <artifactId>guice</artifactId>
         <version>${guice.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>cglib</groupId>
         <artifactId>cglib</artifactId>
@@ -1199,7 +1206,7 @@
        <version>1.46</version>
        <scope>test</scope>
      </dependency>
-      
+
      <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
@@ -1391,6 +1398,13 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
           <version>${findbugs.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>

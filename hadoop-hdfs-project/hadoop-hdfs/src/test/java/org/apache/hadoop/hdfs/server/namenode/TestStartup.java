@@ -425,8 +425,9 @@ public class TestStartup {
       SecondaryNameNode.main(argv);
       fail("Failed to handle runtime exceptions during SNN startup!");
     } catch (ExitException ee) {
-      GenericTestUtils.assertExceptionContains("ExitException", ee);
-      assertTrue("Didn't termiated properly ", ExitUtil.terminateCalled());
+      GenericTestUtils.assertExceptionContains(
+          ExitUtil.EXIT_EXCEPTION_MESSAGE, ee);
+      assertTrue("Didn't terminate properly ", ExitUtil.terminateCalled());
     }
   }
 

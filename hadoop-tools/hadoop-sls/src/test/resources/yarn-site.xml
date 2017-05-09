@@ -17,7 +17,7 @@
 <configuration>
   <property>
     <name>yarn.resourcemanager.scheduler.class</name>
-	  <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
     <!-- <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value> -->
   </property>
 
@@ -79,4 +79,12 @@
     <name>yarn.scheduler.fair.assignmultiple</name>
     <value>true</value>
   </property>
+
+
+  <property>
+    <description>Enable reservation system.</description>
+    <name>yarn.resourcemanager.reservation-system.enable</name>
+    <value>true</value>
+  </property>
+
 </configuration>

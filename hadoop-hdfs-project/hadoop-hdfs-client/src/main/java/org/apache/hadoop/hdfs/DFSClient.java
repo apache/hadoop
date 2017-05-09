@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
+import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -231,7 +232,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final int smallBufferSize;
-  private URI keyProviderUri = null;
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -2763,6 +2763,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  public AddingECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies) throws IOException {
+    checkOpen();
+    return namenode.addErasureCodingPolicies(policies);
+  }
+
   public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
     checkOpen();
     return new DFSInotifyEventInputStream(namenode, tracer);
@@ -2894,10 +2900,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   URI getKeyProviderUri() throws IOException {
-    if (keyProviderUri != null) {
-      return keyProviderUri;
-    }
-
+    URI keyProviderUri = null;
     // Lookup the secret in credentials object for namenodeuri.
     Credentials credentials = ugi.getCredentials();
     byte[] keyProviderUriBytes = credentials.getSecretKey(getKeyProviderMapKey());
@@ -2929,14 +2932,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return clientContext.getKeyProviderCache().get(conf, getKeyProviderUri());
   }
 
-  /*
-   * Should be used only for testing.
-   */
-  @VisibleForTesting
-  public void setKeyProviderUri(URI providerUri) {
-    this.keyProviderUri = providerUri;
-  }
-
   @VisibleForTesting
   public void setKeyProvider(KeyProvider provider) {
     clientContext.getKeyProviderCache().setKeyProvider(conf, provider);
@@ -2946,7 +2941,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Probe for encryption enabled on this filesystem.
    * @return true if encryption is enabled
    */
-  public boolean isHDFSEncryptionEnabled() throws IOException{
+  boolean isHDFSEncryptionEnabled() throws IOException {
     return getKeyProviderUri() != null;
   }
 

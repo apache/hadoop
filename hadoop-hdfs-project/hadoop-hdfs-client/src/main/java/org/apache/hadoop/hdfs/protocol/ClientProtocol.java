@@ -154,8 +154,10 @@ public interface ClientProtocol {
    * @param src path of the file being created.
    * @param masked masked permission.
    * @param clientName name of the current client.
-   * @param flag indicates whether the file should be
-   * overwritten if it already exists or create if it does not exist or append.
+   * @param flag indicates whether the file should be overwritten if it already
+   *             exists or create if it does not exist or append, or whether the
+   *             file should be a replicate file, no matter what its ancestor's
+   *             replication or erasure coding policy is.
    * @param createParent create missing parent directory if true
    * @param replication block replication factor.
    * @param blockSize maximum block size.
@@ -163,7 +165,9 @@ public interface ClientProtocol {
    * @param ecPolicyName the name of erasure coding policy. A null value means
    *                     this file will inherit its parent directory's policy,
    *                     either traditional replication or erasure coding
-   *                     policy.
+   *                     policy. ecPolicyName and SHOULD_REPLICATE CreateFlag
+   *                     are mutually exclusive. It's invalid to set both
+   *                     SHOULD_REPLICATE flag and a non-null ecPolicyName.
    *
    * @return the status of the created file, it could be null if the server
    *           doesn't support returning the file status
@@ -1519,6 +1523,17 @@ public interface ClientProtocol {
   @AtMostOnce
   void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException;
+
+  /**
+   * Add Erasure coding policies.
+   *
+   * @param policies The user defined ec policy list to add.
+   * @return Return the response list of adding operations.
+   * @throws IOException
+   */
+  @AtMostOnce
+  AddingECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies) throws IOException;
 
   /**
    * Get the erasure coding policies loaded in Namenode

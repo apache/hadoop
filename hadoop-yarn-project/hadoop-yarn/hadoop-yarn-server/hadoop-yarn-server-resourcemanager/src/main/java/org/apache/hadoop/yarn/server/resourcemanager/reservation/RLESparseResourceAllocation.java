@@ -132,6 +132,7 @@ public class RLESparseResourceAllocation {
    * Returns the capacity, i.e. total resources allocated at the specified point
    * of time.
    *
+   * @param tick timeStap at which resource needs to be known
    * @return the resources allocated at the specified time
    */
   public Resource getCapacityAtTime(long tick) {
@@ -307,6 +308,10 @@ public class RLESparseResourceAllocation {
     } finally {
       readLock.unlock();
     }
+  }
+
+  public ResourceCalculator getResourceCalculator() {
+    return resourceCalculator;
   }
 
   /**
@@ -531,6 +536,52 @@ public class RLESparseResourceAllocation {
    */
   public enum RLEOperator {
     add, subtract, min, max, subtractTestNonNegative
+  }
+
+  /**
+   * Get the maximum capacity across specified time instances. The search-space
+   * is specified using the starting value, tick, and the periodic interval for
+   * search. Maximum resource allocation across tick, tick + period,
+   * tick + 2 * period,..., tick + n * period .. is returned.
+   *
+   * @param tick the starting time instance
+   * @param period interval at which capacity is evaluated
+   * @return maximum resource allocation
+   */
+  public Resource getMaximumPeriodicCapacity(long tick, long period) {
+    Resource maxCapacity = ZERO_RESOURCE;
+    if (!cumulativeCapacity.isEmpty()) {
+      Long lastKey = cumulativeCapacity.lastKey();
+      for (long t = tick; t <= lastKey; t = t + period) {
+        maxCapacity = Resources.componentwiseMax(maxCapacity,
+            cumulativeCapacity.floorEntry(t).getValue());
+      }
+    }
+    return maxCapacity;
+  }
+
+  /**
+   * Get the minimum capacity in the specified time range.
+   *
+   * @param interval the {@link ReservationInterval} to be searched
+   * @return minimum resource allocation
+   */
+  public Resource getMinimumCapacityInInterval(ReservationInterval interval) {
+    Resource minCapacity = Resource.newInstance(
+        Integer.MAX_VALUE, Integer.MAX_VALUE);
+    long start = interval.getStartTime();
+    long end = interval.getEndTime();
+    NavigableMap<Long, Resource> capacityRange =
+        this.getRangeOverlapping(start, end).getCumulative();
+    if (!capacityRange.isEmpty()) {
+      for (Map.Entry<Long, Resource> entry : capacityRange.entrySet()) {
+        if (entry.getValue() != null) {
+          minCapacity = Resources.componentwiseMin(minCapacity,
+              entry.getValue());
+        }
+      }
+    }
+    return minCapacity;
   }
 
 }

@@ -498,29 +498,98 @@ static JNIEnv* getGlobalJNIEnv(void)
  */
 JNIEnv* getJNIEnv(void)
 {
-    JNIEnv *env;
-    THREAD_LOCAL_STORAGE_GET_QUICK();
+    struct ThreadLocalState *state = NULL;
+    THREAD_LOCAL_STORAGE_GET_QUICK(&state);
+    if (state) return state->env;
+
     mutexLock(&jvmMutex);
-    if (threadLocalStorageGet(&env)) {
+    if (threadLocalStorageGet(&state)) {
       mutexUnlock(&jvmMutex);
       return NULL;
     }
-    if (env) {
+    if (state) {
       mutexUnlock(&jvmMutex);
-      return env;
+
+      // Free any stale exception strings.
+      free(state->lastExceptionRootCause);
+      free(state->lastExceptionStackTrace);
+      state->lastExceptionRootCause = NULL;
+      state->lastExceptionStackTrace = NULL;
+
+      return state->env;
     }
 
-    env = getGlobalJNIEnv();
+    /* Create a ThreadLocalState for this thread */
+    state = threadLocalStorageCreate();
+    if (!state) {
+      fprintf(stderr, "getJNIEnv: Unable to create ThreadLocalState\n");
+      return NULL;
+    }
+    state->env = getGlobalJNIEnv();
     mutexUnlock(&jvmMutex);
-    if (!env) {
-      fprintf(stderr, "getJNIEnv: getGlobalJNIEnv failed\n");
-      return NULL;
+    if (!state->env) {
+      goto fail;
     }
-    if (threadLocalStorageSet(env)) {
-      return NULL;
+    if (threadLocalStorageSet(state)) {
+      goto fail;
     }
-    THREAD_LOCAL_STORAGE_SET_QUICK(env);
-    return env;
+    THREAD_LOCAL_STORAGE_SET_QUICK(state);
+
+    return state->env;
+
+fail:
+    fprintf(stderr, "getJNIEnv: getGlobalJNIEnv failed\n");
+    hdfsThreadDestructor(state);
+    return NULL;
+}
+
+char* getLastTLSExceptionRootCause()
+{
+    struct ThreadLocalState *state = NULL;
+    THREAD_LOCAL_STORAGE_GET_QUICK(&state);
+    if (!state) {
+        mutexLock(&jvmMutex);
+        if (threadLocalStorageGet(&state)) {
+            mutexUnlock(&jvmMutex);
+            return NULL;
+        }
+        mutexUnlock(&jvmMutex);
+    }
+    return state->lastExceptionRootCause;
+}
+
+char* getLastTLSExceptionStackTrace()
+{
+    struct ThreadLocalState *state = NULL;
+    THREAD_LOCAL_STORAGE_GET_QUICK(&state);
+    if (!state) {
+        mutexLock(&jvmMutex);
+        if (threadLocalStorageGet(&state)) {
+            mutexUnlock(&jvmMutex);
+            return NULL;
+        }
+        mutexUnlock(&jvmMutex);
+    }
+    return state->lastExceptionStackTrace;
+}
+
+void setTLSExceptionStrings(const char *rootCause, const char *stackTrace)
+{
+    struct ThreadLocalState *state = NULL;
+    THREAD_LOCAL_STORAGE_GET_QUICK(&state);
+    if (!state) {
+        mutexLock(&jvmMutex);
+        if (threadLocalStorageGet(&state)) {
+            mutexUnlock(&jvmMutex);
+            return;
+        }
+        mutexUnlock(&jvmMutex);
+    }
+
+    free(state->lastExceptionRootCause);
+    free(state->lastExceptionStackTrace);
+    state->lastExceptionRootCause = (char*)rootCause;
+    state->lastExceptionStackTrace = (char*)stackTrace;
 }
 
 int javaObjectIsOfClass(JNIEnv *env, jobject obj, const char *name)

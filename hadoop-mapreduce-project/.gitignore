@@ -29,7 +29,6 @@ conf/core-site.xml
 conf/hdfs-site.xml
 conf/hadoop-env.sh
 conf/hadoop-site.xml
-conf/mapred-site.xml
 conf/hadoop-policy.xml
 conf/capacity-scheduler.xml
 conf/fair-scheduler.xml

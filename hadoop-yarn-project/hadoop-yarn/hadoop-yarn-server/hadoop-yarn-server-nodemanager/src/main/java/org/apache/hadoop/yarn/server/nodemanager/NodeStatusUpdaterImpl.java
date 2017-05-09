@@ -428,8 +428,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         .verifyRMRegistrationResponseForNodeLabels(regNMResponse));
 
     LOG.info(successfullRegistrationMsg);
-    LOG.info("Notifying ContainerManager to unblock new container-requests");
-    this.context.getContainerManager().setBlockNewContainerRequests(false);
   }
 
   private List<ApplicationId> createKeepAliveApplicationList() {
@@ -988,6 +986,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       return true;
     }
     return false;
+  }
+
+  @Override
+  public void reportException(Exception ex) {
+    healthChecker.reportException(ex);
+    sendOutofBandHeartBeat();
   }
 
   private List<LogAggregationReport> getLogAggregationReportsForApps(

@@ -318,7 +318,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  ReplicaHandler createTemporary(StorageType storageType,
+  ReplicaHandler createTemporary(StorageType storageType, String storageId,
       ExtendedBlock b) throws IOException;
 
   /**
@@ -328,7 +328,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  ReplicaHandler createRbw(StorageType storageType,
+  ReplicaHandler createRbw(StorageType storageType, String storageId,
       ExtendedBlock b, boolean allowLazyPersist) throws IOException;
 
   /**
@@ -623,7 +623,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
      * Move block from one storage to another storage
      */
    ReplicaInfo moveBlockAcrossStorage(final ExtendedBlock block,
-        StorageType targetStorageType) throws IOException;
+        StorageType targetStorageType, String storageId) throws IOException;
 
   /**
    * Set a block to be pinned on this datanode so that it cannot be moved
