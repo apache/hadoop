@@ -46,6 +46,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -77,8 +78,8 @@ import org.apache.htrace.core.TraceScope;
  * Each stripe contains a sequence of cells.
  */
 @InterfaceAudience.Private
-public class DFSStripedOutputStream extends DFSOutputStream {
-
+public class DFSStripedOutputStream extends DFSOutputStream
+    implements StreamCapabilities {
   private static final ByteBufferPool BUFFER_POOL = new ElasticByteBufferPool();
 
   static class MultipleBlockingQueue<T> {
@@ -807,6 +808,12 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
   private int stripeDataSize() {
     return numDataBlocks * cellSize;
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    // StreamCapabilities like hsync / hflush are not supported yet.
+    return false;
   }
 
   @Override

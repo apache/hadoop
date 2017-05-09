@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataOutputStream extends DataOutputStream
-    implements Syncable, CanSetDropBehind {
+    implements Syncable, CanSetDropBehind, StreamCapabilities {
   private final OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
@@ -109,6 +109,14 @@ public class FSDataOutputStream extends DataOutputStream
   @InterfaceAudience.LimitedPrivate({"HDFS"})
   public OutputStream getWrappedStream() {
     return wrappedStream;
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    if (wrappedStream instanceof StreamCapabilities) {
+      return ((StreamCapabilities) wrappedStream).hasCapability(capability);
+    }
+    return false;
   }
 
   @Override  // Syncable
