@@ -2005,7 +2005,7 @@ public class DFSOutputStream extends FSOutputSummer
    * Used in test only.
    */
   @VisibleForTesting
-  void setBytesCurBlock(final long bytesCurBlock) {
+  synchronized void setBytesCurBlock(final long bytesCurBlock) {
     this.bytesCurBlock = bytesCurBlock;
   }
 
