@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -29,7 +31,9 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
 /** Base of specific file system FSDataOutputStreamBuilder. */
-public class FSDataOutputStreamBuilder{
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class FSDataOutputStreamBuilder {
   private Path path = null;
   private FsPermission permission = null;
   private Integer bufferSize;
@@ -41,7 +45,7 @@ public class FSDataOutputStreamBuilder{
 
   private final FileSystem fs;
 
-  public FSDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+  protected FSDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
     fs = fileSystem;
     path = p;
   }
