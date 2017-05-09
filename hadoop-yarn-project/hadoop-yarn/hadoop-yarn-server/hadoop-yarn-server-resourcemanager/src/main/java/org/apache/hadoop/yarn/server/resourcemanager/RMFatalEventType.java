@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public enum RMFatalEventType {
   // Source <- Store
+  STATE_STORE_FENCED,
   STATE_STORE_OP_FAILED,
 
   // Source <- Embedded Elector
