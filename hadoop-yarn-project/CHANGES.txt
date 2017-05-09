@@ -8,6 +8,9 @@ Release 2.7.4 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-6457. Allow custom SSL configuration to be supplied in WebApps.
+    (Sanjay M Pujare via haibochen)
+
   OPTIMIZATIONS
 
     YARN-5262. Optimize sending RMNodeFinishedContainersPulledByAMEvent for
