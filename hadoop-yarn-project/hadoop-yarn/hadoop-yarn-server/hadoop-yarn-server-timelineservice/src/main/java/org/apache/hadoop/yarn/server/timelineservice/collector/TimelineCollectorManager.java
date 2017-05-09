@@ -219,8 +219,10 @@ public class TimelineCollectorManager extends AbstractService {
   @Override
   protected void serviceStop() throws Exception {
     if (collectors != null && collectors.size() > 1) {
-      for (TimelineCollector c : collectors.values()) {
-        c.serviceStop();
+      synchronized (collectors) {
+        for (TimelineCollector c : collectors.values()) {
+          c.serviceStop();
+        }
       }
     }
     // stop the flusher first
