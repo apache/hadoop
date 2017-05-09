@@ -39,7 +39,11 @@ public interface CGroupsHandler {
     CPU("cpu"),
     NET_CLS("net_cls"),
     BLKIO("blkio"),
-    MEMORY("memory");
+    MEMORY("memory"),
+    CPUACCT("cpuacct"),
+    CPUSET("cpuset"),
+    FREEZER("freezer"),
+    DEVICES("devices");
 
     private final String name;
 
