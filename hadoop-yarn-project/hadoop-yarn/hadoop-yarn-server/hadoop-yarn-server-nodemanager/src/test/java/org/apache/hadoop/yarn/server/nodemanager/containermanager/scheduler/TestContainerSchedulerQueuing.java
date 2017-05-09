@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
@@ -121,7 +122,8 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   protected ContainerExecutor createContainerExecutor() {
     DefaultContainerExecutor exec = new DefaultContainerExecutor() {
       @Override
-      public int launchContainer(ContainerStartContext ctx) throws IOException {
+      public int launchContainer(ContainerStartContext ctx)
+          throws IOException, ConfigurationException {
         if (delayContainers) {
           try {
             Thread.sleep(10000);
