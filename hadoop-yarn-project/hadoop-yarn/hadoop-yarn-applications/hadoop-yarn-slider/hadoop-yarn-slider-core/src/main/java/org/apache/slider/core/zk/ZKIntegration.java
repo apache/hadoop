@@ -52,7 +52,7 @@ public class ZKIntegration implements Watcher, Closeable {
   public static final String SVC_SLIDER = "/" + ZK_SERVICES + "/" + ZK_SLIDER;
   public static final String SVC_SLIDER_USERS = SVC_SLIDER + "/" + ZK_USERS;
 
-  public static final List<String> ZK_USERS_PATH_LIST = new ArrayList<String>();
+  private static final List<String> ZK_USERS_PATH_LIST = new ArrayList<String>();
   static {
     ZK_USERS_PATH_LIST.add(ZK_SERVICES);
     ZK_USERS_PATH_LIST.add(ZK_SLIDER);

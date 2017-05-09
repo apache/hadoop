@@ -150,10 +150,10 @@ public class RoleLaunchService
         containerLauncher.setupUGI();
         containerLauncher.putEnv(envVars);
 
-        String failedInstance = role.failedInstanceName.poll();
+        RoleInstance failedInstance = role.failedInstances.poll();
         RoleInstance instance;
         if (failedInstance != null) {
-          instance = new RoleInstance(container, role, failedInstance);
+          instance = new RoleInstance(container, failedInstance);
         } else {
           instance = new RoleInstance(container, role);
         }

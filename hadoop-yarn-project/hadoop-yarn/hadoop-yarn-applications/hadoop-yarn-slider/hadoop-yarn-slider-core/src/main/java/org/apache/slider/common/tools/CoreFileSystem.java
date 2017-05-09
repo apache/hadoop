@@ -597,53 +597,6 @@ public class CoreFileSystem {
     providerResources.put(SliderKeys.SLIDER_DEPENDENCY_LOCALIZED_DIR_LINK, lc);
   }
 
-  /**
-   * Copy local file(s) to destination HDFS directory. If {@code localPath} is a
-   * local directory then all files matching the {@code filenameFilter}
-   * (optional) are copied, otherwise {@code filenameFilter} is ignored.
-   * 
-   * @param localPath
-   *          a local file or directory path
-   * @param filenameFilter
-   *          if {@code localPath} is a directory then filenameFilter is used as
-   *          a filter (if specified)
-   * @param destDir
-   *          the destination HDFS directory where the file(s) should be copied
-   * @param fp
-   *          file permissions of all the directories and files that will be
-   *          created in this api
-   * @throws IOException
-   */
-  public void copyLocalFilesToHdfs(File localPath,
-      FilenameFilter filenameFilter, Path destDir, FsPermission fp)
-      throws IOException {
-    if (localPath == null || destDir == null) {
-      throw new IOException("Either localPath or destDir is null");
-    }
-    fileSystem.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
-        "000");
-    fileSystem.mkdirs(destDir, fp);
-    if (localPath.isDirectory()) {
-      // copy all local files under localPath to destDir (honoring filename
-      // filter if provided
-      File[] localFiles = localPath.listFiles(filenameFilter);
-      Path[] localFilePaths = new Path[localFiles.length];
-      int i = 0;
-      for (File localFile : localFiles) {
-        localFilePaths[i++] = new Path(localFile.getPath());
-      }
-      log.info("Copying {} files from {} to {}", i, localPath.toURI(),
-          destDir.toUri());
-      fileSystem.copyFromLocalFile(false, true, localFilePaths, destDir);
-    } else {
-      log.info("Copying file {} to {}", localPath.toURI(), destDir.toUri());
-      fileSystem.copyFromLocalFile(false, true, new Path(localPath.getPath()),
-          destDir);
-    }
-    // set permissions for all the files created in the destDir
-    fileSystem.setPermission(destDir, fp);
-  }
-
   public void copyLocalFileToHdfs(File localPath,
       Path destPath, FsPermission fp)
       throws IOException {

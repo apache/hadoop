@@ -25,7 +25,7 @@ public enum ConfigFormat {
   JSON("json"),
   PROPERTIES("properties"),
   XML("xml"),
-  HADOOP_XML("hadoop-xml"),
+  HADOOP_XML("hadoop_xml"),
   ENV("env"),
   TEMPLATE("template"),
   YAML("yaml"),

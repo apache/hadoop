@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.slider.api.resource.Application;
+import org.apache.slider.common.tools.CoreFileSystem;
 import org.apache.slider.providers.ProviderRole;
 
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public class AppStateBindingInfo {
   public Path historyPath;
   public List<Container> liveContainers = new ArrayList<>(0);
   public ContainerReleaseSelector releaseSelector = new SimpleReleaseSelector();
+  public String serviceHdfsDir = "";
   /** node reports off the RM. */
   public List<NodeReport> nodeReports = new ArrayList<>(0);
 

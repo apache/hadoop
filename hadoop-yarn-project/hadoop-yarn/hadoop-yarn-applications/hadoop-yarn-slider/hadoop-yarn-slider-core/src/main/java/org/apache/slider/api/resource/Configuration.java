@@ -105,10 +105,7 @@ public class Configuration implements Serializable {
   }
 
   public long getPropertyLong(String name, long defaultValue) {
-    if (name == null) {
-      return defaultValue;
-    }
-    String value = properties.get(name.trim());
+    String value = getProperty(name);
     if (StringUtils.isEmpty(value)) {
       return defaultValue;
     }
@@ -116,10 +113,7 @@ public class Configuration implements Serializable {
   }
 
   public int getPropertyInt(String name, int defaultValue) {
-    if (name == null) {
-      return defaultValue;
-    }
-    String value = properties.get(name.trim());
+    String value = getProperty(name);
     if (StringUtils.isEmpty(value)) {
       return defaultValue;
     }
@@ -127,10 +121,7 @@ public class Configuration implements Serializable {
   }
 
   public boolean getPropertyBool(String name, boolean defaultValue) {
-    if (name == null) {
-      return defaultValue;
-    }
-    String value = properties.get(name.trim());
+    String value = getProperty(name);
     if (StringUtils.isEmpty(value)) {
       return defaultValue;
     }
@@ -138,10 +129,11 @@ public class Configuration implements Serializable {
   }
 
   public String getProperty(String name, String defaultValue) {
-    if (name == null) {
+    String value = getProperty(name);
+    if (StringUtils.isEmpty(value)) {
       return defaultValue;
     }
-    return properties.get(name.trim());
+    return value;
   }
 
   public void setProperty(String name, String value) {
@@ -149,16 +141,10 @@ public class Configuration implements Serializable {
   }
 
   public String getProperty(String name) {
-    if (name == null) {
-      return null;
-    }
     return properties.get(name.trim());
   }
 
   public String getEnv(String name) {
-    if (name == null) {
-      return null;
-    }
     return env.get(name.trim());
   }
 

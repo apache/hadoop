@@ -99,6 +99,7 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
       assertEquals(roles[i], entry.getKey());
       RoleInstance instance = entry.getValue();
       assertEquals(roles[i], instance.compInstanceName);
+      assertEquals(i, instance.componentId);
       assertEquals(group, instance.role);
       assertEquals(group, instance.providerRole.name);
       assertEquals(group, instance.providerRole.group);
@@ -129,7 +130,6 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
     createAndStartNodes();
     instances = appState.cloneOwnedContainerList();
     verifyInstances(instances, "group1", "group10", "group11", "group12");
-    // fails because the names continue at N+1, with group12, group13, group14
   }
 
   @Test

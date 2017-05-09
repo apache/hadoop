@@ -819,6 +819,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       binding.releaseSelector =  new MostRecentContainerReleaseSelector();
       binding.nodeReports = nodeReports;
       binding.application = application;
+      binding.serviceHdfsDir = fs.buildClusterDirPath(appName).toString();
       appState.buildInstance(binding);
 
       // build up environment variables that the AM wants set in every container
