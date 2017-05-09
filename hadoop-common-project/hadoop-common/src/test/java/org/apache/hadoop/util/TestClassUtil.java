@@ -26,7 +26,7 @@ import org.apache.log4j.Logger;
 import org.junit.Test;
 
 public class TestClassUtil {
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testFindContainingJar() {
     String containingJar = ClassUtil.findContainingJar(Logger.class);
     Assert.assertNotNull("Containing jar not found for Logger", 
