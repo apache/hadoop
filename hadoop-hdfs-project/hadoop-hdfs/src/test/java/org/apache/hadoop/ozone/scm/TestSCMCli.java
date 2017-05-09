@@ -31,6 +31,7 @@ import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -120,58 +121,97 @@ public class TestSCMCli {
     assertEquals(containerName, container.getContainerName());
   }
 
+  private boolean containerExist(String containerName) {
+    try {
+      Pipeline scmPipeline = scm.getContainer(containerName);
+      return scmPipeline != null
+          && containerName.equals(scmPipeline.getContainerName());
+    } catch (IOException e) {
+      return false;
+    }
+  }
 
   @Test
   public void testDeleteContainer() throws Exception {
-    final String cname1 = "cname1";
-    final String cname2 = "cname2";
+    String containerName;
+    ContainerData containerData;
+    Pipeline pipeline;
+    String[] delCmd;
+    ByteArrayOutputStream testErr;
+    int exitCode;
 
     // ****************************************
     // 1. Test to delete a non-empty container.
     // ****************************************
     // Create an non-empty container
-    Pipeline pipeline1 = scm.allocateContainer(cname1);
-    ContainerData data1 = new ContainerData(cname1);
-    containerManager.createContainer(pipeline1, data1);
-    ContainerData cdata = containerManager.readContainer(cname1);
-    KeyUtils.getDB(cdata, conf).put(cname1.getBytes(),
+    containerName = "non-empty-container";
+    pipeline = scm.allocateContainer(containerName);
+    containerData = new ContainerData(containerName);
+    containerManager.createContainer(pipeline, containerData);
+    ContainerData cdata = containerManager.readContainer(containerName);
+    KeyUtils.getDB(cdata, conf).put(containerName.getBytes(),
         "someKey".getBytes());
+    Assert.assertTrue(containerExist(containerName));
+
+    // Gracefully delete a container should fail because it is open.
+    delCmd = new String[] {"-container", "-del", containerName};
+    testErr = new ByteArrayOutputStream();
+    exitCode = runCommandAndGetOutput(delCmd, null, testErr);
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertTrue(testErr.toString()
+        .contains("Deleting an open container is not allowed."));
+    Assert.assertTrue(containerExist(containerName));
+
+    // Close the container
+    containerManager.closeContainer(containerName);
 
     // Gracefully delete a container should fail because it is not empty.
-    String[] del1 = {"-container", "-del", cname1};
-    ByteArrayOutputStream testErr1 = new ByteArrayOutputStream();
-    int exitCode1 = runCommandAndGetOutput(del1, null, testErr1);
-    assertEquals(ResultCode.EXECUTION_ERROR, exitCode1);
-    assertTrue(testErr1.toString()
-        .contains("Container cannot be deleted because it is not empty."));
-
-    // Delete should fail when attempts to delete an open container.
-    // Even with the force tag.
-    String[] del2 = {"-container", "-del", cname1, "-f"};
-    ByteArrayOutputStream testErr2 = new ByteArrayOutputStream();
-    int exitCode2 = runCommandAndGetOutput(del2, null, testErr2);
+    testErr = new ByteArrayOutputStream();
+    int exitCode2 = runCommandAndGetOutput(delCmd, null, testErr);
     assertEquals(ResultCode.EXECUTION_ERROR, exitCode2);
-    assertTrue(testErr2.toString()
-        .contains("Attempting to force delete an open container."));
+    assertTrue(testErr.toString()
+        .contains("Container cannot be deleted because it is not empty."));
+    Assert.assertTrue(containerExist(containerName));
 
-    // Close the container and try force delete again.
-    containerManager.closeContainer(cname1);
-    int exitCode3 = runCommandAndGetOutput(del2, null, null);
-    assertEquals(ResultCode.SUCCESS, exitCode3);
-
+    // Try force delete again.
+    delCmd = new String[] {"-container", "-del", containerName, "-f"};
+    exitCode = runCommandAndGetOutput(delCmd, null, null);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    Assert.assertFalse(containerExist(containerName));
 
     // ****************************************
     // 2. Test to delete an empty container.
     // ****************************************
     // Create an empty container
-    Pipeline pipeline2 = scm.allocateContainer(cname2);
-    ContainerData data2 = new ContainerData(cname2);
-    containerManager.createContainer(pipeline2, data2);
+    containerName = "empty-container";
+    pipeline = scm.allocateContainer(containerName);
+    containerData = new ContainerData(containerName);
+    containerManager.createContainer(pipeline, containerData);
+    containerManager.closeContainer(containerName);
+    Assert.assertTrue(containerExist(containerName));
 
     // Successfully delete an empty container.
-    String[] del3 = {"-container", "-del", cname2};
-    int exitCode4 = runCommandAndGetOutput(del3, null, null);
-    assertEquals(ResultCode.SUCCESS, exitCode4);
+    delCmd = new String[] {"-container", "-del", containerName};
+    exitCode = runCommandAndGetOutput(delCmd, null, null);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    Assert.assertFalse(containerExist(containerName));
+
+    // After the container is deleted,
+    // a same name container can now be recreated.
+    pipeline = scm.allocateContainer(containerName);
+    containerManager.createContainer(pipeline, containerData);
+    Assert.assertTrue(containerExist(containerName));
+
+    // ****************************************
+    // 3. Test to delete a non-exist container.
+    // ****************************************
+    containerName = "non-exist-container";
+    delCmd = new String[] {"-container", "-del", containerName};
+    testErr = new ByteArrayOutputStream();
+    exitCode = runCommandAndGetOutput(delCmd, null, testErr);
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertTrue(testErr.toString()
+        .contains("Specified key does not exist."));
   }
 
   @Test

@@ -56,4 +56,12 @@ public interface Mapping extends Closeable {
    */
   Pipeline allocateContainer(String containerName,
       ScmClient.ReplicationFactor replicationFactor) throws IOException;
+
+  /**
+   * Deletes a container from SCM.
+   *
+   * @param containerName - Container Name
+   * @throws IOException
+   */
+  void deleteContainer(String containerName) throws IOException;
 }

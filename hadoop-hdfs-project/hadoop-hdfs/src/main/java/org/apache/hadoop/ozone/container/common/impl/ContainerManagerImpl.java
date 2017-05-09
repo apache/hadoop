@@ -82,6 +82,8 @@ import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
    .Result.ERROR_IN_COMPACT_DB;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.UNCLOSED_CONTAINER_IO;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_META;
 
@@ -383,6 +385,11 @@ public class ContainerManagerImpl implements ContainerManager {
         "Container name length cannot be zero.");
     writeLock();
     try {
+      if (isOpen(pipeline.getContainerName())) {
+        throw new StorageContainerException(
+            "Deleting an open container is not allowed.", UNCLOSED_CONTAINER_IO);
+      }
+
       ContainerStatus status = containerMap.get(containerName);
       if (status == null) {
         LOG.debug("No such container. Name: {}", containerName);
