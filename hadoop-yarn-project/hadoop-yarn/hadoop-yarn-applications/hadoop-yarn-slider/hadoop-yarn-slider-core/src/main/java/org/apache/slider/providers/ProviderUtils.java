@@ -32,7 +32,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.slider.api.ClusterNode;
-import org.apache.slider.api.OptionKeys;
 import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.RoleKeys;
 import org.apache.slider.api.resource.Application;
@@ -59,7 +58,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -271,8 +269,8 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
   // 2. Add the config file to localResource
   public synchronized void createConfigFileAndAddLocalResource(
       ContainerLauncher launcher, SliderFileSystem fs, Component component,
-      Map<String, String> tokensForSubstitution, RoleInstance roleInstance)
-      throws IOException {
+      Map<String, String> tokensForSubstitution, RoleInstance roleInstance,
+      StateAccessForProviders appState) throws IOException {
     Path compDir =
         new Path(new Path(fs.getAppDir(), "components"), component.getName());
     Path compInstanceDir =
@@ -315,12 +313,12 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
           case HADOOP_XML:
             // Hadoop_xml_template
             resolveHadoopXmlTemplateAndSaveOnHdfs(fs.getFileSystem(),
-                tokensForSubstitution, configFile, remoteFile, roleInstance);
+                tokensForSubstitution, configFile, remoteFile, appState);
             break;
           case TEMPLATE:
             // plain-template
             resolvePlainTemplateAndSaveOnHdfs(fs.getFileSystem(),
-                tokensForSubstitution, configFile, remoteFile, roleInstance);
+                tokensForSubstitution, configFile, remoteFile, appState);
             break;
           default:
             log.info("Not supporting loading src_file for " + configFile);
@@ -383,11 +381,11 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
   @SuppressWarnings("unchecked")
   private void resolveHadoopXmlTemplateAndSaveOnHdfs(FileSystem fs,
       Map<String, String> tokensForSubstitution, ConfigFile configFile,
-      Path remoteFile, RoleInstance roleInstance) throws IOException {
+      Path remoteFile, StateAccessForProviders appState) throws IOException {
     Map<String, String> conf;
     try {
-      conf = (Map<String, String>) roleInstance.providerRole.
-          appState.configFileCache.get(configFile);
+      conf = (Map<String, String>) appState.getConfigFileCache()
+          .get(configFile);
     } catch (ExecutionException e) {
       log.info("Failed to load config file: " + configFile, e);
       return;
@@ -426,17 +424,16 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
   // 3) save on hdfs
   private void resolvePlainTemplateAndSaveOnHdfs(FileSystem fs,
       Map<String, String> tokensForSubstitution, ConfigFile configFile,
-      Path remoteFile, RoleInstance roleInstance) {
+      Path remoteFile, StateAccessForProviders appState) {
     String content;
     try {
-      content = (String) roleInstance.providerRole.appState.configFileCache
-          .get(configFile);
+      content = (String) appState.getConfigFileCache().get(configFile);
     } catch (ExecutionException e) {
       log.info("Failed to load config file: " + configFile, e);
       return;
     }
     // substitute tokens
-    substituteStrWithTokens(content, tokensForSubstitution);
+    content = substituteStrWithTokens(content, tokensForSubstitution);
 
     try (OutputStream output = fs.create(remoteFile)) {
       org.apache.commons.io.IOUtils.write(content, output);
@@ -446,25 +443,13 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
   }
 
   /**
-   * Get initial token map to be substituted into config values.
-   * @param appConf app configurations
-   * @param clusterName app name
+   * Get initial component token map to be substituted into config values.
+   * @param roleInstance role instance
    * @return tokens to replace
    */
-  public Map<String, String> getStandardTokenMap(Configuration appConf,
-      RoleInstance roleInstance, String clusterName) {
-
+  public Map<String, String> initCompTokensForSubstitute(
+      RoleInstance roleInstance) {
     Map<String, String> tokens = new HashMap<>();
-
-    String nnuri = appConf.getProperty("fs.defaultFS");
-    if (nnuri != null && !nnuri.isEmpty()) {
-      tokens.put("${NN_URI}", nnuri);
-      tokens.put("${NN_HOST}", URI.create(nnuri).getHost());
-    }
-    tokens.put("${ZK_HOST}", appConf.getProperty(OptionKeys.ZOOKEEPER_HOSTS));
-    tokens.put("${DEFAULT_ZK_PATH}", appConf.getProperty(OptionKeys.ZOOKEEPER_PATH));
-    tokens.put(SERVICE_NAME_LC, clusterName.toLowerCase());
-    tokens.put(SERVICE_NAME, clusterName);
     tokens.put(COMPONENT_NAME, roleInstance.role);
     tokens.put(COMPONENT_NAME_LC, roleInstance.role.toLowerCase());
     tokens.put(COMPONENT_INSTANCE_NAME, roleInstance.getCompInstanceName());

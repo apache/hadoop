@@ -18,11 +18,13 @@
 
 package org.apache.slider.server.appmaster.state;
 
+import com.google.common.cache.LoadingCache;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.resource.Application;
+import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.NodeInformation;
@@ -261,5 +263,15 @@ public class ProviderAppState implements StateAccessForProviders {
   @Override
   public RoleStatistics getRoleStatistics() {
     return appState.getRoleStatistics();
+  }
+
+  @Override
+  public Map<String, String> getGlobalSubstitutionTokens() {
+    return appState.globalTokens;
+  }
+
+  @Override
+  public LoadingCache<ConfigFile, Object> getConfigFileCache() {
+    return appState.configFileCache;
   }
 }

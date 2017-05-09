@@ -1112,18 +1112,20 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           "not a directory", folder);
     }
 
-    for (File f : files) {
-      srcFile = new Path(f.toURI());
+    if (files != null) {
+      for (File f : files) {
+        srcFile = new Path(f.toURI());
 
-      Path fileInFs = new Path(pkgPath, srcFile.getName());
-      log.info("Installing file {} at {} and overwrite is {}.",
-          srcFile, fileInFs, resourceInfo.overwrite);
-      require(!(sfs.exists(fileInFs) && !resourceInfo.overwrite),
-          "File exists at %s. Use --overwrite to overwrite.", fileInFs.toUri());
+        Path fileInFs = new Path(pkgPath, srcFile.getName());
+        log.info("Installing file {} at {} and overwrite is {}.",
+            srcFile, fileInFs, resourceInfo.overwrite);
+        require(!(sfs.exists(fileInFs) && !resourceInfo.overwrite),
+            "File exists at %s. Use --overwrite to overwrite.", fileInFs.toUri());
 
-      sfs.copyFromLocalFile(false, resourceInfo.overwrite, srcFile, fileInFs);
-      sfs.setPermission(fileInFs,
-          new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE));
+        sfs.copyFromLocalFile(false, resourceInfo.overwrite, srcFile, fileInFs);
+        sfs.setPermission(fileInFs,
+            new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE));
+      }
     }
 
     return EXIT_SUCCESS;

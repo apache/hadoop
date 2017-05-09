@@ -811,6 +811,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         LOG.error("Incorrect format for ip and host");
         return null;
       }
+      // strip off quotes if any
+      output = output.replaceAll("['\"]", "");
       String ips = output.substring(0, index).trim();
       String host = output.substring(index+1).trim();
       String[] ipAndHost = new String[2];

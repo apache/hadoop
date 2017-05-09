@@ -36,6 +36,10 @@ public interface ServiceApiConstants {
 
   String SERVICE_NAME_LC = $("SERVICE_NAME.lc");
 
+  String USER = $("USER");
+
+  String DOMAIN = $("DOMAIN");
+
   // Constants for component
   String COMPONENT_NAME = $("COMPONENT_NAME");
 
@@ -47,4 +51,19 @@ public interface ServiceApiConstants {
   String COMPONENT_ID = $("COMPONENT_ID");
 
   String CONTAINER_ID = $("CONTAINER_ID");
+
+  // Constants for default cluster ZK
+  String CLUSTER_ZK_QUORUM = $("CLUSTER_ZK_QUORUM");
+
+  // URI for the default cluster fs
+  String CLUSTER_FS_URI = $("CLUSTER_FS_URI");
+
+  // the host component of the cluster fs UI
+  String CLUSTER_FS_HOST = $("CLUSTER_FS_HOST");
+
+  // Path in zookeeper for a specific service
+  String SERVICE_ZK_PATH = $("SERVICE_ZK_PATH");
+
+  // Constants for service specific hdfs dir
+  String SERVICE_HDFS_DIR = $("SERVICE_HDFS_DIR");
 }

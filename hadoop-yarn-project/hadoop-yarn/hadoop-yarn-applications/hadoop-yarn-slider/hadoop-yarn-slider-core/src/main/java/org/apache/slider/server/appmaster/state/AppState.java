@@ -24,11 +24,11 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.InternalKeys;
+import org.apache.slider.api.ServiceApiConstants;
 import org.apache.slider.api.StatusKeys;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.proto.Messages.ComponentCountProto;
@@ -61,6 +62,7 @@ import org.apache.slider.core.exceptions.ErrorStrings;
 import org.apache.slider.core.exceptions.NoSuchNodeException;
 import org.apache.slider.core.exceptions.SliderInternalStateException;
 import org.apache.slider.core.exceptions.TriggerClusterTeardownException;
+import org.apache.slider.core.zk.ZKIntegration;
 import org.apache.slider.providers.PlacementPolicy;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
@@ -75,6 +77,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -89,7 +92,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.registry.client.api.RegistryConstants.DEFAULT_REGISTRY_ZK_QUORUM;
+import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_DNS_DOMAIN;
+import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
 import static org.apache.slider.api.ResourceKeys.*;
+import static org.apache.slider.api.ServiceApiConstants.*;
 import static org.apache.slider.api.StateValues.*;
 import static org.apache.slider.api.resource.ApplicationState.STARTED;
 
@@ -193,14 +201,13 @@ public class AppState {
   private int containerMinMemory;
 
   private RoleHistory roleHistory;
-  private Configuration publishedProviderConf;
   private long startTimeThreshold;
 
   private int failureThreshold = 10;
   private int nodeFailureThreshold = 3;
 
   private String logServerURL = "";
-
+  public Map<String, String> globalTokens = new HashMap<>();
   /**
    * Selector of containers to release; application wide.
    */
@@ -335,6 +342,7 @@ public class AppState {
         DEFAULT_CONTAINER_FAILURE_THRESHOLD);
     nodeFailureThreshold = conf.getPropertyInt(NODE_FAILURE_THRESHOLD,
         DEFAULT_NODE_FAILURE_THRESHOLD);
+    initGlobalTokensForSubstitute(binding);
 
     //build the initial component list
     int priority = 1;
@@ -365,6 +373,34 @@ public class AppState {
     applicationLive = true;
     app.setState(STARTED);
     createConfigFileCache(binding.fs);
+  }
+
+  private void initGlobalTokensForSubstitute(AppStateBindingInfo binding)
+      throws IOException {
+    // ZK
+    globalTokens.put(ServiceApiConstants.CLUSTER_ZK_QUORUM,
+        binding.serviceConfig
+            .getTrimmed(KEY_REGISTRY_ZK_QUORUM, DEFAULT_REGISTRY_ZK_QUORUM));
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    globalTokens
+        .put(SERVICE_ZK_PATH, ZKIntegration.mkClusterPath(user, app.getName()));
+
+    globalTokens.put(ServiceApiConstants.USER, user);
+    String dnsDomain = binding.serviceConfig.getTrimmed(KEY_DNS_DOMAIN);
+    if (dnsDomain != null && !dnsDomain.isEmpty()) {
+      globalTokens.put(ServiceApiConstants.DOMAIN, dnsDomain);
+    }
+    // HDFS
+    String clusterFs = binding.serviceConfig.getTrimmed(FS_DEFAULT_NAME_KEY);
+    if (clusterFs != null && !clusterFs.isEmpty()) {
+      globalTokens.put(ServiceApiConstants.CLUSTER_FS_URI, clusterFs);
+      globalTokens.put(ServiceApiConstants.CLUSTER_FS_HOST,
+          URI.create(clusterFs).getHost());
+    }
+    globalTokens.put(SERVICE_HDFS_DIR, binding.serviceHdfsDir);
+    // service name
+    globalTokens.put(SERVICE_NAME_LC, app.getName().toLowerCase());
+    globalTokens.put(SERVICE_NAME, app.getName());
   }
 
   private void createConfigFileCache(final FileSystem fileSystem) {
@@ -411,7 +447,7 @@ public class AppState {
         DEF_YARN_LABEL_EXPRESSION);
     ProviderRole newRole =
         new ProviderRole(name, group, priority, (int)placementPolicy, threshold,
-            placementTimeout, label, component, this);
+            placementTimeout, label, component);
     buildRole(newRole, component);
     log.info("Created a new role " + newRole);
     return newRole;
@@ -1300,8 +1336,7 @@ public class AppState {
         try {
           RoleStatus roleStatus = lookupRoleStatus(roleInstance.roleId);
           decRunningContainers(roleStatus);
-          roleStatus.getProviderRole().failedInstanceName
-              .offer(roleInstance.compInstanceName);
+          roleStatus.getProviderRole().failedInstances.offer(roleInstance);
           boolean shortLived = isShortLived(roleInstance);
           String message;
           Container failedContainer = roleInstance.container;
@@ -1742,8 +1777,7 @@ public class AppState {
         for (RoleInstance possible : finalCandidates) {
           log.info("Targeting for release: {}", possible);
           containerReleaseSubmitted(possible.container);
-          role.getProviderRole().failedInstanceName
-              .offer(possible.compInstanceName);
+          role.getProviderRole().failedInstances.offer(possible);
           operations.add(new ContainerReleaseOperation(possible.getContainerId()));
         }
       }
@@ -1862,7 +1896,6 @@ public class AppState {
       //get the role
       final ContainerId cid = container.getId();
       final RoleStatus role = lookupRoleStatus(container);
-      decRequestedContainers(role);
 
       //inc allocated count -this may need to be dropped in a moment,
       // but us needed to update the logic below
@@ -1888,6 +1921,7 @@ public class AppState {
         role.getComponentMetrics().surplusContainers.incr();
         containersRunning.decr();
       } else {
+        decRequestedContainers(role);
         log.info("Assigning role {} to container" + " {}," + " on {}:{},",
             roleName, cid, nodeId.getHost(), nodeId.getPort());
 
