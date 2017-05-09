@@ -24,6 +24,7 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Pipeline;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.util.Tool;
@@ -47,6 +48,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
 
 /**
@@ -61,7 +63,7 @@ public class SQLCLI  extends Configured implements Tool {
   // for container.db
   private static final String CREATE_CONTAINER_INFO =
       "CREATE TABLE containerInfo (" +
-          "containerName TEXT PRIMARY KEY NOT NULL , " +
+          "containerName TEXT PRIMARY KEY NOT NULL, " +
           "leaderUUID TEXT NOT NULL)";
   private static final String CREATE_CONTAINER_MACHINE =
       "CREATE TABLE containerMembers (" +
@@ -87,6 +89,14 @@ public class SQLCLI  extends Configured implements Tool {
           "VALUES (\"%s\", \"%s\", \"%s\", %d, %d, %d, %d, %d)";
   private static final String INSERT_CONTAINER_MEMBERS =
       "INSERT INTO containerMembers (containerName, datanodeUUID) " +
+          "VALUES (\"%s\", \"%s\")";
+  // for block.db
+  private static final String CREATE_BLOCK_CONTAINER =
+      "CREATE TABLE blockContainer (" +
+          "blockKey TEXT PRIMARY KEY NOT NULL, " +
+          "containerName TEXT NOT NULL)";
+  private static final String INSERT_BLOCK_CONTAINER =
+      "INSERT INTO blockContainer (blockKey, containerName) " +
           "VALUES (\"%s\", \"%s\")";
 
 
@@ -153,6 +163,9 @@ public class SQLCLI  extends Configured implements Tool {
     if (dbName.toString().equals(CONTAINER_DB)) {
       LOG.info("Converting container DB");
       convertContainerDB(dbPath, outPath);
+    } else if (dbName.toString().equals(BLOCK_DB)) {
+      LOG.info("Converting block DB");
+      convertBlockDB(dbPath, outPath);
     } else {
       LOG.error("Unrecognized db name {}", dbName);
     }
@@ -201,6 +214,7 @@ public class SQLCLI  extends Configured implements Tool {
    * --------------------------------
    *
    * @param dbPath path to container db.
+   * @param outPath path to output sqlite
    * @throws IOException throws exception.
    */
   private void convertContainerDB(Path dbPath, Path outPath)
@@ -267,6 +281,42 @@ public class SQLCLI  extends Configured implements Tool {
       executeSQL(conn, insertContainerMembers);
     }
     LOG.info("Insertion completed.");
+  }
+
+  /**
+   * Converts block.db to sqlite. This is rather simple db, the schema has only
+   * one table:
+   *
+   * blockContainer
+   * --------------------------
+   * blockKey*  | containerName
+   * --------------------------
+   *
+   * @param dbPath path to container db.
+   * @param outPath path to output sqlite
+   * @throws IOException throws exception.
+   */
+  private void convertBlockDB(Path dbPath, Path outPath) throws Exception {
+    LOG.info("Create tables for sql block db.");
+    File dbFile = dbPath.toFile();
+    org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
+    LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
+
+    Connection conn = connectDB(outPath.toString());
+    executeSQL(conn, CREATE_BLOCK_CONTAINER);
+
+    DBIterator iter = dbStore.getIterator();
+    iter.seekToFirst();
+    while (iter.hasNext()) {
+      Map.Entry<byte[], byte[]> entry = iter.next();
+      String blockKey = DFSUtilClient.bytes2String(entry.getKey());
+      String containerName = DFSUtilClient.bytes2String(entry.getValue());
+      String insertBlockContainer = String.format(
+          INSERT_BLOCK_CONTAINER, blockKey, containerName);
+      executeSQL(conn, insertBlockContainer);
+    }
+    closeDB(conn);
+    dbStore.close();
   }
 
   private CommandLine parseArgs(String[] argv)

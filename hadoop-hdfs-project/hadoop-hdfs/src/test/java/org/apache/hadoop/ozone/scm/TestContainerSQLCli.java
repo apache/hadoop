@@ -22,7 +22,12 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
 import org.apache.hadoop.ozone.scm.cli.SQLCLI;
+import org.apache.hadoop.ozone.scm.container.ContainerMapping;
+import org.apache.hadoop.ozone.scm.node.NodeManager;
+import org.apache.hadoop.scm.ScmConfigKeys;
+import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -36,8 +41,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 
+import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.KB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -52,30 +60,93 @@ public class TestContainerSQLCli {
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
 
+  private static ContainerMapping mapping;
+  private static NodeManager nodeManager;
+  private static BlockManagerImpl blockManager;
+
+  private static String pipelineName1;
+  private static String pipelineName2;
+
+  private static HashMap<String, String> blockContainerMap;
+
+  private final static long DEFAULT_BLOCK_SIZE = 4 * KB;
+
   @BeforeClass
   public static void init() throws Exception {
     long datanodeCapacities = 3 * OzoneConsts.TB;
+    blockContainerMap = new HashMap<>();
+
     conf = new OzoneConfiguration();
+    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 2);
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType("distributed").build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     cluster.waitForHeartbeatProcessed();
-
-    // create two containers to be retrieved later.
-    storageContainerLocationClient.allocateContainer(
-        "container0");
-    storageContainerLocationClient.allocateContainer(
-        "container1");
-
     cluster.shutdown();
+
+    nodeManager = cluster.getStorageContainerManager().getScmNodeManager();
+    mapping = new ContainerMapping(conf, nodeManager, 128);
+    blockManager = new BlockManagerImpl(conf, nodeManager, mapping, 128);
+
+    // blockManager.allocateBlock() will create containers if there is none
+    // stored in levelDB. The number of containers to create is the value of
+    // OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE which we set to 2.
+    // so the first allocateBlock() will create two containers. A random one
+    // is assigned for the block.
+    AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+    pipelineName1 = ab1.getPipeline().getContainerName();
+    blockContainerMap.put(ab1.getKey(), pipelineName1);
+
+    AllocatedBlock ab2;
+    // we want the two blocks on the two provisioned containers respectively,
+    // however blockManager picks containers randomly, keep retry until we
+    // assign the second block to the other container. This seems to be the only
+    // way to get the two containers.
+    // although each retry will create a block and assign to a container. So
+    // the size of blockContainerMap will vary each time the test is run.
+    while (true) {
+      ab2 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+      pipelineName2 = ab2.getPipeline().getContainerName();
+      blockContainerMap.put(ab2.getKey(), pipelineName2);
+      if (!pipelineName2.equals(pipelineName1)) {
+        break;
+      }
+    }
+
+    blockManager.close();
+    mapping.close();
+    nodeManager.close();
+
     cli = new SQLCLI();
   }
 
   @AfterClass
   public static void shutdown() throws InterruptedException {
     IOUtils.cleanup(null, storageContainerLocationClient, cluster);
+  }
+
+  @Test
+  public void testConvertBlockDB() throws Exception {
+    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbPath = dbRootPath + "/" + BLOCK_DB;
+    String[] args = {"-p", dbPath, "-o", dbOutPath};
+
+    cli.run(args);
+
+    Connection conn = connectDB(dbOutPath);
+    String sql = "SELECT * FROM blockContainer";
+    ResultSet rs = executeQuery(conn, sql);
+    while(rs.next()) {
+      String blockKey = rs.getString("blockKey");
+      String containerName = rs.getString("containerName");
+      assertTrue(blockContainerMap.containsKey(blockKey) &&
+          blockContainerMap.remove(blockKey).equals(containerName));
+    }
+    assertEquals(0, blockContainerMap.size());
+    Files.delete(Paths.get(dbOutPath));
   }
 
   @Test
@@ -104,8 +175,8 @@ public class TestContainerSQLCli {
       //assertEquals(dnUUID, rs.getString("leaderUUID"));
     }
     assertTrue(containerNames.size() == 2 &&
-        containerNames.contains("container0") &&
-        containerNames.contains("container1"));
+        containerNames.contains(pipelineName1) &&
+        containerNames.contains(pipelineName2));
 
     sql = "SELECT * FROM containerMembers";
     rs = executeQuery(conn, sql);
@@ -115,8 +186,8 @@ public class TestContainerSQLCli {
       //assertEquals(dnUUID, rs.getString("datanodeUUID"));
     }
     assertTrue(containerNames.size() == 2 &&
-        containerNames.contains("container0") &&
-        containerNames.contains("container1"));
+        containerNames.contains(pipelineName1) &&
+        containerNames.contains(pipelineName2));
 
     sql = "SELECT * FROM datanodeInfo";
     rs = executeQuery(conn, sql);
