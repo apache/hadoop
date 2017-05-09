@@ -2050,17 +2050,31 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
   fprintf(LOGFILE, "Failed to mount cgroup controller, not supported\n");
   return -1;
 #else
-  char *controller = malloc(strlen(pair));
-  char *mount_path = malloc(strlen(pair));
+  size_t len = strlen(pair);
+  char *controller = malloc(len);
+  char *mount_path = malloc(len);
   char hier_path[EXECUTOR_PATH_MAX];
   int result = 0;
+  struct stat sb;
 
-  if (get_kv_key(pair, controller, strlen(pair)) < 0 ||
-      get_kv_value(pair, mount_path, strlen(pair)) < 0) {
+  if (controller == NULL || mount_path == NULL) {
+    fprintf(LOGFILE, "Failed to mount cgroup controller; not enough memory\n");
+    result = OUT_OF_MEMORY;
+  }
+  if (get_kv_key(pair, controller, len) < 0 ||
+      get_kv_value(pair, mount_path, len) < 0) {
     fprintf(LOGFILE, "Failed to mount cgroup controller; invalid option: %s\n",
               pair);
     result = -1;
   } else {
+    if (stat(mount_path, &sb) != 0) {
+      // Create mount point, if it does not exist
+      const mode_t mount_perms = S_IRWXU | S_IRGRP | S_IXGRP;
+      if (mkdirs(mount_path, mount_perms) == 0) {
+        fprintf(LOGFILE, "Failed to create cgroup mount point %s at %s\n",
+          controller, mount_path);
+      }
+    }
     if (mount("none", mount_path, "cgroup", 0, controller) == 0) {
       char *buf = stpncpy(hier_path, mount_path, strlen(mount_path));
       *buf++ = '/';

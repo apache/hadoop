@@ -21,13 +21,16 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
@@ -40,8 +43,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
@@ -66,6 +70,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   private final long deleteCGroupTimeout;
   private final long deleteCGroupDelay;
   private Map<CGroupController, String> controllerPaths;
+  private Map<String, Set<String>> parsedMtab;
   private final ReadWriteLock rwLock;
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
   private final Clock clock;
@@ -95,6 +100,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
         conf.getLong(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY,
             YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY);
     this.controllerPaths = new HashMap<>();
+    this.parsedMtab = new HashMap<>();
     this.rwLock = new ReentrantReadWriteLock();
     this.privilegedOperationExecutor = privilegedOperationExecutor;
     this.clock = SystemClock.getInstance();
@@ -128,51 +134,53 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   }
 
   private void initializeControllerPaths() throws ResourceHandlerException {
-    if (enableCGroupMount) {
-      // nothing to do here - we support 'deferred' mounting of specific
-      // controllers - we'll populate the path for a given controller when an
-      // explicit mountCGroupController request is issued.
-      LOG.info("CGroup controller mounting enabled.");
-    } else {
-      // cluster admins are expected to have mounted controllers in specific
-      // locations - we'll attempt to figure out mount points
+    // Cluster admins may have some subsystems mounted in specific locations
+    // We'll attempt to figure out mount points. We do this even if we plan
+    // to mount cgroups into our own tree to control the path permissions or
+    // to mount subsystems that are not mounted previously.
+    // The subsystems for new and existing mount points have to match, and
+    // the same hierarchy will be mounted at each mount point with the same
+    // subsystem set.
 
-      Map<CGroupController, String> cPaths =
-          initializeControllerPathsFromMtab(mtabFile, this.cGroupPrefix);
-      // we want to do a bulk update without the paths changing concurrently
-      try {
-        rwLock.writeLock().lock();
-        controllerPaths = cPaths;
-      } finally {
-        rwLock.writeLock().unlock();
-      }
+    Map<String, Set<String>> newMtab;
+    Map<CGroupController, String> cPaths;
+    try {
+      // parse mtab
+      newMtab = parseMtab(mtabFile);
+
+      // find cgroup controller paths
+      cPaths = initializeControllerPathsFromMtab(newMtab);
+    } catch (IOException e) {
+      LOG.warn("Failed to initialize controller paths! Exception: " + e);
+      throw new ResourceHandlerException(
+          "Failed to initialize controller paths!");
+    }
+
+    // we want to do a bulk update without the paths changing concurrently
+    try {
+      rwLock.writeLock().lock();
+      controllerPaths = cPaths;
+      parsedMtab = newMtab;
+    } finally {
+      rwLock.writeLock().unlock();
     }
   }
 
   @VisibleForTesting
   static Map<CGroupController, String> initializeControllerPathsFromMtab(
-      String mtab, String cGroupPrefix) throws ResourceHandlerException {
-    try {
-      Map<String, List<String>> parsedMtab = parseMtab(mtab);
-      Map<CGroupController, String> ret = new HashMap<>();
+      Map<String, Set<String>> parsedMtab)
+      throws ResourceHandlerException {
+    Map<CGroupController, String> ret = new HashMap<>();
 
-      for (CGroupController controller : CGroupController.values()) {
-        String subsystemName = controller.getName();
-        String controllerPath = findControllerInMtab(subsystemName, parsedMtab);
+    for (CGroupController controller : CGroupController.values()) {
+      String subsystemName = controller.getName();
+      String controllerPath = findControllerInMtab(subsystemName, parsedMtab);
 
-        if (controllerPath != null) {
-          ret.put(controller, controllerPath);
-        } else {
-          LOG.warn("Controller not mounted but automount disabled: " +
-              subsystemName);
-        }
+      if (controllerPath != null) {
+        ret.put(controller, controllerPath);
       }
-      return ret;
-    } catch (IOException e) {
-      LOG.warn("Failed to initialize controller paths! Exception: " + e);
-      throw new ResourceHandlerException(
-        "Failed to initialize controller paths!");
     }
+    return ret;
   }
 
   /* We are looking for entries of the form:
@@ -190,10 +198,15 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    * for mounts with type "cgroup". Cgroup controllers will
    * appear in the list of options for a path.
    */
-  private static Map<String, List<String>> parseMtab(String mtab)
+  @VisibleForTesting
+  static Map<String, Set<String>> parseMtab(String mtab)
       throws IOException {
-    Map<String, List<String>> ret = new HashMap<String, List<String>>();
+    Map<String, Set<String>> ret = new HashMap<>();
     BufferedReader in = null;
+    HashSet<String> validCgroups = new HashSet<>();
+    for (CGroupController controller : CGroupController.values()) {
+      validCgroups.add(controller.getName());
+    }
 
     try {
       FileInputStream fis = new FileInputStream(new File(mtab));
@@ -209,13 +222,21 @@ class CGroupsHandlerImpl implements CGroupsHandler {
           String options = m.group(3);
 
           if (type.equals(CGROUPS_FSTYPE)) {
-            List<String> value = Arrays.asList(options.split(","));
-            ret.put(path, value);
+            Set<String> cgroupList =
+                new HashSet<>(Arrays.asList(options.split(",")));
+            // Collect the valid subsystem names
+            cgroupList.retainAll(validCgroups);
+            ret.put(path, cgroupList);
           }
         }
       }
     } catch (IOException e) {
-      throw new IOException("Error while reading " + mtab, e);
+      if (Shell.LINUX) {
+        throw new IOException("Error while reading " + mtab, e);
+      } else {
+        // Ignore the error, if we are running on an os other than Linux
+        LOG.warn("Error while reading " + mtab, e);
+      }
     } finally {
       IOUtils.cleanup(LOG, in);
     }
@@ -234,8 +255,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    */
   @VisibleForTesting
   static String findControllerInMtab(String controller,
-      Map<String, List<String>> entries) {
-    for (Map.Entry<String, List<String>> e : entries.entrySet()) {
+      Map<String, Set<String>> entries) {
+    for (Map.Entry<String, Set<String>> e : entries.entrySet()) {
       if (e.getValue().contains(controller)) {
         if (new File(e.getKey()).canRead()) {
           return e.getKey();
@@ -251,31 +272,45 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
   private void mountCGroupController(CGroupController controller)
       throws ResourceHandlerException {
-    String path = getControllerPath(controller);
+    if (cGroupMountPath == null) {
+      throw new ResourceHandlerException(
+          String.format("Cgroups mount path not specified in %s.",
+              YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH));
+    }
+    String existingMountPath = getControllerPath(controller);
+    String requestedMountPath =
+        new File(cGroupMountPath, controller.getName()).getAbsolutePath();
 
-    if (path == null) {
+    if (existingMountPath == null ||
+        !requestedMountPath.equals(existingMountPath)) {
       try {
         //lock out other readers/writers till we are done
         rwLock.writeLock().lock();
 
-        String hierarchy = cGroupPrefix;
-        StringBuffer controllerPath = new StringBuffer()
-            .append(cGroupMountPath).append('/').append(controller.getName());
-        StringBuffer cGroupKV = new StringBuffer()
-            .append(controller.getName()).append('=').append(controllerPath);
+        // If the controller was already mounted we have to mount it
+        // with the same options to clone the mount point otherwise
+        // the operation will fail
+        String mountOptions;
+        if (existingMountPath != null) {
+          mountOptions = Joiner.on(',')
+              .join(parsedMtab.get(existingMountPath));
+        } else {
+          mountOptions = controller.getName();
+        }
+
+        String cGroupKV =
+            mountOptions + "=" + requestedMountPath;
         PrivilegedOperation.OperationType opType = PrivilegedOperation
             .OperationType.MOUNT_CGROUPS;
         PrivilegedOperation op = new PrivilegedOperation(opType);
 
-        op.appendArgs(hierarchy, cGroupKV.toString());
+        op.appendArgs(cGroupPrefix, cGroupKV);
         LOG.info("Mounting controller " + controller.getName() + " at " +
-              controllerPath);
+              requestedMountPath);
         privilegedOperationExecutor.executePrivilegedOperation(op, false);
 
         //if privileged operation succeeds, update controller paths
-        controllerPaths.put(controller, controllerPath.toString());
-
-        return;
+        controllerPaths.put(controller, requestedMountPath);
       } catch (PrivilegedOperationException e) {
         LOG.error("Failed to mount controller: " + controller.getName());
         throw new ResourceHandlerException("Failed to mount controller: "
@@ -284,37 +319,34 @@ class CGroupsHandlerImpl implements CGroupsHandler {
         rwLock.writeLock().unlock();
       }
     } else {
-      LOG.info("CGroup controller already mounted at: " + path);
-      return;
+      LOG.info("CGroup controller already mounted at: " + existingMountPath);
     }
   }
 
   @Override
   public String getRelativePathForCGroup(String cGroupId) {
-    return new StringBuffer(cGroupPrefix).append("/")
-        .append(cGroupId).toString();
+    return cGroupPrefix + Path.SEPARATOR + cGroupId;
   }
 
   @Override
   public String getPathForCGroup(CGroupController controller, String cGroupId) {
-    return new StringBuffer(getControllerPath(controller))
-        .append('/').append(cGroupPrefix).append("/")
-        .append(cGroupId).toString();
+    return getControllerPath(controller) + Path.SEPARATOR + cGroupPrefix
+        + Path.SEPARATOR + cGroupId;
   }
 
   @Override
   public String getPathForCGroupTasks(CGroupController controller,
       String cGroupId) {
-    return new StringBuffer(getPathForCGroup(controller, cGroupId))
-        .append('/').append(CGROUP_FILE_TASKS).toString();
+    return getPathForCGroup(controller, cGroupId)
+        + Path.SEPARATOR + CGROUP_FILE_TASKS;
   }
 
   @Override
   public String getPathForCGroupParam(CGroupController controller,
       String cGroupId, String param) {
-    return new StringBuffer(getPathForCGroup(controller, cGroupId))
-        .append('/').append(controller.getName()).append('.')
-        .append(param).toString();
+    return getPathForCGroup(controller, cGroupId)
+        + Path.SEPARATOR + controller.getName()
+        + "." + param;
   }
 
   /**
@@ -330,10 +362,21 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       // We have a controller that needs to be mounted
       mountCGroupController(controller);
     } else {
-      // We are working with a pre-mounted contoller
-      // Make sure that Yarn cgroup hierarchy path exists
-      initializePreMountedCGroupController(controller);
+      String controllerPath = getControllerPath(controller);
+
+      if (controllerPath == null) {
+        throw new ResourceHandlerException(
+            String.format("Controller %s not mounted."
+                + " You either need to mount it with %s"
+                + " or mount cgroups before launching Yarn",
+                controller.getName(), YarnConfiguration.
+                NM_LINUX_CONTAINER_CGROUPS_MOUNT));
+      }
     }
+
+    // We are working with a pre-mounted contoller
+    // Make sure that Yarn cgroup hierarchy path exists
+    initializePreMountedCGroupController(controller);
   }
 
   /**
@@ -347,11 +390,22 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    * @throws ResourceHandlerException yarn hierarchy cannot be created or
    *   accessed for any reason
    */
-  public void initializePreMountedCGroupController(CGroupController controller)
+  private void initializePreMountedCGroupController(CGroupController controller)
       throws ResourceHandlerException {
     // Check permissions to cgroup hierarchy and
     // create YARN cgroup if it does not exist, yet
-    File rootHierarchy = new File(getControllerPath(controller));
+    String controllerPath = getControllerPath(controller);
+
+    if (controllerPath == null) {
+      throw new ResourceHandlerException(
+          String.format("Controller %s not mounted."
+                  + " You either need to mount it with %s"
+                  + " or mount cgroups before launching Yarn",
+              controller.getName(), YarnConfiguration.
+                  NM_LINUX_CONTAINER_CGROUPS_MOUNT));
+    }
+
+    File rootHierarchy = new File(controllerPath);
     File yarnHierarchy = new File(rootHierarchy, cGroupPrefix);
     String subsystemName = controller.getName();
 
@@ -403,17 +457,9 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       String errorMessage,
       String subsystemName,
       String yarnCgroupPath) {
-    return new StringBuilder()
-        .append(errorMessage)
-        .append(" Subsystem:")
-        .append(subsystemName)
-        .append(" Mount points:")
-        .append(mtabFile)
-        .append(" User:")
-        .append(System.getProperty("user.name"))
-        .append(" Path: ")
-        .append(yarnCgroupPath)
-        .toString();
+    return String.format("%s Subsystem:%s Mount points:%s User:%s Path:%s ",
+        errorMessage, subsystemName, mtabFile, System.getProperty("user.name"),
+        yarnCgroupPath);
   }
 
   @Override
@@ -456,7 +502,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    * @param cgf object referring to the cgroup to be deleted
    * @return Boolean indicating whether cgroup was deleted
    */
-  boolean checkAndDeleteCgroup(File cgf) throws InterruptedException {
+  private boolean checkAndDeleteCgroup(File cgf) throws InterruptedException {
     boolean deleted = false;
     // FileInputStream in = null;
     try (FileInputStream in = new FileInputStream(cgf + "/tasks")) {
@@ -504,8 +550,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     } while (!deleted && (clock.getTime() - start) < deleteCGroupTimeout);
 
     if (!deleted) {
-      LOG.warn("Unable to delete  " + cGroupPath +
-          ", tried to delete for " + deleteCGroupTimeout + "ms");
+      LOG.warn(String.format("Unable to delete  %s, tried to delete for %d ms",
+          cGroupPath, deleteCGroupTimeout));
     }
   }
 
@@ -517,8 +563,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-          "updateCGroupParam for path: " + cGroupParamPath + " with value " +
-              value);
+          String.format("updateCGroupParam for path: %s with value %s",
+              cGroupParamPath, value));
     }
 
     try {
@@ -527,22 +573,22 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       pw = new PrintWriter(w);
       pw.write(value);
     } catch (IOException e) {
-      throw new ResourceHandlerException(new StringBuffer("Unable to write to ")
-          .append(cGroupParamPath).append(" with value: ").append(value)
-          .toString(), e);
+      throw new ResourceHandlerException(
+          String.format("Unable to write to %s with value: %s",
+              cGroupParamPath, value), e);
     } finally {
       if (pw != null) {
         boolean hasError = pw.checkError();
         pw.close();
         if (hasError) {
           throw new ResourceHandlerException(
-              new StringBuffer("Unable to write to ")
-                  .append(cGroupParamPath).append(" with value: ").append(value)
-                  .toString());
+              String.format("PrintWriter unable to write to %s with value: %s",
+                  cGroupParamPath, value));
         }
         if (pw.checkError()) {
-          throw new ResourceHandlerException("Error while closing cgroup file" +
-              " " + cGroupParamPath);
+          throw new ResourceHandlerException(
+              String.format("Error while closing cgroup file %s",
+                  cGroupParamPath));
         }
       }
     }
