@@ -824,7 +824,7 @@ public class TestUserGroupInformation {
     assertEquals("guest@DEFAULT.REALM", ugi.getUserName());
   }
 
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testSetLoginUser() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
     UserGroupInformation.setLoginUser(ugi);

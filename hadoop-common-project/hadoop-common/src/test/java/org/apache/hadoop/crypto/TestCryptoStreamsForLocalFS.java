@@ -88,28 +88,28 @@ public class TestCryptoStreamsForLocalFS extends CryptoStreamsTestBase {
   
   @Ignore("ChecksumFSInputChecker doesn't support ByteBuffer read")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testByteBufferRead() throws Exception {}
   
   @Ignore("ChecksumFSOutputSummer doesn't support Syncable")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testSyncable() throws IOException {}
   
   @Ignore("ChecksumFSInputChecker doesn't support ByteBuffer read")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testCombinedOp() throws Exception {}
   
   @Ignore("ChecksumFSInputChecker doesn't support enhanced ByteBuffer access")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testHasEnhancedByteBufferAccess() throws Exception {
   }
   
   @Ignore("ChecksumFSInputChecker doesn't support seekToNewSource")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testSeekToNewSource() throws Exception {
   }
 }

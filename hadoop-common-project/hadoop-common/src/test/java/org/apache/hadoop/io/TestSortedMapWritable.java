@@ -165,7 +165,7 @@ public class TestSortedMapWritable {
     assertTrue(failureReason, !mapB.equals(mapA));
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testPutAll() {
     SortedMapWritable map1 = new SortedMapWritable();
     SortedMapWritable map2 = new SortedMapWritable();
