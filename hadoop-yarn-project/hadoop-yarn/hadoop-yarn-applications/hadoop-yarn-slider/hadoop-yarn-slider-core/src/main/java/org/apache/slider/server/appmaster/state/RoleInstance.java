@@ -128,11 +128,11 @@ public final class RoleInstance implements Cloneable {
     this.providerRole = role;
   }
 
-  public RoleInstance(Container container, ProviderRole role,
-      String compInstanceName) {
+  public RoleInstance(Container container, RoleInstance failedInstance) {
     this(container);
-    this.compInstanceName = compInstanceName;
-    this.providerRole = role;
+    this.componentId = failedInstance.componentId;
+    this.compInstanceName = failedInstance.compInstanceName;
+    this.providerRole = failedInstance.providerRole;
   }
 
   /**

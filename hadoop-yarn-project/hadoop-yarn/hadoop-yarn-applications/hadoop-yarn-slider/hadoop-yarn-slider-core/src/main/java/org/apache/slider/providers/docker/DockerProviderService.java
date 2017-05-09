@@ -88,10 +88,10 @@ public class DockerProviderService extends AbstractService
 
     // Generate tokens (key-value pair) for config substitution.
     // Get pre-defined tokens
+    Map<String, String> globalTokens = amState.getGlobalSubstitutionTokens();
     Map<String, String> tokensForSubstitution = providerUtils
-        .getStandardTokenMap(application.getConfiguration(), roleInstance,
-            application.getName());
-
+        .initCompTokensForSubstitute(roleInstance);
+    tokensForSubstitution.putAll(globalTokens);
     // Set the environment variables in launcher
     launcher.putEnv(SliderUtils
         .buildEnvMap(component.getConfiguration(), tokensForSubstitution));
@@ -111,7 +111,7 @@ public class DockerProviderService extends AbstractService
 
     // create config file on hdfs and add local resource
     providerUtils.createConfigFileAndAddLocalResource(launcher, fileSystem,
-        component, tokensForSubstitution, roleInstance);
+        component, tokensForSubstitution, roleInstance, amState);
 
     // substitute launch command
     String launchCommand = ProviderUtils

@@ -379,4 +379,52 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
     assertNull(ri3);
   }
 
+  @Test
+  public void testDoubleAllocate() throws Throwable {
+    getRole0Status().setDesired(1);
+
+    List<AbstractRMOperation> ops = appState.reviewRequestAndReleaseNodes();
+    ContainerRequestOperation operation = (ContainerRequestOperation)ops.get(0);
+    AMRMClient.ContainerRequest request = operation.getRequest();
+    Container cont = engine.allocateContainer(request);
+    List<Container> allocated = new ArrayList<>();
+    allocated.add(cont);
+    List<ContainerAssignment> assignments = new ArrayList<>();
+    List<AbstractRMOperation> operations = new ArrayList<>();
+    assertEquals(0L, getRole0Status().getRunning());
+    assertEquals(1L, getRole0Status().getRequested());
+    appState.onContainersAllocated(allocated, assignments, operations);
+
+    assertListLength(ops, 1);
+    assertListLength(assignments, 1);
+    ContainerAssignment assigned = assignments.get(0);
+    Container target = assigned.container;
+    assertEquals(target.getId(), cont.getId());
+    int roleId = assigned.role.getPriority();
+    assertEquals(roleId, extractRole(request.getPriority()));
+    assertEquals(assigned.role.getName(), ROLE0);
+    RoleInstance ri = roleInstance(assigned);
+    //tell the app it arrived
+    appState.containerStartSubmitted(target, ri);
+    appState.innerOnNodeManagerContainerStarted(target.getId());
+    assertEquals(1L, getRole0Status().getRunning());
+    assertEquals(0L, getRole0Status().getRequested());
+
+    // now get an extra allocation that should be released
+    cont = engine.allocateContainer(request);
+    allocated = new ArrayList<>();
+    allocated.add(cont);
+    assignments = new ArrayList<>();
+    operations = new ArrayList<>();
+    appState.onContainersAllocated(allocated, assignments, operations);
+
+    assertListLength(operations, 1);
+    assertTrue(operations.get(0) instanceof ContainerReleaseOperation);
+    ContainerReleaseOperation release = (ContainerReleaseOperation)
+        operations.get(0);
+    assertEquals(release.getContainerId(), cont.getId());
+
+    assertEquals(1L, getRole0Status().getRunning());
+    assertEquals(0L, getRole0Status().getRequested());
+  }
 }
