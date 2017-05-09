@@ -132,6 +132,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14371. License error in TestLoadBalancingKMSClientProvider.java.
     (hu xiaodong via aajisaka)
 
+    HADOOP-14374. License error in GridmixTestUtils.java.
+    (lixinglong via aajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
