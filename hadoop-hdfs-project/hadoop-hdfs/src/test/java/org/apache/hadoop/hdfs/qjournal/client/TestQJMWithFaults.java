@@ -65,7 +65,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 
 
 public class TestQJMWithFaults {
@@ -402,7 +401,7 @@ public class TestQJMWithFaults {
 
     @Override
     protected ExecutorService createSingleThreadExecutor() {
-      return MoreExecutors.newDirectExecutorService();
+      return new DirectExecutorService();
     }
   }
 

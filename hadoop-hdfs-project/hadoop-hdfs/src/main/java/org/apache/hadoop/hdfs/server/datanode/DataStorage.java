@@ -65,7 +65,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.Futures;
 
 /** 
  * Data storage information file.
@@ -1109,7 +1108,14 @@ public class DataStorage extends Storage {
     }
     linkWorkers.shutdown();
     for (Future<Void> f : futures) {
-      Futures.getChecked(f, IOException.class);
+      try {
+        f.get();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException(e);
+      } catch (ExecutionException e) {
+        throw new IOException(e);
+      }
     }
   }
 

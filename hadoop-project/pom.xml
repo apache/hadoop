@@ -90,7 +90,7 @@
     <findbugs.version>3.0.0</findbugs.version>
     <spotbugs.version>3.1.0-RC1</spotbugs.version>
 
-    <guava.version>21.0</guava.version>
+    <guava.version>11.0.2</guava.version>
     <guice.version>4.0</guice.version>
     <joda-time.version>2.9.4</joda-time.version>
 
