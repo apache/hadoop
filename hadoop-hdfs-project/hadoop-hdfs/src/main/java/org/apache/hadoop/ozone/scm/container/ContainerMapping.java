@@ -238,6 +238,31 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
+   * Deletes a container from SCM.
+   *
+   * @param containerName - Container name
+   * @throws IOException
+   *   if container doesn't exist
+   *   or container store failed to delete the specified key.
+   */
+  @Override
+  public void deleteContainer(String containerName) throws IOException {
+    lock.lock();
+    try {
+      byte[] dbKey = containerName.getBytes(encoding);
+      byte[] pipelineBytes =
+          containerStore.get(dbKey);
+      if(pipelineBytes == null) {
+        throw new IOException("Failed to delete container "
+            + containerName + ", reason : container doesn't exist.");
+      }
+      containerStore.delete(dbKey);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
    * Closes this stream and releases any system resources associated with it. If
    * the stream is already closed then invoking this method has no effect.
    * <p>

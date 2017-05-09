@@ -206,12 +206,14 @@ public class TestContainerPersistence {
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName1),
         data);
+    containerManager.closeContainer(containerName1);
 
     data = new ContainerData(containerName2);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName2),
         data);
+    containerManager.closeContainer(containerName2);
 
     Assert.assertTrue(containerManager.getContainerMap()
         .containsKey(containerName1));
@@ -231,6 +233,7 @@ public class TestContainerPersistence {
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName1),
         data);
+    containerManager.closeContainer(containerName1);
 
     // Assert we still have both containers.
     Assert.assertTrue(containerManager.getContainerMap()

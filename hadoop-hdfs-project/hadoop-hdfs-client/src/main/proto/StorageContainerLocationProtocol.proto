@@ -92,6 +92,14 @@ message GetContainerResponseProto {
   required hadoop.hdfs.ozone.Pipeline pipeline = 1;
 }
 
+message DeleteContainerRequestProto {
+  required string containerName = 1;
+}
+
+message DeleteContainerResponseProto {
+  // Empty response
+}
+
 // SCM Block protocol
 /**
  * keys - batch of block keys to find
@@ -162,6 +170,11 @@ service StorageContainerLocationProtocolService {
    * Returns the pipeline for a given container.
    */
   rpc getContainer(GetContainerRequestProto) returns (GetContainerResponseProto);
+
+  /**
+   * Deletes a container in SCM.
+   */
+  rpc deleteContainer(DeleteContainerRequestProto) returns (DeleteContainerResponseProto);
 
   /**
    * Find the set of nodes that currently host the block, as

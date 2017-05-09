@@ -72,4 +72,13 @@ public interface StorageContainerLocationProtocol {
    */
   Pipeline getContainer(String containerName) throws IOException;
 
+  /**
+   * Deletes a container in SCM.
+   *
+   * @param containerName
+   * @throws IOException
+   *   if failed to delete the container mapping from db store
+   *   or container doesn't exist.
+   */
+  void deleteContainer(String containerName) throws IOException;
 }

@@ -17,6 +17,7 @@
 package org.apache.hadoop.scm.protocolPB;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -37,6 +38,7 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.LocatedContainerProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
@@ -161,6 +163,29 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       GetContainerResponseProto response =
           rpcProxy.getContainer(NULL_RPC_CONTROLLER, request);
       return Pipeline.getFromProtoBuf(response.getPipeline());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  /**
+   * Ask SCM to delete a container by name. SCM will remove
+   * the container mapping in its database.
+   *
+   * @param containerName
+   * @throws IOException
+   */
+  @Override
+  public void deleteContainer(String containerName)
+      throws IOException {
+    Preconditions.checkState(!Strings.isNullOrEmpty(containerName),
+        "Container name cannot be null or empty");
+    DeleteContainerRequestProto request = DeleteContainerRequestProto
+        .newBuilder()
+        .setContainerName(containerName)
+        .build();
+    try {
+      rpcProxy.deleteContainer(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

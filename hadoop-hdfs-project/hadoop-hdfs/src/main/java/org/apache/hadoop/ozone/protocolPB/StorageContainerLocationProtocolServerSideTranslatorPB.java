@@ -58,6 +58,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.GetContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.GetContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeleteContainerResponseProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 
@@ -143,6 +147,18 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       return GetContainerResponseProto.newBuilder()
           .setPipeline(pipeline.getProtobufMessage())
           .build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DeleteContainerResponseProto deleteContainer(
+      RpcController controller, DeleteContainerRequestProto request)
+      throws ServiceException {
+    try {
+      impl.deleteContainer(request.getContainerName());
+      return DeleteContainerResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

@@ -374,6 +374,14 @@ public class StorageContainerManager
   }
 
   /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void deleteContainer(String containerName) throws IOException {
+    scmContainerManager.deleteContainer(containerName);
+  }
+
+  /**
    * Asks SCM where a container should be allocated. SCM responds with the set
    * of datanodes that should be used creating this container.
    *

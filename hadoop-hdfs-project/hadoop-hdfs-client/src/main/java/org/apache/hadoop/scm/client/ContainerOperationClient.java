@@ -141,6 +141,8 @@ public class ContainerOperationClient implements ScmClient {
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ContainerProtocolCalls.deleteContainer(client, force, traceID);
+      storageContainerLocationClient
+          .deleteContainer(pipeline.getContainerName());
       LOG.info("Deleted container {}, leader: {}, machines: {} ",
           pipeline.getContainerName(),
           pipeline.getLeader(),

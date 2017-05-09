@@ -421,16 +421,6 @@ public class TestOzoneContainer {
       Assert.assertTrue(
           putKeyRequest.getTraceID().equals(response.getTraceID()));
 
-      // Container cannot be deleted because the container is not empty.
-      request = ContainerTestHelper.getDeleteContainer(
-          client.getPipeline(), false);
-      response = client.sendCommand(request);
-
-      Assert.assertNotNull(response);
-      Assert.assertEquals(ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY,
-          response.getResult());
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-
       // Container cannot be deleted forcibly because
       // the container is not closed.
       request = ContainerTestHelper.getDeleteContainer(
@@ -449,8 +439,18 @@ public class TestOzoneContainer {
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
+      // Container cannot be deleted because the container is not empty.
+      request = ContainerTestHelper.getDeleteContainer(
+          client.getPipeline(), false);
+      response = client.sendCommand(request);
+
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY,
+          response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
       // Container can be deleted forcibly because
-      // it has been closed.
+      // it is closed and non-empty.
       request = ContainerTestHelper.getDeleteContainer(
           client.getPipeline(), true);
       response = client.sendCommand(request);
