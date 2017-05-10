@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.regex.Pattern;
@@ -52,6 +53,10 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.impl.Log4jLoggerAdapter;
 
 /**
  * Change log level in runtime.
@@ -357,7 +362,25 @@ public class LogLevel {
           process(((Jdk14Logger)log).getLogger(), level, out);
         }
         else {
-          out.println("Sorry, " + log.getClass() + " not supported.<br />");
+          Logger logger = LoggerFactory.getLogger(logName);
+          if (logger instanceof Log4jLoggerAdapter) {
+            try {
+              Field field = Log4jLoggerAdapter.class.getDeclaredField("logger");
+              field.setAccessible(true);
+              org.apache.log4j.Logger log4jLogger = (org.apache.log4j.Logger) field.get(logger);
+              process(log4jLogger, level, out);
+            } catch (NoSuchFieldException e) {
+              e.printStackTrace();
+              out.println("Sorry, " + log.getClass() + " exception.<br />" + e.getMessage()
+                  + "<br />");
+            } catch (IllegalAccessException e) {
+              e.printStackTrace();
+              out.println("Sorry, " + log.getClass() + " exception.<br />" + e.getMessage()
+                  + "<br />");
+            }
+          } else {
+            out.println("Sorry, " + log.getClass() + " not supported.<br />");
+          }
         }
       }
 
