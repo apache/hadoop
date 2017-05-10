@@ -89,7 +89,6 @@ public final class SCMNodePoolManager implements NodePoolManager {
     }
     Options options = new Options();
     options.cacheSize(cacheSize * OzoneConsts.MB);
-    options.createIfMissing();
 
     File nodePoolDBPath = new File(scmMetaDataDir, NODEPOOL_DB);
     nodePoolStore = new LevelDBStore(nodePoolDBPath, options);

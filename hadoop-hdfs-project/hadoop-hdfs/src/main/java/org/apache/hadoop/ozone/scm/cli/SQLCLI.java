@@ -156,8 +156,12 @@ public class SQLCLI  extends Configured implements Tool {
       LOG.error("Error processing output path {}", outPath);
       return -1;
     }
-    if (!Files.exists(outPath.getParent())) {
-      Files.createDirectories(outPath.getParent());
+
+    Path outParentPath = outPath.getParent();
+    if (outParentPath != null) {
+      if (!Files.exists(outParentPath)) {
+        Files.createDirectories(outParentPath);
+      }
     }
     LOG.info("Parent path [{}] db name [{}]", parentPath, dbName);
     if (dbName.toString().equals(CONTAINER_DB)) {

@@ -87,7 +87,6 @@ public class ContainerMapping implements Mapping {
     }
     Options options = new Options();
     options.cacheSize(this.cacheSize * OzoneConsts.MB);
-    options.createIfMissing();
 
     // Write the container name to pipeline mapping.
     File containerDBPath = new File(scmMetaDataDir, CONTAINER_DB);

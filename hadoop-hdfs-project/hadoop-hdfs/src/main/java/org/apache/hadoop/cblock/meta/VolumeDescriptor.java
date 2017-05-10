@@ -262,16 +262,7 @@ public class VolumeDescriptor {
           return false;
         }
       }
-      for (String containerKey : containerMap.keySet()) {
-        if (!other.containerMap.containsKey(containerKey)) {
-          return false;
-        }
-        if (!containerMap.get(containerKey).equals(
-            other.containerMap.get(containerKey))) {
-          return false;
-        }
-      }
-      return true;
+      return containerMap.equals(other.containerMap);
     }
     return false;
   }
