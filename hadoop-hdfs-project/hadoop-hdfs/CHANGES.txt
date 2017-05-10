@@ -265,6 +265,10 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11766. Fix findbugs warning in branch-2.7. (Chen Liang via aajisaka)
 
+	HDFS-11373. Backport HDFS-11258 and HDFS-11272
+	(File mtime change could not save to editlog).
+	(Contributed by Jimmy Xiang, backported by Akira Ajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
