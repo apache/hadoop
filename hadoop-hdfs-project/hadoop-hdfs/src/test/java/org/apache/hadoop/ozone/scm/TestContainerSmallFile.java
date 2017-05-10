@@ -62,7 +62,7 @@ public class TestContainerSmallFile {
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
     cluster = new MiniOzoneCluster.Builder(ozoneConfig).numDataNodes(1)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient = cluster
         .createStorageContainerLocationClient();
     xceiverClientManager = new XceiverClientManager(ozoneConfig);

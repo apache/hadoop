@@ -28,6 +28,7 @@ import org.apache.hadoop.cblock.jscsiHelper.cache.impl.CBlockLocalCache;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
@@ -90,7 +91,8 @@ public class TestLocalBlockCache {
     config.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     config.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
     cluster = new MiniOzoneCluster.Builder(config)
-        .numDataNodes(1).setHandlerType("distributed").build();
+        .numDataNodes(1)
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient = cluster
         .createStorageContainerLocationClient();
     xceiverClientManager = new XceiverClientManager(config);

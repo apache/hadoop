@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
@@ -56,7 +57,7 @@ public class TestSCMMXBean {
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
-        .setHandlerType("distributed")
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .build();
     scm = cluster.getStorageContainerManager();
     mbs = ManagementFactory.getPlatformMBeanServer();

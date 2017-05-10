@@ -106,7 +106,7 @@ public class TestContainerPersistence {
     Assert.assertTrue(containerDir.mkdirs());
 
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     containerManager = new ContainerManagerImpl();
     chunkManager = new ChunkManagerImpl(containerManager);
     containerManager.setChunkManager(chunkManager);

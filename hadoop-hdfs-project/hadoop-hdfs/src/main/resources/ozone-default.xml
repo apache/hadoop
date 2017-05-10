@@ -39,7 +39,7 @@
     <description>
       The second key dfs.storage.handler.type tells ozone which storage
       handler to use. The possible values are:
-      ozone - The Ozone distributed storage handler.
+      distributed - The Ozone distributed storage handler.
       local - Local Storage handler strictly for testing.
     </description>
   </property>
