@@ -2639,6 +2639,8 @@ public class YarnConfiguration extends Configuration {
 
   public static final String ROUTER_PREFIX = YARN_PREFIX + "router.";
 
+  public static final String ROUTER_BIND_HOST = ROUTER_PREFIX + "bind-host";
+
   public static final String ROUTER_CLIENTRM_PREFIX =
       ROUTER_PREFIX + "clientrm.";
 
@@ -2654,9 +2656,23 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.router.clientrm."
           + "DefaultClientRequestInterceptor";
 
-  public static final String ROUTER_CLIENTRM_PIPELINE_CACHE_MAX_SIZE =
-      ROUTER_CLIENTRM_PREFIX + "cache-max-size";
-  public static final int DEFAULT_ROUTER_CLIENTRM_PIPELINE_CACHE_MAX_SIZE = 25;
+  public static final String ROUTER_PIPELINE_CACHE_MAX_SIZE =
+      ROUTER_PREFIX + "pipeline.cache-max-size";
+  public static final int DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE = 25;
+
+  public static final String ROUTER_RMADMIN_PREFIX = ROUTER_PREFIX + "rmadmin.";
+
+  public static final String ROUTER_RMADMIN_ADDRESS =
+      ROUTER_RMADMIN_PREFIX + ".address";
+  public static final int DEFAULT_ROUTER_RMADMIN_PORT = 8052;
+  public static final String DEFAULT_ROUTER_RMADMIN_ADDRESS =
+      "0.0.0.0:" + DEFAULT_ROUTER_RMADMIN_PORT;
+
+  public static final String ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE =
+      ROUTER_RMADMIN_PREFIX + "interceptor-class.pipeline";
+  public static final String DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS =
+      "org.apache.hadoop.yarn.server.router.rmadmin."
+          + "DefaultRMAdminRequestInterceptor";
 
   ////////////////////////////////
   // Other Configs

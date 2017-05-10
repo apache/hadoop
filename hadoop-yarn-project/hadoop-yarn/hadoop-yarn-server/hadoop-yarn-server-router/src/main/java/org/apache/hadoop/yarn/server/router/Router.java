@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
+import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +55,7 @@ public class Router extends CompositeService {
   private Configuration conf;
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private RouterClientRMService clientRMProxyService;
+  private RouterRMAdminService rmAdminProxyService;
 
   /**
    * Priority of the Router shutdown hook.
@@ -71,8 +73,12 @@ public class Router extends CompositeService {
   @Override
   protected void serviceInit(Configuration config) throws Exception {
     this.conf = config;
+    // ClientRM Proxy
     clientRMProxyService = createClientRMProxyService();
     addService(clientRMProxyService);
+    // RMAdmin Proxy
+    rmAdminProxyService = createRMAdminProxyService();
+    addService(rmAdminProxyService);
     super.serviceInit(conf);
   }
 
@@ -105,6 +111,10 @@ public class Router extends CompositeService {
 
   protected RouterClientRMService createClientRMProxyService() {
     return new RouterClientRMService();
+  }
+
+  protected RouterRMAdminService createRMAdminProxyService() {
+    return new RouterRMAdminService();
   }
 
   public static void main(String[] argv) {

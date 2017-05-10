@@ -16,26 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.router.clientrm;
+package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Implements the {@link ClientRequestInterceptor} interface and provides common
- * functionality which can can be used and/or extended by other concrete
+ * Implements the {@link RMAdminRequestInterceptor} interface and provides
+ * common functionality which can can be used and/or extended by other concrete
  * intercepter classes.
  *
  */
-public abstract class AbstractClientRequestInterceptor
-    implements ClientRequestInterceptor {
+public abstract class AbstractRMAdminRequestInterceptor
+    implements RMAdminRequestInterceptor {
   private Configuration conf;
-  private ClientRequestInterceptor nextInterceptor;
+  private RMAdminRequestInterceptor nextInterceptor;
 
   /**
-   * Sets the {@link ClientRequestInterceptor} in the chain.
+   * Sets the {@link RMAdminRequestInterceptor} in the chain.
    */
   @Override
-  public void setNextInterceptor(ClientRequestInterceptor nextInterceptor) {
+  public void setNextInterceptor(RMAdminRequestInterceptor nextInterceptor) {
     this.nextInterceptor = nextInterceptor;
   }
 
@@ -60,7 +60,7 @@ public abstract class AbstractClientRequestInterceptor
   }
 
   /**
-   * Initializes the {@link ClientRequestInterceptor}.
+   * Initializes the {@link RMAdminRequestInterceptor}.
    */
   @Override
   public void init(String user) {
@@ -70,7 +70,7 @@ public abstract class AbstractClientRequestInterceptor
   }
 
   /**
-   * Disposes the {@link ClientRequestInterceptor}.
+   * Disposes the {@link RMAdminRequestInterceptor}.
    */
   @Override
   public void shutdown() {
@@ -80,10 +80,10 @@ public abstract class AbstractClientRequestInterceptor
   }
 
   /**
-   * Gets the next {@link ClientRequestInterceptor} in the chain.
+   * Gets the next {@link RMAdminRequestInterceptor} in the chain.
    */
   @Override
-  public ClientRequestInterceptor getNextInterceptor() {
+  public RMAdminRequestInterceptor getNextInterceptor() {
     return this.nextInterceptor;
   }
 
