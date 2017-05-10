@@ -91,7 +91,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Extends the AbstractRequestInterceptorClient class and provides an
+ * Extends the {@code AbstractRequestInterceptorClient} class and provides an
  * implementation that simply forwards the client requests to the cluster
  * resource manager.
  *

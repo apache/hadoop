@@ -104,10 +104,11 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * RouterClientRMService is a service that runs on each router that can be used
- * to intercept and inspect ApplicationClientProtocol messages from client to
- * the cluster resource manager. It listens ApplicationClientProtocol messages
- * from the client and creates a request intercepting pipeline instance for each
- * client. The pipeline is a chain of intercepter instances that can inspect and
+ * to intercept and inspect {@link ApplicationClientProtocol} messages from
+ * client to the cluster resource manager. It listens
+ * {@link ApplicationClientProtocol} messages from the client and creates a
+ * request intercepting pipeline instance for each client. The pipeline is a
+ * chain of {@link ClientRequestInterceptor} instances that can inspect and
  * modify the request/response as needed. The main difference with
  * AMRMProxyService is the protocol they implement.
  */
@@ -137,13 +138,14 @@ public class RouterClientRMService extends AbstractService
     UserGroupInformation.setConfiguration(conf);
 
     this.listenerEndpoint =
-        conf.getSocketAddr(YarnConfiguration.ROUTER_CLIENTRM_ADDRESS,
+        conf.getSocketAddr(YarnConfiguration.ROUTER_BIND_HOST,
+            YarnConfiguration.ROUTER_CLIENTRM_ADDRESS,
             YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_ADDRESS,
             YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PORT);
 
     int maxCacheSize =
-        conf.getInt(YarnConfiguration.ROUTER_CLIENTRM_PIPELINE_CACHE_MAX_SIZE,
-            YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PIPELINE_CACHE_MAX_SIZE);
+        conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
+            YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
     this.userPipelineMap = Collections.synchronizedMap(
         new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
             maxCacheSize, true));

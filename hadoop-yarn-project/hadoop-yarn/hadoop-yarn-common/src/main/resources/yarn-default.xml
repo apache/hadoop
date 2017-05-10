@@ -3177,10 +3177,31 @@
 
   <property>
     <description>
-      Size of LRU cache for Router ClientRM Service.
+      Size of LRU cache for Router ClientRM Service and RMAdmin Service.
     </description>
-    <name>yarn.router.clientrm.cache-max-size</name>
+    <name>yarn.router.pipeline.cache-max-size</name>
     <value>25</value>
+  </property>
+
+  <property>
+    <description>
+      The comma separated list of class names that implement the
+      RequestInterceptor interface. This is used by the RouterRMAdminService
+      to create the request processing pipeline for users.
+    </description>
+    <name>yarn.router.rmadmin.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.router.rmadmin.DefaultRMAdminRequestInterceptor</value>
+  </property>
+
+  <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.router.address and yarn.router.webapp.address, respectively. This is
+      most useful for making Router listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.router.bind-host</name>
+    <value></value>
   </property>
 
   <property>
