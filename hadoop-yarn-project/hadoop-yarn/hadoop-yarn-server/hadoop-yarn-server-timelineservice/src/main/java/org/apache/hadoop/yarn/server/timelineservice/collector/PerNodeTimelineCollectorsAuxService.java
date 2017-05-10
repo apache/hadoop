@@ -73,7 +73,12 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     if (!YarnConfiguration.timelineServiceV2Enabled(conf)) {
-      throw new YarnException("Timeline service v2 is not enabled");
+      throw new YarnException(
+          "Looks like timeline_collector is set as an auxillary service in "
+              + YarnConfiguration.NM_AUX_SERVICES
+              + ". But Timeline service v2 is not enabled,"
+              + " so timeline_collector needs to be removed"
+              + " from that list of auxillary services.");
     }
     collectorLingerPeriod =
         conf.getLong(YarnConfiguration.ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS,
