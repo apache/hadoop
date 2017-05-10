@@ -424,10 +424,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     //List<String> -> stored as List -> fetched/converted to List<String>
     //we can't do better here thanks to type-erasure
     @SuppressWarnings("unchecked")
-    List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
-    @SuppressWarnings("unchecked")
-    List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
-    @SuppressWarnings("unchecked")
     List<String> filecacheDirs = ctx.getExecutionAttribute(FILECACHE_DIRS);
     @SuppressWarnings("unchecked")
     List<String> containerLocalDirs = ctx.getExecutionAttribute(
@@ -489,9 +485,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     addCGroupParentIfRequired(resourcesOpts, containerIdStr, runCommand);
 
-    Path nmPrivateContainerScriptPath = ctx.getExecutionAttribute(
-        NM_PRIVATE_CONTAINER_SCRIPT_PATH);
-
     String disableOverride = environment.get(
         ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE);
 
@@ -511,33 +504,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
         containerIdStr);
-    PrivilegedOperation launchOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
-
-    launchOp.appendArgs(runAsUser, ctx.getExecutionAttribute(USER),
-        Integer.toString(PrivilegedOperation
-            .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
-        ctx.getExecutionAttribute(APPID),
-        containerIdStr, containerWorkDir.toString(),
-        nmPrivateContainerScriptPath.toUri().getPath(),
-        ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
-        ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
-        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-            localDirs),
-        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-            logDirs),
-        commandFile,
-        resourcesOpts);
-
-    String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
-
-    if (tcCommandFile != null) {
-      launchOp.appendArgs(tcCommandFile);
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Launching container with cmd: " + runCommand
-          .getCommandWithArguments());
-    }
+    PrivilegedOperation launchOp = buildLaunchOp(ctx,
+        commandFile, runCommand);
 
     try {
       privilegedOperationExecutor.executePrivilegedOperation(null,
@@ -634,5 +602,54 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.error("Error when executing command.", e);
     }
     return null;
+  }
+
+
+
+  private PrivilegedOperation buildLaunchOp(ContainerRuntimeContext ctx,
+      String commandFile, DockerRunCommand runCommand) {
+
+    String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
+    String containerIdStr = ctx.getContainer().getContainerId().toString();
+    Path nmPrivateContainerScriptPath = ctx.getExecutionAttribute(
+            NM_PRIVATE_CONTAINER_SCRIPT_PATH);
+    Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
+    //we can't do better here thanks to type-erasure
+    @SuppressWarnings("unchecked")
+    List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
+    @SuppressWarnings("unchecked")
+    List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
+    String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
+
+    PrivilegedOperation launchOp = new PrivilegedOperation(
+            PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
+
+    launchOp.appendArgs(runAsUser, ctx.getExecutionAttribute(USER),
+            Integer.toString(PrivilegedOperation
+                    .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
+            ctx.getExecutionAttribute(APPID),
+            containerIdStr,
+            containerWorkDir.toString(),
+            nmPrivateContainerScriptPath.toUri().getPath(),
+            ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
+            ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                    localDirs),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                    logDirs),
+            commandFile,
+            resourcesOpts);
+
+    String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
+
+    if (tcCommandFile != null) {
+      launchOp.appendArgs(tcCommandFile);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Launching container with cmd: " + runCommand
+              .getCommandWithArguments());
+    }
+
+    return launchOp;
   }
 }
