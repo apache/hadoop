@@ -130,7 +130,7 @@ public class TestWebHdfsTokens {
     verify(fs, never()).setDelegationToken(any());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testGetOpRequireAuth() {
     for (HttpOpParam.Op op : GetOpParam.Op.values()) {
       boolean expect = (op == GetOpParam.Op.GETDELEGATIONTOKEN);
@@ -138,7 +138,7 @@ public class TestWebHdfsTokens {
     }
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testPutOpRequireAuth() {
     for (HttpOpParam.Op op : PutOpParam.Op.values()) {
       boolean expect = (op == PutOpParam.Op.RENEWDELEGATIONTOKEN || op == PutOpParam.Op.CANCELDELEGATIONTOKEN);
@@ -146,14 +146,14 @@ public class TestWebHdfsTokens {
     }
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testPostOpRequireAuth() {
     for (HttpOpParam.Op op : PostOpParam.Op.values()) {
       assertFalse(op.getRequireAuth());
     }
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testDeleteOpRequireAuth() {
     for (HttpOpParam.Op op : DeleteOpParam.Op.values()) {
       assertFalse(op.getRequireAuth());

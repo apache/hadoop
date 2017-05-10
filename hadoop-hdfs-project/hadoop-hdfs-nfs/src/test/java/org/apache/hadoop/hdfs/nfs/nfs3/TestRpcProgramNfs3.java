@@ -749,7 +749,7 @@ public class TestRpcProgramNfs3 {
     assertEquals("Incorrect COMMIT3Response:", null, response2);
   }
 
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testIdempotent() {
     Object[][] procedures = {
         { Nfs3Constant.NFSPROC3.NULL, 1 },
