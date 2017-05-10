@@ -583,7 +583,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     addSchedPriorityCommand(prefixCommands);
 
     Container container = ctx.getContainer();
-    String runAsUser = getRunAsUser(ctx.getUser());
 
     ContainerRuntimeContext.Builder builder = new ContainerRuntimeContext
             .Builder(container);
@@ -594,7 +593,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     builder.setExecutionAttribute(LOCALIZED_RESOURCES,
         ctx.getLocalizedResources())
-      .setExecutionAttribute(RUN_AS_USER, runAsUser)
+      .setExecutionAttribute(RUN_AS_USER, getRunAsUser(ctx.getUser()))
       .setExecutionAttribute(USER, ctx.getUser())
       .setExecutionAttribute(APPID, ctx.getAppId())
       .setExecutionAttribute(CONTAINER_ID_STR,

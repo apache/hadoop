@@ -310,21 +310,20 @@ public class ContainerLaunch implements Callable<Integer> {
 
   private Path deriveContainerWorkDir() throws IOException {
 
-    final StringBuilder containerWorkDirBuilder =
-        new StringBuilder()
-          .append(ContainerLocalizer.USERCACHE)
-          .append(Path.SEPARATOR)
-          .append(container.getUser())
-          .append(Path.SEPARATOR)
-          .append(ContainerLocalizer.APPCACHE)
-          .append(Path.SEPARATOR)
-          .append(app.getAppId().toString())
-          .append(Path.SEPARATOR)
-          .append(container.getContainerId().toString());
+    final String containerWorkDirPath =
+        ContainerLocalizer.USERCACHE +
+        Path.SEPARATOR +
+        container.getUser() +
+        Path.SEPARATOR +
+        ContainerLocalizer.APPCACHE +
+        Path.SEPARATOR +
+        app.getAppId().toString() +
+        Path.SEPARATOR +
+        container.getContainerId().toString();
 
     final Path containerWorkDir =
         dirsHandler.getLocalPathForWrite(
-          containerWorkDirBuilder.toString(),
+          containerWorkDirPath,
           LocalDirAllocator.SIZE_UNKNOWN, false);
 
     return containerWorkDir;
@@ -338,8 +337,8 @@ public class ContainerLaunch implements Callable<Integer> {
         .setLocalizedResources(localResources)
         .setUser(container.getUser())
         .setContainerLocalDirs(containerLocalDirs)
-        .setCommands(container.getLaunchContext()
-          .getCommands()).build());
+        .setCommands(container.getLaunchContext().getCommands())
+        .build());
   }
 
   @SuppressWarnings("unchecked")
