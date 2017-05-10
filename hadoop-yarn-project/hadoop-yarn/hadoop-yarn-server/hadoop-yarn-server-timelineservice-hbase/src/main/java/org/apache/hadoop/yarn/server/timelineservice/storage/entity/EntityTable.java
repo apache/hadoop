@@ -83,6 +83,13 @@ public class EntityTable extends BaseTable<EntityTable> {
   private static final String METRICS_TTL_CONF_NAME = PREFIX
       + ".table.metrics.ttl";
 
+  /**
+   * config param name that specifies max-versions for metrics column family in
+   * entity table.
+   */
+  private static final String METRICS_MAX_VERSIONS =
+      PREFIX + ".table.metrics.max-versions";
+
   /** default value for entity table name. */
   public static final String DEFAULT_TABLE_NAME = "timelineservice.entity";
 
@@ -90,7 +97,7 @@ public class EntityTable extends BaseTable<EntityTable> {
   private static final int DEFAULT_METRICS_TTL = 2592000;
 
   /** default max number of versions. */
-  private static final int DEFAULT_METRICS_MAX_VERSIONS = 1000;
+  private static final int DEFAULT_METRICS_MAX_VERSIONS = 10000;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(EntityTable.class);
@@ -137,7 +144,8 @@ public class EntityTable extends BaseTable<EntityTable> {
     metricsCF.setBlockCacheEnabled(true);
     // always keep 1 version (the latest)
     metricsCF.setMinVersions(1);
-    metricsCF.setMaxVersions(DEFAULT_METRICS_MAX_VERSIONS);
+    metricsCF.setMaxVersions(
+        hbaseConf.getInt(METRICS_MAX_VERSIONS, DEFAULT_METRICS_MAX_VERSIONS));
     metricsCF.setTimeToLive(hbaseConf.getInt(METRICS_TTL_CONF_NAME,
         DEFAULT_METRICS_TTL));
     entityTableDescp.setRegionSplitPolicyClassName(
