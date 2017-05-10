@@ -145,6 +145,8 @@ public class SLSRunner {
   public void start() throws Exception {
     // start resource manager
     startRM();
+    // wait for RMContainerTokenSecretManager to generate its key
+    Thread.sleep(10*1000);
     // start node managers
     startNM();
     // start application masters
