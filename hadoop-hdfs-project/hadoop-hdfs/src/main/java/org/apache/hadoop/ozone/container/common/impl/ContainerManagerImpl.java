@@ -310,6 +310,12 @@ public class ContainerManagerImpl implements ContainerManager {
       Path metadataPath = null;
       Path location = (!overwrite) ? locationManager.getContainerPath():
           Paths.get(containerData.getContainerPath()).getParent();
+      if (location == null) {
+        throw new StorageContainerException(
+            "Failed to get container file path.",
+            CONTAINER_INTERNAL_ERROR);
+      }
+
       File containerFile = ContainerUtils.getContainerFile(containerData,
           location);
       File metadataFile = ContainerUtils.getMetadataFile(containerData,

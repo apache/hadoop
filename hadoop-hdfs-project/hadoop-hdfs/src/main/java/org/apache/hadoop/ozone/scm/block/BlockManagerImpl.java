@@ -104,7 +104,6 @@ public class BlockManagerImpl implements BlockManager {
     }
     Options options = new Options();
     options.cacheSize(this.cacheSize * OzoneConsts.MB);
-    options.createIfMissing();
 
     // Write the block key to container name mapping.
     File blockContainerDbPath = new File(scmMetaDataDir, BLOCK_DB);
