@@ -102,9 +102,15 @@ public class ContainerData {
       builder.setDbPath(this.getDBPath());
     }
 
+    if (this.getHash() != null) {
+      builder.setHash(this.getHash());
+    }
+
     if (this.getContainerPath() != null) {
       builder.setContainerPath(this.getContainerPath());
     }
+
+    builder.setOpen(this.isOpen());
 
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       ContainerProtos.KeyValue.Builder keyValBuilder =

@@ -33,6 +33,8 @@ import static org.apache.hadoop.ozone.scm.cli.container
     .CreateContainerHandler.CONTAINER_CREATE;
 import static org.apache.hadoop.ozone.scm.cli.container
     .DeleteContainerHandler.CONTAINER_DELETE;
+import static org.apache.hadoop.ozone.scm.cli.container
+    .InfoContainerHandler.CONTAINER_INFO;
 
 /**
  * The handler class of container-specific commands, e.g. createContainer.
@@ -57,6 +59,8 @@ public class ContainerCommandHandler extends OzoneCommandHandler {
       handler = new CreateContainerHandler(getScmClient());
     } else if (cmd.hasOption(CONTAINER_DELETE)) {
       handler = new DeleteContainerHandler(getScmClient());
+    } else if (cmd.hasOption(CONTAINER_INFO)) {
+      handler = new InfoContainerHandler(getScmClient());
     }
 
     // execute the sub command, throw exception if no sub command found
@@ -87,11 +91,14 @@ public class ContainerCommandHandler extends OzoneCommandHandler {
   private static void addCommandsOption(Options options) {
     Option createContainer =
         new Option(CONTAINER_CREATE, false, "Create container");
+    Option infoContainer =
+        new Option(CONTAINER_INFO, true, "Info container");
     Option deleteContainer =
         new Option(CONTAINER_DELETE, true, "Delete container");
 
     options.addOption(createContainer);
     options.addOption(deleteContainer);
+    options.addOption(infoContainer);
     // TODO : add other options such as delete, close etc.
   }
 

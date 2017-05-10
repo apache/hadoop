@@ -27,7 +27,7 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
  * The protobuf counter part of this class looks like this.
  * message ContainerInfo {
  * required string containerName = 1;
- * repeated bytes finalhash = 2;
+ * required string finalhash = 2;
  * optional int64 size = 3;
  * optional int64 keycount = 4;
  * }
