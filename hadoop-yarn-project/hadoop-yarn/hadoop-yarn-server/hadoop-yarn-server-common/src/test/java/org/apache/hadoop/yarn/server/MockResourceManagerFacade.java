@@ -124,8 +124,11 @@ import org.mortbay.log.Log;
  * implementation is expected by the unit test cases. So please change the
  * implementation with care.
  */
-public class MockResourceManagerFacade implements
-    ApplicationMasterProtocol, ApplicationClientProtocol {
+public class MockResourceManagerFacade
+    implements ApplicationClientProtocol, ApplicationMasterProtocol {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MockResourceManagerFacade.class);
 
   private HashMap<String, List<ContainerId>> applicationContainerIdMap =
       new HashMap<String, List<ContainerId>>();

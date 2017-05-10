@@ -24,7 +24,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * Test class to validate the correctness of the LRUCacheHashMap.
+ * Test class to validate the correctness of the {@code LRUCacheHashMap}.
  *
  */
 public class TestLRUCacheHashMap {
