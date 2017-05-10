@@ -274,6 +274,7 @@ public class TestFileCorruption {
       out.write(outBuffer, 0, bufferSize);
       out.close();
       dfs.setReplication(filePath, (short) 10);
+      cluster.triggerBlockReports();
       // underreplicated Blocks should be one after setrep
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override public Boolean get() {
