@@ -163,7 +163,7 @@ public class TestJobConf {
    * old property names
    */
   @SuppressWarnings("deprecation")
-  @Test (timeout = 1000)
+  @Test (timeout = 10000)
   public void testDeprecatedPropertyNameForTaskVmem() {
     JobConf configuration = new JobConf();
 

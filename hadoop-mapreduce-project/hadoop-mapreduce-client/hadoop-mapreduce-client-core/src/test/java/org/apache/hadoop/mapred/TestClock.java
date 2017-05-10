@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
  */
 public class TestClock {
 
-  @Test  (timeout=1000)
+  @Test  (timeout=10000)
   public void testClock(){
     Clock clock= new Clock();
     long templateTime=System.currentTimeMillis();
