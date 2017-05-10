@@ -82,7 +82,7 @@ public class TestHostsFiles {
     // Configure an excludes file
     FileSystem localFileSys = FileSystem.getLocal(conf);
     Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, "build/test/data/temp/decommission");
+    Path dir = new Path(workingDir, MiniDFSCluster.getBaseDirectory());
     Path excludeFile = new Path(dir, "exclude");
     Path includeFile = new Path(dir, "include");
     assertTrue(localFileSys.mkdirs(dir));
@@ -137,7 +137,7 @@ public class TestHostsFiles {
     // Configure an excludes file
     FileSystem localFileSys = FileSystem.getLocal(conf);
     Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, "build/test/data/temp/decommission");
+    Path dir = new Path(workingDir, MiniDFSCluster.getBaseDirectory());
     Path excludeFile = new Path(dir, "exclude");
     Path includeFile = new Path(dir, "include");
     assertTrue(localFileSys.mkdirs(dir));

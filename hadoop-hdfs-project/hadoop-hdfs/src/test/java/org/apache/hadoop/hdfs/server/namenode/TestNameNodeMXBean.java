@@ -228,8 +228,7 @@ public class TestNameNodeMXBean {
       // Define include file to generate deadNodes metrics
       FileSystem localFileSys = FileSystem.getLocal(conf);
       Path workingDir = localFileSys.getWorkingDirectory();
-      Path dir = new Path(workingDir,
-        "build/test/data/temp/TestNameNodeMXBean");
+      Path dir = new Path(workingDir, MiniDFSCluster.getBaseDirectory());
       Path includeFile = new Path(dir, "include");
       assertTrue(localFileSys.mkdirs(dir));
       StringBuilder includeHosts = new StringBuilder();
