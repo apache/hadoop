@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm;
 
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -25,9 +26,12 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
 import org.apache.hadoop.ozone.scm.cli.SQLCLI;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -46,6 +50,7 @@ import java.util.HashMap;
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.KB;
+import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -64,8 +69,8 @@ public class TestContainerSQLCli {
   private static NodeManager nodeManager;
   private static BlockManagerImpl blockManager;
 
-  private static String pipelineName1;
-  private static String pipelineName2;
+  private static Pipeline pipeline1;
+  private static Pipeline pipeline2;
 
   private static HashMap<String, String> blockContainerMap;
 
@@ -78,7 +83,10 @@ public class TestContainerSQLCli {
 
     conf = new OzoneConfiguration();
     conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 2);
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+    conf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
+        SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(2
+    )
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
@@ -96,8 +104,8 @@ public class TestContainerSQLCli {
     // so the first allocateBlock() will create two containers. A random one
     // is assigned for the block.
     AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
-    pipelineName1 = ab1.getPipeline().getContainerName();
-    blockContainerMap.put(ab1.getKey(), pipelineName1);
+    pipeline1 = ab1.getPipeline();
+    blockContainerMap.put(ab1.getKey(), pipeline1.getContainerName());
 
     AllocatedBlock ab2;
     // we want the two blocks on the two provisioned containers respectively,
@@ -108,9 +116,9 @@ public class TestContainerSQLCli {
     // the size of blockContainerMap will vary each time the test is run.
     while (true) {
       ab2 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
-      pipelineName2 = ab2.getPipeline().getContainerName();
-      blockContainerMap.put(ab2.getKey(), pipelineName2);
-      if (!pipelineName2.equals(pipelineName1)) {
+      pipeline2 = ab2.getPipeline();
+      blockContainerMap.put(ab2.getKey(), pipeline2.getContainerName());
+      if (!pipeline1.getContainerName().equals(pipeline2.getContainerName())) {
         break;
       }
     }
@@ -150,6 +158,33 @@ public class TestContainerSQLCli {
   }
 
   @Test
+  public void testConvertNodepoolDB() throws Exception {
+    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbPath = dbRootPath + "/" + NODEPOOL_DB;
+    String[] args = {"-p", dbPath, "-o", dbOutPath};
+
+    cli.run(args);
+
+    // verify the sqlite db
+    HashMap<String, String> expectedPool = new HashMap<>();
+    for (DatanodeID dnid : nodeManager.getAllNodes()) {
+      expectedPool.put(dnid.getDatanodeUuid(), "DefaultNodePool");
+    }
+    Connection conn = connectDB(dbOutPath);
+    String sql = "SELECT * FROM nodePool";
+    ResultSet rs = executeQuery(conn, sql);
+    while(rs.next()) {
+      String datanodeUUID = rs.getString("datanodeUUID");
+      String poolName = rs.getString("poolName");
+      assertTrue(expectedPool.remove(datanodeUUID).equals(poolName));
+    }
+    assertEquals(0, expectedPool.size());
+
+    Files.delete(Paths.get(dbOutPath));
+  }
+
+  @Test
   public void testConvertContainerDB() throws Exception {
     String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
     // TODO : the following will fail due to empty Datanode list, need to fix.
@@ -175,8 +210,8 @@ public class TestContainerSQLCli {
       //assertEquals(dnUUID, rs.getString("leaderUUID"));
     }
     assertTrue(containerNames.size() == 2 &&
-        containerNames.contains(pipelineName1) &&
-        containerNames.contains(pipelineName2));
+        containerNames.contains(pipeline1.getContainerName()) &&
+        containerNames.contains(pipeline2.getContainerName()));
 
     sql = "SELECT * FROM containerMembers";
     rs = executeQuery(conn, sql);
@@ -186,8 +221,8 @@ public class TestContainerSQLCli {
       //assertEquals(dnUUID, rs.getString("datanodeUUID"));
     }
     assertTrue(containerNames.size() == 2 &&
-        containerNames.contains(pipelineName1) &&
-        containerNames.contains(pipelineName2));
+        containerNames.contains(pipeline1.getContainerName()) &&
+        containerNames.contains(pipeline2.getContainerName()));
 
     sql = "SELECT * FROM datanodeInfo";
     rs = executeQuery(conn, sql);
@@ -197,7 +232,10 @@ public class TestContainerSQLCli {
       //assertEquals(dnUUID, rs.getString("datanodeUUID"));
       count += 1;
     }
-    assertEquals(1, count);
+    // the two containers maybe on the same datanode, maybe not.
+    int expected = pipeline1.getLeader().getDatanodeUuid().equals(
+        pipeline2.getLeader().getDatanodeUuid())? 1 : 2;
+    assertEquals(expected, count);
     Files.delete(Paths.get(dbOutPath));
   }
 
