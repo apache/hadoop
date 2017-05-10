@@ -180,16 +180,16 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       new Gauge<Long>() {
         @Override
         public Long getValue() {
-          if (! maxReset &&
-                  SLSRunner.simulateInfoMap.containsKey("Number of nodes") &&
-                  SLSRunner.simulateInfoMap.containsKey("Node memory (MB)") &&
-                  SLSRunner.simulateInfoMap.containsKey("Node VCores")) {
-            int numNMs = Integer.parseInt(
-                  SLSRunner.simulateInfoMap.get("Number of nodes").toString());
-            int numMemoryMB = Integer.parseInt(
-                  SLSRunner.simulateInfoMap.get("Node memory (MB)").toString());
-            int numVCores = Integer.parseInt(
-                  SLSRunner.simulateInfoMap.get("Node VCores").toString());
+          if (! maxReset
+              && SLSRunner.getSimulateInfoMap().containsKey("Number of nodes")
+              && SLSRunner.getSimulateInfoMap().containsKey("Node memory (MB)")
+              && SLSRunner.getSimulateInfoMap().containsKey("Node VCores")) {
+            int numNMs = Integer.parseInt(SLSRunner.getSimulateInfoMap()
+                .get("Number of nodes").toString());
+            int numMemoryMB = Integer.parseInt(SLSRunner.getSimulateInfoMap()
+                .get("Node memory (MB)").toString());
+            int numVCores = Integer.parseInt(SLSRunner.getSimulateInfoMap()
+                .get("Node VCores").toString());
 
             totalMemoryMB = numNMs * numMemoryMB;
             totalVCores = numNMs * numVCores;
