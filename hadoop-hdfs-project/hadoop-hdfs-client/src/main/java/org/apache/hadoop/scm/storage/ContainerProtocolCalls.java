@@ -45,6 +45,10 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .WriteChunkRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ReadContainerResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ReadContainerRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 
 import java.io.IOException;
@@ -272,9 +276,35 @@ public final class ContainerProtocolCalls {
   }
 
   /**
-   * Reads the data given the container name and key.
+   * readContainer call that gets meta data from an existing container.
    *
    * @param client - client
+   * @param traceID - trace ID
+   * @throws IOException
+   */
+  public static ReadContainerResponseProto readContainer(
+      XceiverClientSpi client, String containerName,
+      String traceID) throws IOException {
+    ReadContainerRequestProto.Builder readRequest =
+        ReadContainerRequestProto.newBuilder();
+    readRequest.setName(containerName);
+    readRequest.setPipeline(client.getPipeline().getProtobufMessage());
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(Type.ReadContainer);
+    request.setReadContainer(readRequest);
+    request.setTraceID(traceID);
+    ContainerCommandResponseProto response =
+        client.sendCommand(request.build());
+    validateContainerResponse(response);
+    return response.getReadContainer();
+  }
+
+  /**
+   * Reads the data given the container name and key.
+   *
+   * @param client
    * @param containerName - name of the container
    * @param key - key
    * @param traceID - trace ID

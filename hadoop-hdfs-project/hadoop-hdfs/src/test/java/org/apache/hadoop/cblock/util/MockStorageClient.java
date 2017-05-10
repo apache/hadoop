@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.cblock.util;
 
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -58,6 +59,21 @@ public class MockStorageClient implements ScmClient {
   public void deleteContainer(Pipeline pipeline, boolean force)
       throws IOException {
 
+  }
+
+  /**
+   * Create a instance of ContainerData by a given container id,
+   * since this is a testing class, there is no need set up the hold
+   * env to get the meta data of the container.
+   * @param pipeline
+   * @return
+   * @throws IOException
+   */
+  @Override
+  public ContainerData readContainer(Pipeline pipeline) throws IOException {
+    return ContainerData.newBuilder()
+        .setName(pipeline.getContainerName())
+        .build();
   }
 
   /**

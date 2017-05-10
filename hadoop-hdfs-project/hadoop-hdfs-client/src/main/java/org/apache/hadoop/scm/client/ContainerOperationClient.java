@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.scm.client;
 
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadContainerResponseProto;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -147,6 +149,35 @@ public class ContainerOperationClient implements ScmClient {
           pipeline.getContainerName(),
           pipeline.getLeader(),
           pipeline.getMachines());
+    } finally {
+      if (client != null) {
+        xceiverClientManager.releaseClient(client);
+      }
+    }
+  }
+
+  /**
+   * Get meta data from an existing container.
+   *
+   * @param pipeline - pipeline that represents the container.
+   * @return ContainerInfo - a message of protobuf which has basic info
+   * of a container.
+   * @throws IOException
+   */
+  @Override
+  public ContainerData readContainer(Pipeline pipeline) throws IOException {
+    XceiverClientSpi client = null;
+    try {
+      client = xceiverClientManager.acquireClient(pipeline);
+      String traceID = UUID.randomUUID().toString();
+      ReadContainerResponseProto response =
+          ContainerProtocolCalls.readContainer(client,
+              pipeline.getContainerName(), traceID);
+      LOG.info("Read container {}, leader: {}, machines: {} ",
+          pipeline.getContainerName(),
+          pipeline.getLeader(),
+          pipeline.getMachines());
+      return response.getContainerData();
     } finally {
       if (client != null) {
         xceiverClientManager.releaseClient(client);

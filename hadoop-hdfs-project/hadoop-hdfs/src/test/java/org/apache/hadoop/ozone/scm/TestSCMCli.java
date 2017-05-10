@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm;
 
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
@@ -30,14 +31,19 @@ import org.apache.hadoop.scm.client.ContainerOperationClient;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -62,6 +68,9 @@ public class TestSCMCli {
   private static PrintStream outStream;
   private static ByteArrayOutputStream errContent;
   private static PrintStream errStream;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(30000);
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -215,6 +224,116 @@ public class TestSCMCli {
   }
 
   @Test
+  public void testInfoContainer() throws Exception {
+    // The cluster has one Datanode server.
+    DatanodeID datanodeID = cluster.getDataNodes().get(0).getDatanodeId();
+    String formatStr =
+        "Container Name: %s\n" +
+        "Container State: %s\n" +
+        "Container DB Path: %s\n" +
+        "Container Path: %s\n" +
+        "Container Metadata: {%s}\n" +
+        "LeaderID: %s\n" +
+        "Datanodes: [%s]\n";
+
+    String formatStrWithHash =
+        "Container Name: %s\n" +
+        "Container State: %s\n" +
+        "Container Hash: %s\n" +
+        "Container DB Path: %s\n" +
+        "Container Path: %s\n" +
+        "Container Metadata: {%s}\n" +
+        "LeaderID: %s\n" +
+        "Datanodes: [%s]\n";
+
+    // Test a non-exist container
+    String cname = "nonExistContainer";
+    String[] info = {"-container", "-info", cname};
+    int exitCode = runCommandAndGetOutput(info, null, null);
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+
+    // Create an empty container.
+    cname = "ContainerTestInfo1";
+    Pipeline pipeline = scm.allocateContainer(cname);
+    ContainerData data = new ContainerData(cname);
+    containerManager.createContainer(pipeline, data);
+
+    info = new String[]{"-container", "-info", cname};
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    exitCode = runCommandAndGetOutput(info, out, null);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+
+    String openStatus = data.isOpen() ? "OPEN" : "CLOSED";
+    String expected = String.format(formatStr, cname, openStatus,
+        data.getDBPath(), data.getContainerPath(), "",
+        datanodeID.getHostName(), datanodeID.getHostName());
+    assertEquals(expected, out.toString());
+
+    out.reset();
+
+    // Create an non-empty container
+    cname = "ContainerTestInfo2";
+    pipeline = scm.allocateContainer(cname);
+    data = new ContainerData(cname);
+    containerManager.createContainer(pipeline, data);
+    KeyUtils.getDB(data, conf).put(cname.getBytes(),
+        "someKey".getBytes());
+
+    info = new String[]{"-container", "-info", cname};
+    exitCode = runCommandAndGetOutput(info, out, null);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+
+    openStatus = data.isOpen() ? "OPEN" : "CLOSED";
+    expected = String.format(formatStr, cname, openStatus,
+        data.getDBPath(), data.getContainerPath(), "",
+        datanodeID.getHostName(), datanodeID.getHostName());
+    assertEquals(expected, out.toString());
+
+    out.reset();
+
+    // Create a container with some meta data.
+    cname = "ContainerTestInfo3";
+    pipeline = scm.allocateContainer(cname);
+    data = new ContainerData(cname);
+    data.addMetadata("VOLUME", "shire");
+    data.addMetadata("owner", "bilbo");
+    containerManager.createContainer(pipeline, data);
+    KeyUtils.getDB(data, conf).put(cname.getBytes(),
+        "someKey".getBytes());
+
+    List<String> metaList = data.getAllMetadata().entrySet().stream()
+        .map(entry -> entry.getKey() + ":" + entry.getValue())
+        .collect(Collectors.toList());
+    String metadataStr = StringUtils.join(", ", metaList);
+
+    info = new String[]{"-container", "-info", cname};
+    exitCode = runCommandAndGetOutput(info, out, null);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+
+    openStatus = data.isOpen() ? "OPEN" : "CLOSED";
+    expected = String.format(formatStr, cname, openStatus,
+        data.getDBPath(), data.getContainerPath(), metadataStr,
+        datanodeID.getHostName(), datanodeID.getHostName());
+    assertEquals(expected, out.toString());
+
+    out.reset();
+
+    // Close last container and test info again.
+    containerManager.closeContainer(cname);
+
+    info = new String[]{"-container", "-info", cname};
+    exitCode = runCommandAndGetOutput(info, out, null);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    data = containerManager.readContainer(cname);
+
+    openStatus = data.isOpen() ? "OPEN" : "CLOSED";
+    expected = String.format(formatStrWithHash, cname, openStatus,
+        data.getHash(), data.getDBPath(), data.getContainerPath(),
+        metadataStr, datanodeID.getHostName(), datanodeID.getHostName());
+    assertEquals(expected, out.toString());
+  }
+
+  @Test
   public void testNonExistCommand() throws Exception {
     PrintStream init = System.out;
     ByteArrayOutputStream testContent = new ByteArrayOutputStream();
@@ -255,8 +374,10 @@ public class TestSCMCli {
     String expected1 =
         "usage: hdfs scm -container <commands> <options>\n" +
         "where <commands> can be one of the following\n" +
-        " -create      Create container\n" +
-        " -del <arg>   Delete container\n";
+        " -create       Create container\n" +
+        " -del <arg>    Delete container\n" +
+        " -info <arg>   Info container\n";
+
     assertEquals(expected1, testContent.toString());
     testContent.reset();
 

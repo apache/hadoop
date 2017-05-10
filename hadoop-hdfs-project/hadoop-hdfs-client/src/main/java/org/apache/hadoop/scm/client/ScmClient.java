@@ -18,6 +18,7 @@
 package org.apache.hadoop.scm.client;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
@@ -51,12 +52,21 @@ public interface ScmClient {
   Pipeline getContainer(String containerId) throws IOException;
 
   /**
-   * Delets an existing container.
+   * Deletes an existing container.
    * @param pipeline - Pipeline that represents the container.
    * @param force - true to forcibly delete the container.
    * @throws IOException
    */
   void deleteContainer(Pipeline pipeline, boolean force) throws IOException;
+
+  /**
+   * Read meta data from an existing container.
+   * @param pipeline - Pipeline that represents the container.
+   * @return ContainerInfo
+   * @throws IOException
+   */
+  ContainerData readContainer(Pipeline pipeline) throws IOException;
+
 
   /**
    * Gets the container size -- Computed by SCM from Container Reports.
