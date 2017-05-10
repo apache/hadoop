@@ -131,9 +131,7 @@ class InputStriper {
   static final Comparator<Entry<String,Double>> hostRank =
     new Comparator<Entry<String,Double>>() {
       public int compare(Entry<String,Double> a, Entry<String,Double> b) {
-          final double va = a.getValue();
-          final double vb = b.getValue();
-          return va > vb ? -1 : va < vb ? 1 : 0;
-        }
+        return Double.compare(a.getValue(), b.getValue());
+      }
     };
 }
