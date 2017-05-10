@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -113,7 +114,8 @@ public class SLSRunner extends Configured implements Tool {
   // other simulation information
   private int numNMs, numRacks, numAMs, numTasks;
   private long maxRuntime;
-  public final static Map<String, Object> simulateInfoMap =
+
+  private final static Map<String, Object> simulateInfoMap =
           new HashMap<String, Object>();
 
   // logger
@@ -163,6 +165,13 @@ public class SLSRunner extends Configured implements Tool {
         amClassMap.put(amType, Class.forName(tempConf.get(key)));
       }
     }
+  }
+
+  /**
+   * @return an unmodifiable view of the simulated info map.
+   */
+  public static Map<String, Object> getSimulateInfoMap() {
+    return Collections.unmodifiableMap(simulateInfoMap);
   }
 
   public void setSimulationParams(TraceType inType, String[] inTraces,

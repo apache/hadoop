@@ -2451,8 +2451,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
 
     ArrayList<String> keysToCreateAsFolder = new ArrayList<String>();
-    ArrayList<String> keysToUpdateAsFolder = new ArrayList<String>();
-    boolean childCreated = false;
     // Check that there is no file in the parent chain of the given path.
     for (Path current = absolutePath, parent = current.getParent();
         parent != null; // Stop when you get to the root
@@ -2464,14 +2462,6 @@ public class NativeAzureFileSystem extends FileSystem {
             + current + " is an existing file.");
       } else if (currentMetadata == null) {
         keysToCreateAsFolder.add(currentKey);
-        childCreated = true;
-      } else {
-        // The directory already exists. Its last modified time need to be
-        // updated if there is a child directory created under it.
-        if (childCreated) {
-          keysToUpdateAsFolder.add(currentKey);
-        }
-        childCreated = false;
       }
     }
 
