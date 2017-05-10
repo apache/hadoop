@@ -860,7 +860,7 @@ public class TestDFSUtil {
         DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
   }
 
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testDurationToString() throws Exception {
     assertEquals("000:00:00:00.000", DFSUtil.durationToString(0));
     assertEquals("001:01:01:01.000",
