@@ -125,7 +125,7 @@ public class TestLogsCLI {
     assertTrue("Should return an error code", exitCode != 0);
   }
 
-  @Test(timeout = 1000l)
+  @Test(timeout = 10000l)
   public void testInvalidOpts() throws Exception {
     Configuration conf = new YarnConfiguration();
     YarnClient mockYarnClient = createMockYarnClient(
