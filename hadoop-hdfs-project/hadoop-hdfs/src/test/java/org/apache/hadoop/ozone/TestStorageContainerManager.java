@@ -69,7 +69,7 @@ public class TestStorageContainerManager {
   //@Test
   public void testLocationsForSingleKey() throws Exception {
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     Set<LocatedContainer> containers =
@@ -85,7 +85,7 @@ public class TestStorageContainerManager {
   //@Test
   public void testLocationsForMultipleKeys() throws Exception {
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     Set<LocatedContainer> containers =
@@ -102,7 +102,7 @@ public class TestStorageContainerManager {
   //@Test
   public void testNoDataNodes() throws Exception {
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(0)
-        .setHandlerType("distributed")
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .doNotwaitTobeOutofChillMode()
         .build();
     storageContainerLocationClient =
@@ -118,7 +118,7 @@ public class TestStorageContainerManager {
   //@Test
   public void testMultipleDataNodes() throws Exception {
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     Set<LocatedContainer> containers =

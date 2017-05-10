@@ -78,7 +78,7 @@ public class TestMiniOzoneCluster {
   public void testStartMultipleDatanodes() throws Exception {
     final int numberOfNodes = 3;
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(numberOfNodes)
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
 
     // make sure datanode.id file is correct
     File idPath = new File(

@@ -21,6 +21,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
@@ -76,7 +77,7 @@ public class TestSCMCli {
   public static void setup() throws Exception {
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     ScmClient client = new ContainerOperationClient(

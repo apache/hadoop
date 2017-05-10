@@ -80,7 +80,7 @@ public class TestContainerSQLCli {
     conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 2);
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     cluster.waitForHeartbeatProcessed();

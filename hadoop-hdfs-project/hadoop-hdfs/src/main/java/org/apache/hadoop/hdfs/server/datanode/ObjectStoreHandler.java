@@ -31,6 +31,7 @@ import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 
 import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,7 +81,7 @@ public final class ObjectStoreHandler implements Closeable {
     final StorageHandler storageHandler;
 
     // Initialize Jersey container for object store web application.
-    if ("distributed".equalsIgnoreCase(shType)) {
+    if (OzoneConsts.OZONE_HANDLER_DISTRIBUTED.equalsIgnoreCase(shType)) {
       RPC.setProtocolEngine(conf, StorageContainerLocationProtocolPB.class,
           ProtobufRpcEngine.class);
       long version =
@@ -95,13 +96,16 @@ public final class ObjectStoreHandler implements Closeable {
       storageHandler = new DistributedStorageHandler(new OzoneConfiguration(),
           this.storageContainerLocationClient);
     } else {
-      if ("local".equalsIgnoreCase(shType)) {
+      if (OzoneConsts.OZONE_HANDLER_LOCAL.equalsIgnoreCase(shType)) {
         storageHandler = new LocalStorageHandler(conf);
         this.storageContainerLocationClient = null;
       } else {
         throw new IllegalArgumentException(
-            String.format("Unrecognized value for %s: %s",
-                OZONE_HANDLER_TYPE_KEY, shType));
+            String.format("Unrecognized value for %s: %s,"
+                + " Allowed values are %s,%s",
+                OZONE_HANDLER_TYPE_KEY, shType,
+                OzoneConsts.OZONE_HANDLER_DISTRIBUTED,
+                OzoneConsts.OZONE_HANDLER_LOCAL));
       }
     }
     ApplicationAdapter aa =

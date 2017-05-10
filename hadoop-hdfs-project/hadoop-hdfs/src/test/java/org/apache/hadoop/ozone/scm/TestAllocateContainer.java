@@ -51,7 +51,7 @@ public class TestAllocateContainer {
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     cluster.waitForHeartbeatProcessed();

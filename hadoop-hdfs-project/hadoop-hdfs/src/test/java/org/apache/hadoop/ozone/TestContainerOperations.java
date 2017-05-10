@@ -55,7 +55,7 @@ public class TestContainerOperations {
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
     cluster = new MiniOzoneCluster.Builder(ozoneConf).numDataNodes(1)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
-        .setHandlerType("distributed").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     StorageContainerLocationProtocolClientSideTranslatorPB client =
         cluster.createStorageContainerLocationClient();
     RPC.setProtocolEngine(ozoneConf, StorageContainerLocationProtocolPB.class,

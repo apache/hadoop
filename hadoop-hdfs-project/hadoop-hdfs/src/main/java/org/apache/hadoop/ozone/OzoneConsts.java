@@ -86,6 +86,12 @@ public final class OzoneConsts {
    */
   public enum Versioning {NOT_DEFINED, ENABLED, DISABLED}
 
+  /**
+   * Ozone handler types
+   */
+  public static final String OZONE_HANDLER_DISTRIBUTED = "distributed";
+  public static final String OZONE_HANDLER_LOCAL = "local";
+
   private OzoneConsts() {
     // Never Constructed
   }

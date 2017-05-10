@@ -74,7 +74,7 @@ public class TestOzoneWebAccess {
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("local").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     port = dataNode.getInfoPort();
   }

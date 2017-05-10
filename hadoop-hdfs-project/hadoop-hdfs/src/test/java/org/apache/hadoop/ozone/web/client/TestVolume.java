@@ -73,7 +73,7 @@ public class TestVolume {
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("local").build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
 
