@@ -2968,7 +2968,7 @@ public class NativeAzureFileSystem extends FileSystem {
    * @throws IOException thrown when getting the current user.
    */
   @Override
-  public Token<?> getDelegationToken(final String renewer) throws IOException {
+  public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
     if (kerberosSupportEnabled) {
       try {
         final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
