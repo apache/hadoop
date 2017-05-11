@@ -426,7 +426,7 @@ public class QueuePriorityContainerCandidateSelector
 
     long currentTime = System.currentTimeMillis();
 
-    // From the begining of the list
+    // From the beginning of the list
     for (RMContainer reservedContainer : reservedContainers) {
       // Only try to preempt reserved container after reserved container created
       // and cannot be allocated after minTimeout
