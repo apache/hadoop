@@ -65,14 +65,12 @@ SaslProtocol::SaslProtocol(const std::string & cluster_name,
 
 SaslProtocol::~SaslProtocol()
 {
-  std::lock_guard<std::mutex> state_lock(sasl_state_lock_);
-  event_handlers_->call("SASL End", cluster_name_.c_str(), 0);
+  assert(state_ != kNegotiate);
 }
 
 void SaslProtocol::SetEventHandlers(std::shared_ptr<LibhdfsEvents> event_handlers) {
   std::lock_guard<std::mutex> state_lock(sasl_state_lock_);
   event_handlers_ = event_handlers;
-  event_handlers_->call("SASL Start", cluster_name_.c_str(), 0);
 } // SetEventHandlers() method
 
 void SaslProtocol::Authenticate(std::function<void(const Status & status, const AuthInfo new_auth_info)> callback)
@@ -81,6 +79,7 @@ void SaslProtocol::Authenticate(std::function<void(const Status & status, const 
 
   callback_ = callback;
   state_ = kNegotiate;
+  event_handlers_->call("SASL Start", cluster_name_.c_str(), 0);
 
   std::shared_ptr<RpcSaslProto> req_msg = std::make_shared<RpcSaslProto>();
   req_msg->set_state(RpcSaslProto_SaslState_NEGOTIATE);
@@ -353,6 +352,8 @@ bool SaslProtocol::SendSaslMessage(RpcSaslProto & message)
 bool SaslProtocol::AuthComplete(const Status & status, const AuthInfo & auth_info)
 {
   assert(lock_held(sasl_state_lock_));  // Must be holding lock before calling
+  state_ = kComplete;
+  event_handlers_->call("SASL End", cluster_name_.c_str(), 0);
 
   // RpcConnection might have been freed when we weren't looking.  Lock it
   //   to make sure it's there long enough for us
