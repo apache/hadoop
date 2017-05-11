@@ -503,7 +503,8 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
    */
   public void updateServiceRecord(StateAccessForProviders amState,
       YarnRegistryViewForProviders yarnRegistry,
-      String containerId, String roleName, List<String> ip, String hostname) {
+      String containerId, String roleName, List<String> ip, String hostname)
+      throws IOException {
     try {
       RoleInstance role = null;
       if(ip != null && !ip.isEmpty()){
@@ -535,9 +536,6 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     } catch (NoSuchNodeException e) {
       // ignore - there is nothing to do if we don't find a container
       log.warn("Owned container {} not found - {}", containerId, e);
-    } catch (IOException e) {
-      log.warn("Error updating container {} service record in registry",
-          containerId, e);
     }
   }
 }
