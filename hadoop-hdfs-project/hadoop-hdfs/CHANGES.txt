@@ -82,6 +82,12 @@ Release 2.7.4 - UNRELEASED
     HDFS-11717. Add unit test for HDFS-11709 StandbyCheckpointer should handle
     non-existing legacyOivImageDir gracefully. (Erik Krogen via shv)
 
+    HDFS-9902. Support different values of dfs.datanode.du.reserved per storage
+    type. (Brahma Reddy Battula)
+
+    HDFS-11785. Backport HDFS-9902 to branch-2.7: Support different values of
+    dfs.datanode.du.reserved per storage type. (Brahma Reddy Battula)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
