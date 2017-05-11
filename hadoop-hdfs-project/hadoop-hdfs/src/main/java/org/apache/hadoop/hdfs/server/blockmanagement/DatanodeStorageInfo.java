@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -270,8 +271,12 @@ public class DatanodeStorageInfo {
     return blocks.size();
   }
   
+  /**
+   * @return iterator to an unmodifiable set of blocks
+   * related to this {@link DatanodeStorageInfo}
+   */
   Iterator<BlockInfo> getBlockIterator() {
-    return blocks.iterator();
+    return Collections.unmodifiableSet(blocks).iterator();
   }
 
   void updateState(StorageReport r) {
