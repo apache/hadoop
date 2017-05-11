@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.fs;
 
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
 
 import java.io.BufferedReader;
@@ -32,6 +33,9 @@ import java.util.concurrent.atomic.AtomicLong;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class DU extends Shell {
+  static final String JITTER_KEY = "fs.getspaceused.jitterMillis";
+  static final long DEFAULT_JITTER = TimeUnit.MINUTES.toMillis(1);
+
   private String  dirPath;
 
   private AtomicLong used = new AtomicLong();
@@ -39,7 +43,8 @@ public class DU extends Shell {
   private Thread refreshUsed;
   private IOException duException = null;
   private long refreshInterval;
-  
+  private final long jitter;
+
   /**
    * Keeps track of disk usage.
    * @param path the path to check disk usage in
@@ -47,18 +52,23 @@ public class DU extends Shell {
    * @throws IOException if we fail to refresh the disk usage
    */
   public DU(File path, long interval) throws IOException {
-    this(path, interval, -1L);
+    this(path, interval, 0L, -1L);
   }
-  
+
   /**
    * Keeps track of disk usage.
    * @param path the path to check disk usage in
    * @param interval refresh the disk usage at this interval
+   * @param jitter randomize the refresh interval timing by this amount; the
+   *               actual interval will be randomly chosen between
+   *               {@code interval-jitter} and {@code interval+jitter}
    * @param initialUsed use this value until next refresh
    * @throws IOException if we fail to refresh the disk usage
    */
-  public DU(File path, long interval, long initialUsed) throws IOException { 
+  public DU(File path, long interval, long jitter, long initialUsed)
+      throws IOException {
     super(0);
+    this.jitter = jitter;
 
     //we set the Shell interval to 0 so it will always run our command
     //and use this one to set the thread sleep interval
@@ -93,7 +103,8 @@ public class DU extends Shell {
   public DU(File path, Configuration conf, long initialUsed)
       throws IOException {
     this(path, conf.getLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY,
-                CommonConfigurationKeys.FS_DU_INTERVAL_DEFAULT), initialUsed);
+        CommonConfigurationKeys.FS_DU_INTERVAL_DEFAULT),
+        conf.getLong(JITTER_KEY, DEFAULT_JITTER), initialUsed);
   }
     
   
@@ -112,7 +123,13 @@ public class DU extends Shell {
       while(shouldRun) {
 
         try {
-          Thread.sleep(refreshInterval);
+          long thisRefreshInterval = refreshInterval;
+          if (jitter > 0) {
+            // add/subtract the jitter.
+            thisRefreshInterval +=
+                ThreadLocalRandom.current().nextLong(-jitter, jitter);
+          }
+          Thread.sleep(thisRefreshInterval);
           
           try {
             //update the used variable

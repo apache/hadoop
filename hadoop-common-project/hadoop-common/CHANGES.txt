@@ -32,6 +32,10 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14276. Add a nanosecond API to Time/Timer/FakeTimer.
     (Erik Krogen via zhz)
 
+    HADOOP-12975. Add jitter to CachingGetSpaceUsed's thread
+    (Elliott Clark via Colin P. McCabe).
+    HADOOP-14408. Backport contributed by Erik Krogen.
+
   OPTIMIZATIONS
 
     HADOOP-14138. Remove S3A ref from META-INF service discovery, rely on

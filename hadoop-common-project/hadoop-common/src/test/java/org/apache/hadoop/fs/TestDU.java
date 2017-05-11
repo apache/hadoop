@@ -25,7 +25,6 @@ import java.io.RandomAccessFile;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /** This test makes sure that "DU" does not get to run on each call to getUsed */ 
 public class TestDU extends TestCase {
@@ -78,8 +77,8 @@ public class TestDU extends TestCase {
     createFile(file, writtenSize);
 
     Thread.sleep(5000); // let the metadata updater catch up
-    
-    DU du = new DU(file, 10000);
+
+    DU du = new DU(file, 10000, 0, -1);
     du.start();
     long duSize = du.getUsed();
     du.shutdown();
@@ -89,7 +88,7 @@ public class TestDU extends TestCase {
         writtenSize <= (duSize + slack));
     
     //test with 0 interval, will not launch thread 
-    du = new DU(file, 0);
+    du = new DU(file, 0, 1, -1);
     du.start();
     duSize = du.getUsed();
     du.shutdown();
@@ -99,7 +98,7 @@ public class TestDU extends TestCase {
         writtenSize <= (duSize + slack));
     
     //test without launching thread 
-    du = new DU(file, 10000);
+    du = new DU(file, 10000, 0, -1);
     duSize = du.getUsed();
 
     assertTrue("Invalid on-disk size",
@@ -111,7 +110,7 @@ public class TestDU extends TestCase {
     assertTrue(file.createNewFile());
     Configuration conf = new Configuration();
     conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, 10000L);
-    DU du = new DU(file, conf);
+    DU du = new DU(file, 10000L, 0, -1);
     du.decDfsUsed(Long.MAX_VALUE);
     long duSize = du.getUsed();
     assertTrue(String.valueOf(duSize), duSize >= 0L);
@@ -120,7 +119,7 @@ public class TestDU extends TestCase {
   public void testDUSetInitialValue() throws IOException {
     File file = new File(DU_DIR, "dataX");
     createFile(file, 8192);
-    DU du = new DU(file, 3000, 1024);
+    DU du = new DU(file, 3000, 0, 1024);
     du.start();
     assertTrue("Initial usage setting not honored", du.getUsed() == 1024);
 
