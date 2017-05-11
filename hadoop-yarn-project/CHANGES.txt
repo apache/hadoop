@@ -79,6 +79,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4562. YARN WebApp ignores the configuration passed to it for keystore
     settings (Sergey Shelukhin via vvasudev)
 
+    YARN-5543. ResourceManager SchedulingMonitor could potentially terminate the
+    preemption checker thread. (Min Shen, Jonathan Hung via shv).
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
