@@ -146,8 +146,15 @@ public class DockerProviderService extends AbstractService
       return false;
     }
 
-    providerUtils.updateServiceRecord(amState, yarnRegistry,
-        containerId.toString(), instance.role, status.getIPs(), status.getHost());
+    try {
+      providerUtils.updateServiceRecord(amState, yarnRegistry,
+          containerId.toString(), instance.role, status.getIPs(), status.getHost());
+    } catch (IOException e) {
+      // could not write service record to ZK, log and retry
+      log.warn("Error updating container {} service record in registry, " +
+          "retrying", containerId, e);
+      return true;
+    }
     // TODO publish ip and host
     org.apache.slider.api.resource.Container container =
         instance.providerRole.component.getContainer(containerId.toString());

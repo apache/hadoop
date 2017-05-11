@@ -1182,24 +1182,8 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       return false;
     }
     // this is where component registrations  go
-    String cid = RegistryPathUtils.encodeYarnID(id.toString());
-    ServiceRecord record = new ServiceRecord();
-    record.set(YarnRegistryAttributes.YARN_ID, cid);
-
-    record.description = roleInstance.getCompInstanceName();
     log.info("Registering component " + roleInstance.getCompInstanceName()
         + ", containerId = " + id);
-    record.set(YarnRegistryAttributes.YARN_PERSISTENCE,
-        PersistencePolicies.CONTAINER);
-    setUserProvidedServiceRecordAttributes(
-        instance.providerRole.component.getConfiguration(), record);
-    try {
-      yarnRegistryOperations.putComponent(cid, record);
-    } catch (IOException e) {
-      log.warn("Failed to register container {}/{}: {}",
-          id, roleInstance.role, e, e);
-      return false;
-    }
     org.apache.slider.api.resource.Container container =
         new org.apache.slider.api.resource.Container();
     container.setId(id.toString());
