@@ -252,21 +252,6 @@
           </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-project-info-reports-plugin</artifactId>
-            <executions>
-              <execution>
-                <configuration>
-                  <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-                </configuration>
-                <phase>package</phase>
-                <goals>
-                  <goal>dependencies</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <executions>
               <execution>

@@ -299,21 +299,6 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-        <executions>
-          <execution>
-            <configuration>
-              <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-            </configuration>
-            <goals>
-              <goal>dependencies</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
