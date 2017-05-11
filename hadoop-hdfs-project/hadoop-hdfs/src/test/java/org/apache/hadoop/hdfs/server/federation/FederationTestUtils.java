@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.federation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
@@ -51,17 +52,11 @@ import org.apache.hadoop.security.AccessControlException;
  */
 public final class FederationTestUtils {
 
-  public final static String NAMESERVICE1 = "ns0";
-  public final static String NAMESERVICE2 = "ns1";
-  public final static String NAMENODE1 = "nn0";
-  public final static String NAMENODE2 = "nn1";
-  public final static String NAMENODE3 = "nn2";
-  public final static String NAMENODE4 = "nn3";
-  public final static String ROUTER1 = "router0";
-  public final static String ROUTER2 = "router1";
-  public final static String ROUTER3 = "router2";
-  public final static String ROUTER4 = "router3";
-  public final static long BLOCK_SIZE_BYTES = 134217728;
+  public final static String[] NAMESERVICES = {"ns0", "ns1"};
+  public final static String[] NAMENODES = {"nn0", "nn1", "nn2", "nn3"};
+  public final static String[] ROUTERS =
+      {"router0", "router1", "router2", "router3"};
+
 
   private FederationTestUtils() {
     // Utility class
@@ -81,7 +76,7 @@ public final class FederationTestUtils {
       triggeredException = e;
     }
     if (exceptionClass != null) {
-      assertNotNull("No exception was triggered, expected exception - "
+      assertNotNull("No exception was triggered, expected exception"
           + exceptionClass.getName(), triggeredException);
       assertEquals(exceptionClass, triggeredException.getClass());
     } else {
@@ -101,48 +96,43 @@ public final class FederationTestUtils {
       return report;
     }
     report.setHAServiceState(state);
-    report.setNamespaceInfo(new NamespaceInfo(1, "tesclusterid", ns, 0,
-            "testbuildvesion", "testsoftwareversion"));
+    NamespaceInfo nsInfo = new NamespaceInfo(
+        1, "tesclusterid", ns, 0, "testbuildvesion", "testsoftwareversion");
+    report.setNamespaceInfo(nsInfo);
     return report;
   }
 
   public static void waitNamenodeRegistered(ActiveNamenodeResolver resolver,
-      String nameserviceId, String namenodeId,
-      FederationNamenodeServiceState finalState)
+      String nsId, String nnId, FederationNamenodeServiceState finalState)
           throws InterruptedException, IllegalStateException, IOException {
 
     for (int loopCount = 0; loopCount < 20; loopCount++) {
-
       if (loopCount > 0) {
         Thread.sleep(1000);
       }
 
-      List<? extends FederationNamenodeContext> namenodes;
-      namenodes =
-          resolver.getNamenodesForNameserviceId(nameserviceId);
+      List<? extends FederationNamenodeContext> namenodes =
+          resolver.getNamenodesForNameserviceId(nsId);
       for (FederationNamenodeContext namenode : namenodes) {
-        if (namenodeId != null
-            && !namenode.getNamenodeId().equals(namenodeId)) {
-          // Keep looking
-          continue;
+        // Check if this is the Namenode we are checking
+        if (namenode.getNamenodeId() == nnId  ||
+            namenode.getNamenodeId().equals(nnId)) {
+          if (finalState != null && !namenode.getState().equals(finalState)) {
+            // Wrong state, wait a bit more
+            break;
+          } else {
+            // Found and verified
+            return;
+          }
         }
-        if (finalState != null && !namenode.getState().equals(finalState)) {
-          // Wrong state, wait a bit more
-          break;
-        }
-        // Found
-        return;
       }
     }
-    assertTrue("Failed to verify state store registration for state - "
-        + finalState + " - " + " - " + nameserviceId + " - ", false);
+    fail("Failed to verify State Store registration of " + nsId + " " + nnId +
+        " for state " + finalState);
   }
 
   public static boolean verifyDate(Date d1, Date d2, long precision) {
-    if (Math.abs(d1.getTime() - d2.getTime()) < precision) {
-      return true;
-    }
-    return false;
+    return Math.abs(d1.getTime() - d2.getTime()) < precision;
   }
 
   public static boolean addDirectory(FileSystem context, String path)
@@ -165,15 +155,14 @@ public final class FederationTestUtils {
     } catch (Exception e) {
       return false;
     }
-
     return false;
   }
 
-  public static boolean checkForFileInDirectory(FileSystem context,
-      String testPath, String targetFile) throws AccessControlException,
-          FileNotFoundException,
-          UnsupportedFileSystemException, IllegalArgumentException,
-          IOException {
+  public static boolean checkForFileInDirectory(
+      FileSystem context, String testPath, String targetFile)
+          throws IOException, AccessControlException, FileNotFoundException,
+          UnsupportedFileSystemException, IllegalArgumentException {
+
     FileStatus[] fileStatus = context.listStatus(new Path(testPath));
     String file = null;
     String verifyPath = testPath + "/" + targetFile;
@@ -194,7 +183,8 @@ public final class FederationTestUtils {
 
   public static int countContents(FileSystem context, String testPath)
       throws IOException {
-    FileStatus[] fileStatus = context.listStatus(new Path(testPath));
+    Path path = new Path(testPath);
+    FileStatus[] fileStatus = context.listStatus(path);
     return fileStatus.length;
   }
 
@@ -202,7 +192,7 @@ public final class FederationTestUtils {
       throws IOException {
     FsPermission permissions = new FsPermission("700");
     FSDataOutputStream writeStream = fs.create(new Path(path), permissions,
-        true, 1000, (short) 1, BLOCK_SIZE_BYTES, null);
+        true, 1000, (short) 1, DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT, null);
     for (int i = 0; i < length; i++) {
       writeStream.write(i);
     }
