@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom;
+import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.client.ScmClient;
@@ -169,8 +170,8 @@ public class ContainerMapping implements Mapping {
       byte[] pipelineBytes =
           containerStore.get(containerName.getBytes(encoding));
       if (pipelineBytes == null) {
-        throw new IOException("Specified key does not exist. key : " +
-            containerName);
+        throw new SCMException("Specified key does not exist. key : " +
+            containerName, SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
       pipeline = Pipeline.getFromProtoBuf(
           OzoneProtos.Pipeline.PARSER.parseFrom(pipelineBytes));
@@ -208,7 +209,8 @@ public class ContainerMapping implements Mapping {
     Preconditions.checkState(!containerName.isEmpty());
     Pipeline pipeline = null;
     if (!nodeManager.isOutOfNodeChillMode()) {
-      throw new IOException("Unable to create container while in chill mode");
+      throw new SCMException("Unable to create container while in chill mode",
+          SCMException.ResultCodes.CHILL_MODE_EXCEPTION);
     }
 
     lock.lock();
@@ -216,8 +218,8 @@ public class ContainerMapping implements Mapping {
       byte[] pipelineBytes =
           containerStore.get(containerName.getBytes(encoding));
       if (pipelineBytes != null) {
-        throw new IOException("Specified container already exists. key : " +
-            containerName);
+        throw new SCMException("Specified container already exists. key : " +
+            containerName, SCMException.ResultCodes.CONTAINER_EXISTS);
       }
       List<DatanodeID> datanodes = placementPolicy.chooseDatanodes(
           replicationFactor.getValue(), containerSize);
@@ -253,8 +255,9 @@ public class ContainerMapping implements Mapping {
       byte[] pipelineBytes =
           containerStore.get(dbKey);
       if(pipelineBytes == null) {
-        throw new IOException("Failed to delete container "
-            + containerName + ", reason : container doesn't exist.");
+        throw new SCMException("Failed to delete container "
+            + containerName + ", reason : container doesn't exist.",
+            SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
       containerStore.delete(dbKey);
     } finally {

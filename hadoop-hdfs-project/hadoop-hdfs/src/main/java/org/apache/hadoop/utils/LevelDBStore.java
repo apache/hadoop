@@ -19,10 +19,7 @@
 package org.apache.hadoop.utils;
 
 import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.DB;
-import org.iq80.leveldb.DBIterator;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.WriteOptions;
+import org.iq80.leveldb.*;
 
 import java.io.Closeable;
 import java.io.File;
@@ -157,6 +154,30 @@ public class LevelDBStore implements Closeable {
     JniDBFactory.factory.destroy(dbFile, dbOptions);
   }
 
+  /**
+   * Returns a write batch for write multiple key-value pairs atomically.
+   * @return write batch that can be commit atomically.
+   */
+  public WriteBatch createWriteBatch() {
+    return db.createWriteBatch();
+  }
+
+  /**
+   * Commit multiple writes of key-value pairs atomically.
+   * @param wb
+   */
+  public void commitWriteBatch(WriteBatch wb) {
+    db.write(wb);
+  }
+
+  /**
+   * Close a write batch of multiple writes to key-value pairs.
+   * @param wb - write batch.
+   * @throws IOException
+   */
+  public void closeWriteBatch(WriteBatch wb) throws IOException {
+    wb.close();
+  }
 
   /**
    * Compacts the DB by removing deleted keys etc.

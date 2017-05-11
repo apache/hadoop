@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
@@ -28,11 +29,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos
     .GetStorageContainerLocationsRequestProto;
@@ -44,12 +44,20 @@ import org.apache.hadoop.ozone.protocol.proto
     .ScmLocatedBlockProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.LocatedContainerProto;
+import static org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.AllocateScmBlockRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.AllocateScmBlockResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeleteScmBlocksRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeleteScmBlocksResponseProto;
+import static org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeleteScmBlockResult;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.GetScmBlockLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
@@ -124,8 +132,7 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
 
   @Override
   public ContainerResponseProto allocateContainer(RpcController unused,
-      StorageContainerLocationProtocolProtos.ContainerRequestProto request)
-      throws ServiceException {
+      ContainerRequestProto request) throws ServiceException {
     try {
       Pipeline pipeline = impl.allocateContainer(request.getContainerName());
       return ContainerResponseProto.newBuilder()
@@ -199,21 +206,41 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       AllocatedBlock allocatedBlock =
           blockImpl.allocateBlock(request.getSize());
       if (allocatedBlock != null) {
-        return StorageContainerLocationProtocolProtos
-            .AllocateScmBlockResponseProto.newBuilder()
+        return
+            AllocateScmBlockResponseProto.newBuilder()
             .setKey(allocatedBlock.getKey())
             .setPipeline(allocatedBlock.getPipeline().getProtobufMessage())
             .setCreateContainer(allocatedBlock.getCreateContainer())
             .setErrorCode(AllocateScmBlockResponseProto.Error.success)
             .build();
       } else {
-        return StorageContainerLocationProtocolProtos
-            .AllocateScmBlockResponseProto.newBuilder()
+        return
+            AllocateScmBlockResponseProto.newBuilder()
             .setErrorCode(AllocateScmBlockResponseProto.Error.unknownFailure)
             .build();
       }
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public DeleteScmBlocksResponseProto deleteScmBlocks(
+      RpcController controller, DeleteScmBlocksRequestProto req)
+      throws ServiceException {
+    Set<String> keys = Sets.newLinkedHashSetWithExpectedSize(
+        req.getKeysCount());
+    for (String key : req.getKeysList()) {
+      keys.add(key);
+    }
+    final List<DeleteBlockResult> results = blockImpl.deleteBlocks(keys);
+    DeleteScmBlocksResponseProto.Builder resp =
+        DeleteScmBlocksResponseProto.newBuilder();
+    for (DeleteBlockResult result: results) {
+      DeleteScmBlockResult.Builder deleteResult = DeleteScmBlockResult
+          .newBuilder().setKey(result.getKey()).setResult(result.getResult());
+      resp.addResults(deleteResult.build());
+    }
+    return resp.build();
   }
 }

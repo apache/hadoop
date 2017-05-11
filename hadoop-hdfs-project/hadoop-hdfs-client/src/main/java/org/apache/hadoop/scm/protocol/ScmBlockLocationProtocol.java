@@ -19,9 +19,11 @@
 package org.apache.hadoop.scm.protocol;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 
 /**
  * ScmBlockLocationProtocol is used by an HDFS node to find the set of nodes
@@ -49,5 +51,15 @@ public interface ScmBlockLocationProtocol {
    * @throws IOException
    */
   AllocatedBlock allocateBlock(long size) throws IOException;
+
+  /**
+   * Delete the set of keys specified.
+   *
+   * @param keys batch of block keys to delete.
+   * @return list of block deletion results.
+   * @throws IOException if there is any failure.
+   *
+   */
+  List<DeleteBlockResult> deleteBlocks(Set<String> keys);
 
 }

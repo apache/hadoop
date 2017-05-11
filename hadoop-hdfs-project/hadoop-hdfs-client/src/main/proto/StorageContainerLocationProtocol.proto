@@ -132,6 +132,31 @@ message AllocateScmBlockRequestProto {
 }
 
 /**
+ * keys - batch of block keys to deleted
+ */
+message DeleteScmBlocksRequestProto {
+  repeated string keys = 1;
+}
+
+/**
+ * deletedKeys - keys that are deleted successfully
+ */
+message DeleteScmBlocksResponseProto {
+  repeated DeleteScmBlockResult results = 1;
+}
+
+message DeleteScmBlockResult {
+  enum Result {
+    success = 1;
+    chillMode = 2;
+    errorNotFound = 3;
+    unknownFailure = 4;
+  }
+  required Result result = 1;
+  required string key = 2;
+}
+
+/**
  * Reply from SCM indicating that the container.
  */
 message AllocateScmBlockResponseProto {
@@ -182,11 +207,17 @@ service StorageContainerLocationProtocolService {
    * passing multiple keys.
    */
   rpc getScmBlockLocations(GetScmBlockLocationsRequestProto)
-      returns(GetScmBlockLocationsResponseProto);
+      returns (GetScmBlockLocationsResponseProto);
 
   /**
-   Creates a block entry in SCM.
+   * Creates a block entry in SCM.
    */
   rpc allocateScmBlock(AllocateScmBlockRequestProto)
       returns (AllocateScmBlockResponseProto);
+
+  /**
+   * Deletes one or multiple block keys from SCM.
+   */
+  rpc deleteScmBlocks(DeleteScmBlocksRequestProto)
+      returns (DeleteScmBlocksResponseProto);
 }
