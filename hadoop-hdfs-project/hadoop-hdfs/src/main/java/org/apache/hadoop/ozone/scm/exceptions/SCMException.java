@@ -95,6 +95,7 @@ public class SCMException extends IOException {
    * Error codes to make it easy to decode these exceptions.
    */
   public enum ResultCodes {
+    SUCCEESS,
     FAILED_TO_LOAD_NODEPOOL,
     FAILED_TO_FIND_NODE_IN_POOL,
     FAILED_TO_FIND_HEALTHY_NODES,
@@ -105,7 +106,10 @@ public class SCMException extends IOException {
     CHILL_MODE_EXCEPTION,
     FAILED_TO_LOAD_OPEN_CONTAINER,
     FAILED_TO_ALLOCATE_CONTAINER,
+    CONTAINER_EXISTS,
     FAILED_TO_FIND_CONTAINER,
     FAILED_TO_FIND_CONTAINER_WITH_SAPCE,
+    BLOCK_EXISTS,
+    FAILED_TO_FIND_BLOCK
   }
 }

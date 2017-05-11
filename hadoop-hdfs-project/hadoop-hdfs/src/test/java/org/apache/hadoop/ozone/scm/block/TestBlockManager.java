@@ -49,7 +49,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.MB;
 public class TestBlockManager {
   private static ContainerMapping mapping;
   private static MockNodeManager nodeManager;
-  private static BlockManager blockManager;
+  private static BlockManagerImpl blockManager;
   private static File testDir;
   private final static long DEFAULT_BLOCK_SIZE = 128 * MB;
 
@@ -103,7 +103,25 @@ public class TestBlockManager {
   }
 
   @Test
-  public void testAllocateOversidedBlock() throws IOException {
+  public void testDeleteBlock() throws Exception {
+    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+    Assert.assertNotNull(block);
+    blockManager.deleteBlock(block.getKey());
+
+    // Deleted block can not be retrieved
+    thrown.expectMessage("Specified block key does not exist.");
+    blockManager.getBlock(block.getKey());
+
+    // Tombstone of the deleted block can be retrieved if it has not been
+    // cleaned yet.
+    String deletedKeyName = blockManager.getDeletedKeyName(block.getKey());
+    Pipeline pipeline = blockManager.getBlock(deletedKeyName);
+    Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
+        block.getPipeline().getLeader().getDatanodeUuid());
+  }
+
+  @Test
+  public void testAllocateOversizedBlock() throws IOException {
     long size = 6 * GB;
     thrown.expectMessage("Unsupported block size");
     AllocatedBlock block = blockManager.allocateBlock(size);

@@ -32,8 +32,10 @@ import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.scm.block.BlockManager;
 import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
+import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
@@ -91,6 +93,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeleteScmBlockResult.Result;
 
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_CLIENT_ADDRESS_KEY;
@@ -591,5 +596,38 @@ public class StorageContainerManager
   @Override
   public AllocatedBlock allocateBlock(final long size) throws IOException {
     return scmBlockManager.allocateBlock(size);
+  }
+
+  /**
+   * Delete blocks.
+   * @param keys batch of block keys to delete.
+   * @return deletion results.
+   */
+  public List<DeleteBlockResult> deleteBlocks(final Set<String> keys) {
+    List<DeleteBlockResult> results = new LinkedList<>();
+    for (String key: keys) {
+      Result resultCode;
+      try {
+        scmBlockManager.deleteBlock(key);
+        resultCode = Result.success;
+      } catch (SCMException scmEx) {
+        LOG.warn("Fail to delete block: {}", key, scmEx);
+        switch (scmEx.getResult()) {
+        case CHILL_MODE_EXCEPTION:
+          resultCode = Result.chillMode;
+          break;
+        case FAILED_TO_FIND_BLOCK:
+          resultCode = Result.errorNotFound;
+          break;
+        default:
+          resultCode = Result.unknownFailure;
+        }
+      } catch (IOException ex) {
+        LOG.warn("Fail to delete block: {}", key, ex);
+        resultCode = Result.unknownFailure;
+      }
+      results.add(new DeleteBlockResult(key, resultCode));
+    }
+    return results;
   }
 }
