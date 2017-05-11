@@ -56,7 +56,6 @@ private:
   enum State {
     kUnstarted,
     kNegotiate,
-    kAuthenticate,
     kComplete
   };
 
