@@ -43,7 +43,7 @@ import org.apache.hadoop.util.Time;
 
 /**
  * In-memory cache/mock of a namenode and file resolver. Stores the most
- * recently updated NN information for each nameservice and block pool. Also
+ * recently updated NN information for each nameservice and block pool. It also
  * stores a virtual mount table for resolving global namespace paths to local NN
  * paths.
  */
@@ -51,82 +51,93 @@ public class MockResolver
     implements ActiveNamenodeResolver, FileSubclusterResolver {
 
   private Map<String, List<? extends FederationNamenodeContext>> resolver =
-      new HashMap<String, List<? extends FederationNamenodeContext>>();
-  private Map<String, List<RemoteLocation>> locations =
-      new HashMap<String, List<RemoteLocation>>();
-  private Set<FederationNamespaceInfo> namespaces =
-      new HashSet<FederationNamespaceInfo>();
+      new HashMap<>();
+  private Map<String, List<RemoteLocation>> locations = new HashMap<>();
+  private Set<FederationNamespaceInfo> namespaces = new HashSet<>();
   private String defaultNamespace = null;
+
 
   public MockResolver(Configuration conf, StateStoreService store) {
     this.cleanRegistrations();
   }
 
-  public void addLocation(String mount, String nameservice, String location) {
-    RemoteLocation remoteLocation = new RemoteLocation(nameservice, location);
-    List<RemoteLocation> locationsList = locations.get(mount);
+  public void addLocation(String mount, String nsId, String location) {
+    List<RemoteLocation> locationsList = this.locations.get(mount);
     if (locationsList == null) {
-      locationsList = new LinkedList<RemoteLocation>();
-      locations.put(mount, locationsList);
+      locationsList = new LinkedList<>();
+      this.locations.put(mount, locationsList);
     }
+
+    final RemoteLocation remoteLocation = new RemoteLocation(nsId, location);
     if (!locationsList.contains(remoteLocation)) {
       locationsList.add(remoteLocation);
     }
 
     if (this.defaultNamespace == null) {
-      this.defaultNamespace = nameservice;
+      this.defaultNamespace = nsId;
     }
   }
 
   public synchronized void cleanRegistrations() {
-    this.resolver =
-        new HashMap<String, List<? extends FederationNamenodeContext>>();
-    this.namespaces = new HashSet<FederationNamespaceInfo>();
+    this.resolver = new HashMap<>();
+    this.namespaces = new HashSet<>();
   }
 
   @Override
   public void updateActiveNamenode(
-      String ns, InetSocketAddress successfulAddress) {
+      String nsId, InetSocketAddress successfulAddress) {
 
     String address = successfulAddress.getHostName() + ":" +
         successfulAddress.getPort();
-    String key = ns;
+    String key = nsId;
     if (key != null) {
       // Update the active entry
       @SuppressWarnings("unchecked")
-      List<FederationNamenodeContext> iterator =
-          (List<FederationNamenodeContext>) resolver.get(key);
-      for (FederationNamenodeContext namenode : iterator) {
+      List<FederationNamenodeContext> namenodes =
+          (List<FederationNamenodeContext>) this.resolver.get(key);
+      for (FederationNamenodeContext namenode : namenodes) {
         if (namenode.getRpcAddress().equals(address)) {
           MockNamenodeContext nn = (MockNamenodeContext) namenode;
           nn.setState(FederationNamenodeServiceState.ACTIVE);
           break;
         }
       }
-      Collections.sort(iterator, new NamenodePriorityComparator());
+      // This operation modifies the list so we need to be careful
+      synchronized(namenodes) {
+        Collections.sort(namenodes, new NamenodePriorityComparator());
+      }
     }
   }
 
   @Override
   public List<? extends FederationNamenodeContext>
       getNamenodesForNameserviceId(String nameserviceId) {
-    return resolver.get(nameserviceId);
+    // Return a copy of the list because it is updated periodically
+    List<? extends FederationNamenodeContext> namenodes =
+        this.resolver.get(nameserviceId);
+    return Collections.unmodifiableList(new ArrayList<>(namenodes));
   }
 
   @Override
   public List<? extends FederationNamenodeContext> getNamenodesForBlockPoolId(
       String blockPoolId) {
-    return resolver.get(blockPoolId);
+    // Return a copy of the list because it is updated periodically
+    List<? extends FederationNamenodeContext> namenodes =
+        this.resolver.get(blockPoolId);
+    return Collections.unmodifiableList(new ArrayList<>(namenodes));
   }
 
   private static class MockNamenodeContext
       implements FederationNamenodeContext {
+
+    private String namenodeId;
+    private String nameserviceId;
+
     private String webAddress;
     private String rpcAddress;
     private String serviceAddress;
     private String lifelineAddress;
-    private String namenodeId;
-    private String nameserviceId;
+
     private FederationNamenodeServiceState state;
     private long dateModified;
 
@@ -197,6 +208,7 @@ public class MockResolver
   @Override
   public synchronized boolean registerNamenode(NamenodeStatusReport report)
       throws IOException {
+
     MockNamenodeContext context = new MockNamenodeContext(
         report.getRpcAddress(), report.getServiceAddress(),
         report.getLifelineAddress(), report.getWebAddress(),
@@ -205,13 +217,14 @@ public class MockResolver
     String nsId = report.getNameserviceId();
     String bpId = report.getBlockPoolId();
     String cId = report.getClusterId();
+
     @SuppressWarnings("unchecked")
     List<MockNamenodeContext> existingItems =
-        (List<MockNamenodeContext>) resolver.get(nsId);
+        (List<MockNamenodeContext>) this.resolver.get(nsId);
     if (existingItems == null) {
-      existingItems = new ArrayList<MockNamenodeContext>();
-      resolver.put(bpId, existingItems);
-      resolver.put(nsId, existingItems);
+      existingItems = new ArrayList<>();
+      this.resolver.put(bpId, existingItems);
+      this.resolver.put(nsId, existingItems);
     }
     boolean added = false;
     for (int i=0; i<existingItems.size() && !added; i++) {
@@ -227,7 +240,7 @@ public class MockResolver
     Collections.sort(existingItems, new NamenodePriorityComparator());
 
     FederationNamespaceInfo info = new FederationNamespaceInfo(bpId, cId, nsId);
-    namespaces.add(info);
+    this.namespaces.add(info);
     return true;
   }
 
@@ -238,16 +251,13 @@ public class MockResolver
 
   @Override
   public PathLocation getDestinationForPath(String path) throws IOException {
-    String finalPath = null;
-    String nameservice = null;
-    Set<String> namespaceSet = new HashSet<String>();
-    LinkedList<RemoteLocation> remoteLocations =
-        new LinkedList<RemoteLocation>();
-    for(String key : this.locations.keySet()) {
-      if(path.startsWith(key)) {
+    Set<String> namespaceSet = new HashSet<>();
+    List<RemoteLocation> remoteLocations = new LinkedList<>();
+    for (String key : this.locations.keySet()) {
+      if (path.startsWith(key)) {
         for (RemoteLocation location : this.locations.get(key)) {
-          finalPath = location.getDest() + path.substring(key.length());
-          nameservice = location.getNameserviceId();
+          String finalPath = location.getDest() + path.substring(key.length());
+          String nameservice = location.getNameserviceId();
           RemoteLocation remoteLocation =
               new RemoteLocation(nameservice, finalPath);
           remoteLocations.add(remoteLocation);
@@ -265,7 +275,7 @@ public class MockResolver
 
   @Override
   public List<String> getMountPoints(String path) throws IOException {
-    List<String> mounts = new ArrayList<String>();
+    List<String> mounts = new ArrayList<>();
     if (path.equals("/")) {
       // Mounts only supported under root level
       for (String mount : this.locations.keySet()) {
