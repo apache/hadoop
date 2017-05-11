@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
  * Constructs a router configuration with individual features enabled/disabled.
@@ -26,15 +27,32 @@ public class RouterConfigBuilder {
 
   private Configuration conf;
 
+  private boolean enableRpcServer = false;
+
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
   }
 
   public RouterConfigBuilder() {
-    this.conf = new Configuration();
+    this.conf = new Configuration(false);
+  }
+
+  public RouterConfigBuilder all() {
+    this.enableRpcServer = true;
+    return this;
+  }
+
+  public RouterConfigBuilder rpc(boolean enable) {
+    this.enableRpcServer = enable;
+    return this;
+  }
+
+  public RouterConfigBuilder rpc() {
+    return this.rpc(true);
   }
 
   public Configuration build() {
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_RPC_ENABLE, this.enableRpcServer);
     return conf;
   }
 }
