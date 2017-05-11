@@ -112,7 +112,7 @@ public class JniBasedUnixGroupsNetgroupMapping
   protected synchronized List<String> getUsersForNetgroup(String netgroup) {
     String[] users = null;
     try {
-      // JNI code does not expect '@' at the begining of the group name
+      // JNI code does not expect '@' at the beginning of the group name
       users = getUsersForNetgroupJNI(netgroup.substring(1));
     } catch (Exception e) {
       if (LOG.isDebugEnabled()) {
