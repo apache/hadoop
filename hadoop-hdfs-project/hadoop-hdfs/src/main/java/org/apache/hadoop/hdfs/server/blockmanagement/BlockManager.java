@@ -1409,12 +1409,15 @@ public class BlockManager implements BlockStatsMXBean {
   void removeBlocksAssociatedTo(final DatanodeDescriptor node) {
     for (DatanodeStorageInfo storage : node.getStorageInfos()) {
       final Iterator<BlockInfo> it = storage.getBlockIterator();
+      //add the BlockInfos to a new collection as the
+      //returned iterator is not modifiable.
+      Collection<BlockInfo> toRemove = new ArrayList<>();
       while (it.hasNext()) {
-        BlockInfo block = it.next();
-        // DatanodeStorageInfo must be removed using the iterator to avoid
-        // ConcurrentModificationException in the underlying storage
-        it.remove();
-        removeStoredBlock(block, node);
+        toRemove.add(it.next());
+      }
+
+      for (BlockInfo b : toRemove) {
+        removeStoredBlock(b, node);
       }
     }
     // Remove all pending DN messages referencing this DN.
@@ -1429,11 +1432,11 @@ public class BlockManager implements BlockStatsMXBean {
     assert namesystem.hasWriteLock();
     final Iterator<BlockInfo> it = storageInfo.getBlockIterator();
     DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
-    while(it.hasNext()) {
-      BlockInfo block = it.next();
-      // DatanodeStorageInfo must be removed using the iterator to avoid
-      // ConcurrentModificationException in the underlying storage
-      it.remove();
+    Collection<BlockInfo> toRemove = new ArrayList<>();
+    while (it.hasNext()) {
+      toRemove.add(it.next());
+    }
+    for (BlockInfo block : toRemove) {
       removeStoredBlock(block, node);
       final Block b = getBlockOnStorage(block, storageInfo);
       if (b != null) {
