@@ -36,6 +36,9 @@ Release 2.7.4 - UNRELEASED
     (Elliott Clark via Colin P. McCabe).
     HADOOP-14408. Backport contributed by Erik Krogen.
 
+    HADOOP-11703. git should ignore .DS_Store files on Mac OS X (Abin Shahab
+    via aw)
+
   OPTIMIZATIONS
 
     HADOOP-14138. Remove S3A ref from META-INF service discovery, rely on
