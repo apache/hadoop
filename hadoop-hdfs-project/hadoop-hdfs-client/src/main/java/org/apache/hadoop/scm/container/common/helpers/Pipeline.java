@@ -19,7 +19,7 @@
 package org.apache.hadoop.scm.container.common.helpers;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 
@@ -60,7 +60,7 @@ public class Pipeline {
    * @param pipeline - ProtoBuf definition for the pipeline.
    * @return Pipeline Object
    */
-  public static Pipeline getFromProtoBuf(ContainerProtos.Pipeline pipeline) {
+  public static Pipeline getFromProtoBuf(OzoneProtos.Pipeline pipeline) {
     Preconditions.checkNotNull(pipeline);
     Pipeline newPipeline = new Pipeline(pipeline.getLeaderID());
     for (HdfsProtos.DatanodeIDProto dataID : pipeline.getMembersList()) {
@@ -104,9 +104,9 @@ public class Pipeline {
    *
    * @return Protobuf message
    */
-  public ContainerProtos.Pipeline getProtobufMessage() {
-    ContainerProtos.Pipeline.Builder builder =
-        ContainerProtos.Pipeline.newBuilder();
+  public OzoneProtos.Pipeline getProtobufMessage() {
+    OzoneProtos.Pipeline.Builder builder =
+        OzoneProtos.Pipeline.newBuilder();
     for (DatanodeID datanode : datanodes.values()) {
       builder.addMembers(datanode.getProtoBufMessage());
     }

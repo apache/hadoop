@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -320,5 +321,30 @@ public class TestOzoneClientUtils {
     } catch (Exception e) {
       assertTrue(e instanceof IllegalArgumentException);
     }
+  }
+
+  @Test
+  public void testGetKSMAddress() {
+    final Configuration conf = new OzoneConfiguration();
+
+    // First try a client address with just a host name. Verify it falls
+    // back to the default port.
+    conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "1.2.3.4");
+    InetSocketAddress addr = OzoneClientUtils.getKsmAddress(conf);
+    assertThat(addr.getHostString(), is("1.2.3.4"));
+    assertThat(addr.getPort(), is(KSMConfigKeys.OZONE_KSM_PORT_DEFAULT));
+
+    // Next try a client address with just a host name and port. Verify the port
+    // is ignored and the default KSM port is used.
+    conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "1.2.3.4:100");
+    addr = OzoneClientUtils.getKsmAddress(conf);
+    assertThat(addr.getHostString(), is("1.2.3.4"));
+    assertThat(addr.getPort(), is(100));
+
+    // Assert the we are able to use default configs if no value is specified.
+    conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "");
+    addr = OzoneClientUtils.getKsmAddress(conf);
+    assertThat(addr.getHostString(), is("0.0.0.0"));
+    assertThat(addr.getPort(), is(KSMConfigKeys.OZONE_KSM_PORT_DEFAULT));
   }
 }

@@ -38,7 +38,7 @@ import "HdfsServer.proto";
 
 import "DatanodeProtocol.proto";
 
-import "DatanodeContainerProtocol.proto";
+import "Ozone.proto";
 
 
 /**

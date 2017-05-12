@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -361,8 +362,8 @@ public final class ContainerTestHelper {
     containerData.setName(containerName);
     String[] keys = metaData.keySet().toArray(new String[]{});
     for(int i=0; i<keys.length; i++) {
-      ContainerProtos.KeyValue.Builder kvBuilder =
-          ContainerProtos.KeyValue.newBuilder();
+      OzoneProtos.KeyValue.Builder kvBuilder =
+          OzoneProtos.KeyValue.newBuilder();
       kvBuilder.setKey(keys[i]);
       kvBuilder.setValue(metaData.get(keys[i]));
       containerData.addMetadata(i, kvBuilder.build());

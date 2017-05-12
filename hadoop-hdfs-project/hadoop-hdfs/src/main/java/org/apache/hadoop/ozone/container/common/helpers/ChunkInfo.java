@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.IOException;
 import java.util.Map;
@@ -110,8 +111,8 @@ public class ChunkInfo {
     }
 
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
-      ContainerProtos.KeyValue.Builder keyValBuilder =
-          ContainerProtos.KeyValue.newBuilder();
+      OzoneProtos.KeyValue.Builder keyValBuilder =
+          OzoneProtos.KeyValue.newBuilder();
       builder.addMetadata(keyValBuilder.setKey(entry.getKey())
           .setValue(entry.getValue()).build());
     }

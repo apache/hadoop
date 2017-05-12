@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with this
@@ -19,7 +20,7 @@ package org.apache.hadoop.ozone.scm.container;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -172,7 +173,7 @@ public class ContainerMapping implements Mapping {
             containerName);
       }
       pipeline = Pipeline.getFromProtoBuf(
-          ContainerProtos.Pipeline.PARSER.parseFrom(pipelineBytes));
+          OzoneProtos.Pipeline.PARSER.parseFrom(pipelineBytes));
       return pipeline;
     } finally {
       lock.unlock();
