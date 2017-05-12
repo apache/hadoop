@@ -103,10 +103,9 @@ public class CompressorStream extends CompressionOutputStream {
   public void close() throws IOException {
     if (!closed) {
       try {
-        finish();
+        super.close();
       }
       finally {
-        out.close();
         closed = true;
       }
     }
