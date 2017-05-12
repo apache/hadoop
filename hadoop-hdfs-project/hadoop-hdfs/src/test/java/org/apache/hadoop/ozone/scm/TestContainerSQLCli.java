@@ -46,11 +46,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.KB;
 import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -103,6 +105,15 @@ public class TestContainerSQLCli {
     // OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE which we set to 2.
     // so the first allocateBlock() will create two containers. A random one
     // is assigned for the block.
+
+    // loop until both the two datanodes are up, try up to about 4 seconds.
+    for (int c = 0; c < 40; c++) {
+      if (nodeManager.getAllNodes().size() == 2) {
+        break;
+      }
+      Thread.sleep(100);
+    }
+    assertEquals(2, nodeManager.getAllNodes().size());
     AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
     pipeline1 = ab1.getPipeline();
     blockContainerMap.put(ab1.getKey(), pipeline1.getContainerName());
@@ -180,6 +191,38 @@ public class TestContainerSQLCli {
       assertTrue(expectedPool.remove(datanodeUUID).equals(poolName));
     }
     assertEquals(0, expectedPool.size());
+
+    Files.delete(Paths.get(dbOutPath));
+  }
+
+  @Test
+  public void testConvertOpenContainerDB() throws Exception {
+    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbPath = dbRootPath + "/" + OPEN_CONTAINERS_DB;
+    String[] args = {"-p", dbPath, "-o", dbOutPath};
+
+    cli.run(args);
+
+    Connection conn = connectDB(dbOutPath);
+    String sql = "SELECT * FROM openContainer";
+    ResultSet rs = executeQuery(conn, sql);
+    HashSet<String> expectedContainer = new HashSet<>();
+    expectedContainer.add(pipeline1.getContainerName());
+    expectedContainer.add(pipeline2.getContainerName());
+    // the number of allocated blocks can vary, and they can be located
+    // at either of the two containers. We only check if the total used
+    // is equal to block size * # of blocks.
+    long totalUsed = 0;
+    while(rs.next()) {
+      String containerName = rs.getString("containerName");
+      long containerUsed = rs.getLong("containerUsed");
+      totalUsed += containerUsed;
+      assertTrue(expectedContainer.remove(containerName));
+    }
+    assertEquals(0, expectedContainer.size());
+    assertEquals(blockContainerMap.keySet().size() * DEFAULT_BLOCK_SIZE,
+        totalUsed);
 
     Files.delete(Paths.get(dbOutPath));
   }
