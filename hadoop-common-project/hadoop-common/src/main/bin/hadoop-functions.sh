@@ -1457,30 +1457,6 @@ function hadoop_finalize_classpath
   hadoop_translate_cygwin_path CLASSPATH true
 }
 
-## @description  Finish Catalina configuration prior to execution
-## @audience     private
-## @stability    evolving
-## @replaceable  yes
-function hadoop_finalize_catalina_opts
-{
-
-  local prefix=${HADOOP_CATALINA_PREFIX}
-
-  hadoop_add_param CATALINA_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_HOME}"
-  if [[ -n "${JAVA_LIBRARY_PATH}" ]]; then
-    hadoop_add_param CATALINA_OPTS java.library.path "-Djava.library.path=${JAVA_LIBRARY_PATH}"
-  fi
-  hadoop_add_param CATALINA_OPTS "${prefix}.home.dir" "-D${prefix}.home.dir=${HADOOP_HOME}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.config.dir" "-D${prefix}.config.dir=${HADOOP_CATALINA_CONFIG}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.log.dir" "-D${prefix}.log.dir=${HADOOP_CATALINA_LOG}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.temp.dir" "-D${prefix}.temp.dir=${HADOOP_CATALINA_TEMP}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.admin.port" "-D${prefix}.admin.port=${HADOOP_CATALINA_ADMIN_PORT}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.http.port" "-D${prefix}.http.port=${HADOOP_CATALINA_HTTP_PORT}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.max.threads" "-D${prefix}.max.threads=${HADOOP_CATALINA_MAX_THREADS}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.max.http.header.size" "-D${prefix}.max.http.header.size=${HADOOP_CATALINA_MAX_HTTP_HEADER_SIZE}"
-  hadoop_add_param CATALINA_OPTS "${prefix}.ssl.keystore.file" "-D${prefix}.ssl.keystore.file=${HADOOP_CATALINA_SSL_KEYSTORE_FILE}"
-}
-
 ## @description  Finish all the remaining environment settings prior
 ## @description  to executing Java.  This is a wrapper that calls
 ## @description  the other `finalize` routines.
