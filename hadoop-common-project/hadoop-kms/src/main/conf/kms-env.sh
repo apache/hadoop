@@ -66,6 +66,19 @@
 #
 # export KMS_MAX_HTTP_HEADER_SIZE=65536
 
+# Set to 'true' if you want the SSL stack to require a valid certificate chain
+# from the client before accepting a connection. Set to 'want' if you want the
+# SSL stack to request a client Certificate, but not fail if one isn't
+# presented. A 'false' value (which is the default) will not require a
+# certificate chain unless the client requests a resource protected by a
+# security constraint that uses CLIENT-CERT authentication.
+#
+# export KMS_SSL_CLIENT_AUTH=false
+
+# The comma separated list of SSL protocols to support
+#
+# export KMS_SSL_ENABLED_PROTOCOLS="TLSv1,TLSv1.1,TLSv1.2,SSLv2Hello"
+
 # The comma separated list of encryption ciphers for SSL
 #
 # export KMS_SSL_CIPHERS=

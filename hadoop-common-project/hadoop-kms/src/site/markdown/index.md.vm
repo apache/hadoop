@@ -301,11 +301,20 @@ The answer to "What is your first and last name?" (i.e. "CN") must be the hostna
 
 NOTE: You need to restart the KMS for the configuration changes to take effect.
 
+
+Set environment variable `KMS_SSL_CLIENT_AUTH` to change client
+authentication. The default is `false`. See `clientAuth` in
+[Tomcat 6.0 SSL Support](https://tomcat.apache.org/tomcat-6.0-doc/config/http.html#SSL_Support).
+
+Set environment variable `KMS_SSL_ENABLED_PROTOCOLS` to specify a list of
+enabled SSL protocols. The default list includes `TLSv1`, `TLSv1.1`,
+`TLSv1.2`, and `SSLv2Hello`. See `sslEnabledProtocols` in
+[Tomcat 6.0 SSL Support](https://tomcat.apache.org/tomcat-6.0-doc/config/http.html#SSL_Support).
+
 In order to support some old SSL clients, the default encryption ciphers
 include a few relatively weaker ciphers. Set environment variable
-`KMS_SSL_CIPHERS` or property `kms.ssl.ciphers` to override. The value is a
-comma separated list of ciphers documented in this
-[Tomcat Wiki](https://wiki.apache.org/tomcat/Security/Ciphers).
+`KMS_SSL_CIPHERS` to override. The value is a comma separated list of ciphers
+documented in [Tomcat Wiki](https://wiki.apache.org/tomcat/Security/Ciphers).
 
 $H4 ACLs (Access Control Lists)
 

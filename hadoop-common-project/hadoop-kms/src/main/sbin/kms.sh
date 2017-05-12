@@ -87,6 +87,9 @@ if [[ "${1}" = "start" || "${1}" = "run" ]]; then
     "${KMS_ACCEPTOR_THREAD_COUNT}"
   catalina_set_property "kms.max.http.header.size" \
     "${KMS_MAX_HTTP_HEADER_SIZE}"
+  catalina_set_property "kms.ssl.client.auth" "${KMS_SSL_CLIENT_AUTH}"
+  catalina_set_property "kms.ssl.enabled.protocols" \
+    "${KMS_SSL_ENABLED_PROTOCOLS}"
   catalina_set_property "kms.ssl.ciphers" "${KMS_SSL_CIPHERS}"
   catalina_set_property "kms.ssl.keystore.file" "${KMS_SSL_KEYSTORE_FILE}"
 
