@@ -190,6 +190,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>ReconfigurationProtocol.proto</include>
                   <include>StorageContainerLocationProtocol.proto</include>
                   <include>DatanodeContainerProtocol.proto</include>
+                  <include>Ozone.proto</include>
+                  <include>KeySpaceManagerProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

@@ -29,6 +29,7 @@ option java_outer_classname = "ContainerProtos";
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs.ozone;
 import "hdfs.proto";
+import "Ozone.proto";
 
 /**
  * Commands that are used to manipulate the state of containers on a datanode.
@@ -190,17 +191,7 @@ message ContainerCommandResponseProto {
 
 }
 
-// A pipeline is composed of one or more datanodes that back a container.
-message Pipeline {
-  required string leaderID = 1;
-  repeated DatanodeIDProto members = 2;
-  required string containerName = 3;
-}
 
-message KeyValue {
-  required string key = 1;
-  optional string value = 2;
-}
 
 message ContainerData {
   required string name = 1;

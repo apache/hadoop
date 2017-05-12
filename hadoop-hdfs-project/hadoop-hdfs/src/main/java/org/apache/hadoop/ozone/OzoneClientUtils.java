@@ -35,6 +35,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
+    .OZONE_KSM_BIND_HOST_DEFAULT;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_PORT_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
@@ -222,6 +226,26 @@ public final class OzoneClientUtils {
     return NetUtils.createSocketAddr(
         host.or(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
             port.or(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
+  }
+
+
+  /**
+   * Retrieve the socket address that is used by KSM.
+   * @param conf
+   * @return Target InetSocketAddress for the SCM service endpoint.
+   */
+  public static InetSocketAddress getKsmAddress(
+      Configuration conf) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf,
+        OZONE_KSM_ADDRESS_KEY);
+
+    // If no port number is specified then we'll just try the defaultBindPort.
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        OZONE_KSM_ADDRESS_KEY);
+
+    return NetUtils.createSocketAddr(
+        host.or(OZONE_KSM_BIND_HOST_DEFAULT) + ":" +
+            port.or(OZONE_KSM_PORT_DEFAULT));
   }
 
   /**
