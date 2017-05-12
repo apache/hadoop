@@ -1642,6 +1642,7 @@ public final class SliderUtils {
       boolean usingMiniMRCluster) {
 
     ClasspathConstructor classpath = new ClasspathConstructor();
+    classpath.append(SliderKeys.LOG4J_SERVER_PROP_FILENAME);
 
     // add the runtime classpath needed for tests to work
     if (usingMiniMRCluster) {
