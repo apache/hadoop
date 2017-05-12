@@ -278,6 +278,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11795. Fix ASF License warnings in branch-2.7.
     (Yiqun Lin via aajisaka)
 
+	HDFS-11674. reserveSpaceForReplicas is not released if append request failed
+	due to mirror down and replica recovered (vinayakumarb)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

@@ -426,6 +426,21 @@ public class DFSOutputStream extends FSOutputSummer
       }
     }
 
+    /**
+     * Set pipeline in construction
+     *
+     * @param lastBlock the last block of a file
+     * @throws IOException
+     */
+    void setPipelineInConstruction(LocatedBlock lastBlock) throws IOException{
+      // setup pipeline to append to the last block XXX retries??
+      setPipeline(lastBlock);
+      if (nodes.length < 1) {
+        throw new IOException("Unable to retrieve blocks locations " +
+            " for last block " + block + " of file " + src);
+      }
+    }
+
     private void setPipeline(LocatedBlock lb) {
       setPipeline(lb.getLocations(), lb.getStorageTypes(), lb.getStorageIDs());
     }
@@ -2495,6 +2510,13 @@ public class DFSOutputStream extends FSOutputSummer
   @VisibleForTesting
   public long getFileId() {
     return fileId;
+  }
+
+  /**
+   * Returns the data streamer object.
+   */
+  protected DataStreamer getStreamer() {
+    return streamer;
   }
 
   private static <T> void arraycopy(T[] srcs, T[] dsts, int skipIndex) {
