@@ -159,7 +159,6 @@ public class TestBlockManager {
     Mockito.when(haState.shouldPopulateReplQueues()).thenReturn(true);
     Mockito.when(fsn.getHAContext()).thenReturn(haContext);
     bm = new BlockManager(fsn, false, conf);
-    bm.setInitializedReplQueues(true);
     CacheManager cm = Mockito.mock(CacheManager.class);
     Mockito.doReturn(cm).when(fsn).getCacheManager();
     GSet<CachedBlock, CachedBlock> cb =
@@ -967,10 +966,12 @@ public class TestBlockManager {
     StorageReceivedDeletedBlocks srdb =
         new StorageReceivedDeletedBlocks(new DatanodeStorage(ds.getStorageID()),
             rdbiList.toArray(new ReceivedDeletedBlockInfo[rdbiList.size()]));
+    bm.setInitializedReplQueues(true);
     bm.processIncrementalBlockReport(node, srdb);
     // Needed replications should still be 0.
     assertEquals("UC block was incorrectly added to needed Replications",
         0, bm.neededReconstruction.size());
+    bm.setInitializedReplQueues(false);
   }
 
   private BlockInfo addBlockToBM(long blkId) {
