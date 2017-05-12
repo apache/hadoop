@@ -53,6 +53,7 @@ import java.util.Set;
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
  * This is the CLI that can be use to convert a levelDB into a sqlite DB file.
@@ -116,6 +117,14 @@ public class SQLCLI  extends Configured implements Tool {
       "INSERT INTO nodePool (datanodeUUID, poolName) " +
           "VALUES (\"%s\", \"%s\")";
   // and reuse CREATE_DATANODE_INFO and INSERT_DATANODE_INFO
+  // for openContainer.db
+  private static final String CREATE_OPEN_CONTAINER =
+      "CREATE TABLE openContainer (" +
+          "containerName TEXT PRIMARY KEY NOT NULL, " +
+          "containerUsed INTEGER NOT NULL)";
+  private static final String INSERT_OPEN_CONTAINER =
+      "INSERT INTO openContainer (containerName, containerUsed) " +
+          "VALUES (\"%s\", \"%s\")";
 
 
   private static final Logger LOG =
@@ -191,6 +200,9 @@ public class SQLCLI  extends Configured implements Tool {
     } else if (dbName.toString().equals(NODEPOOL_DB)) {
       LOG.info("Converting node pool DB");
       convertNodePoolDB(dbPath, outPath);
+    } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
+      LOG.info("Converting open container DB");
+      convertOpenContainerDB(dbPath, outPath);
     } else {
       LOG.error("Unrecognized db name {}", dbName);
     }
@@ -244,12 +256,12 @@ public class SQLCLI  extends Configured implements Tool {
     File dbFile = dbPath.toFile();
     org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
     try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
-         Connection conn = connectDB(outPath.toString())) {
+         Connection conn = connectDB(outPath.toString());
+         DBIterator iter = dbStore.getIterator()) {
       executeSQL(conn, CREATE_CONTAINER_INFO);
       executeSQL(conn, CREATE_CONTAINER_MEMBERS);
       executeSQL(conn, CREATE_DATANODE_INFO);
 
-      DBIterator iter = dbStore.getIterator();
       iter.seekToFirst();
       HashSet<String> uuidChecked = new HashSet<>();
       while (iter.hasNext()) {
@@ -320,10 +332,10 @@ public class SQLCLI  extends Configured implements Tool {
     File dbFile = dbPath.toFile();
     org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
     try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
-         Connection conn = connectDB(outPath.toString())) {
+         Connection conn = connectDB(outPath.toString());
+         DBIterator iter = dbStore.getIterator()) {
       executeSQL(conn, CREATE_BLOCK_CONTAINER);
 
-      DBIterator iter = dbStore.getIterator();
       iter.seekToFirst();
       while (iter.hasNext()) {
         Map.Entry<byte[], byte[]> entry = iter.next();
@@ -364,11 +376,11 @@ public class SQLCLI  extends Configured implements Tool {
     File dbFile = dbPath.toFile();
     org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
     try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
-         Connection conn = connectDB(outPath.toString())) {
+         Connection conn = connectDB(outPath.toString());
+         DBIterator iter = dbStore.getIterator()) {
       executeSQL(conn, CREATE_NODE_POOL);
       executeSQL(conn, CREATE_DATANODE_INFO);
 
-      DBIterator iter = dbStore.getIterator();
       iter.seekToFirst();
       while (iter.hasNext()) {
         Map.Entry<byte[], byte[]> entry = iter.next();
@@ -392,6 +404,42 @@ public class SQLCLI  extends Configured implements Tool {
         datanodeID.getInfoPort(), datanodeID.getIpcPort(),
         datanodeID.getInfoSecurePort(), datanodeID.getContainerPort());
     executeSQL(conn, insertDatanodeID);
+  }
+
+  /**
+   * Convert openContainer.db to sqlite db file. This is rather simple db,
+   * the schema has only one table:
+   *
+   * openContainer
+   * -------------------------------
+   * containerName* | containerUsed
+   * -------------------------------
+   *
+   * @param dbPath path to container db.
+   * @param outPath path to output sqlite
+   * @throws IOException throws exception.
+   */
+  private void convertOpenContainerDB(Path dbPath, Path outPath)
+      throws Exception {
+    LOG.info("Create table for open container db.");
+    File dbFile = dbPath.toFile();
+    org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
+    try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
+        Connection conn = connectDB(outPath.toString());
+        DBIterator iter = dbStore.getIterator()) {
+      executeSQL(conn, CREATE_OPEN_CONTAINER);
+
+      iter.seekToFirst();
+      while (iter.hasNext()) {
+        Map.Entry<byte[], byte[]> entry = iter.next();
+        String containerName = DFSUtil.bytes2String(entry.getKey());
+        Long containerUsed = Long.parseLong(
+            DFSUtil.bytes2String(entry.getValue()));
+        String insertOpenContainer = String.format(
+            INSERT_OPEN_CONTAINER, containerName, containerUsed);
+        executeSQL(conn, insertOpenContainer);
+      }
+    }
   }
 
   private CommandLine parseArgs(String[] argv)
