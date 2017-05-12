@@ -157,7 +157,10 @@ public class CodecPool {
         LOG.debug("Got recycled compressor");
       }
     }
-    updateLeaseCount(compressorCounts, compressor, 1);
+    if (compressor != null &&
+        !compressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      updateLeaseCount(compressorCounts, compressor, 1);
+    }
     return compressor;
   }
   
@@ -184,7 +187,10 @@ public class CodecPool {
         LOG.debug("Got recycled decompressor");
       }
     }
-    updateLeaseCount(decompressorCounts, decompressor, 1);
+    if (decompressor != null &&
+        !decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      updateLeaseCount(decompressorCounts, decompressor, 1);
+    }
     return decompressor;
   }
   
