@@ -336,15 +336,11 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     }
 
     public void close() throws IOException {
-      if (needsReset) {
-        // In the case that nothing is written to this stream, we still need to
-        // write out the header before closing, otherwise the stream won't be
-        // recognized by BZip2CompressionInputStream.
-        internalReset();
+      try {
+        super.close();
+      } finally {
+        output.close();
       }
-      this.output.flush();
-      this.output.close();
-      needsReset = true;
     }
 
   }// end of class BZip2CompressionOutputStream
@@ -454,8 +450,12 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
     public void close() throws IOException {
       if (!needsReset) {
-        input.close();
-        needsReset = true;
+        try {
+          input.close();
+          needsReset = true;
+        } finally {
+          super.close();
+        }
       }
     }
 
