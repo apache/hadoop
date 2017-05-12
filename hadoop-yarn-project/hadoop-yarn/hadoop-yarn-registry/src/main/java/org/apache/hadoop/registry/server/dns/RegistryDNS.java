@@ -1393,19 +1393,28 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       throws IOException {
     ServiceRecordProcessor processor;
     try {
-      if (record.get(YarnRegistryAttributes.YARN_PERSISTENCE)
-          .equals(CONTAINER)) {
-        // container registration.  the logic to identify and create the
-        // container entry needs to be enhanced/more accurate and associate to
-        // correct host
-        processor =
-            new ContainerServiceRecordProcessor(record, path, domainName, this);
+      String yarnPersistanceValue = record.get(
+                                    YarnRegistryAttributes.YARN_PERSISTENCE);
+      if (yarnPersistanceValue != null) {
+        if (yarnPersistanceValue.equals(CONTAINER)) {
+          // container registration.  the logic to identify and create the
+          // container entry needs to be enhanced/more accurate and associate
+          // to correct host
+          processor =
+               new ContainerServiceRecordProcessor(record, path, domainName,
+                   this);
+        } else {
+          LOG.debug("Creating ApplicationServiceRecordProcessor for {}",
+                    yarnPersistanceValue);
+          processor =
+               new ApplicationServiceRecordProcessor(record, path, domainName,
+                   this);
+        }
+        processor.manageDNSRecords(command);
       } else {
-        processor =
-            new ApplicationServiceRecordProcessor(record, path, domainName,
-                this);
+        LOG.warn("Yarn Resgistry record {} does not contain {} attribute ",
+                  record.toString(), YarnRegistryAttributes.YARN_PERSISTENCE);
       }
-      processor.manageDNSRecords(command);
     } catch (Exception e) {
       throw new IOException(e);
     }

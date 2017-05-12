@@ -129,6 +129,16 @@ public class TestRegistryDNS extends Assert {
       + "  \"yarn:persistence\" : \"container\"\n"
       + "}\n";
 
+  private static final String CONTAINER_RECORD_YARN_PERSISTANCE_ABSENT = "{\n"
+      + "  \"type\" : \"JSONServiceRecord\",\n"
+      + "  \"description\" : \"YCLOUD\",\n"
+      + "  \"external\" : [ ],\n"
+      + "  \"internal\" : [ ],\n"
+      + "  \"yarn:id\" : \"container_e50_1451931954322_0016_01_000003\",\n"
+      + "  \"yarn:ip\" : \"172.17.0.19\",\n"
+      + "  \"yarn:hostname\" : \"0a134d6329bb\"\n"
+      + "}\n";
+
   @Before
   public void initialize() throws Exception {
     setRegistryDNS(new RegistryDNS("TestRegistry"));
@@ -217,6 +227,25 @@ public class TestRegistryDNS extends Assert {
 
     recs = assertDNSQuery("ycloud.test1.root.hwx.test.", 1);
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
+  }
+
+  @Test
+  public void testContainerRegistrationPersistanceAbsent() throws Exception {
+    ServiceRecord record = marshal.fromBytes("somepath",
+        CONTAINER_RECORD_YARN_PERSISTANCE_ABSENT.getBytes());
+    registryDNS.register(
+        "/registry/users/root/services/org-apache-slider/test1/components/"
+            + "container-e50-1451931954322-0016-01-000003",
+         record);
+
+    Name name =
+        Name.fromString("ctr-e50-1451931954322-0016-01-000002.hwx.test.");
+    Record question = Record.newRecord(name, Type.A, DClass.IN);
+    Message query = Message.newQuery(question);
+    byte[] responseBytes = registryDNS.generateReply(query, null);
+    Message response = new Message(responseBytes);
+    assertEquals("Excepting NXDOMAIN as Record must not have regsisterd wrong",
+        Rcode.NXDOMAIN, response.getRcode());
   }
 
   @Test
