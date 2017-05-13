@@ -29,17 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -103,9 +99,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
-import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -1038,92 +1033,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected void startWepApp() {
 
-    // Use the customized yarn filter instead of the standard kerberos filter to
-    // allow users to authenticate using delegation tokens
-    // 4 conditions need to be satisfied -
-    // 1. security is enabled
-    // 2. http auth type is set to kerberos
-    // 3. "yarn.resourcemanager.webapp.use-yarn-filter" override is set to true
-    // 4. hadoop.http.filter.initializers container AuthenticationFilterInitializer
-
     Configuration conf = getConfig();
-    boolean enableCorsFilter =
-        conf.getBoolean(YarnConfiguration.RM_WEBAPP_ENABLE_CORS_FILTER,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_ENABLE_CORS_FILTER);
-    boolean useYarnAuthenticationFilter =
-        conf.getBoolean(
-          YarnConfiguration.RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER,
-          YarnConfiguration.DEFAULT_RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER);
-    String authPrefix = "hadoop.http.authentication.";
-    String authTypeKey = authPrefix + "type";
-    String filterInitializerConfKey = "hadoop.http.filter.initializers";
-    String actualInitializers = "";
-    Class<?>[] initializersClasses =
-        conf.getClasses(filterInitializerConfKey);
 
-    // setup CORS
-    if (enableCorsFilter) {
-      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
-          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
-    }
-
-    boolean hasHadoopAuthFilterInitializer = false;
-    boolean hasRMAuthFilterInitializer = false;
-    if (initializersClasses != null) {
-      for (Class<?> initializer : initializersClasses) {
-        if (initializer.getName().equals(
-          AuthenticationFilterInitializer.class.getName())) {
-          hasHadoopAuthFilterInitializer = true;
-        }
-        if (initializer.getName().equals(
-          RMAuthenticationFilterInitializer.class.getName())) {
-          hasRMAuthFilterInitializer = true;
-        }
-      }
-      if (UserGroupInformation.isSecurityEnabled()
-          && useYarnAuthenticationFilter
-          && hasHadoopAuthFilterInitializer
-          && conf.get(authTypeKey, "").equals(
-            KerberosAuthenticationHandler.TYPE)) {
-        ArrayList<String> target = new ArrayList<String>();
-        for (Class<?> filterInitializer : initializersClasses) {
-          if (filterInitializer.getName().equals(
-            AuthenticationFilterInitializer.class.getName())) {
-            if (hasRMAuthFilterInitializer == false) {
-              target.add(RMAuthenticationFilterInitializer.class.getName());
-            }
-            continue;
-          }
-          target.add(filterInitializer.getName());
-        }
-        actualInitializers = StringUtils.join(",", target);
-
-        LOG.info("Using RM authentication filter(kerberos/delegation-token)"
-            + " for RM webapp authentication");
-        RMAuthenticationFilter
-          .setDelegationTokenSecretManager(getClientRMService().rmDTSecretManager);
-        conf.set(filterInitializerConfKey, actualInitializers);
-      }
-    }
-
-    // if security is not enabled and the default filter initializer has not 
-    // been set, set the initializer to include the
-    // RMAuthenticationFilterInitializer which in turn will set up the simple
-    // auth filter.
-
-    String initializers = conf.get(filterInitializerConfKey);
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      if (initializersClasses == null || initializersClasses.length == 0) {
-        conf.set(filterInitializerConfKey,
-          RMAuthenticationFilterInitializer.class.getName());
-        conf.set(authTypeKey, "simple");
-      } else if (initializers.equals(StaticUserWebFilter.class.getName())) {
-        conf.set(filterInitializerConfKey,
-          RMAuthenticationFilterInitializer.class.getName() + ","
-              + initializers);
-        conf.set(authTypeKey, "simple");
-      }
-    }
+    RMWebAppUtil.setupSecurityAndFilters(conf,
+        getClientRMService().rmDTSecretManager);
 
     Builder<ApplicationMasterService> builder = 
         WebApps
