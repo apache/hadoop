@@ -363,5 +363,6 @@ public class CBlockManager implements CBlockServiceProtocol,
         client, new XceiverClientManager(ozoneConf));
     CBlockManager cbm = new CBlockManager(ozoneConf, storageClient);
     cbm.start();
+    cbm.join();
   }
 }
