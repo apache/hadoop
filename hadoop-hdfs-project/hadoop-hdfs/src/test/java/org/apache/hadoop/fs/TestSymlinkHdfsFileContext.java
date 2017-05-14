@@ -34,7 +34,7 @@ public class TestSymlinkHdfsFileContext extends TestSymlinkHdfs {
     wrapper = new FileContextTestWrapper(fc, "/tmp/TestSymlinkHdfsFileContext");
   }
 
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   /** Test access a symlink using AbstractFileSystem */
   public void testAccessLinkFromAbstractFileSystem() throws IOException {
     Path file = new Path(testBaseDir1(), "file");

@@ -866,7 +866,7 @@ public class TestAlignedPlanner {
     curAlloc.clear();
     curAlloc.put(new ReservationInterval(9 * step, 10 * step),
         Resource.newInstance(1024, 1));
-    assertTrue("validateOrderNoFap() should have suceeded",
+    assertTrue("validateOrderNoFap() should have succeeded",
         IterativePlanner.validateOrderNoGap(allocation, curAlloc, false));
 
     // 2. allocateLeft = false, fail when curAlloc has a gap
@@ -888,7 +888,7 @@ public class TestAlignedPlanner {
     curAlloc.clear();
     curAlloc.put(new ReservationInterval(13 * step, 14 * step),
         Resource.newInstance(1024, 1));
-    assertTrue("validateOrderNoFap() should have suceeded",
+    assertTrue("validateOrderNoFap() should have succeeded",
         IterativePlanner.validateOrderNoGap(allocation, curAlloc, true));
 
     // 5. allocateLeft = true, fail when there is a gap between curAlloc and

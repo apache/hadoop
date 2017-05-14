@@ -187,14 +187,14 @@ public class SLSWebApp extends HttpServlet {
     response.setStatus(HttpServletResponse.SC_OK);
 
     String simulateInfo;
-    if (SLSRunner.simulateInfoMap.isEmpty()) {
+    if (SLSRunner.getSimulateInfoMap().isEmpty()) {
       String empty = "<tr><td colspan='2' align='center'>" +
               "No information available</td></tr>";
       simulateInfo = MessageFormat.format(simulateInfoTemplate, empty);
     } else {
       StringBuilder info = new StringBuilder();
       for (Map.Entry<String, Object> entry :
-              SLSRunner.simulateInfoMap.entrySet()) {
+              SLSRunner.getSimulateInfoMap().entrySet()) {
         info.append("<tr>");
         info.append("<td class='td1'>").append(entry.getKey()).append("</td>");
         info.append("<td class='td2'>").append(entry.getValue())

@@ -312,7 +312,7 @@ public class TestCompositeService {
     assertInState(STATE.INITED, child);
   }
 
-  @Test (timeout = 1000)
+  @Test (timeout = 10000)
   public void testAddIfService() {
     CompositeService testService = new CompositeService("TestService") {
       Service service;
@@ -363,7 +363,7 @@ public class TestCompositeService {
   // Tests for adding child service to parent
   //
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedChildBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -376,7 +376,7 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedChildInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -396,7 +396,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedChildInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -408,7 +408,7 @@ public class TestCompositeService {
     assertInState(STATE.NOTINITED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedChildInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -419,7 +419,7 @@ public class TestCompositeService {
     assertInState(STATE.NOTINITED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedChildBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -433,7 +433,7 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedChildInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -446,7 +446,7 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedChildInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -459,7 +459,7 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedChildInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -471,7 +471,7 @@ public class TestCompositeService {
     assertInState(STATE.INITED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedChildBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -489,7 +489,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedChildInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -503,7 +503,7 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedChildInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -517,7 +517,7 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedChildInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -530,7 +530,7 @@ public class TestCompositeService {
     assertInState(STATE.STARTED, child);
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedChildBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -549,7 +549,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedChildInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -570,7 +570,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedChildInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -583,7 +583,7 @@ public class TestCompositeService {
     parent.stop();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedChildInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService child = new BreakableService();
@@ -600,7 +600,7 @@ public class TestCompositeService {
   // Tests for adding sibling service to parent
   //
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedSiblingBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -617,7 +617,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedSiblingInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -636,7 +636,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedSiblingInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -653,7 +653,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddUninitedSiblingInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -670,7 +670,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedSiblingBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -688,7 +688,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedSiblingInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -706,7 +706,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedSiblingInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -724,7 +724,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddInitedSiblingInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -735,7 +735,7 @@ public class TestCompositeService {
     parent.init(new Configuration());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedSiblingBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -754,7 +754,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedSiblingInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -774,7 +774,7 @@ public class TestCompositeService {
   }
 
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedSiblingInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -793,7 +793,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStartedSiblingInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -812,7 +812,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedSiblingBeforeInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -832,7 +832,7 @@ public class TestCompositeService {
                  1, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedSiblingInInit() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -856,7 +856,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedSiblingInStart() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();
@@ -876,7 +876,7 @@ public class TestCompositeService {
                  2, parent.getServices().size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testAddStoppedSiblingInStop() throws Throwable {
     CompositeService parent = new CompositeService("parent");
     BreakableService sibling = new BreakableService();

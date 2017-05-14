@@ -80,6 +80,11 @@ public class ServerProxy {
     exceptionToPolicyMap.put(ConnectTimeoutException.class, retryPolicy);
     exceptionToPolicyMap.put(RetriableException.class, retryPolicy);
     exceptionToPolicyMap.put(SocketException.class, retryPolicy);
+    
+    /*
+     * Still keeping this to cover case like newer client talking
+     * to an older version of server
+     */
     exceptionToPolicyMap.put(NMNotYetReadyException.class, retryPolicy);
 
     return RetryPolicies.retryByException(RetryPolicies.TRY_ONCE_THEN_FAIL,

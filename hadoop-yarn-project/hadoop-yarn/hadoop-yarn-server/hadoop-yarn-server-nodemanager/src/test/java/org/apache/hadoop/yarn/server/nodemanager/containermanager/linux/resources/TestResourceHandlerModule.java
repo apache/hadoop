@@ -43,9 +43,6 @@ public class TestResourceHandlerModule {
 
     networkEnabledConf.setBoolean(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED,
         true);
-    //We need to bypass mtab parsing for figuring out cgroups mount locations
-    networkEnabledConf.setBoolean(YarnConfiguration
-        .NM_LINUX_CONTAINER_CGROUPS_MOUNT, true);
     ResourceHandlerModule.nullifyResourceHandlerChain();
   }
 

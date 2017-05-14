@@ -647,7 +647,7 @@ public class TestBlockRecovery {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
-    dn.data.createRbw(StorageType.DEFAULT, block, false);
+    dn.data.createRbw(StorageType.DEFAULT, null, block, false);
     BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
         recoveryWorker.new RecoveryTaskContiguous(rBlock);
     try {
@@ -673,7 +673,7 @@ public class TestBlockRecovery {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
     ReplicaInPipeline replicaInfo = dn.data.createRbw(
-        StorageType.DEFAULT, block, false).getReplica();
+        StorageType.DEFAULT, null, block, false).getReplica();
     ReplicaOutputStreams streams = null;
     try {
       streams = replicaInfo.createStreams(true,
@@ -972,7 +972,7 @@ public class TestBlockRecovery {
           // Register this thread as the writer for the recoveringBlock.
           LOG.debug("slowWriter creating rbw");
           ReplicaHandler replicaHandler =
-              spyDN.data.createRbw(StorageType.DISK, block, false);
+              spyDN.data.createRbw(StorageType.DISK, null, block, false);
           replicaHandler.close();
           LOG.debug("slowWriter created rbw");
           // Tell the parent thread to start progressing.

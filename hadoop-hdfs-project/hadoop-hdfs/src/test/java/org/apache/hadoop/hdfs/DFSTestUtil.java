@@ -1018,7 +1018,8 @@ public class DFSTestUtil {
       // send the request
       new Sender(out).transferBlock(b, new Token<BlockTokenIdentifier>(),
           dfsClient.clientName, new DatanodeInfo[]{datanodes[1]},
-          new StorageType[]{StorageType.DEFAULT});
+          new StorageType[]{StorageType.DEFAULT},
+          new String[0]);
       out.flush();
 
       return BlockOpResponseProto.parseDelimitedFrom(in);
@@ -1459,6 +1460,11 @@ public class DFSTestUtil {
 
   public static void abortStream(DFSOutputStream out) throws IOException {
     out.abort();
+  }
+
+  public static void setPipeline(DFSOutputStream out, LocatedBlock lastBlock)
+      throws IOException {
+    out.getStreamer().setPipelineInConstruction(lastBlock);
   }
 
   public static byte[] asArray(ByteBuffer buf) {

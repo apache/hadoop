@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.Proportion
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.*;
 
 public class TestSchedulingMonitor {
 
@@ -42,6 +43,24 @@ public class TestSchedulingMonitor {
     } catch (Exception e) {
       fail("ResourceManager does not start when " +
           YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS + " is set to true");
+    }
+
+    SchedulingEditPolicy mPolicy = mock(SchedulingEditPolicy.class);
+    when(mPolicy.getMonitoringInterval()).thenReturn(1000L);
+    SchedulingMonitor monitor = new SchedulingMonitor(rm.getRMContext(),
+        mPolicy);
+    try {
+      monitor.serviceInit(conf);
+      monitor.serviceStart();
+    } catch (Exception e) {
+      fail("SchedulingMonitor failes to start.");
+    }
+    verify(mPolicy, times(1)).editSchedule();
+    try {
+      monitor.close();
+      rm.close();
+    } catch (Exception e) {
+      fail("Failed to close.");
     }
   }
 }

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HFLUSH;
+import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HSYNC;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -34,6 +37,7 @@ import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -90,7 +94,7 @@ import com.google.common.base.Preconditions;
  ****************************************************************/
 @InterfaceAudience.Private
 public class DFSOutputStream extends FSOutputSummer
-    implements Syncable, CanSetDropBehind {
+    implements Syncable, CanSetDropBehind, StreamCapabilities {
   static final Logger LOG = LoggerFactory.getLogger(DFSOutputStream.class);
   /**
    * Number of times to retry creating a file when there are transient
@@ -544,6 +548,15 @@ public class DFSOutputStream extends FSOutputSummer
       getStreamer().setBytesCurBlock(0);
       lastFlushOffset = 0;
     }
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    if (capability.equalsIgnoreCase(HSYNC.getValue()) ||
+        capability.equalsIgnoreCase((HFLUSH.getValue()))) {
+      return true;
+    }
+    return false;
   }
 
   /**

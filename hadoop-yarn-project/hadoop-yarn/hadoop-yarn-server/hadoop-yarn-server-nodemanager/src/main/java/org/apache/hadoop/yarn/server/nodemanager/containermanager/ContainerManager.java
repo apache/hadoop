@@ -42,8 +42,6 @@ public interface ContainerManager extends ServiceStateChangeListener,
 
   void updateQueuingLimit(ContainerQueuingLimit queuingLimit);
 
-  void setBlockNewContainerRequests(boolean blockNewContainerRequests);
-
   ContainerScheduler getContainerScheduler();
 
 }

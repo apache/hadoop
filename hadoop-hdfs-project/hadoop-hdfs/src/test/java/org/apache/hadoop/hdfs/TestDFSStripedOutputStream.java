@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.fail;
+import static org.junit.Assert.assertFalse;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities.StreamCapability;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.IOUtils;
@@ -195,14 +196,19 @@ public class TestDFSStripedOutputStream {
   public void testStreamFlush() throws Exception {
     final byte[] bytes = StripedFileTestUtil.generateBytes(blockSize *
         dataBlocks * 3 + cellSize * dataBlocks + cellSize + 123);
-    try (FSDataOutputStream os = fs.create(new Path("/ec-file-1"))) {
-      InputStream is = new ByteArrayInputStream(bytes);
-      IOUtils.copyBytes(is, os, bytes.length);
-      os.hflush();
-      os.hsync();
-    } catch (Exception e) {
-      fail("hflush()/hsync() on striped file output stream failed!", e);
-    }
+    FSDataOutputStream os = fs.create(new Path("/ec-file-1"));
+    assertFalse("DFSStripedOutputStream should not have hflush() " +
+            "capability yet!", os.hasCapability(
+                StreamCapability.HFLUSH.getValue()));
+    assertFalse("DFSStripedOutputStream should not have hsync() " +
+            "capability yet!", os.hasCapability(
+                StreamCapability.HSYNC.getValue()));
+    InputStream is = new ByteArrayInputStream(bytes);
+    IOUtils.copyBytes(is, os, bytes.length);
+    os.hflush();
+    IOUtils.copyBytes(is, os, bytes.length);
+    os.hsync();
+    os.close();
   }
 
   private void testOneFile(String src, int writeBytes) throws Exception {

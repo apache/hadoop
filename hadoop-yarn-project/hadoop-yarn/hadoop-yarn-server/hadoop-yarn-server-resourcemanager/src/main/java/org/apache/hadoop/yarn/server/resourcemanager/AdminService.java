@@ -304,13 +304,12 @@ public class AdminService extends CompositeService implements
       // call all refresh*s for active RM to get the updated configurations.
       refreshAll();
     } catch (Exception e) {
-      LOG.error("RefreshAll failed so firing fatal event", e);
       rmContext
           .getDispatcher()
           .getEventHandler()
           .handle(
               new RMFatalEvent(RMFatalEventType.TRANSITION_TO_ACTIVE_FAILED,
-                  e));
+                  e, "failure to refresh configuration settings"));
       throw new ServiceFailedException(
           "Error on refreshAll during transition to Active", e);
     }
