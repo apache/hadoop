@@ -452,45 +452,46 @@ public final class OzoneMetadataManager {
     String prevKey = args.getPrevKey();
     int maxCount = args.getMaxKeys();
     String userName = null;
-    DBIterator iterator = this.userDB.getDB().iterator();
+    try (DBIterator iterator = this.userDB.getDB().iterator()) {
 
-    if (prevKey != null) {
-      // Format is username/volumeName
+      if (prevKey != null) {
+        // Format is username/volumeName
 
-      String[] volName = args.getPrevKey().split("/");
-      if (volName.length < 2) {
-        throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
+        String[] volName = args.getPrevKey().split("/");
+        if (volName.length < 2) {
+          throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
+        }
+        seekToUser(iterator, volName[0]);
+        userName = new String(iterator.peekNext().getKey(), encoding);
+        prevKey = volName[1];
+      } else {
+        userName = getFirstUser(iterator);
       }
-      seekToUser(iterator, volName[0]);
-      userName = new String(iterator.peekNext().getKey(), encoding);
-      prevKey = volName[1];
-    } else {
-      userName = getFirstUser(iterator);
-    }
 
-    if (userName == null || userName.isEmpty()) {
-      throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
-    }
-
-    ListVolumes returnSet = new ListVolumes();
-    int count = maxCount - returnSet.getVolumes().size();
-
-    // we need to iterate through users until we get maxcount volumes
-    // or no more volumes are left.
-    while (iterator.hasNext() && count > 0) {
-
-      userName = new String(iterator.next().getKey(), encoding);
-
-      byte[] volumeList = userDB.get(userName.getBytes(encoding));
-      if (volumeList == null) {
+      if (userName == null || userName.isEmpty()) {
         throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
       }
 
-      returnSet.getVolumes().addAll(
-          getFilteredVolumes(volumeList, prefix, prevKey, count).getVolumes());
-      count = maxCount - returnSet.getVolumes().size();
+      ListVolumes returnSet = new ListVolumes();
+      int count = maxCount - returnSet.getVolumes().size();
+
+      // we need to iterate through users until we get maxcount volumes
+      // or no more volumes are left.
+      while (iterator.hasNext() && count > 0) {
+
+        userName = new String(iterator.next().getKey(), encoding);
+
+        byte[] volumeList = userDB.get(userName.getBytes(encoding));
+        if (volumeList == null) {
+          throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
+        }
+
+        returnSet.getVolumes().addAll(getFilteredVolumes(
+            volumeList, prefix, prevKey, count).getVolumes());
+        count = maxCount - returnSet.getVolumes().size();
+      }
+      return returnSet;
     }
-    return returnSet;
   }
 
   /**

@@ -74,7 +74,6 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HA
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT;
 
 /**
  * The main entry point of CBlock operations, ALL the CBlock operations
@@ -269,18 +268,19 @@ public class CBlockManager implements CBlockServiceProtocol,
     levelDBStore.delete(key);
   }
 
-  public void readFromPersistentStore() {
-    DBIterator iter = levelDBStore.getIterator();
-    iter.seekToFirst();
-    while (iter.hasNext()) {
-      Map.Entry<byte[], byte[]> entry = iter.next();
-      String volumeKey = new String(entry.getKey(), encoding);
-      try {
-        VolumeDescriptor volumeDescriptor =
-            VolumeDescriptor.fromProtobuf(entry.getValue());
-        storageManager.addVolume(volumeDescriptor);
-      } catch (IOException e) {
-        LOG.error("Loading volume " + volumeKey + " error " + e);
+  public void readFromPersistentStore() throws IOException {
+    try (DBIterator iter = levelDBStore.getIterator()) {
+      iter.seekToFirst();
+      while (iter.hasNext()) {
+        Map.Entry<byte[], byte[]> entry = iter.next();
+        String volumeKey = new String(entry.getKey(), encoding);
+        try {
+          VolumeDescriptor volumeDescriptor =
+              VolumeDescriptor.fromProtobuf(entry.getValue());
+          storageManager.addVolume(volumeDescriptor);
+        } catch (IOException e) {
+          LOG.error("Loading volume " + volumeKey + " error " + e);
+        }
       }
     }
   }
