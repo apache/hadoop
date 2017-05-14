@@ -59,6 +59,8 @@ import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
@@ -1012,10 +1014,25 @@ public class S3AFileSystem extends FileSystem {
    * operation statistics.
    * @param deleteRequest keys to delete on the s3-backend
    */
-  private void deleteObjects(DeleteObjectsRequest deleteRequest) {
+  private void deleteObjects(DeleteObjectsRequest deleteRequest) throws InvalidRequestException {
     incrementWriteOperations();
     incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
-    s3.deleteObjects(deleteRequest);
+    try {
+      s3.deleteObjects(deleteRequest);
+    } catch (MultiObjectDeleteException ex) {
+      List<DeleteObjectsRequest.KeyVersion> errorKeys = new ArrayList<>();
+      for (DeleteError deleteError : ex.getErrors()) {
+        errorKeys.add(new DeleteObjectsRequest.KeyVersion(deleteError.getKey()));
+      }
+      if (errorKeys.size() == deleteRequest.getKeys().size()) {
+        // fallback to single key deletion if all of them failed
+        for (DeleteObjectsRequest.KeyVersion keyVersion : errorKeys) {
+          deleteObject(keyVersion.getKey());
+        }
+      } else {
+        deleteObjects(deleteRequest.withKeys(errorKeys));
+      }
+    }
   }
 
   /**
