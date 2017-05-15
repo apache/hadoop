@@ -141,6 +141,9 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       if (i == 2) {
         entities.addEntity(createApplicationTimelineEntity(
             appId, true, false, false, true));
+      } else if (i == 3) {
+        entities.addEntity(createApplicationTimelineEntity(
+            appId, false, false, false, false, true));
       } else {
         entities.addEntity(createApplicationTimelineEntity(
             appId, false, false, false, false));
@@ -164,7 +167,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
 
   @Test
   public void testGetApplicationReport() throws Exception {
-    for (int i = 1; i <= 2; ++i) {
+    for (int i = 1; i <= 3; ++i) {
       final ApplicationId appId = ApplicationId.newInstance(0, i);
       ApplicationReport app;
       if (callerUGI == null) {
@@ -202,7 +205,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       Assert.assertTrue(app.getApplicationTags().contains("Test_APP_TAGS_2"));
       // App 2 doesn't have the ACLs, such that the default ACLs " " will be used.
       // Nobody except admin and owner has access to the details of the app.
-      if ((i ==  1 && callerUGI != null &&
+      if ((i != 2 && callerUGI != null &&
           callerUGI.getShortUserName().equals("user3")) ||
           (i ==  2 && callerUGI != null &&
           (callerUGI.getShortUserName().equals("user2") ||
@@ -233,10 +236,16 @@ public class TestApplicationHistoryManagerOnTimelineStore {
           applicationResourceUsageReport.getMemorySeconds());
       Assert
           .assertEquals(345, applicationResourceUsageReport.getVcoreSeconds());
-      Assert.assertEquals(456,
+      long expectedPreemptMemSecs = 456;
+      long expectedPreemptVcoreSecs = 789;
+      if (i == 3) {
+        expectedPreemptMemSecs = 0;
+        expectedPreemptVcoreSecs = 0;
+      }
+      Assert.assertEquals(expectedPreemptMemSecs,
           applicationResourceUsageReport.getPreemptedMemorySeconds());
       Assert
-          .assertEquals(789, applicationResourceUsageReport
+          .assertEquals(expectedPreemptVcoreSecs, applicationResourceUsageReport
               .getPreemptedVcoreSeconds());
       Assert.assertEquals(FinalApplicationStatus.UNDEFINED,
           app.getFinalApplicationStatus());
@@ -473,6 +482,14 @@ public class TestApplicationHistoryManagerOnTimelineStore {
   private static TimelineEntity createApplicationTimelineEntity(
       ApplicationId appId, boolean emptyACLs, boolean noAttemptId,
       boolean wrongAppId, boolean enableUpdateEvent) {
+    return createApplicationTimelineEntity(appId, emptyACLs, noAttemptId,
+        wrongAppId, enableUpdateEvent, false);
+  }
+
+  private static TimelineEntity createApplicationTimelineEntity(
+      ApplicationId appId, boolean emptyACLs, boolean noAttemptId,
+      boolean wrongAppId, boolean enableUpdateEvent,
+      boolean missingPreemptMetrics) {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     if (wrongAppId) {
@@ -497,8 +514,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         Integer.MAX_VALUE + 1L);
     entityInfo.put(ApplicationMetricsConstants.APP_MEM_METRICS, 123);
     entityInfo.put(ApplicationMetricsConstants.APP_CPU_METRICS, 345);
-    entityInfo.put(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS,456);
-    entityInfo.put(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS,789);
+    if (!missingPreemptMetrics) {
+      entityInfo.put(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS, 456);
+      entityInfo.put(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS, 789);
+    }
     if (emptyACLs) {
       entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO, "");
     } else {
