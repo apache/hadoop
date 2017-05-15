@@ -32,18 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT;
 
 /**
  * A Queue that is used to write blocks asynchronously to the container.
@@ -51,12 +44,6 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CACHE_BLOCK_B
 public class AsyncBlockWriter {
   private static final Logger LOG =
       LoggerFactory.getLogger(AsyncBlockWriter.class);
-
-  /**
-   * Right now we have a single buffer and we block when we write it to
-   * the file.
-   */
-  private final ByteBuffer blockIDBuffer;
 
   /**
    * XceiverClientManager is used to get client connections to a set of
@@ -80,8 +67,8 @@ public class AsyncBlockWriter {
    * The cache this writer is operating against.
    */
   private final CBlockLocalCache parentCache;
-  private final int blockBufferSize;
-  private final static String DIRTY_LOG_PREFIX = "DirtyLog";
+  private final BlockBufferManager blockBufferManager;
+  public final static String DIRTY_LOG_PREFIX = "DirtyLog";
   private AtomicLong localIoCount;
 
   /**
@@ -95,14 +82,11 @@ public class AsyncBlockWriter {
     Preconditions.checkNotNull(cache, "Cache cannot be null.");
     Preconditions.checkNotNull(cache.getCacheDB(), "DB cannot be null.");
     localIoCount = new AtomicLong();
-    blockBufferSize = config.getInt(DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE,
-        DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT) * (Long.SIZE / Byte.SIZE);
-    LOG.info("Cache: Block Size: {}", blockBufferSize);
     lock = new ReentrantLock();
     notEmpty = lock.newCondition();
     parentCache = cache;
     xceiverClientManager = cache.getClientManager();
-    blockIDBuffer = ByteBuffer.allocateDirect(blockBufferSize);
+    blockBufferManager = new BlockBufferManager(config, parentCache);
   }
 
   public void start() throws IOException {
@@ -113,6 +97,7 @@ public class AsyncBlockWriter {
       throw new IllegalStateException("Cache Directory create failed, Cannot " +
           "continue. Log Dir: {}" + logDir);
     }
+    blockBufferManager.start();
   }
 
   /**
@@ -179,11 +164,7 @@ public class AsyncBlockWriter {
             block.getBlockID(), endTime - startTime, datahash);
       }
       block.clearData();
-      parentCache.getTargetMetrics().incNumDirtyLogBlockUpdated();
-      blockIDBuffer.putLong(block.getBlockID());
-      if (blockIDBuffer.remaining() == 0) {
-        writeBlockBufferToFile(blockIDBuffer);
-      }
+      blockBufferManager.addToBlockBuffer(block.getBlockID());
     } else {
       Pipeline pipeline = parentCache.getPipeline(block.getBlockID());
       String containerName = pipeline.getContainerName();
@@ -216,68 +197,10 @@ public class AsyncBlockWriter {
   }
 
   /**
-   * Write Block Buffer to file.
-   *
-   * @param blockBuffer - ByteBuffer
-   * @throws IOException
-   */
-  private synchronized void writeBlockBufferToFile(ByteBuffer blockBuffer)
-      throws IOException {
-    long startTime = Time.monotonicNow();
-    boolean append = false;
-    int bytesWritten = 0;
-
-    // If there is nothing written to blockId buffer,
-    // then skip flushing of blockId buffer
-    if (blockBuffer.position() == 0) {
-      return;
-    }
-
-    blockBuffer.flip();
-    String fileName =
-        String.format("%s.%s", DIRTY_LOG_PREFIX, Time.monotonicNow());
-    String log = Paths.get(parentCache.getDbPath().toString(), fileName)
-        .toString();
-
-    try {
-      FileChannel channel = new FileOutputStream(log, append).getChannel();
-      bytesWritten = channel.write(blockBuffer);
-    } catch (Exception ex) {
-      LOG.error("Unable to sync the Block map to disk -- This might cause a " +
-          "data loss or corruption", ex);
-      parentCache.getTargetMetrics().incNumFailedDirtyBlockFlushes();
-      throw ex;
-    } finally {
-      blockBuffer.clear();
-    }
-
-    parentCache.processDirtyMessage(fileName);
-    blockIDBuffer.clear();
-    long endTime = Time.monotonicNow();
-    if (parentCache.isTraceEnabled()) {
-      parentCache.getTracer().info(
-          "Task=DirtyBlockLogWrite,Time={} bytesWritten={}",
-          endTime - startTime, bytesWritten);
-    }
-
-    parentCache.getTargetMetrics().incNumBytesDirtyLogWritten(bytesWritten);
-    parentCache.getTargetMetrics().incNumBlockBufferFlush();
-    parentCache.getTargetMetrics()
-        .updateBlockBufferFlushLatency(endTime - startTime);
-    LOG.debug("Block buffer writer bytesWritten:{} Time:{}",
-        bytesWritten, endTime - startTime);
-  }
-
-  /**
    * Shutdown by writing any pending I/O to dirtylog buffer.
    */
   public void shutdown() {
-    try {
-      writeBlockBufferToFile(this.blockIDBuffer);
-    } catch (IOException e) {
-      LOG.error("Unable to sync the Block map to disk -- This might cause a " +
-          "data loss or corruption");
-    }
+    blockBufferManager.shutdown();
   }
   /**
    * Returns tracer.
