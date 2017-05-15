@@ -363,6 +363,7 @@ public class ContainerCacheFlusher implements Runnable {
         if (finishCountMap.containsKey(message.getFileName())) {
           // In theory this should never happen. But if it happened,
           // we need to know it...
+          getTargetMetrics().incNumIllegalDirtyLogFiles();
           LOG.error("Adding DirtyLog file again {} current count {} new {}",
               message.getFileName(),
               finishCountMap.get(message.getFileName()).expectedCount,
@@ -516,6 +517,7 @@ public class ContainerCacheFlusher implements Runnable {
           }*/
           fileDeleted.set(true);
         } catch (Exception e) {
+          flusher.getTargetMetrics().incNumFailedDirtyLogFileDeletes();
           LOG.error("Error deleting dirty log file:" + filePath, e);
         }
       }

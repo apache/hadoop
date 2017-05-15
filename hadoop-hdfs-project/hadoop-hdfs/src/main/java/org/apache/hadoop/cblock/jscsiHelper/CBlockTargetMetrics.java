@@ -39,14 +39,15 @@ public class CBlockTargetMetrics {
   @Metric private MutableCounterLong numWriteOps;
   @Metric private MutableCounterLong numReadCacheHits;
   @Metric private MutableCounterLong numReadCacheMiss;
+  @Metric private MutableCounterLong numDirectBlockWrites;
 
   // Cblock internal Metrics
-  @Metric private MutableCounterLong numDirectBlockWrites;
-  @Metric private MutableCounterLong numBlockBufferFlush;
   @Metric private MutableCounterLong numDirtyLogBlockRead;
-  @Metric private MutableCounterLong numDirtyLogBlockUpdated;
   @Metric private MutableCounterLong numBytesDirtyLogRead;
   @Metric private MutableCounterLong numBytesDirtyLogWritten;
+  @Metric private MutableCounterLong numBlockBufferFlushCompleted;
+  @Metric private MutableCounterLong numBlockBufferFlushTriggered;
+  @Metric private MutableCounterLong numBlockBufferUpdates;
 
   // Failure Metrics
   @Metric private MutableCounterLong numReadLostBlocks;
@@ -54,7 +55,10 @@ public class CBlockTargetMetrics {
   @Metric private MutableCounterLong numWriteIOExceptionRetryBlocks;
   @Metric private MutableCounterLong numWriteGenericExceptionRetryBlocks;
   @Metric private MutableCounterLong numFailedDirectBlockWrites;
-  @Metric private MutableCounterLong numFailedDirtyBlockFlushes;
+  @Metric private MutableCounterLong numIllegalDirtyLogFiles;
+  @Metric private MutableCounterLong numFailedDirtyLogFileDeletes;
+  @Metric private MutableCounterLong numFailedBlockBufferFlushes;
+  @Metric private MutableCounterLong numInterruptedBufferWaits;
 
   // Latency based Metrics
   @Metric private MutableRate dbReadLatency;
@@ -114,8 +118,12 @@ public class CBlockTargetMetrics {
     numFailedReadBlocks.incr();
   }
 
-  public void incNumBlockBufferFlush() {
-    numBlockBufferFlush.incr();
+  public void incNumBlockBufferFlushCompleted() {
+    numBlockBufferFlushCompleted.incr();
+  }
+
+  public void incNumBlockBufferFlushTriggered() {
+    numBlockBufferFlushTriggered.incr();
   }
 
   public void incNumDirtyLogBlockRead() {
@@ -126,16 +134,28 @@ public class CBlockTargetMetrics {
     numBytesDirtyLogRead.incr(bytes);
   }
 
-  public void incNumDirtyLogBlockUpdated() {
-    numDirtyLogBlockUpdated.incr();
+  public void incNumBlockBufferUpdates() {
+    numBlockBufferUpdates.incr();
   }
 
   public void incNumBytesDirtyLogWritten(int bytes) {
     numBytesDirtyLogWritten.incr(bytes);
   }
 
-  public void incNumFailedDirtyBlockFlushes() {
-    numFailedDirtyBlockFlushes.incr();
+  public void incNumFailedBlockBufferFlushes() {
+    numFailedBlockBufferFlushes.incr();
+  }
+
+  public void incNumInterruptedBufferWaits() {
+    numInterruptedBufferWaits.incr();
+  }
+
+  public void incNumIllegalDirtyLogFiles() {
+    numIllegalDirtyLogFiles.incr();
+  }
+
+  public void incNumFailedDirtyLogFileDeletes() {
+    numFailedDirtyLogFileDeletes.incr();
   }
 
   public void updateDBReadLatency(long latency) {
@@ -213,8 +233,13 @@ public class CBlockTargetMetrics {
   }
 
   @VisibleForTesting
-  public long getNumBlockBufferFlush() {
-    return numBlockBufferFlush.value();
+  public long getNumBlockBufferFlushCompleted() {
+    return numBlockBufferFlushCompleted.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBlockBufferFlushTriggered() {
+    return numBlockBufferFlushTriggered.value();
   }
 
   @VisibleForTesting
@@ -228,8 +253,8 @@ public class CBlockTargetMetrics {
   }
 
   @VisibleForTesting
-  public long getNumDirtyLogBlockUpdated() {
-    return numDirtyLogBlockUpdated.value();
+  public long getNumBlockBufferUpdates() {
+    return numBlockBufferUpdates.value();
   }
 
   @VisibleForTesting
@@ -238,7 +263,22 @@ public class CBlockTargetMetrics {
   }
 
   @VisibleForTesting
-  public long getNumFailedDirtyBlockFlushes() {
-    return numFailedDirtyBlockFlushes.value();
+  public long getNumFailedBlockBufferFlushes() {
+    return numFailedBlockBufferFlushes.value();
+  }
+
+  @VisibleForTesting
+  public long getNumInterruptedBufferWaits() {
+    return numInterruptedBufferWaits.value();
+  }
+
+  @VisibleForTesting
+  public long getNumIllegalDirtyLogFiles() {
+    return numIllegalDirtyLogFiles.value();
+  }
+
+  @VisibleForTesting
+  public long getNumFailedDirtyLogFileDeletes() {
+    return numFailedDirtyLogFileDeletes.value();
   }
 }

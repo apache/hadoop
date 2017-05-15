@@ -132,6 +132,11 @@ public final class CBlockConfigKeys {
       "dfs.cblock.cache.block.buffer.size";
   public static final int DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT = 512;
 
+  public static final String DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS =
+      "dfs.cblock.block.buffer.flush.interval.seconds";
+  public static final int
+      DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS_DEFAULT = 60;
+
   // jscsi server settings
   public static final String DFS_CBLOCK_JSCSI_SERVER_ADDRESS_KEY =
       "dfs.cblock.jscsi.server.address";
