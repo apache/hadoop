@@ -18,6 +18,25 @@
 
 package org.apache.hadoop.fs;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Verify;
+import org.apache.commons.collections.map.CaseInsensitiveMap;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.StringUtils;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -33,33 +52,21 @@ import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.zip.CRC32;
+import java.util.zip.CheckedOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
-import org.apache.commons.collections.map.CaseInsensitiveMap;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.hadoop.util.StringUtils;
+import java.util.zip.ZipOutputStream;
 
 /**
- * A collection of file-processing util methods
+ * A collection of file-processing util methods.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -73,6 +80,11 @@ public class FileUtil {
    * "src\winutils\common.h"
    * */
   public static final int SYMLINK_NO_PRIVILEGE = 2;
+
+  /**
+   * Buffer size used while zipping and unzipping zip-ed archives.
+   */
+  private static final int BUFFER_SIZE = 8192;
 
   /**
    * convert an array of FileStatus to an array of Path
@@ -574,6 +586,65 @@ public class FileUtil {
   }
 
   /**
+   * creates zip archieve of the source dir and writes a zip file.
+   *
+   * @param sourceDir - The directory to zip.
+   * @param archiveName - The destination file, the parent directory is assumed
+   * to exist.
+   * @return Checksum of the Archive.
+   * @throws IOException - Throws if zipFileName already exists or if the
+   *                     sourceDir does not exist.
+   */
+  public static Long zip(File sourceDir, File archiveName) throws IOException {
+    Preconditions.checkNotNull(sourceDir, "source directory cannot be null");
+    Preconditions.checkState(sourceDir.exists(), "source directory must " +
+        "exist");
+
+    Preconditions.checkNotNull(archiveName, "Destination file cannot be null");
+    Preconditions.checkNotNull(archiveName.getParent(), "Destination " +
+        "directory cannot be null");
+    Preconditions.checkState(new File(archiveName.getParent()).exists(),
+        "Destination directory must exist");
+    Preconditions.checkState(!archiveName.exists(), "Destination file " +
+        "already exists. Refusing to overwrite existing file.");
+
+    CheckedOutputStream checksum;
+    try (FileOutputStream outputStream =
+             new FileOutputStream(archiveName)) {
+      checksum = new CheckedOutputStream(outputStream, new CRC32());
+      byte[] data = new byte[BUFFER_SIZE];
+      try (ZipOutputStream out =
+               new ZipOutputStream(new BufferedOutputStream(checksum))) {
+
+        Iterator<File> fileIter = FileUtils.iterateFiles(sourceDir, null, true);
+        while (fileIter.hasNext()) {
+          File file = fileIter.next();
+          LOG.debug("Compressing file : " + file.getPath());
+          try (FileInputStream currentFile = new FileInputStream(file)) {
+            ZipEntry entry = new ZipEntry(file.getCanonicalPath());
+            out.putNextEntry(entry);
+            try (BufferedInputStream sourceFile
+                     = new BufferedInputStream(currentFile, BUFFER_SIZE)) {
+              int bytesRead;
+              while ((bytesRead = sourceFile.read(data, 0, BUFFER_SIZE)) !=
+                  -1) {
+                out.write(data, 0, bytesRead);
+              }
+            }
+          }
+        }
+        out.flush();
+      }
+    }
+    // Exit condition -- ZipFile must exist.
+    Verify.verify(archiveName.exists(), "Expected archive file missing: {}",
+        archiveName.toPath());
+    long crc32 = checksum.getChecksum().getValue();
+    checksum.close();
+    return crc32;
+  }
+
+  /**
    * Given a File input it will unzip the file in a the unzip directory
    * passed as the second parameter
    * @param inFile The zip file as input
@@ -595,12 +666,12 @@ public class FileUtil {
             if (!file.getParentFile().mkdirs()) {
               if (!file.getParentFile().isDirectory()) {
                 throw new IOException("Mkdirs failed to create " +
-                                      file.getParentFile().toString());
+                    file.getParentFile().toString());
               }
             }
             OutputStream out = new FileOutputStream(file);
             try {
-              byte[] buffer = new byte[8192];
+              byte[] buffer = new byte[BUFFER_SIZE];
               int i;
               while ((i = in.read(buffer)) != -1) {
                 out.write(buffer, 0, i);

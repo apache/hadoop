@@ -74,25 +74,27 @@ import "Ozone.proto";
  *  16. GetSmallFile - A single RPC that combines both getKey and ReadChunk.
  *
  *  17. CloseContainer - Closes an open container and makes it immutable.
+ *
+ *  18. CopyContainer - Copies a container from a remote machine.
  */
 
 enum Type {
-   CreateContainer = 1;
-   ReadContainer = 2;
-   UpdateContainer = 3;
-   DeleteContainer = 4;
-   ListContainer = 5;
+  CreateContainer = 1;
+  ReadContainer = 2;
+  UpdateContainer = 3;
+  DeleteContainer = 4;
+  ListContainer = 5;
 
-   PutKey = 6;
-   GetKey = 7;
-   DeleteKey = 8;
-   ListKey = 9;
+  PutKey = 6;
+  GetKey = 7;
+  DeleteKey = 8;
+  ListKey = 9;
 
-   ReadChunk = 10;
-   DeleteChunk = 11;
-   WriteChunk = 12;
-   ListChunk = 13;
-   CompactChunk = 14;
+  ReadChunk = 10;
+  DeleteChunk = 11;
+  WriteChunk = 12;
+  ListChunk = 13;
+  CompactChunk = 14;
 
   /** Combines Key and Chunk Operation into Single RPC. */
   PutSmallFile = 15;
@@ -128,6 +130,8 @@ enum Result {
   ERROR_CONTAINER_NOT_EMPTY = 23;
   ERROR_IN_COMPACT_DB = 24;
   UNCLOSED_CONTAINER_IO = 25;
+  DELETE_ON_OPEN_CONTAINER = 26;
+  CLOSED_CONTAINER_RETRY = 27;
 }
 
 message ContainerCommandRequestProto {
@@ -381,4 +385,19 @@ message GetSmallFileRequestProto {
 
 message GetSmallFileResponseProto {
   required ReadChunkResponseProto data = 1;
+}
+
+message CopyContainerRequestProto {
+  required string containerName = 1;
+  required uint64 readOffset = 2;
+  optional uint64 len = 3;
+}
+
+message CopyContainerResponseProto {
+  required string archiveName = 1;
+  required uint64 readOffset = 2;
+  required uint64 len = 3;
+  required bool eof = 4;
+  repeated bytes data = 5;
+  optional int64 checksum = 6;
 }
