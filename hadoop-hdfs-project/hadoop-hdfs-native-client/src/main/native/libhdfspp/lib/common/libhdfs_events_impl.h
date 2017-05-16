@@ -40,27 +40,14 @@ public:
   void clear_fs_callback();
   void clear_file_callback();
 
-  event_response call(const char * event,
-                                const char * cluster,
-                                int64_t value) {
-      if (fs_callback) {
-          return fs_callback->operator ()(event, cluster, value);
-      } else {
-          return event_response::ok();
-      }
-  }
+  event_response call(const char *event,
+                      const char *cluster,
+                      int64_t value);
 
-  event_response call(const char * event,
-                                const char * cluster,
-                                const char * file,
-                                int64_t value) {
-      if (file_callback) {
-          return file_callback->operator ()(event, cluster, file, value);
-      } else {
-          return event_response::ok();
-      }
-  }
-
+  event_response call(const char *event,
+                      const char *cluster,
+                      const char *file,
+                      int64_t value);
 private:
   // Called when fs events occur
   std::experimental::optional<fs_event_callback> fs_callback;

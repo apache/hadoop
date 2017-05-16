@@ -51,24 +51,54 @@ static constexpr const char * FILE_DN_WRITE_EVENT = "DN::write";
 
 class event_response {
 public:
-// Create a response
-enum event_response_type {
-  kOk = 0,
-
-  // Responses to be used in testing only
-  kTest_Error = 100
-};
-
-
+  // Helper factories
   // The default ok response; libhdfspp should continue normally
-  static event_response ok() { return event_response(); }
-  event_response_type response() { return response_; }
+  static event_response make_ok() {
+    return event_response(kOk);
+  }
+  static event_response make_caught_std_exception(const char *what) {
+    return event_response(kCaughtStdException, what);
+  }
+  static event_response make_caught_unknown_exception() {
+    return event_response(kCaughtUnknownException);
+  }
+
+  // High level classification of responses
+  enum event_response_type {
+    kOk = 0,
+    // User supplied callback threw.
+    // Std exceptions will copy the what() string
+    kCaughtStdException = 1,
+    kCaughtUnknownException = 2,
+
+    // Responses to be used in testing only
+    kTest_Error = 100
+  };
+
+  event_response_type response_type() { return response_type_; }
 
 private:
-  event_response() : response_(event_response_type::kOk) {};
+  // Use factories to construct for now
+  event_response();
+  event_response(event_response_type type)
+            : response_type_(type)
+  {
+    if(type == kCaughtUnknownException) {
+      status_ = Status::Exception("c++ unknown exception", "");
+    }
+  }
+  event_response(event_response_type type, const char *what)
+            : response_type_(type),
+              exception_msg_(what==nullptr ? "" : what)
+  {
+    status_ = Status::Exception("c++ std::exception", exception_msg_.c_str());
+  }
 
-  event_response_type response_;
 
+  event_response_type response_type_;
+
+  // use to hold what str if event handler threw
+  std::string exception_msg_;
 
 
 ///////////////////////////////////////////////
@@ -83,31 +113,23 @@ public:
     return event_response(status);
   }
 
-  Status status() { return error_status_; }
+  Status status() { return status_; }
 
 private:
   event_response(const Status & status) :
-    response_(event_response_type::kTest_Error), error_status_(status) {}
+    response_type_(event_response_type::kTest_Error), status_(status) {}
 
-  Status error_status_; // To be used with kTest_Error
+  Status status_; // To be used with kTest_Error
 };
 
-
-
 /* callback signature */
-typedef std::function<
-  event_response (const char * event,
-                  const char * cluster,
-                  int64_t value)>
-  fs_event_callback;
+typedef std::function<event_response (const char * event,
+                                      const char * cluster,
+                                      int64_t value)> fs_event_callback;
 
-typedef std::function<
-  event_response (const char * event,
-                  const char * cluster,
-                  const char * file,
-                  int64_t value)>
-  file_event_callback;
-
-
+typedef std::function<event_response (const char * event,
+                                      const char * cluster,
+                                      const char * file,
+                                      int64_t value)>file_event_callback;
 }
 #endif

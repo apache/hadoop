@@ -1462,7 +1462,7 @@ event_response fs_callback_glue(libhdfspp_fs_event_callback handler,
                       int64_t value) {
   int result = handler(event, cluster, value, cookie);
   if (result == LIBHDFSPP_EVENT_OK) {
-    return event_response::ok();
+    return event_response::make_ok();
   }
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
   if (result == DEBUG_SIMULATE_ERROR) {
@@ -1470,7 +1470,7 @@ event_response fs_callback_glue(libhdfspp_fs_event_callback handler,
   }
 #endif
 
-  return event_response::ok();
+  return event_response::make_ok();
 }
 
 event_response file_callback_glue(libhdfspp_file_event_callback handler,
@@ -1481,7 +1481,7 @@ event_response file_callback_glue(libhdfspp_file_event_callback handler,
                       int64_t value) {
   int result = handler(event, cluster, file, value, cookie);
   if (result == LIBHDFSPP_EVENT_OK) {
-    return event_response::ok();
+    return event_response::make_ok();
   }
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
   if (result == DEBUG_SIMULATE_ERROR) {
@@ -1489,7 +1489,7 @@ event_response file_callback_glue(libhdfspp_file_event_callback handler,
   }
 #endif
 
-  return event_response::ok();
+  return event_response::make_ok();
 }
 
 HDFS_EXT_API

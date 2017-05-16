@@ -18,6 +18,8 @@
 
 #include "libhdfs_events_impl.h"
 
+#include <exception>
+
 namespace hdfs {
 
 /**
@@ -46,6 +48,42 @@ void LibhdfsEvents::clear_file_callback() {
   file_callback = std::experimental::nullopt;
 }
 
+event_response LibhdfsEvents::call(const char * event,
+                                   const char * cluster,
+                                   int64_t value)
+{
+  if (fs_callback) {
+    try {
+      return fs_callback->operator()(event, cluster, value);
+    } catch (const std::exception& e) {
+      return event_response::make_caught_std_exception(e.what());
+    } catch (...) {
+      // Arguably calling abort() here would serve as appropriate
+      // punishment for those who throw garbage that isn't derived
+      // from std::exception...
+      return event_response::make_caught_unknown_exception();
+    }
+  } else {
+    return event_response::make_ok();
+  }
+}
 
+event_response LibhdfsEvents::call(const char * event,
+                                   const char * cluster,
+                                   const char * file,
+                                   int64_t value)
+{
+  if (file_callback) {
+    try {
+      return file_callback->operator()(event, cluster, file, value);
+    } catch (const std::exception& e) {
+      return event_response::make_caught_std_exception(e.what());
+    } catch (...) {
+      return event_response::make_caught_unknown_exception();
+    }
+  } else {
+    return event_response::make_ok();
+  }
+}
 
 }

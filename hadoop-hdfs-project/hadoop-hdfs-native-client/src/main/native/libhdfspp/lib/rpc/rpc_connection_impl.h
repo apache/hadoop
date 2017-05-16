@@ -179,7 +179,7 @@ void RpcConnectionImpl<Socket>::ConnectComplete(const ::asio::error_code &ec, co
   if(event_handlers_) {
     event_response event_resp = event_handlers_->call(FS_NN_CONNECT_EVENT, cluster_name_.c_str(), 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-    if (event_resp.response() == event_response::kTest_Error) {
+    if (event_resp.response_type() == event_response::kTest_Error) {
       status = event_resp.status();
     }
 #endif
@@ -370,7 +370,7 @@ void RpcConnectionImpl<Socket>::OnRecvCompleted(const ::asio::error_code &origin
   if(event_handlers_) {
     event_response event_resp = event_handlers_->call(FS_NN_READ_EVENT, cluster_name_.c_str(), 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-    if (event_resp.response() == event_response::kTest_Error) {
+    if (event_resp.response_type() == event_response::kTest_Error) {
       my_ec = std::make_error_code(std::errc::network_down);
     }
 #endif
