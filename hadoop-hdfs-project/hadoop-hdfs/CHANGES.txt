@@ -280,6 +280,9 @@ Release 2.7.4 - UNRELEASED
 
 	HDFS-11674. reserveSpaceForReplicas is not released if append request failed
 	due to mirror down and replica recovered (vinayakumarb)
+	
+    HDFS-10987. Make Decommission less expensive when lot of blocks present. 
+    (Brahma Reddy Battula)
 
 Release 2.7.3 - 2016-08-25
 
