@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
@@ -46,7 +47,6 @@ import org.junit.rules.Timeout;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -92,9 +92,8 @@ public class TestContainerPersistence {
   @BeforeClass
   public static void init() throws Throwable {
     conf = new OzoneConfiguration();
-    URL p = conf.getClass().getResource("");
-    path = p.getPath().concat(
-        TestContainerPersistence.class.getSimpleName());
+    path = GenericTestUtils
+        .getTempPath(TestContainerPersistence.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);

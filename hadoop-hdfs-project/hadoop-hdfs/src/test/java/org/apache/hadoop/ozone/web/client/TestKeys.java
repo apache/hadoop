@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
@@ -40,7 +41,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -74,8 +74,7 @@ public class TestKeys {
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
-    URL p = conf.getClass().getResource("");
-    path = p.getPath().concat(TestKeys.class.getSimpleName());
+    path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
                             OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);

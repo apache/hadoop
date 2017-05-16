@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.headers.Header;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -37,7 +38,6 @@ import org.junit.rules.Timeout;
 
 import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -69,8 +69,8 @@ public class TestOzoneWebAccess {
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneWebAccess.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestOzoneWebAccess.class.getSimpleName());
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
     cluster = new MiniOzoneCluster.Builder(conf)
