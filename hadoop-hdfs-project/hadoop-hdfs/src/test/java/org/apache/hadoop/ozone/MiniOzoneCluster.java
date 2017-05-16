@@ -26,8 +26,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocolPB
+    .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
@@ -67,6 +70,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
 
   private final OzoneConfiguration conf;
   private final StorageContainerManager scm;
+  private final KeySpaceManager ksm;
   private final Path tempPath;
 
   /**
@@ -76,11 +80,13 @@ public final class MiniOzoneCluster extends MiniDFSCluster
    * @param scm     StorageContainerManager, already running
    * @throws IOException if there is an I/O error
    */
-  private MiniOzoneCluster(Builder builder, StorageContainerManager scm)
+  private MiniOzoneCluster(Builder builder, StorageContainerManager scm,
+                           KeySpaceManager ksm)
       throws IOException {
     super(builder);
     this.conf = builder.conf;
     this.scm = scm;
+    this.ksm = ksm;
     tempPath = Paths.get(builder.getPath(), builder.getRunID());
   }
 
@@ -126,16 +132,26 @@ public final class MiniOzoneCluster extends MiniDFSCluster
   public void shutdown() {
     super.shutdown();
     LOG.info("Shutting down the Mini Ozone Cluster");
-    if (scm == null) {
-      return;
+
+    if (ksm != null) {
+      LOG.info("Shutting down the keySpaceManager");
+      ksm.stop();
+      ksm.join();
     }
-    LOG.info("Shutting down the StorageContainerManager");
-    scm.stop();
-    scm.join();
+
+    if (scm != null) {
+      LOG.info("Shutting down the StorageContainerManager");
+      scm.stop();
+      scm.join();
+    }
   }
 
   public StorageContainerManager getStorageContainerManager() {
     return this.scm;
+  }
+
+  public KeySpaceManager getKeySpaceManager() {
+    return this.ksm;
   }
 
   /**
@@ -336,6 +352,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
 
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "127.0.0.1:0");
 
       // Use random ports for ozone containers in mini cluster,
       // in order to launch multiple container servers per node.
@@ -344,11 +361,15 @@ public final class MiniOzoneCluster extends MiniDFSCluster
 
       StorageContainerManager scm = new StorageContainerManager(conf);
       scm.start();
+
+      KeySpaceManager ksm = new KeySpaceManager(conf);
+      ksm.start();
+
       String addressString =  scm.getDatanodeRpcAddress().getHostString() +
           ":" + scm.getDatanodeRpcAddress().getPort();
       conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, addressString);
 
-      MiniOzoneCluster cluster = new MiniOzoneCluster(this, scm);
+      MiniOzoneCluster cluster = new MiniOzoneCluster(this, scm, ksm);
       try {
         cluster.waitOzoneReady();
         if (waitForChillModeFinish) {

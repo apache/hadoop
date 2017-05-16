@@ -19,7 +19,11 @@
 package org.apache.hadoop.utils;
 
 import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.*;
+import org.iq80.leveldb.WriteBatch;
+import org.iq80.leveldb.DB;
+import org.iq80.leveldb.WriteOptions;
+import org.iq80.leveldb.DBIterator;
+import org.iq80.leveldb.Options;
 
 import java.io.Closeable;
 import java.io.File;
@@ -32,6 +36,7 @@ public class LevelDBStore implements Closeable {
   private DB db;
   private final File dbFile;
   private final Options dbOptions;
+  private final WriteOptions writeOptions;
 
   /**
    * Opens a DB file.
@@ -49,6 +54,7 @@ public class LevelDBStore implements Closeable {
       throw new IOException("Db is null");
     }
     this.dbFile = dbPath;
+    this.writeOptions = new WriteOptions().sync(true);
   }
 
   /**
@@ -65,6 +71,7 @@ public class LevelDBStore implements Closeable {
       throw new IOException("Db is null");
     }
     this.dbFile = dbPath;
+    this.writeOptions = new WriteOptions().sync(true);
   }
 
 
@@ -75,9 +82,7 @@ public class LevelDBStore implements Closeable {
    * @param value - value
    */
   public void put(byte[] key, byte[] value) {
-    WriteOptions options = new WriteOptions();
-    options.sync(true);
-    db.put(key, value, options);
+    db.put(key, value, writeOptions);
   }
 
   /**
@@ -167,7 +172,7 @@ public class LevelDBStore implements Closeable {
    * @param wb
    */
   public void commitWriteBatch(WriteBatch wb) {
-    db.write(wb);
+    db.write(wb, writeOptions);
   }
 
   /**

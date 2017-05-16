@@ -17,31 +17,19 @@
  */
 package org.apache.hadoop.ozone.web;
 
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 
 import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -50,63 +38,23 @@ import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertEquals;
 
-public class TestOzoneVolumes {
-  /**
-   * Set the timeout for every test.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(300000);
+/**
+ * Helper functions to test Ozone.
+ */
+public class TestOzoneHelper {
 
-  private static MiniOzoneCluster cluster = null;
-  private static int port = 0;
-
-  /**
-   * Create a MiniDFSCluster for testing.
-   * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
-   * emulate Ozone backend.
-   *
-   * @throws IOException
-   */
-  @BeforeClass
-  public static void init() throws Exception {
-    OzoneConfiguration conf = new OzoneConfiguration();
-
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneVolumes.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
-
-    cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    port = dataNode.getInfoPort();
+  public CloseableHttpClient createHttpClient() {
+    return HttpClientBuilder.create().build();
   }
-
-  /**
-   * shutdown MiniDFSCluster
-   */
-  @AfterClass
-  public static void shutdown() {
-    if (cluster != null) {
-      cluster.shutdown();
-    }
-  }
-
   /**
    * Creates Volumes on Ozone Store.
    *
    * @throws IOException
    */
-  @Test
-  public void testCreateVolumes() throws IOException {
+  public void testCreateVolumes(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = createHttpClient();
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     try {
       HttpPost httppost = new HttpPost(
@@ -125,7 +73,7 @@ public class TestOzoneVolumes {
       assertEquals(response.toString(), HTTP_CREATED,
           response.getStatusLine().getStatusCode());
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 
@@ -134,11 +82,10 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  @Test
-  public void testCreateVolumesWithQuota() throws IOException {
+  public void testCreateVolumesWithQuota(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = createHttpClient();
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     try {
       HttpPost httppost = new HttpPost(
@@ -157,7 +104,7 @@ public class TestOzoneVolumes {
       assertEquals(response.toString(), HTTP_CREATED,
           response.getStatusLine().getStatusCode());
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 
@@ -166,11 +113,10 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  @Test
-  public void testCreateVolumesWithInvalidQuota() throws IOException {
+  public void testCreateVolumesWithInvalidQuota(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = createHttpClient();
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     try {
       HttpPost httppost = new HttpPost(
@@ -190,7 +136,7 @@ public class TestOzoneVolumes {
               .getHttpCode(),
           response.getStatusLine().getStatusCode());
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 
@@ -201,11 +147,10 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  @Test
-  public void testCreateVolumesWithInvalidUser() throws IOException {
+  public void testCreateVolumesWithInvalidUser(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = createHttpClient();
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     try {
       HttpPost httppost = new HttpPost(
@@ -224,7 +169,7 @@ public class TestOzoneVolumes {
       assertEquals(response.toString(), ErrorTable.USER_NOT_FOUND.getHttpCode(),
           response.getStatusLine().getStatusCode());
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 
@@ -236,11 +181,10 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  @Test
-  public void testCreateVolumesWithOutAdminRights() throws IOException {
+  public void testCreateVolumesWithOutAdminRights(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = createHttpClient();
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     try {
       HttpPost httppost = new HttpPost(
@@ -259,7 +203,7 @@ public class TestOzoneVolumes {
       assertEquals(response.toString(), ErrorTable.ACCESS_DENIED.getHttpCode(),
           response.getStatusLine().getStatusCode());
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 
@@ -268,13 +212,12 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  //@Test
-  public void testCreateVolumesInLoop() throws IOException {
+  public void testCreateVolumesInLoop(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
 
     for (int x = 0; x < 1000; x++) {
-      HttpClient client = new DefaultHttpClient();
+      CloseableHttpClient client = createHttpClient();
       String volumeName = OzoneUtils.getRequestID().toLowerCase();
       String userName = OzoneUtils.getRequestID().toLowerCase();
 
@@ -293,7 +236,7 @@ public class TestOzoneVolumes {
       HttpResponse response = client.execute(httppost);
       assertEquals(response.toString(), HTTP_CREATED,
           response.getStatusLine().getStatusCode());
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
   /**
@@ -301,13 +244,12 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  @Test
-  public void testGetVolumesByUser() throws IOException {
+  public void testGetVolumesByUser(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
     // We need to create a volume for this test to succeed.
-    testCreateVolumes();
-    HttpClient client = new DefaultHttpClient();
+    testCreateVolumes(port);
+    CloseableHttpClient client = createHttpClient();
     try {
       HttpGet httpget =
           new HttpGet(String.format("http://localhost:%d/", port));
@@ -323,14 +265,14 @@ public class TestOzoneVolumes {
               OzoneConsts.OZONE_SIMPLE_HDFS_USER);
 
       httpget.addHeader(Header.OZONE_USER,
-          OzoneConsts.OZONE_SIMPLE_HDFS_USER );
+          OzoneConsts.OZONE_SIMPLE_HDFS_USER);
 
       HttpResponse response = client.execute(httpget);
       assertEquals(response.toString(), HTTP_OK,
           response.getStatusLine().getStatusCode());
 
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 
@@ -339,12 +281,11 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  @Test
-  public void testGetVolumesOfAnotherUser() throws IOException {
+  public void testGetVolumesOfAnotherUser(int port) throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
 
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = createHttpClient();
     try {
       HttpGet httpget =
           new HttpGet(String.format("http://localhost:%d/", port));
@@ -366,7 +307,7 @@ public class TestOzoneVolumes {
           response.getStatusLine().getStatusCode());
 
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 
@@ -376,12 +317,12 @@ public class TestOzoneVolumes {
    *
    * @throws IOException
    */
-  @Test
-  public void testGetVolumesOfAnotherUserShouldFail() throws IOException {
+  public void testGetVolumesOfAnotherUserShouldFail(int port)
+      throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
 
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = createHttpClient();
     String userName = OzoneUtils.getRequestID().toLowerCase();
     try {
       HttpGet httpget =
@@ -406,7 +347,7 @@ public class TestOzoneVolumes {
           response.getStatusLine().getStatusCode());
 
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 

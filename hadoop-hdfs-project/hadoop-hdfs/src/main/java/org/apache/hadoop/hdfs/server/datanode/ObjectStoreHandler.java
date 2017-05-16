@@ -30,6 +30,9 @@ import java.util.Map;
 import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 
+import org.apache.hadoop.ksm.protocolPB
+    .KeySpaceManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.slf4j.Logger;
@@ -62,6 +65,8 @@ public final class ObjectStoreHandler implements Closeable {
       LoggerFactory.getLogger(ObjectStoreJerseyContainer.class);
 
   private final ObjectStoreJerseyContainer objectStoreJerseyContainer;
+  private final KeySpaceManagerProtocolClientSideTranslatorPB
+      keySpaceManagerClient;
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
 
@@ -84,21 +89,34 @@ public final class ObjectStoreHandler implements Closeable {
     if (OzoneConsts.OZONE_HANDLER_DISTRIBUTED.equalsIgnoreCase(shType)) {
       RPC.setProtocolEngine(conf, StorageContainerLocationProtocolPB.class,
           ProtobufRpcEngine.class);
-      long version =
+      long scmVersion =
           RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
-      InetSocketAddress address =
+      InetSocketAddress scmAddress =
           OzoneClientUtils.getScmAddressForClients(conf);
       this.storageContainerLocationClient =
           new StorageContainerLocationProtocolClientSideTranslatorPB(
-              RPC.getProxy(StorageContainerLocationProtocolPB.class, version,
-              address, UserGroupInformation.getCurrentUser(), conf,
-              NetUtils.getDefaultSocketFactory(conf), Client.getTimeout(conf)));
+              RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
+              scmAddress, UserGroupInformation.getCurrentUser(), conf,
+              NetUtils.getDefaultSocketFactory(conf),
+              Client.getRpcTimeout(conf)));
+      long ksmVersion =
+          RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
+      InetSocketAddress ksmAddress = OzoneClientUtils.getKsmAddress(conf);
+      this.keySpaceManagerClient =
+          new KeySpaceManagerProtocolClientSideTranslatorPB(
+              RPC.getProxy(KeySpaceManagerProtocolPB.class, ksmVersion,
+              ksmAddress, UserGroupInformation.getCurrentUser(), conf,
+              NetUtils.getDefaultSocketFactory(conf),
+              Client.getRpcTimeout(conf)));
+
       storageHandler = new DistributedStorageHandler(new OzoneConfiguration(),
-          this.storageContainerLocationClient);
+          this.storageContainerLocationClient,
+          this.keySpaceManagerClient);
     } else {
       if (OzoneConsts.OZONE_HANDLER_LOCAL.equalsIgnoreCase(shType)) {
         storageHandler = new LocalStorageHandler(conf);
         this.storageContainerLocationClient = null;
+        this.keySpaceManagerClient = null;
       } else {
         throw new IllegalArgumentException(
             String.format("Unrecognized value for %s: %s,"

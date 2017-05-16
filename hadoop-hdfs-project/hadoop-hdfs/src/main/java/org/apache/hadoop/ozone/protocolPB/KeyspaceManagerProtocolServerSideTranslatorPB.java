@@ -18,9 +18,40 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocol.KeyspaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
+import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
+import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CreateVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.SetVolumePropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.SetVolumePropertyResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CheckVolumeAccessRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CheckVolumeAccessResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.Status;
+
+
+import java.io.IOException;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -42,47 +73,61 @@ public class KeyspaceManagerProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public KeySpaceManagerProtocolProtos.CreateVolumeResponse createVolume(
-      RpcController controller, KeySpaceManagerProtocolProtos
-      .CreateVolumeRequest
-      request) throws ServiceException {
-    return null;
+  public CreateVolumeResponse createVolume(
+      RpcController controller, CreateVolumeRequest request)
+      throws ServiceException {
+    CreateVolumeResponse.Builder resp = CreateVolumeResponse.newBuilder();
+    resp.setStatus(Status.OK);
+    try {
+      impl.createVolume(KsmVolumeArgs.getFromProtobuf(request.getVolumeInfo()));
+    } catch (IOException e) {
+      if (e instanceof KSMException) {
+        KSMException ksmException = (KSMException)e;
+        if (ksmException.getResult() ==
+            ResultCodes.FAILED_VOLUME_ALREADY_EXISTS) {
+          resp.setStatus(Status.VOLUME_ALREADY_EXISTS);
+        } else if (ksmException.getResult() ==
+            ResultCodes.FAILED_TOO_MANY_USER_VOLUMES) {
+          resp.setStatus(Status.USER_TOO_MANY_VOLUMES);
+        }
+      } else {
+        resp.setStatus(Status.INTERNAL_ERROR);
+      }
+    }
+    return resp.build();
   }
 
   @Override
-  public KeySpaceManagerProtocolProtos.SetVolumePropertyResponse
-      setVolumeProperty(RpcController controller, KeySpaceManagerProtocolProtos
-      .SetVolumePropertyRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public KeySpaceManagerProtocolProtos.CheckVolumeAccessResponse
-      checkVolumeAccess(RpcController controller, KeySpaceManagerProtocolProtos
-      .CheckVolumeAccessRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public KeySpaceManagerProtocolProtos.InfoVolumeResponse infoVolume(
-      RpcController controller,
-      KeySpaceManagerProtocolProtos.InfoVolumeRequest request)
+  public SetVolumePropertyResponse setVolumeProperty(
+      RpcController controller, SetVolumePropertyRequest request)
       throws ServiceException {
     return null;
   }
 
   @Override
-  public KeySpaceManagerProtocolProtos.DeleteVolumeResponse deleteVolume(
-      RpcController controller, KeySpaceManagerProtocolProtos
-      .DeleteVolumeRequest
-      request) throws ServiceException {
+  public CheckVolumeAccessResponse checkVolumeAccess(
+      RpcController controller, CheckVolumeAccessRequest request)
+      throws ServiceException {
     return null;
   }
 
   @Override
-  public KeySpaceManagerProtocolProtos.ListVolumeResponse listVolumes(
-      RpcController controller,
-      KeySpaceManagerProtocolProtos.ListVolumeRequest request)
+  public InfoVolumeResponse infoVolume(
+      RpcController controller, InfoVolumeRequest request)
+      throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public DeleteVolumeResponse deleteVolume(
+      RpcController controller, DeleteVolumeRequest request)
+      throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public ListVolumeResponse listVolumes(
+      RpcController controller, ListVolumeRequest request)
       throws ServiceException {
     return null;
   }

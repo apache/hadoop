@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.ksm.protocol;
 
-import org.apache.hadoop.ksm.helpers.VolumeArgs;
-
+import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import java.io.IOException;
 import java.util.List;
 
@@ -32,7 +31,7 @@ public interface KeyspaceManagerProtocol {
    * @param args - Arguments to create Volume.
    * @throws IOException
    */
-  void createVolume(VolumeArgs args) throws IOException;
+  void createVolume(KsmVolumeArgs args) throws IOException;
 
   /**
    * Changes the owner of a volume.
@@ -64,7 +63,7 @@ public interface KeyspaceManagerProtocol {
    * @return VolumeArgs or exception is thrown.
    * @throws IOException
    */
-  VolumeArgs getVolumeinfo(String volume) throws IOException;
+  KsmVolumeArgs getVolumeInfo(String volume) throws IOException;
 
   /**
    * Deletes the an exisiting empty volume.
@@ -82,7 +81,7 @@ public interface KeyspaceManagerProtocol {
    * @return List of Volumes.
    * @throws IOException
    */
-  List<VolumeArgs> listVolumeByUser(String userName, String prefix, String
+  List<KsmVolumeArgs> listVolumeByUser(String userName, String prefix, String
       prevKey, long maxKeys) throws IOException;
 
   /**
@@ -93,6 +92,6 @@ public interface KeyspaceManagerProtocol {
    * @return List of Volumes.
    * @throws IOException
    */
-  List<VolumeArgs> listAllVolumes(String prefix, String
+  List<KsmVolumeArgs> listAllVolumes(String prefix, String
       prevKey, long maxKeys) throws IOException;
 }

@@ -80,6 +80,7 @@ public final class OzoneConsts {
   public static final String BLOCK_DB = "block.db";
   public static final String NODEPOOL_DB = "nodepool.db";
   public static final String OPEN_CONTAINERS_DB = "openContainers.db";
+  public static final String KSM_DB_NAME = "ksm.db";
 
   /**
    * Supports Bucket Versioning.
@@ -87,7 +88,7 @@ public final class OzoneConsts {
   public enum Versioning {NOT_DEFINED, ENABLED, DISABLED}
 
   /**
-   * Ozone handler types
+   * Ozone handler types.
    */
   public static final String OZONE_HANDLER_DISTRIBUTED = "distributed";
   public static final String OZONE_HANDLER_LOCAL = "local";
