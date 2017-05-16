@@ -32,6 +32,8 @@ import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
@@ -261,16 +263,20 @@ public class TestWasbRemoteCallHelper
     performop(mockHttpClient);
   }
 
-  private void setupExpectations() {
+  private void setupExpectations() throws UnsupportedEncodingException {
+
+    String path = new Path("/").makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString();
+    String pathEncoded = URLEncoder.encode(path, "UTF-8");
+
+    String requestURI = String.format("http://localhost/CHECK_AUTHORIZATION?wasb_absolute_path=%s&operation_type=write", pathEncoded);
     expectedEx.expect(WasbAuthorizationException.class);
     expectedEx.expectMessage("org.apache.hadoop.fs.azure.WasbRemoteCallException: "
-        + "http://localhost/CHECK_AUTHORIZATION?wasb_absolute_path=%2F&"
-        + "operation_type=write:Encountered IOException while making remote call");
+        + requestURI
+        + ":Encountered IOException while making remote call"
+    );
   }
 
   private void performop(HttpClient mockHttpClient) throws Throwable {
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
 
     Path testPath = new Path("/", "test.dat");
 
