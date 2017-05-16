@@ -28,6 +28,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +39,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
@@ -1711,10 +1713,45 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  HdfsFileStatus getAuditFileInfo(INodesInPath iip)
+  FileStatus getAuditFileInfo(INodesInPath iip)
       throws IOException {
-    return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
-        ? FSDirStatAndListingOp.getFileInfo(this, iip, false) : null;
+    if (!namesystem.isAuditEnabled() || !namesystem.isExternalInvocation()) {
+      return null;
+    }
+
+    final INode inode = iip.getLastINode();
+    if (inode == null) {
+      return null;
+    }
+    final int snapshot = iip.getPathSnapshotId();
+
+    Path symlink = null;
+    long size = 0;     // length is zero for directories
+    short replication = 0;
+    long blocksize = 0;
+
+    if (inode.isFile()) {
+      final INodeFile fileNode = inode.asFile();
+      size = fileNode.computeFileSize(snapshot);
+      replication = fileNode.getFileReplication(snapshot);
+      blocksize = fileNode.getPreferredBlockSize();
+    } else if (inode.isSymlink()) {
+      symlink = new Path(
+          DFSUtilClient.bytes2String(inode.asSymlink().getSymlink()));
+    }
+
+    return new FileStatus(
+        size,
+        inode.isDirectory(),
+        replication,
+        blocksize,
+        inode.getModificationTime(snapshot),
+        inode.getAccessTime(snapshot),
+        inode.getFsPermission(snapshot),
+        inode.getUserName(snapshot),
+        inode.getGroupName(snapshot),
+        symlink,
+        new Path(iip.getPath()));
   }
 
   /**
