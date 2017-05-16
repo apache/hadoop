@@ -78,6 +78,15 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
+   * Setup the expected exception class, and exception message that the test is supposed to fail with
+   */
+  private void setExpectedFailureMessage(String operation, Path path) {
+    expectedEx.expect(WasbAuthorizationException.class);
+    expectedEx.expectMessage(String.format("%s operation for Path : %s not allowed",
+        operation, path.makeQualified(fs.getUri(), fs.getWorkingDirectory())));
+  }
+
+  /**
    * Positive test to verify Create access check
    * The file is created directly under an existing folder.
    * No intermediate folders need to be created.
@@ -86,13 +95,10 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testCreateAccessWithoutCreateIntermediateFoldersCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -117,13 +123,10 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testCreateAccessWithCreateIntermediateFoldersCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/testCreateAccessCheckPositive/1/2/3");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -148,16 +151,12 @@ public class TestNativeAzureFileSystemAuthorization
   @Test // (expected=WasbAuthorizationException.class)
   public void testCreateAccessWithOverwriteCheckNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("create operation for Path : /test.dat not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("create", testPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -184,13 +183,10 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testCreateAccessWithOverwriteCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -218,16 +214,12 @@ public class TestNativeAzureFileSystemAuthorization
   @Test // (expected=WasbAuthorizationException.class)
   public void testCreateAccessCheckNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("create operation for Path : /testCreateAccessCheckNegative/test.dat not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/testCreateAccessCheckNegative");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("create", testPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), false);
     fs.updateWasbAuthorizer(authorizer);
@@ -249,14 +241,11 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testListAccessCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/testListAccessCheckPositive");
     Path intermediateFolders = new Path(parentDir, "1/2/3/");
     Path testPath = new Path(intermediateFolders, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -280,16 +269,12 @@ public class TestNativeAzureFileSystemAuthorization
   @Test //(expected=WasbAuthorizationException.class)
   public void testListAccessCheckNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("liststatus operation for Path : /testListAccessCheckNegative/test.dat not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/testListAccessCheckNegative");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("liststatus", testPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), false);
@@ -312,14 +297,11 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testRenameAccessCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/testRenameAccessCheckPositive");
     Path srcPath = new Path(parentDir, "test1.dat");
     Path dstPath = new Path(parentDir, "test2.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parentDir */
     authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true); /* for rename */
@@ -347,16 +329,13 @@ public class TestNativeAzureFileSystemAuthorization
   @Test //(expected=WasbAuthorizationException.class)
   public void testRenameAccessCheckNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("rename operation for Path : /testRenameAccessCheckNegative/test1.dat not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
     Path parentDir = new Path("/testRenameAccessCheckNegative");
     Path srcPath = new Path(parentDir, "test1.dat");
     Path dstPath = new Path(parentDir, "test2.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("rename", srcPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dir */
     authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), false);
@@ -384,17 +363,14 @@ public class TestNativeAzureFileSystemAuthorization
   @Test //(expected=WasbAuthorizationException.class)
   public void testRenameAccessCheckNegativeOnDstFolder() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("rename operation for Path : /testRenameAccessCheckNegativeDst/test2.dat not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
     Path parentSrcDir = new Path("/testRenameAccessCheckNegativeSrc");
     Path srcPath = new Path(parentSrcDir, "test1.dat");
     Path parentDstDir = new Path("/testRenameAccessCheckNegativeDst");
     Path dstPath = new Path(parentDstDir, "test2.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("rename", dstPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dir */
     authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
@@ -419,17 +395,15 @@ public class TestNativeAzureFileSystemAuthorization
    * Positive test to verify rename access check - the dstFolder allows rename
    * @throws Throwable
    */
-  @Test //(expected=WasbAuthorizationException.class)
+  @Test
   public void testRenameAccessCheckPositiveOnDstFolder() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
     Path parentSrcDir = new Path("/testRenameAccessCheckPositiveSrc");
     Path srcPath = new Path(parentSrcDir, "test1.dat");
     Path parentDstDir = new Path("/testRenameAccessCheckPositiveDst");
     Path dstPath = new Path(parentDstDir, "test2.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dirs */
     authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
@@ -461,12 +435,10 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testReadAccessCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
     Path parentDir = new Path("/testReadAccessCheckPositive");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -504,15 +476,12 @@ public class TestNativeAzureFileSystemAuthorization
   @Test //(expected=WasbAuthorizationException.class)
   public void testReadAccessCheckNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("read operation for Path : /testReadAccessCheckNegative/test.dat not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
     Path parentDir = new Path("/testReadAccessCheckNegative");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("read", testPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), false);
@@ -548,13 +517,10 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testFileDeleteAccessCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -576,16 +542,12 @@ public class TestNativeAzureFileSystemAuthorization
   @Test //(expected=WasbAuthorizationException.class)
   public void testFileDeleteAccessCheckNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("delete operation for Path : /test.dat not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("delete", testPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -622,13 +584,10 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testFileDeleteAccessWithIntermediateFoldersCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path parentDir = new Path("/testDeleteIntermediateFolder");
     Path testPath = new Path(parentDir, "1/2/test.dat");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); // for create and delete
     authorizer.addAuthRule("/testDeleteIntermediateFolder*",
@@ -655,12 +614,9 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testGetFileStatusPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path testPath = new Path("/");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
@@ -675,15 +631,11 @@ public class TestNativeAzureFileSystemAuthorization
   @Test //(expected=WasbAuthorizationException.class)
   public void testGetFileStatusNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("getFileStatus operation for Path : / not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path testPath = new Path("/");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("getFileStatus", testPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.READ.toString(), false);
     fs.updateWasbAuthorizer(authorizer);
@@ -698,12 +650,9 @@ public class TestNativeAzureFileSystemAuthorization
   @Test
   public void testMkdirsCheckPositive() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path testPath = new Path("/testMkdirsAccessCheckPositive/1/2/3");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -726,15 +675,11 @@ public class TestNativeAzureFileSystemAuthorization
   @Test //(expected=WasbAuthorizationException.class)
   public void testMkdirsCheckNegative() throws Throwable {
 
-    expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("mkdirs operation for Path : /testMkdirsAccessCheckNegative/1/2/3 not allowed");
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-
     Path testPath = new Path("/testMkdirsAccessCheckNegative/1/2/3");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl();
+    setExpectedFailureMessage("mkdirs", testPath);
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), false);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
@@ -748,5 +693,24 @@ public class TestNativeAzureFileSystemAuthorization
       allowRecursiveDelete(fs, authorizer, "/testMkdirsAccessCheckNegative");
       fs.delete(new Path("/testMkdirsAccessCheckNegative"), true);
     }
+  }
+
+
+  /**
+   * Positive test triple slash format (wasb:///) access check
+   * @throws Throwable
+   */
+  @Test
+  public void testListStatusWithTripleSlashCheckPositive() throws Throwable {
+
+    Path testPath = new Path("/");
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
+    authorizer.init(null);
+    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    Path testPathWithTripleSlash = new Path("wasb:///" + testPath);
+    fs.listStatus(testPathWithTripleSlash);
   }
 }
