@@ -18,7 +18,10 @@
 
 #include "hdfspp_mini_dfs.h"
 #include "hdfspp/hdfs_ext.h"
+
+#include <cstring>
 #include <chrono>
+#include <exception>
 
 namespace hdfs {
 
@@ -324,8 +327,8 @@ TEST_F(HdfsExtTest, TestEOF) {
   EXPECT_EQ(0, hdfsCloseFile(fs, file));
 }
 
-  //Testing hdfsExists
-  TEST_F(HdfsExtTest, TestExists) {
+//Testing hdfsExists
+TEST_F(HdfsExtTest, TestExists) {
 
   HdfsHandle connection = cluster.connect_c();
   hdfsFS fs = connection.handle();
@@ -585,7 +588,168 @@ TEST_F(HdfsExtTest, TestWorkingDirectory) {
 }
 
 
+// Flags used to test event handlers
+static int connect_callback_invoked = 0;
+int basic_fs_callback(const char *event, const char *cluster, int64_t value, int64_t cookie) {
+  (void)cluster;
+  (void)value;
+  if(::strstr(FS_NN_CONNECT_EVENT, event) && cookie == 0xFFF0) {
+    connect_callback_invoked = 1;
+  }
+  return LIBHDFSPP_EVENT_OK;
 }
+
+// Make sure event handler gets called during connect
+TEST_F(HdfsExtTest, TestConnectEvent) {
+  connect_callback_invoked = 0;
+  hdfsPreAttachFSMonitor(basic_fs_callback, 0xFFF0);
+
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+  EXPECT_EQ(connect_callback_invoked, 1);
+}
+
+int throwing_fs_callback(const char *event, const char *cluster, int64_t value, int64_t cookie) {
+  (void)cluster;
+  (void)value;
+  if(::strstr(FS_NN_CONNECT_EVENT, event) && cookie == 0xFFF1) {
+    connect_callback_invoked = 1;
+    throw std::runtime_error("Throwing in callbacks is a bad thing.");
+  }
+  return LIBHDFSPP_EVENT_OK;
+}
+
+// Make sure throwing in the connect event handler doesn't prevent connection
+TEST_F(HdfsExtTest, TestConnectEventThrow) {
+  connect_callback_invoked = 0;
+  hdfsPreAttachFSMonitor(throwing_fs_callback, 0xFFF1);
+
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+  EXPECT_EQ(connect_callback_invoked, 1);
+}
+
+int char_throwing_fs_callback(const char *event, const char *cluster, int64_t value, int64_t cookie) {
+  (void)cluster;
+  (void)value;
+  if(::strstr(FS_NN_CONNECT_EVENT, event) && cookie == 0xFFF2) {
+    connect_callback_invoked = 1;
+    throw "Throwing non std::exceptions in callbacks is even worse.";
+  }
+  return LIBHDFSPP_EVENT_OK;
+}
+
+TEST_F(HdfsExtTest, TestConnectEventThrowChar) {
+  connect_callback_invoked = 0;
+  hdfsPreAttachFSMonitor(char_throwing_fs_callback, 0xFFF2);
+
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+  EXPECT_EQ(connect_callback_invoked, 1);
+}
+
+// Make sure throwing in the read event handler doesn't prevent reads
+int read_handler_invokation_count = 0;
+int basic_read_event_handler(const char *event, const char *cluster, const char *file,
+                             int64_t value, int64_t cookie)
+{
+  (void)cluster;
+  (void)file;
+  (void)value;
+  if(::strstr(FILE_DN_READ_EVENT, event) && cookie == 0xFFF3) {
+    read_handler_invokation_count += 1;
+  }
+  return LIBHDFSPP_EVENT_OK;
+}
+
+// Testing that read handler is called.
+// Note: This is counting calls to async_read rather than hdfsPread.
+//  Typically a call to hdfs(P)Read that doesn't span blocks/packets
+//  invokes async_read 6 times; 4 more than required (improving that
+//  in HDFS-11266).
+TEST_F(HdfsExtTest, TestReadEvent) {
+  read_handler_invokation_count = 0;
+  hdfsPreAttachFileMonitor(basic_read_event_handler, 0xFFF3);
+
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+  //Write to a file
+  errno = 0;
+  int size = 256;
+  std::string path = "/readEventTest";
+  hdfsFile file = hdfsOpenFile(fs, path.c_str(), O_WRONLY, 0, 0, 0);
+  EXPECT_NE(nullptr, file);
+  void * buf = malloc(size);
+  memset(buf, ' ', size);
+  EXPECT_EQ(size, hdfsWrite(fs, file, buf, size));
+  free(buf);
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+
+  //Test that read counters are getting incremented
+  char buffer[300];
+  file = hdfsOpenFile(fs, path.c_str(), O_RDONLY, 0, 0, 0);
+  EXPECT_EQ(size, hdfsPread(fs, file, 0, buffer, sizeof(buffer)));
+  EXPECT_EQ(read_handler_invokation_count, 6);
+
+  EXPECT_EQ(size, hdfsPread(fs, file, 0, buffer, sizeof(buffer)));
+  EXPECT_EQ(read_handler_invokation_count, 12);
+
+
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+}
+
+int throwing_read_event_handler(const char *event, const char *cluster, const char *file,
+                             int64_t value, int64_t cookie)
+{
+  (void)cluster;
+  (void)file;
+  (void)value;
+  if(::strstr(FILE_DN_READ_EVENT, event) && cookie == 0xFFF4) {
+    read_handler_invokation_count += 1;
+    throw std::runtime_error("Throwing here is a bad idea, but shouldn't break reads");
+  }
+  return LIBHDFSPP_EVENT_OK;
+}
+
+// Testing that reads can be done when event handler throws.
+TEST_F(HdfsExtTest, TestReadEventThrow) {
+  read_handler_invokation_count = 0;
+  hdfsPreAttachFileMonitor(throwing_read_event_handler, 0xFFF4);
+
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+  //Write to a file
+  errno = 0;
+  int size = 256;
+  std::string path = "/readEventTest";
+  hdfsFile file = hdfsOpenFile(fs, path.c_str(), O_WRONLY, 0, 0, 0);
+  EXPECT_NE(nullptr, file);
+  void * buf = malloc(size);
+  memset(buf, ' ', size);
+  EXPECT_EQ(size, hdfsWrite(fs, file, buf, size));
+  free(buf);
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+
+  //Test that read counters are getting incremented
+  char buffer[300];
+  file = hdfsOpenFile(fs, path.c_str(), O_RDONLY, 0, 0, 0);
+  EXPECT_EQ(size, hdfsPread(fs, file, 0, buffer, sizeof(buffer)));
+  EXPECT_EQ(read_handler_invokation_count, 6);
+
+  EXPECT_EQ(size, hdfsPread(fs, file, 0, buffer, sizeof(buffer)));
+  EXPECT_EQ(read_handler_invokation_count, 12);
+
+
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+}
+
+
+} // end namespace hdfs
 
 int main(int argc, char *argv[]) {
   // The following line must be executed to initialize Google Mock

@@ -367,7 +367,7 @@ TEST(RpcEngineTest, TestEventCallbacks)
     if (calls == 1 || calls == 3) // First connect and first read
       return event_response::test_err(Status::Error("Test"));
 
-    return event_response::ok();
+    return event_response::make_ok();
   });
 
 

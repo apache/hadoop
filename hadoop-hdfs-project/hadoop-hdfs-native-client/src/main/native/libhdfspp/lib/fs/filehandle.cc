@@ -256,7 +256,7 @@ void FileHandleImpl::AsyncPreadSome(
   auto read_handler = [reader, event_handlers, cluster_name, path, dn_id, handler](const Status & status, size_t transferred) {
   event_response event_resp = event_handlers->call(FILE_DN_READ_EVENT, cluster_name.c_str(), path.c_str(), transferred);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-    if (event_resp.response() == event_response::kTest_Error) {
+    if (event_resp.response_type() == event_response::kTest_Error) {
       handler(event_resp.status(), dn_id, transferred);
       return;
     }
@@ -270,7 +270,7 @@ void FileHandleImpl::AsyncPreadSome(
     (void)dn;
     event_response event_resp = event_handlers->call(FILE_DN_CONNECT_EVENT, cluster_name.c_str(), path.c_str(), 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-    if (event_resp.response() == event_response::kTest_Error) {
+    if (event_resp.response_type() == event_response::kTest_Error) {
       status = event_resp.status();
     }
 #endif

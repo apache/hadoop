@@ -189,7 +189,7 @@ TEST(BadDataNodeTest, NNEventCallback) {
     if (calls++ == 1)
       return event_response::test_err(Status::Error("Test"));
 
-    return event_response::ok();
+    return event_response::make_ok();
   });
   PartialMockFileHandle is("cluster", "file", &io_service.io_service(), GetRandomClientName(),  file_info, tracker, monitors);
   Status stat;

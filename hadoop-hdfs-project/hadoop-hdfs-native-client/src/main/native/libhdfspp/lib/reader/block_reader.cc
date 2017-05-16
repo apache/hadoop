@@ -122,7 +122,7 @@ void BlockReaderImpl::AsyncRequestBlock(const std::string &client_name,
       if(this->event_handlers_) {
         event_response event_resp = this->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-        if (stat.ok() && event_resp.response() == event_response::kTest_Error) {
+        if (stat.ok() && event_resp.response_type() == event_response::kTest_Error) {
           stat = Status::Error("Test error");
         }
 #endif
@@ -182,7 +182,7 @@ struct BlockReaderImpl::ReadPacketHeader : continuation::Continuation
       if(parent_->event_handlers_) {
         event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
+        if (status.ok() && event_resp.response_type() == event_response::kTest_Error) {
           status = Status::Error("Test error");
         }
 #endif
@@ -255,7 +255,7 @@ struct BlockReaderImpl::ReadChecksum : continuation::Continuation
       if(parent->event_handlers_) {
         event_response event_resp = parent->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
+        if (status.ok() && event_resp.response_type() == event_response::kTest_Error) {
           status = Status::Error("Test error");
         }
 #endif
@@ -309,7 +309,7 @@ struct BlockReaderImpl::ReadData : continuation::Continuation
           if(parent_->event_handlers_) {
             event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-            if (status.ok() && event_resp.response() == event_response::kTest_Error) {
+            if (status.ok() && event_resp.response_type() == event_response::kTest_Error) {
                 status = Status::Error("Test error");
             }
 #endif
@@ -360,7 +360,7 @@ struct BlockReaderImpl::ReadPadding : continuation::Continuation
       if(parent_->event_handlers_) {
         event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
+        if (status.ok() && event_resp.response_type() == event_response::kTest_Error) {
           status = Status::Error("Test error");
         }
 #endif
@@ -414,7 +414,7 @@ struct BlockReaderImpl::AckRead : continuation::Continuation
       if(parent_->event_handlers_) {
         event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
+        if (status.ok() && event_resp.response_type() == event_response::kTest_Error) {
           status = Status::Error("Test error");
         }
 #endif
