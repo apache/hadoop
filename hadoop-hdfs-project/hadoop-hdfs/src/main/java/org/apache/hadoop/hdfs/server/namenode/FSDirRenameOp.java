@@ -261,11 +261,29 @@ class FSDirRenameOp {
     src = srcIIP.getPath();
     dst = dstIIP.getPath();
     if (fsd.isPermissionEnabled()) {
-      // Rename does not operate on link targets
-      // Do not resolveLink when checking permissions of src and dst
-      // Check write access to parent of src
-      fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null, null,
-          false);
+      boolean renameToTrash = false;
+      if (null != options &&
+          Arrays.asList(options).
+          contains(Options.Rename.TO_TRASH)) {
+        renameToTrash = true;
+      }
+
+      if(renameToTrash) {
+        // if destination is the trash directory,
+        // besides the permission check on "rename"
+        // we need to enforce the check for "delete"
+        // otherwise, it would expose a
+        // security hole that stuff moved to trash
+        // will be deleted by superuser
+        fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null,
+            FsAction.ALL, true);
+      } else {
+        // Rename does not operate on link targets
+        // Do not resolveLink when checking permissions of src and dst
+        // Check write access to parent of src
+        fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null,
+            null, false);
+      }
       // Check write access to ancestor of dst
       fsd.checkPermission(pc, dstIIP, false, FsAction.WRITE, null, null, null,
           false);

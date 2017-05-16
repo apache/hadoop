@@ -283,6 +283,10 @@ Release 2.7.4 - UNRELEASED
 	
     HDFS-10987. Make Decommission less expensive when lot of blocks present. 
     (Brahma Reddy Battula)
+    
+    HDFS-8312. Trash does not descent into child directories to check for permissions. 
+   (Contributed By Weiwei Yang via Eric Yang)
+    HDFS-11784. Backport HDFS-8312 contributed by Brahma Reddy Battula.
 
 Release 2.7.3 - 2016-08-25
 
