@@ -22,8 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -136,6 +138,8 @@ public class ContainerImpl implements Container {
     }
   }
 
+  private final SimpleDateFormat dateFormat =
+      new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
   private final Lock readLock;
   private final Lock writeLock;
   private final Dispatcher dispatcher;
@@ -763,7 +767,7 @@ public class ContainerImpl implements Container {
 
   private void addDiagnostics(String... diags) {
     for (String s : diags) {
-      this.diagnostics.append(s);
+      this.diagnostics.append("[" + dateFormat.format(new Date()) + "]" + s);
     }
     if (diagnostics.length() > diagnosticsMaxSize) {
       diagnostics.delete(0, diagnostics.length() - diagnosticsMaxSize);
@@ -987,6 +991,7 @@ public class ContainerImpl implements Container {
         // We also need to make sure that if Rollback is possible, the
         // rollback state should be retained in the
         // oldLaunchContext and oldResourceSet
+        container.addDiagnostics("Container will be Restarted.\n");
         return new ReInitializationContext(
             container.launchContext, container.resourceSet,
             container.canRollback() ?
@@ -994,6 +999,7 @@ public class ContainerImpl implements Container {
             container.canRollback() ?
                 container.reInitContext.oldResourceSet : null);
       } else {
+        container.addDiagnostics("Container will be Re-initialized.\n");
         return new ReInitializationContext(
             reInitEvent.getReInitLaunchContext(),
             reInitEvent.getResourceSet(),
@@ -1014,6 +1020,7 @@ public class ContainerImpl implements Container {
     @Override
     protected ReInitializationContext createReInitContext(ContainerImpl
         container, ContainerEvent event) {
+      container.addDiagnostics("Container upgrade will be Rolled-back.\n");
       LOG.warn("Container [" + container.getContainerId() + "]" +
           " about to be explicitly Rolledback !!");
       return container.reInitContext.createContextForRollback();
