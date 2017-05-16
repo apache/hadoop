@@ -41,8 +41,11 @@ enum Status {
     VOLUME_NOT_UNIQUE = 2;
     VOLUME_NOT_FOUND = 3;
     VOLUME_NOT_EMPTY = 4;
-    USER_NOT_FOUND = 5;
-    ACCESS_DENIED = 6;
+    VOLUME_ALREADY_EXISTS = 5;
+    USER_NOT_FOUND = 6;
+    USER_TOO_MANY_VOLUMES = 7;
+    ACCESS_DENIED = 8;
+    INTERNAL_ERROR = 9;
 }
 
 
@@ -64,6 +67,10 @@ message CreateVolumeRequest {
 message CreateVolumeResponse {
 
     required Status status = 1;
+}
+
+message VolumeList {
+    repeated string volumeNames = 1;
 }
 
 /**

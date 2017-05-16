@@ -23,6 +23,8 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetKeyRespons
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -47,7 +49,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.Locale;
+import java.util.HashSet;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
 import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.getKey;
@@ -62,7 +70,9 @@ public final class DistributedStorageHandler implements StorageHandler {
       LoggerFactory.getLogger(DistributedStorageHandler.class);
 
   private final StorageContainerLocationProtocolClientSideTranslatorPB
-      storageContainerLocation;
+      storageContainerLocationClient;
+  private final KeySpaceManagerProtocolClientSideTranslatorPB
+      keySpaceManagerClient;
   private final XceiverClientManager xceiverClientManager;
 
   private int chunkSize;
@@ -72,11 +82,15 @@ public final class DistributedStorageHandler implements StorageHandler {
    *
    * @param conf configuration
    * @param storageContainerLocation StorageContainerLocationProtocol proxy
+   * @param keySpaceManagerClient KeySpaceManager proxy
    */
   public DistributedStorageHandler(OzoneConfiguration conf,
       StorageContainerLocationProtocolClientSideTranslatorPB
-      storageContainerLocation) {
-    this.storageContainerLocation = storageContainerLocation;
+                                       storageContainerLocation,
+      KeySpaceManagerProtocolClientSideTranslatorPB
+                                       keySpaceManagerClient) {
+    this.keySpaceManagerClient = keySpaceManagerClient;
+    this.storageContainerLocationClient = storageContainerLocation;
     this.xceiverClientManager = new XceiverClientManager(conf);
 
     chunkSize = conf.getInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
@@ -92,21 +106,15 @@ public final class DistributedStorageHandler implements StorageHandler {
 
   @Override
   public void createVolume(VolumeArgs args) throws IOException, OzoneException {
-    String containerKey = buildContainerKey(args.getVolumeName());
-    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
-    try {
-      VolumeInfo volume = new VolumeInfo();
-      volume.setVolumeName(args.getVolumeName());
-      volume.setQuota(args.getQuota());
-      volume.setOwner(new VolumeOwner(args.getUserName()));
-      volume.setCreatedOn(dateToString(new Date()));
-      volume.setCreatedBy(args.getAdminName());
-      KeyData containerKeyData = fromVolumeToContainerKeyData(
-          xceiverClient.getPipeline().getContainerName(), containerKey, volume);
-      putKey(xceiverClient, containerKeyData, args.getRequestID());
-    } finally {
-      xceiverClientManager.releaseClient(xceiverClient);
-    }
+    long quota = args.getQuota() == null ?
+        Long.MAX_VALUE : args.getQuota().sizeInBytes();
+    KsmVolumeArgs volumeArgs = KsmVolumeArgs.newBuilder()
+        .setAdminName(args.getAdminName())
+        .setOwnerName(args.getUserName())
+        .setVolume(args.getVolumeName())
+        .setQuotaInBytes(quota)
+        .build();
+    keySpaceManagerClient.createVolume(volumeArgs);
   }
 
   @Override
@@ -293,9 +301,9 @@ public final class DistributedStorageHandler implements StorageHandler {
   }
 
   /**
-   * Acquires an {@link XceiverClientSpi} connected to a {@link Pipeline} of nodes
-   * capable of serving container protocol operations.  The container is
-   * selected based on the specified container key.
+   * Acquires an {@link XceiverClientSpi} connected to a {@link Pipeline}
+   * of nodes capable of serving container protocol operations.
+   * The container is selected based on the specified container key.
    *
    * @param containerKey container key
    * @return XceiverClient connected to a container
@@ -304,7 +312,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   private XceiverClientSpi acquireXceiverClient(String containerKey)
       throws IOException {
     Set<LocatedContainer> locatedContainers =
-        storageContainerLocation.getStorageContainerLocations(
+        storageContainerLocationClient.getStorageContainerLocations(
             new HashSet<>(Arrays.asList(containerKey)));
     Pipeline pipeline = newPipelineFromLocatedContainer(
         locatedContainers.iterator().next());

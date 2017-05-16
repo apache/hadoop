@@ -37,4 +37,13 @@ public final class KSMConfigKeys {
   public static final String OZONE_KSM_BIND_HOST_DEFAULT =
       "0.0.0.0";
   public static final int OZONE_KSM_PORT_DEFAULT = 9862;
+
+  // LevelDB cache file uses an off-heap cache in LevelDB of 128 MB.
+  public static final String OZONE_KSM_DB_CACHE_SIZE_MB =
+      "ozone.ksm.leveldb.cache.size.mb";
+  public static final int OZONE_KSM_DB_CACHE_SIZE_DEFAULT = 128;
+
+  public static final String OZONE_KSM_USER_MAX_VOLUME =
+      "ozone.ksm.user.max.volume";
+  public static final int OZONE_KSM_USER_MAX_VOLUME_DEFAULT = 1024;
 }

@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.ozone.web.utils;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
@@ -30,6 +33,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -271,5 +275,24 @@ public final class OzoneUtils {
         .header(HttpHeaders.CONTENT_LENGTH, stream.getLength())
         .build();
 
+  }
+
+  /**
+   * Checks and creates Ozone Metadir Path if it does not exist.
+   *
+   * @param conf - Configuration
+   *
+   * @return File MetaDir
+   */
+  public static File getScmMetadirPath(Configuration conf) {
+    String metaDirPath = conf.getTrimmed(OzoneConfigKeys
+        .OZONE_CONTAINER_METADATA_DIRS);
+    Preconditions.checkNotNull(metaDirPath);
+    File dirPath = new File(metaDirPath);
+    if (!dirPath.exists() && !dirPath.mkdirs()) {
+      throw new IllegalArgumentException("Unable to create paths. Path: " +
+          dirPath);
+    }
+    return dirPath;
   }
 }
