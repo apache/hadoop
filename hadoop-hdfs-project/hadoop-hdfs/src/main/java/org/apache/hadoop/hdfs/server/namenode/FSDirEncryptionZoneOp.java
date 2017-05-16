@@ -34,6 +34,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -41,7 +42,6 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -143,10 +143,10 @@ final class FSDirEncryptionZoneOp {
    *                KeyProvider
    * @param logRetryCache whether to record RPC ids in editlog for retry cache
    *                      rebuilding
-   * @return HdfsFileStatus
+   * @return FileStatus
    * @throws IOException
    */
-  static HdfsFileStatus createEncryptionZone(final FSDirectory fsd,
+  static FileStatus createEncryptionZone(final FSDirectory fsd,
       final String srcArg, final FSPermissionChecker pc, final String cipher,
       final String keyName, final boolean logRetryCache) throws IOException {
     final CipherSuite suite = CipherSuite.convert(cipher);
@@ -177,7 +177,7 @@ final class FSDirEncryptionZoneOp {
    * @param pc permission checker to check fs permission
    * @return the EZ with file status.
    */
-  static Map.Entry<EncryptionZone, HdfsFileStatus> getEZForPath(
+  static Map.Entry<EncryptionZone, FileStatus> getEZForPath(
       final FSDirectory fsd, final String srcArg, final FSPermissionChecker pc)
       throws IOException {
     final INodesInPath iip;
@@ -192,7 +192,7 @@ final class FSDirEncryptionZoneOp {
     } finally {
       fsd.readUnlock();
     }
-    HdfsFileStatus auditStat = fsd.getAuditFileInfo(iip);
+    FileStatus auditStat = fsd.getAuditFileInfo(iip);
     return new AbstractMap.SimpleImmutableEntry<>(ret, auditStat);
   }
 
