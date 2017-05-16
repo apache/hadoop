@@ -278,15 +278,18 @@ Release 2.7.4 - UNRELEASED
     HDFS-11795. Fix ASF License warnings in branch-2.7.
     (Yiqun Lin via aajisaka)
 
-	HDFS-11674. reserveSpaceForReplicas is not released if append request failed
-	due to mirror down and replica recovered (vinayakumarb)
-	
+    HDFS-11674. reserveSpaceForReplicas is not released if append request failed
+    due to mirror down and replica recovered (vinayakumarb)
+
     HDFS-10987. Make Decommission less expensive when lot of blocks present. 
     (Brahma Reddy Battula)
     
     HDFS-8312. Trash does not descent into child directories to check for permissions. 
    (Contributed By Weiwei Yang via Eric Yang)
     HDFS-11784. Backport HDFS-8312 contributed by Brahma Reddy Battula.
+
+    HDFS-8498. Blocks can be committed with wrong size. (Jing Zhao)
+    Backport HDFS-11732 by Zhe Zhang.
 
 Release 2.7.3 - 2016-08-25
 
