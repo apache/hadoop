@@ -21,13 +21,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
@@ -59,7 +59,7 @@ class FSDirXAttrOp {
    *          - xAttrs flags
    * @throws IOException
    */
-  static HdfsFileStatus setXAttr(
+  static FileStatus setXAttr(
       FSDirectory fsd, String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
       boolean logRetryCache)
       throws IOException {
@@ -153,7 +153,7 @@ class FSDirXAttrOp {
    *          - xAttr to remove
    * @throws IOException
    */
-  static HdfsFileStatus removeXAttr(
+  static FileStatus removeXAttr(
       FSDirectory fsd, String src, XAttr xAttr, boolean logRetryCache)
       throws IOException {
     FSDirXAttrOp.checkXAttrsConfigFlag(fsd);

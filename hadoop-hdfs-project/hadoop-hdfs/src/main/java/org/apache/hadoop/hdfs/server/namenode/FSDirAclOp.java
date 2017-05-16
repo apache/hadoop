@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -25,7 +26,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 
 import java.io.IOException;
@@ -33,7 +33,7 @@ import java.util.Collections;
 import java.util.List;
 
 class FSDirAclOp {
-  static HdfsFileStatus modifyAclEntries(
+  static FileStatus modifyAclEntries(
       FSDirectory fsd, final String srcArg, List<AclEntry> aclSpec)
       throws IOException {
     String src = srcArg;
@@ -58,7 +58,7 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus removeAclEntries(
+  static FileStatus removeAclEntries(
       FSDirectory fsd, final String srcArg, List<AclEntry> aclSpec)
       throws IOException {
     String src = srcArg;
@@ -83,7 +83,7 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus removeDefaultAcl(FSDirectory fsd, final String srcArg)
+  static FileStatus removeDefaultAcl(FSDirectory fsd, final String srcArg)
       throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
@@ -107,7 +107,7 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus removeAcl(FSDirectory fsd, final String srcArg)
+  static FileStatus removeAcl(FSDirectory fsd, final String srcArg)
       throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
@@ -126,7 +126,7 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus setAcl(
+  static FileStatus setAcl(
       FSDirectory fsd, final String srcArg, List<AclEntry> aclSpec)
       throws IOException {
     String src = srcArg;
