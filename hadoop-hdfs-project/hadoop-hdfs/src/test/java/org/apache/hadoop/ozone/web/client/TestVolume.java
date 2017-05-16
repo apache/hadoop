@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -29,6 +28,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
@@ -38,7 +38,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -63,8 +62,8 @@ public class TestVolume {
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(TestVolume.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestVolume.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     FileUtils.deleteDirectory(new File(path));

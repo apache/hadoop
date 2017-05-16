@@ -29,6 +29,7 @@ import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientRatis;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.junit.Assert;
@@ -36,7 +37,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,9 +54,8 @@ public class TestOzoneContainer {
   public void testCreateOzoneContainer() throws Exception {
     String containerName = OzoneUtils.getRequestID();
     OzoneConfiguration conf = new OzoneConfiguration();
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestOzoneContainer.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
@@ -141,8 +140,8 @@ public class TestOzoneContainer {
   }
 
   private static void setOzoneLocalStorageRoot(OzoneConfiguration conf) {
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestOzoneContainer.class.getSimpleName());
     path += conf.getTrimmed(
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
@@ -475,9 +474,8 @@ public class TestOzoneContainer {
       throws Exception {
 
     String containerName = OzoneUtils.getRequestID();
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestOzoneContainer.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);

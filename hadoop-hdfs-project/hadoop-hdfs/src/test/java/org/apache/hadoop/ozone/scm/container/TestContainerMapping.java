@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -31,8 +32,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Paths;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -51,12 +50,10 @@ public class TestContainerMapping {
   public static void setUp() throws Exception {
     Configuration conf = SCMTestUtils.getConf();
 
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestContainerMapping.class.getSimpleName());
-
-    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS, path);
-    testDir = Paths.get(path).toFile();
+    testDir = GenericTestUtils
+        .getTestDir(TestContainerMapping.class.getSimpleName());
+    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+        testDir.getAbsolutePath());
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {
       throw new IOException("Unable to create test directory path");

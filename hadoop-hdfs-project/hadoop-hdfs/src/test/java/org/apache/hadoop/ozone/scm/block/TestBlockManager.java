@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.MockNodeManager;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,7 +36,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Paths;
 import java.util.UUID;
 
@@ -59,10 +59,8 @@ public class TestBlockManager {
   public static void setUp() throws Exception {
     Configuration conf = SCMTestUtils.getConf();
 
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(
-        org.apache.hadoop.ozone.scm.container.TestContainerMapping
-            .class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestBlockManager.class.getSimpleName());
 
     conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS, path);
     testDir = Paths.get(path).toFile();

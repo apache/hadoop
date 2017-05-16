@@ -19,14 +19,13 @@ package org.apache.hadoop.cblock;
 
 import org.apache.hadoop.cblock.meta.VolumeDescriptor;
 import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.cblock.util.MockStorageClient;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.List;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
@@ -54,9 +53,8 @@ public class TestCBlockServerPersistence {
     int blockSize = 4096;
     CBlockManager cBlockManager = null;
     CBlockManager cBlockManager1 = null;
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestCBlockServerPersistence.class.getSimpleName());
     File filePath = new File(path);
     if(!filePath.exists() && !filePath.mkdirs()) {
       throw new IOException("Unable to create test DB dir");

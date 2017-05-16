@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -34,7 +35,6 @@ import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -65,8 +65,8 @@ public class TestBuckets {
       URISyntaxException, OzoneException {
     OzoneConfiguration conf = new OzoneConfiguration();
 
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(TestBuckets.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestBuckets.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
 

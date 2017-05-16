@@ -22,6 +22,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
@@ -31,7 +32,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
-import java.net.URL;
 
 /**
  * Test ozone volume in the local storage handler scenario.
@@ -59,9 +59,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath()
-        .concat(TestLocalOzoneVolumes.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestLocalOzoneVolumes.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
 
