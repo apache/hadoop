@@ -124,6 +124,8 @@ public class SLSRunner extends Configured implements Tool {
   private final static int DEFAULT_MAPPER_PRIORITY = 20;
   private final static int DEFAULT_REDUCER_PRIORITY = 10;
 
+  private static boolean exitAtTheFinish = false;
+
   /**
    * The type of trace in input.
    */
@@ -761,6 +763,9 @@ public class SLSRunner extends Configured implements Tool {
 
     if (remainingApps == 0) {
       LOG.info("SLSRunner tears down.");
+      if (exitAtTheFinish) {
+        System.exit(0);
+      }
     }
   }
 
@@ -857,6 +862,7 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   public static void main(String[] argv) throws Exception {
+    exitAtTheFinish = true;
     ToolRunner.run(new Configuration(), new SLSRunner(), argv);
   }
 
