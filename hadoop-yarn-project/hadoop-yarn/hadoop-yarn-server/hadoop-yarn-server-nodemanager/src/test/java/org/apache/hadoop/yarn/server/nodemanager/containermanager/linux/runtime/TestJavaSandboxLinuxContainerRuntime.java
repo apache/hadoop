@@ -37,20 +37,29 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilePermission;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.net.SocketPermission;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Formatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.api.ApplicationConstants.Environment.JAVA_HOME;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.LOG;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.MULTI_COMMAND_REGEX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.CLEAN_CMD_REGEX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.CONTAINS_JAVA_CMD;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.POLICY_APPEND_FLAG;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.POLICY_FILE;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.POLICY_FLAG;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.SECURITY_FLAG;
@@ -76,8 +85,9 @@ import static org.mockito.Mockito.when;
  */
 public class TestJavaSandboxLinuxContainerRuntime {
 
-  private static final String HADOOP_HOME = "hadoop.home.dir";
-  private static String hadoopHomeDir = System.getProperty(HADOOP_HOME);
+  private final static String HADOOP_HOME = "hadoop.home.dir";
+  private final static String HADOOP_HOME_DIR = System.getProperty(HADOOP_HOME);
+  private final Properties baseProps = new Properties(System.getProperties());
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -101,11 +111,12 @@ public class TestJavaSandboxLinuxContainerRuntime {
   private final static String WHITELIST_GROUP = "captains";
   private final static String CONTAINER_ID = "container_1234567890";
   private final static String APPLICATION_ID = "application_1234567890";
+  private File baseTestDirectory;
 
   @Before
   public void setup() throws Exception {
 
-    File baseTestDirectory = new File(System.getProperty("test.build.data",
+    baseTestDirectory = new File(System.getProperty("test.build.data",
         System.getProperty("java.io.tmpdir", "target")),
         TestJavaSandboxLinuxContainerRuntime.class.getName());
 
@@ -114,10 +125,8 @@ public class TestJavaSandboxLinuxContainerRuntime {
 
     conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
-        WHITELIST_USER + "=" + WHITELIST_GROUP + ";"
+        WHITELIST_USER + "=" + WHITELIST_GROUP + "," + NORMAL_GROUP + ";"
             + NORMAL_USER + "=" + NORMAL_GROUP + ";");
-    conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX_WHITELIST_GROUP,
-        WHITELIST_GROUP);
     conf.set("hadoop.tmp.dir", baseTestDirectory.getAbsolutePath());
 
     Files.deleteIfExists(Paths.get(baseTestDirectory.getAbsolutePath(),
@@ -151,21 +160,20 @@ public class TestJavaSandboxLinuxContainerRuntime {
 
     runtimeContextBuilder = createRuntimeContext();
 
-    if (hadoopHomeDir == null) {
+    if (HADOOP_HOME_DIR == null) {
       System.setProperty(HADOOP_HOME, policyFile.getParent());
     }
 
     OutputStream outStream = new FileOutputStream(policyFile);
     JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils
-        .generatePolicyFile(outStream, symLinks, resources, conf);
+        .generatePolicyFile(outStream, symLinks, null, resources, conf);
     outStream.close();
 
     System.setProperty("java.security.policy", policyFile.getCanonicalPath());
     securityManager = new SecurityManager();
-
   }
 
-  public  ContainerRuntimeContext.Builder createRuntimeContext(){
+  public ContainerRuntimeContext.Builder createRuntimeContext(){
 
     Container container = mock(Container.class);
     ContainerLaunchContext  ctx = mock(ContainerLaunchContext.class);
@@ -192,6 +200,71 @@ public class TestJavaSandboxLinuxContainerRuntime {
         .setExecutionAttribute(CONTAINER_RUN_CMDS, localDirs);
 
     return builder;
+  }
+
+  public static final String SOCKET_PERMISSION_FORMAT =
+      "grant { \n" +
+      "   permission %1s \"%2s\", \"%3s\";\n" +
+      "};\n";
+  public static final String RUNTIME_PERMISSION_FORMAT =
+      "grant { \n" +
+          "   permission %1s \"%2s\";\n" +
+          "};\n";
+
+  @Test
+  public void testGroupPolicies()
+      throws IOException, ContainerExecutionException {
+    // Generate new policy files each containing one grant
+    File openSocketPolicyFile =
+        File.createTempFile("openSocket", "policy", baseTestDirectory);
+    File classLoaderPolicyFile =
+        File.createTempFile("createClassLoader", "policy", baseTestDirectory);
+    Permission socketPerm = new SocketPermission("localhost:0", "listen");
+    Permission runtimePerm = new RuntimePermission("createClassLoader");
+
+    StringBuilder socketPermString = new StringBuilder();
+    Formatter openSocketPolicyFormatter = new Formatter(socketPermString);
+    openSocketPolicyFormatter.format(SOCKET_PERMISSION_FORMAT,
+        socketPerm.getClass().getName(), socketPerm.getName(),
+        socketPerm.getActions());
+    FileWriter socketPermWriter = new FileWriter(openSocketPolicyFile);
+    socketPermWriter.write(socketPermString.toString());
+    socketPermWriter.close();
+
+    StringBuilder classLoaderPermString = new StringBuilder();
+    Formatter classLoaderPolicyFormatter = new Formatter(classLoaderPermString);
+    classLoaderPolicyFormatter.format(RUNTIME_PERMISSION_FORMAT,
+        runtimePerm.getClass().getName(), runtimePerm.getName());
+    FileWriter classLoaderPermWriter = new FileWriter(classLoaderPolicyFile);
+    classLoaderPermWriter.write(classLoaderPermString.toString());
+    classLoaderPermWriter.close();
+
+    conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX +
+        WHITELIST_GROUP, openSocketPolicyFile.toString());
+    conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX +
+        NORMAL_GROUP, classLoaderPolicyFile.toString());
+
+    String[] inputCommand = {"$JAVA_HOME/bin/java jar MyJob.jar"};
+    List<String> commands = Arrays.asList(inputCommand);
+
+    runtimeContextBuilder.setExecutionAttribute(USER, WHITELIST_USER);
+    runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
+
+    runtime.prepareContainer(runtimeContextBuilder.build());
+
+    //pull generated policy from cmd
+    Matcher policyMatches = Pattern.compile(POLICY_APPEND_FLAG + "=?([^ ]+)")
+        .matcher(commands.get(0));
+    policyMatches.find();
+    String generatedPolicy = policyMatches.group(1);
+
+    //Test that generated policy file has included both policies
+    Assert.assertTrue(
+        Files.readAllLines(Paths.get(generatedPolicy)).contains(
+            classLoaderPermString.toString().split("\n")[1]));
+    Assert.assertTrue(
+        Files.readAllLines(Paths.get(generatedPolicy)).contains(
+            socketPermString.toString().split("\n")[1]));
   }
 
   @Test
@@ -235,7 +308,6 @@ public class TestJavaSandboxLinuxContainerRuntime {
     JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils
         .appendSecurityFlags(commands, env, policyFilePath,
               JavaSandboxLinuxContainerRuntime.SandboxMode.permissive);
-
   }
 
   @Test
@@ -247,6 +319,9 @@ public class TestJavaSandboxLinuxContainerRuntime {
     };
     List<String> commands = Arrays.asList(inputCommand);
 
+    conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX_WHITELIST_GROUP,
+        WHITELIST_GROUP);
+
     runtimeContextBuilder.setExecutionAttribute(USER, WHITELIST_USER);
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
     runtime.prepareContainer(runtimeContextBuilder.build());
@@ -254,7 +329,6 @@ public class TestJavaSandboxLinuxContainerRuntime {
     Assert.assertTrue("Command should not be modified when user is " +
             "member of whitelisted group",
         inputCommand[0].equals(commands.get(0)));
-
   }
 
   @Test
@@ -264,6 +338,9 @@ public class TestJavaSandboxLinuxContainerRuntime {
         "$JAVA_HOME/bin/java jar -Djava.security.manager MyJob.jar"
     };
     List<String> commands = Arrays.asList(inputCommand);
+
+    conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX_WHITELIST_GROUP,
+        WHITELIST_GROUP);
 
     runtimeContextBuilder.setExecutionAttribute(USER, WHITELIST_USER);
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
@@ -282,6 +359,9 @@ public class TestJavaSandboxLinuxContainerRuntime {
         "$JAVA_HOME/bin/java jar MyJob.jar"
     };
     List<String> commands = Arrays.asList(inputCommand);
+
+    conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX_WHITELIST_GROUP,
+        WHITELIST_GROUP);
 
     runtimeContextBuilder.setExecutionAttribute(USER, NORMAL_USER);
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
@@ -373,6 +453,6 @@ public class TestJavaSandboxLinuxContainerRuntime {
 
   @After
   public void cleanup(){
-    System.setSecurityManager(null);
+    System.setProperties(baseProps);
   }
 }

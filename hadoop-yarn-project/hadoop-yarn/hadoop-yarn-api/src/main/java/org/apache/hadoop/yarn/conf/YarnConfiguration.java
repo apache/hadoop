@@ -1500,6 +1500,10 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_CONTAINER_SANDBOX_POLICY =
       YARN_CONTAINER_SANDBOX + ".policy";
 
+  /** Prefix for group to policy file mapping.*/
+  public static final String YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX =
+      YARN_CONTAINER_SANDBOX_POLICY + ".group.";
+
   /** The group which will run by default without the java security manager.*/
   public static final String YARN_CONTAINER_SANDBOX_WHITELIST_GROUP =
       YARN_CONTAINER_SANDBOX + ".whitelist-group";
