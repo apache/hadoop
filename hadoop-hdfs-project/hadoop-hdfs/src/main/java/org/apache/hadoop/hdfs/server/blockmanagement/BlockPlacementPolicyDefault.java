@@ -718,7 +718,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
       Preconditions.checkState(excludedNodes.add(chosenNode), "chosenNode "
           + chosenNode + " is already in excludedNodes " + excludedNodes);
-      if (LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled() && builder != null) {
         builder.append("\nNode ").append(NodeBase.getPath(chosenNode))
             .append(" [");
       }
@@ -747,7 +747,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           }
         }
 
-        if (LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled() && builder != null) {
           builder.append("\n]");
         }
 
