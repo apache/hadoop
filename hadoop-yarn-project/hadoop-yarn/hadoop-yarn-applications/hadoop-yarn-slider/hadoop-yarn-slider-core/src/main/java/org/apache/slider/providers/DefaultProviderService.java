@@ -15,16 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.slider.providers.docker;
+package org.apache.slider.providers;
 
-public interface DockerKeys {
-  String PROVIDER_DOCKER = "docker";
-  String DOCKER_PREFIX = "docker.";
-  String DOCKER_IMAGE = DOCKER_PREFIX + "image";
-  String DOCKER_NETWORK = DOCKER_PREFIX + "network";
-  String DOCKER_USE_PRIVILEGED = DOCKER_PREFIX + "usePrivileged";
-  String DOCKER_START_COMMAND = DOCKER_PREFIX + "startCommand";
+import org.apache.slider.api.resource.Component;
+import org.apache.slider.common.tools.SliderFileSystem;
+import org.apache.slider.core.launch.ContainerLauncher;
+import org.apache.slider.providers.AbstractProviderService;
 
-  String DEFAULT_DOCKER_NETWORK = "bridge";
-  Boolean DEFAULT_DOCKER_USE_PRIVILEGED = false;
+import java.io.IOException;
+
+public class DefaultProviderService extends AbstractProviderService {
+
+  protected DefaultProviderService() {
+    super(DefaultProviderService.class.getSimpleName());
+  }
+
+  @Override
+  public void processArtifact(ContainerLauncher launcher, Component
+      component, SliderFileSystem fileSystem) throws IOException {
+  }
 }

@@ -19,7 +19,6 @@
 package org.apache.slider.server.appmaster.web.view;
 
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.apache.slider.server.appmaster.web.rest.RestPaths;
@@ -33,12 +32,10 @@ import static org.apache.slider.server.appmaster.web.rest.RestPaths.SLIDER_PATH_
 public abstract class SliderHamletBlock extends HtmlBlock  {
 
   protected final StateAccessForProviders appState;
-  protected final ProviderService providerService;
   protected final RestPaths restPaths = new RestPaths();
   
   public SliderHamletBlock(WebAppApi slider) {
     this.appState = slider.getAppState();
-    this.providerService = slider.getProviderService();
   }
 
   protected String rootPath(String absolutePath) {

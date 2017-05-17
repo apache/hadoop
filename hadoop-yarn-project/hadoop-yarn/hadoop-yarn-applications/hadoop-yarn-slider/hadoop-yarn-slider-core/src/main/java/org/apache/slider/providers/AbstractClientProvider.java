@@ -19,31 +19,25 @@
 package org.apache.slider.providers;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
+import org.apache.slider.api.resource.Artifact;
+import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.exceptions.SliderException;
 import org.codehaus.jettison.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public abstract class AbstractClientProvider extends Configured {
-  private static final Logger log =
-    LoggerFactory.getLogger(AbstractClientProvider.class);
+public abstract class AbstractClientProvider {
 
-  public AbstractClientProvider(Configuration conf) {
-    super(conf);
+  public AbstractClientProvider() {
   }
-
-  public abstract String getName();
-
-  public abstract List<ProviderRole> getRoles();
 
   /**
    * Generates a fixed format of application tags given one or more of
@@ -70,7 +64,29 @@ public abstract class AbstractClientProvider extends Configured {
   }
 
   /**
-   * Process client operations for applications such as install, configure
+   * Validate the artifact.
+   * @param artifact
+   */
+  public abstract void validateArtifact(Artifact artifact, FileSystem
+      fileSystem) throws IOException;
+
+  protected abstract void validateConfigFile(ConfigFile configFile, FileSystem
+      fileSystem) throws IOException;
+
+  /**
+   * Validate the config files.
+   * @param configFiles config file list
+   * @param fileSystem file system
+   */
+  public void validateConfigFiles(List<ConfigFile> configFiles, FileSystem
+      fileSystem) throws IOException {
+    for (ConfigFile configFile : configFiles) {
+      validateConfigFile(configFile, fileSystem);
+    }
+  }
+
+  /**
+   * Process client operations for applications such as install, configure.
    * @param fileSystem
    * @param registryOperations
    * @param configuration

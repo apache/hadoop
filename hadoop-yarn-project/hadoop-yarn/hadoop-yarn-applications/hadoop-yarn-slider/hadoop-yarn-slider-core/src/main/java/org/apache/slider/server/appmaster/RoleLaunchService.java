@@ -27,7 +27,7 @@ import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.launch.ContainerLauncher;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.providers.ProviderService;
-import org.apache.slider.providers.agent.AgentKeys;
+import org.apache.slider.providers.SliderProviderFactory;
 import org.apache.slider.server.appmaster.actions.ActionStartContainer;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.state.ContainerAssignment;
@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.slider.common.SliderKeys.KEY_CONTAINER_LAUNCH_DELAY;
 
 /**
  * A service for launching containers
@@ -60,11 +62,6 @@ public class RoleLaunchService
   private final QueueAccess actionQueue;
 
   /**
-   * Provider building up the command
-   */
-  private final ProviderService provider;
-  
-  /**
    * Filesystem to use for the launch
    */
   private final SliderFileSystem fs;
@@ -75,16 +72,14 @@ public class RoleLaunchService
   /**
    * Construct an instance of the launcher
    * @param queueAccess
-   * @param provider the provider
    * @param fs filesystem
    * @param envVars environment variables
    */
-  public RoleLaunchService(QueueAccess queueAccess, ProviderService provider,
-      SliderFileSystem fs, Map<String, String> envVars) {
+  public RoleLaunchService(QueueAccess queueAccess, SliderFileSystem fs,
+      Map<String, String> envVars) {
     super(ROLE_LAUNCH_SERVICE);
     this.actionQueue = queueAccess;
     this.fs = fs;
-    this.provider = provider;
     this.envVars = envVars;
   }
 
@@ -167,11 +162,13 @@ public class RoleLaunchService
         instance.roleId = role.id;
         instance.environment = envDescription;
 
+        ProviderService provider = SliderProviderFactory.getProviderService(
+            role.component.getArtifact());
         provider.buildContainerLaunchContext(containerLauncher, application,
             container, role, fs, instance);
 
         long delay = role.component.getConfiguration()
-            .getPropertyLong(AgentKeys.KEY_CONTAINER_LAUNCH_DELAY, 0);
+            .getPropertyLong(KEY_CONTAINER_LAUNCH_DELAY, 0);
         long maxDelay = getConfig()
             .getLong(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
                 YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);

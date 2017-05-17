@@ -20,9 +20,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.model.mock.BaseMockAppStateTest;
-import org.apache.slider.server.appmaster.model.mock.MockProviderService;
 import org.apache.slider.server.appmaster.state.ProviderAppState;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.apache.slider.server.appmaster.web.WebAppApiImpl;
@@ -45,11 +43,9 @@ public class TestClusterSpecificationBlock extends BaseMockAppStateTest {
     ProviderAppState providerAppState = new ProviderAppState(
         "undefined",
         appState);
-    ProviderService providerService = new MockProviderService();
 
     WebAppApiImpl inst = new WebAppApiImpl(
         providerAppState,
-        providerService,
         null,
         null, null);
 

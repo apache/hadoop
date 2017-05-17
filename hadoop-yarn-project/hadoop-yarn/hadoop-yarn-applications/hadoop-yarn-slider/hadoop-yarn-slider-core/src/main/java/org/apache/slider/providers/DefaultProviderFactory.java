@@ -15,25 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.slider.providers.docker;
+package org.apache.slider.providers;
 
-import org.apache.slider.providers.AbstractClientProvider;
-import org.apache.slider.providers.ProviderService;
-import org.apache.slider.providers.SliderProviderFactory;
-
-public class DockerProviderFactory extends SliderProviderFactory {
+public final class DefaultProviderFactory extends SliderProviderFactory {
   private static final SliderProviderFactory FACTORY = new
-      DockerProviderFactory();
+      DefaultProviderFactory();
 
-  private DockerProviderFactory() {
-  }
+  private DefaultProviderFactory() {}
 
   private static class Client {
-    static final AbstractClientProvider PROVIDER = new DockerClientProvider();
+    static final AbstractClientProvider PROVIDER = new DefaultClientProvider();
   }
 
   private static class Server {
-    static final ProviderService PROVIDER = new DockerProviderService();
+    static final ProviderService PROVIDER = new DefaultProviderService();
   }
 
   @Override

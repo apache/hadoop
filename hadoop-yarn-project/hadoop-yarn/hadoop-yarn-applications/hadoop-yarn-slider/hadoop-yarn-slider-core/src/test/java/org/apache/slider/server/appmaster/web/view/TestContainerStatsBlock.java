@@ -27,12 +27,10 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.hamlet.HamletImpl.EImp;
 import org.apache.slider.api.ClusterNode;
-import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.model.mock.BaseMockAppStateTest;
 import org.apache.slider.server.appmaster.model.mock.MockContainer;
 import org.apache.slider.server.appmaster.model.mock.MockContainerId;
 import org.apache.slider.server.appmaster.model.mock.MockNodeId;
-import org.apache.slider.server.appmaster.model.mock.MockProviderService;
 import org.apache.slider.server.appmaster.model.mock.MockResource;
 import org.apache.slider.server.appmaster.state.ProviderAppState;
 import org.apache.slider.server.appmaster.state.RoleInstance;
@@ -65,14 +63,12 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
   @Before
   public void setup() throws Exception {
     super.setup();
-    ProviderService providerService = new MockProviderService();
     ProviderAppState providerAppState = new ProviderAppState(
         "undefined",
         appState);
 
     WebAppApiImpl inst = new WebAppApiImpl(
         providerAppState,
-        providerService,
         null,
         METRICS, null);
 

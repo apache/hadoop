@@ -17,7 +17,6 @@
 package org.apache.slider.server.appmaster.web;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
-import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.state.AppState;
@@ -32,11 +31,6 @@ public interface WebAppApi {
    * The {@link AppState} for the current cluster
    */
   StateAccessForProviders getAppState();
-  
-  /**
-   * The {@link ProviderService} for the current cluster
-   */
-  ProviderService getProviderService();
   
   /**
    * Registry operations accessor
