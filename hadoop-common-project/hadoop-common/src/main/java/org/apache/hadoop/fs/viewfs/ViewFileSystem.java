@@ -195,7 +195,7 @@ public class ViewFileSystem extends FileSystem {
         protected
         FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
           throws URISyntaxException {
-          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri);
+          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config);
         }
 
         @Override
@@ -905,11 +905,11 @@ public class ViewFileSystem extends FileSystem {
     final URI myUri;
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
-        final long cTime, final UserGroupInformation ugi, URI uri)
-      throws URISyntaxException {
+        final long cTime, final UserGroupInformation ugi, URI uri,
+        Configuration config) throws URISyntaxException {
       myUri = uri;
       try {
-        initialize(myUri, new Configuration());
+        initialize(myUri, config);
       } catch (IOException e) {
         throw new RuntimeException("Cannot occur");
       }
