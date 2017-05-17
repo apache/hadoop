@@ -166,21 +166,6 @@
             </executions>
           </plugin>
           <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>findbugs-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>findbugs</goal>
-                </goals>
-                <phase>prepare-package</phase>
-              </execution>
-            </executions>
-            <configuration>
-              <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
-            </configuration>
-          </plugin>
-          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-dependency-plugin</artifactId>
             <executions>
@@ -297,11 +282,6 @@
                         <path refid="maven.compile.classpath"/>
                       </classpath>
                     </javadoc>
-
-                    <xslt style="${env.FINDBUGS_HOME}/src/xsl/default.xsl"
-                          in="${project.build.directory}/findbugsXml.xml"
-                          out="${project.build.directory}/site/findbugs.html"/>
-
                   </target>
                 </configuration>
               </execution>
