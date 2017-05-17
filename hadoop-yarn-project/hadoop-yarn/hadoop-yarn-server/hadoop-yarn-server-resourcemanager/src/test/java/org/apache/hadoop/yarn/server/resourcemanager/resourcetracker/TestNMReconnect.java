@@ -205,8 +205,6 @@ public class TestNMReconnect {
     nm1.registerNode();
     rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
 
-    rm.getRMContext().getNodesListManager().getHostsReader().
-        getExcludedHosts().add("127.0.0.1");
     rm.getRMContext().getDispatcher().getEventHandler().handle(
         new RMNodeEvent(nm1.getNodeId(),
             RMNodeEventType.GRACEFUL_DECOMMISSION));
