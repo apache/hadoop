@@ -18,8 +18,6 @@
 
 package org.apache.slider.common;
 
-import org.apache.hadoop.yarn.api.ApplicationConstants;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -158,12 +156,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
    */
   String HISTORY_FILENAME_GLOB_PATTERN = HISTORY_FILENAME_PREFIX +"*."+
                                     HISTORY_FILENAME_SUFFIX;
-  /**
-   * XML resource listing the standard Slider providers
-   * {@value}
-   */
-  String SLIDER_XML = "org/apache/slider/slider.xml";
-  
+
   String CLUSTER_DIRECTORY = "cluster";
 
   String PACKAGE_DIRECTORY = "package";
@@ -311,5 +304,12 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String APP_RESOURCES = "application.resources";
   String APP_RESOURCES_DIR = "app/resources";
 
-  String APP_PACKAGES_DIR = "app/packages";
+  String APP_INSTALL_DIR = "app/install";
+
+  String OUT_FILE = "stdout.txt";
+  String ERR_FILE = "stderr.txt";
+
+  String QUICK_LINKS = "quicklinks";
+
+  String KEY_CONTAINER_LAUNCH_DELAY = "container.launch.delay.sec";
 }

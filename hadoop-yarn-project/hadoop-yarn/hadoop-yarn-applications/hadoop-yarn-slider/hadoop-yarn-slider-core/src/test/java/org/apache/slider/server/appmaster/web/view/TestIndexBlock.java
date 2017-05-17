@@ -22,12 +22,10 @@ import com.google.inject.Injector;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.model.appstate.BaseMockAppStateAATest;
 import org.apache.slider.server.appmaster.model.mock.MockContainer;
 import org.apache.slider.server.appmaster.model.mock.MockContainerId;
 import org.apache.slider.server.appmaster.model.mock.MockNodeId;
-import org.apache.slider.server.appmaster.model.mock.MockProviderService;
 import org.apache.slider.server.appmaster.model.mock.MockResource;
 import org.apache.slider.server.appmaster.state.ContainerOutcome;
 import org.apache.slider.server.appmaster.state.OutstandingRequest;
@@ -58,14 +56,12 @@ public class TestIndexBlock extends BaseMockAppStateAATest {
   public void setup() throws Exception {
     super.setup();
     assertNotNull(appState);
-    ProviderService providerService = new MockProviderService();
     ProviderAppState providerAppState = new ProviderAppState(
         "undefined",
         appState);
 
     WebAppApiImpl inst = new WebAppApiImpl(
         providerAppState,
-        providerService,
         null,
         METRICS, null);
 

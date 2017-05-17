@@ -15,33 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.slider.providers.docker;
+package org.apache.slider.providers.tarball;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.slider.api.resource.Component;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.launch.ContainerLauncher;
 import org.apache.slider.providers.AbstractProviderService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-public class DockerProviderService extends AbstractProviderService
-    implements DockerKeys {
+public class TarballProviderService extends AbstractProviderService {
 
-  protected static final Logger log =
-      LoggerFactory.getLogger(DockerProviderService.class);
-
-  protected DockerProviderService() {
-    super(DockerProviderService.class.getSimpleName());
+  protected TarballProviderService() {
+    super(TarballProviderService.class.getSimpleName());
   }
 
+  @Override
   public void processArtifact(ContainerLauncher launcher, Component
       component, SliderFileSystem fileSystem) throws IOException {
-    launcher.setYarnDockerMode(true);
-    launcher.setDockerImage(component.getArtifact().getId());
-    launcher.setDockerNetwork(component.getConfiguration()
-        .getProperty(DOCKER_NETWORK, DEFAULT_DOCKER_NETWORK));
-    launcher.setRunPrivilegedContainer(component.getRunPrivilegedContainer());
+    Path artifact =  new Path(component.getArtifact().getId());
+    if (!fileSystem.isFile(artifact)) {
+      throw new IOException("Package doesn't exist as a resource: " +
+          artifact.toString());
+    }
+    log.info("Adding resource {}", artifact.toString());
+    LocalResourceType type = LocalResourceType.ARCHIVE;
+    LocalResource packageResource = fileSystem.createAmResource(
+        artifact, type);
+    launcher.addLocalResource(APP_INSTALL_DIR, packageResource);
   }
 }

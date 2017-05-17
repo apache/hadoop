@@ -15,25 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.slider.providers.docker;
+package org.apache.slider.providers.tarball;
 
 import org.apache.slider.providers.AbstractClientProvider;
 import org.apache.slider.providers.ProviderService;
 import org.apache.slider.providers.SliderProviderFactory;
 
-public class DockerProviderFactory extends SliderProviderFactory {
+public class TarballProviderFactory extends SliderProviderFactory {
   private static final SliderProviderFactory FACTORY = new
-      DockerProviderFactory();
+      TarballProviderFactory();
 
-  private DockerProviderFactory() {
+  private TarballProviderFactory() {
   }
 
   private static class Client {
-    static final AbstractClientProvider PROVIDER = new DockerClientProvider();
+    static final AbstractClientProvider PROVIDER = new TarballClientProvider();
   }
 
   private static class Server {
-    static final ProviderService PROVIDER = new DockerProviderService();
+    static final ProviderService PROVIDER = new TarballProviderService();
   }
 
   @Override
