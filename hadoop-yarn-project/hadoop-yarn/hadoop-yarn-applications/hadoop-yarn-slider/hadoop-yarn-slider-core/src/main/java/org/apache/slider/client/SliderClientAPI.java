@@ -42,7 +42,6 @@ import org.apache.slider.common.params.ActionThawArgs;
 import org.apache.slider.common.params.ActionUpgradeArgs;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.SliderException;
-import org.apache.slider.providers.AbstractClientProvider;
 
 import java.io.IOException;
 
@@ -61,15 +60,6 @@ public interface SliderClientAPI extends Service {
    */
   int actionAmSuicide(String clustername,
       ActionAMSuicideArgs args) throws YarnException, IOException;
-
-  /**
-   * Get the provider for this cluster
-   * @param provider the name of the provider
-   * @return the provider instance
-   * @throws SliderException problems building the provider
-   */
-  AbstractClientProvider createClientProvider(String provider)
-    throws SliderException;
 
   /**
    * Manage keytabs leveraged by slider

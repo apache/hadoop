@@ -15,39 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.slider.providers.docker;
+package org.apache.slider.providers;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.api.resource.ConfigFile;
-import org.apache.slider.common.SliderKeys;
-import org.apache.slider.providers.AbstractClientProvider;
-import org.apache.slider.util.RestApiErrorMessages;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 
-public class DockerClientProvider extends AbstractClientProvider
-    implements SliderKeys {
+public class DefaultClientProvider extends AbstractClientProvider {
 
-  public DockerClientProvider() {
-    super();
+  public DefaultClientProvider() {
   }
 
   @Override
   public void validateArtifact(Artifact artifact, FileSystem fileSystem) {
-    if (artifact == null) {
-      throw new IllegalArgumentException(
-          RestApiErrorMessages.ERROR_ARTIFACT_INVALID);
-    }
-    if (StringUtils.isEmpty(artifact.getId())) {
-      throw new IllegalArgumentException(
-          RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
-    }
   }
 
   @Override
   protected void validateConfigFile(ConfigFile configFile, FileSystem
       fileSystem) throws IOException {
+    // validate dest_file is not absolute
+    if (Paths.get(configFile.getDestFile()).isAbsolute()) {
+      throw new IllegalArgumentException(
+          "Dest_file must not be absolute path: " + configFile.getDestFile());
+    }
   }
 }

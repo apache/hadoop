@@ -64,7 +64,6 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
@@ -342,7 +341,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * ProviderService of this cluster
    */
   @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
-  private ProviderService providerService;
+  private List<ProviderService> providers = new ArrayList<>();
 
   /**
    * The YARN registry service
@@ -523,8 +522,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   public Configuration bindArgs(Configuration config, String... args) throws Exception {
     // let the superclass process it
     Configuration superConf = super.bindArgs(config, args);
-    // add the slider XML config
-    ConfigHelper.injectSliderXMLResource();
 
     //yarn-ify
     YarnConfiguration yarnConfiguration = new YarnConfiguration(
@@ -603,12 +600,15 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     // obtain security state
     // set the global security flag for the instance definition
 
-    //get our provider
-    SliderProviderFactory factory =
-      SliderProviderFactory.createSliderProviderFactory("docker");
-    providerService = factory.createServerProvider();
-    // init the provider BUT DO NOT START IT YET
-    initAndAddService(providerService);
+    // initialize our providers
+    for (Component component : application.getComponents()) {
+      SliderProviderFactory factory = SliderProviderFactory
+          .createSliderProviderFactory(component.getArtifact());
+      ProviderService providerService = factory.createServerProvider();
+      // init the provider BUT DO NOT START IT YET
+      initAndAddService(providerService);
+      providers.add(providerService);
+    }
 
     InetSocketAddress rmSchedulerAddress = SliderUtils.getRmSchedulerAddress(serviceConf);
     log.info("RM is at {}", rmSchedulerAddress);
@@ -667,7 +667,9 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         serviceTimelinePublisher.init(getConfig());
         serviceTimelinePublisher.start();
 
-        providerService.setServiceTimelinePublisher(serviceTimelinePublisher);
+        for (ProviderService providerService : providers) {
+          providerService.setServiceTimelinePublisher(serviceTimelinePublisher);
+        }
         appState.setServiceTimelinePublisher(serviceTimelinePublisher);
         log.info("ServiceTimelinePublisher started.");
       }
@@ -707,7 +709,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       WebAppApiImpl webAppApi =
           new WebAppApiImpl(
               stateForProviders,
-              providerService, registryOperations,
+              registryOperations,
               metricsAndMonitoring,
               actionQueues);
       initAMFilterOptions(serviceConf);
@@ -843,13 +845,14 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     //launcher service
     launchService = new RoleLaunchService(actionQueues,
-                                          providerService,
                                           fs, envVars);
 
     deployChildService(launchService);
 
     //Give the provider access to the state, and AM
-    providerService.setAMState(stateForProviders);
+    for (ProviderService providerService : providers) {
+      providerService.setAMState(stateForProviders);
+    }
 
     // chaos monkey
     maybeStartMonkey();
@@ -1119,7 +1122,9 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         SliderKeys.APP_TYPE,
         instanceName,
         appAttemptID);
-    providerService.bindToYarnRegistry(yarnRegistryOperations);
+    for (ProviderService providerService : providers) {
+      providerService.bindToYarnRegistry(yarnRegistryOperations);
+    }
 
     // Yarn registry
     ServiceRecord serviceRecord = new ServiceRecord();
@@ -1859,7 +1864,9 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   protected synchronized void launchProviderService()
       throws IOException, SliderException {
     // didn't start, so don't register
-    providerService.start();
+    for (ProviderService providerService : providers) {
+      providerService.start();
+    }
     // and send the started event ourselves
     eventCallbackEvent(null);
   }
@@ -1959,19 +1966,23 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       ContainerStatus containerStatus) {
     LOG_YARN.debug("Container Status: id={}, status={}", containerId,
         containerStatus);
+    RoleInstance cinfo = appState.getOwnedContainer(containerId);
+    if (cinfo == null) {
+      LOG_YARN.error("Owned container not found for {}", containerId);
+      return;
+    }
+    ProviderService providerService = SliderProviderFactory
+        .getProviderService(cinfo.providerRole.component.getArtifact());
     if (providerService.processContainerStatus(containerId, containerStatus)) {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
       }
-      RoleInstance cinfo = appState.getOwnedContainer(containerId);
-      if (cinfo != null) {
-        LOG_YARN.info("Re-requesting status for role {}, {}",
-            cinfo.role, containerId);
-        //trigger another async container status
-        nmClientAsync.getContainerStatusAsync(containerId,
-            cinfo.container.getNodeId());
-      }
+      LOG_YARN.info("Re-requesting status for role {}, {}",
+          cinfo.role, containerId);
+      //trigger another async container status
+      nmClientAsync.getContainerStatusAsync(containerId,
+          cinfo.container.getNodeId());
     } else if (timelineServiceEnabled) {
       RoleInstance instance = appState.getOwnedContainer(containerId);
       if (instance != null) {
@@ -1995,11 +2006,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   @Override //  NMClientAsync.CallbackHandler 
   public void onStopContainerError(ContainerId containerId, Throwable t) {
     LOG_YARN.warn("Failed to stop Container {}", containerId);
-  }
-
-
-  public ProviderService getProviderService() {
-    return providerService;
   }
 
   /**

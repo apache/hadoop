@@ -17,7 +17,6 @@
 package org.apache.slider.server.appmaster.web;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
-import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
@@ -33,32 +32,24 @@ public class WebAppApiImpl implements WebAppApi {
   private static final Logger log = LoggerFactory.getLogger(WebAppApiImpl.class);
 
   protected final StateAccessForProviders appState;
-  protected final ProviderService provider;
   private final RegistryOperations registryOperations;
   private final MetricsAndMonitoring metricsAndMonitoring;
   private final QueueAccess queues;
 
   public WebAppApiImpl(StateAccessForProviders appState,
-      ProviderService provider, RegistryOperations registryOperations,
+      RegistryOperations registryOperations,
       MetricsAndMonitoring metricsAndMonitoring, QueueAccess queues) {
     checkNotNull(appState);
-    checkNotNull(provider);
     this.queues = queues;
 
     this.registryOperations = registryOperations;
     this.appState = appState;
-    this.provider = provider;
     this.metricsAndMonitoring = metricsAndMonitoring;
   }
 
   @Override
   public StateAccessForProviders getAppState() {
     return appState;
-  }
-
-  @Override
-  public ProviderService getProviderService() {
-    return provider;
   }
 
   @Override

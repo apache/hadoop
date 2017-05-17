@@ -18,11 +18,16 @@
 
 package org.apache.slider.providers;
 
-import org.apache.slider.providers.docker.DockerKeys;
+import org.apache.slider.api.resource.Artifact;
+import org.apache.slider.api.resource.Artifact.TypeEnum;
+import org.apache.slider.providers.docker.DockerClientProvider;
 import org.apache.slider.providers.docker.DockerProviderFactory;
+import org.apache.slider.providers.docker.DockerProviderService;
+import org.apache.slider.providers.tarball.TarballClientProvider;
+import org.apache.slider.providers.tarball.TarballProviderFactory;
+import org.apache.slider.providers.tarball.TarballProviderService;
 import org.junit.Test;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -30,25 +35,38 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestProviderFactory {
   @Test
-  public void testLoadAgentProvider() throws Throwable {
+  public void testDockerFactory() throws Throwable {
     SliderProviderFactory factory = SliderProviderFactory
-        .createSliderProviderFactory(DockerKeys.PROVIDER_DOCKER);
+        .createSliderProviderFactory(new Artifact().type(TypeEnum.DOCKER));
     assertTrue(factory instanceof DockerProviderFactory);
+    assertTrue(factory.createClientProvider() instanceof DockerClientProvider);
+    assertTrue(factory.createServerProvider() instanceof DockerProviderService);
+    assertTrue(SliderProviderFactory.getProviderService(new Artifact()
+        .type(TypeEnum.DOCKER)) instanceof DockerProviderService);
   }
 
   @Test
-  public void testCreateClientProvider() throws Throwable {
+  public void testTarballFactory() throws Throwable {
     SliderProviderFactory factory = SliderProviderFactory
-        .createSliderProviderFactory(DockerKeys.PROVIDER_DOCKER);
-    assertNotNull(factory.createClientProvider());
+        .createSliderProviderFactory(new Artifact().type(TypeEnum.TARBALL));
+    assertTrue(factory instanceof TarballProviderFactory);
+    assertTrue(factory.createClientProvider() instanceof TarballClientProvider);
+    assertTrue(factory.createServerProvider() instanceof
+        TarballProviderService);
+    assertTrue(SliderProviderFactory.getProviderService(new Artifact()
+        .type(TypeEnum.TARBALL)) instanceof TarballProviderService);
   }
 
   @Test
-  public void testCreateProviderByClassname() throws Throwable {
+  public void testDefaultFactory() throws Throwable {
     SliderProviderFactory factory = SliderProviderFactory
-        .createSliderProviderFactory(DockerKeys.PROVIDER_DOCKER);
-    assertNotNull(factory.createServerProvider());
-    assertTrue(factory instanceof DockerProviderFactory);
+        .createSliderProviderFactory(null);
+    assertTrue(factory instanceof DefaultProviderFactory);
+    assertTrue(factory.createClientProvider() instanceof DefaultClientProvider);
+    assertTrue(factory.createServerProvider() instanceof
+        DefaultProviderService);
+    assertTrue(SliderProviderFactory.getProviderService(null) instanceof
+        DefaultProviderService);
   }
 
 }

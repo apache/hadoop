@@ -133,7 +133,6 @@ import org.apache.slider.core.zk.BlockingZKWatcher;
 import org.apache.slider.core.zk.ZKIntegration;
 import org.apache.slider.providers.AbstractClientProvider;
 import org.apache.slider.providers.ProviderUtils;
-import org.apache.slider.providers.SliderProviderFactory;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
 import org.apache.slider.server.services.utility.AbstractSliderLaunchedService;
@@ -257,8 +256,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     config = super.bindArgs(config, args);
     serviceArgs = new ClientArgs(args);
     serviceArgs.parse();
-    // add the slider XML config
-    ConfigHelper.injectSliderXMLResource();
     // yarn-ify
     YarnConfiguration yarnConfiguration = new YarnConfiguration(config);
     return patchConfiguration(yarnConfiguration);
@@ -622,14 +619,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return EXIT_SUCCESS;
   }
 
-  @Override
-  public AbstractClientProvider createClientProvider(String provider)
-    throws SliderException {
-    SliderProviderFactory factory =
-      SliderProviderFactory.createSliderProviderFactory(provider);
-    return factory.createClientProvider();
-  }
-
   private Application getApplicationFromArgs(String clusterName,
       AbstractClusterBuildingActionArgs args) throws IOException {
     File file = args.getAppDef();
@@ -893,7 +882,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   private void persistApp(Path appDir, Application application)
       throws IOException, SliderException {
-    FsPermission appDirPermission = new FsPermission("777");
+    FsPermission appDirPermission = new FsPermission("750");
     sliderFileSystem.createWithPermissions(appDir, appDirPermission);
     Path appJson = new Path(appDir, application.getName() + ".json");
     jsonSerDeser
@@ -1190,17 +1179,18 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       }
     }
 
+    // TODO handle client install
     // Only INSTALL is supported
-    AbstractClientProvider
-        provider = createClientProvider(SliderProviderFactory.DEFAULT_CLUSTER_TYPE);
-    provider.processClientOperation(sliderFileSystem,
-        getRegistryOperations(),
-        getConfig(),
-        "INSTALL",
-        clientInfo.installLocation,
-        pkgFile,
-        config,
-        clientInfo.name);
+    //    ClientProvider
+    //        provider = createClientProvider(SliderProviderFactory.DEFAULT_CLUSTER_TYPE);
+    //    provider.processClientOperation(sliderFileSystem,
+    //        getRegistryOperations(),
+    //        getConfig(),
+    //        "INSTALL",
+    //        clientInfo.installLocation,
+    //        pkgFile,
+    //        config,
+    //        clientInfo.name);
     return EXIT_SUCCESS;
   }
 

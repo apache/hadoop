@@ -18,93 +18,60 @@
 
 package org.apache.slider.providers;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.slider.common.SliderKeys;
-import org.apache.slider.common.SliderXmlConfKeys;
-import org.apache.slider.core.exceptions.BadClusterStateException;
+import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.core.exceptions.SliderException;
-import org.apache.slider.providers.agent.AgentKeys;
+import org.apache.slider.providers.docker.DockerProviderFactory;
+import org.apache.slider.providers.tarball.TarballProviderFactory;
+import org.apache.slider.util.RestApiErrorMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Base class for factories
+ * Base class for factories.
  */
-public abstract class SliderProviderFactory extends Configured {
-
-  public static final String DEFAULT_CLUSTER_TYPE = AgentKeys.PROVIDER_AGENT;
-  
+public abstract class SliderProviderFactory {
   protected static final Logger log =
-    LoggerFactory.getLogger(SliderProviderFactory.class);
-  public static final String PROVIDER_NOT_FOUND =
-    "Unable to find provider of application type %s";
+      LoggerFactory.getLogger(SliderProviderFactory.class);
 
-  public SliderProviderFactory(Configuration conf) {
-    super(conf);
-  }
-
-  protected SliderProviderFactory() {
-  }
+  protected SliderProviderFactory() {}
 
   public abstract AbstractClientProvider createClientProvider();
 
   public abstract ProviderService createServerProvider();
 
-  /**
-   * Create a provider for a specific application
-   * @param application app
-   * @return app instance
-   * @throws SliderException on any instantiation problem
-   */
-  public static SliderProviderFactory createSliderProviderFactory(String application) throws
-      SliderException {
-    Configuration conf = loadSliderConfiguration();
-    if (application == null) {
-      application = DEFAULT_CLUSTER_TYPE;
-    }
-    String providerKey =
-      String.format(SliderXmlConfKeys.KEY_PROVIDER, application);
-    if (application.contains(".")) {
-      log.debug("Treating {} as a classname", application);
-      String name = "classname.key";
-      conf.set(name, application);
-      providerKey = name;
-    }
-    
-    Class<? extends SliderProviderFactory> providerClass;
-    try {
-      providerClass = conf.getClass(providerKey, null, SliderProviderFactory.class);
-    } catch (RuntimeException e) {
-      throw new BadClusterStateException(e, "Failed to load provider %s: %s", application, e);
-    }
-    if (providerClass == null) {
-      throw new BadClusterStateException(PROVIDER_NOT_FOUND, application);
-    }
+  public static synchronized ProviderService getProviderService(Artifact
+      artifact) {
+    return createSliderProviderFactory(artifact).createServerProvider();
+  }
 
-    Exception ex;
-    try {
-      SliderProviderFactory providerFactory = providerClass.newInstance();
-      providerFactory.setConf(conf);
-      return providerFactory;
-    } catch (Exception e) {
-      ex = e;
-    }
-    //by here the operation failed and ex is set to the value 
-    throw new BadClusterStateException(ex,
-                              "Failed to create an instance of %s : %s",
-                              providerClass,
-                              ex);
+  public static synchronized AbstractClientProvider getClientProvider(Artifact
+      artifact) {
+    return createSliderProviderFactory(artifact).createClientProvider();
   }
 
   /**
-   * Load a configuration with the {@link SliderKeys#SLIDER_XML} resource
-   * included
-   * @return a configuration instance
+   * Create a provider for a specific application
+   * @param artifact artifact
+   * @return provider factory
+   * @throws SliderException on any instantiation problem
    */
-  public static Configuration loadSliderConfiguration() {
-    Configuration conf = new Configuration();
-    conf.addResource(SliderKeys.SLIDER_XML);
-    return conf;
+  public static synchronized SliderProviderFactory createSliderProviderFactory(
+      Artifact artifact) {
+    if (artifact == null || artifact.getType() == null) {
+      log.info("Loading service provider type default");
+      return DefaultProviderFactory.getInstance();
+    }
+    log.info("Loading service provider type {}", artifact.getType());
+    switch (artifact.getType()) {
+      // TODO add handling for custom types?
+      // TODO handle application
+      case DOCKER:
+        return DockerProviderFactory.getInstance();
+      case TARBALL:
+        return TarballProviderFactory.getInstance();
+      default:
+        throw new IllegalArgumentException(
+            RestApiErrorMessages.ERROR_ARTIFACT_INVALID);
+    }
   }
 }

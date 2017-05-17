@@ -15,10 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.slider.providers.docker;
+package org.apache.slider.providers.tarball;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.common.SliderKeys;
@@ -26,16 +27,17 @@ import org.apache.slider.providers.AbstractClientProvider;
 import org.apache.slider.util.RestApiErrorMessages;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 
-public class DockerClientProvider extends AbstractClientProvider
+public class TarballClientProvider extends AbstractClientProvider
     implements SliderKeys {
 
-  public DockerClientProvider() {
-    super();
+  public TarballClientProvider() {
   }
 
   @Override
-  public void validateArtifact(Artifact artifact, FileSystem fileSystem) {
+  public void validateArtifact(Artifact artifact, FileSystem fs)
+      throws IOException {
     if (artifact == null) {
       throw new IllegalArgumentException(
           RestApiErrorMessages.ERROR_ARTIFACT_INVALID);
@@ -44,10 +46,20 @@ public class DockerClientProvider extends AbstractClientProvider
       throw new IllegalArgumentException(
           RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
     }
+    Path p = new Path(artifact.getId());
+    if (!fs.exists(p)) {
+      throw new IllegalArgumentException( "Artifact tarball does not exist "
+          + artifact.getId());
+    }
   }
 
   @Override
   protected void validateConfigFile(ConfigFile configFile, FileSystem
       fileSystem) throws IOException {
+    // validate dest_file is not absolute
+    if (Paths.get(configFile.getDestFile()).isAbsolute()) {
+      throw new IllegalArgumentException(
+          "Dest_file must not be absolute path: " + configFile.getDestFile());
+    }
   }
 }
