@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
@@ -71,7 +72,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
   public void testOutlierIsDetected() throws Exception {
     final String slowNodeName = "SlowNode";
 
-    DataNodePeerMetrics peerMetrics = new DataNodePeerMetrics(
+    final DataNodePeerMetrics peerMetrics = new DataNodePeerMetrics(
         "PeerMetrics-For-Test", WINDOW_INTERVAL_SECONDS,
         ROLLING_AVERAGE_WINDOWS);
 
@@ -80,6 +81,13 @@ public class TestDataNodeOutlierDetectionViaMetrics {
 
     // Trigger a snapshot.
     peerMetrics.dumpSendPacketDownstreamAvgInfoAsJson();
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return peerMetrics.getOutliers().size() > 0;
+      }
+    }, 500, 100_000);
 
     final Map<String, Double> outliers = peerMetrics.getOutliers();
     LOG.info("Got back outlier nodes: {}", outliers);
