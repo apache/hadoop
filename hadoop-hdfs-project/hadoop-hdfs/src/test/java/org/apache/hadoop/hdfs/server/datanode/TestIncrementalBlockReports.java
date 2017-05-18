@@ -159,8 +159,8 @@ public class TestIncrementalBlockReports {
           anyString(),
           any(StorageReceivedDeletedBlocks[].class));
 
-      // Trigger a block report, this also triggers an IBR.
-      DataNodeTestUtils.triggerBlockReport(singletonDn);
+      // Trigger a heartbeat, this also triggers an IBR.
+      DataNodeTestUtils.triggerHeartbeat(singletonDn);
       Thread.sleep(2000);
 
       // Ensure that the deleted block is reported.

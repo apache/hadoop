@@ -82,8 +82,6 @@ class BPServiceActor implements Runnable {
   HAServiceState state;
 
   final BPOfferService bpos;
-  
-  volatile long lastDeletedReport = 0;
 
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
@@ -385,10 +383,10 @@ class BPServiceActor implements Runnable {
   @VisibleForTesting
   void triggerDeletionReportForTests() {
     synchronized (pendingIncrementalBRperStorage) {
-      lastDeletedReport = 0;
+      sendImmediateIBR = true;
       pendingIncrementalBRperStorage.notifyAll();
 
-      while (lastDeletedReport == 0) {
+      while (sendImmediateIBR) {
         try {
           pendingIncrementalBRperStorage.wait(100);
         } catch (InterruptedException e) {
@@ -421,7 +419,6 @@ class BPServiceActor implements Runnable {
    */
   List<DatanodeCommand> blockReport() throws IOException {
     // send block report if timer has expired.
-    final long startTime = scheduler.monotonicNow(); 
     if (!scheduler.isBlockReportDue()) {
       return null;
     }
@@ -433,7 +430,6 @@ class BPServiceActor implements Runnable {
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
     reportReceivedDeletedBlocks();
-    lastDeletedReport = startTime;
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -624,7 +620,6 @@ class BPServiceActor implements Runnable {
    */
   private void offerService() throws Exception {
     LOG.info("For namenode " + nnAddr + " using"
-        + " DELETEREPORT_INTERVAL of " + dnConf.deleteReportInterval + " msec "
         + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msec"
         + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msec"
         + " Initial delay: " + dnConf.initialBlockReportDelay + "msec"
@@ -679,10 +674,8 @@ class BPServiceActor implements Runnable {
             }
           }
         }
-        if (sendImmediateIBR ||
-            (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
+        if (sendImmediateIBR || sendHeartbeat) {
           reportReceivedDeletedBlocks();
-          lastDeletedReport = startTime;
         }
 
         List<DatanodeCommand> cmds = blockReport();

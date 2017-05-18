@@ -88,6 +88,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11785. Backport HDFS-9902 to branch-2.7: Support different values of
     dfs.datanode.du.reserved per storage type. (Brahma Reddy Battula)
 
+    HDFS-7990. IBR delete ack should not be delayed. (Daryn Sharp.
+    Backport HDFS-11838 by Vinitha Gankidi)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
