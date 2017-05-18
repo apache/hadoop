@@ -145,6 +145,16 @@ public class SLSRunner extends Configured implements Tool {
     init(tempConf);
   }
 
+  @Override
+  public void setConf(Configuration conf) {
+    if (null != conf) {
+      // Override setConf to make sure all conf added load sls-runner.xml, see
+      // YARN-6560
+      conf.addResource("sls-runner.xml");
+    }
+    super.setConf(conf);
+  }
+
   private void init(Configuration tempConf) throws ClassNotFoundException {
     nmMap = new HashMap<>();
     queueAppNumMap = new HashMap<>();
@@ -152,8 +162,7 @@ public class SLSRunner extends Configured implements Tool {
     amClassMap = new HashMap<>();
 
     // runner configuration
-    tempConf.addResource("sls-runner.xml");
-    super.setConf(tempConf);
+    setConf(tempConf);
 
     // runner
     int poolSize = tempConf.getInt(SLSConfiguration.RUNNER_POOL_SIZE,
