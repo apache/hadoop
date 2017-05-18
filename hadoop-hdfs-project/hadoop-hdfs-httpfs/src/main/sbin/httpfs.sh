@@ -68,6 +68,9 @@ if [[ "${1}" = "start" || "${1}" = "run" ]]; then
   catalina_set_property "httpfs.http.port" "${HTTPFS_HTTP_PORT}"
   catalina_set_property "httpfs.http.hostname" "${HTTPFS_HTTP_HOSTNAME}"
   catalina_set_property "httpfs.ssl.enabled" "${HTTPFS_SSL_ENABLED}"
+  catalina_set_property "httpfs.ssl.client.auth" "${HTTPFS_SSL_CLIENT_AUTH}"
+  catalina_set_property "httpfs.ssl.enabled.protocols" \
+    "${HTTPFS_SSL_ENABLED_PROTOCOLS}"
   catalina_set_property "httpfs.ssl.ciphers" "${HTTPFS_SSL_CIPHERS}"
   catalina_set_property "httpfs.ssl.keystore.file" \
     "${HTTPFS_SSL_KEYSTORE_FILE}"
