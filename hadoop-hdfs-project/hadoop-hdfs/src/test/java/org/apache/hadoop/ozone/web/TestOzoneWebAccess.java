@@ -27,9 +27,9 @@ import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -98,7 +98,7 @@ public class TestOzoneWebAccess {
   public void testOzoneRequest() throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
-    HttpClient client = new DefaultHttpClient();
+    CloseableHttpClient client = HttpClients.createDefault();
     String volumeName = getRequestID().toLowerCase(Locale.US);
     try {
       HttpPost httppost = new HttpPost(
@@ -117,7 +117,7 @@ public class TestOzoneWebAccess {
       assertEquals(response.toString(), HTTP_CREATED,
           response.getStatusLine().getStatusCode());
     } finally {
-      client.getConnectionManager().shutdown();
+      client.close();
     }
   }
 }
