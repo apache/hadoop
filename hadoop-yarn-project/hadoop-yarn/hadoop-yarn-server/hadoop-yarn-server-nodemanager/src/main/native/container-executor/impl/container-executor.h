@@ -66,7 +66,8 @@ enum errorcodes {
   DOCKER_RUN_FAILED=29,
   ERROR_OPENING_FILE = 30,
   ERROR_READING_FILE = 31,
-  FEATURE_DISABLED = 32
+  FEATURE_DISABLED = 32,
+  ERROR_SANITIZING_DOCKER_COMMAND = 33
 };
 
 enum operations {
@@ -288,3 +289,8 @@ int traffic_control_read_stats(char *command_file);
  * Run a docker command passing the command file as an argument
  */
 int run_docker(const char *command_file);
+
+/**
+ * Sanitize docker commands. Returns NULL if there was any failure.
+*/
+char* sanitize_docker_command(const char *line);
