@@ -109,6 +109,10 @@ public class DistCpConstants {
   /* DistCp CopyListing class override param */
   public static final String CONF_LABEL_COPY_LISTING_CLASS = "distcp.copy.listing.class";
 
+  /* DistCp Copy Buffer Size */
+  public static final String CONF_LABEL_COPY_BUFFER_SIZE =
+      "distcp.copy.buffer.size";
+
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
    */
@@ -141,4 +145,6 @@ public class DistCpConstants {
   public static final String HDFS_RESERVED_RAW_DIRECTORY_NAME = "/.reserved/raw";
 
   static final String HDFS_DISTCP_DIFF_DIRECTORY_NAME = ".distcp.diff.tmp";
+
+  public static final int COPY_BUFFER_SIZE_DEFAULT = 8 * 1024;
 }

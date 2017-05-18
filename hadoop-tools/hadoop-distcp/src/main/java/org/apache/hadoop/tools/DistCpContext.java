@@ -175,6 +175,10 @@ public class DistCpContext {
     return options.getBlocksPerChunk() > 0;
   }
 
+  public int getCopyBufferSize() {
+    return options.getCopyBufferSize();
+  }
+
   public void setTargetPathExists(boolean targetPathExists) {
     this.targetPathExists = targetPathExists;
   }

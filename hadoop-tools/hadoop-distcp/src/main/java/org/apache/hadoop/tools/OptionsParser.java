@@ -213,6 +213,18 @@ public class OptionsParser {
       }
     }
 
+    if (command.hasOption(DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch())) {
+      final String copyBufferSizeStr = getVal(command,
+          DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch().trim());
+      try {
+        int copyBufferSize = Integer.parseInt(copyBufferSizeStr);
+        builder.withCopyBufferSize(copyBufferSize);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("copyBufferSize is invalid: "
+            + copyBufferSizeStr, e);
+      }
+    }
+
     return builder.build();
   }
 
