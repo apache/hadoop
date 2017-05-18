@@ -18,20 +18,29 @@
 
 package org.apache.hadoop.ozone.web.storage;
 
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetKeyResponseProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
+import org.apache.hadoop.hdfs.ozone.protocol.proto
+    .ContainerProtos.ChunkInfo;
+import org.apache.hadoop.hdfs.ozone.protocol.proto
+    .ContainerProtos.GetKeyResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto
+    .ContainerProtos.KeyData;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset
+    .LengthInputStream;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ksm.protocolPB
+    .KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts.Versioning;
+import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocolPB
+    .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
@@ -59,7 +68,6 @@ import java.util.List;
 
 import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
 import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.getKey;
-import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.putKey;
 
 /**
  * A {@link StorageHandler} implementation that distributes object storage
@@ -167,22 +175,38 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void createBucket(final BucketArgs args)
       throws IOException, OzoneException {
-    String containerKey = buildContainerKey(args.getVolumeName(),
-        args.getBucketName());
-    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
-    try {
-      BucketInfo bucket = new BucketInfo();
-      bucket.setVolumeName(args.getVolumeName());
-      bucket.setBucketName(args.getBucketName());
-      bucket.setAcls(args.getAddAcls());
-      bucket.setVersioning(args.getVersioning());
-      bucket.setStorageType(args.getStorageType());
-      KeyData containerKeyData = fromBucketToContainerKeyData(
-          xceiverClient.getPipeline().getContainerName(), containerKey, bucket);
-      putKey(xceiverClient, containerKeyData, args.getRequestID());
-    } finally {
-      xceiverClientManager.releaseClient(xceiverClient);
+    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    args.getAddAcls().forEach(acl ->
+        builder.addAddAcl(KSMPBHelper.convertOzoneAcl(acl)));
+    args.getRemoveAcls().forEach(acl ->
+        builder.addRemoveAcl(KSMPBHelper.convertOzoneAcl(acl)));
+    builder.setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setIsVersionEnabled(getBucketVersioningProtobuf(
+            args.getVersioning()))
+        .setStorageType(args.getStorageType());
+    keySpaceManagerClient.createBucket(builder.build());
+  }
+
+  /**
+   * Converts OzoneConts.Versioning enum to boolean.
+   *
+   * @param version
+   * @return corresponding boolean value
+   */
+  private boolean getBucketVersioningProtobuf(
+      Versioning version) {
+    if(version != null) {
+      switch(version) {
+      case ENABLED:
+        return true;
+      case NOT_DEFINED:
+      case DISABLED:
+      default:
+        return false;
+      }
     }
+    return false;
   }
 
   @Override

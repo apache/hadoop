@@ -29,9 +29,11 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 public class KSMMetrics {
   // KSM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
+  private @Metric MutableCounterLong numBucketCreates;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
+  private @Metric MutableCounterLong numBucketCreateFails;
 
   public KSMMetrics() {
   }
@@ -47,8 +49,16 @@ public class KSMMetrics {
     numVolumeCreates.incr();
   }
 
+  public void incNumBucketCreates() {
+    numBucketCreates.incr();
+  }
+
   public void incNumVolumeCreateFails() {
     numVolumeCreates.incr();
+  }
+
+  public void incNumBucketCreateFails() {
+    numBucketCreateFails.incr();
   }
 
   @VisibleForTesting
@@ -57,7 +67,18 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumBucketCreates() {
+    return numBucketCreates.value();
+  }
+
+  @VisibleForTesting
   public long getNumVolumeCreateFails() {
     return numVolumeCreateFails.value();
   }
+
+  @VisibleForTesting
+  public long getNumBucketCreateFails() {
+    return numBucketCreateFails.value();
+  }
+
 }

@@ -93,6 +93,11 @@ public final class OzoneConsts {
   public static final String OZONE_HANDLER_DISTRIBUTED = "distributed";
   public static final String OZONE_HANDLER_LOCAL = "local";
 
+  /**
+   * Ozone metadata key delimiter.
+   */
+  public static final String DB_KEY_DELIMITER = "/";
+
   private OzoneConsts() {
     // Never Constructed
   }

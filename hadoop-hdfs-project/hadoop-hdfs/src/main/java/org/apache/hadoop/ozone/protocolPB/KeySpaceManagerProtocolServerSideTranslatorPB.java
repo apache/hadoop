@@ -18,11 +18,16 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ksm.protocol.KeyspaceManagerProtocol;
+import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CreateBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -56,19 +61,19 @@ import java.io.IOException;
 /**
  * This class is the server-side translator that forwards requests received on
  * {@link org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB} to the
- * KeyspaceManagerService server implementation.
+ * KeySpaceManagerService server implementation.
  */
-public class KeyspaceManagerProtocolServerSideTranslatorPB implements
+public class KeySpaceManagerProtocolServerSideTranslatorPB implements
     KeySpaceManagerProtocolPB {
-  private final KeyspaceManagerProtocol impl;
+  private final KeySpaceManagerProtocol impl;
 
   /**
    * Constructs an instance of the server handler.
    *
    * @param impl KeySpaceManagerProtocolPB
    */
-  public KeyspaceManagerProtocolServerSideTranslatorPB(
-      KeyspaceManagerProtocol impl) {
+  public KeySpaceManagerProtocolServerSideTranslatorPB(
+      KeySpaceManagerProtocol impl) {
     this.impl = impl;
   }
 
@@ -130,5 +135,29 @@ public class KeyspaceManagerProtocolServerSideTranslatorPB implements
       RpcController controller, ListVolumeRequest request)
       throws ServiceException {
     return null;
+  }
+
+  @Override
+  public CreateBucketResponse createBucket(
+      RpcController controller, CreateBucketRequest
+      request) throws ServiceException {
+    CreateBucketResponse.Builder resp =
+        CreateBucketResponse.newBuilder();
+    try {
+      impl.createBucket(KsmBucketArgs.getFromProtobuf(
+          request.getBucketInfo()));
+      resp.setStatus(Status.OK);
+    } catch (KSMException ksmEx) {
+      if (ksmEx.getResult() ==
+          ResultCodes.FAILED_VOLUME_NOT_FOUND) {
+        resp.setStatus(Status.VOLUME_NOT_FOUND);
+      } else if (ksmEx.getResult() ==
+          ResultCodes.FAILED_BUCKET_ALREADY_EXISTS) {
+        resp.setStatus(Status.BUCKET_ALREADY_EXISTS);
+      }
+    } catch(IOException ex) {
+      resp.setStatus(Status.INTERNAL_ERROR);
+    }
+    return resp.build();
   }
 }

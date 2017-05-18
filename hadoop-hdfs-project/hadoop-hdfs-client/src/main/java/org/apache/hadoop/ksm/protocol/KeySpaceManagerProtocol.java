@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ksm.protocol;
 
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import java.io.IOException;
 import java.util.List;
@@ -24,7 +25,7 @@ import java.util.List;
 /**
  * Protocol to talk to KSM.
  */
-public interface KeyspaceManagerProtocol {
+public interface KeySpaceManagerProtocol {
 
   /**
    * Creates a volume.
@@ -94,4 +95,12 @@ public interface KeyspaceManagerProtocol {
    */
   List<KsmVolumeArgs> listAllVolumes(String prefix, String
       prevKey, long maxKeys) throws IOException;
+
+  /**
+   * Creates a bucket.
+   * @param args - Arguments to create Bucket.
+   * @throws IOException
+   */
+  void createBucket(KsmBucketArgs args) throws IOException;
+
 }

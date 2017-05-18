@@ -19,15 +19,16 @@ package org.apache.hadoop.ksm.protocolPB;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyspaceManagerService;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.KeySpaceManagerService;
 
 /**
  * Protocol used to communicate with KSM.
  */
 @ProtocolInfo(protocolName =
-    "org.apache.hadoop.ozone.protocol.KeyspaceManagerProtocol",
+    "org.apache.hadoop.ozone.protocol.KeySpaceManagerProtocol",
     protocolVersion = 1)
 @InterfaceAudience.Private
 public interface KeySpaceManagerProtocolPB
-    extends KeyspaceManagerService.BlockingInterface {
+    extends KeySpaceManagerService.BlockingInterface {
 }

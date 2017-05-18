@@ -98,6 +98,8 @@ public class KSMException extends IOException {
   public enum ResultCodes {
     FAILED_TOO_MANY_USER_VOLUMES,
     FAILED_VOLUME_ALREADY_EXISTS,
+    FAILED_VOLUME_NOT_FOUND,
+    FAILED_BUCKET_ALREADY_EXISTS,
     FAILED_INTERNAL_ERROR
   }
 }

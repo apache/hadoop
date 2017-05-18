@@ -23,13 +23,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ksm.protocol.KeyspaceManagerProtocol;
+import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocolPB
-    .KeyspaceManagerProtocolServerSideTranslatorPB;
+    .KeySpaceManagerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -46,7 +47,7 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.KeyspaceManagerService
+    .KeySpaceManagerProtocolProtos.KeySpaceManagerService
     .newReflectiveBlockingService;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
@@ -54,13 +55,15 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
  * Ozone Keyspace manager is the metadata manager of ozone.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
-public class KeySpaceManager implements KeyspaceManagerProtocol {
+public class KeySpaceManager implements KeySpaceManagerProtocol {
   private static final Logger LOG =
       LoggerFactory.getLogger(KeySpaceManager.class);
 
   private final RPC.Server ksmRpcServer;
   private final InetSocketAddress ksmRpcAddress;
+  private final MetadataManager metadataManager;
   private final VolumeManager volumeManager;
+  private final BucketManager bucketManager;
   private final KSMMetrics metrics;
 
   public KeySpaceManager(OzoneConfiguration conf) throws IOException {
@@ -71,7 +74,7 @@ public class KeySpaceManager implements KeyspaceManagerProtocol {
         ProtobufRpcEngine.class);
 
     BlockingService ksmService = newReflectiveBlockingService(
-        new KeyspaceManagerProtocolServerSideTranslatorPB(this));
+        new KeySpaceManagerProtocolServerSideTranslatorPB(this));
     final InetSocketAddress ksmNodeRpcAddr = OzoneClientUtils.
         getKsmAddress(conf);
     ksmRpcServer = startRpcServer(conf, ksmNodeRpcAddr,
@@ -79,7 +82,9 @@ public class KeySpaceManager implements KeyspaceManagerProtocol {
         handlerCount);
     ksmRpcAddress = updateListenAddress(conf,
         OZONE_KSM_ADDRESS_KEY, ksmNodeRpcAddr, ksmRpcServer);
-    volumeManager = new VolumeManagerImpl(this, conf);
+    metadataManager = new MetadataManagerImpl(conf);
+    volumeManager = new VolumeManagerImpl(metadataManager, conf);
+    bucketManager = new BucketManagerImpl(metadataManager);
     metrics = KSMMetrics.create();
   }
 
@@ -185,7 +190,7 @@ public class KeySpaceManager implements KeyspaceManagerProtocol {
   public void start() {
     LOG.info(buildRpcServerStartMessage("KeyspaceManager RPC server",
         ksmRpcAddress));
-    volumeManager.start();
+    metadataManager.start();
     ksmRpcServer.start();
   }
 
@@ -195,7 +200,7 @@ public class KeySpaceManager implements KeyspaceManagerProtocol {
   public void stop() {
     try {
       ksmRpcServer.stop();
-      volumeManager.stop();
+      metadataManager.stop();
     } catch (IOException e) {
       LOG.info("Key Space Manager stop failed.", e);
     }
@@ -221,8 +226,13 @@ public class KeySpaceManager implements KeyspaceManagerProtocol {
    */
   @Override
   public void createVolume(KsmVolumeArgs args) throws IOException {
-    metrics.incNumVolumeCreates();
-    volumeManager.createVolume(args);
+    try {
+      metrics.incNumVolumeCreates();
+      volumeManager.createVolume(args);
+    } catch (Exception ex) {
+      metrics.incNumVolumeCreateFails();
+      throw ex;
+    }
   }
 
   /**
@@ -316,5 +326,22 @@ public class KeySpaceManager implements KeyspaceManagerProtocol {
   public List<KsmVolumeArgs> listAllVolumes(String prefix, String prevKey, long
       maxKeys) throws IOException {
     return null;
+  }
+
+  /**
+   * Creates a bucket.
+   *
+   * @param args - Arguments to create Bucket.
+   * @throws IOException
+   */
+  @Override
+  public void createBucket(KsmBucketArgs args) throws IOException {
+    try {
+      metrics.incNumBucketCreates();
+      bucketManager.createBucket(args);
+    } catch (Exception ex) {
+      metrics.incNumBucketCreateFails();
+      throw ex;
+    }
   }
 }
