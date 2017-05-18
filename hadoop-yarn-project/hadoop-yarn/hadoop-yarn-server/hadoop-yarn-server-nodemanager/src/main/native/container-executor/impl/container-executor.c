@@ -39,6 +39,7 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
+#include <getopt.h>
 
 #include "config.h"
 
@@ -1139,7 +1140,170 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
+static char* escape_single_quote(const char *str) {
+  int p = 0;
+  int i = 0;
+  char replacement[] = "'\"'\"'";
+  size_t replacement_length = strlen(replacement);
+  size_t ret_size = strlen(str) * replacement_length + 1;
+  char *ret = (char *) calloc(ret_size, sizeof(char));
+  if(ret == NULL) {
+    exit(OUT_OF_MEMORY);
+  }
+  while(str[p] != '\0') {
+    if(str[p] == '\'') {
+      strncat(ret, replacement, ret_size - strlen(ret));
+      i += replacement_length;
+    }
+    else {
+      ret[i] = str[p];
+      ret[i + 1] = '\0';
+      i++;
+    }
+    p++;
+  }
+  return ret;
+}
+
+static void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg) {
+  char *tmp = escape_single_quote(arg);
+  strcat(*str, param);
+  strcat(*str, "'");
+  if(strlen(*str) + strlen(tmp) > *size) {
+    *str = (char *) realloc(*str, strlen(*str) + strlen(tmp) + 1024);
+    if(*str == NULL) {
+      exit(OUT_OF_MEMORY);
+    }
+    *size = strlen(*str) + strlen(tmp) + 1024;
+  }
+  strcat(*str, tmp);
+  strcat(*str, "' ");
+  free(tmp);
+}
+
+char** tokenize_docker_command(const char *input, int *split_counter) {
+  char *line = (char *)calloc(strlen(input) + 1, sizeof(char));
+  char **linesplit = (char **) malloc(sizeof(char *));
+  char *p = NULL;
+  int c = 0;
+  *split_counter = 0;
+  strncpy(line, input, strlen(input));
+
+  p = strtok(line, " ");
+  while(p != NULL) {
+    linesplit[*split_counter] = p;
+    (*split_counter)++;
+    linesplit = realloc(linesplit, (sizeof(char *) * (*split_counter + 1)));
+    if(linesplit == NULL) {
+      fprintf(ERRORFILE, "Cannot allocate memory to parse docker command %s",
+                 strerror(errno));
+      fflush(ERRORFILE);
+      exit(OUT_OF_MEMORY);
+    }
+    p = strtok(NULL, " ");
+  }
+  linesplit[*split_counter] = NULL;
+  return linesplit;
+}
+
+char* sanitize_docker_command(const char *line) {
+  static struct option long_options[] = {
+    {"name", required_argument, 0, 'n' },
+    {"user", required_argument, 0, 'u' },
+    {"rm", no_argument, 0, 'r' },
+    {"workdir", required_argument, 0, 'w' },
+    {"net", required_argument, 0, 'e' },
+    {"cgroup-parent", required_argument, 0, 'g' },
+    {"privileged", no_argument, 0, 'p' },
+    {"cap-add", required_argument, 0, 'a' },
+    {"cap-drop", required_argument, 0, 'o' },
+    {"device", required_argument, 0, 'i' },
+    {"detach", required_argument, 0, 't' },
+    {0, 0, 0, 0}
+  };
+
+  int c = 0;
+  int option_index = 0;
+  char *output = NULL;
+  size_t output_size = 0;
+  char **linesplit;
+  int split_counter = 0;
+  int len = strlen(line);
+
+  linesplit = tokenize_docker_command(line, &split_counter);
+
+  output_size = len * 2;
+  output = (char *) calloc(output_size, sizeof(char));
+  if(output == NULL) {
+    exit(OUT_OF_MEMORY);
+  }
+  strcat(output, linesplit[0]);
+  strcat(output, " ");
+  optind = 1;
+  while((c=getopt_long(split_counter, linesplit, "dv:", long_options, &option_index)) != -1) {
+    switch(c) {
+      case 'n':
+        quote_and_append_arg(&output, &output_size, "--name=", optarg);
+        break;
+      case 'w':
+        quote_and_append_arg(&output, &output_size, "--workdir=", optarg);
+        break;
+      case 'u':
+        quote_and_append_arg(&output, &output_size, "--user=", optarg);
+        break;
+      case 'e':
+        quote_and_append_arg(&output, &output_size, "--net=", optarg);
+        break;
+      case 'v':
+        quote_and_append_arg(&output, &output_size, "-v ", optarg);
+        break;
+      case 'a':
+        quote_and_append_arg(&output, &output_size, "--cap-add=", optarg);
+        break;
+      case 'o':
+        quote_and_append_arg(&output, &output_size, "--cap-drop=", optarg);
+        break;
+      case 'd':
+        strcat(output, "-d ");
+        break;
+      case 'r':
+        strcat(output, "--rm ");
+        break;
+      case 'g':
+        quote_and_append_arg(&output, &output_size, "--cgroup-parent=", optarg);
+        break;
+      case 'p':
+        strcat(output, "--privileged ");
+        break;
+      case 'i':
+        quote_and_append_arg(&output, &output_size, "--device=", optarg);
+        break;
+      case 't':
+        quote_and_append_arg(&output, &output_size, "--detach=", optarg);
+        break;
+      default:
+        fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);
+        fflush(LOGFILE);
+        return NULL;
+        break;
+    }
+  }
+
+  if(optind < split_counter) {
+    quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+    strcat(output, "'");
+    while(optind < split_counter) {
+      strcat(output, linesplit[optind++]);
+      strcat(output, " ");
+    }
+    strcat(output, "'");
+  }
+
+  return output;
+}
+
 char* parse_docker_command_file(const char* command_file) {
+
   size_t len = 0;
   char *line = NULL;
   ssize_t read;
@@ -1158,7 +1322,14 @@ char* parse_docker_command_file(const char* command_file) {
   }
   fclose(stream);
 
-  return line;
+  char* ret = sanitize_docker_command(line);
+  if(ret == NULL) {
+    exit(ERROR_SANITIZING_DOCKER_COMMAND);
+  }
+  fprintf(LOGFILE, "Using command %s\n", ret);
+  fflush(LOGFILE);
+
+  return ret;
 }
 
 int run_docker(const char *command_file) {
