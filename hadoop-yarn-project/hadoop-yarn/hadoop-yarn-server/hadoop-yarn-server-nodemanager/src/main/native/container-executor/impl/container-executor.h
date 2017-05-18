@@ -74,6 +74,7 @@ enum errorcodes {
   COULD_NOT_CREATE_APP_LOG_DIRECTORIES = 36,
   COULD_NOT_CREATE_TMP_DIRECTORIES = 37,
   ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS = 38,
+  ERROR_SANITIZING_DOCKER_COMMAND = 39
 };
 
 enum operations {
@@ -303,3 +304,8 @@ int is_docker_support_enabled();
  * Run a docker command passing the command file as an argument
  */
 int run_docker(const char *command_file);
+
+/**
+ * Sanitize docker commands. Returns NULL if there was any failure.
+*/
+char* sanitize_docker_command(const char *line);
