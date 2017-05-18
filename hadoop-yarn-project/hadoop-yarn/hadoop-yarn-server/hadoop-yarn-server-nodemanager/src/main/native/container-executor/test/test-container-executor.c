@@ -1013,6 +1013,47 @@ void test_recursive_unlink_children() {
   }
 }
 
+void test_sanitize_docker_command() {
+
+/*
+  char *input[] = {
+    "run ''''''''"
+  };
+*/
+  char *input[] = {
+    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
+    "run --name=$CID --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
+    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
+    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu' || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
+    "run ''''''''"
+  };
+/*
+  char *expected_output[] = {
+      "run ''''''''"
+  };
+*/
+  char *expected_output[] = {
+      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh '",
+      "run --name='$CID' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh '",
+      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' '|| touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh '",
+      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu'\"'\"'' '|| touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh '",
+      "run ''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"'' ''",
+  };
+
+  int input_size = sizeof(input) / sizeof(char *);
+  int i = 0;
+  for(i = 0;  i < input_size; i++) {
+    char *command = (char *) calloc(strlen(input[i]), sizeof(char));
+    strncpy(command, input[i], strlen(input[i]));
+    char *op = sanitize_docker_command(command);
+    if(strncmp(expected_output[i], op, strlen(expected_output[i])) != 0) {
+      printf("FAIL: expected output %s does not match actual output '%s'\n", expected_output[i], op);
+      exit(1);
+    }
+    free(command);
+  }
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1103,6 +1144,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting is_feature_enabled()\n");
   test_is_feature_enabled();
+
+  printf("\nTesting sanitize docker commands()\n");
+  test_sanitize_docker_command();
 
   test_check_user(0);
 
