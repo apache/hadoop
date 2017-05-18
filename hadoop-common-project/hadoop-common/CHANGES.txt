@@ -148,6 +148,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-12173. NetworkTopology::add calls toString always.
     (Inigo Goiri via cdouglas)
 
+    HADOOP-14434. Use MoveFileEx to allow renaming a file when the destination
+    exists. (Lukas Majercak via cdouglas)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

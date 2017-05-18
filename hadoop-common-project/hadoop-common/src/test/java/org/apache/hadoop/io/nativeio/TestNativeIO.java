@@ -543,7 +543,7 @@ public class TestNativeIO {
         Assert.assertEquals(Errno.ENOENT, e.getErrno());
       }
     }
-    
+
     // Test renaming a file to itself.  It should succeed and do nothing.
     File sourceFile = new File(TEST_DIR, "source");
     Assert.assertTrue(sourceFile.createNewFile());
@@ -569,7 +569,9 @@ public class TestNativeIO {
       }
     }
 
-    FileUtils.deleteQuietly(TEST_DIR);
+    // Test renaming to an existing file
+    assertTrue(targetFile.exists());
+    NativeIO.renameTo(sourceFile, targetFile);
   }
 
   @Test(timeout=10000)
