@@ -49,6 +49,7 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
@@ -455,7 +456,8 @@ public class S3AFileSystem extends FileSystem {
    * @param path input path, may be relative to the working dir
    * @return a key excluding the leading "/", or, if it is the root path, ""
    */
-  private String pathToKey(Path path) {
+  @VisibleForTesting
+  String pathToKey(Path path) {
     if (!path.isAbsolute()) {
       path = new Path(workingDir, path);
     }
@@ -1010,11 +1012,26 @@ public class S3AFileSystem extends FileSystem {
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
    * @param deleteRequest keys to delete on the s3-backend
+   * @throws MultiObjectDeleteException one or more of the keys could not
+   * be deleted.
+   * @throws AmazonClientException amazon-layer failure.
    */
-  private void deleteObjects(DeleteObjectsRequest deleteRequest) {
+  private void deleteObjects(DeleteObjectsRequest deleteRequest)
+      throws MultiObjectDeleteException, AmazonClientException {
     incrementWriteOperations();
     incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
-    s3.deleteObjects(deleteRequest);
+    try {
+      s3.deleteObjects(deleteRequest);
+    } catch (MultiObjectDeleteException e) {
+      // one or more of the operations failed.
+      List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
+      LOG.error("Partial failure of delete, {} errors", errors.size(), e);
+      for (MultiObjectDeleteException.DeleteError error : errors) {
+        LOG.error("{}: \"{}\" - {}",
+            error.getKey(), error.getCode(), error.getMessage());
+      }
+      throw e;
+    }
   }
 
   /**
@@ -1224,10 +1241,15 @@ public class S3AFileSystem extends FileSystem {
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
+   * @throws MultiObjectDeleteException one or more of the keys could not
+   * be deleted in a multiple object delete operation.
+   * @throws AmazonClientException amazon-layer failure.
    */
-  private void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+  @VisibleForTesting
+  void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean clearKeys, boolean deleteFakeDir)
-      throws AmazonClientException, InvalidRequestException {
+      throws MultiObjectDeleteException, AmazonClientException,
+      InvalidRequestException {
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
       return;
