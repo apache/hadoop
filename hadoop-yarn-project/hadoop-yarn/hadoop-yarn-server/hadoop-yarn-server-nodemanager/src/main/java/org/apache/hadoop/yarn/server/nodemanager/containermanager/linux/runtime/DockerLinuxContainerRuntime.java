@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
@@ -127,6 +128,12 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private static final Log LOG = LogFactory.getLog(
       DockerLinuxContainerRuntime.class);
+
+  // This validates that the image is a proper docker image
+  public static final String DOCKER_IMAGE_PATTERN =
+      "^(([a-zA-Z0-9.-]+)(:\\d+)?/)?([a-z0-9_./-]+)(:[\\w.-]+)?$";
+  private static final Pattern dockerImagePattern =
+      Pattern.compile(DOCKER_IMAGE_PATTERN);
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -413,10 +420,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     validateContainerNetworkType(network);
 
-    if (imageName == null) {
-      throw new ContainerExecutionException(ENV_DOCKER_CONTAINER_IMAGE
-          + " not set!");
-    }
+    validateImageName(imageName);
 
     String containerIdStr = container.getContainerId().toString();
     String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
@@ -634,5 +638,17 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.error("Error when executing command.", e);
     }
     return null;
+  }
+
+  public static void validateImageName(String imageName)
+      throws ContainerExecutionException {
+    if (imageName == null || imageName.isEmpty()) {
+      throw new ContainerExecutionException(
+          ENV_DOCKER_CONTAINER_IMAGE + " not set!");
+    }
+    if (!dockerImagePattern.matcher(imageName).matches()) {
+      throw new ContainerExecutionException("Image name '" + imageName
+          + "' doesn't match docker image name pattern");
+    }
   }
 }
