@@ -34,7 +34,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
@@ -165,7 +166,7 @@ public class OzoneVolume {
 
     try {
       OzoneUtils.verifyBucketName(bucketName);
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
 
@@ -240,7 +241,7 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   private void executeCreateBucket(HttpPost httppost,
-                                   DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {
@@ -275,7 +276,7 @@ public class OzoneVolume {
 
     try {
       OzoneUtils.verifyBucketName(bucketName);
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
       HttpPut putRequest = client.getHttpPut(builder.toString());
@@ -302,7 +303,7 @@ public class OzoneVolume {
       throws OzoneException {
     try {
       OzoneUtils.verifyBucketName(bucketName);
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
       HttpPut putRequest = client.getHttpPut(builder.toString());
@@ -327,7 +328,7 @@ public class OzoneVolume {
   public OzoneBucket getBucket(String bucketName) throws OzoneException {
     try {
       OzoneUtils.verifyBucketName(bucketName);
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName)
         .setParameter(Header.OZONE_LIST_QUERY_TAG,
@@ -353,7 +354,7 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   private OzoneBucket executeInfoBucket(HttpGet getRequest,
-                                        DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {
@@ -389,7 +390,7 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   private void executePutBucket(HttpPut putRequest,
-                                DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {
@@ -422,7 +423,7 @@ public class OzoneVolume {
    */
   public List<OzoneBucket> listBuckets() throws OzoneException {
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName()).build();
@@ -447,7 +448,7 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   private List<OzoneBucket> executeListBuckets(HttpGet getRequest,
-                                               DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     List<OzoneBucket> ozoneBucketList = new LinkedList<OzoneBucket>();
@@ -489,7 +490,7 @@ public class OzoneVolume {
   public void deleteBucket(String bucketName) throws OzoneException {
     try {
       OzoneUtils.verifyBucketName(bucketName);
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
 
@@ -511,7 +512,7 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   private void executeDeleteBucket(HttpDelete delRequest,
-                                   DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {

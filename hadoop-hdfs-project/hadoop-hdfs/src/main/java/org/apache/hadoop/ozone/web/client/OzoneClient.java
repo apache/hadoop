@@ -31,7 +31,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -142,7 +143,7 @@ public class OzoneClient implements Closeable {
   public OzoneVolume createVolume(String volumeName, String onBehalfOf,
                                   String quota) throws OzoneException {
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       OzoneUtils.verifyBucketName(volumeName);
 
       URIBuilder builder = new URIBuilder(endPointURI);
@@ -169,7 +170,7 @@ public class OzoneClient implements Closeable {
    */
   public OzoneVolume getVolume(String volumeName) throws OzoneException {
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       OzoneUtils.verifyBucketName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
@@ -205,7 +206,7 @@ public class OzoneClient implements Closeable {
   public List<OzoneVolume> listVolumes(String onBehalfOf, String prefix, int
       maxKeys, OzoneVolume prevKey) throws OzoneException {
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       URIBuilder builder = new URIBuilder(endPointURI);
       if (prefix != null) {
@@ -261,7 +262,7 @@ public class OzoneClient implements Closeable {
   public List<OzoneVolume> listAllVolumes(String prefix, int maxKeys,
       OzoneVolume prevKey) throws OzoneException {
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       URIBuilder builder = new URIBuilder(endPointURI);
       if (prefix != null) {
@@ -296,7 +297,7 @@ public class OzoneClient implements Closeable {
      */
   public void deleteVolume(String volumeName) throws OzoneException {
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       OzoneUtils.verifyBucketName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
@@ -323,7 +324,7 @@ public class OzoneClient implements Closeable {
       throw new OzoneClientException("Invalid new owner name");
     }
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       OzoneUtils.verifyBucketName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
@@ -354,7 +355,7 @@ public class OzoneClient implements Closeable {
       throw new OzoneClientException("Invalid quota");
     }
     try {
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       OzoneUtils.verifyBucketName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
@@ -379,7 +380,7 @@ public class OzoneClient implements Closeable {
    * @throws OzoneException
    */
   private void executeCreateVolume(HttpPost httppost,
-                                   DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {
@@ -412,7 +413,7 @@ public class OzoneClient implements Closeable {
    * @throws OzoneException
    */
   private OzoneVolume executeInfoVolume(HttpGet httpGet,
-                                        DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {
@@ -446,7 +447,7 @@ public class OzoneClient implements Closeable {
    * @throws OzoneException
    */
   private void executePutVolume(HttpPut putRequest,
-                                DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {
@@ -472,7 +473,7 @@ public class OzoneClient implements Closeable {
    * @throws OzoneException
    */
   private List<OzoneVolume> executeListVolume(HttpGet httpGet,
-                                              DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     List<OzoneVolume> volList = new LinkedList<>();
@@ -513,7 +514,7 @@ public class OzoneClient implements Closeable {
    * @throws OzoneException
    */
   private void executeDeleteVolume(HttpDelete httpDelete,
-                                   DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     try {

@@ -36,10 +36,10 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
-import javax.ws.rs.core.HttpHeaders;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -159,7 +159,7 @@ public class OzoneBucket {
     try {
       OzoneClient client = getVolume().getClient();
 
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
@@ -219,7 +219,7 @@ public class OzoneBucket {
     try {
       OzoneClient client = getVolume().getClient();
 
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
@@ -234,10 +234,6 @@ public class OzoneBucket {
       FileInputStream fis = new FileInputStream(file);
       putRequest.setHeader(Header.CONTENT_MD5, DigestUtils.md5Hex(fis));
       fis.close();
-      putRequest.setHeader(HttpHeaders.CONTENT_LENGTH, Long.toString(file
-          .length()));
-      httpClient.removeRequestInterceptorByClass(
-          org.apache.http.protocol.RequestContent.class);
       executePutKey(putRequest, httpClient);
 
     } catch (IOException | URISyntaxException ex) {
@@ -253,7 +249,7 @@ public class OzoneBucket {
    * @throws OzoneException
    * @throws IOException
    */
-  private void executePutKey(HttpPut putRequest, DefaultHttpClient httpClient)
+  private void executePutKey(HttpPut putRequest, CloseableHttpClient httpClient)
       throws OzoneException, IOException {
     HttpEntity entity = null;
     try {
@@ -298,7 +294,7 @@ public class OzoneBucket {
     try {
       OzoneClient client = getVolume().getClient();
 
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       FileOutputStream outPutFile = new FileOutputStream(downloadTo.toFile());
 
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
@@ -332,7 +328,7 @@ public class OzoneBucket {
       OzoneClient client = getVolume().getClient();
       ByteArrayOutputStream outPutStream = new ByteArrayOutputStream();
 
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
 
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
@@ -357,7 +353,7 @@ public class OzoneBucket {
    * @throws IOException
    * @throws OzoneException
    */
-  private void executeGetKey(HttpGet getRequest, DefaultHttpClient httpClient,
+  private void executeGetKey(HttpGet getRequest, CloseableHttpClient httpClient,
                              OutputStream stream)
       throws IOException, OzoneException {
 
@@ -399,7 +395,7 @@ public class OzoneBucket {
 
     try {
       OzoneClient client = getVolume().getClient();
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
 
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
@@ -422,7 +418,7 @@ public class OzoneBucket {
    * @throws OzoneException
    */
   private void executeDeleteKey(HttpDelete deleteRequest,
-                                DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
 
     HttpEntity entity = null;
@@ -456,7 +452,7 @@ public class OzoneBucket {
   public List<OzoneKey> listKeys() throws OzoneException {
     try {
       OzoneClient client = getVolume().getClient();
-      DefaultHttpClient httpClient = new DefaultHttpClient();
+      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName())
           .build();
@@ -479,7 +475,7 @@ public class OzoneBucket {
    * @throws OzoneException
    */
   private List<OzoneKey> executeListKeys(HttpGet getRequest,
-                                         DefaultHttpClient httpClient)
+      CloseableHttpClient httpClient)
       throws IOException, OzoneException {
     HttpEntity entity = null;
     List<OzoneKey> ozoneKeyList = new LinkedList<OzoneKey>();

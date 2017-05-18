@@ -281,7 +281,7 @@ public final class OzoneClientUtils {
     if ((value == null) || value.isEmpty()) {
       return Optional.absent();
     }
-    return Optional.of(HostAndPort.fromString(value).getHostText());
+    return Optional.of(HostAndPort.fromString(value).getHost());
   }
 
   /**

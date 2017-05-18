@@ -26,7 +26,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 
 import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
@@ -44,7 +44,7 @@ import static org.junit.Assert.assertEquals;
 public class TestOzoneHelper {
 
   public CloseableHttpClient createHttpClient() {
-    return HttpClientBuilder.create().build();
+    return HttpClients.createDefault();
   }
   /**
    * Creates Volumes on Ozone Store.
