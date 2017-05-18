@@ -6,6 +6,9 @@ Release 2.7.4 - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-6304. Specifying node labels when submitting MR jobs.
+    (Naganarasimha G R. Backport by Inigo Goiri)
+
   IMPROVEMENTS
 
     MAPREDUCE-6741. Add MR support to redact job conf properties. (Haibo Chen

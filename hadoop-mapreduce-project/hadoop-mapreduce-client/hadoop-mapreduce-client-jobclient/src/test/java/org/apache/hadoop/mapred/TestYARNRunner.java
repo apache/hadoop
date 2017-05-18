@@ -563,6 +563,22 @@ public class TestYARNRunner extends TestCase {
     testAMStandardEnv(true);
   }
 
+  @Test
+  public void testNodeLabelExp() throws Exception {
+    JobConf jobConf = new JobConf();
+
+    jobConf.set(MRJobConfig.JOB_NODE_LABEL_EXP, "GPU");
+    jobConf.set(MRJobConfig.AM_NODE_LABEL_EXP, "highMem");
+
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    ApplicationSubmissionContext appSubCtx =
+        buildSubmitContext(yarnRunner, jobConf);
+
+    assertEquals(appSubCtx.getNodeLabelExpression(), "GPU");
+    assertEquals(appSubCtx.getAMContainerResourceRequest()
+        .getNodeLabelExpression(), "highMem");
+  }
+
   private void testAMStandardEnv(boolean customLibPath) throws Exception {
     // the Windows behavior is different and this test currently doesn't really
     // apply
