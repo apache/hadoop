@@ -22,8 +22,15 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ksm.protocol.KeyspaceManagerProtocol;
+import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CreateBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -38,12 +45,12 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- *  The client side implementation of KeyspaceManagerProtocol.
+ *  The client side implementation of KeySpaceManagerProtocol.
  */
 
 @InterfaceAudience.Private
 public final class KeySpaceManagerProtocolClientSideTranslatorPB
-    implements KeyspaceManagerProtocol, ProtocolTranslator, Closeable {
+    implements KeySpaceManagerProtocol, ProtocolTranslator, Closeable {
 
   /**
    * RpcController is not used and hence is set to null.
@@ -197,6 +204,32 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
   public List<KsmVolumeArgs> listAllVolumes(String prefix, String prevKey, long
       maxKeys) throws IOException {
     return null;
+  }
+
+  /**
+   * Creates a bucket.
+   *
+   * @param args - Arguments to create Bucket.
+   * @throws IOException
+   */
+  @Override
+  public void createBucket(KsmBucketArgs args) throws IOException {
+    CreateBucketRequest.Builder req =
+        CreateBucketRequest.newBuilder();
+    BucketInfo bucketInfo = args.getProtobuf();
+    req.setBucketInfo(bucketInfo);
+
+    final CreateBucketResponse resp;
+    try {
+      resp = rpcProxy.createBucket(NULL_RPC_CONTROLLER,
+          req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new IOException("Bucket creation failed, error: "
+          + resp.getStatus());
+    }
   }
 
   /**

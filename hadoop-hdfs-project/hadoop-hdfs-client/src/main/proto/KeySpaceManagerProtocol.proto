@@ -34,6 +34,7 @@ Ozone key space manager. Ozone KSM manages the namespace for ozone.
 This is similar to Namenode for Ozone.
 */
 
+import "hdfs.proto";
 import "Ozone.proto";
 
 enum Status {
@@ -44,8 +45,11 @@ enum Status {
     VOLUME_ALREADY_EXISTS = 5;
     USER_NOT_FOUND = 6;
     USER_TOO_MANY_VOLUMES = 7;
-    ACCESS_DENIED = 8;
-    INTERNAL_ERROR = 9;
+    BUCKET_NOT_FOUND = 8;
+    BUCKET_NOT_EMPTY = 9;
+    BUCKET_ALREADY_EXISTS = 10;
+    ACCESS_DENIED = 11;
+    INTERNAL_ERROR = 12;
 }
 
 
@@ -154,10 +158,42 @@ message ListVolumeResponse {
     repeated VolumeInfo volumeInfo = 2;
 }
 
+message BucketInfo {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    repeated OzoneAclInfo addAcls = 3;
+    repeated OzoneAclInfo removeAcls = 4;
+    required bool isVersionEnabled = 5 [default = false];
+    optional StorageTypeProto storageType = 6 [default = DISK];
+}
+
+message OzoneAclInfo {
+    enum OzoneAclType {
+        USER = 1;
+        GROUP = 2;
+        WORLD = 3;
+    }
+    enum OzoneAclRights {
+        READ = 1;
+        WRITE = 2;
+        READ_WRITE = 3;
+    }
+    required OzoneAclType type = 1;
+    required string name = 2;
+    required OzoneAclRights rights = 3;
+}
+
+message CreateBucketRequest {
+    required BucketInfo bucketInfo = 1;
+}
+
+message CreateBucketResponse {
+    required Status status = 1;
+}
 /**
  The KSM service that takes care of Ozone namespace.
 */
-service KeyspaceManagerService {
+service KeySpaceManagerService {
 
     /**
         Creates a Volume.
@@ -193,4 +229,10 @@ service KeyspaceManagerService {
     */
     rpc listVolumes(ListVolumeRequest)
         returns (ListVolumeResponse);
+
+    /**
+        Creates a Bucket.
+    */
+    rpc createBucket(CreateBucketRequest)
+        returns(CreateBucketResponse);
 }

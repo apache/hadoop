@@ -16,18 +16,16 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
-import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
-
-import java.io.IOException;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 
 /**
- * KSM volume manager interface.
+ * BucketManager handles all the bucket level operations.
  */
-public interface VolumeManager {
-
+public interface BucketManager {
   /**
-   * Create a new volume.
-   * @param args - Volume args to create a volume
+   * Creates a bucket.
+   * @param args - KsmBucketArgs for creating bucket.
    */
-  void createVolume(KsmVolumeArgs args) throws IOException;
+  void createBucket(KsmBucketArgs args) throws KSMException;
 }
