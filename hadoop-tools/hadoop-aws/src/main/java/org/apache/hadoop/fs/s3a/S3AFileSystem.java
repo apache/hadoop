@@ -1736,28 +1736,43 @@ public class S3AFileSystem extends FileSystem {
    * delSrc indicates if the source should be removed
    * @param delSrc whether to delete the src
    * @param overwrite whether to overwrite an existing file
-   * @param src path
+   * @param src Source path: must be on local filesystem
    * @param dst path
    * @throws IOException IO problem
    * @throws FileAlreadyExistsException the destination file exists and
-   * overwrite==false
+   * overwrite==false, or if the destination is a directory.
+   * @throws FileNotFoundException if the source file does not exit
    * @throws AmazonClientException failure in the AWS SDK
+   * @throws IllegalArgumentException if the source path is not on the local FS
    */
   private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
       Path src, Path dst)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
     incrementStatistic(INVOCATION_COPY_FROM_LOCAL_FILE);
-    final String key = pathToKey(dst);
-
-    if (!overwrite && exists(dst)) {
-      throw new FileAlreadyExistsException(dst + " already exists");
-    }
     LOG.debug("Copying local file from {} to {}", src, dst);
 
     // Since we have a local file, we don't need to stream into a temporary file
     LocalFileSystem local = getLocal(getConf());
     File srcfile = local.pathToFile(src);
+    if (!srcfile.exists()) {
+      throw new FileNotFoundException("No file: " + src);
+    }
+    if (!srcfile.isFile()) {
+      throw new FileNotFoundException("Not a file: " + src);
+    }
 
+    try {
+      FileStatus status = getFileStatus(dst);
+      if (!status.isFile()) {
+        throw new FileAlreadyExistsException(dst + " exists and is not a file");
+      }
+      if (!overwrite) {
+        throw new FileAlreadyExistsException(dst + " already exists");
+      }
+    } catch (FileNotFoundException e) {
+      // no destination, all is well
+    }
+    final String key = pathToKey(dst);
     final ObjectMetadata om = newObjectMetadata(srcfile.length());
     PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
     Upload up = putObject(putObjectRequest);
