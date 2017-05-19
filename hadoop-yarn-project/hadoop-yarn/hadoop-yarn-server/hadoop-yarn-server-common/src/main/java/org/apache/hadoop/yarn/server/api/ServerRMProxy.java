@@ -32,7 +32,6 @@ import com.google.common.base.Preconditions;
 
 public class ServerRMProxy<T> extends RMProxy<T> {
   private static final Log LOG = LogFactory.getLog(ServerRMProxy.class);
-  private static final ServerRMProxy INSTANCE = new ServerRMProxy();
 
   private ServerRMProxy() {
     super();
@@ -65,7 +64,8 @@ public class ServerRMProxy<T> extends RMProxy<T> {
         configuration.getLong(
             YarnConfiguration.NM_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
                 rmRetryInterval);
-    return createRMProxy(configuration, protocol, INSTANCE,
+    ServerRMProxy<T> serverRMProxy = new ServerRMProxy<>();
+    return createRMProxy(configuration, protocol, serverRMProxy,
         nmRmConnectWait, nmRmRetryInterval);
   }
 
