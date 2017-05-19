@@ -95,7 +95,7 @@ public class RequestHedgingRMFailoverProxyProvider<T>
       // Create proxy that can retry exceptions properly.
       RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf, false);
       InetSocketAddress rmAddress = rmProxy.getRMAddress(conf, protocol);
-      T proxy = RMProxy.<T> getProxy(conf, protocol, rmAddress);
+      T proxy = rmProxy.getProxy(conf, protocol, rmAddress);
       return (T) RetryProxy.create(protocol, proxy, retryPolicy);
     } catch (IOException ioe) {
       LOG.error("Unable to create proxy to the ResourceManager "
