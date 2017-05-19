@@ -391,4 +391,59 @@ public class TestBufferManager {
     Assert.assertEquals(1, metrics.getNumBlockBufferFlushCompleted());
     Assert.assertEquals(0, metrics.getNumFailedBlockBufferFlushes());
   }
+
+  @Test
+  public void testRepeatedBlockWrites() throws IOException,
+      InterruptedException, TimeoutException{
+    // Create a new config so that this tests write metafile to new location
+    OzoneConfiguration flushTestConfig = new OzoneConfiguration();
+    URL p = flushTestConfig.getClass().getResource("");
+    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
+    flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
+    flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
+
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
+    String userName = "user" + RandomStringUtils.randomNumeric(4);
+    String data = RandomStringUtils.random(4 * KB);
+    CBlockTargetMetrics metrics = CBlockTargetMetrics.create();
+    ContainerCacheFlusher flusher = new ContainerCacheFlusher(flushTestConfig,
+        xceiverClientManager, metrics);
+    CBlockLocalCache cache = CBlockLocalCache.newBuilder()
+        .setConfiguration(flushTestConfig)
+        .setVolumeName(volumeName)
+        .setUserName(userName)
+        .setPipelines(createContainerAndGetPipeline(10))
+        .setClientManager(xceiverClientManager)
+        .setBlockSize(4 * KB)
+        .setVolumeSize(50 * GB)
+        .setFlusher(flusher)
+        .setCBlockTargetMetrics(metrics)
+        .build();
+    Thread fllushListenerThread = new Thread(flusher);
+    fllushListenerThread.setDaemon(true);
+    fllushListenerThread.start();
+    cache.start();
+    for (int i = 0; i < 512; i++) {
+      cache.put(i, data.getBytes(StandardCharsets.UTF_8));
+    }
+    Assert.assertEquals(512, metrics.getNumWriteOps());
+    Assert.assertEquals(512, metrics.getNumBlockBufferUpdates());
+    Assert.assertEquals(1, metrics.getNumBlockBufferFlushTriggered());
+    Thread.sleep(5000);
+    Assert.assertEquals(1, metrics.getNumBlockBufferFlushCompleted());
+
+
+    for (int i = 0; i < 512; i++) {
+      cache.put(i, data.getBytes(StandardCharsets.UTF_8));
+    }
+    Assert.assertEquals(1024, metrics.getNumWriteOps());
+    Assert.assertEquals(1024, metrics.getNumBlockBufferUpdates());
+    Assert.assertEquals(2, metrics.getNumBlockBufferFlushTriggered());
+
+    Thread.sleep(5000);
+    Assert.assertEquals(0, metrics.getNumWriteIOExceptionRetryBlocks());
+    Assert.assertEquals(0, metrics.getNumWriteGenericExceptionRetryBlocks());
+    Assert.assertEquals(2, metrics.getNumBlockBufferFlushCompleted());
+  }
 }
