@@ -931,7 +931,7 @@ public class TestNMLeveldbStateStoreService {
     };
     store.init(conf);
     store.start();
-    verify(mockdb, timeout(10000)).compactRange(
+    verify(mockdb, timeout(10000).atLeastOnce()).compactRange(
         (byte[]) isNull(), (byte[]) isNull());
     store.close();
   }
