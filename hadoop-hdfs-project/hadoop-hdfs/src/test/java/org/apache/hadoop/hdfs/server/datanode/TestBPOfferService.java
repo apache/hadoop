@@ -761,7 +761,7 @@ public class TestBPOfferService {
     List<BPServiceActor> bpServiceActors = bpos.getBPServiceActors();
     for (BPServiceActor bpServiceActor : bpServiceActors) {
       if (bpServiceActor.state == HAServiceState.STANDBY) {
-        return bpServiceActor.getPendingIBRSize();
+        return bpServiceActor.getIbrManager().getPendingIBRSize();
       }
     }
     return -1;

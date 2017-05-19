@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 
@@ -54,7 +55,6 @@ public class TestIncrementalBlockReports {
   private static final long DUMMY_BLOCK_GENSTAMP = 1000;
 
   private MiniDFSCluster cluster = null;
-  private DistributedFileSystem fs;
   private Configuration conf;
   private NameNode singletonNn;
   private DataNode singletonDn;
@@ -66,7 +66,6 @@ public class TestIncrementalBlockReports {
   public void startCluster() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DN_COUNT).build();
-    fs = cluster.getFileSystem();
     singletonNn = cluster.getNameNode();
     singletonDn = cluster.getDataNodes().get(0);
     bpos = singletonDn.getAllBpOs()[0];
@@ -84,7 +83,8 @@ public class TestIncrementalBlockReports {
   private void injectBlockReceived() {
     ReceivedDeletedBlockInfo rdbi = new ReceivedDeletedBlockInfo(
         getDummyBlock(), BlockStatus.RECEIVED_BLOCK, null);
-    actor.notifyNamenodeBlock(rdbi, storageUuid, true);
+    DatanodeStorage s = singletonDn.getFSDataset().getStorage(storageUuid);
+    actor.getIbrManager().notifyNamenodeBlock(rdbi, s);
   }
 
   /**
@@ -93,7 +93,8 @@ public class TestIncrementalBlockReports {
   private void injectBlockDeleted() {
     ReceivedDeletedBlockInfo rdbi = new ReceivedDeletedBlockInfo(
         getDummyBlock(), BlockStatus.DELETED_BLOCK, null);
-    actor.notifyNamenodeDeletedBlock(rdbi, storageUuid);
+    actor.getIbrManager().addRDBI(rdbi,
+        singletonDn.getFSDataset().getStorage(storageUuid));
   }
 
   /**
@@ -202,7 +203,7 @@ public class TestIncrementalBlockReports {
           any(StorageReceivedDeletedBlocks[].class));
 
       // Ensure that no more IBRs are pending.
-      assertFalse(actor.hasPendingIBR());
+      assertFalse(actor.getIbrManager().sendImmediately());
 
     } finally {
       cluster.shutdown();

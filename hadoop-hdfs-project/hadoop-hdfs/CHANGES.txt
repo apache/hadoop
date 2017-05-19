@@ -91,6 +91,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-7990. IBR delete ack should not be delayed. (Daryn Sharp.
     Backport HDFS-11838 by Vinitha Gankidi)
 
+    HDFS-9726. Refactor IBR code to a new class. (Tsz-Wo Nicholas Sze
+    Backport HDFS-11839 by Vinitha Reddy Gankidi)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.

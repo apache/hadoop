@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
@@ -94,7 +95,9 @@ public final class TestTriggerBlockReport {
         datanode.getAllBpOs()[0].getBPServiceActors().get(0);
     String storageUuid =
         datanode.getFSDataset().getVolumes().get(0).getStorageID();
-    actor.notifyNamenodeDeletedBlock(rdbi, storageUuid);
+    final DatanodeStorage storage = new DatanodeStorage(storageUuid);
+    actor.getIbrManager().addRDBI(rdbi, storage);
+
 
     // Manually trigger a block report.
     datanode.triggerBlockReport(
