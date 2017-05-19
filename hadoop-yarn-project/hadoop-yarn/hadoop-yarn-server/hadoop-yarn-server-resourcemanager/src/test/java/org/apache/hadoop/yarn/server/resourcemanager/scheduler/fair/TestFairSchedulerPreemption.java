@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.util.ControlledClock;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -188,6 +189,9 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   private void setupCluster() throws IOException {
     resourceManager = new MockRM(conf);
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
+    // YARN-6249, FSLeafQueue#lastTimeAtMinShare is initialized to the time in
+    // the real world, so we should keep the clock up with it.
+    clock.setTime(SystemClock.getInstance().getTime());
     scheduler.setClock(clock);
     resourceManager.start();
 
