@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ReadContainerResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ReadContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.KeyValue;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 
 import java.io.IOException;
@@ -199,11 +200,14 @@ public final class ContainerProtocolCalls {
         .setPipeline(client.getPipeline().getProtobufMessage())
         .setKeyData(containerKeyData);
 
+    KeyValue keyValue = KeyValue.newBuilder()
+        .setKey("OverWriteRequested").setValue("true").build();
     ChunkInfo chunk = ChunkInfo
         .newBuilder()
         .setChunkName(key + "_chunk")
         .setOffset(0)
         .setLen(data.length)
+        .addMetadata(keyValue)
         .build();
 
     PutSmallFileRequestProto putSmallFileRequest = PutSmallFileRequestProto
