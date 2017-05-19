@@ -232,6 +232,7 @@ Options:
 
 * The -s option will result in an aggregate summary of file lengths being displayed, rather than the individual files. Without the -s option, calculation is done by going 1-level deep from the given path.
 * The -h option will format file sizes in a "human-readable" fashion (e.g 64.0m instead of 67108864)
+* The -v option will display the names of columns as a header line.
 * The -x option will exclude snapshots from the result calculation. Without the -x option (default), the result is always calculated from all INodes, including all snapshots under the given path.
 
 The du returns three columns with the following format:
