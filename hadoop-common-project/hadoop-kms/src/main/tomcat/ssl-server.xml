@@ -76,7 +76,6 @@
                clientAuth="${kms.ssl.client.auth}"
                sslEnabledProtocols="${kms.ssl.enabled.protocols}"
                ciphers="${kms.ssl.ciphers}"
-               truststorePass="${kms.ssl.truststore.pass}"
                keystoreFile="${kms.ssl.keystore.file}"
                keystorePass="${kms.ssl.keystore.pass}"/>
 

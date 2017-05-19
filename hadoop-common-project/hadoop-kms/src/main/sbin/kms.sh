@@ -45,9 +45,6 @@ fi
 # it is used in Tomcat's server.xml configuration file
 #
 
-# Mask the trustStorePassword
-KMS_SSL_TRUSTSTORE_PASS=`echo $CATALINA_OPTS | grep -o 'trustStorePassword=[^ ]*' | awk -F'=' '{print $2}'`
-CATALINA_OPTS_DISP=`echo ${CATALINA_OPTS} | sed -e 's/trustStorePassword=[^ ]*/trustStorePassword=***/'`
 print "Using   CATALINA_OPTS:       ${CATALINA_OPTS_DISP}"
 
 catalina_opts="-Dproc_kms"
@@ -97,8 +94,6 @@ if [[ "${1}" = "start" || "${1}" = "run" ]]; then
   KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
   catalina_set_property "kms.ssl.keystore.pass" \
     "${KMS_SSL_KEYSTORE_PASS}" "<redacted>"
-  catalina_set_property "kms.ssl.truststore.pass" \
-    "${KMS_SSL_TRUSTSTORE_PASS}" "<redacted>"
 fi
 
 # A bug in catalina.sh script does not use CATALINA_OPTS for stopping the server
