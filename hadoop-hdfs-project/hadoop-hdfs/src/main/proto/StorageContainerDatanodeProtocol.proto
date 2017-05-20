@@ -172,6 +172,12 @@ message SCMRegisteredCmdResponseProto {
 }
 
 /**
+ * SCM informs a datanode to register itself again.
+ * With recieving this command, datanode will transit to REGISTER state.
+ */
+message SCMReregisterCmdResponseProto {}
+
+/**
  * Container ID maintains the container's Identity along with cluster ID
  * after the registration is done.
  */
@@ -195,6 +201,7 @@ enum Type {
   versionCommand = 2;
   registeredCommand = 3;
   sendContainerReport = 4;
+  reregisterCommand = 5;
 }
 
 /*
@@ -205,7 +212,7 @@ message SCMCommandResponseProto {
   optional SCMRegisteredCmdResponseProto registeredProto = 3;
   optional SCMVersionResponseProto versionProto = 4;
   optional SendContainerReportProto sendReport = 5;
-
+  optional SCMReregisterCmdResponseProto reregisterProto = 6;
 }
 
 
