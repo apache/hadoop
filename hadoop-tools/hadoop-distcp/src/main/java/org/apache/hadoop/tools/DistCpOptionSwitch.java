@@ -189,6 +189,14 @@ public enum DistCpOptionSwitch {
           + "system implements concat method")),
 
   /**
+   * Configurable copy buffer size.
+   */
+  COPY_BUFFER_SIZE(DistCpConstants.CONF_LABEL_COPY_BUFFER_SIZE,
+      new Option("copybuffersize", true, "Size of the copy buffer to use. "
+          + "By default <copybuffersize> is "
+          + DistCpConstants.COPY_BUFFER_SIZE_DEFAULT + "B.")),
+
+  /**
    * Specify bandwidth per map in MB
    */
   BANDWIDTH(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
