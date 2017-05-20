@@ -21,20 +21,20 @@ package org.apache.hadoop.ozone.container;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.ratis.rpc.RpcType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,12 +43,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 /**
  * Helpers for container tests.
@@ -62,6 +57,15 @@ public final class ContainerTestHelper {
    * Never constructed.
    */
   private ContainerTestHelper() {
+  }
+
+  public static void setOzoneLocalStorageRoot(
+      Class<?> clazz, OzoneConfiguration conf) {
+    String path = GenericTestUtils.getTempPath(clazz.getSimpleName());
+    path += conf.getTrimmed(
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
   }
 
   // TODO: mock multi-node pipeline
@@ -105,16 +109,6 @@ public final class ContainerTestHelper {
       pipeline.addMember(createDatanodeID());
     }
     return pipeline;
-  }
-
-  public static void initRatisConf(
-      RpcType rpc, Pipeline pipeline, Configuration conf) {
-    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY, true);
-    conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY, rpc.name());
-    conf.setStrings(OzoneConfigKeys.DFS_CONTAINER_RATIS_CONF,
-        pipeline.getMachines().stream()
-            .map(dn -> dn.getXferAddr())
-            .collect(Collectors.joining(",")));
   }
 
   /**

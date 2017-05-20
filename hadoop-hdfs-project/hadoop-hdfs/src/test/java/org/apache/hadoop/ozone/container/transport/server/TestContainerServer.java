@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerComm
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -120,7 +121,7 @@ public class TestContainerServer {
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
       throws Exception {
     runTestClientServer(numNodes,
-        (pipeline, conf) -> ContainerTestHelper.initRatisConf(
+        (pipeline, conf) -> RatisTestHelper.initRatisConf(
             rpc, pipeline, conf),
         XceiverClientRatis::newXceiverClientRatis,
         TestContainerServer::newXceiverServerRatis);

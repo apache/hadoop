@@ -37,6 +37,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -56,11 +58,16 @@ public final  class XceiverClientRatis implements XceiverClientSpi {
   }
 
   private final Pipeline pipeline;
-  private final RaftClient client;
+  private final RpcType rpcType;
+  private final AtomicReference<RaftClient> client = new AtomicReference<>();
 
   /** Constructs a client. */
-  XceiverClientRatis(Pipeline pipeline, RpcType rpcType) {
+  private XceiverClientRatis(Pipeline pipeline, RpcType rpcType) {
     this.pipeline = pipeline;
+    this.rpcType = rpcType;
+  }
+
+  static RaftClient newRaftClient(Pipeline pipeline, RpcType rpcType) {
     final List<RaftPeer> peers = pipeline.getMachines().stream()
         .map(dn -> dn.getXferAddr())
         .map(addr -> new RaftPeer(new RaftPeerId(addr), addr))
@@ -70,7 +77,7 @@ public final  class XceiverClientRatis implements XceiverClientSpi {
     final ClientFactory factory = ClientFactory.cast(rpcType.newFactory(
         properties, null));
 
-    client = RaftClient.newBuilder()
+    return RaftClient.newBuilder()
         .setClientRpc(factory.newRaftClientRpc())
         .setServers(peers)
         .setLeaderId(new RaftPeerId(pipeline.getLeader().getXferAddr()))
@@ -85,23 +92,32 @@ public final  class XceiverClientRatis implements XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
-    // do nothing.
+    if (!client.compareAndSet(null, newRaftClient(pipeline, rpcType))) {
+      throw new IllegalStateException("Client is already connected.");
+    }
   }
 
   @Override
   public void close() {
-    try {
-      client.close();
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
+    final RaftClient c = client.getAndSet(null);
+    if (c != null) {
+      try {
+        c.close();
+      } catch (IOException e) {
+        throw new IllegalStateException(e);
+      }
     }
+  }
+
+  private RaftClient getClient() {
+    return Objects.requireNonNull(client.get(), "client is null");
   }
 
   @Override
   public ContainerCommandResponseProto sendCommand(
       ContainerCommandRequestProto request) throws IOException {
     LOG.debug("sendCommand {}", request);
-    final RaftClientReply reply = client.send(
+    final RaftClientReply reply = getClient().send(
         () -> ShadedProtoUtil.asShadedByteString(request.toByteArray()));
     LOG.debug("reply {}", reply);
     Preconditions.checkState(reply.isSuccess());
