@@ -23,12 +23,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .EndpointStateMachine.EndPointStates;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
 import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
-import org.apache.hadoop.ozone.protocol.proto
-     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
      .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
@@ -125,10 +125,28 @@ public class HeartbeatEndpointTask
   private void processResponse(SCMHeartbeatResponseProto response) {
     for (SCMCommandResponseProto commandResponseProto : response
         .getCommandsList()) {
-      if (commandResponseProto.getCmdType() ==
-          StorageContainerDatanodeProtocolProtos.Type.sendContainerReport) {
+      switch (commandResponseProto.getCmdType()) {
+      case sendContainerReport:
         this.context.addCommand(SendContainerCommand.getFromProtobuf(
             commandResponseProto.getSendReport()));
+        break;
+      case reregisterCommand:
+        if (rpcEndpoint.getState() == EndPointStates.HEARTBEAT) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Received SCM notification to register."
+                + " Interrupt HEARTBEAT and transit to REGISTER state.");
+          }
+          rpcEndpoint.setState(EndPointStates.REGISTER);
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Illegal state {} found, expecting {}.",
+                rpcEndpoint.getState().name(), EndPointStates.HEARTBEAT);
+          }
+        }
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown response : "
+            + commandResponseProto.getCmdType().name());
       }
     }
   }

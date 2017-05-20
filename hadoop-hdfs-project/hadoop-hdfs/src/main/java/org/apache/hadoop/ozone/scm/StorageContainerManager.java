@@ -68,6 +68,8 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMReregisterCmdResponseProto;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB
     .StorageContainerDatanodeProtocolServerSideTranslatorPB;
@@ -324,6 +326,11 @@ public class StorageContainerManager
     case sendContainerReport:
       return builder.setCmdType(Type.sendContainerReport)
           .setSendReport(SendContainerReportProto.getDefaultInstance())
+          .build();
+    case reregisterCommand:
+      return builder.setCmdType(Type.reregisterCommand)
+          .setReregisterProto(SCMReregisterCmdResponseProto
+              .getDefaultInstance())
           .build();
     default:
       throw new IllegalArgumentException("Not implemented");

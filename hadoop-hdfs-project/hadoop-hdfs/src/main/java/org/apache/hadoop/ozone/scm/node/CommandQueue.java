@@ -60,19 +60,12 @@ public class CommandQueue {
   @SuppressWarnings("unchecked")
   List<SCMCommand> getCommand(final DatanodeID datanodeID) {
     lock.lock();
-
     try {
-      if (commandMap.containsKey(datanodeID)) {
-        List temp = commandMap.get(datanodeID);
-        if (temp.size() > 0) {
-          commandMap.put(datanodeID, DEFAULT_LIST);
-          return temp;
-        }
-      }
+      List<SCMCommand> cmds = commandMap.remove(datanodeID);
+      return cmds == null ? DEFAULT_LIST : cmds;
     } finally {
       lock.unlock();
     }
-    return DEFAULT_LIST;
   }
 
   /**

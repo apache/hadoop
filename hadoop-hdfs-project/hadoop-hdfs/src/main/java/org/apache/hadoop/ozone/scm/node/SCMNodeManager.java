@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto
@@ -585,7 +586,10 @@ public class SCMNodeManager
       updateNodeStat(datanodeID, nodeReport);
       return;
     }
+
     LOG.warn("SCM receive heartbeat from unregistered datanode {}", datanodeID);
+    this.commandQueue.addCommand(hbItem.getDatanodeID(),
+        new ReregisterCommand());
   }
 
   private void updateNodeStat(String datanodeID, SCMNodeReport nodeReport) {
@@ -704,7 +708,6 @@ public class SCMNodeManager
    * @return SCMCommand
    */
   private SCMCommand verifyDatanodeUUID(DatanodeID datanodeID) {
-
     if (datanodeID.getDatanodeUuid() != null &&
         nodes.containsKey(datanodeID.getDatanodeUuid())) {
       LOG.trace("Datanode is already registered. Datanode: {}",
