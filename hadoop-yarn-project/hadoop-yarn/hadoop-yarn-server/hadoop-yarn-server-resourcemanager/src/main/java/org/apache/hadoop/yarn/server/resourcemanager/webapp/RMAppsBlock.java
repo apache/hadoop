@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.webapp.AppsBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
@@ -96,13 +97,15 @@ public class RMAppsBlock extends AppsBlock {
       }
 
       String blacklistedNodesCount = "N/A";
-      RMAppAttempt appAttempt =
-          rm.getRMContext().getRMApps().get(appAttemptId.getApplicationId())
-              .getAppAttempts().get(appAttemptId);
-      Set<String> nodes =
-          null == appAttempt ? null : appAttempt.getBlacklistedNodes();
-      if (nodes != null) {
-        blacklistedNodesCount = String.valueOf(nodes.size());
+      RMApp rmApp = rm.getRMContext().getRMApps()
+          .get(appAttemptId.getApplicationId());
+      if (rmApp != null) {
+        RMAppAttempt appAttempt = rmApp.getRMAppAttempt(appAttemptId);
+        Set<String> nodes =
+            null == appAttempt ? null : appAttempt.getBlacklistedNodes();
+        if (nodes != null) {
+          blacklistedNodesCount = String.valueOf(nodes.size());
+        }
       }
       String percent = StringUtils.format("%.1f", app.getProgress());
       appsTableData

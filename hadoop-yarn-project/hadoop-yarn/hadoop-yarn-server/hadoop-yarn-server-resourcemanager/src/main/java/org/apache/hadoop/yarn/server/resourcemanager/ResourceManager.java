@@ -113,6 +113,8 @@ import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -1068,9 +1070,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     WebAppContext uiWebAppContext = null;
     if (getConfig().getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
         YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE)) {
-      String webPath = UI2_WEBAPP_NAME;
       String onDiskPath = getConfig()
           .get(YarnConfiguration.YARN_WEBAPP_UI2_WARFILE_PATH);
+
+      uiWebAppContext = new WebAppContext();
+      uiWebAppContext.setContextPath(UI2_WEBAPP_NAME);
 
       if (null == onDiskPath) {
         String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
@@ -1078,21 +1082,33 @@ public class ResourceManager extends CompositeService implements Recoverable {
         URL url = cl.findResource(war);
 
         if (null == url) {
-          onDiskPath = "";
+          onDiskPath = getWebAppsPath("ui2");
         } else {
           onDiskPath = url.getFile();
         }
-
-        LOG.info(
-            "New web UI war file name:" + war + ", and path:" + onDiskPath);
       }
-
-      uiWebAppContext = new WebAppContext();
-      uiWebAppContext.setContextPath(webPath);
-      uiWebAppContext.setWar(onDiskPath);
+      if (onDiskPath == null || onDiskPath.isEmpty()) {
+          LOG.error("No war file or webapps found for ui2 !");
+      } else {
+        if (onDiskPath.endsWith(".war")) {
+          uiWebAppContext.setWar(onDiskPath);
+          LOG.info("Using war file at: " + onDiskPath);
+        } else {
+          uiWebAppContext.setResourceBase(onDiskPath);
+          LOG.info("Using webapps at: " + onDiskPath);
+        }
+      }
     }
 
     webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+  }
+
+  private String getWebAppsPath(String appName) {
+    URL url = getClass().getClassLoader().getResource("webapps/" + appName);
+    if (url == null) {
+      return "";
+    }
+    return url.toString();
   }
 
   /**

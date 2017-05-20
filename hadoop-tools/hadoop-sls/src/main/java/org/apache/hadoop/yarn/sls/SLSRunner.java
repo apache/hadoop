@@ -124,6 +124,8 @@ public class SLSRunner extends Configured implements Tool {
   private final static int DEFAULT_MAPPER_PRIORITY = 20;
   private final static int DEFAULT_REDUCER_PRIORITY = 10;
 
+  private static boolean exitAtTheFinish = false;
+
   /**
    * The type of trace in input.
    */
@@ -143,6 +145,16 @@ public class SLSRunner extends Configured implements Tool {
     init(tempConf);
   }
 
+  @Override
+  public void setConf(Configuration conf) {
+    if (null != conf) {
+      // Override setConf to make sure all conf added load sls-runner.xml, see
+      // YARN-6560
+      conf.addResource("sls-runner.xml");
+    }
+    super.setConf(conf);
+  }
+
   private void init(Configuration tempConf) throws ClassNotFoundException {
     nmMap = new HashMap<>();
     queueAppNumMap = new HashMap<>();
@@ -150,8 +162,7 @@ public class SLSRunner extends Configured implements Tool {
     amClassMap = new HashMap<>();
 
     // runner configuration
-    tempConf.addResource("sls-runner.xml");
-    super.setConf(tempConf);
+    setConf(tempConf);
 
     // runner
     int poolSize = tempConf.getInt(SLSConfiguration.RUNNER_POOL_SIZE,
@@ -761,6 +772,9 @@ public class SLSRunner extends Configured implements Tool {
 
     if (remainingApps == 0) {
       LOG.info("SLSRunner tears down.");
+      if (exitAtTheFinish) {
+        System.exit(0);
+      }
     }
   }
 
@@ -857,6 +871,7 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   public static void main(String[] argv) throws Exception {
+    exitAtTheFinish = true;
     ToolRunner.run(new Configuration(), new SLSRunner(), argv);
   }
 

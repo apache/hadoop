@@ -180,7 +180,7 @@
     </fileSet>
       <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-ui/target/hadoop-yarn-ui-${project.version}</directory>
-      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/rm</outputDirectory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/ui2</outputDirectory>
       <includes>
         <include>**/*</include>
       </includes>
@@ -188,6 +188,9 @@
   </fileSets>
   <moduleSets>
     <moduleSet>
+      <excludes>
+        <exclude>org.apache.hadoop:hadoop-yarn-ui</exclude>
+      </excludes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
         <includeDependencies>false</includeDependencies>

@@ -188,8 +188,10 @@ public interface HdfsServerConstants {
         return NamenodeRole.NAMENODE;
       }
     }
-    
+
     public void setClusterId(String cid) {
+      Preconditions.checkState(this == UPGRADE || this == UPGRADEONLY
+          || this == FORMAT);
       clusterId = cid;
     }
 
@@ -214,6 +216,7 @@ public interface HdfsServerConstants {
     }
 
     public void setForce(int force) {
+      Preconditions.checkState(this == RECOVER);
       this.force = force;
     }
     
@@ -226,6 +229,7 @@ public interface HdfsServerConstants {
     }
     
     public void setForceFormat(boolean force) {
+      Preconditions.checkState(this == FORMAT);
       isForceFormat = force;
     }
     
@@ -234,6 +238,7 @@ public interface HdfsServerConstants {
     }
     
     public void setInteractiveFormat(boolean interactive) {
+      Preconditions.checkState(this == FORMAT);
       isInteractiveFormat = interactive;
     }
     

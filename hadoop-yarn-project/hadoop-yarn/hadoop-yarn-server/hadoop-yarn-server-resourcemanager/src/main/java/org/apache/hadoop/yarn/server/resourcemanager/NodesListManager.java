@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -40,6 +39,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.HostsFileReader.HostDetails;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -192,14 +192,11 @@ public class NodesListManager extends CompositeService implements
         conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
             YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
 
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
-
-    for (String include : hostsList) {
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    for (String include : hostDetails.getIncludedHosts()) {
       LOG.debug("include: " + include);
     }
-    for (String exclude : excludeList) {
+    for (String exclude : hostDetails.getExcludedHosts()) {
       LOG.debug("exclude: " + exclude);
     }
   }
@@ -262,9 +259,9 @@ public class NodesListManager extends CompositeService implements
     // Nodes need to be decommissioned (graceful or forceful);
     List<RMNode> nodesToDecom = new ArrayList<RMNode>();
 
-    Set<String> includes = new HashSet<String>();
-    Map<String, Integer> excludes = new HashMap<String, Integer>();
-    hostsReader.getHostDetails(includes, excludes);
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    Set<String> includes = hostDetails.getIncludedHosts();
+    Map<String, Integer> excludes = hostDetails.getExcludedMap();
 
     for (RMNode n : this.rmContext.getRMNodes().values()) {
       NodeState s = n.getState();
@@ -453,10 +450,9 @@ public class NodesListManager extends CompositeService implements
   }
 
   public boolean isValidNode(String hostName) {
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
-    return isValidNode(hostName, hostsList, excludeList);
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    return isValidNode(hostName, hostDetails.getIncludedHosts(),
+        hostDetails.getExcludedHosts());
   }
 
   private boolean isValidNode(
@@ -563,9 +559,9 @@ public class NodesListManager extends CompositeService implements
   public boolean isUntrackedNode(String hostName) {
     String ip = resolver.resolve(hostName);
 
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    Set<String> hostsList = hostDetails.getIncludedHosts();
+    Set<String> excludeList = hostDetails.getExcludedHosts();
 
     return !hostsList.isEmpty() && !hostsList.contains(hostName)
         && !hostsList.contains(ip) && !excludeList.contains(hostName)

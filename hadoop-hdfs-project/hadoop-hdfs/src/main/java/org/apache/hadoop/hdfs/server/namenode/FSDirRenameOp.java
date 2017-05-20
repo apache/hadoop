@@ -19,13 +19,13 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -781,18 +781,18 @@ class FSDirRenameOp {
       INodesInPath dst, boolean filesDeleted,
       BlocksMapUpdateInfo collectedBlocks) throws IOException {
     boolean success = (dst != null);
-    HdfsFileStatus auditStat = success ? fsd.getAuditFileInfo(dst) : null;
+    FileStatus auditStat = success ? fsd.getAuditFileInfo(dst) : null;
     return new RenameResult(
         success, auditStat, filesDeleted, collectedBlocks);
   }
 
   static class RenameResult {
     final boolean success;
-    final HdfsFileStatus auditStat;
+    final FileStatus auditStat;
     final boolean filesDeleted;
     final BlocksMapUpdateInfo collectedBlocks;
 
-    RenameResult(boolean success, HdfsFileStatus auditStat,
+    RenameResult(boolean success, FileStatus auditStat,
         boolean filesDeleted, BlocksMapUpdateInfo collectedBlocks) {
       this.success = success;
       this.auditStat = auditStat;

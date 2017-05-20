@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.swift;
 
-import junit.framework.AssertionFailedError;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -119,7 +118,7 @@ public class TestSwiftFileSystemContract
   public void testWriteReadAndDeleteEmptyFile() throws Exception {
     try {
       super.testWriteReadAndDeleteEmptyFile();
-    } catch (AssertionFailedError e) {
+    } catch (AssertionError e) {
       SwiftTestUtils.downgrade("empty files get mistaken for directories", e);
     }
   }

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 /**
  * A mock wasb authorizer implementation.
@@ -32,6 +33,14 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   private Map<AuthorizationComponent, Boolean> authRules;
 
+  // The full qualified URL to the root directory
+  private String qualifiedPrefixUrl;
+
+  public MockWasbAuthorizerImpl(NativeAzureFileSystem fs) {
+    qualifiedPrefixUrl = new Path("/").makeQualified(fs.getUri(), fs.getWorkingDirectory())
+        .toString().replaceAll("/$", "");
+  }
+
   @Override
   public void init(Configuration conf) {
     authRules = new HashMap<AuthorizationComponent, Boolean>();
@@ -39,6 +48,8 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   public void addAuthRule(String wasbAbsolutePath,
       String accessType, boolean access) {
+
+    wasbAbsolutePath = qualifiedPrefixUrl + wasbAbsolutePath;
 
     AuthorizationComponent component = wasbAbsolutePath.endsWith("*")
         ? new AuthorizationComponent("^" + wasbAbsolutePath.replace("*", ".*"), accessType)

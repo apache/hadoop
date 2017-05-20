@@ -287,7 +287,7 @@ public class TestDistCpOptions {
         "mapBandwidth=0.0, copyStrategy='uniformsize', preserveStatus=[], " +
         "atomicWorkPath=null, logPath=null, sourceFileListing=abc, " +
         "sourcePaths=null, targetPath=xyz, filtersFile='null'," +
-        " blocksPerChunk=0}";
+        " blocksPerChunk=0, copyBufferSize=8192}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -497,4 +497,21 @@ public class TestDistCpOptions {
     Assert.assertFalse(builder.build().shouldAppend());
   }
 
+  @Test
+  public void testSetCopyBufferSize() {
+    final DistCpOptions.Builder builder = new DistCpOptions.Builder(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"));
+
+    Assert.assertEquals(DistCpConstants.COPY_BUFFER_SIZE_DEFAULT,
+        builder.build().getCopyBufferSize());
+
+    builder.withCopyBufferSize(4194304);
+    Assert.assertEquals(4194304,
+        builder.build().getCopyBufferSize());
+
+    builder.withCopyBufferSize(-1);
+    Assert.assertEquals(DistCpConstants.COPY_BUFFER_SIZE_DEFAULT,
+        builder.build().getCopyBufferSize());
+  }
 }

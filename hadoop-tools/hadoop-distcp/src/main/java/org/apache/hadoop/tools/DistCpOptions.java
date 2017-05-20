@@ -143,6 +143,8 @@ public final class DistCpOptions {
   // to copy in parallel. Default is 0 and file are not splitted.
   private final int blocksPerChunk;
 
+  private final int copyBufferSize;
+
   /**
    * File attributes for preserve.
    *
@@ -200,6 +202,8 @@ public final class DistCpOptions {
     this.preserveStatus = builder.preserveStatus;
 
     this.blocksPerChunk = builder.blocksPerChunk;
+
+    this.copyBufferSize = builder.copyBufferSize;
   }
 
   public Path getSourceFileListing() {
@@ -302,7 +306,7 @@ public final class DistCpOptions {
   }
 
   /**
-   * Checks if the input attribute should be preserved or not
+   * Checks if the input attribute should be preserved or not.
    *
    * @param attribute - Attribute to check
    * @return True if attribute should be preserved, false otherwise
@@ -313,6 +317,10 @@ public final class DistCpOptions {
 
   public int getBlocksPerChunk() {
     return blocksPerChunk;
+  }
+
+  public int getCopyBufferSize() {
+    return copyBufferSize;
   }
 
   /**
@@ -351,6 +359,8 @@ public final class DistCpOptions {
     }
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BLOCKS_PER_CHUNK,
         String.valueOf(blocksPerChunk));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.COPY_BUFFER_SIZE,
+        String.valueOf(copyBufferSize));
   }
 
   /**
@@ -385,6 +395,7 @@ public final class DistCpOptions {
         ", targetPath=" + targetPath +
         ", filtersFile='" + filtersFile + '\'' +
         ", blocksPerChunk=" + blocksPerChunk +
+        ", copyBufferSize=" + copyBufferSize +
         '}';
   }
 
@@ -428,6 +439,9 @@ public final class DistCpOptions {
         EnumSet.noneOf(FileAttribute.class);
 
     private int blocksPerChunk = 0;
+
+    private int copyBufferSize =
+            DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -662,6 +676,13 @@ public final class DistCpOptions {
 
     public Builder withBlocksPerChunk(int newBlocksPerChunk) {
       this.blocksPerChunk = newBlocksPerChunk;
+      return this;
+    }
+
+    public Builder withCopyBufferSize(int newCopyBufferSize) {
+      this.copyBufferSize =
+          newCopyBufferSize > 0 ? newCopyBufferSize
+              : DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
       return this;
     }
   }
