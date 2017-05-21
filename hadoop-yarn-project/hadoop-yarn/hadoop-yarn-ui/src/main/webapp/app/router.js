@@ -56,6 +56,18 @@ Router.map(function() {
   this.route('notfound', { path: '*:' });
   this.route('yarn-app-attempts', { path: '/yarn-app-attempts/:app_id' });
   this.route('yarn-queues', { path: '/yarn-queues/:queue_name' });
+
+  this.route('yarn-flow-activity');
+  this.route('yarn-flow', { path: '/yarn-flow/:flow_uid'}, function() {
+    this.route('info');
+    this.route('runs');
+  });
+  this.route('yarn-flowrun', { path: '/yarn-flowrun/:flowrun_uid'}, function() {
+    this.route('info');
+    this.route('metrics');
+  });
+  this.route('yarn-flowrun-metric', { path: '/yarn-flowrun-metric/:flowrun_uid/:metric_id'});
+  this.route('timeline-error', {path: 'timeline-error/:error_id'});
 });
 
 export default Router;

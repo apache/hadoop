@@ -26,9 +26,9 @@
       <div class="panel panel-default">
         <div class="panel-heading">
           {{#if service}}
-            <h4>Service</h4>
+            Service
           {{else}}
-            <h4>Application</h4>
+            Application
           {{/if}}
         </div>
         <div class="panel-body">
@@ -175,8 +175,8 @@
               <thead>
               <tr>
                 <th>Master Container Log</th>
-                <td>Master Node</td>
-                <td>Master Node Label Expression</td>
+                <th>Master Node</th>
+                <th>Master Node Label Expression</th>
               </tr>
               </thead>
 
@@ -215,48 +215,7 @@
       {{/if}}
 
 
-      </div>
-
-    <!--
-      <div class="row">
-        <div class="col-md-12 container-fluid">
-          <div class="panel panel-default">
-              <div class="panel-heading">
-                Application Attempts
-              </div>
-              <table id="app-attempt-table" class="table table-striped table-bordered" cellspacing="0" width="100%" height="100%">
-                <thead>
-                  <tr>
-                        <th>Start Time</th>
-                        <th>Master ContainerId</th>
-                        <th>Node Http Address</th>
-                        <th>Node Id</th>
-                        <th>Logs Link</th>
-                      </tr>
-                </thead>
-                <tbody>
-                  {{#each model.attempts as |attempt|}}
-                    <tr>
-                      <td>{{attempt.startTime}}</td>
-                      <td>{{attempt.containerId}}</td>
-                      <td><a href={{attempt.nodeHttpAddress}}>{{attempt.nodeHttpAddress}}</a></td>
-                      <td>{{attempt.nodeId}}</td>
-                      <td><a href={{attempt.logsLink}}>link</a></td>
-                    </tr>
-                  {{/each}}
-                </tbody>
-            </table>
-            </div>
-        </div>
-      </div>
-    -->
-
-      <!-- timeline view of children -->
-    <!--
-      <div class="row">
-         {{timeline-view parent-id="attempt-timeline-div" my-id="timeline-view" height="100%" rmModel=model.attempts label="shortAppAttemptId" attemptModel=true}}
-      </div>
-    -->
+    </div>
   </div>
 </div>
 {{/if}}

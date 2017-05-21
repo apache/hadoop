@@ -17,29 +17,26 @@
  */
 
 import Ember from 'ember';
-
 import AbstractRoute from './abstract';
+import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend({
+export default AbstractRoute.extend(AppAttemptMixin, {
   model(param) {
     return Ember.RSVP.hash({
-      app: this.store.find('yarn-app', param.app_id),
+      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
 
       rmContainers: this.store.find('yarn-app', param.app_id).then(function() {
         return this.store.query('yarn-app-attempt', {appId: param.app_id}).then(function (attempts) {
           if (attempts && attempts.get('firstObject')) {
             var appAttemptId = attempts.get('firstObject').get('appAttemptId');
-            var rmContainers = this.store.query('yarn-container',
-              {
-                app_attempt_id: appAttemptId,
-                is_rm: true
-              });
-            return rmContainers;
+            return this.store.query('yarn-container', {
+              app_attempt_id: appAttemptId
+            });
           }
         }.bind(this));
       }.bind(this)),
 
-      nodes: this.store.findAll('yarn-rm-node'),
+      nodes: this.store.findAll('yarn-rm-node', {reload: true}),
     });
   },
 
@@ -48,5 +45,6 @@ export default AbstractRoute.extend({
     this.store.unloadAll('yarn-app-attempt');
     this.store.unloadAll('yarn-container');
     this.store.unloadAll('yarn-rm-node');
+    this.store.unloadAll('yarn-app-timeline');
   }
 });
