@@ -41,6 +41,7 @@
     "ember-data": "2.1.0",
     "ember-disable-proxy-controllers": "1.0.1",
     "ember-export-application-global": "1.0.5",
+    "ember-lodash": "0.0.10",
     "ember-resolver": "2.0.3",
     "ember-spin-spinner": "0.2.3",
     "ember-truth-helpers": "1.2.0",

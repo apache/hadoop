@@ -17,7 +17,6 @@
  */
 
 import Ember from 'ember';
-import ColumnDef from 'em-table/utils/column-definition';
 import TableDefinition from 'em-table/utils/table-definition';
 import AppTableController from '../app-table-columns';
 

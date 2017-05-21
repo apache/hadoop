@@ -25,31 +25,17 @@ export default DS.JSONAPIAdapter.extend({
   },
 
   host: function() {
-    return undefined;
+    return this.get(`hosts.rmWebAddress`);
   }.property(),
 
   namespace: function() {
-    return undefined;
+    return this.get(`env.app.namespaces.cluster`);
   }.property(),
 
   urlForQuery(query/*, modelName*/) {
-    var rmHosts = this.get(`hosts.rmWebAddress`);
-    var tsHosts = this.get(`hosts.timelineWebAddress`);
-    var rmNamespaces = this.get(`env.app.namespaces.cluster`);
-    var tsNamespaces = this.get(`env.app.namespaces.timeline`);
-
-    if (query.is_rm) {
-      this.set("host", rmHosts);
-      this.set("namespace", rmNamespaces);
-    } else {
-      this.set("host", tsHosts);
-      this.set("namespace", tsNamespaces);
-    }
-
     var url = this._buildURL();
     url = url + '/apps/' + Converter.attemptIdToAppId(query.app_attempt_id) +
           "/appattempts/" + query.app_attempt_id + "/containers";
-    console.log(url);
     return url;
   },
 

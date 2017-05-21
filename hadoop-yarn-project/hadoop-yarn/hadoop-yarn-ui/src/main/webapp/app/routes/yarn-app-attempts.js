@@ -16,19 +16,20 @@
  * limitations under the License.
  */
 
+import Ember from 'ember';
 import AbstractRoute from './abstract';
+import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend({
+export default AbstractRoute.extend(AppAttemptMixin, {
   model(param) {
-    return this.store.query('yarn-app-attempt', { appId: param.app_id}).then(function (attempts) {
-      return {
-        appId: param.app_id,
-        attempts: attempts
-      };
+    return Ember.RSVP.hash({
+      appId: param.app_id,
+      attempts: this.fetchAttemptListFromRMorATS(param.app_id, this.store)
     });
   },
 
   unloadAll() {
     this.store.unloadAll('yarn-app-attempt');
+    this.store.unloadAll('yarn-timeline-appattempt');
   }
 });

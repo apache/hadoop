@@ -314,3 +314,86 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+#main {
+  float: left;
+  width: 750px;
+}
+
+#sidebar {
+  float: right;
+  width: 100px;
+}
+
+#sequence {
+  width: 600px;
+  height: 70px;
+}
+
+#legend {
+  padding: 10px 0 0 3px;
+}
+
+#sequence text, #legend text {
+  font-weight: 600;
+  fill: #fff;
+}
+
+#chart {
+  position: relative;
+}
+
+#chart path {
+  stroke: #fff;
+}
+
+#explanation {
+  position: absolute;
+  top: 360px;
+  left: 385px;
+  width: 230px;
+  text-align: center;
+  color: #666;
+  z-index: -1;
+}
+
+.simple-bar-chart .axis text {
+  font: 10px sans-serif;
+}
+
+.simple-bar-chart .axis path, .simple-bar-chart .axis line {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1px;
+}
+
+.simple-bar-chart rect {
+  fill: steelblue;
+}
+
+.simple-bar-chart rect:hover {
+  fill: brown;
+  cursor: pointer;
+}
+
+.yarn-flow-runs .chart-panel, .yarn-flow-runinfo .chart-panel {
+  overflow: auto;
+}
+
+.yarn-flow-runs .glyphicon-remove, .yarn-flow-runinfo .glyphicon-remove {
+  cursor: pointer;
+}
+
+.yarn-flow-runs .glyphicon-remove:hover, .yarn-flow-runinfo .glyphicon-remove:hover {
+  color: #c9302c;
+}
+
+.yarn-flow-runs .dropdown-menu .item-text, .yarn-flow-runinfo .dropdown-menu .item-text {
+  width: auto;
+  display: inline-block;
+}
+
+.yarn-flow-runs .dropdown-menu .item-icon, .yarn-flow-runinfo .dropdown-menu .item-icon {
+  width: 14px;
+  display: inline-block;
+}

@@ -52,7 +52,7 @@ export default BaseChartComponent.extend({
 
   bindSelectCategory: function(element, i) {
     element.on("click", function() {
-      if (this.selectedCategory == i) {
+      if (this.selectedCategory === i) {
         // Remove selection for second click
         this.selectedCategory = 0;
       } else {
@@ -76,7 +76,7 @@ export default BaseChartComponent.extend({
     }
 
     var usage = node.get("usedMemoryMB") /
-      (node.get("usedMemoryMB") + node.get("availMemoryMB"))
+      (node.get("usedMemoryMB") + node.get("availMemoryMB"));
     var lowerLimit = (this.selectedCategory - 1) * 0.2;
     var upperLimit = this.selectedCategory * 0.2;
     if (lowerLimit <= usage && usage <= upperLimit) {
@@ -116,6 +116,7 @@ export default BaseChartComponent.extend({
     var sampleXOffset = (layout.x2 - layout.x1) / 2 - 2.5 * this.SAMPLE_CELL_WIDTH -
       2 * this.CELL_MARGIN;
     var sampleYOffset = layout.margin * 2;
+    var text;
 
     for (i = 1; i <= 5; i++) {
       var ratio = i * 0.2 - 0.1;
@@ -128,7 +129,7 @@ export default BaseChartComponent.extend({
         .attr("height", this.SAMPLE_HEIGHT)
         .attr("class", "hyperlink");
       this.bindSelectCategory(rect, i);
-      var text = g.append("text")
+      text = g.append("text")
         .text("" + (ratio * 100).toFixed(1) + "% Used")
         .attr("y", sampleYOffset + this.SAMPLE_HEIGHT / 2 + 5)
         .attr("x", sampleXOffset + this.SAMPLE_CELL_WIDTH / 2)
@@ -137,8 +138,8 @@ export default BaseChartComponent.extend({
       sampleXOffset += this.CELL_MARGIN + this.SAMPLE_CELL_WIDTH;
     }
 
-    if (this.selectedCategory != 0) {
-      var text = g.append("text")
+    if (this.selectedCategory !== 0) {
+      text = g.append("text")
         .text("Clear")
         .attr("y", sampleYOffset + this.SAMPLE_HEIGHT / 2 + 5)
         .attr("x", sampleXOffset + 20)
@@ -149,7 +150,7 @@ export default BaseChartComponent.extend({
     var chartXOffset = -1;
 
     for (i = 0; i < racksArray.length; i++) {
-      var text = g.append("text")
+      text = g.append("text")
         .text(racksArray[i])
         .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
         .attr("x", layout.margin)
@@ -163,7 +164,6 @@ export default BaseChartComponent.extend({
 
       for (var j = 0; j < data.length; j++) {
         var rack = data[j].get("rack");
-        var host = data[j].get("nodeHostName");
 
         if (rack === racksArray[i]) {
           this.addNode(g, xOffset, yOffset, colorFunc, data[j]);
@@ -217,11 +217,11 @@ export default BaseChartComponent.extend({
         href = `#/yarn-node/${node_id}/${node_addr}`;
     var a = g.append("a")
       .attr("href", href);
-    var text = a.append("text")
+    a.append("text")
       .text(data.get("nodeHostName"))
       .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
       .attr("x", xOffset + this.CELL_WIDTH / 2)
-      .attr("class", this.isNodeSelected(data) ? "heatmap-cell" : "heatmap-cell-notselected")
+      .attr("class", this.isNodeSelected(data) ? "heatmap-cell" : "heatmap-cell-notselected");
     if (this.isNodeSelected(data)) {
       this.bindTP(a, rect);
     }

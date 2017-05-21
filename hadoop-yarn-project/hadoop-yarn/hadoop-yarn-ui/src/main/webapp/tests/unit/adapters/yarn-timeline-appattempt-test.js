@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import ChartsMixin from '../../../mixins/charts';
-import { module, test } from 'qunit';
+import { moduleFor, test } from 'ember-qunit';
 
-module('Unit | Mixin | charts');
+moduleFor('adapter:yarn-timeline-appattempt', 'Unit | Adapter | yarn timeline appattempt', {
+  // Specify the other units that are required for this test.
+  // needs: ['serializer:foo']
+});
 
 // Replace this with your real tests.
-test('it works', function(assert) {
-  var ChartsObject = Ember.Object.extend(ChartsMixin);
-  var subject = ChartsObject.create();
-  assert.ok(subject);
+test('it exists', function(assert) {
+  let adapter = this.subject();
+  assert.ok(adapter);
 });

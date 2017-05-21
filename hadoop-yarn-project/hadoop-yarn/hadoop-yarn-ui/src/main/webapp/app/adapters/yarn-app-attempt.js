@@ -26,7 +26,9 @@ export default AbstractAdapter.extend({
 
   urlForQuery(query/*, modelName*/) {
     var url = this._buildURL();
-    return url + '/apps/' + query.appId + "/appattempts";
+    var appId = query.appId;
+    delete query.appId;
+    return url + '/apps/' + appId + "/appattempts";
   },
 
   urlForFindRecord(id/*, modelName, snapshot*/) {
