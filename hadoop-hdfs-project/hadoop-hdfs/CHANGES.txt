@@ -105,6 +105,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11384. Balancer disperses getBlocks calls to avoid NameNode's rpc queue
     saturation. (shv)
 
+    HDFS-9412. getBlocks occupies FSLock and takes too long to complete.
+    Contributed by He Tianyi. Backport HDFS-11855 by Vinitha Reddy Gankidi.
+
   BUG FIXES
    
     HDFS-8307. Spurious DNS Queries from hdfs shell. (Andres Perez via aengineer)
