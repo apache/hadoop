@@ -22,7 +22,7 @@ export default {
   containerIdToAttemptId: function(containerId) {
     if (containerId) {
       var arr = containerId.split('_');
-      var attemptId = ["appattempt", arr[1], 
+      var attemptId = ["appattempt", arr[1],
         arr[2], this.padding(arr[3], 6)];
       return attemptId.join('_');
     }
@@ -30,7 +30,7 @@ export default {
   attemptIdToAppId: function(attemptId) {
     if (attemptId) {
       var arr = attemptId.split('_');
-      var appId = ["application", arr[1], 
+      var appId = ["application", arr[1],
         arr[2]].join('_');
       return appId;
     }
@@ -85,6 +85,10 @@ export default {
     var dateTimeString = moment(parseInt(timeStamp)).format("YYYY/MM/DD HH:mm:ss");
     return dateTimeString;
   },
+  timeStampToDateOnly: function(timeStamp) {
+    var dateTimeString = moment(parseInt(timeStamp)).format("YYYY/MM/DD");
+    return dateTimeString;
+  },
   dateToTimeStamp: function(date) {
     if (date) {
       var ts = moment(date, "YYYY/MM/DD HH:mm:ss").valueOf();
@@ -126,7 +130,7 @@ export default {
     }
     return value.toFixed(1) + " " + unit;
   },
-  msToElapsedTimeUnit: function(millisecs) {
+  msToElapsedTimeUnit: function(millisecs, short) {
     var seconds = Math.floor(millisecs / 1000);
     var days = Math.floor(seconds / (3600 * 24));
     var hours = Math.floor(seconds / 3600) - (days * 24);
@@ -148,6 +152,18 @@ export default {
     }
     pluralize = secs > 1? " Secs" : " Sec";
     timeStrArr.push(secs + pluralize);
+    if (short) {
+      return timeStrArr[0] + (timeStrArr[1]? " : " + timeStrArr[1] : "");
+    }
     return timeStrArr.join(" : ");
+  },
+  memoryBytesToMB: function(mem) {
+    var unit = "MB";
+    var value = mem / (1024 * 1024);
+    if (value / 1024 >= 0.9) {
+      value = value / 1024;
+      unit = "GB";
+    }
+    return value.toFixed(1) + " " + unit;
   }
 };

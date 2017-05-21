@@ -24,7 +24,11 @@
     <div class="col-md-2 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4>Application</h4>
+          {{#if service}}
+            Service
+          {{else}}
+            Application
+          {{/if}}
         </div>
         <div class="panel-body">
           <ul class="nav nav-pills nav-stacked" id="stacked-menu">
@@ -44,7 +48,6 @@
     </div>
 
     <div class="col-md-10 container-fluid">
-      <!-- timeline view of children -->
       <div class="row">
          {{timeline-view parent-id="attempt-timeline-div" my-id="timeline-view" height="100%" rmModel=model.attempts label="shortAppAttemptId" attemptModel=true serviceName=service}}
       </div>
