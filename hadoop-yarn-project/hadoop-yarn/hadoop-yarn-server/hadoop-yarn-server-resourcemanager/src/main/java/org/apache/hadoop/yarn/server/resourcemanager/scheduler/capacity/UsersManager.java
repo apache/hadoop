@@ -253,6 +253,15 @@ public class UsersManager implements AbstractUsersManager {
     public void setUserResourceLimit(Resource userResourceLimit) {
       this.userResourceLimit = userResourceLimit;
     }
+
+    public String getUserName() {
+      return this.userName;
+    }
+
+    @VisibleForTesting
+    public void setResourceUsage(ResourceUsage resourceUsage) {
+      this.userResourceUsage = resourceUsage;
+    }
   } /* End of User class */
 
   /**
@@ -344,7 +353,7 @@ public class UsersManager implements AbstractUsersManager {
   /*
    * Get all users of queue.
    */
-  private Map<String, User> getUsers() {
+  public Map<String, User> getUsers() {
     return users;
   }
 
