@@ -19,8 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,22 +47,34 @@ public class TestMutableCSConfigurationProvider {
 
   private MutableCSConfigurationProvider confProvider;
   private RMContext rmContext;
-  private Map<String, String> goodUpdate;
-  private Map<String, String> badUpdate;
+  private QueueConfigsUpdateInfo goodUpdate;
+  private QueueConfigsUpdateInfo badUpdate;
   private CapacityScheduler cs;
 
-  private static final String TEST_USER = "testUser";
+  private static final UserGroupInformation TEST_USER = UserGroupInformation
+      .createUserForTesting("testUser", new String[] {});
 
   @Before
   public void setUp() {
     cs = mock(CapacityScheduler.class);
     rmContext = mock(RMContext.class);
     when(rmContext.getScheduler()).thenReturn(cs);
+    when(cs.getConfiguration()).thenReturn(
+        new CapacitySchedulerConfiguration());
     confProvider = new MutableCSConfigurationProvider(rmContext);
-    goodUpdate = new HashMap<>();
-    goodUpdate.put("goodKey", "goodVal");
-    badUpdate = new HashMap<>();
-    badUpdate.put("badKey", "badVal");
+    goodUpdate = new QueueConfigsUpdateInfo();
+    Map<String, String> goodUpdateMap = new HashMap<>();
+    goodUpdateMap.put("goodKey", "goodVal");
+    QueueConfigInfo goodUpdateInfo = new
+        QueueConfigInfo("root.a", goodUpdateMap);
+    goodUpdate.getUpdateQueueInfo().add(goodUpdateInfo);
+
+    badUpdate = new QueueConfigsUpdateInfo();
+    Map<String, String> badUpdateMap = new HashMap<>();
+    badUpdateMap.put("badKey", "badVal");
+    QueueConfigInfo badUpdateInfo = new
+        QueueConfigInfo("root.a", badUpdateMap);
+    badUpdate.getUpdateQueueInfo().add(badUpdateInfo);
   }
 
   @Test
@@ -66,15 +82,16 @@ public class TestMutableCSConfigurationProvider {
     Configuration conf = new Configuration();
     confProvider.init(conf);
     assertNull(confProvider.loadConfiguration(conf)
-        .get("goodKey"));
+        .get("yarn.scheduler.capacity.root.a.goodKey"));
 
     doNothing().when(cs).reinitialize(any(Configuration.class),
         any(RMContext.class));
     confProvider.mutateConfiguration(TEST_USER, goodUpdate);
     assertEquals("goodVal", confProvider.loadConfiguration(conf)
-        .get("goodKey"));
+        .get("yarn.scheduler.capacity.root.a.goodKey"));
 
-    assertNull(confProvider.loadConfiguration(conf).get("badKey"));
+    assertNull(confProvider.loadConfiguration(conf).get(
+        "yarn.scheduler.capacity.root.a.badKey"));
     doThrow(new IOException()).when(cs).reinitialize(any(Configuration.class),
         any(RMContext.class));
     try {
@@ -82,6 +99,7 @@ public class TestMutableCSConfigurationProvider {
     } catch (IOException e) {
       // Expected exception.
     }
-    assertNull(confProvider.loadConfiguration(conf).get("badKey"));
+    assertNull(confProvider.loadConfiguration(conf).get(
+        "yarn.scheduler.capacity.root.a.badKey"));
   }
 }

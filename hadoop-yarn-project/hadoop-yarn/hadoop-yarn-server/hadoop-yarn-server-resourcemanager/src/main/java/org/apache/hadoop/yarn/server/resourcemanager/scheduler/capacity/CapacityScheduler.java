@@ -142,6 +142,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Placeme
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -650,6 +651,7 @@ public class CapacityScheduler extends
     preemptionManager.refreshQueues(null, this.getRootQueue());
   }
 
+  @Override
   public CSQueue getQueue(String queueName) {
     if (queueName == null) {
       return null;
@@ -2616,10 +2618,10 @@ public class CapacityScheduler extends
 
   @Override
   public void updateConfiguration(UserGroupInformation user,
-      Map<String, String> confUpdate) throws IOException {
+      QueueConfigsUpdateInfo confUpdate) throws IOException {
     if (csConfProvider instanceof MutableConfigurationProvider) {
       ((MutableConfigurationProvider) csConfProvider).mutateConfiguration(
-          user.getShortUserName(), confUpdate);
+          user, confUpdate);
     } else {
       throw new UnsupportedOperationException("Configured CS configuration " +
           "provider does not support updating configuration.");

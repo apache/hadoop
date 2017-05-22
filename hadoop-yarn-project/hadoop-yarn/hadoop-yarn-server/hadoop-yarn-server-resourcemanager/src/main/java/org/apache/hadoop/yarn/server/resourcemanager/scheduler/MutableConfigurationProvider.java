@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Interface for allowing changing scheduler configurations.
@@ -32,7 +34,7 @@ public interface MutableConfigurationProvider {
    * @param confUpdate Key-value pairs for configurations to be updated.
    * @throws IOException if scheduler could not be reinitialized
    */
-  void mutateConfiguration(String user, Map<String, String> confUpdate)
-      throws IOException;
+  void mutateConfiguration(UserGroupInformation user, QueueConfigsUpdateInfo
+      confUpdate) throws IOException;
 
 }

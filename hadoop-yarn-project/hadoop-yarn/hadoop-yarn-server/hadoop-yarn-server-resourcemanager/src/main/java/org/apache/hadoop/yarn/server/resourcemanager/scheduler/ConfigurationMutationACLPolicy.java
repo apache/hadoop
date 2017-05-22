@@ -15,39 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
 
-import java.io.IOException;
-
 /**
- * Interface for a scheduler that supports changing configuration at runtime.
- *
+ * Interface for determining whether configuration mutations are allowed.
  */
-public interface MutableConfScheduler extends ResourceScheduler {
+public interface ConfigurationMutationACLPolicy {
 
   /**
-   * Update the scheduler's configuration.
-   * @param user Caller of this update
-   * @param confUpdate configuration update
-   * @throws IOException if update is invalid
+   * Initialize ACL policy with configuration and RMContext.
+   * @param conf Configuration to initialize with.
+   * @param rmContext rmContext
    */
-  void updateConfiguration(UserGroupInformation user,
-      QueueConfigsUpdateInfo confUpdate) throws IOException;
+  void init(Configuration conf, RMContext rmContext);
 
   /**
-   * Get the scheduler configuration.
-   * @return the scheduler configuration
+   * Check if mutation is allowed.
+   * @param user User issuing the request
+   * @param confUpdate configurations to be updated
+   * @return whether provided mutation is allowed or not
    */
-  Configuration getConfiguration();
+  boolean isMutationAllowed(UserGroupInformation user, QueueConfigsUpdateInfo
+      confUpdate);
 
-  /**
-   * Get queue object based on queue name.
-   * @param queueName the queue name
-   * @return the queue object
-   */
-  Queue getQueue(String queueName);
 }
