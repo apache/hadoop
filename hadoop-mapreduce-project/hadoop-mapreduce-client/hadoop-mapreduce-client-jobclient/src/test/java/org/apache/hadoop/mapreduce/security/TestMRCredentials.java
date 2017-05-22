@@ -1,5 +1,3 @@
-package org.apache.hadoop.mapreduce.security;
-
 /** Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +15,7 @@ package org.apache.hadoop.mapreduce.security;
  * limitations under the License.
  */
 
+package org.apache.hadoop.mapreduce.security;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
