@@ -144,9 +144,9 @@ public class Resources {
     return createResource(memory, (memory > 0) ? 1 : 0, (memory > 0) ? 1 : 0);
   }
 
-  /*public static Resource createResource(int memory, int cores) {
+  public static Resource createResource(int memory, int cores) {
     return createResource(memory, cores, 0, 0);
-  }*/
+  }
 
   public static Resource createResource(int memory, int cores, int GPUs) {
     return createResource(memory, cores, GPUs, 0);
