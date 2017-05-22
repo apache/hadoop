@@ -15,39 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
 
-import java.io.IOException;
-
 /**
- * Interface for a scheduler that supports changing configuration at runtime.
- *
+ * Default configuration mutation ACL policy. Checks if user is YARN admin.
  */
-public interface MutableConfScheduler extends ResourceScheduler {
+public class DefaultConfigurationMutationACLPolicy implements
+    ConfigurationMutationACLPolicy {
 
-  /**
-   * Update the scheduler's configuration.
-   * @param user Caller of this update
-   * @param confUpdate configuration update
-   * @throws IOException if update is invalid
-   */
-  void updateConfiguration(UserGroupInformation user,
-      QueueConfigsUpdateInfo confUpdate) throws IOException;
+  private YarnAuthorizationProvider authorizer;
 
-  /**
-   * Get the scheduler configuration.
-   * @return the scheduler configuration
-   */
-  Configuration getConfiguration();
+  @Override
+  public void init(Configuration conf, RMContext rmContext) {
+    authorizer = YarnAuthorizationProvider.getInstance(conf);
+  }
 
-  /**
-   * Get queue object based on queue name.
-   * @param queueName the queue name
-   * @return the queue object
-   */
-  Queue getQueue(String queueName);
+  @Override
+  public boolean isMutationAllowed(UserGroupInformation user,
+      QueueConfigsUpdateInfo confUpdate) {
+    return authorizer.isAdmin(user);
+  }
 }
