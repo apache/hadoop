@@ -112,22 +112,22 @@ public final class SCMContainerPlacementCapacity extends SCMCommonPolicy {
     int firstNodeNdx = getRand().nextInt(healthyNodes.size());
     int secondNodeNdx = getRand().nextInt(healthyNodes.size());
 
+    DatanodeID chosenID;
     // There is a possibility that both numbers will be same.
     // if that is so, we just return the node.
     if (firstNodeNdx == secondNodeNdx) {
-      return healthyNodes.get(firstNodeNdx);
+      chosenID = healthyNodes.get(firstNodeNdx);
+    } else {
+      DatanodeID firstNodeID = healthyNodes.get(firstNodeNdx);
+      DatanodeID secondNodeID = healthyNodes.get(secondNodeNdx);
+      SCMNodeMetric firstNodeMetric =
+          getNodeManager().getNodeStat(firstNodeID);
+      SCMNodeMetric secondNodeMetric =
+          getNodeManager().getNodeStat(secondNodeID);
+      chosenID = firstNodeMetric.isGreater(secondNodeMetric.get())
+          ? firstNodeID : secondNodeID;
     }
-
-    DatanodeID firstNodeID = healthyNodes.get(firstNodeNdx);
-    DatanodeID secondNodeID = healthyNodes.get(secondNodeNdx);
-    SCMNodeMetric firstNodeMetric = getNodeManager().getNodeStat(firstNodeID);
-    SCMNodeMetric secondNodeMetric = getNodeManager().getNodeStat(secondNodeID);
-
-    DatanodeID chosenID = firstNodeMetric.isGreater(secondNodeMetric.get())
-        ? firstNodeID : secondNodeID;
-
     healthyNodes.remove(chosenID);
     return chosenID;
   }
-
 }
