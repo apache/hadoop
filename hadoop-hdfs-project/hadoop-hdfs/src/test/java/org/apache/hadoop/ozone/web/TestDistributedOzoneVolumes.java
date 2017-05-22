@@ -89,9 +89,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   public void testCreateVolumes() throws IOException {
     super.testCreateVolumes(port);
     Assert.assertEquals(cluster.getKeySpaceManager()
-                          .getMetrics().getNumVolumeCreates(), 1);
-    Assert.assertEquals(cluster.getKeySpaceManager()
-                          .getMetrics().getNumVolumeCreateFails(), 0);
+        .getMetrics().getNumVolumeCreateFails(), 0);
   }
 
   /**
@@ -99,8 +97,11 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Test
   public void testCreateVolumesWithQuota() throws IOException {
     super.testCreateVolumesWithQuota(port);
+    Assert.assertEquals(cluster.getKeySpaceManager()
+        .getMetrics().getNumVolumeCreateFails(), 0);
   }
 
   /**
@@ -108,8 +109,11 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Test
   public void testCreateVolumesWithInvalidQuota() throws IOException {
     super.testCreateVolumesWithInvalidQuota(port);
+    Assert.assertEquals(cluster.getKeySpaceManager()
+        .getMetrics().getNumVolumeCreateFails(), 0);
   }
 
   /**
@@ -119,8 +123,11 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Test
   public void testCreateVolumesWithInvalidUser() throws IOException {
     super.testCreateVolumesWithInvalidUser(port);
+    Assert.assertEquals(cluster.getKeySpaceManager()
+        .getMetrics().getNumVolumeCreateFails(), 0);
   }
 
   /**
@@ -131,8 +138,11 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Test
   public void testCreateVolumesWithOutAdminRights() throws IOException {
     super.testCreateVolumesWithOutAdminRights(port);
+    Assert.assertEquals(cluster.getKeySpaceManager()
+        .getMetrics().getNumVolumeCreateFails(), 0);
   }
 
   /**
@@ -140,8 +150,11 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Test
   public void testCreateVolumesInLoop() throws IOException {
     super.testCreateVolumesInLoop(port);
+    Assert.assertEquals(cluster.getKeySpaceManager()
+        .getMetrics().getNumVolumeCreateFails(), 0);
   }
   /**
    * Get volumes owned by the user.

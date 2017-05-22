@@ -60,14 +60,14 @@ public interface KeySpaceManagerProtocol {
 
   /**
    * Gets the volume information.
-   * @param volume - Volume name.s
+   * @param volume - Volume name.
    * @return VolumeArgs or exception is thrown.
    * @throws IOException
    */
   KsmVolumeArgs getVolumeInfo(String volume) throws IOException;
 
   /**
-   * Deletes the an exisiting empty volume.
+   * Deletes an existing empty volume.
    * @param volume - Name of the volume.
    * @throws IOException
    */

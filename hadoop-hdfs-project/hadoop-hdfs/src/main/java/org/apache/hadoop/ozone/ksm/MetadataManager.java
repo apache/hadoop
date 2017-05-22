@@ -62,10 +62,37 @@ public interface MetadataManager {
   void put(byte[] key, byte[] value);
 
   /**
+   * Performs batch Put and Delete to Metadata DB.
+   * Can be used to do multiple puts and deletes atomically.
+   * @param putList - list of Key/Value to put into DB
+   * @param delList - list of Key to delete from DB
+   */
+  void batchPutDelete(List<Map.Entry<byte[], byte[]>> putList,
+                      List<byte[]> delList) throws IOException;
+
+  /**
    * Performs a batch Put to Metadata DB.
    * Can be used to do multiple puts atomically.
-   * @param list - list of Map.Entry
+   * @param putList - list of Key/Value to put into DB
    */
-  void batchPut(List<Map.Entry<byte[], byte[]>> list) throws IOException;
+  void batchPut(List<Map.Entry<byte[], byte[]>> putList) throws IOException;
 
+  /**
+   * Given a volume return the corresponding DB key.
+   * @param volume - Volume name
+   */
+  byte[] getVolumeKey(String volume);
+
+  /**
+   * Given a user return the corresponding DB key.
+   * @param user - User name
+   */
+  byte[] getUserKey(String user);
+
+  /**
+   * Given a volume and bucket, return the corresponding DB key.
+   * @param volume - User name
+   * @param bucket - Bucket name
+   */
+  byte[] getBucketKey(String volume, String bucket);
 }

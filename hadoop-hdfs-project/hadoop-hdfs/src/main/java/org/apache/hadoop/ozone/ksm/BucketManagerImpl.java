@@ -17,14 +17,11 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.ozone.OzoneConsts.DB_KEY_DELIMITER;
 
 /**
  * KSM bucket manager.
@@ -73,35 +70,31 @@ public class BucketManagerImpl implements BucketManager {
   public void createBucket(KsmBucketArgs args) throws KSMException {
     Preconditions.checkNotNull(args);
     metadataManager.writeLock().lock();
-    String volumeNameString = args.getVolumeName();
-    String bucketNameString = args.getBucketName();
+    String volumeName = args.getVolumeName();
+    String bucketName = args.getBucketName();
     try {
       //bucket key: {volume/bucket}
-      String bucketKeyString = volumeNameString +
-          DB_KEY_DELIMITER + bucketNameString;
-
-      byte[] volumeName = DFSUtil.string2Bytes(volumeNameString);
-      byte[] bucketKey = DFSUtil.string2Bytes(bucketKeyString);
+      byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
+      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
       //Check if the volume exists
-      if(metadataManager.get(volumeName) == null) {
-        LOG.error("volume: {} not found ", volumeNameString);
+      if(metadataManager.get(volumeKey) == null) {
+        LOG.error("volume: {} not found ", volumeName);
         throw new KSMException("Volume doesn't exist",
             KSMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
       //Check if bucket already exists
       if(metadataManager.get(bucketKey) != null) {
-        LOG.error("bucket: {} already exists ", bucketNameString);
+        LOG.error("bucket: {} already exists ", bucketName);
         throw new KSMException("Bucket already exist",
             KSMException.ResultCodes.FAILED_BUCKET_ALREADY_EXISTS);
       }
       metadataManager.put(bucketKey, args.getProtobuf().toByteArray());
 
-      LOG.info("created bucket: {} in volume: {}", bucketNameString,
-          volumeNameString);
+      LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
     } catch (DBException ex) {
       LOG.error("Bucket creation failed for bucket:{} in volume:{}",
-          volumeNameString, bucketNameString, ex);
+          bucketName, volumeName, ex);
       throw new KSMException(ex.getMessage(),
           KSMException.ResultCodes.FAILED_INTERNAL_ERROR);
     } finally {

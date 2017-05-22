@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.ksm;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions
     .KSMException.ResultCodes;
@@ -56,6 +57,19 @@ public class TestBucketManagerImpl {
 
     Mockito.when(metadataManager.writeLock()).thenReturn(lock.writeLock());
     Mockito.when(metadataManager.readLock()).thenReturn(lock.readLock());
+    Mockito.when(metadataManager.getVolumeKey(any(String.class))).thenAnswer(
+        (InvocationOnMock invocation) ->
+            DFSUtil.string2Bytes(
+                OzoneConsts.KSM_VOLUME_PREFIX + invocation.getArguments()[0]));
+    Mockito.when(metadataManager
+        .getBucketKey(any(String.class), any(String.class))).thenAnswer(
+            (InvocationOnMock invocation) ->
+                DFSUtil.string2Bytes(
+                    OzoneConsts.KSM_VOLUME_PREFIX
+                        + invocation.getArguments()[0]
+                        + OzoneConsts.KSM_BUCKET_PREFIX
+                        + invocation.getArguments()[1]));
+
     Mockito.doAnswer(
         new Answer<Void>() {
           @Override
@@ -74,7 +88,8 @@ public class TestBucketManagerImpl {
     );
     for(String volumeName : volumesToCreate) {
       byte[] dummyVolumeInfo = DFSUtil.string2Bytes(volumeName);
-      metadataDB.put(volumeName, dummyVolumeInfo);
+      metadataDB.put(OzoneConsts.KSM_VOLUME_PREFIX + volumeName,
+                     dummyVolumeInfo);
     }
     return metadataManager;
   }
@@ -112,7 +127,7 @@ public class TestBucketManagerImpl {
     bucketManager.createBucket(bucketArgs);
     //TODO: Use BucketManagerImpl#getBucketInfo to verify creation of bucket.
     Assert.assertNotNull(metaMgr
-        .get(DFSUtil.string2Bytes("sampleVol/bucketOne")));
+        .get(DFSUtil.string2Bytes("/sampleVol/bucketOne")));
   }
 
   @Test
