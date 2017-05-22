@@ -1551,12 +1551,17 @@ public class LeafQueue extends AbstractCSQueue {
       // Inform the node
       node.allocateContainer(allocatedContainer);
 
+      String label = RMNodeLabelsManager.NO_LABEL;
+      if (node.getLabels() != null && !node.getLabels().isEmpty()) {
+        label = node.getLabels().iterator().next();
+      }
       LOG.info("assignedContainer" +
           " application attempt=" + application.getApplicationAttemptId() +
           " container=" + container + 
           " queue=" + this + 
           " clusterResource=" + clusterResource + 
-          " type=" + type);
+          " type=" + type +
+          " requestedPartition=" + label);
 
       createdContainer.setValue(allocatedContainer);
       return container.getResource();
