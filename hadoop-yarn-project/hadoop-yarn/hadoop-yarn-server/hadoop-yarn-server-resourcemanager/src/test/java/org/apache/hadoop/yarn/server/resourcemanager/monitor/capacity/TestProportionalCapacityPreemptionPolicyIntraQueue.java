@@ -62,12 +62,16 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
      * Apps which are running at low priority (4) will preempt few of its
      * resources to meet the demand.
      */
+
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
+
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label
         "n1= res=100";
     String queuesConfig =
         // guaranteed,max,used,pending,reserved
-        "root(=[100 100 80 120 0]);" + // root
+        "root(=[100 100 79 120 0]);" + // root
             "-a(=[11 100 11 50 0]);" + // a
             "-b(=[40 100 38 60 0]);" + // b
             "-c(=[20 100 10 10 0]);" + // c
@@ -304,6 +308,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     conf.setFloat(CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 0.5);
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label
@@ -357,6 +363,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     // report "ideal" preempt as 10%. Ensure preemption happens only for 10%
     conf.setFloat(CapacitySchedulerConfiguration.TOTAL_PREEMPTION_PER_ROUND,
         (float) 0.1);
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label
@@ -411,6 +419,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     conf.setFloat(CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 0.5);
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label
@@ -418,7 +428,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     String queuesConfig =
         // guaranteed,max,used,pending,reserved
         "root(=[100 100 95 170 0]);" + // root
-            "-a(=[60 100 70 50 0]);" + // a
+            "-a(=[60 100 70 35 0]);" + // a
             "-b(=[40 100 25 120 0])"; // b
 
     String appsConfig =
@@ -467,6 +477,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     conf.setFloat(CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 0.5);
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label
@@ -516,6 +528,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
      * cycle. Eventhough there are more demand and no other low priority
      * apps are present, still AM contaier need to soared.
      */
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label
@@ -660,6 +674,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     conf.setFloat(CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 0.5);
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;" + // default partition
         "x=100,true"; // partition=x
@@ -720,6 +736,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     conf.setFloat(CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 0.5);
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label
@@ -840,8 +858,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     policy.editSchedule();
 
     // Considering user-limit of 50% since only 2 users are there, only preempt
-    // 15 more (5 is already running) eventhough demand is for 30.
-    verify(mDisp, times(15)).handle(argThat(
+    // 14 more (5 is already running) eventhough demand is for 30. Ideally we
+    // must preempt 15. But 15th container will bring user1's usage to 20 which
+    // is same as user-limit. Hence skip 15th container.
+    verify(mDisp, times(14)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -869,6 +889,8 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     conf.setFloat(CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 0.5);
+    conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+        "priority_first");
 
     String labelsConfig = "=100,true;" + // default partition
         "x=100,true"; // partition=x

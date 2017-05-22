@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Temporary data-structure tracking resource availability, pending resource
@@ -58,6 +60,10 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   // this will be always 0
   int relativePriority = 0;
   TempQueuePerPartition parent = null;
+
+  // This will hold a temp user data structure and will hold userlimit,
+  // idealAssigned, used etc.
+  Map<String, TempUserPerPartition> usersPerPartition = new LinkedHashMap<>();
 
   TempQueuePerPartition(String queueName, Resource current,
       boolean preemptionDisabled, String partition, Resource killable,
@@ -289,4 +295,12 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     return apps;
   }
 
+  public void addUserPerPartition(String userName,
+      TempUserPerPartition tmpUser) {
+    this.usersPerPartition.put(userName, tmpUser);
+  }
+
+  public Map<String, TempUserPerPartition> getUsersPerPartition() {
+    return usersPerPartition;
+  }
 }
