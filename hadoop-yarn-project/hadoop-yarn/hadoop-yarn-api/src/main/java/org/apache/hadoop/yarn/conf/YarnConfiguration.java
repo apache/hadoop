@@ -855,6 +855,15 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_GPUS = NM_PREFIX + "resource.gpus";
   public static final int DEFAULT_NM_GPUS = 8;
 
+  /** List of GPU Ids.*/
+  public static final String NM_GPU_DEVICES = NM_GPUS + "resource.gpus.ids";
+  public static final String DEFAULT_NM_GPU_DEVICES = "0,1,2,3,4,5,6,7";
+
+  /** Topology information of GPUs.*/
+  /** Domains (separated by '.') include PCIe Host Bridge (in CPU socket), PCIe switch, and NVLINK.*/
+  public static final String NM_GPU_TOPOLOGY = NM_GPUS + "resource.gpus.topology";
+  public static final String DEFAULT_NM_GPU_TOPOLOGY = "0-3,1-7..";
+
   /** Percentage of overall GPU which can be allocated for containers. */
   public static final String NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT =
           NM_PREFIX + "resource.percentage-physical-gpu-limit";
