@@ -88,16 +88,24 @@ public abstract class AbstractContainerAllocator {
       } else if (result.getAllocationState() == AllocationState.ALLOCATED){
         // This is a new container
         // Inform the ordering policy
+        RMContainer allocatedContainer = application.getRMContainer(
+            updatedContainer.getId());
+        if (allocatedContainer == null) {
+          LOG.warn("Allocated container for containerId "
+              + updatedContainer.getId() + " is null.");
+        }
         LOG.info("assignedContainer" + " application attempt="
             + application.getApplicationAttemptId() + " container="
             + updatedContainer.getId() + " queue=" + this + " clusterResource="
-            + clusterResource + " type=" + assignment.getType());
+            + clusterResource + " type=" + assignment.getType()
+            + " requestedPartition="
+            + (allocatedContainer == null ? "null" :
+                allocatedContainer.getNodeLabelExpression()));
 
         application
             .getCSLeafQueue()
             .getOrderingPolicy()
-            .containerAllocated(application,
-                application.getRMContainer(updatedContainer.getId()));
+            .containerAllocated(application, allocatedContainer);
 
         assignment.getAssignmentInformation().addAllocationDetails(
             updatedContainer.getId(),
