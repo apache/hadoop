@@ -105,28 +105,29 @@ public class XceiverClientManager {
     Preconditions.checkArgument(pipeline.getMachines() != null);
     Preconditions.checkArgument(!pipeline.getMachines().isEmpty());
     String containerName = pipeline.getContainerName();
-    XceiverClientWithAccessInfo info = openClient.getIfPresent(containerName);
+    synchronized(openClient) {
+      XceiverClientWithAccessInfo info =
+          openClient.getIfPresent(containerName);
 
-    if (info != null) {
-      // we do have this connection, add reference and return
-      info.incrementReference();
-      return info.getXceiverClient();
-    } else {
-      // connection not found, create new, add reference and return
-      final XceiverClientSpi xceiverClient = useRatis?
-          XceiverClientRatis.newXceiverClientRatis(pipeline, conf)
-          : new XceiverClient(pipeline, conf);
-      try {
-        xceiverClient.connect();
-      } catch (Exception e) {
-        throw new IOException("Exception connecting XceiverClient.", e);
-      }
-      info = new XceiverClientWithAccessInfo(xceiverClient);
-      info.incrementReference();
-      synchronized (openClient) {
+      if (info != null) {
+        // we do have this connection, add reference and return
+        info.incrementReference();
+        return info.getXceiverClient();
+      } else {
+        // connection not found, create new, add reference and return
+        final XceiverClientSpi xceiverClient = useRatis ?
+            XceiverClientRatis.newXceiverClientRatis(pipeline, conf)
+            : new XceiverClient(pipeline, conf);
+        try {
+          xceiverClient.connect();
+        } catch (Exception e) {
+          throw new IOException("Exception connecting XceiverClient.", e);
+        }
+        info = new XceiverClientWithAccessInfo(xceiverClient);
+        info.incrementReference();
         openClient.put(containerName, info);
+        return xceiverClient;
       }
-      return xceiverClient;
     }
   }
 
@@ -141,9 +142,9 @@ public class XceiverClientManager {
     XceiverClientWithAccessInfo info;
     synchronized (openClient) {
       info = openClient.getIfPresent(containerName);
+      Preconditions.checkNotNull(info);
+      info.decrementReference();
     }
-    Preconditions.checkNotNull(info);
-    info.decrementReference();
   }
 
   /**
