@@ -319,6 +319,10 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `SendDataPacketTransferNanosNumOps` | Total number of sending packets |
 | `SendDataPacketTransferNanosAvgTime` | Average transfer time of sending packets in nanoseconds |
 | `BPServiceActorInfo` | The information about a block pool service actor |
+| `BlocksInPendingIBR` | Number of blocks in pending incremental block report (IBR) |
+| `BlocksReceivingInPendingIBR` | Number of blocks at receiving status in pending incremental block report (IBR) |
+| `BlocksReceivedInPendingIBR` | Number of blocks at received status in pending incremental block report (IBR) |
+| `BlocksDeletedInPendingIBR` | Number of blocks at deleted status in pending incremental block report (IBR) |
 
 FsVolume
 --------
