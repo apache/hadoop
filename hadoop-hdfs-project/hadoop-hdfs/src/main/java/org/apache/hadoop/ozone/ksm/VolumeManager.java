@@ -30,4 +30,30 @@ public interface VolumeManager {
    * @param args - Volume args to create a volume
    */
   void createVolume(KsmVolumeArgs args) throws IOException;
+
+  /**
+   * Changes the owner of a volume.
+   *
+   * @param volume - Name of the volume.
+   * @param owner - Name of the owner.
+   * @throws IOException
+   */
+  void setOwner(String volume, String owner) throws IOException;
+
+  /**
+   * Changes the Quota on a volume.
+   *
+   * @param volume - Name of the volume.
+   * @param quota - Quota in bytes.
+   * @throws IOException
+   */
+  void setQuota(String volume, long quota) throws IOException;
+
+  /**
+   * Gets the volume information.
+   * @param volume - Volume name.
+   * @return VolumeArgs or exception is thrown.
+   * @throws IOException
+   */
+  KsmVolumeArgs getVolumeInfo(String volume) throws IOException;
 }

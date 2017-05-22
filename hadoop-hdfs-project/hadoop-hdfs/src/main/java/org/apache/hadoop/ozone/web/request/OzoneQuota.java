@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.web.request;
 
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.headers.Header;
 import org.codehaus.jackson.annotate.JsonIgnore;
 
@@ -29,10 +30,6 @@ import org.codehaus.jackson.annotate.JsonIgnore;
  */
 @InterfaceAudience.Private
 public class OzoneQuota {
-  private static final long MB_IN_BYTES = 1048576L;
-  private static final long GB_IN_BYTES = 1073741824L;
-  private static final long TB_IN_BYTES = 1099511627776L;
-
 
   private Units unit;
   private int size;
@@ -179,14 +176,40 @@ public class OzoneQuota {
     case BYTES:
       return this.getSize();
     case MB:
-      return this.getSize() * MB_IN_BYTES;
+      return this.getSize() * OzoneConsts.MB;
     case GB:
-      return this.getSize() * GB_IN_BYTES;
+      return this.getSize() * OzoneConsts.GB;
     case TB:
-      return this.getSize() * TB_IN_BYTES;
+      return this.getSize() * OzoneConsts.TB;
     case UNDEFINED:
     default:
       return -1;
     }
+  }
+
+  /**
+   * Returns OzoneQuota corresponding to size in bytes.
+   *
+   * @param sizeInBytes size in bytes to be converted
+   *
+   * @return OzoneQuota object
+   */
+  public static OzoneQuota getOzoneQuota(long sizeInBytes) {
+    long size;
+    Units unit;
+    if (sizeInBytes % OzoneConsts.TB == 0) {
+      size = sizeInBytes / OzoneConsts.TB;
+      unit = Units.TB;
+    } else if (sizeInBytes % OzoneConsts.GB == 0) {
+      size = sizeInBytes / OzoneConsts.GB;
+      unit = Units.GB;
+    } else if (sizeInBytes % OzoneConsts.MB == 0) {
+      size = sizeInBytes / OzoneConsts.MB;
+      unit = Units.MB;
+    } else {
+      size = sizeInBytes;
+      unit = Units.BYTES;
+    }
+    return new OzoneQuota((int)size, unit);
   }
 }

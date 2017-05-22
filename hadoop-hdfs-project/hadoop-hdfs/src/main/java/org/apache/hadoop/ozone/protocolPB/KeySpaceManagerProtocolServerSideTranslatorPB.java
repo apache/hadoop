@@ -23,7 +23,6 @@ import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
-import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -77,6 +76,29 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
     this.impl = impl;
   }
 
+  // Convert and exception to corresponding status code
+  private Status exceptionToResponseStatus(IOException ex) {
+    if (ex instanceof KSMException) {
+      KSMException ksmException = (KSMException)ex;
+      switch (ksmException.getResult()) {
+      case FAILED_VOLUME_ALREADY_EXISTS:
+        return Status.VOLUME_ALREADY_EXISTS;
+      case FAILED_TOO_MANY_USER_VOLUMES:
+        return Status.USER_TOO_MANY_VOLUMES;
+      case FAILED_VOLUME_NOT_FOUND:
+        return Status.VOLUME_NOT_FOUND;
+      case FAILED_USER_NOT_FOUND:
+        return Status.USER_NOT_FOUND;
+      case FAILED_BUCKET_ALREADY_EXISTS:
+        return Status.BUCKET_ALREADY_EXISTS;
+      default:
+        return Status.INTERNAL_ERROR;
+      }
+    } else {
+      return Status.INTERNAL_ERROR;
+    }
+  }
+
   @Override
   public CreateVolumeResponse createVolume(
       RpcController controller, CreateVolumeRequest request)
@@ -86,18 +108,7 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
     try {
       impl.createVolume(KsmVolumeArgs.getFromProtobuf(request.getVolumeInfo()));
     } catch (IOException e) {
-      if (e instanceof KSMException) {
-        KSMException ksmException = (KSMException)e;
-        if (ksmException.getResult() ==
-            ResultCodes.FAILED_VOLUME_ALREADY_EXISTS) {
-          resp.setStatus(Status.VOLUME_ALREADY_EXISTS);
-        } else if (ksmException.getResult() ==
-            ResultCodes.FAILED_TOO_MANY_USER_VOLUMES) {
-          resp.setStatus(Status.USER_TOO_MANY_VOLUMES);
-        }
-      } else {
-        resp.setStatus(Status.INTERNAL_ERROR);
-      }
+      resp.setStatus(exceptionToResponseStatus(e));
     }
     return resp.build();
   }
@@ -106,7 +117,23 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
   public SetVolumePropertyResponse setVolumeProperty(
       RpcController controller, SetVolumePropertyRequest request)
       throws ServiceException {
-    return null;
+    SetVolumePropertyResponse.Builder resp =
+        SetVolumePropertyResponse.newBuilder();
+    resp.setStatus(Status.OK);
+    String volume = request.getVolumeName();
+
+    try {
+      if (request.hasQuotaInBytes()) {
+        long quota = request.getQuotaInBytes();
+        impl.setQuota(volume, quota);
+      } else {
+        String owner = request.getOwnerName();
+        impl.setOwner(volume, owner);
+      }
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
   }
 
   @Override
@@ -120,7 +147,16 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
   public InfoVolumeResponse infoVolume(
       RpcController controller, InfoVolumeRequest request)
       throws ServiceException {
-    return null;
+    InfoVolumeResponse.Builder resp = InfoVolumeResponse.newBuilder();
+    resp.setStatus(Status.OK);
+    String volume = request.getVolumeName();
+    try {
+      KsmVolumeArgs ret = impl.getVolumeInfo(volume);
+      resp.setVolumeInfo(ret.getProtobuf());
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
   }
 
   @Override
@@ -147,16 +183,8 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
       impl.createBucket(KsmBucketArgs.getFromProtobuf(
           request.getBucketInfo()));
       resp.setStatus(Status.OK);
-    } catch (KSMException ksmEx) {
-      if (ksmEx.getResult() ==
-          ResultCodes.FAILED_VOLUME_NOT_FOUND) {
-        resp.setStatus(Status.VOLUME_NOT_FOUND);
-      } else if (ksmEx.getResult() ==
-          ResultCodes.FAILED_BUCKET_ALREADY_EXISTS) {
-        resp.setStatus(Status.BUCKET_ALREADY_EXISTS);
-      }
-    } catch(IOException ex) {
-      resp.setStatus(Status.INTERNAL_ERROR);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
     }
     return resp.build();
   }

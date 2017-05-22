@@ -69,6 +69,7 @@ public final class ObjectStoreHandler implements Closeable {
       keySpaceManagerClient;
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
+  private final StorageHandler storageHandler;
 
   /**
    * Creates a new ObjectStoreHandler.
@@ -83,7 +84,6 @@ public final class ObjectStoreHandler implements Closeable {
         OZONE_HANDLER_TYPE_KEY, shType);
     boolean ozoneTrace = conf.getBoolean(OZONE_TRACE_ENABLED_KEY,
         OZONE_TRACE_ENABLED_DEFAULT);
-    final StorageHandler storageHandler;
 
     // Initialize Jersey container for object store web application.
     if (OzoneConsts.OZONE_HANDLER_DISTRIBUTED.equalsIgnoreCase(shType)) {
@@ -145,6 +145,15 @@ public final class ObjectStoreHandler implements Closeable {
    */
   public ObjectStoreJerseyContainer getObjectStoreJerseyContainer() {
     return this.objectStoreJerseyContainer;
+  }
+
+  /**
+   * Returns the storage handler.
+   *
+   * @return returns the storage handler
+   */
+  public StorageHandler getStorageHandler() {
+    return this.storageHandler;
   }
 
   @Override

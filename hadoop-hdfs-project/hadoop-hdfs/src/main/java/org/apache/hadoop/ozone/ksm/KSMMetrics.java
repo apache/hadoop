@@ -29,10 +29,14 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 public class KSMMetrics {
   // KSM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
+  private @Metric MutableCounterLong numVolumeModifies;
+  private @Metric MutableCounterLong numVolumeInfos;
   private @Metric MutableCounterLong numBucketCreates;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
+  private @Metric MutableCounterLong numVolumeModifyFails;
+  private @Metric MutableCounterLong numVolumeInfoFails;
   private @Metric MutableCounterLong numBucketCreateFails;
 
   public KSMMetrics() {
@@ -49,12 +53,28 @@ public class KSMMetrics {
     numVolumeCreates.incr();
   }
 
+  public void incNumVolumeModifies() {
+    numVolumeModifies.incr();
+  }
+
+  public void incNumVolumeInfos() {
+    numVolumeInfos.incr();
+  }
+
   public void incNumBucketCreates() {
     numBucketCreates.incr();
   }
 
   public void incNumVolumeCreateFails() {
     numVolumeCreates.incr();
+  }
+
+  public void incNumVolumeModifyFails() {
+    numVolumeModifyFails.incr();
+  }
+
+  public void incNumVolumeInfoFails() {
+    numVolumeInfoFails.incr();
   }
 
   public void incNumBucketCreateFails() {
@@ -67,6 +87,16 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumVolumeModifies() {
+    return numVolumeModifies.value();
+  }
+
+  @VisibleForTesting
+  public long getNumVolumeInfos() {
+    return numVolumeInfos.value();
+  }
+
+  @VisibleForTesting
   public long getNumBucketCreates() {
     return numBucketCreates.value();
   }
@@ -74,6 +104,16 @@ public class KSMMetrics {
   @VisibleForTesting
   public long getNumVolumeCreateFails() {
     return numVolumeCreateFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumVolumeModifyFails() {
+    return numVolumeModifyFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumVolumeInfoFails() {
+    return numVolumeInfoFails.value();
   }
 
   @VisibleForTesting

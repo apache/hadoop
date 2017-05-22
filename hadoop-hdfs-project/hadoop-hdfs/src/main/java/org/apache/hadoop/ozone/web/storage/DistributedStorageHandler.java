@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
+import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -115,7 +116,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void createVolume(VolumeArgs args) throws IOException, OzoneException {
     long quota = args.getQuota() == null ?
-        Long.MAX_VALUE : args.getQuota().sizeInBytes();
+        OzoneConsts.MAX_QUOTA_IN_BYTES : args.getQuota().sizeInBytes();
     KsmVolumeArgs volumeArgs = KsmVolumeArgs.newBuilder()
         .setAdminName(args.getAdminName())
         .setOwnerName(args.getUserName())
@@ -128,13 +129,15 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void setVolumeOwner(VolumeArgs args) throws
       IOException, OzoneException {
-    throw new UnsupportedOperationException("setVolumeOwner not implemented");
+    keySpaceManagerClient.setOwner(args.getVolumeName(), args.getUserName());
   }
 
   @Override
   public void setVolumeQuota(VolumeArgs args, boolean remove)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException("setVolumeQuota not implemented");
+    long quota = remove ? OzoneConsts.MAX_QUOTA_IN_BYTES :
+                                   args.getQuota().sizeInBytes();
+    keySpaceManagerClient.setQuota(args.getVolumeName(), quota);
   }
 
   @Override
@@ -158,18 +161,15 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public VolumeInfo getVolumeInfo(VolumeArgs args)
       throws IOException, OzoneException {
-    String containerKey = buildContainerKey(args.getVolumeName());
-    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
-    try {
-      KeyData containerKeyData = containerKeyDataForRead(
-          xceiverClient.getPipeline().getContainerName(), containerKey);
-      GetKeyResponseProto response = getKey(xceiverClient, containerKeyData,
-          args.getRequestID());
-      return fromContainerKeyValueListToVolume(
-          response.getKeyData().getMetadataList());
-    } finally {
-      xceiverClientManager.releaseClient(xceiverClient);
-    }
+    KsmVolumeArgs volumeArgs =
+        keySpaceManagerClient.getVolumeInfo(args.getVolumeName());
+    //TODO: add support for createdOn and other fields in getVolumeInfo
+    VolumeInfo volInfo =
+        new VolumeInfo(volumeArgs.getVolume(), null,
+            volumeArgs.getAdminName());
+    volInfo.setOwner(new VolumeOwner(volumeArgs.getOwnerName()));
+    volInfo.setQuota(OzoneQuota.getOzoneQuota(volumeArgs.getQuotaInBytes()));
+    return volInfo;
   }
 
   @Override

@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.ozone.ksm;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -121,15 +120,6 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     return metrics;
   }
 
-  /**
-   * Returns listening address of Key Space Manager RPC server.
-   *
-   * @return listen address of Key Space Manager RPC server
-   */
-  @VisibleForTesting
-  public InetSocketAddress getClientRpcAddress() {
-    return ksmRpcAddress;
-  }
   /**
    * Main entry point for starting KeySpaceManager.
    *
@@ -244,7 +234,13 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
    */
   @Override
   public void setOwner(String volume, String owner) throws IOException {
-
+    try {
+      metrics.incNumVolumeModifies();
+      volumeManager.setOwner(volume, owner);
+    } catch (Exception ex) {
+      metrics.incNumVolumeModifyFails();
+      throw ex;
+    }
   }
 
   /**
@@ -256,7 +252,13 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
    */
   @Override
   public void setQuota(String volume, long quota) throws IOException {
-
+    try {
+      metrics.incNumVolumeModifies();
+      volumeManager.setQuota(volume, quota);
+    } catch (Exception ex) {
+      metrics.incNumVolumeModifyFails();
+      throw ex;
+    }
   }
 
   /**
@@ -275,17 +277,23 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   /**
    * Gets the volume information.
    *
-   * @param volume - Volume name.s
+   * @param volume - Volume name.
    * @return VolumeArgs or exception is thrown.
    * @throws IOException
    */
   @Override
   public KsmVolumeArgs getVolumeInfo(String volume) throws IOException {
-    return null;
+    try {
+      metrics.incNumVolumeInfos();
+      return volumeManager.getVolumeInfo(volume);
+    } catch (Exception ex) {
+      metrics.incNumVolumeInfoFails();
+      throw ex;
+    }
   }
 
   /**
-   * Deletes the an exisiting empty volume.
+   * Deletes an existing empty volume.
    *
    * @param volume - Name of the volume.
    * @throws IOException

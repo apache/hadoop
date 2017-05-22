@@ -36,6 +36,14 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.SetVolumePropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.SetVolumePropertyResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
@@ -108,7 +116,8 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
     }
 
     if (resp.getStatus() != Status.OK) {
-      throw new IOException("Volume creation failed error" + resp.getStatus());
+      throw new
+          IOException("Volume creation failed, error:" + resp.getStatus());
     }
   }
 
@@ -121,7 +130,19 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
    */
   @Override
   public void setOwner(String volume, String owner) throws IOException {
-
+    SetVolumePropertyRequest.Builder req =
+        SetVolumePropertyRequest.newBuilder();
+    req.setVolumeName(volume).setOwnerName(owner);
+    final SetVolumePropertyResponse resp;
+    try {
+      resp = rpcProxy.setVolumeProperty(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new
+          IOException("Volume owner change failed, error:" + resp.getStatus());
+    }
   }
 
   /**
@@ -133,7 +154,19 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
    */
   @Override
   public void setQuota(String volume, long quota) throws IOException {
-
+    SetVolumePropertyRequest.Builder req =
+        SetVolumePropertyRequest.newBuilder();
+    req.setVolumeName(volume).setQuotaInBytes(quota);
+    final SetVolumePropertyResponse resp;
+    try {
+      resp = rpcProxy.setVolumeProperty(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new
+          IOException("Volume quota change failed, error:" + resp.getStatus());
+    }
   }
 
   /**
@@ -152,17 +185,29 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
   /**
    * Gets the volume information.
    *
-   * @param volume - Volume name.s
+   * @param volume - Volume name.
    * @return KsmVolumeArgs or exception is thrown.
    * @throws IOException
    */
   @Override
   public KsmVolumeArgs getVolumeInfo(String volume) throws IOException {
-    return null;
+    InfoVolumeRequest.Builder req = InfoVolumeRequest.newBuilder();
+    req.setVolumeName(volume);
+    final InfoVolumeResponse resp;
+    try {
+      resp = rpcProxy.infoVolume(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new
+          IOException("Info Volume failed, error:" + resp.getStatus());
+    }
+    return KsmVolumeArgs.getFromProtobuf(resp.getVolumeInfo());
   }
 
   /**
-   * Deletes the an exisiting empty volume.
+   * Deletes an existing empty volume.
    *
    * @param volume - Name of the volume.
    * @throws IOException

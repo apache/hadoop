@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -76,6 +77,35 @@ public class MetadataManagerImpl implements  MetadataManager {
   }
 
   /**
+   * Given a volume return the corresponding DB key.
+   * @param volume - Volume name
+   */
+  public byte[] getVolumeKey(String volume) {
+    String dbVolumeName = OzoneConsts.KSM_VOLUME_PREFIX + volume;
+    return DFSUtil.string2Bytes(dbVolumeName);
+  }
+
+  /**
+   * Given a user return the corresponding DB key.
+   * @param user - User name
+   */
+  public byte[] getUserKey(String user) {
+    String dbUserName = OzoneConsts.KSM_USER_PREFIX + user;
+    return DFSUtil.string2Bytes(dbUserName);
+  }
+
+  /**
+   * Given a volume and bucket, return the corresponding DB key.
+   * @param volume - User name
+   * @param bucket - Bucket name
+   */
+  public byte[] getBucketKey(String volume, String bucket) {
+    String bucketKeyString = OzoneConsts.KSM_VOLUME_PREFIX + volume
+        + OzoneConsts.KSM_BUCKET_PREFIX + bucket;
+    return DFSUtil.string2Bytes(bucketKeyString);
+  }
+
+  /**
    * Returns the read lock used on Metadata DB.
    * @return readLock
    */
@@ -111,6 +141,26 @@ public class MetadataManagerImpl implements  MetadataManager {
   @Override
   public void put(byte[] key, byte[] value) {
     store.put(key, value);
+  }
+
+  /**
+   * Performs a batch Put and Delete from Metadata DB.
+   * Can be used to do multiple puts and deletes atomically.
+   * @param putList - list of key and value pairs to put to Metadata DB.
+   * @param delList - list of keys to delete from Metadata DB.
+   */
+  @Override
+  public void batchPutDelete(List<Map.Entry<byte[], byte[]>> putList,
+                             List<byte[]> delList)
+      throws IOException {
+    WriteBatch batch = store.createWriteBatch();
+    putList.forEach(entry -> batch.put(entry.getKey(), entry.getValue()));
+    delList.forEach(entry -> batch.delete(entry));
+    try {
+      store.commitWriteBatch(batch);
+    } finally {
+      store.closeWriteBatch(batch);
+    }
   }
 
   /**

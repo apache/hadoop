@@ -94,9 +94,17 @@ public final class OzoneConsts {
   public static final String OZONE_HANDLER_LOCAL = "local";
 
   /**
-   * Ozone metadata key delimiter.
+   * KSM LevelDB prefixes.
    */
-  public static final String DB_KEY_DELIMITER = "/";
+  public static final String KSM_VOLUME_PREFIX = "/";
+  public static final String KSM_BUCKET_PREFIX = KSM_VOLUME_PREFIX;
+  public static final String KSM_KEY_PREFIX = KSM_VOLUME_PREFIX;
+  public static final String KSM_USER_PREFIX = "$";
+
+  /**
+   * Max KSM Quota size of 1024 PB.
+   */
+  public static final long MAX_QUOTA_IN_BYTES = 1024L * 1024 * TB;
 
   private OzoneConsts() {
     // Never Constructed
