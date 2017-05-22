@@ -205,42 +205,42 @@ public class CapacityOverTimePolicy implements SharingPolicy {
   private static class IntegralResource {
     long memory;
     long vcores;
-    long GPUs;
+    long gpus;
 
     public IntegralResource(Resource resource) {
       this.memory = resource.getMemory();
       this.vcores = resource.getVirtualCores();
-      this.GPUs = resource.getGPUs();
+      this.gpus = resource.getGPUs();
     }
 
     /*public IntegralResource(long mem, long vcores) {
       this.memory = mem;
       this.vcores = vcores;
-      this.GPUs = 0;
+      this.gpus = 0;
     }*/
 
     public IntegralResource(long mem, long vcores, long GPUs) {
       this.memory = mem;
       this.vcores = vcores;
-      this.GPUs = GPUs;
+      this.gpus = GPUs;
     }
 
     public void add(Resource r) {
       memory += r.getMemory();
       vcores += r.getVirtualCores();
-      GPUs += r.getGPUs();
+      gpus += r.getGPUs();
     }
 
     public void subtract(Resource r) {
       memory -= r.getMemory();
       vcores -= r.getVirtualCores();
-      GPUs-= r.getGPUs();
+      gpus -= r.getGPUs();
     }
 
     public void multiplyBy(long window) {
       memory = memory * window;
       vcores = vcores * window;
-      GPUs = GPUs * window;
+      gpus = gpus * window;
     }
 
     public long compareTo(IntegralResource other) {
@@ -248,7 +248,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
       if (diff == 0) {
         diff = vcores - other.vcores;
         if (diff == 0) {
-          diff = GPUs - other.GPUs;
+          diff = gpus - other.gpus;
         }
       }
       return diff;
@@ -256,7 +256,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
 
     @Override
     public String toString() {
-      return "<memory:" + memory + ", vCores:" + vcores + ", GPUs:" + GPUs + ">";
+      return "<memory:" + memory + ", vCores:" + vcores + ", GPUs:" + gpus + ">";
     }
   }
 }

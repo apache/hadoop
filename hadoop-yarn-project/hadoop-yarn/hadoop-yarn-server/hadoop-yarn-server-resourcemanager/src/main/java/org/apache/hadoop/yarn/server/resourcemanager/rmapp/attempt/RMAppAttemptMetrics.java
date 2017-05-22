@@ -114,7 +114,7 @@ public class RMAppAttemptMetrics {
   public AggregateAppResourceUsage getAggregateAppResourceUsage() {
     long memorySeconds = finishedMemorySeconds.get();
     long vcoreSeconds = finishedVcoreSeconds.get();
-    long GPUSeconds = finishedGPUSeconds.get();
+    long gpuSeconds = finishedGPUSeconds.get();
 
     // Only add in the running containers if this is the active attempt.
     RMAppAttempt currentAttempt = rmContext.getRMApps()
@@ -125,10 +125,10 @@ public class RMAppAttemptMetrics {
       if (appResUsageReport != null) {
         memorySeconds += appResUsageReport.getMemorySeconds();
         vcoreSeconds += appResUsageReport.getVcoreSeconds();
-        GPUSeconds += appResUsageReport.getGPUSeconds();
+        gpuSeconds += appResUsageReport.getGPUSeconds();
       }
     }
-    return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds, GPUSeconds);
+    return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds, gpuSeconds);
   }
 
   public void updateAggregateAppResourceUsage(long finishedMemorySeconds,

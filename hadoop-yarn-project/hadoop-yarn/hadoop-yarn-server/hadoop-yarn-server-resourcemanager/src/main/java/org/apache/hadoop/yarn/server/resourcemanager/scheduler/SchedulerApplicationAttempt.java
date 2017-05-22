@@ -532,7 +532,7 @@ public class SchedulerApplicationAttempt {
         > MEM_AGGREGATE_ALLOCATION_CACHE_MSECS) {
       long memorySeconds = 0;
       long vcoreSeconds = 0;
-      long GPUSeconds = 0;
+      long gpuSeconds = 0;
       for (RMContainer rmContainer : this.liveContainers.values()) {
         long usedMillis = currentTimeMillis - rmContainer.getCreationTime();
         Resource resource = rmContainer.getContainer().getResource();
@@ -540,14 +540,14 @@ public class SchedulerApplicationAttempt {
             DateUtils.MILLIS_PER_SECOND;
         vcoreSeconds += resource.getVirtualCores() * usedMillis /
             DateUtils.MILLIS_PER_SECOND;
-        GPUSeconds += resource.getGPUs() * usedMillis /
+        gpuSeconds += resource.getGPUs() * usedMillis /
             DateUtils.MILLIS_PER_SECOND;
       }
 
       lastMemoryAggregateAllocationUpdateTime = currentTimeMillis;
       lastMemorySeconds = memorySeconds;
       lastVcoreSeconds = vcoreSeconds;
-      lastGPUSeconds = GPUSeconds;
+      lastGPUSeconds = gpuSeconds;
     }
     return new AggregateAppResourceUsage(lastMemorySeconds, lastVcoreSeconds, lastGPUSeconds);
   }

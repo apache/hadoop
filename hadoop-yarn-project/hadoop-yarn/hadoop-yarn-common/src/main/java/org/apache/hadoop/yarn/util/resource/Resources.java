@@ -144,22 +144,12 @@ public class Resources {
     return createResource(memory, (memory > 0) ? 1 : 0, (memory > 0) ? 1 : 0);
   }
 
-  public static Resource createResource(int memory, int cores) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(memory);
-    resource.setVirtualCores(cores);
-    resource.setGPUs(0);
-    resource.setGPUAttribute(0);
-    return resource;
-  }
+  /*public static Resource createResource(int memory, int cores) {
+    return createResource(memory, cores, 0, 0);
+  }*/
 
   public static Resource createResource(int memory, int cores, int GPUs) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(memory);
-    resource.setVirtualCores(cores);
-    resource.setGPUs(GPUs);
-    resource.setGPUAttribute(0);
-    return resource;
+    return createResource(memory, cores, GPUs, 0);
   }
 
   public static Resource createResource(int memory, int cores, int GPUs, int GPUAttribute) {
@@ -194,21 +184,22 @@ public class Resources {
     return addTo(clone(lhs), rhs);
   }
 
-  public static Resource addToWithLocality(Resource lhs, Resource rhs) {
+  public static Resource addToWithGPUAttribute(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() + rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
     lhs.setGPUs(lhs.getGPUs() + rhs.getGPUs());
 
-    // MJTHIS: FIXME: not clear what to do with recovery
-    // Must uncomment it when you are running test cases
-    assert (lhs.getGPUAttribute() & rhs.getGPUAttribute()) == 0 : "lhs GPU attribute is " + lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
+    // MJTHIS: TODO: make sure if this works well with recovery scenarios
+    assert (lhs.getGPUAttribute() & rhs.getGPUAttribute()) == 0 : "lhs GPU attribute is " +
+            lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
+
     lhs.setGPUAttribute(lhs.getGPUAttribute() | rhs.getGPUAttribute());
 
     return lhs;
   }
 
-  public static Resource addWithLocality(Resource lhs, Resource rhs) {
-    return addToWithLocality(clone(lhs), rhs);
+  public static Resource addWithGPUAttribute(Resource lhs, Resource rhs) {
+    return addToWithGPUAttribute(clone(lhs), rhs);
   }
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
@@ -222,21 +213,22 @@ public class Resources {
     return subtractFrom(clone(lhs), rhs);
   }
 
-  public static Resource subtractFromWithLocality(Resource lhs, Resource rhs) {
+  public static Resource subtractFromWithGPUAttribute(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() - rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
     lhs.setGPUs(lhs.getGPUs() - rhs.getGPUs());
 
-    // MJTHIS: FIXME: not clear what to do with recovery
-    // Must uncomment it when you are running test cases
-    assert (lhs.getGPUAttribute() | rhs.getGPUAttribute()) == lhs.getGPUAttribute() : "lhs GPU attribute is " + lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
+    // MJTHIS: TODO: make sure if this works well with recovery scenarios
+    assert (lhs.getGPUAttribute() | rhs.getGPUAttribute()) == lhs.getGPUAttribute() : "lhs GPU attribute is " +
+            lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
+
     lhs.setGPUAttribute(lhs.getGPUAttribute() & ~rhs.getGPUAttribute());
 
     return lhs;
   }
 
-  public static Resource subtractWithLocality(Resource lhs, Resource rhs) {
-    return subtractFromWithLocality(clone(lhs), rhs);
+  public static Resource subtractWithGPUAttribute(Resource lhs, Resource rhs) {
+    return subtractFromWithGPUAttribute(clone(lhs), rhs);
   }
 
   public static Resource negate(Resource resource) {
@@ -258,7 +250,7 @@ public class Resources {
       ResourceCalculator calculator,Resource lhs, double by, Resource factor) {
     return calculator.multiplyAndNormalizeUp(lhs, by, factor);
   }
-  
+
   public static Resource multiplyAndNormalizeDown(
       ResourceCalculator calculator,Resource lhs, double by, Resource factor) {
     return calculator.multiplyAndNormalizeDown(lhs, by, factor);
@@ -361,7 +353,7 @@ public class Resources {
         smaller.getGPUs() <= bigger.getGPUs();
   }
 
-  public static boolean fitsInWithLocality(Resource smaller, Resource bigger, Resource all) {
+  public static boolean fitsInWithGPUAttribute(Resource smaller, Resource bigger, Resource all) {
     boolean fitsIn = fitsIn(smaller, bigger);
     if (fitsIn == true) {
       if (smaller.getGPUAttribute() > 0) {

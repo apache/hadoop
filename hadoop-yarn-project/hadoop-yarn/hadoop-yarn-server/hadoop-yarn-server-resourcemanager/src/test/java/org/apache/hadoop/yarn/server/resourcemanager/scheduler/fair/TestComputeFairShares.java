@@ -52,8 +52,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable());
     scheds.add(new FakeSchedulable());
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
-    verifyMemoryShares(10, 10, 10, 10);
+        Resources.createResource(0, 0, 40), ResourceType.GPU);
+    verifyGPUShares(10, 10, 10, 10);
   }
   
   /**
@@ -70,8 +70,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(0, 11));
     scheds.add(new FakeSchedulable(0, 3));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
-    verifyMemoryShares(13, 13, 11, 3);
+        Resources.createResource(0, 0, 40), ResourceType.GPU);
+    verifyGPUShares(13, 13, 11, 3);
   }
 
     
@@ -90,8 +90,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(0));
     scheds.add(new FakeSchedulable(2));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
-    verifyMemoryShares(20, 18, 0, 2);
+        Resources.createResource(0, 0, 40), ResourceType.GPU);
+    verifyGPUShares(20, 18, 0, 2);
   }
   
   /**
@@ -105,8 +105,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(0, 1.0));
     scheds.add(new FakeSchedulable(0, 0.5));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(45), ResourceType.MEMORY);
-    verifyMemoryShares(20, 10, 10, 5);
+        Resources.createResource(0, 0, 45), ResourceType.GPU);
+    verifyGPUShares(20, 10, 10, 5);
   }
   
   /**
@@ -123,8 +123,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(0, 30, 1.0));
     scheds.add(new FakeSchedulable(0, 20, 0.5));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(45), ResourceType.MEMORY);
-    verifyMemoryShares(10, 11, 16, 8);
+        Resources.createResource(0, 0, 45), ResourceType.GPU);
+    verifyGPUShares(10, 11, 16, 8);
   }
 
 
@@ -142,8 +142,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(5, 1.0));
     scheds.add(new FakeSchedulable(15, 0.5));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(45), ResourceType.MEMORY);
-    verifyMemoryShares(20, 5, 5, 15);
+        Resources.createResource(0, 0, 45), ResourceType.GPU);
+    verifyGPUShares(20, 5, 5, 15);
   }
 
   /**
@@ -158,8 +158,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable());
     scheds.add(new FakeSchedulable());
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40 * million), ResourceType.MEMORY);
-    verifyMemoryShares(10 * million, 10 * million, 10 * million, 10 * million);
+        Resources.createResource(0, 0, 40 * million), ResourceType.GPU);
+    verifyGPUShares(10 * million, 10 * million, 10 * million, 10 * million);
   }
   
   /**
@@ -168,8 +168,8 @@ public class TestComputeFairShares {
   @Test
   public void testEmptyList() {
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(40), ResourceType.MEMORY);
-    verifyMemoryShares();
+        Resources.createResource(0, 0, 40), ResourceType.GPU);
+    verifyGPUShares();
   }
   
   /**
@@ -207,6 +207,16 @@ public class TestComputeFairShares {
     Assert.assertEquals(scheds.size(), shares.length);
     for (int i = 0; i < shares.length; i++) {
       Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getVirtualCores());
+    }
+  }
+
+  /**
+   * Check that a given list of shares have been assigned to this.scheds.
+   */
+  private void verifyGPUShares(int... shares) {
+    Assert.assertEquals(scheds.size(), shares.length);
+    for (int i = 0; i < shares.length; i++) {
+      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getGPUs());
     }
   }
 }

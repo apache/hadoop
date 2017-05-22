@@ -508,7 +508,7 @@ public class TestSchedulerUtils {
       fail("Zero vcores should be accepted");
     }
 
-    // zero GPUs
+    // zero gpus
     try {
       Resource resource =
           Resources.createResource(
@@ -520,7 +520,7 @@ public class TestSchedulerUtils {
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
           mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
-      fail("Zero GPUs should be accepted");
+      fail("Zero gpus should be accepted");
     }
 
     // max memory
@@ -555,7 +555,7 @@ public class TestSchedulerUtils {
       fail("Max vcores should not be accepted");
     }
 
-    // max GPUs
+    // max gpus
     try {
       Resource resource =
           Resources.createResource(
@@ -568,7 +568,7 @@ public class TestSchedulerUtils {
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
           mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
-      fail("Max GPUs should not be accepted");
+      fail("Max gpus should not be accepted");
     }
 
     // negative memory
@@ -603,7 +603,7 @@ public class TestSchedulerUtils {
       // expected
     }
 
-    // negative GPUs
+    // negative gpus
     try {
       Resource resource =
           Resources.createResource(
@@ -614,7 +614,7 @@ public class TestSchedulerUtils {
               ResourceRequest.ANY, resource, 1);
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
           mockScheduler, rmContext);
-      fail("Negative GPUs should not be accepted");
+      fail("Negative gpus should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
     }
@@ -654,7 +654,7 @@ public class TestSchedulerUtils {
       // expected
     }
 
-    // more than max GPUs
+    // more than max gpus
     try {
       Resource resource =
           Resources
@@ -667,7 +667,7 @@ public class TestSchedulerUtils {
               ResourceRequest.ANY, resource, 1);
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
           mockScheduler, rmContext);
-      fail("More than max GPUs should not be accepted");
+      fail("More than max gpus should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
     }

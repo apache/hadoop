@@ -90,7 +90,7 @@ public class TestContainerResourceUsage {
                           + rmAppMetrics.getVcoreSeconds(),
         rmAppMetrics.getVcoreSeconds() == 0);
     Assert.assertTrue(
-        "Before app submission, GPU seconds should have been 0 but was "
+        "Before app submission, gpu seconds should have been 0 but was "
                           + rmAppMetrics.getGPUSeconds(),
         rmAppMetrics.getGPUSeconds() == 0);
 
@@ -122,7 +122,7 @@ public class TestContainerResourceUsage {
             + rmAppMetrics.getVcoreSeconds(),
         rmAppMetrics.getVcoreSeconds() > 0);
     Assert.assertTrue(
-        "While app is running, GPU seconds should be >0 but is "
+        "While app is running, gpu seconds should be >0 but is "
             + rmAppMetrics.getGPUSeconds(),
         rmAppMetrics.getGPUSeconds() > 0);
 
@@ -226,12 +226,12 @@ public class TestContainerResourceUsage {
     // Check that the container metrics match those from the app usage report.
     long memorySeconds = 0;
     long vcoreSeconds = 0;
-    long GPUSeconds = 0;
+    long gpuSeconds = 0;
     for (RMContainer c : rmContainers) {
       AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
       memorySeconds += ru.getMemorySeconds();
       vcoreSeconds += ru.getVcoreSeconds();
-      GPUSeconds += ru.getGPUSeconds();
+      gpuSeconds += ru.getGPUSeconds();
     }
 
     RMAppMetrics metricsBefore = app0.getRMAppMetrics();
@@ -240,7 +240,7 @@ public class TestContainerResourceUsage {
     Assert.assertEquals("Unexpected VcoreSeconds value",
         vcoreSeconds, metricsBefore.getVcoreSeconds());
     Assert.assertEquals("Unexpected GPUSeconds value",
-        GPUSeconds, metricsBefore.getGPUSeconds());
+        gpuSeconds, metricsBefore.getGPUSeconds());
 
     // create new RM to represent RM restart. Load up the state store.
     MockRM rm1 = new MockRM(conf, memStore);
@@ -328,7 +328,7 @@ public class TestContainerResourceUsage {
 
     long memorySeconds = 0;
     long vcoreSeconds = 0;
-    long GPUSeconds = 0;
+    long gpuSeconds = 0;
 
     // Calculate container usage metrics for first attempt.
     if (keepRunningContainers) {
@@ -338,7 +338,7 @@ public class TestContainerResourceUsage {
           AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
           memorySeconds += ru.getMemorySeconds();
           vcoreSeconds += ru.getVcoreSeconds();
-          GPUSeconds += ru.getGPUSeconds();
+          gpuSeconds += ru.getGPUSeconds();
         } else {
           // The remaining container should be RUNNING.
           Assert.assertTrue("After first attempt failed, remaining container "
@@ -353,7 +353,7 @@ public class TestContainerResourceUsage {
         AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
         memorySeconds += ru.getMemorySeconds();
         vcoreSeconds += ru.getVcoreSeconds();
-        GPUSeconds += ru.getGPUSeconds();
+        gpuSeconds += ru.getGPUSeconds();
       }
     }
 
@@ -405,7 +405,7 @@ public class TestContainerResourceUsage {
       AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
       memorySeconds += ru.getMemorySeconds();
       vcoreSeconds += ru.getVcoreSeconds();
-      GPUSeconds += ru.getGPUSeconds();
+      gpuSeconds += ru.getGPUSeconds();
     }
     
     RMAppMetrics rmAppMetrics = app.getRMAppMetrics();
@@ -415,7 +415,7 @@ public class TestContainerResourceUsage {
     Assert.assertEquals("Unexpected VcoreSeconds value",
         vcoreSeconds, rmAppMetrics.getVcoreSeconds());
     Assert.assertEquals("Unexpected GPUSeconds value",
-        GPUSeconds, rmAppMetrics.getGPUSeconds());
+        gpuSeconds, rmAppMetrics.getGPUSeconds());
 
     rm.stop();
     return;
@@ -430,8 +430,8 @@ public class TestContainerResourceUsage {
                           * usedMillis / DateUtils.MILLIS_PER_SECOND;
     long vcoreSeconds = resource.getVirtualCores()
                           * usedMillis / DateUtils.MILLIS_PER_SECOND;
-    long GPUSeconds = resource.getGPUs()
+    long gpuSeconds = resource.getGPUs()
                           * usedMillis / DateUtils.MILLIS_PER_SECOND;
-    return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds, GPUSeconds);
+    return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds, gpuSeconds);
   }
 }

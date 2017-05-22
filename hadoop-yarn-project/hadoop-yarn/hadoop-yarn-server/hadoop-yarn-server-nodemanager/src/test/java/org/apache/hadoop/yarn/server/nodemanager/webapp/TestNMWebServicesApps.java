@@ -121,6 +121,10 @@ public class TestNMWebServicesApps extends JerseyTestBase {
           return new Long("4000");
         }
 
+        @Override
+        public long getGPUsAllocatedForContainers() {
+          return new Long("4000");
+        }
 
         @Override
         public boolean isVmemCheckEnabled() {

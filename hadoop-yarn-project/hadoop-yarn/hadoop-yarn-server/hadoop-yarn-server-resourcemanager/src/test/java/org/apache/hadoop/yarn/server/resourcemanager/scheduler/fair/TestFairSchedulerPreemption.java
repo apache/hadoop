@@ -97,9 +97,9 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   }
 
   private void registerNodeAndSubmitApp(
-      int memory, int vcores, int GPUs, int appContainers, int appMemory) {
+      int memory, int vcores, int gpus, int appContainers, int appMemory) {
     RMNode node1 = MockNodes.newNodeInfo(
-        1, Resources.createResource(memory, vcores, GPUs), 1, "node1");
+        1, Resources.createResource(memory, vcores, gpus), 1, "node1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -121,9 +121,9 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   }
 
   private void registerNodeAndSubmitApp(
-          int memory, int vcores, int GPUs, int GPLocation, int appContainers, int appMemory) {
+          int memory, int vcores, int gpus, int GPLocation, int appContainers, int appMemory) {
     RMNode node1 = MockNodes.newNodeInfo(
-            1, Resources.createResource(memory, vcores, GPUs, GPLocation), 1, "node1");
+            1, Resources.createResource(memory, vcores, gpus, GPLocation), 1, "node1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 

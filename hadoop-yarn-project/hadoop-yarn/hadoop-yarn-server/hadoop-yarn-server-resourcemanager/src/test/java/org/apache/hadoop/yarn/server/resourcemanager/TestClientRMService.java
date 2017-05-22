@@ -1219,7 +1219,7 @@ public class TestClientRMService {
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName,
-      final long memorySeconds, final long vcoreSeconds, final long GPUSeconds) {
+      final long memorySeconds, final long vcoreSeconds, final long gpuSeconds) {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
 
@@ -1239,7 +1239,7 @@ public class TestClientRMService {
                         report.getApplicationResourceUsageReport();
                     usageReport.setMemorySeconds(memorySeconds);
                     usageReport.setVcoreSeconds(vcoreSeconds);
-                    usageReport.setGPUSeconds(GPUSeconds);
+                    usageReport.setGPUSeconds(gpuSeconds);
                     report.setApplicationResourceUsageReport(usageReport);
                     return report;
                   }

@@ -225,9 +225,9 @@ extends ApplicationResourceUsageReport {
   }
 
   @Override
-  public synchronized void setGPUSeconds(long GPU_seconds) {
+  public synchronized void setGPUSeconds(long gpu_seconds) {
     maybeInitBuilder();
-    builder.setGPUSeconds(GPU_seconds);
+    builder.setGPUSeconds(gpu_seconds);
   }
 
   @Override

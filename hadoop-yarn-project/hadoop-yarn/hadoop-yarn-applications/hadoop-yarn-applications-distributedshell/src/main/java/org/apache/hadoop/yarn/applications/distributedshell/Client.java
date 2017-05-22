@@ -130,7 +130,7 @@ public class Client {
   // Amt. of virtual core resource to request for to run the App Master
   private int amVCores = 1;
   // Amt. of GPU resource to request for to run the App Master
-  private int amGPUs = 1;
+  private int amGPUs = 0;
 
   // Application master jar file
   private String appMasterJar = ""; 
@@ -155,7 +155,7 @@ public class Client {
   // Amt. of GPUs to request for container in which shell script will be executed
   private int containerGPUs = 1;
   // GPU locality preference to request for the container on which the shell command will run
-  private int containerGPUAttribute = 1;
+  private int containerGPUAttribute = 0;
   // No. of containers in which the shell script needs to be executed
   private int numContainers = 1;
   private String nodeLabelExpression = null;
@@ -354,7 +354,7 @@ public class Client {
     amQueue = cliParser.getOptionValue("queue", "default");
     amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "10"));		
     amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
-    amGPUs = Integer.parseInt(cliParser.getOptionValue("master_GPUs", "1"));
+    amGPUs = Integer.parseInt(cliParser.getOptionValue("master_GPUs", "0"));
 
     if (amMemory < 0) {
       throw new IllegalArgumentException("Invalid memory specified for application master, exiting."
@@ -411,7 +411,7 @@ public class Client {
     containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
     containerGPUs = Integer.parseInt(cliParser.getOptionValue("container_GPUs", "1"));
-    containerGPUAttribute = Integer.parseInt(cliParser.getOptionValue("container_GPUAttribute", "1"));
+    containerGPUAttribute = Integer.parseInt(cliParser.getOptionValue("container_GPUAttribute", "0"));
     numContainers = Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
     
 

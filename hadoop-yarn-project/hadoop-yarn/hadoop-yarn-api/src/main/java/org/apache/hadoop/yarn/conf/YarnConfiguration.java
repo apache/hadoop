@@ -184,7 +184,7 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES = 4;
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS =
       YARN_PREFIX + "scheduler.maximum-allocation-gpus";
-  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS = 4;
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS = 8;
 
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
@@ -852,12 +852,12 @@ public class YarnConfiguration extends Configuration {
       100;
 
   /** Number of GPUs which can be allocated for containers.*/
-  public static final String NM_GPUS = NM_PREFIX + "resource.GPUs";
+  public static final String NM_GPUS = NM_PREFIX + "resource.gpus";
   public static final int DEFAULT_NM_GPUS = 8;
 
   /** Percentage of overall GPU which can be allocated for containers. */
   public static final String NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT =
-          NM_PREFIX + "resource.percentage-GPU-limit";
+          NM_PREFIX + "resource.percentage-physical-gpu-limit";
   public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT =
           100;
   
@@ -1103,7 +1103,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED = false;
 
   public static final String NM_WINDOWS_CONTAINER_GPU_LIMIT_ENABLED =
-      NM_PREFIX + "windows-container.GPU-limit.enabled";
+      NM_PREFIX + "windows-container.gpu-limit.enabled";
   public static final boolean DEFAULT_NM_WINDOWS_CONTAINER_GPU_LIMIT_ENABLED = false;
 
   /** 

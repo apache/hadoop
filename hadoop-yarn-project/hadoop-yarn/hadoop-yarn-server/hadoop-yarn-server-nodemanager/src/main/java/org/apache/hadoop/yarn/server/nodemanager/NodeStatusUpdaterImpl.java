@@ -152,14 +152,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         conf.getInt(
             YarnConfiguration.NM_GPUS, YarnConfiguration.DEFAULT_NM_GPUS);
 
-    int GPULocation = 0;
+    int GPUAttribute = 0;
     int pos = 1;
-    while (Integer.bitCount(GPULocation) < GPUs) {
-      GPULocation = GPULocation + pos;
+    while (Integer.bitCount(GPUAttribute) < GPUs) {
+      GPUAttribute = GPUAttribute + pos;
       pos = pos << 1;
     }
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPULocation);
+    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute);
     metrics.addResource(totalResource);
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
     this.tokenRemovalDelayMs =
@@ -190,7 +190,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     super.serviceInit(conf);
     LOG.info("Initialized nodemanager for " + nodeId + ":" +
         " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
-        " virtual-cores=" + virtualCores + " gpus=" + GPUs);
+        " virtual-cores=" + virtualCores + " gpus=" + GPUs + " gpu-attribute=" + GPUAttribute);
   }
 
   @Override

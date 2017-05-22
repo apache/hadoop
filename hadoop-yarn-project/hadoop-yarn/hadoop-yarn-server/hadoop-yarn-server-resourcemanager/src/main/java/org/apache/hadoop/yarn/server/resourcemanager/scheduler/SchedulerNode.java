@@ -52,8 +52,6 @@ public abstract class SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
 
-  // MJTHIS: Make sure these three are tracked correctly. Resources are added or substracted for a node
-  // , so arithmetic operations used here should factor in GPU location properly.
   private Resource availableResource = Resource.newInstance(0, 0, 0, 0);
   private Resource usedResource = Resource.newInstance(0, 0, 0, 0);
   private Resource totalResourceCapability;
@@ -97,7 +95,7 @@ public abstract class SchedulerNode {
    */
   public synchronized void setTotalResource(Resource resource){
     this.totalResourceCapability = resource;
-    this.availableResource = Resources.subtractWithLocality(totalResourceCapability,
+    this.availableResource = Resources.subtractWithGPUAttribute(totalResourceCapability,
       this.usedResource);
   }
   
@@ -228,8 +226,8 @@ public abstract class SchedulerNode {
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.subtractFromWithLocality(usedResource, resource);
-    Resources.addToWithLocality(availableResource, resource);
+    Resources.subtractFromWithGPUAttribute(usedResource, resource);
+    Resources.addToWithGPUAttribute(availableResource, resource);
 
     //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
     //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
@@ -241,8 +239,8 @@ public abstract class SchedulerNode {
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.addToWithLocality(usedResource, resource);
-    Resources.subtractFromWithLocality(availableResource, resource);
+    Resources.addToWithGPUAttribute(usedResource, resource);
+    Resources.subtractFromWithGPUAttribute(availableResource, resource);
 
     //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
     //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
@@ -293,7 +291,7 @@ public abstract class SchedulerNode {
       return;
     }
     allocateContainer(rmContainer);
-    // MJTHIS: FIXME: don't know how to deal with node recovery case yet.
+    // MJTHIS: TODO: may need to deal with recovery cases
   }
   
   public Set<String> getLabels() {

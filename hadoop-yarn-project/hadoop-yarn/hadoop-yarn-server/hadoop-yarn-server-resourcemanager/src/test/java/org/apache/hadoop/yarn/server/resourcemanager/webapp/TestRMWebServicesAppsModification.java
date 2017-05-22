@@ -678,8 +678,10 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     JSONObject maxResources = json.getJSONObject("maximum-resource-capability");
     long memory = maxResources.getLong("memory");
     long vCores = maxResources.getLong("vCores");
+    long GPUs = maxResources.getLong("GPUs");
     assertTrue(memory != 0);
     assertTrue(vCores != 0);
+    assertTrue(GPUs != 0);
     return appId;
   }
 
@@ -703,8 +705,11 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         WebServicesTestUtils.getXmlLong(maxResourceCapability, "memory");
     long vCores =
         WebServicesTestUtils.getXmlLong(maxResourceCapability, "vCores");
+    long GPUs =
+        WebServicesTestUtils.getXmlLong(maxResourceCapability, "GPUs");
     assertTrue(memory != 0);
     assertTrue(vCores != 0);
+    assertTrue(GPUs != 0);
     return appId;
   }
 
@@ -780,6 +785,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     appInfo.getContainerLaunchContextInfo().setCredentials(credentials);
     appInfo.getResource().setMemory(1024);
     appInfo.getResource().setvCores(1);
+    appInfo.getResource().setGPUs(1);
     appInfo.setApplicationTags(tags);
 
     ClientResponse response =
@@ -888,6 +894,10 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
       rm.getConfig().getInt(
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES) + 1);
+    appInfo.getResource().setGPUs(
+      rm.getConfig().getInt(
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS) + 1);
     appInfo.getResource().setMemory(CONTAINER_MB);
     response =
         this.constructWebResource(urlPath).accept(acceptMedia)

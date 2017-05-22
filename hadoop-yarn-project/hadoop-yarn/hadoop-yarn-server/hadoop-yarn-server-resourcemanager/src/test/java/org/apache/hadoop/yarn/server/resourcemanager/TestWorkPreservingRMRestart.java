@@ -221,7 +221,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // 2 running containers.
     Resource usedResources = Resources.multiply(containerResource, 2);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGPULocation());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGPUAttribute());
 
     assertTrue(schedulerNode1.isValidContainer(amContainer.getContainerId()));
     assertTrue(schedulerNode1.isValidContainer(runningContainer
@@ -526,7 +526,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // Calculate each queue's resource usage.
     Resource containerResource = Resource.newInstance(1024, 1, 1);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGPULocation());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGPUAttribute());
     Resource clusterResource = Resources.multiply(nmResource, 2);
     Resource q1Resource = Resources.multiply(clusterResource, 0.5);
     Resource q2Resource = Resources.multiply(clusterResource, 0.5);

@@ -593,7 +593,7 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
     Assert.assertTrue(msg.contains("memorySeconds=16384"));
     Assert.assertTrue(msg.contains("vcoreSeconds=64"));
-    Assert.assertTrue(msg.contains("GPUSeconds=64"));
+    Assert.assertTrue(msg.contains("gpuSeconds=64"));
     Assert.assertTrue(msg.contains("preemptedAMContainers=1"));
     Assert.assertTrue(msg.contains("preemptedNonAMContainers=10"));
     Assert.assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56\\, GPUs:56\\, GPUAttribute:0>"));

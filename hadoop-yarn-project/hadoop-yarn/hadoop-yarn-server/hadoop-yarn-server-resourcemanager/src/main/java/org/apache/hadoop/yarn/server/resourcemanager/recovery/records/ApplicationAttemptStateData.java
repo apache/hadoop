@@ -40,7 +40,7 @@ public abstract class ApplicationAttemptStateData {
       Credentials attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
-      long finishTime, long memorySeconds, long vcoreSeconds, long GPUSeconds) {
+      long finishTime, long memorySeconds, long vcoreSeconds, long gpuSeconds) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
@@ -55,17 +55,17 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setFinishTime(finishTime);
     attemptStateData.setMemorySeconds(memorySeconds);
     attemptStateData.setVcoreSeconds(vcoreSeconds);
-    attemptStateData.setGPUSeconds(GPUSeconds);
+    attemptStateData.setGPUSeconds(gpuSeconds);
     return attemptStateData;
   }
 
   public static ApplicationAttemptStateData newInstance(
       ApplicationAttemptId attemptId, Container masterContainer,
       Credentials attemptTokens, long startTime, long memorySeconds,
-      long vcoreSeconds, long GPUSeconds) {
+      long vcoreSeconds, long gpuSeconds) {
     return newInstance(attemptId, masterContainer, attemptTokens,
         startTime, null, "N/A", "", null, ContainerExitStatus.INVALID, 0,
-        memorySeconds, vcoreSeconds, GPUSeconds);
+        memorySeconds, vcoreSeconds, gpuSeconds);
   }
 
 
@@ -194,5 +194,5 @@ public abstract class ApplicationAttemptStateData {
 
   @Public
   @Unstable
-  public abstract void setGPUSeconds(long GPUSeconds);
+  public abstract void setGPUSeconds(long gpuSeconds);
 }

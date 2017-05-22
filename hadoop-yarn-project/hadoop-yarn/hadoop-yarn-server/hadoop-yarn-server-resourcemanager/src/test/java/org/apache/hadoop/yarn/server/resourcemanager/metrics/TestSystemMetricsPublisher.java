@@ -160,6 +160,10 @@ public class TestSystemMetricsPublisher {
             app.getRMAppMetrics().getVcoreSeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getGPUSeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_GPU_METRICS).toString()));
       }
       boolean hasCreatedEvent = false;
       boolean hasFinishedEvent = false;
@@ -302,6 +306,10 @@ public class TestSystemMetricsPublisher {
         container.getAllocatedResource().getVirtualCores(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO));
+    Assert.assertEquals(
+        container.getAllocatedResource().getGPUs(),
+        entity.getOtherInfo().get(
+            ContainerMetricsConstants.ALLOCATED_GPU_ENTITY_INFO));
     Assert.assertEquals(
         container.getAllocatedPriority().getPriority(),
         entity.getOtherInfo().get(

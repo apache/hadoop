@@ -59,9 +59,9 @@ public class FakeSchedulable implements Schedulable {
   
   public FakeSchedulable(int minShare, int maxShare, double weight, int fairShare, int usage,
       long startTime) {
-    this(Resources.createResource(minShare, 0, 0), Resources.createResource(maxShare, 0, 0),
-        new ResourceWeights((float)weight), Resources.createResource(fairShare, 0, 0),
-        Resources.createResource(usage, 0, 0), startTime);
+    this(Resources.createResource(0, 0, minShare), Resources.createResource(0, 0, maxShare),
+        new ResourceWeights((float)weight), Resources.createResource(0, 0, fairShare),
+        Resources.createResource(0, 0, usage), startTime);
   }
   
   public FakeSchedulable(Resource minShare, ResourceWeights weights) {

@@ -247,7 +247,7 @@ public class FairSchedulerConfiguration extends Configuration {
 
   /**
    * Parses a resource config value of a form like "1024", "1024 mb",
-   * or "1024 mb, 3 vcores". If no units are given, megabytes are assumed.
+   * or "1024 mb, 3 vcores" or "1024 mb, 3 vcores, 1 gcores". If no units are given, megabytes are assumed.
    * 
    * @throws AllocationConfigurationException
    */
@@ -257,8 +257,8 @@ public class FairSchedulerConfiguration extends Configuration {
       val = StringUtils.toLowerCase(val);
       int memory = findResource(val, "mb");
       int vcores = findResource(val, "vcores");
-      int GPUs = findResource(val, "gpus");
-      return BuilderUtils.newResource(memory, vcores, GPUs);
+      int gpus = findResource(val, "gpus");
+      return BuilderUtils.newResource(memory, vcores, gpus);
     } catch (AllocationConfigurationException ex) {
       throw ex;
     } catch (Exception ex) {

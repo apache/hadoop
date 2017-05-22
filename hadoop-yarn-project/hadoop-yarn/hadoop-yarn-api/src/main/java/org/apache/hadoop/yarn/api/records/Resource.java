@@ -55,23 +55,13 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(memory);
-    resource.setVirtualCores(vCores);
-    resource.setGPUs(0);
-    resource.setGPUAttribute(0);
-    return resource;
+    return newInstance(memory, vCores, 0, 0);
   }
 
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores, int GPUs) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(memory);
-    resource.setVirtualCores(vCores);
-    resource.setGPUs(GPUs);
-    resource.setGPUAttribute(0);
-    return resource;
+    return newInstance(memory, vCores, GPUs, 0);
   }
 
   @Public
@@ -206,11 +196,19 @@ public abstract class Resource implements Comparable<Resource> {
     Resource other = (Resource) obj;
     if (getMemory() != other.getMemory() ||
         getVirtualCores() != other.getVirtualCores() ||
-        getGPUs() != other.getGPUs() ||
-        getGPUAttribute() != other.getGPUAttribute()) {
+        getGPUs() != other.getGPUs()) {
       return false;
     }
     return true;
+  }
+
+  public boolean equalsWithGPUAttribute(Object obj) {
+    if (!this.equals(obj)) {
+      return false;
+    } else {
+      Resource other = (Resource) obj;
+      return this.getGPUAttribute() == other.getGPUAttribute();
+    }
   }
 
   @Override

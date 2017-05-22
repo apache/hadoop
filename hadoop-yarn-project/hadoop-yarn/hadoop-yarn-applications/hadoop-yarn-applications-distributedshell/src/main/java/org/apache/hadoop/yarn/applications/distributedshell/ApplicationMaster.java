@@ -219,9 +219,9 @@ public class ApplicationMaster {
   // VirtualCores to request for the container on which the shell command will run
   private int containerVirtualCores = 1;
   // GPUs to request for the container on which the shell command will run
-  private int containerGPUs = 1;
+  private int containerGPUs = 0;
   // GPU locality preference to request for the container on which the shell command will run
-  private int containerGPUAttribute = 1;
+  private int containerGPUAttribute = 0;
   // Priority of the request
   private int requestPriority;
 
@@ -500,9 +500,9 @@ public class ApplicationMaster {
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
         "container_vcores", "1"));
     containerGPUs = Integer.parseInt(cliParser.getOptionValue(
-        "container_GPUs", "1"));
+        "container_GPUs", "0"));
     containerGPUAttribute = Integer.parseInt(cliParser.getOptionValue(
-            "container_GPUAttribute", "1"));
+            "container_GPUAttribute", "0"));
     numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
         "num_containers", "1"));
     if (numTotalContainers == 0) {
