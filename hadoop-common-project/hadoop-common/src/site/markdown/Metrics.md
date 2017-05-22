@@ -322,6 +322,10 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `RemoteBytesRead` | Number of bytes read by remote clients |
 | `RemoteBytesWritten` | Number of bytes written by remote clients |
 | `BPServiceActorInfo` | The information about a block pool service actor |
+| `BlocksInPendingIBR` | Number of blocks in pending incremental block report (IBR) |
+| `BlocksReceivingInPendingIBR` | Number of blocks at receiving status in pending incremental block report (IBR) |
+| `BlocksReceivedInPendingIBR` | Number of blocks at received status in pending incremental block report (IBR) |
+| `BlocksDeletedInPendingIBR` | Number of blocks at deleted status in pending incremental block report (IBR) |
 | `EcReconstructionTasks` | Total number of erasure coding reconstruction tasks |
 | `EcFailedReconstructionTasks` | Total number of erasure coding failed reconstruction tasks |
 | `EcDecodingTimeNanos` | Total number of nanoseconds spent by decoding tasks |
