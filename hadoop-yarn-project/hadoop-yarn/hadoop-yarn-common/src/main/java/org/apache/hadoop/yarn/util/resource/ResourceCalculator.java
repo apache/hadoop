@@ -204,4 +204,13 @@ public abstract class ResourceCalculator {
    */
   public abstract boolean fitsIn(Resource cluster,
       Resource smaller, Resource bigger);
+
+  /**
+   * Check if resource has any major resource types (which are all NodeManagers
+   * included) a zero value.
+   *
+   * @param resource resource
+   * @return returns true if any resource is zero.
+   */
+  public abstract boolean isAnyMajorResourceZero(Resource resource);
 }
