@@ -312,6 +312,8 @@ Release 2.7.4 - UNRELEASED
     HDFS-11864. Document Metrics to track usage of memory for writes.
     (Contributed by Yiqun Lin via Brahma Reddy Battula)
 
+    HDFS-11377. Balancer hung due to no available mover threads. (yunjiong zhao)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
