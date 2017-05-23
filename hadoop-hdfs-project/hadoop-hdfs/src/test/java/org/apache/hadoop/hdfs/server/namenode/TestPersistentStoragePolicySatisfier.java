@@ -32,6 +32,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+import static org.junit.Assert.*;
 
 /**
  * Test persistence of satisfying files/directories.
@@ -60,11 +61,9 @@ public class TestPersistentStoragePolicySatisfier {
   private static final String ALL_SSD = "ALL_SSD";
 
   private static StorageType[][] storageTypes = new StorageType[][] {
-      {StorageType.ARCHIVE, StorageType.DISK},
-      {StorageType.DISK, StorageType.SSD},
-      {StorageType.SSD, StorageType.RAM_DISK},
-      {StorageType.ARCHIVE, StorageType.DISK},
-      {StorageType.ARCHIVE, StorageType.SSD}
+      {StorageType.DISK, StorageType.ARCHIVE, StorageType.SSD},
+      {StorageType.DISK, StorageType.ARCHIVE, StorageType.SSD},
+      {StorageType.DISK, StorageType.ARCHIVE, StorageType.SSD}
   };
 
   private final int timeout = 300000;
@@ -94,10 +93,13 @@ public class TestPersistentStoragePolicySatisfier {
   private void clusterSetUp(boolean isHAEnabled, Configuration newConf)
       throws Exception {
     conf = newConf;
+    conf.set(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+        "3000");
     final int dnNumber = storageTypes.length;
     final short replication = 3;
     MiniDFSCluster.Builder clusterBuilder = new MiniDFSCluster.Builder(conf)
-        .storageTypes(storageTypes)
+        .storageTypes(storageTypes).storagesPerDatanode(3)
         .numDataNodes(dnNumber);
     if (isHAEnabled) {
       clusterBuilder.nnTopology(MiniDFSNNTopology.simpleHATopology());
@@ -277,9 +279,10 @@ public class TestPersistentStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testWithFederationHA() throws Exception {
+    MiniDFSCluster haCluster = null;
     try {
       conf = new HdfsConfiguration();
-      final MiniDFSCluster haCluster = new MiniDFSCluster
+      haCluster = new MiniDFSCluster
           .Builder(conf)
           .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
           .storageTypes(storageTypes)
@@ -305,7 +308,14 @@ public class TestPersistentStoragePolicySatisfier {
           testFileName, StorageType.ARCHIVE, 2, timeout, fs);
 
     } finally {
-      clusterShutdown();
+      if(fs != null) {
+        fs.close();
+        fs = null;
+      }
+      if(haCluster != null) {
+        haCluster.shutdown(true);
+        haCluster = null;
+      }
     }
   }
 
@@ -398,6 +408,70 @@ public class TestPersistentStoragePolicySatisfier {
       DFSTestUtil.waitForXattrRemoved(testFileName,
           XATTR_SATISFY_STORAGE_POLICY, cluster.getNamesystem(), 30000);
 
+    } finally {
+      clusterShutdown();
+    }
+  }
+
+  /**
+   * Test loading of SPS xAttrs from the edits log when satisfyStoragePolicy
+   * called on child file and parent directory.
+   * 1. Create one directory and create one child file.
+   * 2. Set storage policy for child file and call
+   * satisfyStoragePolicy.
+   * 3. wait for SPS to remove xAttr for file child file.
+   * 4. Set storage policy for parent directory and call
+   * satisfyStoragePolicy.
+   * 5. restart the namenode.
+   * NameNode should be started successfully.
+   */
+  @Test(timeout = 300000)
+  public void testNameNodeRestartWhenSPSCalledOnChildFileAndParentDir()
+      throws Exception {
+    try {
+      clusterSetUp();
+      fs.setStoragePolicy(childFile, "COLD");
+      fs.satisfyStoragePolicy(childFile);
+      DFSTestUtil.waitExpectedStorageType(childFile.toUri().getPath(),
+          StorageType.ARCHIVE, 3, 30000, cluster.getFileSystem());
+      // wait for SPS to remove Xattr from file
+      Thread.sleep(30000);
+      fs.setStoragePolicy(childDir, "COLD");
+      fs.satisfyStoragePolicy(childDir);
+      try {
+        cluster.restartNameNodes();
+      } catch (Exception e) {
+        assertFalse(e.getMessage().contains(
+            "Cannot request to call satisfy storage policy"));
+      }
+    } finally {
+      clusterShutdown();
+    }
+  }
+
+  /**
+   * Test SPS when satisfyStoragePolicy called on child file and
+   * parent directory.
+   * 1. Create one parent directory and child directory.
+   * 2. Create some file in both the directory.
+   * 3. Set storage policy for parent directory and call
+   * satisfyStoragePolicy.
+   * 4. Set storage policy for child directory and call
+   * satisfyStoragePolicy.
+   * 5. restart the namenode.
+   * All the file blocks should satisfy the policy.
+   */
+  @Test(timeout = 300000)
+  public void testSPSOnChildAndParentDirectory() throws Exception {
+    try {
+      clusterSetUp();
+      fs.setStoragePolicy(parentDir, "COLD");
+      fs.satisfyStoragePolicy(childDir);
+      fs.satisfyStoragePolicy(parentDir);
+      DFSTestUtil.waitExpectedStorageType(childFileName, StorageType.ARCHIVE,
+          3, 30000, cluster.getFileSystem());
+      DFSTestUtil.waitExpectedStorageType(parentFileName, StorageType.ARCHIVE,
+          3, 30000, cluster.getFileSystem());
     } finally {
       clusterShutdown();
     }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -829,6 +831,6 @@ public class StoragePolicySatisfier implements Runnable {
    */
   public void postBlkStorageMovementCleanup(long trackId)
       throws IOException {
-    this.namesystem.getFSDirectory().removeSPSXattr(trackId);
+    this.namesystem.removeXattr(trackId, XATTR_SATISFY_STORAGE_POLICY);
   }
 }

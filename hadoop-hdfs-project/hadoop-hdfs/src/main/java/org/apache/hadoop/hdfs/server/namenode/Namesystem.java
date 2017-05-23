@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -52,4 +54,12 @@ public interface Namesystem extends RwLock, SafeMode {
    * @return true if valid write lease exists, otherwise return false.
    */
   boolean isFileOpenedForWrite(String filePath);
+
+  /**
+   * Remove xAttr from the inode.
+   * @param id
+   * @param xattrName
+   * @throws IOException
+   */
+  void removeXattr(long id, String xattrName) throws IOException;
 }

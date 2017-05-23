@@ -2262,10 +2262,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                 + " by admin. Seek for an admin help to activate it "
                 + "or use Mover tool.");
       }
-      FSDirAttrOp.satisfyStoragePolicy(dir, blockManager, src, logRetryCache);
+      FSDirSatisfyStoragePolicyOp.satisfyStoragePolicy(dir, blockManager, src,
+          logRetryCache);
     } finally {
       writeUnlock();
     }
+    getEditLog().logSync();
   }
 
   /**
@@ -7853,6 +7855,26 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  @Override
+  public void removeXattr(long id, String xattrName) throws IOException {
+    writeLock();
+    try {
+      final INode inode = dir.getInode(id);
+      final XAttrFeature xaf = inode.getXAttrFeature();
+      if (xaf == null) {
+        return;
+      }
+      final XAttr spsXAttr = xaf.getXAttr(xattrName);
+
+      if (spsXAttr != null) {
+        FSDirSatisfyStoragePolicyOp.removeSPSXattr(dir, inode, spsXAttr);
+      }
+    } finally {
+      writeUnlock("removeXAttr");
+    }
+    getEditLog().logSync();
   }
 
   void checkAccess(String src, FsAction mode) throws IOException {
