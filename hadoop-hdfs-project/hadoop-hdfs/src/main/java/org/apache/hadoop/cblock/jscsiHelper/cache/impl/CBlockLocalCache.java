@@ -157,10 +157,9 @@ public class CBlockLocalCache implements CacheModule {
       throw new IllegalArgumentException("Unable to create paths. Path: " +
           dbPath);
     }
-    cacheDB = flusher.openDB(dbPath.toString());
+    cacheDB = flusher.getCacheDB(dbPath.toString());
     this.containerList = containerPipelines.toArray(new
         Pipeline[containerPipelines.size()]);
-    flusher.register(dbPath.toString(), containerList);
     this.ipAddressString = getHostIP();
     this.tracePrefix = ipAddressString + ":" + this.volumeName;
     this.volumeSize = volumeSize;
@@ -298,6 +297,7 @@ public class CBlockLocalCache implements CacheModule {
 
   @Override
   public void start() throws IOException {
+    flusher.register(getDbPath().getPath(), containerList);
     blockWriter.start();
   }
 
@@ -309,7 +309,7 @@ public class CBlockLocalCache implements CacheModule {
   public void close() throws IOException {
     blockReader.shutdown();
     blockWriter.shutdown();
-    this.flusher.closeDB(dbPath.toString());
+    this.flusher.releaseCacheDB(dbPath.toString());
     if (this.traceEnabled) {
       getTracer().info("Task=ShutdownCache");
     }
@@ -593,7 +593,7 @@ public class CBlockLocalCache implements CacheModule {
             "relies on private data on the pipeline, null data found.");
       }
 
-      Preconditions.checkNotNull(clientManager, "Client Manager canoot be " +
+      Preconditions.checkNotNull(clientManager, "Client Manager cannot be " +
           "null");
       Preconditions.checkState(blockSize > 0, " Block size has to be a " +
           "number greater than 0");

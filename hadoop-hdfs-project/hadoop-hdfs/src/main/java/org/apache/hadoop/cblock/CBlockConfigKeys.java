@@ -166,6 +166,21 @@ public final class CBlockConfigKeys {
       "dfs.cblock.cache.leveldb.cache.size.mb";
   public static final int DFS_CBLOCK_CACHE_LEVELDB_CACHE_SIZE_MB_DEFAULT = 256;
 
+  /**
+   * Cache does an best case attempt to write a block to a container.
+   * At some point of time, we will need to handle the case where we did try
+   * 64K times and is till not able to write to the container.
+   *
+   * TODO: We will need cBlock Server to allow us to do a remapping of the
+   * block location in case of failures, at that point we should reduce the
+   * retry count to a more normal number. This is approximately 18 hours of
+   * retry.
+   */
+  public static final String DFS_CBLOCK_CACHE_MAX_RETRY_KEY =
+      "dfs.cblock.cache.max.retry";
+  public static final int DFS_CBLOCK_CACHE_MAX_RETRY_DEFAULT =
+      64 * 1024;
+
   private CBlockConfigKeys() {
 
   }

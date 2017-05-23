@@ -69,6 +69,7 @@ public class AsyncBlockWriter {
   private final CBlockLocalCache parentCache;
   private final BlockBufferManager blockBufferManager;
   public final static String DIRTY_LOG_PREFIX = "DirtyLog";
+  public static final String RETRY_LOG_PREFIX = "RetryLog";
   private AtomicLong localIoCount;
 
   /**

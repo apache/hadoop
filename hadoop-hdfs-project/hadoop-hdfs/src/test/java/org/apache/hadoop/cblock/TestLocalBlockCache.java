@@ -62,6 +62,10 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.
     DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
     DFS_CBLOCK_TRACE_IO;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.
+    DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.
+    DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE;
 
 /**
  * Tests for Tests for local cache.
@@ -518,7 +522,7 @@ public class TestLocalBlockCache {
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
-
+    flushTestConfig.setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 3);
     XceiverClientManager xcm = new XceiverClientManager(flushTestConfig);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
     String userName = "user" + RandomStringUtils.randomNumeric(4);
@@ -561,9 +565,11 @@ public class TestLocalBlockCache {
     Assert.assertEquals(512, metrics.getNumWriteOps());
     Thread.sleep(5000);
     flusher.shutdown();
+    Assert.assertTrue(metrics.getNumBlockBufferFlushTriggered() > 1);
+    Assert.assertEquals(1, metrics.getNumBlockBufferFlushCompleted());
     Assert.assertEquals(0, metrics.getNumWriteIOExceptionRetryBlocks());
     Assert.assertEquals(0, metrics.getNumWriteGenericExceptionRetryBlocks());
-
+    Assert.assertEquals(0, metrics.getNumFailedReleaseLevelDB());
     // Now disable DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO and restart cache
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, false);
     CBlockTargetMetrics newMetrics = CBlockTargetMetrics.create();
@@ -593,5 +599,92 @@ public class TestLocalBlockCache {
     Assert.assertEquals(0, newMetrics.getNumFailedReadBlocks());
     newCache.close();
     newFlusher.shutdown();
+  }
+
+  @Test
+  public void testRetryLog() throws IOException,
+      InterruptedException, TimeoutException {
+    // Create a new config so that this tests write metafile to new location
+    OzoneConfiguration flushTestConfig = new OzoneConfiguration();
+    URL p = flushTestConfig.getClass().getResource("");
+    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
+    flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
+    flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
+    flushTestConfig.setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 3);
+
+    int numblocks = 10;
+    flushTestConfig.setInt(DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE, numblocks);
+
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
+    String userName = "user" + RandomStringUtils.randomNumeric(4);
+    String data = RandomStringUtils.random(4 * KB);
+
+    List<Pipeline> fakeContainerPipelines = new LinkedList<>();
+    Pipeline fakePipeline = new Pipeline("fake");
+    fakePipeline.setData(Longs.toByteArray(1));
+    fakeContainerPipelines.add(fakePipeline);
+
+    CBlockTargetMetrics metrics = CBlockTargetMetrics.create();
+    ContainerCacheFlusher flusher = new ContainerCacheFlusher(flushTestConfig,
+        xceiverClientManager, metrics);
+    CBlockLocalCache cache = CBlockLocalCache.newBuilder()
+        .setConfiguration(flushTestConfig)
+        .setVolumeName(volumeName)
+        .setUserName(userName)
+        .setPipelines(fakeContainerPipelines)
+        .setClientManager(xceiverClientManager)
+        .setBlockSize(4 * KB)
+        .setVolumeSize(50 * GB)
+        .setFlusher(flusher)
+        .setCBlockTargetMetrics(metrics)
+        .build();
+    cache.start();
+    Thread flushListenerThread = new Thread(flusher);
+    flushListenerThread.setDaemon(true);
+    flushListenerThread.start();
+
+    for (int i = 0; i < numblocks; i++) {
+      cache.put(i, data.getBytes(StandardCharsets.UTF_8));
+    }
+    Assert.assertEquals(numblocks, metrics.getNumWriteOps());
+    Thread.sleep(3000);
+
+    // all the writes to the container will fail because of fake pipelines
+    Assert.assertEquals(numblocks, metrics.getNumDirtyLogBlockRead());
+    Assert.assertTrue(
+        metrics.getNumWriteGenericExceptionRetryBlocks() >= numblocks);
+    Assert.assertEquals(0, metrics.getNumWriteIOExceptionRetryBlocks());
+    Assert.assertEquals(0, metrics.getNumFailedRetryLogFileWrites());
+    Assert.assertEquals(0, metrics.getNumFailedReleaseLevelDB());
+    cache.close();
+    flusher.shutdown();
+
+    // restart cache with correct pipelines, now blocks should be uploaded
+    // correctly
+    CBlockTargetMetrics newMetrics = CBlockTargetMetrics.create();
+    ContainerCacheFlusher newFlusher =
+        new ContainerCacheFlusher(flushTestConfig,
+            xceiverClientManager, newMetrics);
+    CBlockLocalCache newCache = CBlockLocalCache.newBuilder()
+        .setConfiguration(flushTestConfig)
+        .setVolumeName(volumeName)
+        .setUserName(userName)
+        .setPipelines(getContainerPipeline(10))
+        .setClientManager(xceiverClientManager)
+        .setBlockSize(4 * KB)
+        .setVolumeSize(50 * GB)
+        .setFlusher(newFlusher)
+        .setCBlockTargetMetrics(newMetrics)
+        .build();
+    newCache.start();
+    Thread newFlushListenerThread = new Thread(newFlusher);
+    newFlushListenerThread.setDaemon(true);
+    newFlushListenerThread.start();
+    Thread.sleep(3000);
+    Assert.assertTrue(newMetrics.getNumRetryLogBlockRead() >= numblocks);
+    Assert.assertEquals(0, newMetrics.getNumWriteGenericExceptionRetryBlocks());
+    Assert.assertEquals(0, newMetrics.getNumWriteIOExceptionRetryBlocks());
+    Assert.assertEquals(0, newMetrics.getNumFailedReleaseLevelDB());
   }
 }

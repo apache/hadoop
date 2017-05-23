@@ -20,10 +20,12 @@ package org.apache.hadoop.cblock.jscsiHelper;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.cblock.jscsiHelper.cache.LogicalBlock;
+import org.apache.hadoop.cblock.jscsiHelper.cache.impl.AsyncBlockWriter;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.LevelDBStore;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,7 +43,7 @@ public class BlockWriterTask implements Runnable {
   private final ContainerCacheFlusher flusher;
   private final String dbPath;
   private final String fileName;
-  private static final String RETRY_LOG_PREFIX = "RetryLog";
+  private final int maxRetryCount;
 
   /**
    * Constructs a BlockWriterTask.
@@ -50,12 +52,13 @@ public class BlockWriterTask implements Runnable {
    * @param flusher - ContainerCacheFlusher.
    */
   public BlockWriterTask(LogicalBlock block, ContainerCacheFlusher flusher,
-      String dbPath, String fileName) {
+      String dbPath, int tryCount, String fileName, int maxRetryCount) {
     this.block = block;
     this.flusher = flusher;
     this.dbPath = dbPath;
-    tryCount = 0;
+    this.tryCount = tryCount;
     this.fileName = fileName;
+    this.maxRetryCount = maxRetryCount;
   }
 
   /**
@@ -73,6 +76,7 @@ public class BlockWriterTask implements Runnable {
   public void run() {
     String containerName = null;
     XceiverClientSpi client = null;
+    LevelDBStore levelDBStore = null;
     flusher.getLOG().debug(
         "Writing block to remote. block ID: {}", block.getBlockID());
     try {
@@ -83,7 +87,9 @@ public class BlockWriterTask implements Runnable {
       byte[] keybuf = Longs.toByteArray(block.getBlockID());
       byte[] data;
       long startTime = Time.monotonicNow();
-      data = flusher.getCacheDB(this.dbPath).get(keybuf);
+      levelDBStore = flusher.getCacheDB(this.dbPath);
+      data = levelDBStore.get(keybuf);
+      Preconditions.checkNotNull(data);
       long endTime = Time.monotonicNow();
       Preconditions.checkState(data.length > 0, "Block data is zero length");
       startTime = Time.monotonicNow();
@@ -99,17 +105,23 @@ public class BlockWriterTask implements Runnable {
       flusher.incrementRemoteIO();
 
     } catch (Exception ex) {
-      flusher.getLOG().error("Writing of block failed, We have attempted " +
+      flusher.getLOG().error("Writing of block:{} failed, We have attempted " +
               "to write this block {} times to the container {}.Trace ID:{}",
-          this.getTryCount(), containerName, "", ex);
+          block.getBlockID(), this.getTryCount(), containerName, "", ex);
       writeRetryBlock(block);
       if (ex instanceof IOException) {
         flusher.getTargetMetrics().incNumWriteIOExceptionRetryBlocks();
       } else {
         flusher.getTargetMetrics().incNumWriteGenericExceptionRetryBlocks();
       }
+      if (this.getTryCount() >= maxRetryCount) {
+        flusher.getTargetMetrics().incNumWriteMaxRetryBlocks();
+      }
     } finally {
       flusher.incFinishCount(fileName);
+      if (levelDBStore != null) {
+        flusher.releaseCacheDB(dbPath);
+      }
       if(client != null) {
         flusher.getXceiverClientManager().releaseClient(client);
       }
@@ -120,8 +132,8 @@ public class BlockWriterTask implements Runnable {
   private void writeRetryBlock(LogicalBlock currentBlock) {
     boolean append = false;
     String retryFileName =
-        String.format("%s.%d.%s", RETRY_LOG_PREFIX, currentBlock.getBlockID(),
-            Time.monotonicNow());
+        String.format("%s.%d.%s.%s", AsyncBlockWriter.RETRY_LOG_PREFIX,
+            currentBlock.getBlockID(), Time.monotonicNow(), tryCount);
     File logDir = new File(this.dbPath);
     if (!logDir.exists() && !logDir.mkdirs()) {
       flusher.getLOG().error(
@@ -131,12 +143,14 @@ public class BlockWriterTask implements Runnable {
     String log = Paths.get(this.dbPath, retryFileName).toString();
     ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE / Byte.SIZE);
     buffer.putLong(currentBlock.getBlockID());
+    buffer.flip();
     try {
       FileChannel channel = new FileOutputStream(log, append).getChannel();
       channel.write(buffer);
       channel.close();
       flusher.processDirtyBlocks(this.dbPath, retryFileName);
     } catch (IOException e) {
+      flusher.getTargetMetrics().incNumFailedRetryLogFileWrites();
       flusher.getLOG().error("Unable to write the retry block. Block ID: {}",
           currentBlock.getBlockID(), e);
     }
