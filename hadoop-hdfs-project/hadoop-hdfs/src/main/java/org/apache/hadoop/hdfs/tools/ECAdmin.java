@@ -33,8 +33,10 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * CLI for the erasure code encoding operations.
@@ -361,11 +363,66 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
+  /** Command to list the set of supported erasure coding codecs and coders. */
+  private static class ListECCodecsCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-listCodecs";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + "]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      return getShortUsage() + "\n" +
+          "Get the list of supported erasure coding codecs and coders.\n" +
+          "A coder is an implementation of a codec. A codec can have " +
+          "different implementations, thus different coders.\n" +
+          "The coders for a codec are listed in a fall back order.\n";
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      if (args.size() > 0) {
+        System.err.println(getName() + ": Too many arguments");
+        return 1;
+      }
+
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        HashMap<String, String> codecs =
+            dfs.getAllErasureCodingCodecs();
+        if (codecs.isEmpty()) {
+          System.out.println("No erasure coding codecs are supported on the " +
+              "cluster.");
+        } else {
+          System.out.println("Erasure Coding Codecs: Codec [Coder List]");
+          for (Map.Entry<String, String> codec : codecs.entrySet()) {
+            if (codec != null) {
+              System.out.println("\t" + codec.getKey().toUpperCase() + " ["
+                  + codec.getValue().toUpperCase() +"]");
+            }
+          }
+        }
+      } catch (IOException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
+
   private static final AdminHelper.Command[] COMMANDS = {
       new ListECPoliciesCommand(),
       new AddECPoliciesCommand(),
       new GetECPolicyCommand(),
       new SetECPolicyCommand(),
-      new UnsetECPolicyCommand()
+      new UnsetECPolicyCommand(),
+      new ListECCodecsCommand()
   };
 }

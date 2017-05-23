@@ -37,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -2238,6 +2239,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
     checkNNStartup();
     return namesystem.getErasureCodingPolicies();
+  }
+
+  @Override // ClientProtocol
+  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    checkNNStartup();
+    return namesystem.getErasureCodingCodecs();
   }
 
   @Override // ClientProtocol

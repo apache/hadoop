@@ -154,6 +154,7 @@ Deployment
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
+         [-listCodecs]
          [-usage [cmd ...]]
          [-help [cmd ...]]
 
@@ -182,3 +183,7 @@ Below are the details about each command.
  *  `[-addPolicies -policyFile <file>]`
 
      Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file.
+
+ *  `[-listCodecs]`
+
+     Get the list of supported erasure coding codecs and coders in system. A coder is an implementation of a codec. A codec can have different implementations, thus different coders. The coders for a codec are listed in a fall back order.

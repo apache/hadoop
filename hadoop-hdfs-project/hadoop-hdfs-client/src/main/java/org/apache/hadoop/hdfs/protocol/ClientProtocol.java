@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1536,7 +1537,7 @@ public interface ClientProtocol {
       ErasureCodingPolicy[] policies) throws IOException;
 
   /**
-   * Get the erasure coding policies loaded in Namenode
+   * Get the erasure coding policies loaded in Namenode.
    *
    * @throws IOException
    */
@@ -1544,7 +1545,15 @@ public interface ClientProtocol {
   ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException;
 
   /**
-   * Get the information about the EC policy for the path
+   * Get the erasure coding codecs loaded in Namenode.
+   *
+   * @throws IOException
+   */
+  @Idempotent
+  HashMap<String, String> getErasureCodingCodecs() throws IOException;
+
+  /**
+   * Get the information about the EC policy for the path.
    *
    * @param src path to get the info for
    * @throws IOException

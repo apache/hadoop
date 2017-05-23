@@ -912,6 +912,8 @@ service ClientNamenodeProtocol {
       returns(AddErasureCodingPoliciesResponseProto);
   rpc getErasureCodingPolicy(GetErasureCodingPolicyRequestProto)
       returns(GetErasureCodingPolicyResponseProto);
+  rpc getErasureCodingCodecs(GetErasureCodingCodecsRequestProto)
+      returns(GetErasureCodingCodecsResponseProto);
   rpc getQuotaUsage(GetQuotaUsageRequestProto)
       returns(GetQuotaUsageResponseProto);
 }
