@@ -14,6 +14,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4109. Exception on RM scheduler page loading with labels.
     (Mohammad Shahid Khan via rohithsharmaks)
 
+    YARN-6493. Print requested node partition in assignContainer logs. 
+    (Jonathan Hung via wangda)
+
   OPTIMIZATIONS
 
     YARN-5262. Optimize sending RMNodeFinishedContainersPulledByAMEvent for
