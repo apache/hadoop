@@ -306,6 +306,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10715. NPE when applying AvailableSpaceBlockPlacementPolicy.
     (Guangbin Zhu)
 
+    HDFS-11849. JournalNode startup failure exception should be logged in log file.
+    (Contributed By Surendra Singh Lilhore via Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
