@@ -48,6 +48,8 @@ public class CBlockTargetMetrics {
   @Metric private MutableCounterLong numBlockBufferFlushCompleted;
   @Metric private MutableCounterLong numBlockBufferFlushTriggered;
   @Metric private MutableCounterLong numBlockBufferUpdates;
+  @Metric private MutableCounterLong numRetryLogBlockRead;
+  @Metric private MutableCounterLong numBytesRetryLogRead;
 
   // Failure Metrics
   @Metric private MutableCounterLong numReadLostBlocks;
@@ -59,6 +61,9 @@ public class CBlockTargetMetrics {
   @Metric private MutableCounterLong numFailedDirtyLogFileDeletes;
   @Metric private MutableCounterLong numFailedBlockBufferFlushes;
   @Metric private MutableCounterLong numInterruptedBufferWaits;
+  @Metric private MutableCounterLong numFailedRetryLogFileWrites;
+  @Metric private MutableCounterLong numWriteMaxRetryBlocks;
+  @Metric private MutableCounterLong numFailedReleaseLevelDB;
 
   // Latency based Metrics
   @Metric private MutableRate dbReadLatency;
@@ -138,6 +143,14 @@ public class CBlockTargetMetrics {
     numBlockBufferUpdates.incr();
   }
 
+  public void incNumRetryLogBlockRead() {
+    numRetryLogBlockRead.incr();
+  }
+
+  public void incNumBytesRetryLogRead(int bytes) {
+    numBytesRetryLogRead.incr(bytes);
+  }
+
   public void incNumBytesDirtyLogWritten(int bytes) {
     numBytesDirtyLogWritten.incr(bytes);
   }
@@ -156,6 +169,18 @@ public class CBlockTargetMetrics {
 
   public void incNumFailedDirtyLogFileDeletes() {
     numFailedDirtyLogFileDeletes.incr();
+  }
+
+  public void incNumFailedRetryLogFileWrites() {
+    numFailedRetryLogFileWrites.incr();
+  }
+
+  public void incNumWriteMaxRetryBlocks() {
+    numWriteMaxRetryBlocks.incr();
+  }
+
+  public void incNumFailedReleaseLevelDB() {
+    numFailedReleaseLevelDB.incr();
   }
 
   public void updateDBReadLatency(long latency) {
@@ -258,6 +283,16 @@ public class CBlockTargetMetrics {
   }
 
   @VisibleForTesting
+  public long getNumRetryLogBlockRead() {
+    return numRetryLogBlockRead.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBytesRetryLogReads() {
+    return numBytesRetryLogRead.value();
+  }
+
+  @VisibleForTesting
   public long getNumBytesDirtyLogWritten() {
     return numBytesDirtyLogWritten.value();
   }
@@ -280,5 +315,20 @@ public class CBlockTargetMetrics {
   @VisibleForTesting
   public long getNumFailedDirtyLogFileDeletes() {
     return numFailedDirtyLogFileDeletes.value();
+  }
+
+  @VisibleForTesting
+  public long getNumFailedRetryLogFileWrites() {
+    return numFailedRetryLogFileWrites.value();
+  }
+
+  @VisibleForTesting
+  public long getNumWriteMaxRetryBlocks() {
+    return numWriteMaxRetryBlocks.value();
+  }
+
+  @VisibleForTesting
+  public long getNumFailedReleaseLevelDB() {
+    return numFailedReleaseLevelDB.value();
   }
 }
