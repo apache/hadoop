@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -621,5 +622,21 @@ public class TestErasureCodingPolicies {
         .close();
     assertNull(fs.getErasureCodingPolicy(filePath));
     fs.delete(dirPath, true);
+  }
+
+  @Test
+  public void testGetAllErasureCodingCodecs() throws Exception {
+    HashMap<String, String> allECCodecs = fs
+        .getAllErasureCodingCodecs();
+    assertTrue("At least 3 system codecs should be enabled",
+        allECCodecs.size() >= 3);
+    System.out.println("Erasure Coding Codecs: Codec [Coder List]");
+    for (String codec : allECCodecs.keySet()) {
+      String coders = allECCodecs.get(codec);
+      if (codec != null && coders != null) {
+        System.out.println("\t" + codec.toUpperCase() + "["
+            + coders.toUpperCase() + "]");
+      }
+    }
   }
 }

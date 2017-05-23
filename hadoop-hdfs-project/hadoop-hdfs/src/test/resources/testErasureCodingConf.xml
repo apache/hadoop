@@ -541,5 +541,34 @@
       </comparators>
     </test>
 
+    <test>
+      <description>listCodecs : illegal parameters - too many parameters</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listCodecs /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-listCodecs: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listCodecs : successful list codecs</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listCodecs</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Erasure Coding Codecs: Codec [Coder List]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

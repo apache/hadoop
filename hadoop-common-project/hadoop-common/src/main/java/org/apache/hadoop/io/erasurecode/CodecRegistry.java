@@ -55,9 +55,14 @@ public final class CodecRegistry {
 
   private Map<String, String[]> coderNameMap;
 
+  // Protobuffer 2.5.0 doesn't support map<String, String[]> type well, so use
+  // the compact value instead
+  private HashMap<String, String> coderNameCompactMap;
+
   private CodecRegistry() {
     coderMap = new HashMap<>();
     coderNameMap = new HashMap<>();
+    coderNameCompactMap = new HashMap<>();
     final ServiceLoader<RawErasureCoderFactory> coderFactories =
         ServiceLoader.load(RawErasureCoderFactory.class);
     updateCoders(coderFactories);
@@ -113,6 +118,9 @@ public final class CodecRegistry {
       coderNameMap.put(codecName, coders.stream().
           map(RawErasureCoderFactory::getCoderName).
           collect(Collectors.toList()).toArray(new String[0]));
+      coderNameCompactMap.put(codecName, coders.stream().
+          map(RawErasureCoderFactory::getCoderName)
+          .collect(Collectors.joining(", ")));
     }
   }
 
@@ -172,5 +180,14 @@ public final class CodecRegistry {
     // if not found, throw exception
     throw new IllegalArgumentException("No implementation for coder "
         + coderName + " of codec " + codecName);
+  }
+
+  /**
+   * Get all codec names and their corresponding coder list.
+   * @return a map of all codec names, and their corresponding code list
+   * separated by ','.
+   */
+  public HashMap<String, String> getCodec2CoderCompactMap() {
+    return coderNameCompactMap;
   }
 }

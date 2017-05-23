@@ -172,6 +172,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CodecProto;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -2698,6 +2699,13 @@ public class PBHelperClient {
           .setSchema(convertECSchema(policy.getSchema()))
           .setCellSize(policy.getCellSize());
     }
+    return builder.build();
+  }
+
+  public static CodecProto convertErasureCodingCodec(String codec,
+      String coders) {
+    CodecProto.Builder builder = CodecProto.newBuilder()
+        .setCodec(codec).setCoders(coders);
     return builder.build();
   }
 

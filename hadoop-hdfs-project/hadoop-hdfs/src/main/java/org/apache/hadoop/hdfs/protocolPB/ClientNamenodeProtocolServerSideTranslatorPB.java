@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -223,6 +225,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodin
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodingPolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCodingPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
@@ -1611,6 +1615,25 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           .newBuilder();
       for (ErasureCodingPolicy ecPolicy : ecPolicies) {
         resBuilder.addEcPolicies(PBHelperClient.convertErasureCodingPolicy(ecPolicy));
+      }
+      return resBuilder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetErasureCodingCodecsResponseProto getErasureCodingCodecs(
+      RpcController controller, GetErasureCodingCodecsRequestProto request)
+      throws ServiceException {
+    try {
+      HashMap<String, String> codecs = server.getErasureCodingCodecs();
+      GetErasureCodingCodecsResponseProto.Builder resBuilder =
+          GetErasureCodingCodecsResponseProto.newBuilder();
+      for (Map.Entry<String, String> codec : codecs.entrySet()) {
+        resBuilder.addCodec(
+            PBHelperClient.convertErasureCodingCodec(
+                codec.getKey(), codec.getValue()));
       }
       return resBuilder.build();
     } catch (IOException e) {

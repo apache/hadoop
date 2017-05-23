@@ -2763,6 +2763,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("getErasureCodingCodecs")) {
+      return namenode.getErasureCodingCodecs();
+    }
+  }
+
   public AddingECPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
     checkOpen();
