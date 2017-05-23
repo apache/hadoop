@@ -283,6 +283,21 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `WritesFromLocalClient` | Total number of write operations from local client |
 | `WritesFromRemoteClient` | Total number of write operations from remote client |
 | `BlocksGetLocalPathInfo` | Total number of operations to get local path names of blocks |
+| `RamDiskBlocksWrite` | Total number of blocks written to memory |
+| `RamDiskBlocksWriteFallback` | Total number of blocks written to memory but not satisfied (failed-over to disk) |
+| `RamDiskBytesWrite` | Total number of bytes written to memory |
+| `RamDiskBlocksReadHits` | Total number of times a block in memory was read |
+| `RamDiskBlocksEvicted` | Total number of blocks evicted in memory |
+| `RamDiskBlocksEvictedWithoutRead` | Total number of blocks evicted in memory without ever being read from memory |
+| `RamDiskBlocksEvictionWindowMsNumOps` | Number of blocks evicted in memory|
+| `RamDiskBlocksEvictionWindowMsAvgTime` | Average time of blocks in memory before being evicted in milliseconds |
+| `RamDiskBlocksEvictionWindows`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of latency between memory write and eviction in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `RamDiskBlocksLazyPersisted` | Total number of blocks written to disk by lazy writer |
+| `RamDiskBlocksDeletedBeforeLazyPersisted` | Total number of blocks deleted by application before being persisted to disk |
+| `RamDiskBytesLazyPersisted` | Total number of bytes written to disk by lazy writer |
+| `RamDiskBlocksLazyPersistWindowMsNumOps` | Number of blocks written to disk by lazy writer |
+| `RamDiskBlocksLazyPersistWindowMsAvgTime` | Average time of blocks written to disk by lazy writer in milliseconds |
+| `RamDiskBlocksLazyPersistWindows`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of latency between memory write and disk persist in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 | `FsyncCount` | Total number of fsync |
 | `VolumeFailures` | Total number of volume failures occurred |
 | `ReadBlockOpNumOps` | Total number of read operations |
