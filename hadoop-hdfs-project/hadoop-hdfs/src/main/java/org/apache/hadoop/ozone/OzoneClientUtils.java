@@ -152,6 +152,33 @@ public final class OzoneClientUtils {
   }
 
   /**
+   * Retrieve the socket address that should be used by clients to connect
+   * to the SCM for block service.
+   *
+   * @param conf
+   * @return Target InetSocketAddress for the SCM block client endpoint.
+   */
+  public static InetSocketAddress getScmAddressForBlockClients(
+      Configuration conf) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
+
+    if (!host.isPresent()) {
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY +
+          " must be defined. See" +
+          " https://wiki.apache.org/hadoop/Ozone#Configuration for details" +
+          " on configuring Ozone.");
+    }
+
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
+
+    return NetUtils.createSocketAddr(host.get() + ":" +
+        port.or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
+  }
+
+  /**
    * Retrieve the socket address that should be used by DataNodes to connect
    * to the SCM.
    *
@@ -205,6 +232,26 @@ public final class OzoneClientUtils {
     return NetUtils.createSocketAddr(
         host.or(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT) + ":" +
             port.or(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
+  }
+
+  /**
+   * Retrieve the socket address that should be used by clients to connect
+   * to the SCM Block service.
+   *
+   * @param conf
+   * @return Target InetSocketAddress for the SCM block client endpoint.
+   */
+  public static InetSocketAddress getScmBlockClientBindAddress(
+      Configuration conf) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_BIND_HOST_KEY);
+
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
+
+    return NetUtils.createSocketAddr(
+        host.or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_BIND_HOST_DEFAULT) +
+            ":" + port.or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
   }
 
   /**

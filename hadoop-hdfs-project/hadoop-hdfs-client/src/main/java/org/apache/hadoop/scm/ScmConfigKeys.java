@@ -53,15 +53,30 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_CLIENT_PORT_KEY =
       "ozone.scm.client.port";
   public static final int OZONE_SCM_CLIENT_PORT_DEFAULT = 9860;
+
   public static final String OZONE_SCM_DATANODE_PORT_KEY =
       "ozone.scm.datanode.port";
   public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
 
+  // OZONE_KSM_PORT_DEFAULT = 9862
+  public static final String OZONE_SCM_BLOCK_CLIENT_PORT_KEY =
+      "ozone.scm.block.client.port";
+  public static final int OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT = 9863;
+
+  // Container service client
   public static final String OZONE_SCM_CLIENT_ADDRESS_KEY =
       "ozone.scm.client.address";
   public static final String OZONE_SCM_CLIENT_BIND_HOST_KEY =
       "ozone.scm.client.bind.host";
   public static final String OZONE_SCM_CLIENT_BIND_HOST_DEFAULT =
+      "0.0.0.0";
+
+  // Block service client
+  public static final String OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY =
+      "ozone.scm.block.client.address";
+  public static final String OZONE_SCM_BLOCK_CLIENT_BIND_HOST_KEY =
+      "ozone.scm.block.client.bind.host";
+  public static final String OZONE_SCM_BLOCK_CLIENT_BIND_HOST_DEFAULT =
       "0.0.0.0";
 
   public static final String OZONE_SCM_DATANODE_ADDRESS_KEY =

@@ -60,6 +60,6 @@ public interface ScmBlockLocationProtocol {
    * @throws IOException if there is any failure.
    *
    */
-  List<DeleteBlockResult> deleteBlocks(Set<String> keys);
+  List<DeleteBlockResult> deleteBlocks(Set<String> keys) throws IOException;
 
 }
