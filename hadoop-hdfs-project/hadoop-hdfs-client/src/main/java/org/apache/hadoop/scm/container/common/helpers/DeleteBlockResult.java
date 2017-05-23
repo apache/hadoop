@@ -19,7 +19,7 @@ package org.apache.hadoop.scm.container.common.helpers;
 
 
 import static org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.DeleteScmBlockResult;
+    .ScmBlockLocationProtocolProtos.DeleteScmBlockResult;
 
 /**
  * Class wraps storage container manager block deletion results.

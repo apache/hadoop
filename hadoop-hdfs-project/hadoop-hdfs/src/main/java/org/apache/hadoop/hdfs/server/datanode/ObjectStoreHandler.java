@@ -35,6 +35,8 @@ import org.apache.hadoop.ksm.protocolPB
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +71,8 @@ public final class ObjectStoreHandler implements Closeable {
       keySpaceManagerClient;
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
+  private final ScmBlockLocationProtocolClientSideTranslatorPB
+      scmBlockLocationClient;
   private final StorageHandler storageHandler;
 
   /**
@@ -91,6 +95,7 @@ public final class ObjectStoreHandler implements Closeable {
           ProtobufRpcEngine.class);
       long scmVersion =
           RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
+
       InetSocketAddress scmAddress =
           OzoneClientUtils.getScmAddressForClients(conf);
       this.storageContainerLocationClient =
@@ -99,6 +104,16 @@ public final class ObjectStoreHandler implements Closeable {
               scmAddress, UserGroupInformation.getCurrentUser(), conf,
               NetUtils.getDefaultSocketFactory(conf),
               Client.getRpcTimeout(conf)));
+
+      InetSocketAddress scmBlockAddress =
+          OzoneClientUtils.getScmAddressForBlockClients(conf);
+      this.scmBlockLocationClient =
+          new ScmBlockLocationProtocolClientSideTranslatorPB(
+              RPC.getProxy(ScmBlockLocationProtocolPB.class, scmVersion,
+                  scmBlockAddress, UserGroupInformation.getCurrentUser(), conf,
+                  NetUtils.getDefaultSocketFactory(conf),
+                  Client.getRpcTimeout(conf)));
+
       long ksmVersion =
           RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
       InetSocketAddress ksmAddress = OzoneClientUtils.getKsmAddress(conf);
@@ -116,6 +131,7 @@ public final class ObjectStoreHandler implements Closeable {
       if (OzoneConsts.OZONE_HANDLER_LOCAL.equalsIgnoreCase(shType)) {
         storageHandler = new LocalStorageHandler(conf);
         this.storageContainerLocationClient = null;
+        this.scmBlockLocationClient = null;
         this.keySpaceManagerClient = null;
       } else {
         throw new IllegalArgumentException(
@@ -161,6 +177,9 @@ public final class ObjectStoreHandler implements Closeable {
     LOG.info("Closing ObjectStoreHandler.");
     if (this.storageContainerLocationClient != null) {
       this.storageContainerLocationClient.close();
+    }
+    if (this.scmBlockLocationClient != null) {
+      this.scmBlockLocationClient.close();
     }
   }
 }
