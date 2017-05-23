@@ -7655,6 +7655,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
+  /**
+   * Get available erasure coding codecs and corresponding coders.
+   */
+  HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      return FSDirErasureCodingOp.getErasureCodingCodecs(this);
+    } finally {
+      readUnlock("getErasureCodingCodecs");
+    }
+  }
+
   void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
                 boolean logRetryCache)
       throws IOException {

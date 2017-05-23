@@ -179,4 +179,13 @@ public final class CodecRegistry {
   public Map<String, String> getCodec2CoderCompactMap() {
     return coderNameCompactMap;
   }
+
+  /**
+   * Get all codec names and their corresponding coder list.
+   * @return a map of all codec names, and their corresponding code list
+   * separated by ','.
+   */
+  public HashMap<String, String> getCodec2CoderCompactMap() {
+    return coderNameCompactMap;
+  }
 }
