@@ -68,6 +68,13 @@ public final class OzoneConfigKeys {
       "ozone.container.task.wait.seconds";
   public static final long OZONE_CONTAINER_TASK_WAIT_DEFAULT = 5;
 
+  public static final String OZONE_CLIENT_SOCKET_TIMEOUT_MS =
+      "ozone.client.socket.timeout.ms";
+  public static final int OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT = 5000;
+  public static final String OZONE_CLIENT_CONNECTION_TIMEOUT_MS =
+      "ozone.client.connection.timeout.ms";
+  public static final int OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT = 5000;
+
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT

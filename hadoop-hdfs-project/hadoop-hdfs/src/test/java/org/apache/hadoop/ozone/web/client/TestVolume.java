@@ -22,28 +22,36 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class TestVolume {
   private static MiniOzoneCluster cluster = null;
@@ -90,10 +98,15 @@ public class TestVolume {
   }
 
   @Test
-  public void testCreateVolume() throws OzoneException {
+  public void testCreateVolume() throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
+
+    OzoneClient mockClient = Mockito.spy(client);
+    List<CloseableHttpClient> mockedClients = mockHttpClients(mockClient);
+    OzoneVolume vol = mockClient.createVolume(volumeName, "bilbo", "100TB");
+    // Verify http clients are properly closed.
+    verifyHttpConnectionClosed(mockedClients);
 
     assertEquals(vol.getVolumeName(), volumeName);
     assertEquals(vol.getCreatedby(), "hdfs");
@@ -209,5 +222,81 @@ public class TestVolume {
     // becasue we are querying an existing ozone store, there will
     // be volumes created by other tests too. So we should get more page counts.
     Assert.assertEquals(volCount / step , pagecount);
+  }
+
+  /**
+   * Returns a list of mocked {@link CloseableHttpClient} used for testing.
+   * The mocked client replaces the actual calls in
+   * {@link OzoneClient#newHttpClient()}, it is used to verify
+   * if the invocation of this client is expected. <b>Note</b>, the output
+   * of this method is always used as the input of
+   * {@link TestVolume#verifyHttpConnectionClosed(List)}.
+   *
+   * @param ozoneClient mocked ozone client.
+   * @return a list of mocked {@link CloseableHttpClient}.
+   * @throws IOException
+   */
+  private List<CloseableHttpClient> mockHttpClients(OzoneClient ozoneClient)
+      throws IOException {
+    List<CloseableHttpClient> spyHttpClients = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      CloseableHttpClient spyHttpClient = Mockito
+          .spy(OzoneClientUtils.newHttpClient());
+      spyHttpClients.add(spyHttpClient);
+    }
+
+    List<CloseableHttpClient> nextReturns =
+        new ArrayList<>(spyHttpClients.subList(1, spyHttpClients.size()));
+    Mockito.when(ozoneClient.newHttpClient()).thenReturn(
+        spyHttpClients.get(0),
+        nextReturns.toArray(new CloseableHttpClient[nextReturns.size()]));
+    return spyHttpClients;
+  }
+
+  /**
+   * This method is used together with
+   * {@link TestVolume#mockHttpClients(OzoneClient)} to verify
+   * if the http client is properly closed. It verifies that as long as
+   * a client calls {@link CloseableHttpClient#execute(HttpUriRequest)} to
+   * send request, then it must calls {@link CloseableHttpClient#close()}
+   * close the http connection.
+   *
+   * @param mockedHttpClients
+   */
+  private void verifyHttpConnectionClosed(
+      List<CloseableHttpClient> mockedHttpClients) {
+    final AtomicInteger totalCalled = new AtomicInteger();
+    Assert.assertTrue(mockedHttpClients.stream().allMatch(
+        closeableHttpClient -> {
+          boolean clientUsed = false;
+          try {
+            verify(closeableHttpClient, times(1))
+                .execute(Mockito.any());
+            totalCalled.incrementAndGet();
+            clientUsed = true;
+          } catch (Throwable e) {
+            // There might be some redundant instances in mockedHttpClients,
+            // it is allowed that a client is not used.
+            return true;
+          }
+
+          if (clientUsed) {
+            try {
+              // If a client is used, ensure the close function is called.
+              verify(closeableHttpClient,
+                  times(1)).close();
+              return true;
+            } catch (IOException e) {
+              return false;
+            }
+          } else {
+            return true;
+          }
+        }));
+    System.out.println("Successful connections "
+        + totalCalled.get());
+    Assert.assertTrue(
+        "The mocked http client should be called at least once.",
+        totalCalled.get() > 0);
   }
 }
