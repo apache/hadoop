@@ -32,12 +32,14 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numVolumeModifies;
   private @Metric MutableCounterLong numVolumeInfos;
   private @Metric MutableCounterLong numBucketCreates;
+  private @Metric MutableCounterLong numBucketInfos;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
   private @Metric MutableCounterLong numVolumeModifyFails;
   private @Metric MutableCounterLong numVolumeInfoFails;
   private @Metric MutableCounterLong numBucketCreateFails;
+  private @Metric MutableCounterLong numBucketInfoFails;
 
   public KSMMetrics() {
   }
@@ -65,6 +67,10 @@ public class KSMMetrics {
     numBucketCreates.incr();
   }
 
+  public void incNumBucketInfos() {
+    numBucketInfos.incr();
+  }
+
   public void incNumVolumeCreateFails() {
     numVolumeCreates.incr();
   }
@@ -79,6 +85,10 @@ public class KSMMetrics {
 
   public void incNumBucketCreateFails() {
     numBucketCreateFails.incr();
+  }
+
+  public void incNumBucketInfoFails() {
+    numBucketInfoFails.incr();
   }
 
   @VisibleForTesting
@@ -102,6 +112,11 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumBucketInfos() {
+    return numBucketInfos.value();
+  }
+
+  @VisibleForTesting
   public long getNumVolumeCreateFails() {
     return numVolumeCreateFails.value();
   }
@@ -119,6 +134,11 @@ public class KSMMetrics {
   @VisibleForTesting
   public long getNumBucketCreateFails() {
     return numBucketCreateFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBucketInfoFails() {
+    return numBucketInfoFails.value();
   }
 
 }

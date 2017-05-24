@@ -16,8 +16,9 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
-import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
+
+import java.io.IOException;
 
 /**
  * BucketManager handles all the bucket level operations.
@@ -25,7 +26,14 @@ import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 public interface BucketManager {
   /**
    * Creates a bucket.
-   * @param args - KsmBucketArgs for creating bucket.
+   * @param bucketInfo - KsmBucketInfo for creating bucket.
    */
-  void createBucket(KsmBucketArgs args) throws KSMException;
+  void createBucket(KsmBucketInfo bucketInfo) throws IOException;
+  /**
+   * Returns Bucket Information.
+   * @param volumeName - Name of the Volume.
+   * @param bucketName - Name of the Bucket.
+   */
+  KsmBucketInfo getBucketInfo(String volumeName, String bucketName)
+      throws IOException;
 }

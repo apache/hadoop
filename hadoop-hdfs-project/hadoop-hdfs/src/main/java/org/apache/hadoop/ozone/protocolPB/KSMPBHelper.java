@@ -35,7 +35,7 @@ public final class KSMPBHelper {
   }
 
   /**
-   * Returns protobuf's OzoneAclInfo of the current instance.
+   * Converts OzoneAcl into protobuf's OzoneAclInfo.
    * @return OzoneAclInfo
    */
   public static OzoneAclInfo convertOzoneAcl(OzoneAcl acl) {
@@ -72,5 +72,42 @@ public final class KSMPBHelper {
         .setName(acl.getName())
         .setRights(aclRights)
         .build();
+  }
+
+  /**
+   * Converts protobuf's OzoneAclInfo into OzoneAcl.
+   * @return OzoneAcl
+   */
+  public static OzoneAcl convertOzoneAcl(OzoneAclInfo aclInfo) {
+    OzoneAcl.OzoneACLType aclType;
+    switch(aclInfo.getType()) {
+    case USER:
+      aclType = OzoneAcl.OzoneACLType.USER;
+      break;
+    case GROUP:
+      aclType = OzoneAcl.OzoneACLType.GROUP;
+      break;
+    case WORLD:
+      aclType = OzoneAcl.OzoneACLType.WORLD;
+      break;
+    default:
+      throw new IllegalArgumentException("ACL type is not recognized");
+    }
+    OzoneAcl.OzoneACLRights aclRights;
+    switch(aclInfo.getRights()) {
+    case READ:
+      aclRights = OzoneAcl.OzoneACLRights.READ;
+      break;
+    case WRITE:
+      aclRights = OzoneAcl.OzoneACLRights.WRITE;
+      break;
+    case READ_WRITE:
+      aclRights = OzoneAcl.OzoneACLRights.READ_WRITE;
+      break;
+    default:
+      throw new IllegalArgumentException("ACL right is not recognized");
+    }
+
+    return new OzoneAcl(aclType, aclInfo.getName(), aclRights);
   }
 }

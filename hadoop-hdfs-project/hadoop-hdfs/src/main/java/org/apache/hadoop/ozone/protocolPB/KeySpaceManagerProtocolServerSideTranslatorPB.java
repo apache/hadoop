@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
@@ -27,6 +27,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -91,6 +95,8 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         return Status.USER_NOT_FOUND;
       case FAILED_BUCKET_ALREADY_EXISTS:
         return Status.BUCKET_ALREADY_EXISTS;
+      case FAILED_BUCKET_NOT_FOUND:
+        return Status.BUCKET_NOT_FOUND;
       default:
         return Status.INTERNAL_ERROR;
       }
@@ -180,10 +186,27 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
     CreateBucketResponse.Builder resp =
         CreateBucketResponse.newBuilder();
     try {
-      impl.createBucket(KsmBucketArgs.getFromProtobuf(
+      impl.createBucket(KsmBucketInfo.getFromProtobuf(
           request.getBucketInfo()));
       resp.setStatus(Status.OK);
     } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public InfoBucketResponse infoBucket(
+      RpcController controller, InfoBucketRequest request)
+      throws ServiceException {
+    InfoBucketResponse.Builder resp =
+        InfoBucketResponse.newBuilder();
+    try {
+      KsmBucketInfo ksmBucketInfo = impl.getBucketInfo(
+          request.getVolumeName(), request.getBucketName());
+      resp.setStatus(Status.OK);
+      resp.setBucketInfo(ksmBucketInfo.getProtobuf());
+    } catch(IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
     }
     return resp.build();

@@ -25,9 +25,10 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto
 import org.apache.hadoop.hdfs.ozone.protocol.proto
     .ContainerProtos.KeyData;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset
     .LengthInputStream;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
@@ -66,6 +67,7 @@ import java.util.Locale;
 import java.util.HashSet;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
 import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.getKey;
@@ -175,16 +177,21 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void createBucket(final BucketArgs args)
       throws IOException, OzoneException {
-    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
-    args.getAddAcls().forEach(acl ->
-        builder.addAddAcl(KSMPBHelper.convertOzoneAcl(acl)));
-    args.getRemoveAcls().forEach(acl ->
-        builder.addRemoveAcl(KSMPBHelper.convertOzoneAcl(acl)));
+    KsmBucketInfo.Builder builder = KsmBucketInfo.newBuilder();
     builder.setVolumeName(args.getVolumeName())
-        .setBucketName(args.getBucketName())
-        .setIsVersionEnabled(getBucketVersioningProtobuf(
-            args.getVersioning()))
-        .setStorageType(args.getStorageType());
+        .setBucketName(args.getBucketName());
+    if(args.getAddAcls() != null) {
+      builder.setAcls(args.getAddAcls().stream().map(
+          KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+    }
+    if(args.getStorageType() != null) {
+      builder.setStorageType(PBHelperClient.convertStorageType(
+          args.getStorageType()));
+    }
+    if(args.getVersioning() != null) {
+      builder.setIsVersionEnabled(getBucketVersioningProtobuf(
+          args.getVersioning()));
+    }
     keySpaceManagerClient.createBucket(builder.build());
   }
 
@@ -250,20 +257,23 @@ public final class DistributedStorageHandler implements StorageHandler {
 
   @Override
   public BucketInfo getBucketInfo(BucketArgs args)
-      throws IOException, OzoneException {
-    String containerKey = buildContainerKey(args.getVolumeName(),
-        args.getBucketName());
-    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
-    try {
-      KeyData containerKeyData = containerKeyDataForRead(
-          xceiverClient.getPipeline().getContainerName(), containerKey);
-      GetKeyResponseProto response = getKey(xceiverClient, containerKeyData,
-          args.getRequestID());
-      return fromContainerKeyValueListToBucket(
-          response.getKeyData().getMetadataList());
-    } finally {
-      xceiverClientManager.releaseClient(xceiverClient);
+      throws IOException {
+    String volumeName = args.getVolumeName();
+    String bucketName = args.getBucketName();
+    KsmBucketInfo ksmBucketInfo = keySpaceManagerClient.getBucketInfo(
+        volumeName, bucketName);
+    BucketInfo bucketInfo = new BucketInfo(ksmBucketInfo.getVolumeName(),
+        ksmBucketInfo.getBucketName());
+    if(ksmBucketInfo.getIsVersionEnabled()) {
+      bucketInfo.setVersioning(Versioning.ENABLED);
+    } else {
+      bucketInfo.setVersioning(Versioning.DISABLED);
     }
+    bucketInfo.setStorageType(PBHelperClient.convertStorageType(
+        ksmBucketInfo.getStorageType()));
+    bucketInfo.setAcls(ksmBucketInfo.getAcls().stream().map(
+        KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+    return bucketInfo;
   }
 
   @Override

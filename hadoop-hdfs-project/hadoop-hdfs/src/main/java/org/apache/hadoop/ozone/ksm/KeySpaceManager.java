@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
@@ -339,17 +339,38 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   /**
    * Creates a bucket.
    *
-   * @param args - Arguments to create Bucket.
+   * @param bucketInfo - BucketInfo to create bucket.
    * @throws IOException
    */
   @Override
-  public void createBucket(KsmBucketArgs args) throws IOException {
+  public void createBucket(KsmBucketInfo bucketInfo) throws IOException {
     try {
       metrics.incNumBucketCreates();
-      bucketManager.createBucket(args);
+      bucketManager.createBucket(bucketInfo);
     } catch (Exception ex) {
       metrics.incNumBucketCreateFails();
       throw ex;
     }
   }
+
+  /**
+   * Gets the bucket information.
+   *
+   * @param volume - Volume name.
+   * @param bucket - Bucket name.
+   * @return KsmBucketInfo or exception is thrown.
+   * @throws IOException
+   */
+  @Override
+  public KsmBucketInfo getBucketInfo(String volume, String bucket)
+      throws IOException {
+    try {
+      metrics.incNumBucketInfos();
+      return bucketManager.getBucketInfo(volume, bucket);
+    } catch (Exception ex) {
+      metrics.incNumBucketInfoFails();
+      throw ex;
+    }
+  }
+
 }

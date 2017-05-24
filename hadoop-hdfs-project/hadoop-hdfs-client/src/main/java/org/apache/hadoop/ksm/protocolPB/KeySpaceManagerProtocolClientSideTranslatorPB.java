@@ -22,7 +22,7 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ozone.protocol.proto
@@ -31,6 +31,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.InfoBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -254,15 +258,15 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
   /**
    * Creates a bucket.
    *
-   * @param args - Arguments to create Bucket.
+   * @param bucketInfo - BucketInfo to create bucket.
    * @throws IOException
    */
   @Override
-  public void createBucket(KsmBucketArgs args) throws IOException {
+  public void createBucket(KsmBucketInfo bucketInfo) throws IOException {
     CreateBucketRequest.Builder req =
         CreateBucketRequest.newBuilder();
-    BucketInfo bucketInfo = args.getProtobuf();
-    req.setBucketInfo(bucketInfo);
+    BucketInfo bucketInfoProtobuf = bucketInfo.getProtobuf();
+    req.setBucketInfo(bucketInfoProtobuf);
 
     final CreateBucketResponse resp;
     try {
@@ -276,6 +280,38 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
           + resp.getStatus());
     }
   }
+
+  /**
+   * Gets the bucket information.
+   *
+   * @param volume - Volume name.
+   * @param bucket - Bucket name.
+   * @return KsmBucketInfo or exception is thrown.
+   * @throws IOException
+   */
+  @Override
+  public KsmBucketInfo getBucketInfo(String volume, String bucket)
+      throws IOException {
+    InfoBucketRequest.Builder req =
+        InfoBucketRequest.newBuilder();
+    req.setVolumeName(volume);
+    req.setBucketName(bucket);
+
+    final InfoBucketResponse resp;
+    try {
+      resp = rpcProxy.infoBucket(NULL_RPC_CONTROLLER,
+          req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() == Status.OK) {
+      return KsmBucketInfo.getFromProtobuf(resp.getBucketInfo());
+    } else {
+      throw new IOException("Info Bucket failed, error: "
+          + resp.getStatus());
+    }
+  }
+
 
   /**
    * Return the proxy object underlying this protocol translator.
