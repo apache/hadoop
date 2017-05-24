@@ -58,7 +58,7 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.inotify.Event;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
-import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.BlockType;
@@ -124,7 +124,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmS
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AddingECPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AddECPolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
@@ -2724,10 +2724,10 @@ public class PBHelperClient {
     return builder.build();
   }
 
-  public static AddingECPolicyResponseProto convertAddingECPolicyResponse(
-      AddingECPolicyResponse response) {
-    AddingECPolicyResponseProto.Builder builder =
-        AddingECPolicyResponseProto.newBuilder()
+  public static AddECPolicyResponseProto convertAddECPolicyResponse(
+      AddECPolicyResponse response) {
+    AddECPolicyResponseProto.Builder builder =
+        AddECPolicyResponseProto.newBuilder()
         .setPolicy(convertErasureCodingPolicy(response.getPolicy()))
         .setSucceed(response.isSucceed());
     if (!response.isSucceed()) {
@@ -2736,13 +2736,13 @@ public class PBHelperClient {
     return builder.build();
   }
 
-  public static AddingECPolicyResponse convertAddingECPolicyResponse(
-      AddingECPolicyResponseProto proto) {
+  public static AddECPolicyResponse convertAddECPolicyResponse(
+      AddECPolicyResponseProto proto) {
     ErasureCodingPolicy policy = convertErasureCodingPolicy(proto.getPolicy());
     if (proto.getSucceed()) {
-      return new AddingECPolicyResponse(policy);
+      return new AddECPolicyResponse(policy);
     } else {
-      return new AddingECPolicyResponse(policy, proto.getErrorMsg());
+      return new AddECPolicyResponse(policy, proto.getErrorMsg());
     }
   }
 

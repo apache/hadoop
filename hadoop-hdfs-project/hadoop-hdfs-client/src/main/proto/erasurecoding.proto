@@ -58,7 +58,7 @@ message AddErasureCodingPoliciesRequestProto {
 }
 
 message AddErasureCodingPoliciesResponseProto {
-  repeated AddingECPolicyResponseProto responses = 1;
+  repeated AddECPolicyResponseProto responses = 1;
 }
 
 message UnsetErasureCodingPolicyRequestProto {

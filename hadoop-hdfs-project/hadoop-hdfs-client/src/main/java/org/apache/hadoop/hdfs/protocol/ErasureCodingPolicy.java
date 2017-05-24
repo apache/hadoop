@@ -41,6 +41,8 @@ public final class ErasureCodingPolicy {
     Preconditions.checkNotNull(name);
     Preconditions.checkNotNull(schema);
     Preconditions.checkArgument(cellSize > 0, "cellSize must be positive");
+    Preconditions.checkArgument(cellSize % 1024 == 0,
+        "cellSize must be 1024 aligned");
     this.name = name;
     this.schema = schema;
     this.cellSize = cellSize;
@@ -51,8 +53,13 @@ public final class ErasureCodingPolicy {
     this(composePolicyName(schema, cellSize), schema, cellSize, id);
   }
 
+  public ErasureCodingPolicy(ECSchema schema, int cellSize) {
+    this(composePolicyName(schema, cellSize), schema, cellSize, (byte) -1);
+  }
+
   public static String composePolicyName(ECSchema schema, int cellSize) {
-    assert cellSize % 1024 == 0;
+    Preconditions.checkArgument(cellSize % 1024 == 0,
+        "cellSize must be 1024 aligned");
     return schema.getCodecName().toUpperCase() + "-" +
         schema.getNumDataUnits() + "-" + schema.getNumParityUnits() +
         "-" + cellSize / 1024 + "k";

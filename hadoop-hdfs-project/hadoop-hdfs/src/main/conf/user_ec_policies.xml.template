@@ -61,6 +61,7 @@
     <!-- schema is referred by its id -->
     <schema>XORk2m1</schema>
     <!-- cellsize must be an positive integer multiple of 1024(1k) -->
+    <!-- maximum cellsize is defined by 'dfs.namenode.ec.policies.max.cellsize' property -->
     <cellsize>131072</cellsize>
   </policy>
   <policy>

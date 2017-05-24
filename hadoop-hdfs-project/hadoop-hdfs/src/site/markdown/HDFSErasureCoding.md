@@ -154,6 +154,7 @@ Deployment
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
+         [-addPolicies -policyFile <file>]
          [-listCodecs]
          [-usage [cmd ...]]
          [-help [cmd ...]]
@@ -182,7 +183,7 @@ Below are the details about each command.
 
  *  `[-addPolicies -policyFile <file>]`
 
-     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file.
+     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB.
 
  *  `[-listCodecs]`
 

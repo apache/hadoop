@@ -18,26 +18,26 @@
 package org.apache.hadoop.hdfs.protocol;
 
 /**
- * A response of adding an ErasureCoding policy.
+ * A response of add an ErasureCoding policy.
  */
-public class AddingECPolicyResponse {
+public class AddECPolicyResponse {
   private boolean succeed;
   private ErasureCodingPolicy policy;
   private String errorMsg;
 
-  public AddingECPolicyResponse(ErasureCodingPolicy policy) {
+  public AddECPolicyResponse(ErasureCodingPolicy policy) {
     this.policy = policy;
     this.succeed = true;
   }
 
-  public AddingECPolicyResponse(ErasureCodingPolicy policy,
+  public AddECPolicyResponse(ErasureCodingPolicy policy,
       String errorMsg) {
     this.policy = policy;
     this.errorMsg = errorMsg;
     this.succeed = false;
   }
 
-  public AddingECPolicyResponse(ErasureCodingPolicy policy,
+  public AddECPolicyResponse(ErasureCodingPolicy policy,
       IllegalECPolicyException e) {
     this(policy, e.getMessage());
   }

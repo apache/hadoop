@@ -127,28 +127,20 @@ public final class CodecRegistry {
   /**
    * Get all coder names of the given codec.
    * @param codecName the name of codec
-   * @return an array of all coder names
+   * @return an array of all coder names, null if not exist
    */
   public String[] getCoderNames(String codecName) {
     String[] coderNames = coderNameMap.get(codecName);
-    if (coderNames == null) {
-      throw new IllegalArgumentException("No available raw coder factory for "
-          + codecName);
-    }
     return coderNames;
   }
 
   /**
    * Get all coder factories of the given codec.
    * @param codecName the name of codec
-   * @return a list of all coder factories
+   * @return a list of all coder factories, null if not exist
    */
   public List<RawErasureCoderFactory> getCoders(String codecName) {
     List<RawErasureCoderFactory> coders = coderMap.get(codecName);
-    if (coders == null) {
-      throw new IllegalArgumentException("No available raw coder factory for "
-          + codecName);
-    }
     return coders;
   }
 
@@ -164,7 +156,7 @@ public final class CodecRegistry {
    * Get a specific coder factory defined by codec name and coder name.
    * @param codecName name of the codec
    * @param coderName name of the coder
-   * @return the specific coder
+   * @return the specific coder, null if not exist
    */
   public RawErasureCoderFactory getCoderByName(
       String codecName, String coderName) {
@@ -176,10 +168,7 @@ public final class CodecRegistry {
         return coder;
       }
     }
-
-    // if not found, throw exception
-    throw new IllegalArgumentException("No implementation for coder "
-        + coderName + " of codec " + codecName);
+    return null;
   }
 
   /**

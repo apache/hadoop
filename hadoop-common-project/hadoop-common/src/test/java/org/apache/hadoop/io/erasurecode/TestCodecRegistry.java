@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -67,10 +68,11 @@ public class TestCodecRegistry {
     assertTrue(coders.get(1) instanceof XORRawErasureCoderFactory);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testGetCodersWrong() {
     List<RawErasureCoderFactory> coders =
         CodecRegistry.getInstance().getCoders("WRONG_CODEC");
+    assertNull(coders);
   }
 
   @Test
@@ -123,10 +125,11 @@ public class TestCodecRegistry {
     assertTrue(coder instanceof NativeXORRawErasureCoderFactory);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testGetCoderByNameWrong() {
     RawErasureCoderFactory coder = CodecRegistry.getInstance().
             getCoderByName(ErasureCodeConstants.RS_CODEC_NAME, "WRONG_RS");
+    assertNull(coder);
   }
 
   @Test

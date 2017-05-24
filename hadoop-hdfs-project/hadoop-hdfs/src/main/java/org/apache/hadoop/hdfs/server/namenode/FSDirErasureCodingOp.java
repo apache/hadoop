@@ -212,10 +212,10 @@ final class FSDirErasureCodingOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static void addErasureCodePolicy(final FSNamesystem fsn,
+  static ErasureCodingPolicy addErasureCodePolicy(final FSNamesystem fsn,
       ErasureCodingPolicy policy) throws IllegalECPolicyException {
     Preconditions.checkNotNull(policy);
-    fsn.getErasureCodingPolicyManager().addPolicy(policy);
+    return fsn.getErasureCodingPolicyManager().addPolicy(policy);
   }
 
   private static List<XAttr> removeErasureCodingPolicyXAttr(

@@ -153,6 +153,10 @@ public final class CodecUtil {
     return fact;
   }
 
+  public static boolean hasCodec(String codecName) {
+    return (CodecRegistry.getInstance().getCoderNames(codecName) != null);
+  }
+
   // Return a list of coder names
   private static String[] getRawCoderNames(
       Configuration conf, String codecName) {

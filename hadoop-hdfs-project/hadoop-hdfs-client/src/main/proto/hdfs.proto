@@ -372,7 +372,7 @@ message ErasureCodingPolicyProto {
   required uint32 id = 4; // Actually a byte - only 8 bits used
 }
 
-message AddingECPolicyResponseProto {
+message AddECPolicyResponseProto {
   required ErasureCodingPolicyProto policy = 1;
   required bool succeed = 2;
   optional string errorMsg = 3;
