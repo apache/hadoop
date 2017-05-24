@@ -49,7 +49,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
-import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -1637,7 +1637,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public AddingECPolicyResponse[] addErasureCodingPolicies(
+  public AddECPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
     List<ErasureCodingPolicyProto> protos = Arrays.stream(policies)
         .map(PBHelperClient::convertErasureCodingPolicy)
@@ -1648,9 +1648,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       AddErasureCodingPoliciesResponseProto rep = rpcProxy
           .addErasureCodingPolicies(null, req);
-      AddingECPolicyResponse[] responses = rep.getResponsesList().stream()
-          .map(PBHelperClient::convertAddingECPolicyResponse)
-          .toArray(AddingECPolicyResponse[]::new);
+      AddECPolicyResponse[] responses = rep.getResponsesList().stream()
+          .map(PBHelperClient::convertAddECPolicyResponse)
+          .toArray(AddECPolicyResponse[]::new);
       return responses;
     }  catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

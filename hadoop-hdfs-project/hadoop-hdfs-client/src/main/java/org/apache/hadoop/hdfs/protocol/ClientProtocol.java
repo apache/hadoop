@@ -1526,14 +1526,17 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
-   * Add Erasure coding policies.
+   * Add Erasure coding policies to HDFS. For each policy input, schema and
+   * cellSize are musts, name and id are ignored. They will be automatically
+   * created and assigned by Namenode once the policy is successfully added, and
+   * will be returned in the response.
    *
    * @param policies The user defined ec policy list to add.
    * @return Return the response list of adding operations.
    * @throws IOException
    */
   @AtMostOnce
-  AddingECPolicyResponse[] addErasureCodingPolicies(
+  AddECPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException;
 
   /**

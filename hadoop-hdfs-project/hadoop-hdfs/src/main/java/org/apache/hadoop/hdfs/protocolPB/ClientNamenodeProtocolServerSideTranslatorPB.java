@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.QuotaUsage;
-import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -1649,11 +1649,11 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       ErasureCodingPolicy[] policies = request.getEcPoliciesList().stream()
           .map(PBHelperClient::convertErasureCodingPolicy)
           .toArray(ErasureCodingPolicy[]::new);
-      AddingECPolicyResponse[] result = server
+      AddECPolicyResponse[] result = server
           .addErasureCodingPolicies(policies);
 
-      List<HdfsProtos.AddingECPolicyResponseProto> responseProtos = Arrays
-          .stream(result).map(PBHelperClient::convertAddingECPolicyResponse)
+      List<HdfsProtos.AddECPolicyResponseProto> responseProtos = Arrays
+          .stream(result).map(PBHelperClient::convertAddECPolicyResponse)
           .collect(Collectors.toList());
       AddErasureCodingPoliciesResponseProto response =
           AddErasureCodingPoliciesResponseProto.newBuilder()

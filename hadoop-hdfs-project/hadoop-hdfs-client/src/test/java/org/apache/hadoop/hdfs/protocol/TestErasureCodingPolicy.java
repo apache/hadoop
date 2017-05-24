@@ -56,11 +56,11 @@ public class TestErasureCodingPolicy {
   @Test
   public void testEqualsAndHashCode() {
     ErasureCodingPolicy[] policies = new ErasureCodingPolicy[]{
-        new ErasureCodingPolicy("one", SCHEMA_1, 321, (byte) 1),
-        new ErasureCodingPolicy("two", SCHEMA_1, 321, (byte) 1),
-        new ErasureCodingPolicy("one", SCHEMA_2, 321, (byte) 1),
-        new ErasureCodingPolicy("one", SCHEMA_1, 123, (byte) 1),
-        new ErasureCodingPolicy("one", SCHEMA_1, 321, (byte) 3),
+        new ErasureCodingPolicy("one", SCHEMA_1, 1024, (byte) 1),
+        new ErasureCodingPolicy("two", SCHEMA_1, 1024, (byte) 1),
+        new ErasureCodingPolicy("one", SCHEMA_2, 1024, (byte) 1),
+        new ErasureCodingPolicy("one", SCHEMA_1, 2048, (byte) 1),
+        new ErasureCodingPolicy("one", SCHEMA_1, 1024, (byte) 3),
     };
 
     for (int i = 0; i < policies.length; i++) {

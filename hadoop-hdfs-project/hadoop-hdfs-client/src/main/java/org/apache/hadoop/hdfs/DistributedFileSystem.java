@@ -71,7 +71,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
-import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -2549,13 +2549,16 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Add Erasure coding policies to HDFS.
+   * Add Erasure coding policies to HDFS. For each policy input, schema and
+   * cellSize are musts, name and id are ignored. They will be automatically
+   * created and assigned by Namenode once the policy is successfully added, and
+   * will be returned in the response.
    *
    * @param policies The user defined ec policy list to add.
    * @return Return the response list of adding operations.
    * @throws IOException
    */
-  public AddingECPolicyResponse[] addErasureCodingPolicies(
+  public AddECPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies)  throws IOException {
     return dfs.addErasureCodingPolicies(policies);
   }
