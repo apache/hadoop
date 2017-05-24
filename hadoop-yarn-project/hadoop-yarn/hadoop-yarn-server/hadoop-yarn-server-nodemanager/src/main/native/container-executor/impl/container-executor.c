@@ -1268,13 +1268,9 @@ char* sanitize_docker_command(const char *line) {
   }
 
   if(optind < split_counter) {
-    quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
-    strcat(output, "'");
     while(optind < split_counter) {
-      strcat(output, linesplit[optind++]);
-      strcat(output, " ");
+      quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
     }
-    strcat(output, "'");
   }
 
   return output;
