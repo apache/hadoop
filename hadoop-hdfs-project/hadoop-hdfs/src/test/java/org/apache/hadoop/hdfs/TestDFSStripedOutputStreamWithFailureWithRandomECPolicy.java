@@ -17,18 +17,29 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 /**
- * This tests read operation of DFS striped file with RS-10-4-64k
- *  erasure code policy.
+ * This tests write operation of DFS striped file with a random erasure code
+ * policy except for the default policy under Datanode failure conditions.
  */
-public class TestDFSRSDefault10x4StripedInputStream extends
-    TestDFSStripedInputStream {
+public class TestDFSStripedOutputStreamWithFailureWithRandomECPolicy extends
+    TestDFSStripedOutputStreamWithFailure {
 
+  private static final Log LOG = LogFactory.getLog(
+      TestDFSStripedOutputStreamWithRandomECPolicy.class.getName());
+
+  private ErasureCodingPolicy ecPolicy;
+
+  public TestDFSStripedOutputStreamWithFailureWithRandomECPolicy() {
+    ecPolicy = StripedFileTestUtil.getRandomNonDefaultECPolicy();
+    LOG.info(ecPolicy);
+  }
+
+  @Override
   public ErasureCodingPolicy getEcPolicy() {
-    return SystemErasureCodingPolicies.getByID(
-        SystemErasureCodingPolicies.RS_10_4_POLICY_ID);
+    return ecPolicy;
   }
 }
