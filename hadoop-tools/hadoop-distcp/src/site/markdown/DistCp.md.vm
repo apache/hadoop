@@ -240,7 +240,6 @@ Flag              | Description                          | Notes
 `-numListstatusThreads` | Number of threads to use for building file listing | At most 40 threads.
 `-skipcrccheck` | Whether to skip CRC checks between source and target paths. |
 `-blocksperchunk <blocksperchunk>` | Number of blocks per chunk. When specified, split files into chunks to copy in parallel | If set to a positive value, files with more blocks than this value will be split into chunks of `<blocksperchunk>` blocks to be transferred in parallel, and reassembled on the destination. By default, `<blocksperchunk>` is 0 and the files will be transmitted in their entirety without splitting. This switch is only applicable when the source file system implements getBlockLocations method and the target file system implements concat method. |
-`-copybuffersize <copybuffersize>` | Size of the copy buffer to use. By default, `<copybuffersize>` is set to 8192B |
 
 Architecture of DistCp
 ----------------------

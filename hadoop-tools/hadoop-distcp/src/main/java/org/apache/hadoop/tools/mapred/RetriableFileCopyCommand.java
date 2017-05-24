@@ -38,7 +38,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
-import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.mapred.CopyMapper.FileAction;
 import org.apache.hadoop.tools.util.DistCpUtils;
@@ -54,6 +53,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class RetriableFileCopyCommand extends RetriableCommand {
 
   private static Log LOG = LogFactory.getLog(RetriableFileCopyCommand.class);
+  private static int BUFFER_SIZE = 8 * 1024;
   private boolean skipCrc = false;
   private FileAction action;
 
@@ -169,9 +169,6 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       throws IOException {
     FsPermission permission = FsPermission.getFileDefault().applyUMask(
         FsPermission.getUMask(targetFS.getConf()));
-    int copyBufferSize = context.getConfiguration().getInt(
-        DistCpOptionSwitch.COPY_BUFFER_SIZE.getConfigLabel(),
-        DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
     final OutputStream outStream;
     if (action == FileAction.OVERWRITE) {
       final short repl = getReplicationFactor(fileAttributes, source,
@@ -180,14 +177,14 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           targetFS, targetPath);
       FSDataOutputStream out = targetFS.create(targetPath, permission,
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
-          copyBufferSize, repl, blockSize, context,
+          BUFFER_SIZE, repl, blockSize, context,
           getChecksumOpt(fileAttributes, sourceChecksum));
       outStream = new BufferedOutputStream(out);
     } else {
       outStream = new BufferedOutputStream(targetFS.append(targetPath,
-          copyBufferSize));
+          BUFFER_SIZE));
     }
-    return copyBytes(source, sourceOffset, outStream, copyBufferSize,
+    return copyBytes(source, sourceOffset, outStream, BUFFER_SIZE,
         context);
   }
 

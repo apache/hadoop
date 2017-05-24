@@ -186,8 +186,6 @@ public class OptionsParser {
 
     parseBlocksPerChunk(command, option);
 
-    parseCopyBufferSize(command, option);
-
     return option;
   }
 
@@ -223,29 +221,8 @@ public class OptionsParser {
   }
 
   /**
-   * A helper method to parse copyBufferSize.
-   *
-   * @param command command line arguments
-   */
-  private static void parseCopyBufferSize(CommandLine command,
-      DistCpOptions option) {
-    if (command.hasOption(DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch())) {
-      String copyBufferSizeStr =
-          getVal(command, DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch()
-              .trim());
-      try {
-        int copyBufferSize = Integer.parseInt(copyBufferSizeStr);
-        option.setCopyBufferSize(copyBufferSize);
-      } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("copyBufferSize is invalid: "
-            + copyBufferSizeStr, e);
-      }
-    }
-  }
-
-  /**
-   * parseSizeLimit is a helper method for parsing the deprecated argument
-   * SIZE_LIMIT.
+   * parseSizeLimit is a helper method for parsing the deprecated
+   * argument SIZE_LIMIT.
    *
    * @param command command line arguments
    */

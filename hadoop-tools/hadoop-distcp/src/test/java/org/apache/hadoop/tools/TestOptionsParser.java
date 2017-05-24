@@ -407,8 +407,7 @@ public class TestOptionsParser {
         + "copyStrategy='uniformsize', preserveStatus=[], "
         + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
         + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
-        + "targetPathExists=true, filtersFile='null', blocksPerChunk=0, "
-        + "copyBufferSize=8192}";
+        + "targetPathExists=true, filtersFile='null', blocksPerChunk=0}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -773,44 +772,5 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
     Assert.assertEquals(options.getFiltersFile(), "/tmp/filters.txt");
-  }
-
-  @Test
-  public void testParseCopyBufferSize() {
-    DistCpOptions options =
-        OptionsParser.parse(new String[] {
-            "hdfs://localhost:8020/source/first",
-            "hdfs://localhost:8020/target/" });
-    Assert.assertEquals(options.getCopyBufferSize(),
-        DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
-
-    options =
-        OptionsParser.parse(new String[] { "-copybuffersize", "0",
-            "hdfs://localhost:8020/source/first",
-            "hdfs://localhost:8020/target/" });
-    Assert.assertEquals(options.getCopyBufferSize(),
-        DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
-
-    options =
-        OptionsParser.parse(new String[] { "-copybuffersize", "-1",
-            "hdfs://localhost:8020/source/first",
-            "hdfs://localhost:8020/target/" });
-    Assert.assertEquals(options.getCopyBufferSize(),
-        DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
-
-    options =
-        OptionsParser.parse(new String[] { "-copybuffersize", "4194304",
-            "hdfs://localhost:8020/source/first",
-            "hdfs://localhost:8020/target/" });
-    Assert.assertEquals(options.getCopyBufferSize(), 4194304);
-
-    try {
-      OptionsParser
-          .parse(new String[] { "-copybuffersize", "hello",
-              "hdfs://localhost:8020/source/first",
-              "hdfs://localhost:8020/target/" });
-      Assert.fail("Non numberic copybuffersize parsed successfully!");
-    } catch (IllegalArgumentException ignore) {
-    }
   }
 }

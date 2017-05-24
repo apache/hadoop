@@ -104,11 +104,6 @@ public class DistCpOptions {
   // to copy in parallel. Default is 0 and file are not splitted.
   private int blocksPerChunk = 0;
 
-  /**
-   * The copyBufferSize to use in RetriableFileCopyCommand
-   */
-  private int copyBufferSize = DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
-
   public static enum FileAttribute{
     REPLICATION, BLOCKSIZE, USER, GROUP, PERMISSION, CHECKSUMTYPE, ACL, XATTR, TIMES;
 
@@ -179,7 +174,6 @@ public class DistCpOptions {
       this.targetPathExists = that.getTargetPathExists();
       this.filtersFile = that.getFiltersFile();
       this.blocksPerChunk = that.blocksPerChunk;
-      this.copyBufferSize = that.copyBufferSize;
     }
   }
 
@@ -470,7 +464,7 @@ public class DistCpOptions {
   }
 
   /**
-   * Checks if the input attribute should be preserved or not.
+   * Checks if the input attribute should be preserved or not
    *
    * @param attribute - Attribute to check
    * @return True if attribute should be preserved, false otherwise
@@ -646,16 +640,6 @@ public class DistCpOptions {
     return blocksPerChunk > 0;
   }
 
-  public final void setCopyBufferSize(int newCopyBufferSize) {
-    this.copyBufferSize =
-        newCopyBufferSize > 0 ? newCopyBufferSize
-            : DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
-  }
-
-  public int getCopyBufferSize() {
-    return this.copyBufferSize;
-  }
-
   public void validate(DistCpOptionSwitch option, boolean value) {
 
     boolean syncFolder = (option == DistCpOptionSwitch.SYNC_FOLDERS ?
@@ -752,8 +736,6 @@ public class DistCpOptions {
     }
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BLOCKS_PER_CHUNK,
         String.valueOf(blocksPerChunk));
-    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.COPY_BUFFER_SIZE,
-        String.valueOf(copyBufferSize));
   }
 
   /**
@@ -791,7 +773,6 @@ public class DistCpOptions {
         ", targetPathExists=" + targetPathExists +
         ", filtersFile='" + filtersFile + '\'' +
         ", blocksPerChunk=" + blocksPerChunk +
-        ", copyBufferSize=" + copyBufferSize +
         '}';
   }
 
