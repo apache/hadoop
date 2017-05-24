@@ -20,11 +20,16 @@ package org.apache.hadoop.ozone;
 import com.google.common.base.Optional;
 
 import com.google.common.net.HostAndPort;
+import org.apache.avro.reflect.Nullable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -556,4 +561,52 @@ public final class OzoneClientUtils {
         .DFS_CONTAINER_IPC_PORT_DEFAULT);
   }
 
+  /**
+   * Releases a http connection if the request is not null.
+   * @param request
+   */
+  public static void releaseConnection(HttpRequestBase request) {
+    if (request != null) {
+      request.releaseConnection();
+    }
+  }
+
+  /**
+   * @return a default instance of {@link CloseableHttpClient}.
+   */
+  public static CloseableHttpClient newHttpClient() {
+    return OzoneClientUtils.newHttpClient(null);
+  }
+
+  /**
+   * Returns a {@link CloseableHttpClient} configured by given configuration.
+   * If conf is null, returns a default instance.
+   *
+   * @param conf configuration
+   * @return a {@link CloseableHttpClient} instance.
+   */
+  public static CloseableHttpClient newHttpClient(
+      @Nullable Configuration conf) {
+    int socketTimeout = OzoneConfigKeys
+        .OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT;
+    int connectionTimeout = OzoneConfigKeys
+        .OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT;
+    if (conf != null) {
+      socketTimeout = conf.getInt(
+          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_MS,
+          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT);
+      connectionTimeout = conf.getInt(
+          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_MS,
+          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT);
+    }
+
+    CloseableHttpClient client = HttpClients.custom()
+        .setDefaultRequestConfig(
+            RequestConfig.custom()
+                .setSocketTimeout(socketTimeout)
+                .setConnectTimeout(connectionTimeout)
+                .build())
+        .build();
+    return client;
+  }
 }

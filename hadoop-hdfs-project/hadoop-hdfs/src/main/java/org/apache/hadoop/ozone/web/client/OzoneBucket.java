@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
@@ -37,7 +39,6 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import java.io.ByteArrayInputStream;
@@ -156,19 +157,16 @@ public class OzoneBucket {
       throw new OzoneClientException("Invalid data.");
     }
 
-    try {
-      OzoneClient client = getVolume().getClient();
-
-      CloseableHttpClient httpClient = HttpClients.createDefault();
-
+    HttpPut putRequest = null;
+    InputStream is = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
 
-      HttpPut putRequest =
-          getVolume().getClient().getHttpPut(builder.toString());
+      putRequest = getVolume().getClient().getHttpPut(builder.toString());
 
-      InputStream is = new ByteArrayInputStream(data.getBytes(ENCODING));
+      is = new ByteArrayInputStream(data.getBytes(ENCODING));
       putRequest.setEntity(new InputStreamEntity(is, data.length()));
       is.mark(data.length());
       try {
@@ -177,9 +175,11 @@ public class OzoneBucket {
         is.reset();
       }
       executePutKey(putRequest, httpClient);
-
     } catch (IOException | URISyntaxException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      IOUtils.closeStream(is);
+      OzoneClientUtils.releaseConnection(putRequest);
     }
   }
 
@@ -216,28 +216,28 @@ public class OzoneBucket {
       throw new OzoneClientException("Invalid data stream");
     }
 
-    try {
-      OzoneClient client = getVolume().getClient();
-
-      CloseableHttpClient httpClient = HttpClients.createDefault();
+    HttpPut putRequest = null;
+    FileInputStream fis = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
 
-      HttpPut putRequest =
-          getVolume().getClient().getHttpPut(builder.toString());
+      putRequest = getVolume().getClient().getHttpPut(builder.toString());
 
       FileEntity fileEntity = new FileEntity(file, ContentType
           .APPLICATION_OCTET_STREAM);
       putRequest.setEntity(fileEntity);
 
-      FileInputStream fis = new FileInputStream(file);
+      fis = new FileInputStream(file);
       putRequest.setHeader(Header.CONTENT_MD5, DigestUtils.md5Hex(fis));
-      fis.close();
       executePutKey(putRequest, httpClient);
 
     } catch (IOException | URISyntaxException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      IOUtils.closeStream(fis);
+      OzoneClientUtils.releaseConnection(putRequest);
     }
   }
 
@@ -253,7 +253,6 @@ public class OzoneBucket {
       throws OzoneException, IOException {
     HttpEntity entity = null;
     try {
-
       HttpResponse response = httpClient.execute(putRequest);
       int errorCode = response.getStatusLine().getStatusCode();
       entity = response.getEntity();
@@ -291,23 +290,23 @@ public class OzoneBucket {
       throw new OzoneClientException("Invalid download path");
     }
 
-    try {
-      OzoneClient client = getVolume().getClient();
-
-      CloseableHttpClient httpClient = HttpClients.createDefault();
-      FileOutputStream outPutFile = new FileOutputStream(downloadTo.toFile());
+    FileOutputStream outPutFile = null;
+    HttpGet getRequest = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+      outPutFile = new FileOutputStream(downloadTo.toFile());
 
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
 
-      HttpGet getRequest =
-          getVolume().getClient().getHttpGet(builder.toString());
+      getRequest = getVolume().getClient().getHttpGet(builder.toString());
       executeGetKey(getRequest, httpClient, outPutFile);
       outPutFile.flush();
-      outPutFile.close();
     } catch (IOException | URISyntaxException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      IOUtils.closeStream(outPutFile);
+      OzoneClientUtils.releaseConnection(getRequest);
     }
   }
 
@@ -324,22 +323,24 @@ public class OzoneBucket {
       throw new OzoneClientException("Invalid key Name");
     }
 
-    try {
-      OzoneClient client = getVolume().getClient();
-      ByteArrayOutputStream outPutStream = new ByteArrayOutputStream();
+    HttpGet getRequest = null;
+    ByteArrayOutputStream outPutStream = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+      outPutStream = new ByteArrayOutputStream();
 
-      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
 
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
 
-      HttpGet getRequest =
-          getVolume().getClient().getHttpGet(builder.toString());
+      getRequest = getVolume().getClient().getHttpGet(builder.toString());
       executeGetKey(getRequest, httpClient, outPutStream);
       return outPutStream.toString(ENCODING_NAME);
     } catch (IOException | URISyntaxException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      IOUtils.closeStream(outPutStream);
+      OzoneClientUtils.releaseConnection(getRequest);
     }
 
   }
@@ -393,19 +394,19 @@ public class OzoneBucket {
       throw new OzoneClientException("Invalid key Name");
     }
 
-    try {
-      OzoneClient client = getVolume().getClient();
-      CloseableHttpClient httpClient = HttpClients.createDefault();
-
+    HttpDelete deleteRequest = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
 
-      HttpDelete deleteRequest =
-          getVolume().getClient().getHttpDelete(builder.toString());
+      deleteRequest = getVolume()
+          .getClient().getHttpDelete(builder.toString());
       executeDeleteKey(deleteRequest, httpClient);
     } catch (IOException | URISyntaxException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(deleteRequest);
     }
   }
 
@@ -450,18 +451,20 @@ public class OzoneBucket {
    * @return List of OzoneKeys
    */
   public List<OzoneKey> listKeys() throws OzoneException {
-    try {
+    HttpGet getRequest = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
       OzoneClient client = getVolume().getClient();
-      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName())
           .build();
 
-      HttpGet getRequest = client.getHttpGet(builder.toString());
+      getRequest = client.getHttpGet(builder.toString());
       return executeListKeys(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException e) {
       throw new OzoneClientException(e.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(getRequest);
     }
   }
 

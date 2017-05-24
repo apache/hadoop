@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.ozone.web.client;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
@@ -35,7 +37,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
@@ -164,26 +165,28 @@ public class OzoneVolume {
                                   OzoneConsts.Versioning versioning)
       throws OzoneException {
 
-    try {
+    HttpPost httpPost = null;
+    try (CloseableHttpClient httpClient = newHttpClient()) {
       OzoneUtils.verifyBucketName(bucketName);
-      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
 
-      HttpPost httppost = client.getHttpPost(null, builder.toString());
+      httpPost = client.getHttpPost(null, builder.toString());
       if (acls != null) {
         for (String acl : acls) {
-          httppost
+          httpPost
               .addHeader(Header.OZONE_ACLS, Header.OZONE_ACL_ADD + " " + acl);
         }
       }
 
-      httppost.addHeader(Header.OZONE_STORAGE_TYPE, storageType.toString());
-      httppost.addHeader(Header.OZONE_BUCKET_VERSIONING, versioning.toString());
-      executeCreateBucket(httppost, httpClient);
+      httpPost.addHeader(Header.OZONE_STORAGE_TYPE, storageType.toString());
+      httpPost.addHeader(Header.OZONE_BUCKET_VERSIONING, versioning.toString());
+      executeCreateBucket(httpPost, httpClient);
       return getBucket(bucketName);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(httpPost);
     }
   }
 
@@ -226,7 +229,6 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   public OzoneBucket createBucket(String bucketName) throws OzoneException {
-
     return createBucket(bucketName, null,  StorageType.DEFAULT,
         OzoneConsts.Versioning.DISABLED);
   }
@@ -273,13 +275,12 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   public void addAcls(String bucketName, String[] acls) throws OzoneException {
-
-    try {
+    HttpPut putRequest = null;
+    try (CloseableHttpClient httpClient = newHttpClient()) {
       OzoneUtils.verifyBucketName(bucketName);
-      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
-      HttpPut putRequest = client.getHttpPut(builder.toString());
+      putRequest = client.getHttpPut(builder.toString());
 
       for (String acl : acls) {
         putRequest
@@ -288,6 +289,8 @@ public class OzoneVolume {
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(putRequest);
     }
   }
 
@@ -301,12 +304,12 @@ public class OzoneVolume {
    */
   public void removeAcls(String bucketName, String[] acls)
       throws OzoneException {
-    try {
+    HttpPut putRequest = null;
+    try (CloseableHttpClient httpClient = newHttpClient()) {
       OzoneUtils.verifyBucketName(bucketName);
-      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
-      HttpPut putRequest = client.getHttpPut(builder.toString());
+      putRequest = client.getHttpPut(builder.toString());
 
       for (String acl : acls) {
         putRequest
@@ -315,6 +318,8 @@ public class OzoneVolume {
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(putRequest);
     }
   }
 
@@ -326,18 +331,20 @@ public class OzoneVolume {
    * @return OZoneBucket
    */
   public OzoneBucket getBucket(String bucketName) throws OzoneException {
-    try {
+    HttpGet getRequest = null;
+    try (CloseableHttpClient httpClient = newHttpClient()) {
       OzoneUtils.verifyBucketName(bucketName);
-      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName)
         .setParameter(Header.OZONE_LIST_QUERY_TAG,
             Header.OZONE_LIST_QUERY_BUCKET).build();
-      HttpGet getRequest = client.getHttpGet(builder.toString());
+      getRequest = client.getHttpGet(builder.toString());
       return executeInfoBucket(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(getRequest);
     }
   }
 
@@ -422,17 +429,18 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   public List<OzoneBucket> listBuckets() throws OzoneException {
-    try {
-      CloseableHttpClient httpClient = HttpClients.createDefault();
-
+    HttpGet getRequest = null;
+    try (CloseableHttpClient httpClient = newHttpClient()) {
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName()).build();
 
-      HttpGet getRequest = client.getHttpGet(builder.toString());
+      getRequest = client.getHttpGet(builder.toString());
       return executeListBuckets(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException e) {
       throw new OzoneClientException(e.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(getRequest);
     }
   }
 
@@ -488,17 +496,19 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   public void deleteBucket(String bucketName) throws OzoneException {
-    try {
+    HttpDelete delRequest = null;
+    try (CloseableHttpClient httpClient = newHttpClient()) {
       OzoneUtils.verifyBucketName(bucketName);
-      CloseableHttpClient httpClient = HttpClients.createDefault();
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName).build();
 
-      HttpDelete delRequest = client.getHttpDelete(builder.toString());
+      delRequest = client.getHttpDelete(builder.toString());
       executeDeleteBucket(delRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
       throw new OzoneClientException(ex.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(delRequest);
     }
   }
 
@@ -535,5 +545,10 @@ public class OzoneVolume {
         EntityUtils.consumeQuietly(entity);
       }
     }
+  }
+
+  @VisibleForTesting
+  public CloseableHttpClient newHttpClient() {
+    return OzoneClientUtils.newHttpClient();
   }
 }
