@@ -96,6 +96,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4612. Fix rumen and scheduler load simulator handle killed tasks properly.
     (Ming Ma via xgong)
 
+    YARN-6615. AmIpFilter drops query parameters on redirect. (Wilfred
+    Spiegelenburg via jlowe)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

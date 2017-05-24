@@ -135,9 +135,16 @@ public class AmIpFilter implements Filter {
       LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
     }
     if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
-      String redirectUrl = findRedirectUrl();
-      String target = redirectUrl + httpReq.getRequestURI();
-      ProxyUtils.sendRedirect(httpReq,  httpResp,  target);
+      StringBuilder target = new StringBuilder().append(findRedirectUrl());
+      target.append(httpReq.getRequestURI());
+      // add the query parameters on the redirect if there were any
+      String queryString = httpReq.getQueryString();
+      if (queryString != null && !queryString.isEmpty()) {
+        target.append("?");
+        target.append(queryString);
+      }
+
+      ProxyUtils.sendRedirect(httpReq,  httpResp,  target.toString());
       return;
     }
 

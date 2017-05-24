@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.webproxy.amfilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -163,9 +164,17 @@ public class TestAmFilter {
     Mockito.when(request.getRequestURI()).thenReturn("/redirect");
     testFilter.doFilter(request, response, chain);
     // address "redirect" is not in host list
-    assertEquals(302, response.status);
+    assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, response.status);
     String redirect = response.getHeader(ProxyUtils.LOCATION);
     assertEquals("http://bogus/redirect", redirect);
+    // check for query parameters
+    Mockito.when(request.getRequestURI()).thenReturn("/proxy/application_00_0");
+    Mockito.when(request.getQueryString()).thenReturn("id=0");
+    testFilter.doFilter(request, response, chain);
+    assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, response.status);
+    redirect = response.getHeader(ProxyUtils.LOCATION);
+    assertEquals("http://bogus/proxy/application_00_0?id=0", redirect);
+
     // "127.0.0.1" contains in host list. Without cookie
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     testFilter.doFilter(request, response, chain);
