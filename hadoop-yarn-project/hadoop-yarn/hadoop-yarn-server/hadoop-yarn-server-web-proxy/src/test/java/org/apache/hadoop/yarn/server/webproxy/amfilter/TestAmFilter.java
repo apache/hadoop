@@ -161,6 +161,19 @@ public class TestAmFilter {
     testFilter.doFilter(request, response, chain);
     // address "redirect" is not in host list
     assertEquals("http://bogus/redirect", response.getRedirect());
+    // check for query parameters
+    Mockito.when(request.getRequestURI()).thenReturn("/proxy/application_00_0");
+    Mockito.when(request.getQueryString()).thenReturn("id=0");
+    testFilter.doFilter(request, response, chain);
+    assertEquals("http://bogus/proxy/application_00_0?id=0",
+        response.getRedirect());
+    // check for query parameters: encoding
+    Mockito.when(request.getRequestURI()).thenReturn("/proxy/application_00_0");
+    Mockito.when(request.getQueryString()).thenReturn("id=0&text=' #'");
+    testFilter.doFilter(request, response, chain);
+    assertEquals("http://bogus/proxy/application_00_0?id=0&text=%27+%23%27",
+        response.getRedirect());
+
     // "127.0.0.1" contains in host list. Without cookie
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     testFilter.doFilter(request, response, chain);

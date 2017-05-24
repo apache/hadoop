@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,6 +46,8 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.apache.hadoop.yarn.util.RMHAUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 
 @Public
 public class AmIpFilter implements Filter {
@@ -136,9 +139,16 @@ public class AmIpFilter implements Filter {
       LOG.debug("Remote address for request is: " + httpReq.getRemoteAddr());
     }
     if(!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
-      String redirectUrl = findRedirectUrl();
-      redirectUrl = httpResp.encodeRedirectURL(redirectUrl +
-          httpReq.getRequestURI());
+      StringBuilder target = new StringBuilder().append(findRedirectUrl());
+      target.append(httpReq.getRequestURI());
+      String queryParams = httpReq.getQueryString();
+      if (queryParams != null && !queryParams.isEmpty()) {
+        target.append("?");
+        List<NameValuePair> queryPairs =
+            URLEncodedUtils.parse(queryParams, null);
+        target.append(URLEncodedUtils.format(queryPairs, "UTF-8"));
+      }
+      String redirectUrl = httpResp.encodeRedirectURL(target.toString());
       httpResp.sendRedirect(redirectUrl);
       return;
     }

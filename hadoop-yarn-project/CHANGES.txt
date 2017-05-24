@@ -1,5 +1,20 @@
 Hadoop YARN Change Log
 
+Release 2.6.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-6615. AmIpFilter drops query parameters on redirect. (Wilfred
+    Spiegelenburg via jlowe)
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES
