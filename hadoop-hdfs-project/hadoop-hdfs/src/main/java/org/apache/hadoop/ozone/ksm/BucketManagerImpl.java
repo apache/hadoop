@@ -17,11 +17,15 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.BucketInfo;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 /**
  * KSM bucket manager.
@@ -64,16 +68,15 @@ public class BucketManagerImpl implements BucketManager {
 
   /**
    * Creates a bucket.
-   * @param args - KsmBucketArgs.
+   * @param bucketInfo - KsmBucketInfo.
    */
   @Override
-  public void createBucket(KsmBucketArgs args) throws KSMException {
-    Preconditions.checkNotNull(args);
+  public void createBucket(KsmBucketInfo bucketInfo) throws IOException {
+    Preconditions.checkNotNull(bucketInfo);
     metadataManager.writeLock().lock();
-    String volumeName = args.getVolumeName();
-    String bucketName = args.getBucketName();
+    String volumeName = bucketInfo.getVolumeName();
+    String bucketName = bucketInfo.getBucketName();
     try {
-      //bucket key: {volume/bucket}
       byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
@@ -89,16 +92,46 @@ public class BucketManagerImpl implements BucketManager {
         throw new KSMException("Bucket already exist",
             KSMException.ResultCodes.FAILED_BUCKET_ALREADY_EXISTS);
       }
-      metadataManager.put(bucketKey, args.getProtobuf().toByteArray());
+      metadataManager.put(bucketKey, bucketInfo.getProtobuf().toByteArray());
 
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
-    } catch (DBException ex) {
+    } catch (IOException | DBException ex) {
       LOG.error("Bucket creation failed for bucket:{} in volume:{}",
           bucketName, volumeName, ex);
-      throw new KSMException(ex.getMessage(),
-          KSMException.ResultCodes.FAILED_INTERNAL_ERROR);
+      throw ex;
     } finally {
       metadataManager.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Returns Bucket Information.
+   *
+   * @param volumeName - Name of the Volume.
+   * @param bucketName - Name of the Bucket.
+   */
+  @Override
+  public KsmBucketInfo getBucketInfo(String volumeName, String bucketName)
+      throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    metadataManager.readLock().lock();
+    try {
+      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      byte[] value = metadataManager.get(bucketKey);
+      if(value == null) {
+        LOG.error("bucket: {} not found in volume: {}.",
+            bucketName, volumeName);
+        throw new KSMException("Bucket not found",
+            KSMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+      }
+      return KsmBucketInfo.getFromProtobuf(BucketInfo.parseFrom(value));
+    } catch (IOException | DBException ex) {
+      LOG.error("Exception while getting bucket info for bucket: {}",
+          bucketName, ex);
+      throw ex;
+    } finally {
+      metadataManager.readLock().unlock();
     }
   }
 }

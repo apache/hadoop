@@ -161,10 +161,18 @@ message ListVolumeResponse {
 message BucketInfo {
     required string volumeName = 1;
     required string bucketName = 2;
+    repeated OzoneAclInfo acls = 3;
+    required bool isVersionEnabled = 4 [default = false];
+    required StorageTypeProto storageType = 5 [default = DISK];
+}
+
+message BucketArgs {
+    required string volumeName = 1;
+    required string bucketName = 2;
     repeated OzoneAclInfo addAcls = 3;
     repeated OzoneAclInfo removeAcls = 4;
-    required bool isVersionEnabled = 5 [default = false];
-    optional StorageTypeProto storageType = 6 [default = DISK];
+    optional bool isVersionEnabled = 5;
+    optional StorageTypeProto storageType = 6;
 }
 
 message OzoneAclInfo {
@@ -190,6 +198,18 @@ message CreateBucketRequest {
 message CreateBucketResponse {
     required Status status = 1;
 }
+
+message InfoBucketRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+}
+
+message InfoBucketResponse {
+    required Status status = 1;
+    optional BucketInfo bucketInfo = 2;
+
+}
+
 /**
  The KSM service that takes care of Ozone namespace.
 */
@@ -235,4 +255,10 @@ service KeySpaceManagerService {
     */
     rpc createBucket(CreateBucketRequest)
         returns(CreateBucketResponse);
+
+    /**
+        Get Bucket information.
+    */
+    rpc infoBucket(InfoBucketRequest)
+        returns(InfoBucketResponse);
 }

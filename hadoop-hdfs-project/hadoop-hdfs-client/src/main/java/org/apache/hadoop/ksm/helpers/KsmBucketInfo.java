@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.ksm.helpers;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.proto
     .HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.BucketArgs;
+    .KeySpaceManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 
+import java.util.LinkedList;
+import java.util.List;
+
 /**
- * A class that encapsulates Bucket Arguments.
+ * A class that encapsulates Bucket Info.
  */
-public final class KsmBucketArgs {
+public final class KsmBucketInfo {
   /**
    * Name of the volume in which the bucket belongs to.
    */
@@ -40,13 +41,9 @@ public final class KsmBucketArgs {
    */
   private final String bucketName;
   /**
-   * ACL's that are to be added for the bucket.
+   * ACL Information.
    */
-  private List<OzoneAclInfo> addAcls;
-  /**
-   * ACL's that are to be removed from the bucket.
-   */
-  private List<OzoneAclInfo> removeAcls;
+  private List<OzoneAclInfo> acls;
   /**
    * Bucket Version flag.
    */
@@ -61,18 +58,16 @@ public final class KsmBucketArgs {
    * Private constructor, constructed via builder.
    * @param volumeName - Volume name.
    * @param bucketName - Bucket name.
-   * @param addAcls - ACL's to be added.
-   * @param removeAcls - ACL's to be removed.
+   * @param acls - list of ACLs.
    * @param isVersionEnabled - Bucket version flag.
    * @param storageType - Storage type to be used.
    */
-  private KsmBucketArgs(String volumeName, String bucketName,
-      List<OzoneAclInfo> addAcls, List<OzoneAclInfo> removeAcls,
-      boolean isVersionEnabled, StorageTypeProto storageType) {
+  private KsmBucketInfo(String volumeName, String bucketName,
+                        List<OzoneAclInfo> acls, boolean isVersionEnabled,
+                        StorageTypeProto storageType) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
-    this.addAcls = addAcls;
-    this.removeAcls = removeAcls;
+    this.acls = acls;
     this.isVersionEnabled = isVersionEnabled;
     this.storageType = storageType;
   }
@@ -94,19 +89,11 @@ public final class KsmBucketArgs {
   }
 
   /**
-   * Returns the ACL's that are to be added.
+   * Returns the ACL's associated with this bucket.
    * @return List<OzoneAclInfo>
    */
-  public List<OzoneAclInfo> getAddAcls() {
-    return addAcls;
-  }
-
-  /**
-   * Returns the ACL's that are to be removed.
-   * @return List<OzoneAclInfo>
-   */
-  public List<OzoneAclInfo> getRemoveAcls() {
-    return removeAcls;
+  public List<OzoneAclInfo> getAcls() {
+    return acls;
   }
 
   /**
@@ -119,14 +106,14 @@ public final class KsmBucketArgs {
 
   /**
    * Returns the type of storage to be used.
-   * @return StorageType
+   * @return StorageTypeProto
    */
   public StorageTypeProto getStorageType() {
     return storageType;
   }
 
   /**
-   * Returns new builder class that builds a KsmBucketArgs.
+   * Returns new builder class that builds a KsmBucketInfo.
    *
    * @return Builder
    */
@@ -135,15 +122,21 @@ public final class KsmBucketArgs {
   }
 
   /**
-   * Builder for KsmBucketArgs.
+   * Builder for KsmBucketInfo.
    */
   public static class Builder {
     private String volumeName;
     private String bucketName;
-    private List<OzoneAclInfo> addAcls;
-    private List<OzoneAclInfo> removeAcls;
+    private List<OzoneAclInfo> acls;
     private Boolean isVersionEnabled;
     private StorageTypeProto storageType;
+
+    Builder() {
+      //Default values
+      this.acls = new LinkedList<>();
+      this.isVersionEnabled = false;
+      this.storageType = StorageTypeProto.DISK;
+    }
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -155,13 +148,8 @@ public final class KsmBucketArgs {
       return this;
     }
 
-    public Builder setAddAcls(List<OzoneAclInfo> acls) {
-      this.addAcls = acls;
-      return this;
-    }
-
-    public Builder setRemoveAcls(List<OzoneAclInfo> acls) {
-      this.removeAcls = acls;
+    public Builder setAcls(List<OzoneAclInfo> listOfAcls) {
+      this.acls = listOfAcls;
       return this;
     }
 
@@ -176,50 +164,44 @@ public final class KsmBucketArgs {
     }
 
     /**
-     * Constructs the KsmBucketArgs.
-     * @return instance of KsmBucketArgs.
+     * Constructs the KsmBucketInfo.
+     * @return instance of KsmBucketInfo.
      */
-    public KsmBucketArgs build() {
+    public KsmBucketInfo build() {
       Preconditions.checkNotNull(volumeName);
       Preconditions.checkNotNull(bucketName);
-      return new KsmBucketArgs(volumeName, bucketName, addAcls,
-          removeAcls, isVersionEnabled, storageType);
+      Preconditions.checkNotNull(acls);
+      Preconditions.checkNotNull(isVersionEnabled);
+      Preconditions.checkNotNull(storageType);
+      return new KsmBucketInfo(volumeName, bucketName, acls,
+          isVersionEnabled, storageType);
     }
   }
 
   /**
-   * Creates BucketArgs protobuf from KsmBucketArgs.
+   * Creates BucketInfo protobuf from KsmBucketInfo.
    */
-  public BucketArgs getProtobuf() {
-    BucketArgs.Builder builder = BucketArgs.newBuilder();
-    builder.setVolumeName(volumeName)
-        .setBucketName(bucketName);
-    if(addAcls != null && !addAcls.isEmpty()) {
-      builder.addAllAddAcls(addAcls);
-    }
-    if(removeAcls != null && !removeAcls.isEmpty()) {
-      builder.addAllRemoveAcls(removeAcls);
-    }
-    if(isVersionEnabled != null) {
-      builder.setIsVersionEnabled(isVersionEnabled);
-    }
-    if(storageType != null) {
-      builder.setStorageType(storageType);
-    }
-    return builder.build();
+  public BucketInfo getProtobuf() {
+    return BucketInfo.newBuilder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .addAllAcls(acls)
+        .setIsVersionEnabled(isVersionEnabled)
+        .setStorageType(storageType)
+        .build();
   }
 
   /**
-   * Parses BucketInfo protobuf and creates KsmBucketArgs.
-   * @param bucketArgs
-   * @return instance of KsmBucketArgs
+   * Parses BucketInfo protobuf and creates KsmBucketInfo.
+   * @param bucketInfo
+   * @return instance of KsmBucketInfo
    */
-  public static KsmBucketArgs getFromProtobuf(BucketArgs bucketArgs) {
-    return new KsmBucketArgs(bucketArgs.getVolumeName(),
-        bucketArgs.getBucketName(),
-        bucketArgs.getAddAclsList(),
-        bucketArgs.getRemoveAclsList(),
-        bucketArgs.getIsVersionEnabled(),
-        bucketArgs.getStorageType());
+  public static KsmBucketInfo getFromProtobuf(BucketInfo bucketInfo) {
+    return new KsmBucketInfo(
+        bucketInfo.getVolumeName(),
+        bucketInfo.getBucketName(),
+        bucketInfo.getAclsList(),
+        bucketInfo.getIsVersionEnabled(),
+        bucketInfo.getStorageType());
   }
 }

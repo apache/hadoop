@@ -16,9 +16,9 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions
@@ -100,13 +100,11 @@ public class TestBucketManagerImpl {
     MetadataManager metaMgr = getMetadataManagerMock();
     try {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
-      KsmBucketArgs bucketArgs = KsmBucketArgs.newBuilder()
+      KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
           .setVolumeName("sampleVol")
           .setBucketName("bucketOne")
-          .setStorageType(StorageType.DISK)
-          .setIsVersionEnabled(false)
           .build();
-      bucketManager.createBucket(bucketArgs);
+      bucketManager.createBucket(bucketInfo);
     } catch(KSMException ksmEx) {
       Assert.assertEquals(ResultCodes.FAILED_VOLUME_NOT_FOUND,
           ksmEx.getResult());
@@ -118,16 +116,12 @@ public class TestBucketManagerImpl {
   public void testCreateBucket() throws IOException {
     MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
-    KsmBucketArgs bucketArgs = KsmBucketArgs.newBuilder()
+    KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
-        .setStorageType(StorageType.DISK)
-        .setIsVersionEnabled(false)
         .build();
-    bucketManager.createBucket(bucketArgs);
-    //TODO: Use BucketManagerImpl#getBucketInfo to verify creation of bucket.
-    Assert.assertNotNull(metaMgr
-        .get(DFSUtil.string2Bytes("/sampleVol/bucketOne")));
+    bucketManager.createBucket(bucketInfo);
+    Assert.assertNotNull(bucketManager.getBucketInfo("sampleVol", "bucketOne"));
   }
 
   @Test
@@ -136,18 +130,50 @@ public class TestBucketManagerImpl {
     MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     try {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
-      KsmBucketArgs bucketArgs = KsmBucketArgs.newBuilder()
+      KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
           .setVolumeName("sampleVol")
           .setBucketName("bucketOne")
-          .setStorageType(StorageType.DISK)
-          .setIsVersionEnabled(false)
           .build();
-      bucketManager.createBucket(bucketArgs);
-      bucketManager.createBucket(bucketArgs);
+      bucketManager.createBucket(bucketInfo);
+      bucketManager.createBucket(bucketInfo);
     } catch(KSMException ksmEx) {
       Assert.assertEquals(ResultCodes.FAILED_BUCKET_ALREADY_EXISTS,
           ksmEx.getResult());
       throw ksmEx;
     }
+  }
+
+  @Test
+  public void testGetBucketInfoForInvalidBucket() throws IOException {
+    thrown.expectMessage("Bucket not found");
+    try {
+      MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+      BucketManager bucketManager = new BucketManagerImpl(metaMgr);
+      bucketManager.getBucketInfo("sampleVol", "bucketOne");
+    } catch(KSMException ksmEx) {
+      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
+          ksmEx.getResult());
+      throw ksmEx;
+    }
+  }
+
+  @Test
+  public void testGetBucketInfo() throws IOException {
+    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    BucketManager bucketManager = new BucketManagerImpl(metaMgr);
+    KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
+        .setVolumeName("sampleVol")
+        .setBucketName("bucketOne")
+        .setStorageType(HdfsProtos.StorageTypeProto.DISK)
+        .setIsVersionEnabled(false)
+        .build();
+    bucketManager.createBucket(bucketInfo);
+    KsmBucketInfo result = bucketManager.getBucketInfo(
+        "sampleVol", "bucketOne");
+    Assert.assertEquals("sampleVol", result.getVolumeName());
+    Assert.assertEquals("bucketOne", result.getBucketName());
+    Assert.assertEquals(HdfsProtos.StorageTypeProto.DISK,
+        result.getStorageType());
+    Assert.assertEquals(false, result.getIsVersionEnabled());
   }
 }

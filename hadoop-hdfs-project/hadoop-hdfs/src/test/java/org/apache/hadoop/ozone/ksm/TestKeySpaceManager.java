@@ -24,10 +24,12 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -44,7 +46,7 @@ import java.util.Random;
 public class TestKeySpaceManager {
   private static MiniOzoneCluster cluster = null;
   private static StorageHandler storageHandler;
-  private static UserArgs volUserArgs;
+  private static UserArgs userArgs;
   private static KSMMetrics ksmMetrics;
 
   /**
@@ -63,7 +65,7 @@ public class TestKeySpaceManager {
     cluster = new MiniOzoneCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
-    volUserArgs = new UserArgs(null, null, null, null, null, null);
+    userArgs = new UserArgs(null, null, null, null, null, null);
     ksmMetrics = cluster.getKeySpaceManager().getMetrics();
   }
 
@@ -84,12 +86,12 @@ public class TestKeySpaceManager {
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
 
-    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
     createVolumeArgs.setUserName(userName);
     createVolumeArgs.setAdminName(adminName);
     storageHandler.createVolume(createVolumeArgs);
 
-    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     VolumeInfo retVolumeinfo = storageHandler.getVolumeInfo(getVolumeArgs);
     Assert.assertTrue(retVolumeinfo.getVolumeName().equals(volumeName));
     Assert.assertTrue(retVolumeinfo.getOwner().getName().equals(userName));
@@ -103,7 +105,7 @@ public class TestKeySpaceManager {
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
 
-    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
     createVolumeArgs.setUserName(userName);
     createVolumeArgs.setAdminName(adminName);
     storageHandler.createVolume(createVolumeArgs);
@@ -112,7 +114,7 @@ public class TestKeySpaceManager {
     createVolumeArgs.setUserName(newUserName);
     storageHandler.setVolumeOwner(createVolumeArgs);
 
-    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     VolumeInfo retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
 
     Assert.assertTrue(retVolumeInfo.getVolumeName().equals(volumeName));
@@ -133,13 +135,13 @@ public class TestKeySpaceManager {
     // Create a new volume with a quota
     OzoneQuota createQuota =
         new OzoneQuota(rand.nextInt(100), OzoneQuota.Units.GB);
-    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
     createVolumeArgs.setUserName(userName);
     createVolumeArgs.setAdminName(adminName);
     createVolumeArgs.setQuota(createQuota);
     storageHandler.createVolume(createVolumeArgs);
 
-    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     VolumeInfo retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
     Assert.assertEquals(retVolumeInfo.getQuota().sizeInBytes(),
                                               createQuota.sizeInBytes());
@@ -149,18 +151,43 @@ public class TestKeySpaceManager {
         new OzoneQuota(rand.nextInt(100), OzoneQuota.Units.GB);
     createVolumeArgs.setQuota(setQuota);
     storageHandler.setVolumeQuota(createVolumeArgs, false);
-    getVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
     Assert.assertEquals(retVolumeInfo.getQuota().sizeInBytes(),
                                                 setQuota.sizeInBytes());
 
     // Remove the quota and test it again
     storageHandler.setVolumeQuota(createVolumeArgs, true);
-    getVolumeArgs = new VolumeArgs(volumeName, volUserArgs);
+    getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
     Assert.assertEquals(retVolumeInfo.getQuota().sizeInBytes(),
         OzoneConsts.MAX_QUOTA_IN_BYTES);
     Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
     Assert.assertEquals(0, ksmMetrics.getNumVolumeInfoFails());
+  }
+
+  @Test(timeout = 60000)
+  public void testCreateBucket() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
+    volumeArgs.setUserName(userName);
+    volumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(volumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
+    storageHandler.createBucket(bucketArgs);
+
+    BucketArgs getBucketArgs = new BucketArgs(volumeName, bucketName,
+        userArgs);
+    BucketInfo bucketInfo = storageHandler.getBucketInfo(getBucketArgs);
+    Assert.assertTrue(bucketInfo.getVolumeName().equals(volumeName));
+    Assert.assertTrue(bucketInfo.getBucketName().equals(bucketName));
+    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
+    Assert.assertEquals(0, ksmMetrics.getNumBucketCreateFails());
+    Assert.assertEquals(0, ksmMetrics.getNumBucketInfoFails());
   }
 }
