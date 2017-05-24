@@ -1587,7 +1587,9 @@ public class S3AFileSystem extends FileSystem {
 
       String key = pathToKey(f);
       createFakeDirectory(key);
-      deleteUnnecessaryFakeDirectories(f.getParent());
+      // this is complicated because getParent(a/b/c/) returns a/b/c, but
+      // we want a/b. See HADOOP-14428 for more details.
+      deleteUnnecessaryFakeDirectories(new Path(f.toString()).getParent());
       return true;
     }
   }
@@ -1971,6 +1973,7 @@ public class S3AFileSystem extends FileSystem {
     while (!path.isRoot()) {
       String key = pathToKey(path);
       key = (key.endsWith("/")) ? key : (key + "/");
+      LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
       keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
       path = path.getParent();
     }
