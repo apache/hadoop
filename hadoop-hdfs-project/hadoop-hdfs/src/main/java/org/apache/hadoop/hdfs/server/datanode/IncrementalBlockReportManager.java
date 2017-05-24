@@ -21,6 +21,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +34,8 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
@@ -42,6 +45,9 @@ import com.google.common.collect.Maps;
  */
 @InterfaceAudience.Private
 class IncrementalBlockReportManager {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      IncrementalBlockReportManager.class);
+
   private static class PerStorageIBR {
     /** The blocks in this IBR. */
     final Map<Block, ReceivedDeletedBlockInfo> blocks = Maps.newHashMap();
@@ -103,8 +109,29 @@ class IncrementalBlockReportManager {
    */
   private volatile boolean readyToSend = false;
 
+  /** The time interval between two IBRs. */
+  private final long ibrInterval;
+
+  /** The timestamp of the last IBR. */
+  private volatile long lastIBR;
+
+  IncrementalBlockReportManager(final long ibrInterval) {
+    this.ibrInterval = ibrInterval;
+    this.lastIBR = monotonicNow() - ibrInterval;
+  }
+
   boolean sendImmediately() {
-    return readyToSend;
+    return readyToSend && monotonicNow() - ibrInterval >= lastIBR;
+  }
+
+  synchronized void waitTillNextIBR(long waitTime) {
+    if (waitTime > 0 && !sendImmediately()) {
+      try {
+        wait(ibrInterval > 0 && ibrInterval < waitTime? ibrInterval: waitTime);
+      } catch (InterruptedException ie) {
+        LOG.warn(getClass().getSimpleName() + " interrupted");
+      }
+    }
   }
 
   private synchronized StorageReceivedDeletedBlocks[] generateIBRs() {
@@ -144,6 +171,9 @@ class IncrementalBlockReportManager {
     }
 
     // Send incremental block reports to the Namenode outside the lock
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("call blockReceivedAndDeleted: " + Arrays.toString(reports));
+    }
     boolean success = false;
     final long startTime = monotonicNow();
     try {
@@ -151,7 +181,9 @@ class IncrementalBlockReportManager {
       success = true;
     } finally {
       metrics.addIncrementalBlockReport(monotonicNow() - startTime);
-      if (!success) {
+      if (success) {
+        lastIBR = startTime;
+      } else {
         // If we didn't succeed in sending the report, put all of the
         // blocks back onto our queue, but only in the case where we
         // didn't put something newer in the meantime.
@@ -191,7 +223,7 @@ class IncrementalBlockReportManager {
   }
 
   synchronized void notifyNamenodeBlock(ReceivedDeletedBlockInfo rdbi,
-      DatanodeStorage storage) {
+      DatanodeStorage storage, boolean isOnTransientStorage) {
     addRDBI(rdbi, storage);
 
     final BlockStatus status = rdbi.getStatus();
@@ -200,18 +232,23 @@ class IncrementalBlockReportManager {
       readyToSend = true;
     } else if (status == BlockStatus.RECEIVED_BLOCK) {
       // the report is sent right away.
-      triggerIBR();
+      triggerIBR(isOnTransientStorage);
     }
   }
 
-  synchronized void triggerIBR() {
+  synchronized void triggerIBR(boolean force) {
     readyToSend = true;
-    notifyAll();
+    if (force) {
+      lastIBR = monotonicNow() - ibrInterval;
+    }
+    if (sendImmediately()) {
+      notifyAll();
+    }
   }
 
   @VisibleForTesting
   synchronized void triggerDeletionReportForTests() {
-    triggerIBR();
+    triggerIBR(true);
 
     while (sendImmediately()) {
       try {

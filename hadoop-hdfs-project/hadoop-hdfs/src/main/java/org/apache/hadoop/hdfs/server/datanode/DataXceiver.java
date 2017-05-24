@@ -667,7 +667,9 @@ class DataXceiver extends Receiver implements Runnable {
     String firstBadLink = "";           // first datanode that failed in connection setup
     Status mirrorInStatus = SUCCESS;
     final String storageUuid;
+    final boolean isOnTransientStorage;
     try {
+      final Replica replica;
       if (isDatanode || 
           stage != BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         // open a block receiver
@@ -677,12 +679,13 @@ class DataXceiver extends Receiver implements Runnable {
             stage, latestGenerationStamp, minBytesRcvd, maxBytesRcvd,
             clientname, srcDataNode, datanode, requestedChecksum,
             cachingStrategy, allowLazyPersist, pinning);
-
-        storageUuid = blockReceiver.getStorageUuid();
+        replica = blockReceiver.getReplica();
       } else {
-        storageUuid = datanode.data.recoverClose(
+        replica = datanode.data.recoverClose(
             block, latestGenerationStamp, minBytesRcvd);
       }
+      storageUuid = replica.getStorageUuid();
+      isOnTransientStorage = replica.isOnTransientStorage();
 
       //
       // Connect to downstream machine, if appropriate
@@ -823,7 +826,7 @@ class DataXceiver extends Receiver implements Runnable {
       // the block is finalized in the PacketResponder.
       if (isDatanode ||
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
-        datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT, storageUuid);
+        datanode.closeBlock(block, null, storageUuid, isOnTransientStorage);
         LOG.info("Received " + block + " src: " + remoteAddress + " dest: "
             + localAddress + " of size " + block.getNumBytes());
       }
@@ -1137,8 +1140,9 @@ class DataXceiver extends Receiver implements Runnable {
             dataXceiverServer.balanceThrottler, null, true);
         
         // notify name node
+        final Replica r = blockReceiver.getReplica();
         datanode.notifyNamenodeReceivedBlock(
-            block, delHint, blockReceiver.getStorageUuid());
+            block, delHint, r.getStorageUuid(), r.isOnTransientStorage());
         
         LOG.info("Moved " + block + " from " + peer.getRemoteAddressString()
             + ", delHint=" + delHint);

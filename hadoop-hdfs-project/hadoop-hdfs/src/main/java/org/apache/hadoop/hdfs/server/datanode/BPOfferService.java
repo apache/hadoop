@@ -230,29 +230,32 @@ class BPOfferService {
    * till namenode is informed before responding with success to the
    * client? For now we don't.
    */
-  void notifyNamenodeReceivedBlock(
-      ExtendedBlock block, String delHint, String storageUuid) {
+  void notifyNamenodeReceivedBlock(ExtendedBlock block, String delHint,
+      String storageUuid, boolean isOnTransientStorage) {
     notifyNamenodeBlock(block, BlockStatus.RECEIVED_BLOCK, delHint,
-        storageUuid);
+        storageUuid, isOnTransientStorage);
   }
 
   void notifyNamenodeReceivingBlock(ExtendedBlock block, String storageUuid) {
-    notifyNamenodeBlock(block, BlockStatus.RECEIVING_BLOCK, null, storageUuid);
+    notifyNamenodeBlock(block, BlockStatus.RECEIVING_BLOCK, null, storageUuid,
+        false);
   }
 
   void notifyNamenodeDeletedBlock(ExtendedBlock block, String storageUuid) {
-    notifyNamenodeBlock(block, BlockStatus.DELETED_BLOCK, null, storageUuid);
+    notifyNamenodeBlock(block, BlockStatus.DELETED_BLOCK, null, storageUuid,
+        false);
   }
 
   private void notifyNamenodeBlock(ExtendedBlock block, BlockStatus status,
-      String delHint, String storageUuid) {
+      String delHint, String storageUuid, boolean isOnTransientStorage) {
     checkBlock(block);
     final ReceivedDeletedBlockInfo info = new ReceivedDeletedBlockInfo(
         block.getLocalBlock(), status, delHint);
     final DatanodeStorage storage = dn.getFSDataset().getStorage(storageUuid);
 
     for (BPServiceActor actor : bpServices) {
-      actor.getIbrManager().notifyNamenodeBlock(info, storage);
+      actor.getIbrManager().notifyNamenodeBlock(info, storage,
+          isOnTransientStorage);
     }
   }
 

@@ -202,7 +202,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN2);
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "", "");
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "", false);
 
       ReceivedDeletedBlockInfo[] ret = waitForBlockReceived(FAKE_BLOCK, mockNN1);
       assertEquals(1, ret.length);
@@ -726,7 +726,7 @@ public class TestBPOfferService {
       DatanodeStorage storage = Mockito.mock(DatanodeStorage.class);
       Mockito.doReturn(storage).when(mockFSDataset).getStorage("storage0");
       // Add IBRs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "storage0");
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "storage0", false);
       // Send heartbeat so that the BpServiceActor can send IBR to
       // namenode
       bpos.triggerHeartbeatForTests();

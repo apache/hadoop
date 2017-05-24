@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.protocol;
 
+import java.util.Arrays;
+
 /**
  * Report of block received and deleted per Datanode
  * storage.
@@ -50,5 +52,10 @@ public class StorageReceivedDeletedBlocks {
       final ReceivedDeletedBlockInfo[] blocks) {
     this.storage = storage;
     this.blocks = blocks;
+  }
+
+  @Override
+  public String toString() {
+    return storage + Arrays.toString(blocks);
   }
 }

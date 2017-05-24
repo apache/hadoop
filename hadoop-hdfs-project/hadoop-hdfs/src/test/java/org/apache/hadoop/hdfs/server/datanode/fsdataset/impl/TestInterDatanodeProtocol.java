@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -378,10 +379,11 @@ public class TestInterDatanodeProtocol {
       }
 
       //update
-      final String storageID = fsdataset.updateReplicaUnderRecovery(
+      final Replica r = fsdataset.updateReplicaUnderRecovery(
           new ExtendedBlock(b.getBlockPoolId(), rri), recoveryid,
           rri.getBlockId(), newlength);
-      assertTrue(storageID != null);
+      assertTrue(r != null);
+      assertTrue(r.getStorageUuid() != null);
 
     } finally {
       if (cluster != null) cluster.shutdown();

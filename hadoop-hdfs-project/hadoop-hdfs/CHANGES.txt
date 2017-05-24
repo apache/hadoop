@@ -111,6 +111,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-9412. getBlocks occupies FSLock and takes too long to complete.
     Contributed by He Tianyi. Backport HDFS-11855 by Vinitha Reddy Gankidi.
 
+    HDFS-9710. DN can be configured to send block receipt IBRs in batches.
+    (Tsz-Wo Nicholas Sze. Backport HDFS-11837 by Vinitha Reddy Gankidi)
+
   BUG FIXES
    
     HDFS-8307. Spurious DNS Queries from hdfs shell. (Andres Perez via aengineer)
