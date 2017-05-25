@@ -30,6 +30,7 @@ import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
   }
 
   @Override
-  public AppStateBindingInfo buildBindingInfo() {
+  public AppStateBindingInfo buildBindingInfo() throws IOException {
     AppStateBindingInfo bindingInfo = super.buildBindingInfo();
     bindingInfo.releaseSelector = new MostRecentContainerReleaseSelector();
     return bindingInfo;

@@ -203,7 +203,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     // Update instance definition to allow containers to fail any number of
     // times
     AppStateBindingInfo bindingInfo = buildBindingInfo();
-    bindingInfo.application.getConfiguration().setProperty(
+    bindingInfo.application.getComponent(ROLE0).getConfiguration().setProperty(
         ResourceKeys.CONTAINER_FAILURE_THRESHOLD, "0");
     appState = new MockAppState(bindingInfo);
 

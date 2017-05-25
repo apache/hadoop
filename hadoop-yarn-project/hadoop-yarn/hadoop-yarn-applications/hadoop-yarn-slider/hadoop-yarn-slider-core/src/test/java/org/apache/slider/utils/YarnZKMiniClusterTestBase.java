@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.zk.BlockingZKWatcher;
 import org.apache.slider.core.zk.ZKIntegration;
 import org.slf4j.Logger;
@@ -109,9 +108,7 @@ public abstract class YarnZKMiniClusterTestBase extends
                                    int numLogDirs,
                                    boolean startZK,
                                    boolean startHDFS) throws IOException {
-    if (SliderUtils.isUnset(name)) {
-      name = methodName.getMethodName();
-    }
+    name = buildClustername(name);
     createMicroZKCluster("-" + name, conf);
     conf.setBoolean(RegistryConstants.KEY_REGISTRY_ENABLED, true);
     conf.set(RegistryConstants.KEY_REGISTRY_ZK_QUORUM, getZKBinding());

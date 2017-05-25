@@ -18,8 +18,10 @@
 
 package org.apache.slider.providers;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.api.resource.ConfigFile;
@@ -30,6 +32,7 @@ import org.codehaus.jettison.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -76,12 +79,50 @@ public abstract class AbstractClientProvider {
   /**
    * Validate the config files.
    * @param configFiles config file list
-   * @param fileSystem file system
+   * @param fs file system
    */
-  public void validateConfigFiles(List<ConfigFile> configFiles, FileSystem
-      fileSystem) throws IOException {
-    for (ConfigFile configFile : configFiles) {
-      validateConfigFile(configFile, fileSystem);
+  public void validateConfigFiles(List<ConfigFile> configFiles,
+      FileSystem fs) throws IOException {
+    Set<String> destFileSet = new HashSet<>();
+
+    for (ConfigFile file : configFiles) {
+      if (file.getType() == null) {
+        throw new IllegalArgumentException("File type is empty");
+      }
+
+      if (file.getType().equals(ConfigFile.TypeEnum.TEMPLATE) && StringUtils
+          .isEmpty(file.getSrcFile())) {
+        throw new IllegalArgumentException(
+            "Src_file is empty for " + ConfigFile.TypeEnum.TEMPLATE);
+
+      }
+      if (!StringUtils.isEmpty(file.getSrcFile())) {
+        Path p = new Path(file.getSrcFile());
+        if (!fs.exists(p)) {
+          throw new IllegalArgumentException(
+              "Src_file does not exist for config file: " + file
+                  .getSrcFile());
+        }
+      }
+
+      if (StringUtils.isEmpty(file.getDestFile())) {
+        throw new IllegalArgumentException("Dest_file is empty.");
+      }
+
+      if (destFileSet.contains(file.getDestFile())) {
+        throw new IllegalArgumentException(
+            "Duplicated ConfigFile exists: " + file.getDestFile());
+      }
+      destFileSet.add(file.getDestFile());
+
+      java.nio.file.Path destPath = Paths.get(file.getDestFile());
+      if (!destPath.isAbsolute() && destPath.getNameCount() > 1) {
+        throw new IllegalArgumentException("Non-absolute dest_file has more " +
+            "than one path element");
+      }
+
+      // provider-specific validation
+      validateConfigFile(file, fs);
     }
   }
 

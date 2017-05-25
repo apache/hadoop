@@ -19,7 +19,6 @@
 package org.apache.slider.client;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.io.Files;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -101,6 +100,7 @@ import org.apache.slider.common.params.Arguments;
 import org.apache.slider.common.params.ClientArgs;
 import org.apache.slider.common.params.CommonArgs;
 import org.apache.slider.common.tools.ConfigHelper;
+import org.apache.slider.common.tools.Duration;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.common.tools.SliderVersionInfo;
@@ -142,8 +142,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -636,16 +634,17 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   public int actionBuild(Application application) throws YarnException,
       IOException {
     Path appDir = checkAppNotExistOnHdfs(application);
+    ServiceApiUtil.validateAndResolveApplication(application, sliderFileSystem);
     persistApp(appDir, application);
+    deployedClusterName = application.getName();
     return EXIT_SUCCESS;
   }
 
   public ApplicationId actionCreate(Application application)
       throws IOException, YarnException {
-    ServiceApiUtil.validateApplicationPayload(application,
-        sliderFileSystem.getFileSystem());
     String appName = application.getName();
     validateClusterName(appName);
+    ServiceApiUtil.validateAndResolveApplication(application, sliderFileSystem);
     verifyNoLiveApp(appName, "Create");
     Path appDir = checkAppNotExistOnHdfs(application);
 
@@ -877,6 +876,14 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     Path appDir = sliderFileSystem.buildClusterDirPath(application.getName());
     sliderFileSystem.verifyDirectoryNonexistent(
         new Path(appDir, application.getName() + ".json"));
+    return appDir;
+  }
+
+  private Path checkAppExistOnHdfs(String appName)
+      throws IOException, SliderException {
+    Path appDir = sliderFileSystem.buildClusterDirPath(appName);
+    sliderFileSystem.verifyPathExists(
+        new Path(appDir, appName + ".json"));
     return appDir;
   }
 
@@ -1125,73 +1132,15 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       YarnException,
       IOException {
     if (clientInfo.install) {
-      return doClientInstall(clientInfo);
+      // TODO implement client install
+      throw new UnsupportedOperationException("Client install not yet " +
+          "supported");
     } else {
       throw new BadCommandArgumentsException(
           "Only install, keystore, and truststore commands are supported for the client.\n"
           + CommonArgs.usage(serviceArgs, ACTION_CLIENT));
 
     }
-  }
-
-  private int doClientInstall(ActionClientArgs clientInfo)
-      throws IOException, SliderException {
-
-    require(clientInfo.installLocation != null,
-          E_INVALID_INSTALL_LOCATION +"\n"
-          + CommonArgs.usage(serviceArgs, ACTION_CLIENT));
-    require(clientInfo.installLocation.exists(),
-        E_INSTALL_PATH_DOES_NOT_EXIST + ": " + clientInfo.installLocation.getAbsolutePath());
-
-    require(clientInfo.installLocation.isDirectory(),
-        E_INVALID_INSTALL_PATH + ": " + clientInfo.installLocation.getAbsolutePath());
-
-    File pkgFile;
-    File tmpDir = null;
-
-    require(isSet(clientInfo.packageURI) || isSet(clientInfo.name),
-        E_INVALID_APPLICATION_PACKAGE_LOCATION);
-    if (isSet(clientInfo.packageURI)) {
-      pkgFile = new File(clientInfo.packageURI);
-    } else {
-      Path appDirPath = sliderFileSystem.buildAppDefDirPath(clientInfo.name);
-      Path appDefPath = new Path(appDirPath, SliderKeys.DEFAULT_APP_PKG);
-      require(sliderFileSystem.isFile(appDefPath),
-          E_INVALID_APPLICATION_PACKAGE_LOCATION);
-      tmpDir = Files.createTempDir();
-      pkgFile = new File(tmpDir, SliderKeys.DEFAULT_APP_PKG);
-      sliderFileSystem.copyHdfsFileToLocal(appDefPath, pkgFile);
-    }
-    require(pkgFile.isFile(),
-        E_UNABLE_TO_READ_SUPPLIED_PACKAGE_FILE + " at %s", pkgFile.getAbsolutePath());
-
-    JSONObject config = null;
-    if(clientInfo.clientConfig != null) {
-      try {
-        byte[] encoded = Files.toByteArray(clientInfo.clientConfig);
-        config = new JSONObject(new String(encoded, Charset.defaultCharset()));
-      } catch (JSONException jsonEx) {
-        log.error("Unable to read supplied configuration at {}: {}",
-            clientInfo.clientConfig, jsonEx);
-        log.debug("Unable to read supplied configuration at {}: {}",
-            clientInfo.clientConfig, jsonEx, jsonEx);
-        throw new BadConfigException(E_MUST_BE_A_VALID_JSON_FILE, jsonEx);
-      }
-    }
-
-    // TODO handle client install
-    // Only INSTALL is supported
-    //    ClientProvider
-    //        provider = createClientProvider(SliderProviderFactory.DEFAULT_CLUSTER_TYPE);
-    //    provider.processClientOperation(sliderFileSystem,
-    //        getRegistryOperations(),
-    //        getConfig(),
-    //        "INSTALL",
-    //        clientInfo.installLocation,
-    //        pkgFile,
-    //        config,
-    //        clientInfo.name);
-    return EXIT_SUCCESS;
   }
 
   @Override
@@ -1802,23 +1751,24 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   public int actionStart(String appName, ActionThawArgs thaw)
       throws YarnException, IOException {
     validateClusterName(appName);
+    Path appDir = checkAppExistOnHdfs(appName);
+    Application application = ServiceApiUtil.loadApplication(sliderFileSystem,
+        appName);
+    ServiceApiUtil.validateAndResolveApplication(application, sliderFileSystem);
     // see if it is actually running and bail out;
     verifyNoLiveApp(appName, "Thaw");
-    Path appDir = sliderFileSystem.buildClusterDirPath(appName);
-    Path appJson = new Path(appDir, appName + ".json");
-    Application application =
-        jsonSerDeser.load(sliderFileSystem.getFileSystem(), appJson);
-    submitApp(application);
+    ApplicationId appId = submitApp(application);
+    application.setId(appId.toString());
+    // write app definition on to hdfs
+    persistApp(appDir, application);
     return 0;
   }
 
   public Map<String, Long> flex(String appName, Map<String, Long>
       componentCounts) throws YarnException, IOException {
     validateClusterName(appName);
-    Path appDir = sliderFileSystem.buildClusterDirPath(appName);
-    Path appJson = new Path(appDir, appName + ".json");
-    Application persistedApp =
-        jsonSerDeser.load(sliderFileSystem.getFileSystem(), appJson);
+    Application persistedApp = ServiceApiUtil.loadApplication(sliderFileSystem,
+        appName);
     Map<String, Long> original = new HashMap<>(componentCounts.size());
     for (Component persistedComp : persistedApp.getComponents()) {
       String name = persistedComp.getName();
@@ -1833,7 +1783,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           + " do not exist in app definition.");
     }
     jsonSerDeser
-        .save(sliderFileSystem.getFileSystem(), appJson, persistedApp, true);
+        .save(sliderFileSystem.getFileSystem(), ServiceApiUtil.getAppJsonPath(
+            sliderFileSystem, appName), persistedApp, true);
     log.info("Updated app definition file for components " + componentCounts
         .keySet());
 
@@ -2705,6 +2656,12 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
         yarnClient);
   }
 
+  @VisibleForTesting
+  public ApplicationReport monitorAppToRunning(Duration duration)
+      throws YarnException, IOException {
+    return yarnClient.monitorAppToState(applicationId, YarnApplicationState
+        .RUNNING, duration);
+  }
 }
 
 

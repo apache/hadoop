@@ -107,7 +107,6 @@ import org.apache.slider.core.main.ExitCodeProvider;
 import org.apache.slider.core.main.LauncherExitCodes;
 import org.apache.slider.core.main.RunService;
 import org.apache.slider.core.main.ServiceLauncher;
-import org.apache.slider.core.persist.JsonSerDeser;
 import org.apache.slider.core.registry.info.CustomRegistryConstants;
 import org.apache.slider.providers.ProviderCompleted;
 import org.apache.slider.providers.ProviderService;
@@ -157,7 +156,7 @@ import org.apache.slider.server.services.workflow.ServiceThreadFactory;
 import org.apache.slider.server.services.workflow.WorkflowExecutorService;
 import org.apache.slider.server.services.workflow.WorkflowRpcService;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
-import org.codehaus.jackson.map.PropertyNamingStrategy;
+import org.apache.slider.util.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -389,9 +388,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    */
   private boolean securityEnabled;
   private ContentCache contentCache;
-  private static final JsonSerDeser<Application> jsonSerDeser =
-      new JsonSerDeser<Application>(Application.class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
 
   /**
    * resource limits
@@ -590,9 +586,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     Path appDir = new Path((serviceArgs.getAppDefDir()));
     SliderFileSystem fs = getClusterFS();
     fs.setAppDir(appDir);
-    Path appJson = new Path(appDir, appName + ".json");
-    log.info("Loading application definition from " + appJson);
-    application = jsonSerDeser.load(fs.getFileSystem(), appJson);
+    application = ServiceApiUtil.loadApplication(fs, appName);
     log.info("Application Json: " + application);
     stateForProviders.setApplicationName(appName);
     Configuration serviceConf = getConfig();
@@ -821,7 +815,8 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       binding.releaseSelector =  new MostRecentContainerReleaseSelector();
       binding.nodeReports = nodeReports;
       binding.application = application;
-      binding.serviceHdfsDir = fs.buildClusterDirPath(appName).toString();
+      binding.serviceHdfsDir = new Path(fs.buildClusterDirPath(appName),
+          SliderKeys.DATA_DIR_NAME).toString();
       appState.buildInstance(binding);
 
       // build up environment variables that the AM wants set in every container
@@ -873,11 +868,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     scheduleFailureWindowResets(application.getConfiguration());
     scheduleEscalation(application.getConfiguration());
-
-    for (Component component : application.getComponents()) {
-      // Merge app-level configuration into component level configuration
-      component.getConfiguration().mergeFrom(application.getConfiguration());
-    }
 
     try {
       // schedule YARN Registry registration

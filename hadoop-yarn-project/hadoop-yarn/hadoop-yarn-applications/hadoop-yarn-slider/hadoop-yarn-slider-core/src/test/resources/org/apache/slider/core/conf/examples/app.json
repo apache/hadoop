@@ -1,20 +1,12 @@
 {
   "name": "app-1",
   "lifetime": "3600",
+  "launch_command": "sleep 3600",
   "configuration": {
     "properties": {
       "g1": "a",
       "g2": "b",
-      "internal.chaos.monkey.interval.seconds": "60",
-      "zookeeper.port": "2181",
-      "zookeeper.path": "/yarnapps_small_cluster",
-      "zookeeper.hosts": "zoo1,zoo2,zoo3",
-      "env.MALLOC_ARENA_MAX": "4",
-      "site.hbase.master.startup.retainassign": "true",
-      "site.fs.defaultFS": "hdfs://cluster:8020",
-      "site.fs.default.name": "hdfs://cluster:8020",
-      "site.hbase.master.info.port": "0",
-      "site.hbase.regionserver.info.port": "0"
+      "internal.chaos.monkey.interval.seconds": "60"
     }
   },
   "resource": {
@@ -32,6 +24,7 @@
       "configuration": {
         "properties": {
           "g1": "overridden",
+          "g3": "will-be-overridden",
           "jvm.heapsize": "512M"
         }
       }

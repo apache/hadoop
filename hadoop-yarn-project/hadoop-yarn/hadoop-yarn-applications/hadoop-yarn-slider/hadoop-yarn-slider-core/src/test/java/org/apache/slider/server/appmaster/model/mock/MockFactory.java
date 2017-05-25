@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
+import org.apache.slider.api.resource.Resource;
 import org.apache.slider.providers.PlacementPolicy;
 import org.apache.slider.providers.ProviderRole;
 
@@ -190,6 +191,8 @@ public class MockFactory implements MockRoles {
    */
   public Application newApplication(long r1, long r2, long r3) {
     Application application = new Application();
+    application.setLaunchCommand("sleep 60");
+    application.setResource(new Resource().memory("256"));
     application.getConfiguration().setProperty(ResourceKeys
         .NODE_FAILURE_THRESHOLD, Integer.toString(NODE_FAILURE_THRESHOLD));
     List<Component> components = application.getComponents();

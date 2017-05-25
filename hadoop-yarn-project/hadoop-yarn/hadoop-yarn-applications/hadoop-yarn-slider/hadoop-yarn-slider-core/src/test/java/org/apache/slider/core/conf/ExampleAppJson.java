@@ -29,18 +29,20 @@ import static org.apache.slider.utils.SliderTestUtils.JSON_SER_DESER;
 /**
  * Names of the example configs.
  */
-public final class ExampleConfResources {
+public final class ExampleAppJson {
 
   public static final String APP_JSON = "app.json";
-  public static final String APP_RES = "app-resolved.json";
   public static final String OVERRIDE_JSON = "app-override.json";
-  public static final String OVERRIDE_RES = "app-override-resolved.json";
+  public static final String DEFAULT_JSON = "default.json";
+  public static final String EXTERNAL_JSON_0 = "external0.json";
+  public static final String EXTERNAL_JSON_1 = "external1.json";
+  public static final String EXTERNAL_JSON_2 = "external2.json";
 
   public static final String PACKAGE = "/org/apache/slider/core/conf/examples/";
 
 
-  private static final String[] ALL_EXAMPLES = {APP_JSON, APP_RES,
-      OVERRIDE_JSON, OVERRIDE_RES};
+  private static final String[] ALL_EXAMPLES = {APP_JSON, OVERRIDE_JSON,
+      DEFAULT_JSON};
 
   public static final List<String> ALL_EXAMPLE_RESOURCES = new ArrayList<>();
   static {
@@ -49,10 +51,14 @@ public final class ExampleConfResources {
     }
   }
 
-  private ExampleConfResources() {
+  private ExampleAppJson() {
   }
 
   static Application loadResource(String name) throws IOException {
     return JSON_SER_DESER.fromResource(PACKAGE + name);
+  }
+
+  public static String resourceName(String name) {
+    return "target/test-classes" + PACKAGE + name;
   }
 }

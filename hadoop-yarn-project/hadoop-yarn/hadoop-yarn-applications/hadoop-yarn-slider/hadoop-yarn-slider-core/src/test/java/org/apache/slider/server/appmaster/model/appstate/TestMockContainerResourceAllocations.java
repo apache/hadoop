@@ -40,7 +40,7 @@ public class TestMockContainerResourceAllocations extends BaseMockAppStateTest {
 
   @Override
   public Application buildApplication() {
-    return factory.newApplication(1, 0, 0).name(getTestName());
+    return factory.newApplication(1, 0, 0).name(getValidTestName());
   }
 
   @Test

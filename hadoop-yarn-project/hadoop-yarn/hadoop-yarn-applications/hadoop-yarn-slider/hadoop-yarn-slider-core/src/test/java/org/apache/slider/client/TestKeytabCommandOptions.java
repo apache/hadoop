@@ -34,6 +34,7 @@ import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.main.ServiceLauncher;
 import org.apache.slider.utils.SliderTestBase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,6 +51,7 @@ import java.util.UUID;
 public class TestKeytabCommandOptions extends SliderTestBase {
 
   private static SliderFileSystem testFileSystem;
+  private File testFolderDir;
 
   @Before
   public void setupFilesystem() throws IOException {
@@ -57,9 +59,16 @@ public class TestKeytabCommandOptions extends SliderTestBase {
     YarnConfiguration configuration = SliderUtils.createConfiguration();
     fileSystem.setConf(configuration);
     testFileSystem = new SliderFileSystem(fileSystem, configuration);
-    File testFolderDir = new File(testFileSystem
+    testFolderDir = new File(testFileSystem
         .buildKeytabInstallationDirPath("").toUri().getPath());
     FileUtils.deleteDirectory(testFolderDir);
+  }
+
+  @After
+  public void cleanup() throws IOException {
+    if (testFolderDir != null && testFolderDir.exists()) {
+      FileUtils.deleteDirectory(testFolderDir);
+    }
   }
 
   @Test

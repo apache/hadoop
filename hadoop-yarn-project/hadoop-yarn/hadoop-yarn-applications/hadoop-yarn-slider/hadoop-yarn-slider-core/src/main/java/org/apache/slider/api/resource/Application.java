@@ -286,6 +286,10 @@ public class Application extends BaseResource {
     this.components = components;
   }
 
+  public void addComponent(Component component) {
+    components.add(component);
+  }
+
   public Component getComponent(String name) {
     for (Component component : components) {
       if (component.getName().equals(name)) {

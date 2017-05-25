@@ -25,118 +25,158 @@ import org.apache.hadoop.fs.Path;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.api.resource.Configuration;
 import org.apache.slider.api.resource.Resource;
+import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
+import org.apache.slider.core.persist.JsonSerDeser;
+import org.apache.slider.providers.AbstractClientProvider;
+import org.apache.slider.providers.SliderProviderFactory;
+import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class ServiceApiUtil {
-  private static final Logger log =
+  private static final Logger LOG =
       LoggerFactory.getLogger(ServiceApiUtil.class);
+  private static JsonSerDeser<Application> jsonSerDeser =
+      new JsonSerDeser<>(Application.class,
+          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+
   @VisibleForTesting
-  public static void validateApplicationPayload(Application application,
-      FileSystem fs) throws IOException {
+  public static void setJsonSerDeser(JsonSerDeser jsd) {
+    jsonSerDeser = jsd;
+  }
+
+  @VisibleForTesting
+  public static void validateAndResolveApplication(Application application,
+      SliderFileSystem fs) throws IOException {
     if (StringUtils.isEmpty(application.getName())) {
       throw new IllegalArgumentException(
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID);
     }
     if (!SliderUtils.isClusternameValid(application.getName())) {
-      throw new IllegalArgumentException(
-          RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID_FORMAT);
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID_FORMAT,
+          application.getName()));
     }
 
     // If the application has no components do top-level checks
     if (!hasComponent(application)) {
-      // artifact
-      if (application.getArtifact() == null) {
-        throw new IllegalArgumentException(
-            RestApiErrorMessages.ERROR_ARTIFACT_INVALID);
+      // If artifact is of type APPLICATION, read other application components
+      if (application.getArtifact() != null && application.getArtifact()
+          .getType() == Artifact.TypeEnum.APPLICATION) {
+        if (StringUtils.isEmpty(application.getArtifact().getId())) {
+          throw new IllegalArgumentException(
+              RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
+        }
+        Application otherApplication = loadApplication(fs,
+            application.getArtifact().getId());
+        application.setComponents(otherApplication.getComponents());
+        application.setArtifact(null);
+        SliderUtils.mergeMapsIgnoreDuplicateKeys(application.getQuicklinks(),
+            otherApplication.getQuicklinks());
+      } else {
+        // Since it is a simple app with no components, create a default
+        // component
+        Component comp = createDefaultComponent(application);
+        validateComponent(comp, fs.getFileSystem());
+        application.getComponents().add(comp);
+        if (application.getLifetime() == null) {
+          application.setLifetime(RestApiConstants.DEFAULT_UNLIMITED_LIFETIME);
+        }
+        return;
       }
-      if (StringUtils.isEmpty(application.getArtifact().getId())) {
-        throw new IllegalArgumentException(
-            RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
-      }
+    }
 
-      // If artifact is of type APPLICATION, add a slider specific property
-      if (application.getArtifact().getType()
-          == Artifact.TypeEnum.APPLICATION) {
-        if (application.getConfiguration() == null) {
-          application.setConfiguration(new Configuration());
-        }
+    // Validate there are no component name collisions (collisions are not
+    // currently supported) and add any components from external applications
+    // TODO allow name collisions? see AppState#roles
+    // TODO or add prefix to external component names?
+    Configuration globalConf = application.getConfiguration();
+    Set<String> componentNames = new HashSet<>();
+    List<Component> componentsToRemove = new ArrayList<>();
+    List<Component> componentsToAdd = new ArrayList<>();
+    for (Component comp : application.getComponents()) {
+      if (componentNames.contains(comp.getName())) {
+        throw new IllegalArgumentException("Component name collision: " +
+            comp.getName());
       }
-      // resource
-      validateApplicationResource(application.getResource(), null,
-          application.getArtifact().getType());
-
-      // container size
-      if (application.getNumberOfContainers() == null
-          || application.getNumberOfContainers() < 0) {
-        throw new IllegalArgumentException(
-            RestApiErrorMessages.ERROR_CONTAINERS_COUNT_INVALID + ": "
-                + application.getNumberOfContainers());
-      }
-      validateConfigFile(application.getConfiguration().getFiles(), fs);
-      // Since it is a simple app with no components, create a default component
-      application.getComponents().add(createDefaultComponent(application));
-    } else {
-      // If the application has components, then run checks for each component.
-      // Let global values take effect if component level values are not
-      // provided.
-      Artifact globalArtifact = application.getArtifact();
-      Resource globalResource = application.getResource();
-      Long globalNumberOfContainers = application.getNumberOfContainers();
-      for (Component comp : application.getComponents()) {
-        // artifact
-        if (comp.getArtifact() == null) {
-          comp.setArtifact(globalArtifact);
-        }
-        // If still null raise validation exception
-        if (comp.getArtifact() == null) {
-          throw new IllegalArgumentException(String
-              .format(RestApiErrorMessages.ERROR_ARTIFACT_FOR_COMP_INVALID,
-                  comp.getName()));
-        }
+      // If artifact is of type APPLICATION (which cannot be filled from
+      // global), read external application and add its components to this
+      // application
+      if (comp.getArtifact() != null && comp.getArtifact().getType() ==
+          Artifact.TypeEnum.APPLICATION) {
         if (StringUtils.isEmpty(comp.getArtifact().getId())) {
-          throw new IllegalArgumentException(String
-              .format(RestApiErrorMessages.ERROR_ARTIFACT_ID_FOR_COMP_INVALID,
-                  comp.getName()));
+          throw new IllegalArgumentException(
+              RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
         }
-
-        // If artifact is of type APPLICATION, add a slider specific property
-        if (comp.getArtifact().getType() == Artifact.TypeEnum.APPLICATION) {
-          if (comp.getConfiguration() == null) {
-            comp.setConfiguration(new Configuration());
+        LOG.info("Marking {} for removal", comp.getName());
+        componentsToRemove.add(comp);
+        List<Component> externalComponents = getApplicationComponents(fs,
+            comp.getArtifact().getId());
+        for (Component c : externalComponents) {
+          Component override = application.getComponent(c.getName());
+          if (override != null && override.getArtifact() == null) {
+            // allow properties from external components to be overridden /
+            // augmented by properties in this component, except for artifact
+            // which must be read from external component
+            override.mergeFrom(c);
+            LOG.info("Merging external component {} from external {}", c
+                .getName(), comp.getName());
+          } else {
+            if (componentNames.contains(c.getName())) {
+              throw new IllegalArgumentException("Component name collision: " +
+                  c.getName());
+            }
+            componentNames.add(c.getName());
+            componentsToAdd.add(c);
+            LOG.info("Adding component {} from external {}", c.getName(),
+                comp.getName());
           }
-          comp.setName(comp.getArtifact().getId());
         }
-
-        // resource
-        if (comp.getResource() == null) {
-          comp.setResource(globalResource);
-        }
-        validateApplicationResource(comp.getResource(), comp,
-            comp.getArtifact().getType());
-
-        // container count
-        if (comp.getNumberOfContainers() == null) {
-          comp.setNumberOfContainers(globalNumberOfContainers);
-        }
-        if (comp.getNumberOfContainers() == null
-            || comp.getNumberOfContainers() < 0) {
-          throw new IllegalArgumentException(String.format(
-              RestApiErrorMessages.ERROR_CONTAINERS_COUNT_FOR_COMP_INVALID
-                  + ": " + comp.getNumberOfContainers(), comp.getName()));
-        }
-        validateConfigFile(comp.getConfiguration().getFiles(), fs);
+      } else {
+        // otherwise handle as a normal component
+        componentNames.add(comp.getName());
+        // configuration
+        comp.getConfiguration().mergeFrom(globalConf);
       }
+    }
+    application.getComponents().removeAll(componentsToRemove);
+    application.getComponents().addAll(componentsToAdd);
+
+    // Validate components and let global values take effect if component level
+    // values are not provided
+    Artifact globalArtifact = application.getArtifact();
+    Resource globalResource = application.getResource();
+    Long globalNumberOfContainers = application.getNumberOfContainers();
+    String globalLaunchCommand = application.getLaunchCommand();
+    for (Component comp : application.getComponents()) {
+      // fill in global artifact unless it is type APPLICATION
+      if (comp.getArtifact() == null && application.getArtifact() != null
+          && application.getArtifact().getType() != Artifact.TypeEnum
+          .APPLICATION) {
+        comp.setArtifact(globalArtifact);
+      }
+      // fill in global resource
+      if (comp.getResource() == null) {
+        comp.setResource(globalResource);
+      }
+      // fill in global container count
+      if (comp.getNumberOfContainers() == null) {
+        comp.setNumberOfContainers(globalNumberOfContainers);
+      }
+      // fill in global launch command
+      if (comp.getLaunchCommand() == null) {
+        comp.setLaunchCommand(globalLaunchCommand);
+      }
+      validateComponent(comp, fs.getFileSystem());
     }
 
     // Application lifetime if not specified, is set to unlimited lifetime
@@ -145,52 +185,54 @@ public class ServiceApiUtil {
     }
   }
 
-  // 1) Verify the src_file exists and non-empty for template
-  // 2) dest_file is absolute path
-  private static void validateConfigFile(List<ConfigFile> list, FileSystem fs)
+  public static void validateComponent(Component comp, FileSystem fs)
       throws IOException {
-    Set<String> destFileSet = new HashSet<>();
+    AbstractClientProvider compClientProvider = SliderProviderFactory
+        .getClientProvider(comp.getArtifact());
+    compClientProvider.validateArtifact(comp.getArtifact(), fs);
 
-    for (ConfigFile file : list) {
-      if (file.getType().equals(ConfigFile.TypeEnum.TEMPLATE) && StringUtils
-          .isEmpty(file.getSrcFile())) {
-        throw new IllegalArgumentException(
-            "Src_file is empty for " + ConfigFile.TypeEnum.TEMPLATE);
-
-      }
-      if (!StringUtils.isEmpty(file.getSrcFile())) {
-        Path p = new Path(file.getSrcFile());
-        if (!fs.exists(p)) {
-          throw new IllegalArgumentException(
-              "Src_file does not exist for config file: " + file
-                  .getSrcFile());
-        }
-      }
-
-      if (StringUtils.isEmpty(file.getDestFile())) {
-        throw new IllegalArgumentException("Dest_file is empty.");
-      }
-      // validate dest_file is absolute
-      if (!Paths.get(file.getDestFile()).isAbsolute()) {
-        throw new IllegalArgumentException(
-            "Dest_file must be absolute path: " + file.getDestFile());
-      }
-
-      if (destFileSet.contains(file.getDestFile())) {
-        throw new IllegalArgumentException(
-            "Duplicated ConfigFile exists: " + file.getDestFile());
-      }
-      destFileSet.add(file.getDestFile());
+    if (comp.getLaunchCommand() == null && (comp.getArtifact() == null || comp
+        .getArtifact().getType() != Artifact.TypeEnum.DOCKER)) {
+      throw new IllegalArgumentException(RestApiErrorMessages
+          .ERROR_ABSENT_LAUNCH_COMMAND);
     }
+
+    validateApplicationResource(comp.getResource(), comp);
+
+    if (comp.getNumberOfContainers() == null
+        || comp.getNumberOfContainers() < 0) {
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_CONTAINERS_COUNT_FOR_COMP_INVALID
+              + ": " + comp.getNumberOfContainers(), comp.getName()));
+    }
+    compClientProvider.validateConfigFiles(comp.getConfiguration()
+        .getFiles(), fs);
   }
 
+  @VisibleForTesting
+  public static List<Component> getApplicationComponents(SliderFileSystem
+      fs, String appName) throws IOException {
+    return loadApplication(fs, appName).getComponents();
+  }
+
+  public static Application loadApplication(SliderFileSystem fs, String
+      appName) throws IOException {
+    Path appJson = getAppJsonPath(fs, appName);
+    LOG.info("Loading application definition from " + appJson);
+    Application externalApplication = jsonSerDeser.load(fs.getFileSystem(),
+        appJson);
+    return externalApplication;
+  }
+
+  public static Path getAppJsonPath(SliderFileSystem fs, String appName) {
+    Path appDir = fs.buildClusterDirPath(appName);
+    Path appJson = new Path(appDir, appName + ".json");
+    return appJson;
+  }
 
   private static void validateApplicationResource(Resource resource,
-      Component comp, Artifact.TypeEnum artifactType) {
+      Component comp) {
     // Only apps/components of type APPLICATION can skip resource requirement
-    if (resource == null && artifactType == Artifact.TypeEnum.APPLICATION) {
-      return;
-    }
     if (resource == null) {
       throw new IllegalArgumentException(
           comp == null ? RestApiErrorMessages.ERROR_RESOURCE_INVALID : String
@@ -255,6 +297,7 @@ public class ServiceApiUtil {
     comp.setResource(app.getResource());
     comp.setNumberOfContainers(app.getNumberOfContainers());
     comp.setLaunchCommand(app.getLaunchCommand());
+    comp.setConfiguration(app.getConfiguration());
     return comp;
   }
 

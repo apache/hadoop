@@ -45,6 +45,6 @@ public class TarballProviderService extends AbstractProviderService {
     LocalResourceType type = LocalResourceType.ARCHIVE;
     LocalResource packageResource = fileSystem.createAmResource(
         artifact, type);
-    launcher.addLocalResource(APP_INSTALL_DIR, packageResource);
+    launcher.addLocalResource(APP_LIB_DIR, packageResource);
   }
 }

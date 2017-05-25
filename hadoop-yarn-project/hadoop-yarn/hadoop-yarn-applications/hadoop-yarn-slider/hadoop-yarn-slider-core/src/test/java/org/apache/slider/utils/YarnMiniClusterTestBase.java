@@ -37,6 +37,7 @@ import org.apache.slider.common.SliderExitCodes;
 import org.apache.slider.common.SliderXmlConfKeys;
 import org.apache.slider.common.params.ActionFreezeArgs;
 import org.apache.slider.common.params.Arguments;
+import org.apache.slider.common.params.SliderActions;
 import org.apache.slider.common.tools.Duration;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
@@ -328,11 +329,8 @@ public abstract class YarnMiniClusterTestBase extends SliderTestBase {
    */
   public void stopRunningClusters() {
     for (SliderClient client : clustersToTeardown) {
-      try {
-        maybeStopCluster(client, "", "Teardown at end of test case", true);
-      } catch (Exception e) {
-        LOG.warn("While stopping cluster " + e, e);
-      }
+      maybeStopCluster(client, client.getDeployedClusterName(),
+          "Teardown at end of test case", true);
     }
   }
 
@@ -502,6 +500,62 @@ public abstract class YarnMiniClusterTestBase extends SliderTestBase {
   }
 
   /**
+   * Create or build a cluster (the action is set by the first verb).
+   * @param action operation to invoke: SliderActions.ACTION_CREATE or
+   *               SliderActions.ACTION_BUILD
+   * @param clustername cluster name
+   * @param extraArgs list of extra args to add to the creation command
+   * @param deleteExistingData should the data of any existing cluster
+   * of this name be deleted
+   * @param blockUntilRunning block until the AM is running
+   * @return launcher which will have executed the command.
+   */
+  public ServiceLauncher<SliderClient> createOrBuildCluster(String action,
+      String clustername, List<String> extraArgs, boolean deleteExistingData,
+      boolean blockUntilRunning) throws Throwable {
+    assertNotNull(clustername);
+    assertNotNull(miniCluster);
+    // update action should keep existing data
+    Configuration config = miniCluster.getConfig();
+    if (deleteExistingData && !SliderActions.ACTION_UPDATE.equals(action)) {
+      FileSystem dfs = FileSystem.get(new URI(getFsDefaultName()), config);
+
+      SliderFileSystem sliderFileSystem = new SliderFileSystem(dfs, config);
+      Path clusterDir = sliderFileSystem.buildClusterDirPath(clustername);
+      LOG.info("deleting instance data at {}", clusterDir);
+      //this is a safety check to stop us doing something stupid like deleting /
+      assertTrue(clusterDir.toString().contains("/.slider/"));
+      rigorousDelete(sliderFileSystem, clusterDir, 60000);
+    }
+
+
+    List<String> argsList = new ArrayList<>();
+    argsList.addAll(Arrays.asList(
+        action, clustername,
+        Arguments.ARG_MANAGER, getRMAddr(),
+        Arguments.ARG_FILESYSTEM, getFsDefaultName(),
+        Arguments.ARG_DEBUG));
+
+    argsList.addAll(getExtraCLIArgs());
+
+    if (extraArgs != null) {
+      argsList.addAll(extraArgs);
+    }
+    ServiceLauncher<SliderClient> launcher = launchClientAgainstMiniMR(
+        //config includes RM binding info
+        new YarnConfiguration(config),
+        //varargs list of command line params
+        argsList
+    );
+    assertEquals(0, launcher.getServiceExitCode());
+    SliderClient client = launcher.getService();
+    if (blockUntilRunning) {
+      client.monitorAppToRunning(new Duration(CLUSTER_GO_LIVE_TIME));
+    }
+    return launcher;
+  }
+
+  /**
    * Delete with some pauses and backoff; designed to handle slow delete
    * operation in windows.
    */
@@ -652,28 +706,6 @@ public abstract class YarnMiniClusterTestBase extends SliderTestBase {
     return getTestConfiguration().getTrimmed(getApplicationHomeKey());
   }
 
-  public List<String> getImageCommands() {
-    if (switchToImageDeploy) {
-      // its an image that had better be defined
-      assertNotNull(getArchivePath());
-      if (!imageIsRemote) {
-        // its not remote, so assert it exists
-        File f = new File(getArchivePath());
-        assertTrue(f.exists());
-        return Arrays.asList(Arguments.ARG_IMAGE, f.toURI().toString());
-      } else {
-        assertNotNull(remoteImageURI);
-
-        // if it is remote, then its whatever the archivePath property refers to
-        return Arrays.asList(Arguments.ARG_IMAGE, remoteImageURI.toString());
-      }
-    } else {
-      assertNotNull(getApplicationHome());
-      assertTrue(new File(getApplicationHome()).exists());
-      return Arrays.asList(Arguments.ARG_APP_HOME, getApplicationHome());
-    }
-  }
-
   /**
    * Get the resource configuration dir in the source tree.
    *
@@ -746,14 +778,23 @@ public abstract class YarnMiniClusterTestBase extends SliderTestBase {
       SliderClient sliderClient,
       String clustername,
       String message,
-      boolean force) throws IOException, YarnException {
+      boolean force) {
     if (sliderClient != null) {
       if (SliderUtils.isUnset(clustername)) {
         clustername = sliderClient.getDeployedClusterName();
       }
       //only stop a cluster that exists
       if (SliderUtils.isSet(clustername)) {
-        return clusterActionFreeze(sliderClient, clustername, message, force);
+        try {
+          clusterActionFreeze(sliderClient, clustername, message, force);
+        } catch (Exception e) {
+          LOG.warn("While stopping cluster " + e, e);
+        }
+        try {
+          sliderClient.actionDestroy(clustername);
+        } catch (Exception e) {
+          LOG.warn("While destroying cluster " + e, e);
+        }
       }
     }
     return 0;
