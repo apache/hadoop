@@ -87,7 +87,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
      * It is not guaranteed, but expected, that the data-node actually has
      * the replica.
      */
-    private DatanodeStorageInfo getExpectedStorageLocation() {
+    public DatanodeStorageInfo getExpectedStorageLocation() {
       return expectedLocation;
     }
 
@@ -245,38 +245,40 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
    * Process the recorded replicas. When about to commit or finish the
    * pipeline recovery sort out bad replicas.
    * @param genStamp  The final generation stamp for the block.
+   * @return staleReplica's List.
    */
-  public void setGenerationStampAndVerifyReplicas(long genStamp) {
+  public List<ReplicaUnderConstruction> setGenerationStampAndVerifyReplicas(
+      long genStamp) {
     // Set the generation stamp for the block.
     setGenerationStamp(genStamp);
     if (replicas == null)
-      return;
+      return null;
 
-    // Remove the replicas with wrong gen stamp.
-    // The replica list is unchanged.
+    List<ReplicaUnderConstruction> staleReplicas = new ArrayList<>();
+    // Remove replicas with wrong gen stamp. The replica list is unchanged.
     for (ReplicaUnderConstruction r : replicas) {
       if (genStamp != r.getGenerationStamp()) {
-        r.getExpectedStorageLocation().removeBlock(this);
-        NameNode.blockStateChangeLog.info("BLOCK* Removing stale replica "
-            + "from location: {}", r.getExpectedStorageLocation());
+        staleReplicas.add(r);
       }
     }
+    return staleReplicas;
   }
 
   /**
    * Commit block's length and generation stamp as reported by the client.
    * Set block state to {@link BlockUCState#COMMITTED}.
    * @param block - contains client reported block length and generation 
+   * @return staleReplica's List.
    * @throws IOException if block ids are inconsistent.
    */
-  void commitBlock(Block block) throws IOException {
+  List<ReplicaUnderConstruction> commitBlock(Block block) throws IOException {
     if(getBlockId() != block.getBlockId())
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
     blockUCState = BlockUCState.COMMITTED;
     this.setNumBytes(block.getNumBytes());
     // Sort out invalid replicas.
-    setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
+    return setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }
 
   /**

@@ -322,6 +322,9 @@ Release 2.7.4 - UNRELEASED
 
     HADOOP-13026 Should not wrap IOExceptions into a AuthenticationException in
     KerberosAuthenticator. Xuan Gong via stevel
+    
+    HDFS-11445. FSCK shows overall health stauts as corrupt even one replica is corrupt. 
+    (Brahma Reddy Battula)
 
 Release 2.7.3 - 2016-08-25
 
