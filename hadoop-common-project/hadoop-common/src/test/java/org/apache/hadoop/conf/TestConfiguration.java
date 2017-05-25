@@ -29,6 +29,7 @@ import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -61,6 +62,9 @@ public class TestConfiguration extends TestCase {
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2-TestConfiguration.xml").getAbsolutePath();
   final static String CONFIG_FOR_ENUM = new File("./test-config-enum-TestConfiguration.xml").getAbsolutePath();
+  final static String CONFIG_FOR_URI = "file://"
+      + new File("./test-config-uri-TestConfiguration.xml").getAbsolutePath();
+
   private static final String CONFIG_MULTI_BYTE = new File(
     "./test-config-multi-byte-TestConfiguration.xml").getAbsolutePath();
   private static final String CONFIG_MULTI_BYTE_SAVED = new File(
@@ -85,6 +89,7 @@ public class TestConfiguration extends TestCase {
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
     new File(CONFIG_FOR_ENUM).delete();
+    new File(new URI(CONFIG_FOR_URI)).delete();
     new File(CONFIG_MULTI_BYTE).delete();
     new File(CONFIG_MULTI_BYTE_SAVED).delete();
   }
@@ -428,13 +433,21 @@ public class TestConfiguration extends TestCase {
     appendProperty("a","b");
     appendProperty("c","d");
     endConfig();
+    File fileUri = new File(new URI(CONFIG_FOR_URI));
+    out=new BufferedWriter(new FileWriter(fileUri));
+    startConfig();
+    appendProperty("e", "f");
+    appendProperty("g", "h");
+    endConfig();
 
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
     startInclude(CONFIG2);
     endInclude();
-    appendProperty("e","f");
-    appendProperty("g","h");
+    startInclude(CONFIG_FOR_URI);
+    endInclude();
+    appendProperty("i", "j");
+    appendProperty("k", "l");
     endConfig();
 
     // verify that the includes file contains all properties
@@ -442,8 +455,10 @@ public class TestConfiguration extends TestCase {
     conf.addResource(fileResource);
     assertEquals(conf.get("a"), "b"); 
     assertEquals(conf.get("c"), "d"); 
-    assertEquals(conf.get("e"), "f"); 
-    assertEquals(conf.get("g"), "h"); 
+    assertEquals(conf.get("e"), "f");
+    assertEquals(conf.get("g"), "h");
+    assertEquals(conf.get("i"), "j");
+    assertEquals(conf.get("k"), "l");
     tearDown();
   }
 
