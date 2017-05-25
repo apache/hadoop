@@ -285,14 +285,8 @@ public class JournalNodeSyncer {
         boolean success = false;
         try {
           if (remoteJNproxy.httpServerUrl == null) {
-            if (response.hasFromURL()) {
-              URI uri = URI.create(response.getFromURL());
-              remoteJNproxy.httpServerUrl = getHttpServerURI(uri.getScheme(),
-                  uri.getHost(), uri.getPort());
-            } else {
-              remoteJNproxy.httpServerUrl = getHttpServerURI("http",
-                  remoteJNproxy.jnAddr.getHostName(), response.getHttpPort());
-            }
+            remoteJNproxy.httpServerUrl = getHttpServerURI("http",
+                remoteJNproxy.jnAddr.getHostName(), response.getHttpPort());
           }
 
           String urlPath = GetJournalEditServlet.buildPath(jid, missingLog
