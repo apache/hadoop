@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -34,6 +35,13 @@ public class PathMetadata {
 
   private final FileStatus fileStatus;
   private Tristate isEmptyDirectory;
+  private boolean isDeleted;
+
+  public static PathMetadata tombstone(Path path) {
+    long now = System.currentTimeMillis();
+    FileStatus status = new FileStatus(0, false, 0, 0, now, path);
+    return new PathMetadata(status, Tristate.UNKNOWN, true);
+  }
 
   /**
    * Creates a new {@code PathMetadata} containing given {@code FileStatus}.
@@ -44,6 +52,11 @@ public class PathMetadata {
   }
 
   public PathMetadata(FileStatus fileStatus, Tristate isEmptyDir) {
+    this(fileStatus, isEmptyDir, false);
+  }
+
+  public PathMetadata(FileStatus fileStatus, Tristate isEmptyDir, boolean
+      isDeleted) {
     Preconditions.checkNotNull(fileStatus, "fileStatus must be non-null");
     Preconditions.checkNotNull(fileStatus.getPath(), "fileStatus path must be" +
         " non-null");
@@ -51,6 +64,7 @@ public class PathMetadata {
         " be absolute");
     this.fileStatus = fileStatus;
     this.isEmptyDirectory = isEmptyDir;
+    this.isDeleted = isDeleted;
   }
 
   /**
@@ -73,6 +87,14 @@ public class PathMetadata {
     this.isEmptyDirectory = isEmptyDirectory;
   }
 
+  public boolean isDeleted() {
+    return isDeleted;
+  }
+
+  void setIsDeleted(boolean isDeleted) {
+    this.isDeleted = isDeleted;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof PathMetadata)) {
@@ -91,6 +113,7 @@ public class PathMetadata {
     return "PathMetadata{" +
         "fileStatus=" + fileStatus +
         "; isEmptyDirectory=" + isEmptyDirectory +
+        "; isDeleted=" + isDeleted +
         '}';
   }
 
@@ -99,10 +122,10 @@ public class PathMetadata {
    * @param sb target StringBuilder
    */
   public void prettyPrint(StringBuilder sb) {
-    sb.append(String.format("%-5s %-20s %-7d %s",
+    sb.append(String.format("%-5s %-20s %-7d %-8s %-6s",
         fileStatus.isDirectory() ? "dir" : "file",
         fileStatus.getPath().toString(), fileStatus.getLen(),
-        isEmptyDirectory.name()));
+        isEmptyDirectory.name(), isDeleted));
     sb.append(fileStatus);
   }
 

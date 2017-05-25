@@ -101,29 +101,33 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path path) throws IOException {
-    doDelete(path, false);
+  public void delete(Path p) throws IOException {
+    doDelete(p, false, true);
+  }
+
+  @Override
+  public void forgetMetadata(Path p) throws IOException {
+    doDelete(p, false, false);
   }
 
   @Override
   public void deleteSubtree(Path path) throws IOException {
-    doDelete(path, true);
+    doDelete(path, true, true);
   }
 
-  private synchronized void doDelete(Path p, boolean recursive) {
+  private synchronized void doDelete(Path p, boolean recursive, boolean
+      tombstone) {
 
     Path path = standardize(p);
-    // We could implement positive hit for 'deleted' files.  For now we
-    // do not track them.
 
     // Delete entry from file cache, then from cached parent directory, if any
 
-    removeHashEntries(path);
+    deleteHashEntries(path, tombstone);
 
     if (recursive) {
       // Remove all entries that have this dir as path prefix.
-      clearHashByAncestor(path, dirHash);
-      clearHashByAncestor(path, fileHash);
+      deleteHashByAncestor(path, dirHash, tombstone);
+      deleteHashByAncestor(path, fileHash, tombstone);
     }
   }
 
@@ -157,7 +161,7 @@ public class LocalMetadataStore implements MetadataStore {
    */
   private Tristate isEmptyDirectory(Path p) {
     DirListingMetadata dirMeta = dirHash.get(p);
-    return dirMeta.isEmpty();
+    return dirMeta.withoutTombstones().isEmpty();
   }
 
   @Override
@@ -186,9 +190,9 @@ public class LocalMetadataStore implements MetadataStore {
     synchronized (this) {
 
       // 1. Delete pathsToDelete
-      for (Path p : pathsToDelete) {
-        LOG.debug("move: deleting metadata {}", p);
-        delete(p);
+      for (Path meta : pathsToDelete) {
+        LOG.debug("move: deleting metadata {}", meta);
+        delete(meta);
       }
 
       // 2. Create new destination path metadata
@@ -323,13 +327,25 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @VisibleForTesting
-  static <T> void clearHashByAncestor(Path ancestor, Map<Path, T> hash) {
+  static <T> void deleteHashByAncestor(Path ancestor, Map<Path, T> hash,
+                                       boolean tombstone) {
     for (Iterator<Map.Entry<Path, T>> it = hash.entrySet().iterator();
          it.hasNext();) {
       Map.Entry<Path, T> entry = it.next();
       Path f = entry.getKey();
+      T meta = entry.getValue();
       if (isAncestorOf(ancestor, f)) {
-        it.remove();
+        if (tombstone) {
+          if (meta instanceof PathMetadata) {
+            entry.setValue((T) PathMetadata.tombstone(f));
+          } else if (meta instanceof DirListingMetadata) {
+            it.remove();
+          } else {
+            throw new IllegalStateException("Unknown type in hash");
+          }
+        } else {
+          it.remove();
+        }
       }
     }
   }
@@ -351,16 +367,21 @@ public class LocalMetadataStore implements MetadataStore {
    * Update fileHash and dirHash to reflect deletion of file 'f'.  Call with
    * lock held.
    */
-  private void removeHashEntries(Path path) {
+  private void deleteHashEntries(Path path, boolean tombstone) {
 
     // Remove target file/dir
     LOG.debug("delete file entry for {}", path);
-    fileHash.remove(path);
+    if (tombstone) {
+      fileHash.put(path, PathMetadata.tombstone(path));
+    } else {
+      fileHash.remove(path);
+    }
 
     // Update this and parent dir listing, if any
 
     /* If this path is a dir, remove its listing */
     LOG.debug("removing listing of {}", path);
+
     dirHash.remove(path);
 
     /* Remove this path from parent's dir listing */
@@ -369,7 +390,11 @@ public class LocalMetadataStore implements MetadataStore {
       DirListingMetadata dir = dirHash.get(parent);
       if (dir != null) {
         LOG.debug("removing parent's entry for {} ", path);
-        dir.remove(path);
+        if (tombstone) {
+          dir.markDeleted(path);
+        } else {
+          dir.remove(path);
+        }
       }
     }
   }

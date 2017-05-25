@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -103,8 +104,9 @@ public class DescendantsIterator implements RemoteIterator<FileStatus> {
     if (meta != null) {
       final Path path = meta.getFileStatus().getPath();
       if (path.isRoot()) {
-        final DirListingMetadata rootListing = ms.listChildren(path);
+        DirListingMetadata rootListing = ms.listChildren(path);
         if (rootListing != null) {
+          rootListing = rootListing.withoutTombstones();
           queue.addAll(rootListing.getListing());
         }
       } else {
@@ -123,11 +125,17 @@ public class DescendantsIterator implements RemoteIterator<FileStatus> {
     if (!hasNext()) {
       throw new NoSuchElementException("No more descendants.");
     }
-    final PathMetadata next;
+    PathMetadata next;
     next = queue.poll();
     if (next.getFileStatus().isDirectory()) {
       final Path path = next.getFileStatus().getPath();
-      queue.addAll(metadataStore.listChildren(path).getListing());
+      DirListingMetadata meta = metadataStore.listChildren(path);
+      if (meta != null) {
+        Collection<PathMetadata> more = meta.withoutTombstones().getListing();
+        if (!more.isEmpty()) {
+          queue.addAll(more);
+        }
+      }
     }
     return next.getFileStatus();
   }

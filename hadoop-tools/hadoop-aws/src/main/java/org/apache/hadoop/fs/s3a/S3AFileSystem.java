@@ -26,11 +26,13 @@ import java.io.InterruptedIOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -93,8 +95,8 @@ import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3a.s3guard.DescendantsIterator;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
@@ -878,50 +880,43 @@ public class S3AFileSystem extends FileSystem {
         keysToDelete.add(new DeleteObjectsRequest.KeyVersion(dstKey));
       }
 
-      ListObjectsRequest request = new ListObjectsRequest();
-      request.setBucketName(bucket);
-      request.setPrefix(srcKey);
-      request.setMaxKeys(maxKeys);
+      Path parentPath = keyToPath(srcKey);
+      RemoteIterator<LocatedFileStatus> iterator = listFilesAndEmptyDirectories(
+          parentPath, true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus status = iterator.next();
+        long length = status.getLen();
+        String key = pathToKey(status.getPath());
+        if (status.isDirectory() && !key.endsWith("/")) {
+          key += "/";
+        }
+        keysToDelete
+            .add(new DeleteObjectsRequest.KeyVersion(key));
+        String newDstKey =
+            dstKey + key.substring(srcKey.length());
+        copyFile(key, newDstKey, length);
 
-      ObjectListing objects = listObjects(request);
-
-      while (true) {
-        for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-          long length = summary.getSize();
-          keysToDelete
-              .add(new DeleteObjectsRequest.KeyVersion(summary.getKey()));
-          String newDstKey =
-              dstKey + summary.getKey().substring(srcKey.length());
-          copyFile(summary.getKey(), newDstKey, length);
-
-          if (hasMetadataStore()) {
-            Path childSrc = keyToQualifiedPath(summary.getKey());
-            Path childDst = keyToQualifiedPath(newDstKey);
-            if (objectRepresentsDirectory(summary.getKey(), length)) {
-              S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, childSrc,
-                  childDst, username);
-            } else {
-              S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, childSrc,
-                  childDst, length, getDefaultBlockSize(childDst), username);
-            }
-            // Ancestor directories may not be listed, so we explicitly add them
-            S3Guard.addMoveAncestors(metadataStore, srcPaths, dstMetas,
-                keyToQualifiedPath(srcKey), childSrc, childDst, username);
+        if (hasMetadataStore()) {
+          Path childSrc = keyToQualifiedPath(key);
+          Path childDst = keyToQualifiedPath(newDstKey);
+          if (objectRepresentsDirectory(key, length)) {
+            S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, childSrc,
+                childDst, username);
+          } else {
+            S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, childSrc,
+                childDst, length, getDefaultBlockSize(childDst), username);
           }
-
-          if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-            removeKeys(keysToDelete, true, false);
-          }
+          // Ancestor directories may not be listed, so we explicitly add them
+          S3Guard.addMoveAncestors(metadataStore, srcPaths, dstMetas,
+              keyToQualifiedPath(srcKey), childSrc, childDst, username);
         }
 
-        if (objects.isTruncated()) {
-          objects = continueListObjects(objects);
-        } else {
-          if (!keysToDelete.isEmpty()) {
-            removeKeys(keysToDelete, false, false);
-          }
-          break;
+        if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
+          removeKeys(keysToDelete, true, false);
         }
+      }
+      if (!keysToDelete.isEmpty()) {
+        removeKeys(keysToDelete, false, false);
       }
 
       // We moved all the children, now move the top-level dir
@@ -1632,6 +1627,42 @@ public class S3AFileSystem extends FileSystem {
       throw translateException("innerMkdirs", path, e);
     }
   }
+
+  private enum DirectoryStatus {
+    DOES_NOT_EXIST, EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY,
+    EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE, EXISTS_AND_IS_FILE
+  }
+
+  private DirectoryStatus checkPathForDirectory(Path path) throws
+      IOException {
+    try {
+      if (path.isRoot()) {
+        return DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE;
+      }
+      String key = pathToKey(path);
+
+      // Check MetadataStore, if any.
+      FileStatus status = null;
+      PathMetadata pm = metadataStore.get(path, false);
+      if (pm != null) {
+        if (pm.isDeleted()) {
+          return DirectoryStatus.DOES_NOT_EXIST;
+        }
+        status = pm.getFileStatus();
+        if (status != null && status.isDirectory()) {
+          return DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE;
+        }
+      }
+      status = s3GetFileStatus(path, key, null);
+      if (status.isDirectory()) {
+        return DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY;
+      }
+    } catch (FileNotFoundException e) {
+      return DirectoryStatus.DOES_NOT_EXIST;
+    }
+    return DirectoryStatus.EXISTS_AND_IS_FILE;
+  }
+
   /**
    *
    * Make the given path and all non-existent parents into
@@ -1639,64 +1670,70 @@ public class S3AFileSystem extends FileSystem {
    * See {@link #mkdirs(Path, FsPermission)}
    * @param p path to create
    * @param permission to apply to f
-   * @return true if a directory was created
+   * @return true if a directory was created or already existed
    * @throws FileAlreadyExistsException there is a file at the path specified
    * @throws IOException other IO problems
    * @throws AmazonClientException on failures inside the AWS SDK
    */
   private boolean innerMkdirs(Path p, FsPermission permission)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
+    boolean createOnS3 = false;
     Path f = qualify(p);
     LOG.debug("Making directory: {}", f);
     incrementStatistic(INVOCATION_MKDIRS);
-    FileStatus fileStatus;
     List<Path> metadataStoreDirs = null;
     if (hasMetadataStore()) {
       metadataStoreDirs = new ArrayList<>();
     }
 
-    try {
-      fileStatus = getFileStatus(f);
-
-      if (fileStatus.isDirectory()) {
-        return true;
-      } else {
-        throw new FileAlreadyExistsException("Path is a file: " + f);
-      }
-    } catch (FileNotFoundException e) {
-      // Walk path to root, ensuring closest ancestor is a directory, not file
-      Path fPart = f.getParent();
+    DirectoryStatus status = checkPathForDirectory(f);
+    if (status == DirectoryStatus.DOES_NOT_EXIST) {
+      createOnS3 = true;
       if (metadataStoreDirs != null) {
         metadataStoreDirs.add(f);
       }
-      do {
-        try {
-          fileStatus = getFileStatus(fPart);
-          if (fileStatus.isDirectory()) {
-            break;
-          }
-          if (fileStatus.isFile()) {
-            throw new FileAlreadyExistsException(String.format(
-                "Can't make directory for path '%s' since it is a file.",
-                fPart));
-          }
-        } catch (FileNotFoundException fnfe) {
-          instrumentation.errorIgnored();
-          // We create all missing directories in MetadataStore; it does not
-          // infer directories exist by prefix like S3.
-          if (metadataStoreDirs != null) {
-            metadataStoreDirs.add(fPart);
-          }
-        }
-        fPart = fPart.getParent();
-      } while (fPart != null);
+    } else if (status == DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY) {
+      if (metadataStoreDirs != null) {
+        metadataStoreDirs.add(f);
+      }
+    } else if (status == DirectoryStatus
+        .EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE) {
+      return true;
+    } else if (status == DirectoryStatus.EXISTS_AND_IS_FILE) {
+      throw new FileAlreadyExistsException("Path is a file: " + f);
+    }
 
+    // Walk path to root, ensuring closest ancestor is a directory, not file
+    Path fPart = f.getParent();
+    do {
+      status = checkPathForDirectory(fPart);
+      // The fake directory on S3 may not be visible immediately, but
+      // only the leaf node has a fake directory on S3 so we can treat both
+      // cases the same and just create a metadata store entry.
+      if (status == DirectoryStatus.DOES_NOT_EXIST || status ==
+          DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY) {
+        if (metadataStoreDirs != null) {
+          metadataStoreDirs.add(fPart);
+        }
+      } else if (status == DirectoryStatus
+          .EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE) {
+        // do nothing - just break out of the loop, make whatever child
+        // directories are needed on the metadata store, and return the
+        // result.
+        break;
+      } else if (status == DirectoryStatus.EXISTS_AND_IS_FILE) {
+        throw new FileAlreadyExistsException("Path is a file: " + f);
+      }
+      fPart = fPart.getParent();
+    } while (fPart != null);
+
+    if (createOnS3) {
       String key = pathToKey(f);
       createFakeDirectory(key);
-      S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username);
-      deleteUnnecessaryFakeDirectories(f.getParent());
-      return true;
     }
+    S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username);
+    deleteUnnecessaryFakeDirectories(f.getParent());
+    return true;
   }
 
   /**
@@ -1729,8 +1766,12 @@ public class S3AFileSystem extends FileSystem {
 
     // Check MetadataStore, if any.
     PathMetadata pm = metadataStore.get(path, needEmptyDirectoryFlag);
+    Set<Path> tombstones = Collections.EMPTY_SET;
     if (pm != null) {
-      // HADOOP-13760: handle deleted files, i.e. PathMetadata#isDeleted() here
+      if (pm.isDeleted()) {
+        throw new FileNotFoundException("Path " + f + " is recorded as " +
+            "deleted by S3Guard");
+      }
 
       FileStatus msStatus = pm.getFileStatus();
       if (needEmptyDirectoryFlag && msStatus.isDirectory()) {
@@ -1738,15 +1779,29 @@ public class S3AFileSystem extends FileSystem {
           // We have a definitive true / false from MetadataStore, we are done.
           return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
         } else {
+          DirListingMetadata children = metadataStore.listChildren(path);
+          if (children != null) {
+            tombstones = children.listTombstones();
+          }
           LOG.debug("MetadataStore doesn't know if dir is empty, using S3.");
         }
       } else {
         // Either this is not a directory, or we don't care if it is empty
         return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
       }
+
+      // If the metadata store has no children for it and it's not listed in
+      // S3 yet, we'll assume the empty directory is true;
+      S3AFileStatus s3FileStatus;
+      try {
+        s3FileStatus = s3GetFileStatus(path, key, tombstones);
+      } catch (FileNotFoundException e) {
+        return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE);
+      }
+      return S3Guard.putAndReturn(metadataStore, s3FileStatus, instrumentation);
     }
-    return S3Guard.putAndReturn(metadataStore, s3GetFileStatus(path, key),
-        instrumentation);
+    return S3Guard.putAndReturn(metadataStore,
+        s3GetFileStatus(path, key, tombstones), instrumentation);
   }
 
   /**
@@ -1757,8 +1812,8 @@ public class S3AFileSystem extends FileSystem {
    * @return Status
    * @throws IOException
    */
-  private S3AFileStatus s3GetFileStatus(final Path path, String key)
-      throws IOException {
+  private S3AFileStatus s3GetFileStatus(final Path path, String key,
+      Set<Path> tombstones) throws IOException {
     if (!key.isEmpty()) {
       try {
         ObjectMetadata meta = getObjectMetadata(key);
@@ -1821,17 +1876,18 @@ public class S3AFileSystem extends FileSystem {
 
       ObjectListing objects = listObjects(request);
 
-      if (!objects.getCommonPrefixes().isEmpty()
-          || !objects.getObjectSummaries().isEmpty()) {
+      Collection<String> prefixes = objects.getCommonPrefixes();
+      Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
+      if (!isEmptyOfKeys(prefixes, tombstones) ||
+          !isEmptyOfObjects(summaries, tombstones)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Found path as directory (with /): {}/{}",
-              objects.getCommonPrefixes().size() ,
-              objects.getObjectSummaries().size());
+              prefixes.size(), summaries.size());
 
-          for (S3ObjectSummary summary : objects.getObjectSummaries()) {
+          for (S3ObjectSummary summary : summaries) {
             LOG.debug("Summary: {} {}", summary.getKey(), summary.getSize());
           }
-          for (String prefix : objects.getCommonPrefixes()) {
+          for (String prefix : prefixes) {
             LOG.debug("Prefix: {}", prefix);
           }
         }
@@ -1853,6 +1909,48 @@ public class S3AFileSystem extends FileSystem {
     throw new FileNotFoundException("No such file or directory: " + path);
   }
 
+  /** Helper function to determine if a collection of paths is empty
+   * after accounting for tombstone markers (if provided).
+   * @param keys Collection of path (prefixes / directories or keys).
+   * @param tombstones Set of tombstone markers, or null if not applicable.
+   * @return false if summaries contains objects not accounted for by
+   * tombstones.
+   */
+  private boolean isEmptyOfKeys(Collection<String> keys, Set<Path>
+      tombstones) {
+    if (tombstones == null) {
+      return keys.isEmpty();
+    }
+    for (String key : keys) {
+      Path qualified = keyToQualifiedPath(key);
+      if (!tombstones.contains(qualified)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Helper function to determine if a collection of object summaries is empty
+   * after accounting for tombstone markers (if provided).
+   * @param summaries Collection of objects as returned by listObjects.
+   * @param tombstones Set of tombstone markers, or null if not applicable.
+   * @return false if summaries contains objects not accounted for by
+   * tombstones.
+   */
+  private boolean isEmptyOfObjects(Collection<S3ObjectSummary> summaries,
+      Set<Path> tombstones) {
+    if (tombstones == null) {
+      return summaries.isEmpty();
+    }
+    Collection<String> stringCollection = new ArrayList<>(summaries.size());
+    for(S3ObjectSummary summary : summaries) {
+      stringCollection.add(summary.getKey());
+    }
+    return isEmptyOfKeys(stringCollection, tombstones);
+  }
+
+
+
   /**
    * Raw version of {@link FileSystem#exists(Path)} which uses S3 only:
    * S3Guard MetadataStore, if any, will be skipped.
@@ -1862,7 +1960,7 @@ public class S3AFileSystem extends FileSystem {
     Path path = qualify(f);
     String key = pathToKey(path);
     try {
-      return s3GetFileStatus(path, key) != null;
+      return s3GetFileStatus(path, key, null) != null;
     } catch (FileNotFoundException e) {
       return false;
     }
@@ -2420,10 +2518,10 @@ public class S3AFileSystem extends FileSystem {
         new Listing.AcceptFilesOnly(qualify(f)));
   }
 
-  public RemoteIterator<LocatedFileStatus> listFilesAndDirectories(Path f,
+  public RemoteIterator<LocatedFileStatus> listFilesAndEmptyDirectories(Path f,
       boolean recursive) throws IOException {
     return innerListFiles(f, recursive,
-        new Listing.AcceptAllButSelfAndS3nDirs(qualify(f)));
+        new Listing.AcceptAllButS3nDirs());
   }
 
   private RemoteIterator<LocatedFileStatus> innerListFiles(Path f, boolean
@@ -2446,23 +2544,37 @@ public class S3AFileSystem extends FileSystem {
         LOG.debug("Requesting all entries under {} with delimiter '{}'",
             key, delimiter);
         final RemoteIterator<FileStatus> cachedFilesIterator;
+        final Set<Path> tombstones;
         if (recursive) {
           final PathMetadata pm = metadataStore.get(path, true);
-          cachedFilesIterator = new DescendantsIterator(metadataStore, pm);
+          // shouldn't need to check pm.isDeleted() because that will have
+          // been caught by getFileStatus above.
+          MetadataStoreListFilesIterator metadataStoreListFilesIterator =
+              new MetadataStoreListFilesIterator(metadataStore, pm,
+                  allowAuthoritative);
+          tombstones = metadataStoreListFilesIterator.listTombstones();
+          cachedFilesIterator = metadataStoreListFilesIterator;
         } else {
-          final DirListingMetadata meta = metadataStore.listChildren(path);
+          DirListingMetadata meta = metadataStore.listChildren(path);
+          if (meta != null) {
+            tombstones = meta.listTombstones();
+          } else {
+            tombstones = null;
+          }
           cachedFilesIterator = listing.createProvidedFileStatusIterator(
               S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
           if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
             return listing.createLocatedFileStatusIterator(cachedFilesIterator);
           }
         }
-        return listing.createLocatedFileStatusIterator(
-            listing.createFileStatusListingIterator(path,
-                createListObjectsRequest(key, delimiter),
-                ACCEPT_ALL,
-                acceptor,
-                cachedFilesIterator));
+        return listing.createTombstoneReconcilingIterator(
+            listing.createLocatedFileStatusIterator(
+                listing.createFileStatusListingIterator(path,
+                    createListObjectsRequest(key, delimiter),
+                    ACCEPT_ALL,
+                    acceptor,
+                    cachedFilesIterator)),
+            tombstones);
       }
     } catch (AmazonClientException e) {
       // TODO s3guard:
@@ -2514,7 +2626,7 @@ public class S3AFileSystem extends FileSystem {
         final String key = maybeAddTrailingSlash(pathToKey(path));
         final Listing.FileStatusAcceptor acceptor =
             new Listing.AcceptAllButSelfAndS3nDirs(path);
-        final DirListingMetadata meta = metadataStore.listChildren(path);
+        DirListingMetadata meta = metadataStore.listChildren(path);
         final RemoteIterator<FileStatus> cachedFileStatusIterator =
             listing.createProvidedFileStatusIterator(
                 S3Guard.dirMetaToStatuses(meta), filter, acceptor);

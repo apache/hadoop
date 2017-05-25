@@ -52,6 +52,11 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
+  public void forgetMetadata(Path path) throws IOException {
+    return;
+  }
+
+  @Override
   public void deleteSubtree(Path path) throws IOException {
     return;
   }

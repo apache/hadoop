@@ -23,6 +23,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -33,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -57,12 +59,48 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   private static final Logger LOG =
       LoggerFactory.getLogger(InconsistentAmazonS3Client.class);
 
+  /**
+   * Composite of data we need to track about recently deleted objects:
+   * when it was deleted (same was with recently put objects) and the object
+   * summary (since we should keep returning it for sometime after its
+   * deletion).
+   */
+  private static class Delete {
+    private Long time;
+    private S3ObjectSummary summary;
+
+    Delete(Long time, S3ObjectSummary summary) {
+      this.time = time;
+      this.summary = summary;
+    }
+
+    public Long time() {
+      return time;
+    }
+
+    public S3ObjectSummary summary() {
+      return summary;
+    }
+  }
+
+  /** Map of key to delay -> time it was deleted + object summary (object
+   * summary is null for prefixes. */
+  private Map<String, Delete> delayedDeletes = new HashMap<>();
+
   /** Map of key to delay -> time it was created. */
-  private Map<String, Long> delayedKeys = new HashMap<>();
+  private Map<String, Long> delayedPutKeys = new HashMap<>();
 
   public InconsistentAmazonS3Client(AWSCredentialsProvider credentials,
       ClientConfiguration clientConfiguration) {
     super(credentials, clientConfiguration);
+  }
+
+  @Override
+  public void deleteObject(DeleteObjectRequest deleteObjectRequest)
+      throws AmazonClientException, AmazonServiceException {
+    LOG.debug("key {}", deleteObjectRequest.getKey());
+    registerDeleteObject(deleteObjectRequest);
+    super.deleteObject(deleteObjectRequest);
   }
 
   /* We should only need to override this version of putObject() */
@@ -80,10 +118,49 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
       throws AmazonClientException, AmazonServiceException {
     LOG.debug("prefix {}", listObjectsRequest.getPrefix());
     ObjectListing listing = super.listObjects(listObjectsRequest);
-    return filterListObjects(listObjectsRequest,
-        listing);
+    listing = filterListObjects(listObjectsRequest, listing);
+    listing = restoreListObjects(listObjectsRequest, listing);
+    return listing;
   }
 
+  private boolean addIfNotPresent(List<S3ObjectSummary> list,
+      S3ObjectSummary item) {
+    // Behavior of S3ObjectSummary
+    String key = item.getKey();
+    for (S3ObjectSummary member : list) {
+      if (member.getKey().equals(key)) {
+        return false;
+      }
+    }
+    return list.add(item);
+  }
+
+  private ObjectListing restoreListObjects(ListObjectsRequest request,
+                                           ObjectListing rawListing) {
+    List<S3ObjectSummary> outputList = rawListing.getObjectSummaries();
+    List<String> outputPrefixes = rawListing.getCommonPrefixes();
+    for (String key : new HashSet<>(delayedDeletes.keySet())) {
+      Delete delete = delayedDeletes.get(key);
+      if (isKeyDelayed(delete.time(), key)) {
+        // TODO this works fine for flat directories but:
+        // if you have a delayed key /a/b/c/d and you are listing /a/b,
+        // this incorrectly will add /a/b/c/d to the listing for b
+        if (key.startsWith(request.getPrefix())) {
+          if (delete.summary == null) {
+            if (!outputPrefixes.contains(key)) {
+              outputPrefixes.add(key);
+            }
+          } else {
+            addIfNotPresent(outputList, delete.summary());
+          }
+        }
+      } else {
+        delayedDeletes.remove(key);
+      }
+    }
+
+    return new CustomObjectListing(rawListing, outputList, outputPrefixes);
+  }
 
   private ObjectListing filterListObjects(ListObjectsRequest request,
       ObjectListing rawListing) {
@@ -91,7 +168,8 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     // Filter object listing
     List<S3ObjectSummary> outputList = new ArrayList<>();
     for (S3ObjectSummary s : rawListing.getObjectSummaries()) {
-      if (!isVisibilityDelayed(s.getKey())) {
+      String key = s.getKey();
+      if (!isKeyDelayed(delayedPutKeys.get(key), key)) {
         outputList.add(s);
       }
     }
@@ -99,7 +177,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     // Filter prefixes (directories)
     List<String> outputPrefixes = new ArrayList<>();
     for (String key : rawListing.getCommonPrefixes()) {
-      if (!isVisibilityDelayed(key)) {
+      if (!isKeyDelayed(delayedPutKeys.get(key), key)) {
         outputPrefixes.add(key);
       }
     }
@@ -107,28 +185,43 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     return new CustomObjectListing(rawListing, outputList, outputPrefixes);
   }
 
-  private boolean isVisibilityDelayed(String key) {
-    Long createTime = delayedKeys.get(key);
-    if (createTime == null) {
+  private boolean isKeyDelayed(Long enqueueTime, String key) {
+    if (enqueueTime == null) {
       LOG.debug("no delay for key {}", key);
       return false;
     }
     long currentTime = System.currentTimeMillis();
-    long deadline = createTime + DELAY_KEY_MILLIS;
+    long deadline = enqueueTime + DELAY_KEY_MILLIS;
     if (currentTime >= deadline) {
-      delayedKeys.remove(key);
-      LOG.debug("{} no longer delayed", key);
+      delayedDeletes.remove(key);
+      LOG.debug("no longer delaying {}", key);
       return false;
     } else  {
-      LOG.info("{} delaying visibility", key);
+      LOG.info("delaying {}", key);
       return true;
+    }
+  }
+
+  private void registerDeleteObject(DeleteObjectRequest req) {
+    String key = req.getKey();
+    if (shouldDelay(key)) {
+      // Record summary so we can add it back for some time post-deletion
+      S3ObjectSummary summary = null;
+      ObjectListing list = listObjects(req.getBucketName(), key);
+      for (S3ObjectSummary result : list.getObjectSummaries()) {
+        if (result.getKey().equals(key)) {
+          summary = result;
+          break;
+        }
+      }
+      delayedDeletes.put(key, new Delete(System.currentTimeMillis(), summary));
     }
   }
 
   private void registerPutObject(PutObjectRequest req) {
     String key = req.getKey();
     if (shouldDelay(key)) {
-      enqueueDelayKey(key);
+      enqueueDelayedPut(key);
     }
   }
 
@@ -148,9 +241,9 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
    * listObject replies for a while, to simulate eventual list consistency.
    * @param key key to delay visibility of
    */
-  private void enqueueDelayKey(String key) {
-    LOG.debug("key {}", key);
-    delayedKeys.put(key, System.currentTimeMillis());
+  private void enqueueDelayedPut(String key) {
+    LOG.debug("delaying put of {}", key);
+    delayedPutKeys.put(key, System.currentTimeMillis());
   }
 
   /** Since ObjectListing is immutable, we just override it with wrapper. */

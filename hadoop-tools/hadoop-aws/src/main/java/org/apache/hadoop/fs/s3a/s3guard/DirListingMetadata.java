@@ -25,9 +25,12 @@ import org.apache.hadoop.fs.Path;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.base.Preconditions;
@@ -104,6 +107,26 @@ public class DirListingMetadata {
     return Collections.unmodifiableCollection(listMap.values());
   }
 
+  public Set<Path> listTombstones() {
+    Set<Path> tombstones = new HashSet<>();
+    for (PathMetadata meta : listMap.values()) {
+      if (meta.isDeleted()) {
+        tombstones.add(meta.getFileStatus().getPath());
+      }
+    }
+    return tombstones;
+  }
+
+  public DirListingMetadata withoutTombstones() {
+    Collection<PathMetadata> filteredList = new ArrayList<>();
+    for (PathMetadata meta : listMap.values()) {
+      if (!meta.isDeleted()) {
+        filteredList.add(meta);
+      }
+    }
+    return new DirListingMetadata(path, filteredList, isAuthoritative);
+  }
+
   /**
    * @return number of entries tracked.  This is not the same as the number
    * of entries in the actual directory unless {@link #isAuthoritative()} is
@@ -163,6 +186,15 @@ public class DirListingMetadata {
   public PathMetadata get(Path childPath) {
     checkChildPath(childPath);
     return listMap.get(childPath);
+  }
+
+  /**
+   * Replace an entry with a tombstone.
+   * @param childPath path of entry to replace.
+   */
+  public void markDeleted(Path childPath) {
+    checkChildPath(childPath);
+    listMap.put(childPath, PathMetadata.tombstone(childPath));
   }
 
   /**

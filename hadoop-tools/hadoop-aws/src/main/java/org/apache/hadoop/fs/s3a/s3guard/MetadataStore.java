@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +56,8 @@ public interface MetadataStore extends Closeable {
   void initialize(Configuration conf) throws IOException;
 
   /**
-   * Deletes exactly one path.
+   * Deletes exactly one path, leaving a tombstone to prevent lingering,
+   * inconsistent copies of it from being listed.
    *
    * @param path the path to delete
    * @throws IOException if there is an error
@@ -63,7 +65,20 @@ public interface MetadataStore extends Closeable {
   void delete(Path path) throws IOException;
 
   /**
-   * Deletes the entire sub-tree rooted at the given path.
+   * Removes the record of exactly one path.  Does not leave a tombstone (see
+   * {@link MetadataStore#delete(Path)}. It is currently intended for testing
+   * only, and a need to use it as part of normal FileSystem usage is not
+   * anticipated.
+   *
+   * @param path the path to delete
+   * @throws IOException if there is an error
+   */
+  @VisibleForTesting
+  void forgetMetadata(Path path) throws IOException;
+
+  /**
+   * Deletes the entire sub-tree rooted at the given path, leaving tombstones
+   * to prevent lingering, inconsistent copies of it from being listed.
    *
    * In addition to affecting future calls to {@link #get(Path)},
    * implementations must also update any stored {@code DirListingMetadata}

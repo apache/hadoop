@@ -446,7 +446,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
       RemoteIterator<LocatedFileStatus> it =
-          s3a.listFilesAndDirectories(status.getPath(), true);
+          s3a.listFilesAndEmptyDirectories(status.getPath(), true);
       long items = 0;
 
       while (it.hasNext()) {
@@ -686,7 +686,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       } catch (FileNotFoundException e) {
       }
       PathMetadata meta = ms.get(qualified);
-      FileStatus msStatus = meta != null ? meta.getFileStatus() : null;
+      FileStatus msStatus = (meta != null && !meta.isDeleted()) ?
+          meta.getFileStatus() : null;
       compareDir(msStatus, s3Status, out);
     }
 

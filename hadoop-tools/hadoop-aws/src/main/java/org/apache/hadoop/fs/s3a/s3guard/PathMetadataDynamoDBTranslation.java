@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
  * Defines methods for translating between domain model objects and their
@@ -62,6 +63,7 @@ final class PathMetadataDynamoDBTranslation {
   static final String FILE_LENGTH = "file_length";
   @VisibleForTesting
   static final String BLOCK_SIZE = "block_size";
+  static final String IS_DELETED = "is_deleted";
 
   /** Table version field {@value} in version marker item. */
   @VisibleForTesting
@@ -133,8 +135,10 @@ final class PathMetadataDynamoDBTranslation {
       fileStatus = new FileStatus(len, false, 1, block, modTime, 0, null,
           username, username, path);
     }
+    boolean isDeleted =
+        item.hasAttribute(IS_DELETED) ? item.getBoolean(IS_DELETED) : false;
 
-    return new PathMetadata(fileStatus);
+    return new PathMetadata(fileStatus, Tristate.UNKNOWN, isDeleted);
   }
 
   /**
@@ -154,6 +158,7 @@ final class PathMetadataDynamoDBTranslation {
           .withLong(MOD_TIME, status.getModificationTime())
           .withLong(BLOCK_SIZE, status.getBlockSize());
     }
+    item.withBoolean(IS_DELETED, meta.isDeleted());
     return item;
   }
 

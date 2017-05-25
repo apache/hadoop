@@ -75,7 +75,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
   @Test
   public void testClearByAncestor() {
-    Map<Path, String> map = new HashMap<>();
+    Map<Path, PathMetadata> map = new HashMap<>();
 
     // 1. Test paths without scheme/host
     assertClearResult(map, "", "/", 0);
@@ -90,21 +90,37 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     assertClearResult(map, p, "/invalid", 5);
   }
 
-  private static void populateMap(Map<Path, String> map, String prefix) {
-    String dummyVal = "dummy";
-    map.put(new Path(prefix + "/dirA/dirB/"), dummyVal);
-    map.put(new Path(prefix + "/dirA/dirB/dirC"), dummyVal);
-    map.put(new Path(prefix + "/dirA/dirB/dirC/file1"), dummyVal);
-    map.put(new Path(prefix + "/dirA/dirB/dirC/file2"), dummyVal);
-    map.put(new Path(prefix + "/dirA/file1"), dummyVal);
+  private static void populateMap(Map<Path, PathMetadata> map,
+      String prefix) {
+    populateEntry(map, new Path(prefix + "/dirA/dirB/"));
+    populateEntry(map, new Path(prefix + "/dirA/dirB/dirC"));
+    populateEntry(map, new Path(prefix + "/dirA/dirB/dirC/file1"));
+    populateEntry(map, new Path(prefix + "/dirA/dirB/dirC/file2"));
+    populateEntry(map, new Path(prefix + "/dirA/file1"));
   }
 
-  private static void assertClearResult(Map <Path, String> map,
+  private static void populateEntry(Map<Path, PathMetadata> map,
+      Path path) {
+    map.put(path, new PathMetadata(new FileStatus(0, true, 0, 0, 0, path)));
+  }
+
+  private static int sizeOfMap(Map<Path, PathMetadata> map) {
+    int count = 0;
+    for (PathMetadata meta : map.values()) {
+      if (!meta.isDeleted()) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private static void assertClearResult(Map <Path, PathMetadata> map,
       String prefixStr, String pathStr, int leftoverSize) {
     populateMap(map, prefixStr);
-    LocalMetadataStore.clearHashByAncestor(new Path(prefixStr + pathStr), map);
+    LocalMetadataStore.deleteHashByAncestor(new Path(prefixStr + pathStr), map,
+        true);
     assertEquals(String.format("Map should have %d entries", leftoverSize),
-        leftoverSize, map.size());
+        leftoverSize, sizeOfMap(map));
     map.clear();
   }
 

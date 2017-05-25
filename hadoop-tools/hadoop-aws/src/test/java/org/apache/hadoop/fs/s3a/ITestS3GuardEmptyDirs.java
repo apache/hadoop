@@ -39,45 +39,47 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
 
   @Test
   public void testEmptyDirs() throws Exception {
-
     S3AFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.hasMetadataStore());
     MetadataStore configuredMs = fs.getMetadataStore();
-
-    // 1. Simulate files already existing in the bucket before we started our
-    // cluster.  Temporarily disable the MetadataStore so it doesn't witness
-    // us creating these files.
-
-    fs.setMetadataStore(new NullMetadataStore());
-
     Path existingDir = path("existing-dir");
-    assertTrue(fs.mkdirs(existingDir));
     Path existingFile = path("existing-dir/existing-file");
-    touch(fs, existingFile);
+    try {
+      // 1. Simulate files already existing in the bucket before we started our
+      // cluster.  Temporarily disable the MetadataStore so it doesn't witness
+      // us creating these files.
+
+      fs.setMetadataStore(new NullMetadataStore());
+      assertTrue(fs.mkdirs(existingDir));
+      touch(fs, existingFile);
 
 
-    // 2. Simulate (from MetadataStore's perspective) starting our cluster and
-    // creating a file in an existing directory.
-    fs.setMetadataStore(configuredMs);  // "start cluster"
-    Path newFile = path("existing-dir/new-file");
-    touch(fs, newFile);
+      // 2. Simulate (from MetadataStore's perspective) starting our cluster and
+      // creating a file in an existing directory.
+      fs.setMetadataStore(configuredMs);  // "start cluster"
+      Path newFile = path("existing-dir/new-file");
+      touch(fs, newFile);
 
-    S3AFileStatus status = fs.innerGetFileStatus(existingDir, true);
-    assertEquals("Should not be empty dir", Tristate.FALSE,
-        status.isEmptyDirectory());
+      S3AFileStatus status = fs.innerGetFileStatus(existingDir, true);
+      assertEquals("Should not be empty dir", Tristate.FALSE,
+          status.isEmptyDirectory());
 
-    // 3. Assert that removing the only file the MetadataStore witnessed
-    // being created doesn't cause it to think the directory is now empty.
-    fs.delete(newFile, false);
-    status = fs.innerGetFileStatus(existingDir, true);
-    assertEquals("Should not be empty dir", Tristate.FALSE,
-        status.isEmptyDirectory());
+      // 3. Assert that removing the only file the MetadataStore witnessed
+      // being created doesn't cause it to think the directory is now empty.
+      fs.delete(newFile, false);
+      status = fs.innerGetFileStatus(existingDir, true);
+      assertEquals("Should not be empty dir", Tristate.FALSE,
+          status.isEmptyDirectory());
 
-    // 4. Assert that removing the final file, that existed "before"
-    // MetadataStore started, *does* cause the directory to be marked empty.
-    fs.delete(existingFile, false);
-    status = fs.innerGetFileStatus(existingDir, true);
-    assertEquals("Should be empty dir now", Tristate.TRUE,
-        status.isEmptyDirectory());
+      // 4. Assert that removing the final file, that existed "before"
+      // MetadataStore started, *does* cause the directory to be marked empty.
+      fs.delete(existingFile, false);
+      status = fs.innerGetFileStatus(existingDir, true);
+      assertEquals("Should be empty dir now", Tristate.TRUE,
+          status.isEmptyDirectory());
+    } finally {
+      configuredMs.forgetMetadata(existingFile);
+      configuredMs.forgetMetadata(existingDir);
+    }
   }
 }

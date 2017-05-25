@@ -185,6 +185,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * DynamoDB. Value is {@value} msec. */
   public static final long MIN_RETRY_SLEEP_MSEC = 100;
 
+  private static ValueMap deleteTrackingValueMap =
+      new ValueMap().withBoolean(":false", false);
+
   private DynamoDB dynamoDB;
   private String region;
   private Table table;
@@ -286,6 +289,16 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   @Override
   public void delete(Path path) throws IOException {
+    innerDelete(path, true);
+  }
+
+  @Override
+  public void forgetMetadata(Path path) throws IOException {
+    innerDelete(path, false);
+  }
+
+  private void innerDelete(Path path, boolean tombstone)
+      throws IOException {
     path = checkPath(path);
     LOG.debug("Deleting from table {} in region {}: {}",
         tableName, region, path);
@@ -297,7 +310,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
     }
 
     try {
-      table.deleteItem(pathToKey(path));
+      if (tombstone) {
+        Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
+            PathMetadata.tombstone(path));
+        table.putItem(item);
+      } else {
+        table.deleteItem(pathToKey(path));
+      }
     } catch (AmazonClientException e) {
       throw translateException("delete", path, e);
     }
@@ -310,15 +329,22 @@ public class DynamoDBMetadataStore implements MetadataStore {
         tableName, region, path);
 
     final PathMetadata meta = get(path);
-    if (meta == null) {
+    if (meta == null || meta.isDeleted()) {
       LOG.debug("Subtree path {} does not exist; this will be a no-op", path);
       return;
     }
 
     for (DescendantsIterator desc = new DescendantsIterator(this, meta);
          desc.hasNext();) {
-      delete(desc.next().getPath());
+      innerDelete(desc.next().getPath(), true);
     }
+  }
+
+  private Item getConsistentItem(PrimaryKey key) {
+    final GetItemSpec spec = new GetItemSpec()
+        .withPrimaryKey(key)
+        .withConsistentRead(true); // strictly consistent read
+    return table.getItem(spec);
   }
 
   @Override
@@ -338,10 +364,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
         // Root does not persist in the table
         meta = new PathMetadata(makeDirStatus(username, path));
       } else {
-        final GetItemSpec spec = new GetItemSpec()
-            .withPrimaryKey(pathToKey(path))
-            .withConsistentRead(true); // strictly consistent read
-        final Item item = table.getItem(spec);
+        final Item item = getConsistentItem(pathToKey(path));
         meta = itemToPathMetadata(item, username);
         LOG.debug("Get from table {} in region {} returning for {}: {}",
             tableName, region, path, meta);
@@ -354,7 +377,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
           final QuerySpec spec = new QuerySpec()
               .withHashKey(pathToParentKeyAttribute(path))
               .withConsistentRead(true)
-              .withMaxResultSize(1); // limit 1
+              .withFilterExpression(IS_DELETED + " = :false")
+              .withValueMap(deleteTrackingValueMap);
           final ItemCollection<QueryOutcome> items = table.query(spec);
           boolean hasChildren = items.iterator().hasNext();
           // When this class has support for authoritative
@@ -398,7 +422,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
       final List<PathMetadata> metas = new ArrayList<>();
       for (Item item : items) {
-        metas.add(itemToPathMetadata(item, username));
+        PathMetadata meta = itemToPathMetadata(item, username);
+        metas.add(meta);
       }
       LOG.trace("Listing table {} in region {} for {} returning {}",
           tableName, region, path, metas);
@@ -430,9 +455,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // Following code is to maintain this invariant by putting all ancestor
     // directories of the paths to create.
     // ancestor paths that are not explicitly added to paths to create
-    Collection<PathMetadata> inferredPathsToCreate = null;
+    Collection<PathMetadata> newItems = new ArrayList<>();
     if (pathsToCreate != null) {
-      inferredPathsToCreate = new ArrayList<>(pathsToCreate);
+      newItems.addAll(pathsToCreate);
       // help set for fast look up; we should avoid putting duplicate paths
       final Collection<Path> fullPathsToCreate = new HashSet<>();
       for (PathMetadata meta : pathsToCreate) {
@@ -448,16 +473,20 @@ public class DynamoDBMetadataStore implements MetadataStore {
           LOG.debug("move: auto-create ancestor path {} for child path {}",
               parent, meta.getFileStatus().getPath());
           final FileStatus status = makeDirStatus(parent, username);
-          inferredPathsToCreate.add(new PathMetadata(status, Tristate.FALSE));
+          newItems.add(new PathMetadata(status, Tristate.FALSE, false));
           fullPathsToCreate.add(parent);
           parent = parent.getParent();
         }
       }
     }
+    if (pathsToDelete != null) {
+      for (Path meta : pathsToDelete) {
+        newItems.add(PathMetadata.tombstone(meta));
+      }
+    }
 
     try {
-      processBatchWriteRequest(pathToKey(pathsToDelete),
-          pathMetadataToItem(inferredPathsToCreate));
+      processBatchWriteRequest(null, pathMetadataToItem(newItems));
     } catch (AmazonClientException e) {
       throw translateException("move", (String) null, e);
     }
@@ -565,19 +594,27 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // first existent ancestor
     Path path = meta.getFileStatus().getPath().getParent();
     while (path != null && !path.isRoot()) {
-      final GetItemSpec spec = new GetItemSpec()
-          .withPrimaryKey(pathToKey(path))
-          .withConsistentRead(true); // strictly consistent read
-      final Item item = table.getItem(spec);
-      if (item == null) {
+      final Item item = getConsistentItem(pathToKey(path));
+      if (!itemExists(item)) {
         final FileStatus status = makeDirStatus(path, username);
-        metasToPut.add(new PathMetadata(status, Tristate.FALSE));
+        metasToPut.add(new PathMetadata(status, Tristate.FALSE, false));
         path = path.getParent();
       } else {
         break;
       }
     }
     return metasToPut;
+  }
+
+  private boolean itemExists(Item item) {
+    if (item == null) {
+      return false;
+    }
+    if (item.hasAttribute(IS_DELETED) &&
+        item.getBoolean(IS_DELETED)) {
+      return false;
+    }
+    return true;
   }
 
   /** Create a directory FileStatus using current system time as mod time. */
@@ -591,9 +628,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
 
     // directory path
-    PathMetadata p = new PathMetadata(
-        makeDirStatus(meta.getPath(), username),
-        meta.isEmpty());
+    PathMetadata p = new PathMetadata(makeDirStatus(meta.getPath(), username),
+        meta.isEmpty(), false);
 
     // First add any missing ancestors...
     final Collection<PathMetadata> metasToPut = fullPathsToPut(p);
@@ -670,13 +706,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
         itemCount++;
         if (deletionBatch.size() == S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT) {
           Thread.sleep(delay);
-          processBatchWriteRequest(pathToKey(deletionBatch), new Item[0]);
+          processBatchWriteRequest(pathToKey(deletionBatch), null);
           deletionBatch.clear();
         }
       }
       if (deletionBatch.size() > 0) {
         Thread.sleep(delay);
-        processBatchWriteRequest(pathToKey(deletionBatch), new Item[0]);
+        processBatchWriteRequest(pathToKey(deletionBatch), null);
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();

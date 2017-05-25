@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
@@ -134,12 +135,52 @@ public abstract class MetadataStoreTestBase extends Assert {
   }
 
   /**
+   * Helper function for verifying DescendantsIterator and
+   * MetadataStoreListFilesIterator behavior.
+   * @param createNodes List of paths to create
+   * @param checkNodes List of paths that the iterator should return
+   * @throws IOException
+   */
+  private void doTestDescendantsIterator(
+      Class implementation, String[] createNodes,
+      String[] checkNodes) throws Exception {
+    // we set up the example file system tree in metadata store
+    for (String pathStr : createNodes) {
+      final FileStatus status = pathStr.contains("file")
+          ? basicFileStatus(strToPath(pathStr), 100, false)
+          : basicFileStatus(strToPath(pathStr), 0, true);
+      ms.put(new PathMetadata(status));
+    }
+
+    final PathMetadata rootMeta = new PathMetadata(makeDirStatus("/"));
+    RemoteIterator<FileStatus> iterator;
+    if (implementation == DescendantsIterator.class) {
+      iterator = new DescendantsIterator(ms, rootMeta);
+    } else if (implementation == MetadataStoreListFilesIterator.class) {
+      iterator = new MetadataStoreListFilesIterator(ms, rootMeta, false);
+    } else {
+      throw new UnsupportedOperationException("Unrecognized class");
+    }
+
+    final Set<String> actual = new HashSet<>();
+    while (iterator.hasNext()) {
+      final Path p = iterator.next().getPath();
+      actual.add(Path.getPathWithoutSchemeAndAuthority(p).toString());
+    }
+    LOG.info("We got {} by iterating DescendantsIterator", actual);
+
+    if (!allowMissing()) {
+      assertEquals(Sets.newHashSet(checkNodes), actual);
+    }
+  }
+
+  /**
    * Test that we can get the whole sub-tree by iterating DescendantsIterator.
    *
    * The tree is similar to or same as the example in code comment.
    */
   @Test
-  public void testDescendantsIterator() throws IOException {
+  public void testDescendantsIterator() throws Exception {
     final String[] tree = new String[] {
         "/dir1",
         "/dir1/dir2",
@@ -152,26 +193,38 @@ public abstract class MetadataStoreTestBase extends Assert {
         "/dir1/dir3/dir5/file4",
         "/dir1/dir3/dir6"
     };
-    // we set up the example file system tree in metadata store
-    for (String pathStr : tree) {
-      final FileStatus status = pathStr.contains("file")
-          ? basicFileStatus(strToPath(pathStr), 100, false)
-          : basicFileStatus(strToPath(pathStr), 0, true);
-      ms.put(new PathMetadata(status));
-    }
+    doTestDescendantsIterator(DescendantsIterator.class,
+        tree, tree);
+  }
 
-    final Set<String> actual = new HashSet<>();
-    final PathMetadata rootMeta = new PathMetadata(makeDirStatus("/"));
-    for (DescendantsIterator desc = new DescendantsIterator(ms, rootMeta);
-         desc.hasNext();) {
-      final Path p = desc.next().getPath();
-      actual.add(Path.getPathWithoutSchemeAndAuthority(p).toString());
-    }
-    LOG.info("We got {} by iterating DescendantsIterator", actual);
-
-    if (!allowMissing()) {
-      assertEquals(Sets.newHashSet(tree), actual);
-    }
+  /**
+   * Test that we can get the correct subset of the tree with
+   * MetadataStoreListFilesIterator.
+   *
+   * The tree is similar to or same as the example in code comment.
+   */
+  @Test
+  public void testMetadataStoreListFilesIterator() throws Exception {
+    final String[] wholeTree = new String[] {
+        "/dir1",
+        "/dir1/dir2",
+        "/dir1/dir3",
+        "/dir1/dir2/file1",
+        "/dir1/dir2/file2",
+        "/dir1/dir3/dir4",
+        "/dir1/dir3/dir5",
+        "/dir1/dir3/dir4/file3",
+        "/dir1/dir3/dir5/file4",
+        "/dir1/dir3/dir6"
+    };
+    final String[] leafNodes = new String[] {
+        "/dir1/dir2/file1",
+        "/dir1/dir2/file2",
+        "/dir1/dir3/dir4/file3",
+        "/dir1/dir3/dir5/file4"
+    };
+    doTestDescendantsIterator(MetadataStoreListFilesIterator.class, wholeTree,
+        leafNodes);
   }
 
   @Test
@@ -258,7 +311,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     /* Ensure delete happened. */
     assertDirectorySize("/ADirectory1/db1", 1);
     PathMetadata meta = ms.get(strToPath("/ADirectory1/db1/file2"));
-    assertNull("File deleted", meta);
+    assertTrue("File deleted", meta == null || meta.isDeleted());
   }
 
   @Test
@@ -284,10 +337,10 @@ public abstract class MetadataStoreTestBase extends Assert {
     ms.deleteSubtree(strToPath(p + "/ADirectory1/db1/"));
 
     assertEmptyDirectory(p + "/ADirectory1");
-    assertNotCached(p + "/ADirectory1/db1");
-    assertNotCached(p + "/ADirectory1/file1");
-    assertNotCached(p + "/ADirectory1/file2");
-    assertNotCached(p + "/ADirectory1/db1/dc1/dd1/deepFile");
+    assertDeleted(p + "/ADirectory1/db1");
+    assertDeleted(p + "/ADirectory1/file1");
+    assertDeleted(p + "/ADirectory1/file2");
+    assertDeleted(p + "/ADirectory1/db1/dc1/dd1/deepFile");
     assertEmptyDirectory(p + "/ADirectory2");
   }
 
@@ -302,11 +355,11 @@ public abstract class MetadataStoreTestBase extends Assert {
     setUpDeleteTest();
 
     ms.deleteSubtree(strToPath("/"));
-    assertNotCached("/ADirectory1");
-    assertNotCached("/ADirectory2");
-    assertNotCached("/ADirectory2/db1");
-    assertNotCached("/ADirectory2/db1/file1");
-    assertNotCached("/ADirectory2/db1/file2");
+    assertDeleted("/ADirectory1");
+    assertDeleted("/ADirectory2");
+    assertDeleted("/ADirectory2/db1");
+    assertDeleted("/ADirectory2/db1/file1");
+    assertDeleted("/ADirectory2/db1/file2");
   }
 
   @Test
@@ -348,6 +401,12 @@ public abstract class MetadataStoreTestBase extends Assert {
     if (!allowMissing() || meta != null) {
       assertNotNull("Get found file", meta);
       verifyFileStatus(meta.getFileStatus(), 100);
+    }
+
+    if (!(ms instanceof NullMetadataStore)) {
+      ms.delete(strToPath(filePath));
+      meta = ms.get(strToPath(filePath));
+      assertTrue("Tombstone not left for deleted file", meta.isDeleted());
     }
 
     meta = ms.get(strToPath(dirPath));
@@ -441,6 +500,7 @@ public abstract class MetadataStoreTestBase extends Assert {
 
     dirMeta = ms.listChildren(strToPath("/a1"));
     if (!allowMissing() || dirMeta != null) {
+      dirMeta = dirMeta.withoutTombstones();
       assertListingsEqual(dirMeta.getListing(), "/a1/b1", "/a1/b2");
     }
 
@@ -486,6 +546,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     Collection<PathMetadata> entries;
     DirListingMetadata dirMeta = ms.listChildren(strToPath("/"));
     if (!allowMissing() || dirMeta != null) {
+      dirMeta = dirMeta.withoutTombstones();
       assertNotNull("Listing root", dirMeta);
       entries = dirMeta.getListing();
       assertListingsEqual(entries, "/a1", "/a2", "/a3");
@@ -513,13 +574,12 @@ public abstract class MetadataStoreTestBase extends Assert {
     dirMeta = ms.listChildren(strToPath("/a1"));
     if (!allowMissing() || dirMeta != null) {
       assertNotNull("Listing /a1", dirMeta);
-      entries = dirMeta.getListing();
+      entries = dirMeta.withoutTombstones().getListing();
       assertListingsEqual(entries, "/a1/b2");
     }
 
     PathMetadata meta = ms.get(strToPath("/a1/b1/file1"));
-    // TODO allow return of PathMetadata with isDeleted == true
-    assertNull("Src path deleted", meta);
+    assertTrue("Src path deleted", meta == null || meta.isDeleted());
 
     // Assert dest looks right
     meta = ms.get(strToPath("/b1/file1"));
@@ -596,7 +656,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     ms.prune(cutoff);
     ls = ms.listChildren(strToPath("/pruneFiles"));
     if (allowMissing()) {
-      assertNotCached("/pruneFiles/old");
+      assertDeleted("/pruneFiles/old");
     } else {
       assertListingsEqual(ls.getListing(), "/pruneFiles/new");
     }
@@ -625,7 +685,7 @@ public abstract class MetadataStoreTestBase extends Assert {
 
     ms.prune(cutoff);
 
-    assertNotCached("/pruneDirs/dir/file");
+    assertDeleted("/pruneDirs/dir/file");
   }
 
   /*
@@ -646,6 +706,7 @@ public abstract class MetadataStoreTestBase extends Assert {
         "file3"));
     DirListingMetadata dirMeta = ms.listChildren(strToPath(parent));
     if (!allowMissing() || dirMeta != null) {
+      dirMeta = dirMeta.withoutTombstones();
       assertNotNull("list after putListStatus", dirMeta);
       Collection<PathMetadata> entries = dirMeta.getListing();
       assertNotNull("listStatus has entries", entries);
@@ -700,6 +761,7 @@ public abstract class MetadataStoreTestBase extends Assert {
       assertNotNull("Directory " + pathStr + " in cache", dirMeta);
     }
     if (!allowMissing() || dirMeta != null) {
+      dirMeta = dirMeta.withoutTombstones();
       assertEquals("Number of entries in dir " + pathStr, size,
           nonDeleted(dirMeta.getListing()).size());
     }
@@ -708,21 +770,27 @@ public abstract class MetadataStoreTestBase extends Assert {
   /** @return only file statuses which are *not* marked deleted. */
   private Collection<PathMetadata> nonDeleted(
       Collection<PathMetadata> statuses) {
-    /* TODO: filter out paths marked for deletion. */
-    return statuses;
+    Collection<PathMetadata> currentStatuses = new ArrayList<>();
+    for (PathMetadata status : statuses) {
+      if (!status.isDeleted()) {
+        currentStatuses.add(status);
+      }
+    }
+    return currentStatuses;
   }
 
-  private void assertNotCached(String pathStr) throws IOException {
-    // TODO this should return an entry with deleted flag set
+  private void assertDeleted(String pathStr) throws IOException {
     Path path = strToPath(pathStr);
     PathMetadata meta = ms.get(path);
-    assertNull(pathStr + " should not be cached.", meta);
+    boolean cached = meta != null && !meta.isDeleted();
+    assertFalse(pathStr + " should not be cached.", cached);
   }
 
   protected void assertCached(String pathStr) throws IOException {
     Path path = strToPath(pathStr);
     PathMetadata meta = ms.get(path);
-    assertNotNull(pathStr + " should be cached.", meta);
+    boolean cached = meta != null && !meta.isDeleted();
+    assertTrue(pathStr + " should be cached.", cached);
   }
 
   /**

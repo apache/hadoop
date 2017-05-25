@@ -114,7 +114,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
         describe("Running move workload");
         NanoTimer moveTimer = new NanoTimer();
         LOG.info("Running {} moves of {} paths each", operations,
-            origPaths.size());
+            origMetas.size());
         for (int i = 0; i < operations; i++) {
           Collection<Path> toDelete;
           Collection<PathMetadata> toCreate;

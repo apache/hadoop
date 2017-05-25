@@ -39,6 +39,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
@@ -143,7 +144,8 @@ public final class S3Guard {
 
   /**
    * Convert the data of a directory listing to an array of {@link FileStatus}
-   * entries. If the listing is null an empty array is returned.
+   * entries. Tombstones are filtered out at this point. If the listing is null
+   * an empty array is returned.
    * @param dirMeta directory listing -may be null
    * @return a possibly-empty array of file status entries
    */
@@ -153,15 +155,15 @@ public final class S3Guard {
     }
 
     Collection<PathMetadata> listing = dirMeta.getListing();
-    FileStatus[] statuses = new FileStatus[listing.size()];
+    List<FileStatus> statuses = new ArrayList<>();
 
-    // HADOOP-13760: filter out deleted entries here
-    int i = 0;
     for (PathMetadata pm : listing) {
-      statuses[i++] = pm.getFileStatus();
+      if (!pm.isDeleted()) {
+        statuses.add(pm.getFileStatus());
+      }
     }
 
-    return statuses;
+    return statuses.toArray(new FileStatus[0]);
   }
 
   /**
@@ -196,6 +198,8 @@ public final class S3Guard {
           false);
     }
 
+    Set<Path> deleted = dirMeta.listTombstones();
+
     // Since we treat the MetadataStore as a "fresher" or "consistent" view
     // of metadata, we always use its metadata first.
 
@@ -203,10 +207,11 @@ public final class S3Guard {
     // we will basically start with the set of directory entries in the
     // DirListingMetadata, and add any that only exist in the backingStatuses.
 
-    // HADOOP-13760: filter out deleted files via PathMetadata#isDeleted() here
-
     boolean changed = false;
     for (FileStatus s : backingStatuses) {
+      if (deleted.contains(s.getPath())) {
+        continue;
+      }
 
       // Minor race condition here.  Multiple threads could add to this
       // mutable DirListingMetadata.  Since it is backed by a
@@ -245,7 +250,7 @@ public final class S3Guard {
    *              list will contain [/a/b/c/d, /a/b/c, /a/b].   /a/b/c/d is
    *              an empty, dir, and the other dirs only contain their child
    *              dir.
-   * @param owner Hadoop user name
+   * @param owner Hadoop user name.
    */
   public static void makeDirsOrdered(MetadataStore ms, List<Path> dirs,
       String owner) {
@@ -280,7 +285,8 @@ public final class S3Guard {
         children = new ArrayList<>(1);
         children.add(new PathMetadata(prevStatus));
       }
-      DirListingMetadata dirMeta = new DirListingMetadata(f, children, true);
+      DirListingMetadata dirMeta =
+          new DirListingMetadata(f, children, true);
       try {
         ms.put(dirMeta);
         ms.put(new PathMetadata(status));

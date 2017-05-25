@@ -56,8 +56,185 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     return new S3AContract(conf);
   }
 
+  /**
+   * Helper function for other test cases: does a single rename operation and
+   * validates the aftermath.
+   * @param mkdirs Directories to create
+   * @param srcdirs Source paths for rename operation
+   * @param dstdirs Destination paths for rename operation
+   * @param yesdirs Files that must exist post-rename (e.g. srcdirs children)
+   * @param nodirs Files that must not exist post-rename (e.g. dstdirs children)
+   * @throws Exception
+   */
+  private void doTestRenameSequence(Path[] mkdirs, Path[] srcdirs,
+      Path[] dstdirs, Path[] yesdirs, Path[] nodirs) throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.hasMetadataStore());
+
+    if (mkdirs != null) {
+      for (Path mkdir : mkdirs) {
+        assertTrue(fs.mkdirs(mkdir));
+      }
+      Thread.sleep(InconsistentAmazonS3Client.DELAY_KEY_MILLIS);
+    }
+
+    assertTrue("srcdirs and dstdirs must have equal length",
+        srcdirs.length == dstdirs.length);
+    for (int i = 0; i < srcdirs.length; i++) {
+      assertTrue("Rename returned false: " + srcdirs[i] + " -> " + dstdirs[i],
+          fs.rename(srcdirs[i], dstdirs[i]));
+    }
+
+    for (Path yesdir : yesdirs) {
+      assertTrue("Path was supposed to exist: " + yesdir, fs.exists(yesdir));
+    }
+    for (Path nodir : nodirs) {
+      assertFalse("Path is not supposed to exist: " + nodir, fs.exists(nodir));
+    }
+  }
+
+  /**
+   * Tests that after renaming a directory, the original directory and its
+   * contents are indeed missing and the corresponding new paths are visible.
+   * @throws Exception
+   */
   @Test
-  public void testConsistentListStatus() throws Exception {
+  public void testConsistentListAfterRename() throws Exception {
+    Path[] mkdirs = {
+      path("d1/f"),
+      path("d1/f" + InconsistentAmazonS3Client.DELAY_KEY_SUBSTRING)
+    };
+    Path[] srcdirs = {path("d1")};
+    Path[] dstdirs = {path("d2")};
+    Path[] yesdirs = {path("d2"), path("d2/f"),
+        path("d2/f" + InconsistentAmazonS3Client.DELAY_KEY_SUBSTRING)};
+    Path[] nodirs = {path("d1"), path("d1/f"),
+        path("d1/f" + InconsistentAmazonS3Client.DELAY_KEY_SUBSTRING)};
+    doTestRenameSequence(mkdirs, srcdirs, dstdirs, yesdirs, nodirs);
+    getFileSystem().delete(path("d1"), true);
+    getFileSystem().delete(path("d2"), true);
+  }
+
+  /**
+   * Tests a circular sequence of renames to verify that overwriting recently
+   * deleted files and reading recently created files from rename operations
+   * works as expected.
+   * @throws Exception
+   */
+  @Test
+  public void testRollingRenames() throws Exception {
+    Path[] dir0 = {path("rolling/1")};
+    Path[] dir1 = {path("rolling/2")};
+    Path[] dir2 = {path("rolling/3")};
+    // These sets have to be in reverse order compared to the movement
+    Path[] setA = {dir1[0], dir0[0]};
+    Path[] setB = {dir2[0], dir1[0]};
+    Path[] setC = {dir0[0], dir2[0]};
+
+    for(int i = 0; i < 2; i++) {
+      Path[] firstSet = i == 0 ? setA : null;
+      doTestRenameSequence(firstSet, setA, setB, setB, dir0);
+      doTestRenameSequence(null, setB, setC, setC, dir1);
+      doTestRenameSequence(null, setC, setA, setA, dir2);
+    }
+
+    S3AFileSystem fs = getFileSystem();
+    assertFalse("Renaming deleted file should have failed",
+        fs.rename(dir2[0], dir1[0]));
+    assertTrue("Renaming over existing file should have succeeded",
+        fs.rename(dir1[0], dir0[0]));
+  }
+
+  /**
+   * Tests that deleted files immediately stop manifesting in list operations
+   * even when the effect in S3 is delayed.
+   * @throws Exception
+   */
+  @Test
+  public void testConsistentListAfterDelete() throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    // test will fail if NullMetadataStore (the default) is configured: skip it.
+    Assume.assumeTrue(fs.hasMetadataStore());
+
+    // Any S3 keys that contain DELAY_KEY_SUBSTRING will be delayed
+    // in listObjects() results via InconsistentS3Client
+    Path inconsistentPath =
+        path("a/b/dir3-" + InconsistentAmazonS3Client.DELAY_KEY_SUBSTRING);
+
+    Path[] testDirs = {path("a/b/dir1"),
+        path("a/b/dir2"),
+        inconsistentPath};
+
+    for (Path path : testDirs) {
+      assertTrue(fs.mkdirs(path));
+    }
+    Thread.sleep(2 * InconsistentAmazonS3Client.DELAY_KEY_MILLIS);
+    for (Path path : testDirs) {
+      assertTrue(fs.delete(path, false));
+    }
+
+    FileStatus[] paths = fs.listStatus(path("a/b/"));
+    List<Path> list = new ArrayList<>();
+    for (FileStatus fileState : paths) {
+      list.add(fileState.getPath());
+    }
+    assertFalse(list.contains(path("a/b/dir1")));
+    assertFalse(list.contains(path("a/b/dir2")));
+    // This should fail without S3Guard, and succeed with it.
+    assertFalse(list.contains(inconsistentPath));
+  }
+
+  /**
+   * Tests that rename immediately after files in the source directory are
+   * deleted results in exactly the correct set of destination files and none
+   * of the source files.
+   * @throws Exception
+   */
+  @Test
+  public void testConsistentRenameAfterDelete() throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    // test will fail if NullMetadataStore (the default) is configured: skip it.
+    Assume.assumeTrue(fs.hasMetadataStore());
+
+    // Any S3 keys that contain DELAY_KEY_SUBSTRING will be delayed
+    // in listObjects() results via InconsistentS3Client
+    Path inconsistentPath =
+        path("a/b/dir3-" + InconsistentAmazonS3Client.DELAY_KEY_SUBSTRING);
+
+    Path[] testDirs = {path("a/b/dir1"),
+        path("a/b/dir2"),
+        inconsistentPath};
+
+    for (Path path : testDirs) {
+      assertTrue(fs.mkdirs(path));
+    }
+    Thread.sleep(2 * InconsistentAmazonS3Client.DELAY_KEY_MILLIS);
+    assertTrue(fs.delete(testDirs[1], false));
+    assertTrue(fs.delete(testDirs[2], false));
+
+    fs.rename(path("a"), path("a3"));
+    FileStatus[] paths = fs.listStatus(path("a3/b"));
+    List<Path> list = new ArrayList<>();
+    for (FileStatus fileState : paths) {
+      list.add(fileState.getPath());
+    }
+    assertTrue(list.contains(path("a3/b/dir1")));
+    assertFalse(list.contains(path("a3/b/dir2")));
+    // This should fail without S3Guard, and succeed with it.
+    assertFalse(list.contains(
+        path("a3/b/dir3-" + InconsistentAmazonS3Client.DELAY_KEY_SUBSTRING)));
+
+    try {
+      RemoteIterator<LocatedFileStatus> old = fs.listFilesAndEmptyDirectories(
+          path("a"), true);
+      fail("Recently renamed dir should not be visible");
+    } catch(FileNotFoundException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testConsistentListStatusAfterPut() throws Exception {
 
     S3AFileSystem fs = getFileSystem();
 
@@ -90,23 +267,25 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
   }
 
   /**
-   * Similar to {@link #testConsistentListStatus()}, this tests that the FS
-   * listLocatedStatus() call will return consistent list.
+   * Similar to {@link #testConsistentListStatusAfterPut()}, this tests that the
+   * FS listLocatedStatus() call will return consistent list.
    */
   @Test
-  public void testConsistentListLocatedStatus() throws Exception {
+  public void testConsistentListLocatedStatusAfterPut() throws Exception {
     final S3AFileSystem fs = getFileSystem();
     // This test will fail if NullMetadataStore (the default) is configured:
     // skip it.
     Assume.assumeTrue(fs.hasMetadataStore());
-    fs.mkdirs(path("doTestConsistentListLocatedStatus"));
+    String rootDir = "doTestConsistentListLocatedStatusAfterPut";
+    fs.mkdirs(path(rootDir));
 
     final int[] numOfPaths = {0, 1, 10};
     for (int normalPathNum : numOfPaths) {
       for (int delayedPathNum : numOfPaths) {
         LOG.info("Testing with normalPathNum={}, delayedPathNum={}",
             normalPathNum, delayedPathNum);
-        doTestConsistentListLocatedStatus(fs, normalPathNum, delayedPathNum);
+        doTestConsistentListLocatedStatusAfterPut(fs, rootDir, normalPathNum,
+            delayedPathNum);
       }
     }
   }
@@ -118,18 +297,18 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
    * @param delayedPathNum number paths listed with delaying
    * @throws Exception
    */
-  private void doTestConsistentListLocatedStatus(S3AFileSystem fs,
-      int normalPathNum, int delayedPathNum) throws Exception {
+  private void doTestConsistentListLocatedStatusAfterPut(S3AFileSystem fs,
+      String rootDir, int normalPathNum, int delayedPathNum) throws Exception {
     final List<Path> testDirs = new ArrayList<>(normalPathNum + delayedPathNum);
     int index = 0;
     for (; index < normalPathNum; index++) {
-      testDirs.add(path("doTestConsistentListLocatedStatus/dir-" + index));
+      testDirs.add(path(rootDir + "/dir-" +
+          index));
     }
     for (; index < normalPathNum + delayedPathNum; index++) {
       // Any S3 keys that contain DELAY_KEY_SUBSTRING will be delayed
       // in listObjects() results via InconsistentS3Client
-      testDirs.add(path("doTestConsistentListLocatedStatus/dir-" + index
-          + DELAY_KEY_SUBSTRING));
+      testDirs.add(path(rootDir + "/dir-" + index + DELAY_KEY_SUBSTRING));
     }
 
     for (Path path : testDirs) {
@@ -141,7 +320,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
     // this should return the union data from S3 and MetadataStore
     final RemoteIterator<LocatedFileStatus> statusIterator =
-        fs.listLocatedStatus(path("doTestConsistentListLocatedStatus/"));
+        fs.listLocatedStatus(path(rootDir + "/"));
     List<Path> list = new ArrayList<>();
     for (; statusIterator.hasNext();) {
       list.add(statusIterator.next().getPath());
@@ -223,10 +402,13 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
       fileNames.add("file-" + index + "-" + DELAY_KEY_SUBSTRING);
     }
 
+    int filesAndEmptyDirectories = 0;
+
     // create files under each test directory
     for (Path dir : testDirs) {
       for (String fileName : fileNames) {
         writeTextFile(fs, new Path(dir, fileName), "I, " + fileName, false);
+        filesAndEmptyDirectories++;
       }
     }
 
@@ -251,7 +433,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
       verifyFileIsListed(listedFiles, baseTestDir, fileNames);
     } else {
       assertEquals("Unexpected number of files returned by listFiles() call",
-          testDirs.size() * (normalFileNum + delayedFileNum),
+          filesAndEmptyDirectories,
           listedFiles.size());
       for (Path dir : testDirs) {
         verifyFileIsListed(listedFiles, dir, fileNames);
@@ -363,6 +545,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     assertEquals("Unexpected number of results from metadata store. "
             + "Should have /OnS3 and /OnS3AndMS: " + mdResults,
         2, mdResults.numEntries());
+
+    // If we don't clean this up, the next test run will fail because it will
+    // have recorded /OnS3 being deleted even after it's written to noS3Guard.
+    getFileSystem().getMetadataStore().forgetMetadata(
+        new Path(directory, "OnS3"));
   }
 
 }
