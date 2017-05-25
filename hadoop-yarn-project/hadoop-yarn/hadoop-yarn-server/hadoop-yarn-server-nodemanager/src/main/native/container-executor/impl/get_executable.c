@@ -142,7 +142,7 @@ char* get_executable(char *argv0) {
   return __get_exec_sysctl(mib);
 }
 
-#elif defined(__linux)
+#elif defined(__linux__)
 
 
 char* get_executable(char *argv0) {
