@@ -48,8 +48,6 @@ import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.Slider;
 import org.apache.slider.api.RoleKeys;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Component;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.SliderXmlConfKeys;
@@ -2539,15 +2537,5 @@ public final class SliderUtils {
     // calculate total time, schedule the reset if expected
     long totalMinutes = days * 24 * 60 + hours * 24 + minutes;
     return totalMinutes * 60 + seconds;
-  }
-
-  public static void resolve(Application application) {
-    org.apache.slider.api.resource.Configuration global = application
-        .getConfiguration();
-    for (Component component : application.getComponents()) {
-      mergeMapsIgnoreDuplicateKeys(component.getConfiguration().getProperties(),
-          global.getProperties());
-    }
-    // TODO merge other information to components
   }
 }

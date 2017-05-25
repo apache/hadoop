@@ -245,4 +245,65 @@ public class SliderYarnClientImpl extends YarnClientImpl {
     }
     return results;
   }
+
+  /**
+   * Monitor the submitted application for reaching the requested state.
+   * Will also report if the app reaches a later state (failed, killed, etc)
+   * Kill application if duration!= null & time expires.
+   * @param appId Application Id of application to be monitored
+   * @param duration how long to wait -must be more than 0
+   * @param desiredState desired state.
+   * @return the application report -null on a timeout
+   * @throws YarnException
+   * @throws IOException
+   */
+  public ApplicationReport monitorAppToState(
+      ApplicationId appId, YarnApplicationState desiredState, Duration duration)
+      throws YarnException, IOException {
+
+    if (appId == null) {
+      throw new BadCommandArgumentsException("null application ID");
+    }
+    if (duration.limit <= 0) {
+      throw new BadCommandArgumentsException("Invalid monitoring duration");
+    }
+    log.debug("Waiting {} millis for app to reach state {} ",
+        duration.limit,
+        desiredState);
+    duration.start();
+    try {
+      while (true) {
+        // Get application report for the appId we are interested in
+
+        ApplicationReport r = getApplicationReport(appId);
+
+        log.debug("queried status is\n{}",
+            new SliderUtils.OnDemandReportStringifier(r));
+
+        YarnApplicationState state = r.getYarnApplicationState();
+        if (state.ordinal() >= desiredState.ordinal()) {
+          log.debug("App in desired state (or higher) :{}", state);
+          return r;
+        }
+        if (duration.getLimitExceeded()) {
+          log.debug(
+              "Wait limit of {} millis to get to state {}, exceeded; app " +
+                  "status\n {}",
+              duration.limit,
+              desiredState,
+              new SliderUtils.OnDemandReportStringifier(r));
+          return null;
+        }
+
+        // sleep 1s.
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ignored) {
+          log.debug("Thread sleep in monitoring loop interrupted");
+        }
+      }
+    } finally {
+      duration.close();
+    }
+  }
 }

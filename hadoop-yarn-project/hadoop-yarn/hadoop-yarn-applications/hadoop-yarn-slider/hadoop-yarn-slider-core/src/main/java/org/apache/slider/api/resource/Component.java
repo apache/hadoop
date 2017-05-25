@@ -50,9 +50,9 @@ public class Component implements Serializable {
   private String name = null;
   private List<String> dependencies = new ArrayList<String>();
   private ReadinessCheck readinessCheck = null;
-  private Artifact artifact = new Artifact();
+  private Artifact artifact = null;
   private String launchCommand = null;
-  private Resource resource = new Resource();
+  private Resource resource = null;
   private Long numberOfContainers = null;
   private Boolean uniqueComponentSupport = false;
   private Boolean runPrivilegedContainer = false;
@@ -405,5 +405,42 @@ public class Component implements Serializable {
       return "null";
     }
     return o.toString().replace("\n", "\n    ");
+  }
+
+  /**
+   * Merge from another component into this component without overwriting.
+   */
+  public void mergeFrom(Component that) {
+    if (this.getArtifact() == null) {
+      this.setArtifact(that.getArtifact());
+    }
+    if (this.getResource() == null) {
+      this.setResource(that.getResource());
+    }
+    if (this.getNumberOfContainers() == null) {
+      this.setNumberOfContainers(that.getNumberOfContainers());
+    }
+    if (this.getLaunchCommand() == null) {
+      this.setLaunchCommand(that.getLaunchCommand());
+    }
+    this.getConfiguration().mergeFrom(that.getConfiguration());
+    if (this.getQuicklinks() == null) {
+      this.setQuicklinks(that.getQuicklinks());
+    }
+    if (this.getRunPrivilegedContainer() == null) {
+      this.setRunPrivilegedContainer(that.getRunPrivilegedContainer());
+    }
+    if (this.getUniqueComponentSupport() == null) {
+      this.setUniqueComponentSupport(that.getUniqueComponentSupport());
+    }
+    if (this.getDependencies() == null) {
+      this.setDependencies(that.getDependencies());
+    }
+    if (this.getPlacementPolicy() == null) {
+      this.setPlacementPolicy(that.getPlacementPolicy());
+    }
+    if (this.getReadinessCheck() == null) {
+      this.setReadinessCheck(that.getReadinessCheck());
+    }
   }
 }

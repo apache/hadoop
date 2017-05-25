@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import org.apache.commons.lang.StringUtils;
+import org.apache.slider.common.tools.SliderUtils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -197,8 +198,10 @@ public class Configuration implements Serializable {
    * this ConfigFile.
    */
   public synchronized void mergeFrom(Configuration that) {
-    this.properties.putAll(that.getProperties());
-    this.env.putAll(that.getEnv());
+    SliderUtils.mergeMapsIgnoreDuplicateKeys(this.properties, that
+        .getProperties());
+    SliderUtils.mergeMapsIgnoreDuplicateKeys(this.env, that.getEnv());
+
     Map<String, ConfigFile> thatMap = new HashMap<>();
     for (ConfigFile file : that.getFiles()) {
       thatMap.put(file.getDestFile(), file.copy());
@@ -206,7 +209,8 @@ public class Configuration implements Serializable {
     for (ConfigFile thisFile : files) {
       if(thatMap.containsKey(thisFile.getDestFile())) {
         ConfigFile thatFile = thatMap.get(thisFile.getDestFile());
-        thisFile.getProps().putAll(thatFile.getProps());
+        SliderUtils.mergeMapsIgnoreDuplicateKeys(thisFile.getProps(),
+            thatFile.getProps());
         thatMap.remove(thisFile.getDestFile());
       }
     }

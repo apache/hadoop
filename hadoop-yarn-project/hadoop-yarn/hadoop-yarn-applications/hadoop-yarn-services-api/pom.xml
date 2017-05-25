@@ -28,11 +28,6 @@
   <packaging>jar</packaging>
   <description>Hadoop YARN REST APIs for services</description>
 
-  <properties>
-    <test.failIfNoTests>false</test.failIfNoTests>
-    <powermock.version>1.6.5</powermock.version>
-  </properties>
-
   <build>
 
     <!-- resources are filtered for dynamic updates. This gets build info in-->
@@ -81,30 +76,10 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven-surefire-plugin.version}</version>
         <configuration>
-          <reuseForks>${test.reuseForks}</reuseForks>
-          <forkMode>${test.forkMode}</forkMode>
-          <forkCount>1</forkCount>
-          <forkedProcessTimeoutInSeconds>${test.forkedProcessTimeoutInSeconds}
-          </forkedProcessTimeoutInSeconds>
-          <threadCount>1</threadCount>
-          <argLine>${test.argLine}</argLine>
-          <failIfNoTests>${test.failIfNoTests}</failIfNoTests>
-          <redirectTestOutputToFile>${build.redirect.test.output.to.file}</redirectTestOutputToFile>
           <environmentVariables>
-            <PATH>${test.env.path}</PATH>
+            <JAVA_HOME>${java.home}</JAVA_HOME>
           </environmentVariables>
-          <systemPropertyVariables>
-            <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
-            <java.awt.headless>true</java.awt.headless>
-          </systemPropertyVariables>
-          <includes>
-            <include>**/Test*.java</include>
-          </includes>
-          <excludes>
-            <exclude>**/Test*$*.java</exclude>
-          </excludes>
         </configuration>
       </plugin>
 
@@ -118,13 +93,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-slider-core</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -146,29 +114,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.jaxrs</groupId>
       <artifactId>jackson-jaxrs-json-provider</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-module-junit4</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-api-easymock</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.easymock</groupId>
-          <artifactId>easymock</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 

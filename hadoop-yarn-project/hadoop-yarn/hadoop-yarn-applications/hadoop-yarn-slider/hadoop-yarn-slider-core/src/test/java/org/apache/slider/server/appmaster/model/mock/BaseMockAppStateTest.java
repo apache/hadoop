@@ -51,6 +51,7 @@ import org.apache.slider.server.appmaster.state.ProviderAppState;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
+import org.apache.slider.util.ServiceApiUtil;
 import org.apache.slider.utils.SliderTestBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map.Entry;
 
 /**
@@ -118,7 +120,7 @@ public abstract class BaseMockAppStateTest extends SliderTestBase implements
     historyPath = new Path(historyWorkDir.toURI());
     fs.delete(historyPath, true);
     appState = new MockAppState(buildBindingInfo());
-    stateAccess = new ProviderAppState(getTestName(), appState);
+    stateAccess = new ProviderAppState(getValidTestName(), appState);
   }
 
   /**
@@ -127,9 +129,11 @@ public abstract class BaseMockAppStateTest extends SliderTestBase implements
    * from {@link #buildApplication()} ()}
    * @return
    */
-  protected AppStateBindingInfo buildBindingInfo() {
+  protected AppStateBindingInfo buildBindingInfo() throws IOException {
     AppStateBindingInfo binding = new AppStateBindingInfo();
     binding.application = buildApplication();
+    ServiceApiUtil.validateAndResolveApplication(binding.application,
+        sliderFileSystem);
     //binding.roles = new ArrayList<>(factory.ROLES);
     binding.fs = fs;
     binding.historyPath = historyPath;
@@ -142,7 +146,7 @@ public abstract class BaseMockAppStateTest extends SliderTestBase implements
    * @return the instance definition
    */
   public Application buildApplication() {
-    return factory.newApplication(0, 0, 0).name(getTestName());
+    return factory.newApplication(0, 0, 0).name(getValidTestName());
   }
 
   /**
@@ -151,6 +155,10 @@ public abstract class BaseMockAppStateTest extends SliderTestBase implements
    */
   public String getTestName() {
     return methodName.getMethodName();
+  }
+
+  public String getValidTestName() {
+    return getTestName().toLowerCase(Locale.ENGLISH);
   }
 
   public RoleStatus getRole0Status() {
