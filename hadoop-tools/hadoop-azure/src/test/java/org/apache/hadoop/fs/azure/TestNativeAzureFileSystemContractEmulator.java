@@ -18,33 +18,31 @@
 
 package org.apache.hadoop.fs.azure;
 
+import static org.junit.Assume.assumeNotNull;
+
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.junit.After;
+import org.junit.Before;
 
 public class TestNativeAzureFileSystemContractEmulator extends
     FileSystemContractBaseTest {
   private AzureBlobStorageTestAccount testAccount;
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     testAccount = AzureBlobStorageTestAccount.createForEmulator();
     if (testAccount != null) {
       fs = testAccount.getFileSystem();
     }
+    assumeNotNull(fs);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (testAccount != null) {
       testAccount.cleanup();
       testAccount = null;
       fs = null;
-    }
-  }
-
-  @Override
-  protected void runTest() throws Throwable {
-    if (testAccount != null) {
-      super.runTest();
     }
   }
 }
