@@ -69,11 +69,24 @@ public class BlockUnderConstructionFeature {
 
   /** Set expected locations */
   public void setExpectedLocations(Block block, DatanodeStorageInfo[] targets) {
-    int numLocations = targets == null ? 0 : targets.length;
+    if (targets == null) {
+      return;
+    }
+    int numLocations = 0;
+    for (DatanodeStorageInfo target : targets) {
+      if (target != null) {
+        numLocations++;
+      }
+    }
+
     this.replicas = new ReplicaUnderConstruction[numLocations];
-    for(int i = 0; i < numLocations; i++) {
-      replicas[i] = new ReplicaUnderConstruction(block, targets[i],
-          ReplicaState.RBW);
+    int offset = 0;
+    for(int i = 0; i < targets.length; i++) {
+      // Only store non-null DatanodeStorageInfo.
+      if (targets[i] != null) {
+        replicas[i] = new ReplicaUnderConstruction(block,
+            targets[i], ReplicaState.RBW);
+      }
     }
   }
 
@@ -142,10 +155,17 @@ public class BlockUnderConstructionFeature {
    * Initialize lease recovery for this block.
    * Find the first alive data-node starting from the previous primary and
    * make it primary.
+   * @param blockInfo Block to be recovered
+   * @param recoveryId Recovery ID (new gen stamp)
+   * @param startRecovery Issue recovery command to datanode if true.
    */
-  public void initializeBlockRecovery(BlockInfo blockInfo, long recoveryId) {
+  public void initializeBlockRecovery(BlockInfo blockInfo, long recoveryId,
+      boolean startRecovery) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
+    if (!startRecovery) {
+      return;
+    }
     if (replicas.length == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*" +
           " BlockUnderConstructionFeature.initializeBlockRecovery:" +
