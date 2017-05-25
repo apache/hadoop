@@ -4962,8 +4962,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     // Update old block with the new generation stamp and new length
-    lastBlock.setNumBytes(newBlock.getNumBytes());
-    lastBlock.setGenerationStampAndVerifyReplicas(newBlock.getGenerationStamp());
+    blockManager.updateLastBlock(lastBlock, newBlock);
 
     // find the DatanodeDescriptor objects
     final DatanodeStorageInfo[] storages = blockManager.getDatanodeManager()
