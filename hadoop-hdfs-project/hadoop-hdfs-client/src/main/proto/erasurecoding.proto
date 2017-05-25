@@ -38,6 +38,13 @@ message GetErasureCodingPoliciesResponseProto {
   repeated ErasureCodingPolicyProto ecPolicies = 1;
 }
 
+message GetErasureCodingCodecsRequestProto { // void request
+}
+
+message GetErasureCodingCodecsResponseProto {
+  repeated CodecProto codec = 1;
+}
+
 message GetErasureCodingPolicyRequestProto {
   required string src = 1; // path to get the policy info
 }
@@ -51,7 +58,7 @@ message AddErasureCodingPoliciesRequestProto {
 }
 
 message AddErasureCodingPoliciesResponseProto {
-  repeated AddingECPolicyResponseProto responses = 1;
+  repeated AddECPolicyResponseProto responses = 1;
 }
 
 message UnsetErasureCodingPolicyRequestProto {
@@ -72,4 +79,12 @@ message BlockECReconstructionInfoProto {
   required StorageTypesProto targetStorageTypes = 5;
   required bytes liveBlockIndices = 6;
   required ErasureCodingPolicyProto ecPolicy = 7;
+}
+
+/**
+ * Codec and it's corresponding coders
+ */
+message CodecProto {
+  required string codec  = 1;
+  required string coders = 2;
 }

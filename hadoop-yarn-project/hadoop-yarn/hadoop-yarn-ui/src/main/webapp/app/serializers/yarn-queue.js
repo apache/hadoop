@@ -116,30 +116,14 @@ export default DS.JSONAPISerializer.extend({
       };
     },
 
-    normalizeArrayResponse(store, primaryModelClass, payload, id,
-      requestType) {
+    normalizeArrayResponse(store, primaryModelClass, payload, id, requestType) {
       var normalizedArrayResponse = {};
-      var result = this.handleQueue(store,
-        primaryModelClass,
+      var result = this.handleQueue(store, primaryModelClass,
         payload.scheduler.schedulerInfo, "root", requestType);
 
       normalizedArrayResponse.data = result.data;
       normalizedArrayResponse.included = result.includedData;
 
-      console.log(normalizedArrayResponse);
-
       return normalizedArrayResponse;
-
-      /*
-      // return expected is { data: [ {}, {} ] }
-      var normalizedArrayResponse = {};
-
-      // payload has apps : { app: [ {},{},{} ]  }
-      // need some error handling for ex apps or app may not be defined.
-      normalizedArrayResponse.data = payload.apps.app.map(singleApp => { 
-        return this.normalizeSingleResponse(store, primaryModelClass, singleApp, singleApp.id, requestType);
-      }, this);
-      return normalizedArrayResponse;
-      */
     }
 });

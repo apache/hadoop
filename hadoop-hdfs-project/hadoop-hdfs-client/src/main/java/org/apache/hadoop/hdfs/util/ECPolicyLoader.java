@@ -316,7 +316,7 @@ public class ECPolicyLoader {
     }
 
     if (schema != null && cellSize > 0) {
-      return new ErasureCodingPolicy(schema, cellSize, (byte) -1);
+      return new ErasureCodingPolicy(schema, cellSize);
     } else {
       throw new RuntimeException("Bad policy is found in"
           + " EC policy configuration file");

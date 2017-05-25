@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 
 
 interface IntraQueuePreemptionComputePlugin {
@@ -32,8 +34,14 @@ interface IntraQueuePreemptionComputePlugin {
       String partition);
 
   void computeAppsIdealAllocation(Resource clusterResource,
-      Resource partitionBasedResource, TempQueuePerPartition tq,
+      TempQueuePerPartition tq,
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource totalPreemptedResourceAllowed, Resource queueTotalUnassigned,
       float maxAllowablePreemptLimit);
+
+  Collection<FiCaSchedulerApp> getPreemptableApps(String queueName,
+      String partition);
+
+  boolean skipContainerBasedOnIntraQueuePolicy(FiCaSchedulerApp app,
+      Resource clusterResource, Resource usedResource, RMContainer c);
 }

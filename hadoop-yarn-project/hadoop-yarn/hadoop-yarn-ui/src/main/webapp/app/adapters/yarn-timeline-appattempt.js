@@ -15,18 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
-/**
- * This tests read operation of DFS striped file with XOR-2-1-64k erasure code
- * policy.
- */
-public class TestDFSXORStripedInputStream extends TestDFSStripedInputStream{
+import AbstractAdapter from './abstract';
+import Converter from 'yarn-ui/utils/converter';
 
-  public ErasureCodingPolicy getEcPolicy() {
-    return SystemErasureCodingPolicies.getByID(
-        SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
+export default AbstractAdapter.extend({
+  address: "timelineWebAddress",
+  restNameSpace: "timelineV2",
+  serverName: "ATS",
+
+  urlForQuery(query/*, modelName*/) {
+    var url = this._buildURL();
+    var appId = query.appId;
+    query.fields = 'ALL';
+    delete query.appId;
+    return url + '/apps/' + appId + "/entities/YARN_APPLICATION_ATTEMPT";
+  },
+
+  urlForFindRecord(id/*, modelName, snapshot*/) {
+    var url = this._buildURL();
+    return url + '/apps/' + Converter.attemptIdToAppId(id) +
+      "/entities/YARN_APPLICATION_ATTEMPT/" + id + "?fields=ALL";
   }
-}
+
+});

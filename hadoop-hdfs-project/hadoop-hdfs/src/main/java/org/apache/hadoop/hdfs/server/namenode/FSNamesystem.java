@@ -88,6 +88,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
+
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -175,7 +176,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.UnknownCryptoProtocolVersionException;
-import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
@@ -6847,21 +6848,33 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param policies The policies to add.
    * @return The according result of add operation.
    */
-  AddingECPolicyResponse[] addECPolicies(ErasureCodingPolicy[] policies)
+  AddECPolicyResponse[] addECPolicies(ErasureCodingPolicy[] policies)
       throws IOException {
+    final String operationName = "addECPolicies";
     checkOperation(OperationCategory.WRITE);
-    List<AddingECPolicyResponse> responses = new ArrayList<>();
+    List<AddECPolicyResponse> responses = new ArrayList<>();
+    boolean success = false;
     writeLock();
-    for (ErasureCodingPolicy policy : policies) {
-      try {
-        FSDirErasureCodingOp.addErasureCodePolicy(this, policy);
-        responses.add(new AddingECPolicyResponse(policy));
-      } catch (IllegalECPolicyException e) {
-        responses.add(new AddingECPolicyResponse(policy, e));
+    try {
+      checkOperation(OperationCategory.WRITE);
+      for (ErasureCodingPolicy policy : policies) {
+        try {
+          ErasureCodingPolicy newPolicy =
+              FSDirErasureCodingOp.addErasureCodePolicy(this, policy);
+          responses.add(new AddECPolicyResponse(newPolicy));
+        } catch (IllegalECPolicyException e) {
+          responses.add(new AddECPolicyResponse(policy, e));
+        }
       }
+      success = true;
+      return responses.toArray(new AddECPolicyResponse[0]);
+    } finally {
+      writeUnlock(operationName);
+      if (success) {
+        getEditLog().logSync();
+      }
+      logAuditEvent(success, operationName, null, null, null);
     }
-    writeUnlock("addECPolicies");
-    return responses.toArray(new AddingECPolicyResponse[0]);
   }
 
   /**
@@ -6927,6 +6940,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return FSDirErasureCodingOp.getErasureCodingPolicies(this);
     } finally {
       readUnlock("getErasureCodingPolicies");
+    }
+  }
+
+  /**
+   * Get available erasure coding codecs and corresponding coders.
+   */
+  HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      return FSDirErasureCodingOp.getErasureCodingCodecs(this);
+    } finally {
+      readUnlock("getErasureCodingCodecs");
     }
   }
 

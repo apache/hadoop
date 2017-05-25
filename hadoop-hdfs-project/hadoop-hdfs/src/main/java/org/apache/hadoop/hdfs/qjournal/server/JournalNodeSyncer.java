@@ -296,7 +296,7 @@ public class JournalNodeSyncer {
           }
 
           String urlPath = GetJournalEditServlet.buildPath(jid, missingLog
-              .getStartTxId(), nsInfo);
+              .getStartTxId(), nsInfo, false);
           url = new URL(remoteJNproxy.httpServerUrl, urlPath);
           success = downloadMissingLogSegment(url, missingLog);
         } catch (MalformedURLException e) {

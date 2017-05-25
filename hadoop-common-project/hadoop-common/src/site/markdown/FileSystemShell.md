@@ -224,7 +224,7 @@ Example:
 du
 ----
 
-Usage: `hadoop fs -du [-s] [-h] [-x] URI [URI ...]`
+Usage: `hadoop fs -du [-s] [-h] [-v] [-x] URI [URI ...]`
 
 Displays sizes of files and directories contained in the given directory or the length of a file in case its just a file.
 

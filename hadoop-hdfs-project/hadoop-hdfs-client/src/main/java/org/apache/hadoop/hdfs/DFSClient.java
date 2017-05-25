@@ -101,7 +101,7 @@ import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -2763,7 +2763,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public AddingECPolicyResponse[] addErasureCodingPolicies(
+  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("getErasureCodingCodecs")) {
+      return namenode.getErasureCodingCodecs();
+    }
+  }
+
+  public AddECPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
     checkOpen();
     return namenode.addErasureCodingPolicies(policies);

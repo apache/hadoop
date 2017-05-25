@@ -37,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -83,7 +84,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.protocol.AddingECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -2241,6 +2242,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    checkNNStartup();
+    return namesystem.getErasureCodingCodecs();
+  }
+
+  @Override // ClientProtocol
   public ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException {
     checkNNStartup();
     return namesystem.getErasureCodingPolicy(src);
@@ -2263,9 +2270,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public AddingECPolicyResponse[] addErasureCodingPolicies(
+  public AddECPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
     checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
     return namesystem.addECPolicies(policies);
   }
 

@@ -126,7 +126,9 @@ public abstract class AbstractContainerAllocator {
         LOG.info("assignedContainer" + " application attempt=" + application
             .getApplicationAttemptId() + " container=" + updatedContainer
             .getContainerId() + " queue=" + this + " clusterResource="
-            + clusterResource + " type=" + assignment.getType());
+            + clusterResource + " type=" + assignment.getType()
+            + " requestedPartition="
+            + updatedContainer.getNodeLabelExpression());
 
         assignment.getAssignmentInformation().addAllocationDetails(
             updatedContainer, application.getCSLeafQueue().getQueuePath());

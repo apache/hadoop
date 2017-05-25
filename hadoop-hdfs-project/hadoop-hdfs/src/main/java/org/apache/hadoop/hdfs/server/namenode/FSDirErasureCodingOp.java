@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.erasurecode.CodecRegistry;
 import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_ERASURECODING_POLICY;
@@ -210,10 +212,10 @@ final class FSDirErasureCodingOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static void addErasureCodePolicy(final FSNamesystem fsn,
+  static ErasureCodingPolicy addErasureCodePolicy(final FSNamesystem fsn,
       ErasureCodingPolicy policy) throws IllegalECPolicyException {
     Preconditions.checkNotNull(policy);
-    fsn.getErasureCodingPolicyManager().addPolicy(policy);
+    return fsn.getErasureCodingPolicyManager().addPolicy(policy);
   }
 
   private static List<XAttr> removeErasureCodingPolicyXAttr(
@@ -309,6 +311,18 @@ final class FSDirErasureCodingOp {
       throws IOException {
     assert fsn.hasReadLock();
     return fsn.getErasureCodingPolicyManager().getEnabledPolicies();
+  }
+
+  /**
+   * Get available erasure coding codecs and coders.
+   *
+   * @param fsn namespace
+   * @return {@link java.util.HashMap} array
+   */
+  static HashMap<String, String> getErasureCodingCodecs(final FSNamesystem fsn)
+      throws IOException {
+    assert fsn.hasReadLock();
+    return CodecRegistry.getInstance().getCodec2CoderCompactMap();
   }
 
   private static ErasureCodingPolicy getErasureCodingPolicyForPath(

@@ -15,21 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import Ember from 'ember';
 
-/**
- * This tests write operation of DFS striped file with RS-10-4-64k
- *  erasure code policy under Datanode failure conditions.
- */
-public class TestDFSRSDefault10x4StripedOutputStreamWithFailure
-    extends TestDFSStripedOutputStreamWithFailure {
-
-  @Override
-  public ErasureCodingPolicy getEcPolicy() {
-    return SystemErasureCodingPolicies.getByID(
-        SystemErasureCodingPolicies.RS_10_4_POLICY_ID);
-  }
-}
+export default Ember.Controller.extend({
+  breadcrumbs: Ember.computed("model.flowUid", function() {
+    var flowUid = this.get('model.flowUid');
+    return [{
+      text: "Home",
+      routeName: 'application'
+    }, {
+      text: "Flow Activities",
+      routeName: 'yarn-flow-activity'
+    }, {
+      text: `Flow Info [${flowUid}]`,
+      routeName: 'yarn-flow.info',
+      model: flowUid
+    }];
+  })
+});

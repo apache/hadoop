@@ -15,20 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import AbstractAdapter from './abstract';
 
-/**
- * This tests write operation of DFS striped file with XOR-2-1-64k erasure code
- * policy.
- */
-public class TestDFSXORStripedOutputStream extends TestDFSStripedOutputStream{
+export default AbstractAdapter.extend({
+  address: "timelineWebAddress",
+  restNameSpace: "timelineV2",
+  serverName: "ATS",
 
-  @Override
-  public ErasureCodingPolicy getEcPolicy() {
-    return SystemErasureCodingPolicies.getByID(
-        SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
+  urlForQuery(query/*, modelName*/){
+    var url = this._buildURL();
+    var flowrunUid = query['flowrunUid'];
+    delete query.flowrunUid;
+    url = url + '/run-uid/' + flowrunUid + '/apps?fields=ALL';
+    return url;
   }
-}
+});

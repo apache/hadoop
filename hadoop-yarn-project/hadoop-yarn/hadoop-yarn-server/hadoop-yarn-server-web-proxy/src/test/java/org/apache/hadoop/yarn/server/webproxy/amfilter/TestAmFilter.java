@@ -176,6 +176,14 @@ public class TestAmFilter {
     redirect = response.getHeader(ProxyUtils.LOCATION);
     assertEquals("http://bogus/proxy/redirect/application_00_0", redirect);
 
+    // check for query parameters
+    Mockito.when(request.getRequestURI()).thenReturn("/proxy/application_00_0");
+    Mockito.when(request.getQueryString()).thenReturn("id=0");
+    testFilter.doFilter(request, response, chain);
+    assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, response.status);
+    redirect = response.getHeader(ProxyUtils.LOCATION);
+    assertEquals("http://bogus/proxy/redirect/application_00_0?id=0", redirect);
+
     // "127.0.0.1" contains in host list. Without cookie
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     testFilter.doFilter(request, response, chain);

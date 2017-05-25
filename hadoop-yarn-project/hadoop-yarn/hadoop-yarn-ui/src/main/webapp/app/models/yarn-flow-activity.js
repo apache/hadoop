@@ -15,20 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import DS from 'ember-data';
 
-/**
- * This tests read operation of DFS striped file with RS-10-4-64k
- *  erasure code policy.
- */
-public class TestDFSRSDefault10x4StripedInputStream extends
-    TestDFSStripedInputStream {
-
-  public ErasureCodingPolicy getEcPolicy() {
-    return SystemErasureCodingPolicies.getByID(
-        SystemErasureCodingPolicies.RS_10_4_POLICY_ID);
-  }
-}
+export default DS.Model.extend({
+  cluster: DS.attr('string'),
+  flowName: DS.attr('string'),
+  lastExecDate: DS.attr('string'),
+  user: DS.attr('string'),
+  flowruns: DS.attr('string'),
+  uid: DS.attr('string')
+});

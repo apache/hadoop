@@ -55,9 +55,14 @@ public final class CodecRegistry {
 
   private Map<String, String[]> coderNameMap;
 
+  // Protobuffer 2.5.0 doesn't support map<String, String[]> type well, so use
+  // the compact value instead
+  private HashMap<String, String> coderNameCompactMap;
+
   private CodecRegistry() {
     coderMap = new HashMap<>();
     coderNameMap = new HashMap<>();
+    coderNameCompactMap = new HashMap<>();
     final ServiceLoader<RawErasureCoderFactory> coderFactories =
         ServiceLoader.load(RawErasureCoderFactory.class);
     updateCoders(coderFactories);
@@ -113,34 +118,29 @@ public final class CodecRegistry {
       coderNameMap.put(codecName, coders.stream().
           map(RawErasureCoderFactory::getCoderName).
           collect(Collectors.toList()).toArray(new String[0]));
+      coderNameCompactMap.put(codecName, coders.stream().
+          map(RawErasureCoderFactory::getCoderName)
+          .collect(Collectors.joining(", ")));
     }
   }
 
   /**
    * Get all coder names of the given codec.
    * @param codecName the name of codec
-   * @return an array of all coder names
+   * @return an array of all coder names, null if not exist
    */
   public String[] getCoderNames(String codecName) {
     String[] coderNames = coderNameMap.get(codecName);
-    if (coderNames == null) {
-      throw new IllegalArgumentException("No available raw coder factory for "
-          + codecName);
-    }
     return coderNames;
   }
 
   /**
    * Get all coder factories of the given codec.
    * @param codecName the name of codec
-   * @return a list of all coder factories
+   * @return a list of all coder factories, null if not exist
    */
   public List<RawErasureCoderFactory> getCoders(String codecName) {
     List<RawErasureCoderFactory> coders = coderMap.get(codecName);
-    if (coders == null) {
-      throw new IllegalArgumentException("No available raw coder factory for "
-          + codecName);
-    }
     return coders;
   }
 
@@ -156,7 +156,7 @@ public final class CodecRegistry {
    * Get a specific coder factory defined by codec name and coder name.
    * @param codecName name of the codec
    * @param coderName name of the coder
-   * @return the specific coder
+   * @return the specific coder, null if not exist
    */
   public RawErasureCoderFactory getCoderByName(
       String codecName, String coderName) {
@@ -168,9 +168,15 @@ public final class CodecRegistry {
         return coder;
       }
     }
+    return null;
+  }
 
-    // if not found, throw exception
-    throw new IllegalArgumentException("No implementation for coder "
-        + coderName + " of codec " + codecName);
+  /**
+   * Get all codec names and their corresponding coder list.
+   * @return a map of all codec names, and their corresponding code list
+   * separated by ','.
+   */
+  public HashMap<String, String> getCodec2CoderCompactMap() {
+    return coderNameCompactMap;
   }
 }
