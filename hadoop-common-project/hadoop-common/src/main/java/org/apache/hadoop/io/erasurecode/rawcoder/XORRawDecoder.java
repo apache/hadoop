@@ -42,13 +42,17 @@ public class XORRawDecoder extends RawErasureDecoder {
         decodingState.decodeLength);
     ByteBuffer output = decodingState.outputs[0];
 
-    int erasedIdx = decodingState.erasedIndexes[0];
+    int eiIdx     = 0;
+    int erasedIdx = decodingState.erasedIndexes[eiIdx];
 
     // Process the inputs.
     int iIdx, oIdx;
     for (int i = 0; i < decodingState.inputs.length; i++) {
       // Skip the erased location.
       if (i == erasedIdx) {
+        if (eiIdx < decodingState.erasedIndexes.length - 1) {
+          erasedIdx = decodingState.erasedIndexes[++eiIdx];
+        }
         continue;
       }
 
@@ -67,13 +71,18 @@ public class XORRawDecoder extends RawErasureDecoder {
     int dataLen = decodingState.decodeLength;
     CoderUtil.resetOutputBuffers(decodingState.outputs,
         decodingState.outputOffsets, dataLen);
-    int erasedIdx = decodingState.erasedIndexes[0];
+
+    int eiIdx     = 0;
+    int erasedIdx = decodingState.erasedIndexes[eiIdx];
 
     // Process the inputs.
     int iIdx, oIdx;
     for (int i = 0; i < decodingState.inputs.length; i++) {
       // Skip the erased location.
       if (i == erasedIdx) {
+        if (eiIdx < decodingState.erasedIndexes.length - 1) {
+          erasedIdx = decodingState.erasedIndexes[++eiIdx];
+        }
         continue;
       }
 
