@@ -223,10 +223,17 @@ public class BlockUnderConstructionFeature {
    * Initialize lease recovery for this block.
    * Find the first alive data-node starting from the previous primary and
    * make it primary.
+   * @param blockInfo Block to be recovered
+   * @param recoveryId Recovery ID (new gen stamp)
+   * @param startRecovery Issue recovery command to datanode if true.
    */
-  public void initializeBlockRecovery(BlockInfo blockInfo, long recoveryId) {
+  public void initializeBlockRecovery(BlockInfo blockInfo, long recoveryId,
+      boolean startRecovery) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
+    if (!startRecovery) {
+      return;
+    }
     if (replicas.length == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*" +
           " BlockUnderConstructionFeature.initializeBlockRecovery:" +
