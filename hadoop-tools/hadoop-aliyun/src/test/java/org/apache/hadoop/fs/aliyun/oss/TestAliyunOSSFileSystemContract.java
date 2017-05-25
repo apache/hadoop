@@ -22,6 +22,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assume.*;
 import org.apache.hadoop.fs.FileStatus;
 
 import java.io.FileNotFoundException;
@@ -41,11 +45,11 @@ public class TestAliyunOSSFileSystemContract
   private static Path testRootPath =
       new Path(AliyunOSSTestUtils.generateUniqueTestPath());
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
-    super.setUp();
+    assumeNotNull(fs);
   }
 
   @Override
@@ -53,12 +57,12 @@ public class TestAliyunOSSFileSystemContract
     return testRootPath;
   }
 
-  @Override
+  @Test
   public void testMkdirsWithUmask() throws Exception {
     // not supported
   }
 
-  @Override
+  @Test
   public void testRootDirAlwaysExists() throws Exception {
     //this will throw an exception if the path is not found
     fs.getFileStatus(super.path("/"));
@@ -68,16 +72,15 @@ public class TestAliyunOSSFileSystemContract
         fs.exists(super.path("/")));
   }
 
-  @Override
+  @Test
   public void testRenameRootDirForbidden() throws Exception {
-    if (!renameSupported()) {
-      return;
-    }
+    assumeTrue(renameSupported());
     rename(super.path("/"),
            super.path("/test/newRootDir"),
            false, true, false);
   }
 
+  @Test
   public void testDeleteSubdir() throws IOException {
     Path parentDir = this.path("/test/hadoop");
     Path file = this.path("/test/hadoop/file");
@@ -102,87 +105,83 @@ public class TestAliyunOSSFileSystemContract
     return true;
   }
 
-  @Override
+  @Test
   public void testRenameNonExistentPath() throws Exception {
-    if (this.renameSupported()) {
-      Path src = this.path("/test/hadoop/path");
-      Path dst = this.path("/test/new/newpath");
-      try {
-        super.rename(src, dst, false, false, false);
-        fail("Should throw FileNotFoundException!");
-      } catch (FileNotFoundException e) {
-        // expected
-      }
+    assumeTrue(renameSupported());
+    Path src = this.path("/test/hadoop/path");
+    Path dst = this.path("/test/new/newpath");
+    try {
+      super.rename(src, dst, false, false, false);
+      fail("Should throw FileNotFoundException!");
+    } catch (FileNotFoundException e) {
+      // expected
     }
   }
 
-  @Override
+  @Test
   public void testRenameFileMoveToNonExistentDirectory() throws Exception {
-    if (this.renameSupported()) {
-      Path src = this.path("/test/hadoop/file");
-      this.createFile(src);
-      Path dst = this.path("/test/new/newfile");
-      try {
-        super.rename(src, dst, false, true, false);
-        fail("Should throw FileNotFoundException!");
-      } catch (FileNotFoundException e) {
-        // expected
-      }
+    assumeTrue(renameSupported());
+    Path src = this.path("/test/hadoop/file");
+    this.createFile(src);
+    Path dst = this.path("/test/new/newfile");
+    try {
+      super.rename(src, dst, false, true, false);
+      fail("Should throw FileNotFoundException!");
+    } catch (FileNotFoundException e) {
+      // expected
     }
   }
 
-  @Override
+  @Test
   public void testRenameDirectoryMoveToNonExistentDirectory() throws Exception {
-    if (this.renameSupported()) {
-      Path src = this.path("/test/hadoop/dir");
-      this.fs.mkdirs(src);
-      Path dst = this.path("/test/new/newdir");
-      try {
-        super.rename(src, dst, false, true, false);
-        fail("Should throw FileNotFoundException!");
-      } catch (FileNotFoundException e) {
-        // expected
-      }
+    assumeTrue(renameSupported());
+    Path src = this.path("/test/hadoop/dir");
+    this.fs.mkdirs(src);
+    Path dst = this.path("/test/new/newdir");
+    try {
+      super.rename(src, dst, false, true, false);
+      fail("Should throw FileNotFoundException!");
+    } catch (FileNotFoundException e) {
+      // expected
     }
   }
 
-  @Override
+  @Test
   public void testRenameFileMoveToExistingDirectory() throws Exception {
     super.testRenameFileMoveToExistingDirectory();
   }
 
-  @Override
+  @Test
   public void testRenameFileAsExistingFile() throws Exception {
-    if (this.renameSupported()) {
-      Path src = this.path("/test/hadoop/file");
-      this.createFile(src);
-      Path dst = this.path("/test/new/newfile");
-      this.createFile(dst);
-      try {
-        super.rename(src, dst, false, true, true);
-        fail("Should throw FileAlreadyExistsException");
-      } catch (FileAlreadyExistsException e) {
-        // expected
-      }
+    assumeTrue(renameSupported());
+    Path src = this.path("/test/hadoop/file");
+    this.createFile(src);
+    Path dst = this.path("/test/new/newfile");
+    this.createFile(dst);
+    try {
+      super.rename(src, dst, false, true, true);
+      fail("Should throw FileAlreadyExistsException");
+    } catch (FileAlreadyExistsException e) {
+      // expected
     }
   }
 
-  @Override
+  @Test
   public void testRenameDirectoryAsExistingFile() throws Exception {
-    if (this.renameSupported()) {
-      Path src = this.path("/test/hadoop/dir");
-      this.fs.mkdirs(src);
-      Path dst = this.path("/test/new/newfile");
-      this.createFile(dst);
-      try {
-        super.rename(src, dst, false, true, true);
-        fail("Should throw FileAlreadyExistsException");
-      } catch (FileAlreadyExistsException e) {
-        // expected
-      }
+    assumeTrue(renameSupported());
+    Path src = this.path("/test/hadoop/dir");
+    this.fs.mkdirs(src);
+    Path dst = this.path("/test/new/newfile");
+    this.createFile(dst);
+    try {
+      super.rename(src, dst, false, true, true);
+      fail("Should throw FileAlreadyExistsException");
+    } catch (FileAlreadyExistsException e) {
+      // expected
     }
   }
 
+  @Test
   public void testGetFileStatusFileAndDirectory() throws Exception {
     Path filePath = this.path("/test/oss/file1");
     this.createFile(filePath);
@@ -203,6 +202,7 @@ public class TestAliyunOSSFileSystemContract
     }
   }
 
+  @Test
   public void testMkdirsForExistingFile() throws Exception {
     Path testFile = this.path("/test/hadoop/file");
     assertFalse(this.fs.exists(testFile));
