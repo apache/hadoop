@@ -158,7 +158,7 @@ definitions:
         type: string
         description: A unique application id.
       artifact:
-        description: Artifact of single-component applications. Mandatory if components attribute is not specified.
+        description: Artifact of single-component applications.
         $ref: '#/definitions/Artifact'
       resource:
         description: Resource of single-component applications or the global default for multi-component applications. Mandatory if it is a single-component application and if cpus and memory are not specified at the Application level.
@@ -230,16 +230,16 @@ definitions:
         type: string
         description: Assigns an app to a named partition of the cluster where the application desires to run (optional). If not specified all apps are submitted to a default label of the app owner. One or more labels can be setup for each application owner account with required constraints like no-preemption, sla-99999, preemption-ok, etc.
   Artifact:
-    description: Artifact of an application component.
+    description: Artifact of an application component. If not specified, component will just run the bare launch command and no artifact will be localized.
     required:
     - id
     properties:
       id:
         type: string
-        description: Artifact id. Examples are package location uri for tarball based apps, image name for docker, etc.
+        description: Artifact id. Examples are package location uri for tarball based apps, image name for docker, name of application, etc.
       type:
         type: string
-        description: Artifact type, like docker, tarball, etc. (optional).
+        description: Artifact type, like docker, tarball, etc. (optional). For TARBALL type, the specified tarball will be localized to the container local working directory under a folder named lib. For APPLICATION type, the application specified will be read and its components will be added into this application. The original component with artifact type APPLICATION will be removed (any properties specified in the original component will be ignored).
         enum:
           - DOCKER
           - TARBALL
@@ -269,7 +269,7 @@ definitions:
         $ref: '#/definitions/Artifact'
       launch_command:
         type: string
-        description: The custom launch command of this component (optional). When specified at the component level, it overrides the value specified at the global level (if any).
+        description: The custom launch command of this component (optional for DOCKER component, required otherwise). When specified at the component level, it overrides the value specified at the global level (if any).
       resource:
         description: Resource of this component (optional). If not specified, the application level global resource takes effect.
         $ref: '#/definitions/Resource'
@@ -344,7 +344,7 @@ definitions:
           - HADOOP_XML
       dest_file:
         type: string
-        description: The absolute path that this configuration file should be mounted as, in the application container.
+        description: The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf.
       src_file:
         type: string
         description: This provides the source location of the configuration file, the content of which is dumped to dest_file post property substitutions, in the format as specified in type. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.

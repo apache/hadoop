@@ -21,7 +21,7 @@ public interface RestApiErrorMessages {
   String ERROR_APPLICATION_NAME_INVALID =
       "Application name is either empty or not provided";
   String ERROR_APPLICATION_NAME_INVALID_FORMAT =
-      "Application name is not valid - only lower case letters, digits,"
+      "Application name %s is not valid - only lower case letters, digits,"
           + " underscore and hyphen are allowed";
 
   String ERROR_APPLICATION_NOT_RUNNING = "Application not running";
@@ -76,7 +76,7 @@ public interface RestApiErrorMessages {
   String ERROR_ABSENT_NUM_OF_INSTANCE =
       "Num of instances should appear either globally or per component";
   String ERROR_ABSENT_LAUNCH_COMMAND =
-      "launch command should appear if type is slider-zip or none";
+      "Launch_command is required when type is not DOCKER";
 
   String ERROR_QUICKLINKS_FOR_COMP_INVALID = "Quicklinks specified at"
       + " component level, needs corresponding values set at application level";

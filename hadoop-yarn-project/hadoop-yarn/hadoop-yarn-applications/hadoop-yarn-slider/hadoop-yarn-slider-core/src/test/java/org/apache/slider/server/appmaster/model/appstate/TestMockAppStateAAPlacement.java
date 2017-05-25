@@ -362,7 +362,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
     // now destroy the app state
     AppStateBindingInfo bindingInfo = buildBindingInfo();
     bindingInfo.application = factory.newApplication(0, 0, desiredAA).name(
-        getTestName());
+        getValidTestName());
     bindingInfo.application.getComponent(ROLE2)
         .getConfiguration().setProperty(COMPONENT_PLACEMENT_POLICY,
         Integer.toString(PlacementPolicy.ANTI_AFFINITY_REQUIRED));

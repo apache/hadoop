@@ -18,10 +18,6 @@
 
 package org.apache.slider.common;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 /**
  * Keys and various constants for Slider
  */
@@ -73,17 +69,10 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String APP_TYPE = "org-apache-slider";
 
   /**
-   * Key for component type. This MUST NOT be set in app_config/global {@value}
-   */
-  String COMPONENT_TYPE_KEY = "site.global.component_type";
-  /**
    * A component type for an external app that has been predefined using the
    * slider build command
    */
-  String COMPONENT_TYPE_EXTERNAL_APP = "external_app";
   String COMPONENT_SEPARATOR = "-";
-  List<String> COMPONENT_KEYS_TO_SKIP = Collections.unmodifiableList(Arrays
-      .asList("zookeeper.", "env.MALLOC_ARENA_MAX", "site.fs.", "site.dfs."));
 
   /**
    * A component type for a client component
@@ -91,48 +80,19 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String COMPONENT_TYPE_CLIENT = "client";
 
   /**
-   * Key for application version. This must be set in app_config/global {@value}
+   * Key for application version.
    */
-  String APP_VERSION = "site.global.app_version";
   String APP_VERSION_UNKNOWN = "awaiting heartbeat...";
 
   /**
    * Keys for application container specific properties, like release timeout
    */
   String APP_CONTAINER_RELEASE_TIMEOUT = "site.global.app_container.release_timeout_secs";
-  int APP_CONTAINER_HEARTBEAT_INTERVAL_SEC = 10; // look for HEARTBEAT_IDDLE_INTERVAL_SEC
 
   /**
-   * JVM arg to force IPv4  {@value}
+   * Subdirectories of HDFS cluster dir.
    */
-  String JVM_ENABLE_ASSERTIONS = "-ea";
-  
-  /**
-   * JVM arg enable JVM system/runtime {@value}
-   */
-  String JVM_ENABLE_SYSTEM_ASSERTIONS = "-esa";
-
-  /**
-   * JVM arg to force IPv4  {@value}
-   */
-  String JVM_FORCE_IPV4 = "-Djava.net.preferIPv4Stack=true";
-
-  /**
-   * JVM arg to go headless  {@value}
-   */
-
-  String JVM_JAVA_HEADLESS = "-Djava.awt.headless=true";
-
-  /**
-   * This is the name of the dir/subdir containing
-   * the hbase conf that is propagated via YARN
-   *  {@value}
-   */
-  String PROPAGATED_CONF_DIR_NAME = "propagatedconf";
-  String INFRA_DIR_NAME = "infra";
-  String GENERATED_CONF_DIR_NAME = "generated";
-  String SNAPSHOT_CONF_DIR_NAME = "snapshot";
-  String DATA_DIR_NAME = "database";
+  String DATA_DIR_NAME = "data";
   String HISTORY_DIR_NAME = "history";
   String HISTORY_FILENAME_SUFFIX = "json";
   String HISTORY_FILENAME_PREFIX = "rolehistory-";
@@ -159,14 +119,6 @@ public interface SliderKeys extends SliderXmlConfKeys {
 
   String CLUSTER_DIRECTORY = "cluster";
 
-  String PACKAGE_DIRECTORY = "package";
-
-  /**
-   * JVM property to define the slider configuration directory;
-   * this is set by the slider script: {@value}
-   */
-  String PROPERTY_CONF_DIR = "slider.confdir";
-
   /**
    * JVM property to define the slider lib directory;
    * this is set by the slider script: {@value}
@@ -182,11 +134,6 @@ public interface SliderKeys extends SliderXmlConfKeys {
    * Slider AM log4j file name : {@value}
    */
   String LOG4J_SERVER_PROP_FILENAME = "slideram-log4j.properties";
-
-  /**
-   * Standard log4j file name  : {@value}
-   */
-  String LOG4J_PROP_FILENAME = "log4j.properties";
 
   /**
    * Log4j sysprop to name the resource :{@value}
@@ -209,9 +156,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
    */
   String SLIDER_SERVER_XML = "slider-server.xml";
 
-  String TMP_LOGDIR_PREFIX = "/tmp/slider-";
   String TMP_DIR_PREFIX = "tmp";
-  String AM_DIR_PREFIX = "appmaster";
 
   /**
    * Store the default app definition, e.g. metainfo file or content of a folder
@@ -223,53 +168,11 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String ADDONS_DIR = "addons";
 
   String SLIDER_JAR = "slider-core.jar";
-  String JCOMMANDER_JAR = "jcommander.jar";
-  String GSON_JAR = "gson.jar";
-  String DEFAULT_APP_PKG = "appPkg.zip";
 
-  String DEFAULT_JVM_HEAP = "256M";
-  int DEFAULT_YARN_MEMORY = 256;
   String STDOUT_AM = "slider-out.txt";
   String STDERR_AM = "slider-err.txt";
-  String DEFAULT_GC_OPTS = "";
 
   String HADOOP_USER_NAME = "HADOOP_USER_NAME";
-  String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
-  String SLIDER_PASSPHRASE = "SLIDER_PASSPHRASE";
-
-  boolean PROPAGATE_RESOURCE_OPTION = true;
-
-  /**
-   * Security associated keys.
-   */
-  String SECURITY_DIR = "security";
-  String CRT_FILE_NAME = "ca.crt";
-  String CSR_FILE_NAME = "ca.csr";
-  String KEY_FILE_NAME = "ca.key";
-  String KEYSTORE_FILE_NAME = "keystore.p12";
-  String CRT_PASS_FILE_NAME = "pass.txt";
-  String PASS_LEN = "50";
-
-  String COMP_STORES_REQUIRED_KEY =
-      "slider.component.security.stores.required";
-  String COMP_KEYSTORE_PASSWORD_PROPERTY_KEY =
-      "slider.component.keystore.password.property";
-  String COMP_KEYSTORE_PASSWORD_ALIAS_KEY =
-      "slider.component.keystore.credential.alias.property";
-  String COMP_KEYSTORE_PASSWORD_ALIAS_DEFAULT =
-      "component.keystore.credential.alias";
-  String COMP_TRUSTSTORE_PASSWORD_PROPERTY_KEY =
-      "slider.component.truststore.password.property";
-  String COMP_TRUSTSTORE_PASSWORD_ALIAS_KEY =
-      "slider.component.truststore.credential.alias.property";
-  String COMP_TRUSTSTORE_PASSWORD_ALIAS_DEFAULT =
-      "component.truststore.credential.alias";
-
-  /**
-   * Python specific
-   */
-  String PYTHONPATH = "PYTHONPATH";
-
 
   /**
    * Name of the AM filter to use: {@value}
@@ -277,34 +180,11 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String AM_FILTER_NAME =
       "org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer";
 
-  /**
-   * Allowed port range. This MUST be set in app_conf/global.
-   * {@value}
-   */
-  String KEY_ALLOWED_PORT_RANGE = "site.global.slider.allowed.ports";
-
-  /**
-   * env var for custom JVM options.
-   */
-  String SLIDER_JVM_OPTS = "SLIDER_JVM_OPTS";
-
-  String SLIDER_CLASSPATH_EXTRA = "SLIDER_CLASSPATH_EXTRA";
   String YARN_CONTAINER_PATH = "/node/container/";
 
-  String GLOBAL_CONFIG_TAG = "global";
-  String SYSTEM_CONFIGS = "system_configs";
-  String JAVA_HOME = "java_home";
-  String TWO_WAY_SSL_ENABLED = "ssl.server.client.auth";
-  String INFRA_RUN_SECURITY_DIR = "infra/run/security/";
-  String CERT_FILE_LOCALIZATION_PATH = INFRA_RUN_SECURITY_DIR + "ca.crt";
-
-  String AM_CONFIG_GENERATION = "am.config.generation";
   String APP_CONF_DIR = "conf";
 
-  String APP_RESOURCES = "application.resources";
-  String APP_RESOURCES_DIR = "app/resources";
-
-  String APP_INSTALL_DIR = "app/install";
+  String APP_LIB_DIR = "lib";
 
   String OUT_FILE = "stdout.txt";
   String ERR_FILE = "stderr.txt";

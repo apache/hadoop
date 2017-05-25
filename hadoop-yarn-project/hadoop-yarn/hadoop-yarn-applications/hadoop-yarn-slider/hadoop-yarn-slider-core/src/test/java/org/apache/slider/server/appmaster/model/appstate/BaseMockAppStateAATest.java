@@ -43,7 +43,7 @@ public class BaseMockAppStateAATest extends BaseMockAppStateTest
   @Override
   public Application buildApplication() {
     Application application = factory.newApplication(0, 0, 0)
-        .name(getTestName());
+        .name(getValidTestName());
     application.getComponent(ROLE1).getConfiguration().setProperty(
         COMPONENT_PLACEMENT_POLICY, Integer.toString(PlacementPolicy
             .ANTI_AFFINITY_REQUIRED));

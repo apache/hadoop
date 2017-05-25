@@ -70,7 +70,7 @@ public class TestMockAppStateRebuildOnAMRestart extends BaseMockAppStateTest
 
     AppStateBindingInfo bindingInfo = buildBindingInfo();
     bindingInfo.application = factory.newApplication(r0, r1, r2)
-        .name(getTestName());
+        .name(getValidTestName());
     bindingInfo.liveContainers = containers;
     appState = new MockAppState(bindingInfo);
 

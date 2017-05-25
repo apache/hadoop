@@ -20,7 +20,6 @@ package org.apache.slider.common.tools;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -43,20 +42,15 @@ import org.apache.slider.core.exceptions.ErrorStrings;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.exceptions.UnknownApplicationInstanceException;
 import org.apache.slider.core.persist.Filenames;
-import org.apache.slider.core.persist.InstancePaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Enumeration;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 import static org.apache.slider.common.SliderXmlConfKeys.CLUSTER_DIRECTORY_PERMISSIONS;
 import static org.apache.slider.common.SliderXmlConfKeys.DEFAULT_CLUSTER_DIRECTORY_PERMISSIONS;
@@ -150,34 +144,6 @@ public class CoreFileSystem {
     Preconditions.checkNotNull(addonId);
     Path path = buildClusterDirPath(clustername);
     return new Path(path, SliderKeys.ADDONS_DIR + "/" + addonId);
-  }
-
-  /**
-   * Build up the path string for package install location -no attempt to
-   * create the directory is made
-   *
-   * @return the path for persistent app package
-   */
-  public Path buildPackageDirPath(String packageName, String packageVersion) {
-    Preconditions.checkNotNull(packageName);
-    Path path = getBaseApplicationPath();
-    path = new Path(path, SliderKeys.PACKAGE_DIRECTORY + "/" + packageName);
-    if (SliderUtils.isSet(packageVersion)) {
-      path = new Path(path, packageVersion);
-    }
-    return path;
-  }
-
-  /**
-   * Build up the path string for package install location -no attempt to
-   * create the directory is made
-   *
-   * @return the path for persistent app package
-   */
-  public Path buildClusterSecurityDirPath(String clusterName) {
-    Preconditions.checkNotNull(clusterName);
-    Path path = buildClusterDirPath(clusterName);
-    return new Path(path, SliderKeys.SECURITY_DIR);
   }
 
   /**
@@ -387,36 +353,6 @@ public class CoreFileSystem {
       // ignore, isFile is already set to false
     }
     return isFile;
-  }
-
-  /**
-   * Create the application-instance specific temporary directory
-   * in the DFS
-   *
-   * @param clustername name of the cluster
-   * @param subdir       application ID
-   * @return the path; this directory will already have been created
-   */
-  public Path createAppInstanceTempPath(String clustername, String subdir)
-      throws IOException {
-    Path tmp = getTempPathForCluster(clustername);
-    Path instancePath = new Path(tmp, subdir);
-    fileSystem.mkdirs(instancePath);
-    return instancePath;
-  }
-
-  /**
-   * Create the application-instance specific temporary directory
-   * in the DFS
-   *
-   * @param clustername name of the cluster
-   * @return the path; this directory will already have been deleted
-   */
-  public Path purgeAppInstanceTempFiles(String clustername) throws
-          IOException {
-    Path tmp = getTempPathForCluster(clustername);
-    fileSystem.delete(tmp, true);
-    return tmp;
   }
 
   /**

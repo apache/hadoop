@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 
 /**
@@ -65,7 +66,7 @@ public class TestMockAppStateFlexDynamicRoles extends BaseMockAppStateTest
   }
 
   @Override
-  public AppStateBindingInfo buildBindingInfo() {
+  public AppStateBindingInfo buildBindingInfo() throws IOException {
     AppStateBindingInfo bindingInfo = super.buildBindingInfo();
     bindingInfo.releaseSelector = new MostRecentContainerReleaseSelector();
     return bindingInfo;
@@ -145,7 +146,7 @@ public class TestMockAppStateFlexDynamicRoles extends BaseMockAppStateTest
     appState = new MockAppState();
     AppStateBindingInfo binding2 = buildBindingInfo();
     binding2.application = factory.newApplication(0, 0, 0)
-        .name(getTestName());
+        .name(getValidTestName());
     binding2.historyPath = historyPath2;
     appState.buildInstance(binding2);
     // on this read there won't be the right number of roles
