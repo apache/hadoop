@@ -642,10 +642,11 @@ public class DatanodeManager {
       String format, Object... args) throws UnregisteredNodeException {
     storageIDs = storageIDs == null ? new String[0] : storageIDs;
     if (datanodeID.length != storageIDs.length) {
+      // Error for pre-2.0.0-alpha clients.
       final String err = (storageIDs.length == 0?
           "Missing storageIDs: It is likely that the HDFS client,"
           + " who made this call, is running in an older version of Hadoop"
-          + " which does not support storageIDs."
+          + "(pre-2.0.0-alpha)  which does not support storageIDs."
           : "Length mismatched: storageIDs.length=" + storageIDs.length + " != "
           ) + " datanodeID.length=" + datanodeID.length;
       throw new HadoopIllegalArgumentException(

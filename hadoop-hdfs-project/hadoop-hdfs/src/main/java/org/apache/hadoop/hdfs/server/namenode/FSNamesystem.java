@@ -3250,7 +3250,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } else if(truncateRecovery) {
         recoveryBlock.setGenerationStamp(blockRecoveryId);
       }
-      uc.initializeBlockRecovery(lastBlock, blockRecoveryId);
+      uc.initializeBlockRecovery(lastBlock, blockRecoveryId, true);
       leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
