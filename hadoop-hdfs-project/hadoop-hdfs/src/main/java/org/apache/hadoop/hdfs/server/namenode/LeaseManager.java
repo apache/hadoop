@@ -380,9 +380,16 @@ public class LeaseManager {
           if (!p.startsWith("/")) {
             throw new IOException("Invalid path in the lease " + p);
           }
-          boolean completed = fsnamesystem.internalReleaseLease(
-              leaseToCheck, p, iip,
-              HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          boolean completed = false;
+          try {
+            completed = fsnamesystem.internalReleaseLease(
+                leaseToCheck, p, iip,
+                HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          } catch (IOException e) {
+            LOG.warn("Cannot release the path " + p + " in the lease "
+                + leaseToCheck + ". It will be retried.", e);
+            continue;
+          }
           if (LOG.isDebugEnabled()) {
             if (completed) {
               LOG.debug("Lease recovery for inode " + id + " is complete. " +
@@ -396,7 +403,7 @@ public class LeaseManager {
             needSync = true;
           }
         } catch (IOException e) {
-          LOG.error("Cannot release the path " + p + " in the lease "
+          LOG.warn("Removing lease with an invalid path: " + p + ","
               + leaseToCheck, e);
           removing.add(id);
         }

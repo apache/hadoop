@@ -257,7 +257,7 @@ final class FSDirTruncateOp {
     }
     if (shouldRecoverNow) {
       truncatedBlockUC.getUnderConstructionFeature().initializeBlockRecovery(
-          truncatedBlockUC, newBlock.getGenerationStamp());
+          truncatedBlockUC, newBlock.getGenerationStamp(), true);
     }
 
     return newBlock;
