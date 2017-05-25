@@ -18,16 +18,19 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+
+import java.io.IOException;
 
 public class HATestUtil {
 
   public static void setRpcAddressForRM(String rmId, int base,
-      Configuration conf) {
+      Configuration conf) throws IOException {
     for (String confKey : YarnConfiguration.getServiceAddressConfKeys(conf)) {
-      setConfForRM(rmId, confKey, "0.0.0.0:" + (base +
-          YarnConfiguration.getRMDefaultPortNumber(confKey, conf)), conf);
+      setConfForRM(rmId, confKey, "0.0.0.0:" + ServerSocketUtil.getPort(base +
+          YarnConfiguration.getRMDefaultPortNumber(confKey, conf), 10), conf);
     }
   }
 
