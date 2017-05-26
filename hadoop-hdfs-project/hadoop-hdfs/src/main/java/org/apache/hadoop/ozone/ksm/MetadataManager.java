@@ -95,4 +95,13 @@ public interface MetadataManager {
    * @param bucket - Bucket name
    */
   byte[] getBucketKey(String volume, String bucket);
+
+  /**
+   * Given a volume, bucket and a key, return the corresponding DB key.
+   * @param volume - volume name
+   * @param bucket - bucket name
+   * @param key - key name
+   * @return bytes of DB key.
+   */
+  byte[] getDBKeyForKey(String volume, String bucket, String key);
 }

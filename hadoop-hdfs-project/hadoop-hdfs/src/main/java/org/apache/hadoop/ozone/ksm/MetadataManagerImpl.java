@@ -105,6 +105,14 @@ public class MetadataManagerImpl implements  MetadataManager {
     return DFSUtil.string2Bytes(bucketKeyString);
   }
 
+  @Override
+  public byte[] getDBKeyForKey(String volume, String bucket, String key) {
+    String keyKeyString = OzoneConsts.KSM_VOLUME_PREFIX + volume
+        + OzoneConsts.KSM_BUCKET_PREFIX + bucket + OzoneConsts.KSM_KEY_PREFIX
+        + key;
+    return DFSUtil.string2Bytes(keyKeyString);
+  }
+
   /**
    * Returns the read lock used on Metadata DB.
    * @return readLock
