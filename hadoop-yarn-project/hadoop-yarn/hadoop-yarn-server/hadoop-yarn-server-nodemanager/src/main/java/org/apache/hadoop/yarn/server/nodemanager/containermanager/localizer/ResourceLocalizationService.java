@@ -293,7 +293,7 @@ public class ResourceLocalizationService extends CompositeService
       trackerState = userResources.getPrivateTrackerState();
       if (!trackerState.isEmpty()) {
         LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-            null, dispatcher, true, super.getConfig(), stateStore);
+            null, dispatcher, true, super.getConfig(), stateStore, dirsHandler);
         LocalResourcesTracker oldTracker = privateRsrc.putIfAbsent(user,
             tracker);
         if (oldTracker != null) {
@@ -309,7 +309,8 @@ public class ResourceLocalizationService extends CompositeService
           ApplicationId appId = appEntry.getKey();
           String appIdStr = appId.toString();
           LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-              appId, dispatcher, false, super.getConfig(), stateStore);
+              appId, dispatcher, false, super.getConfig(), stateStore,
+              dirsHandler);
           LocalResourcesTracker oldTracker = appRsrc.putIfAbsent(appIdStr,
               tracker);
           if (oldTracker != null) {
@@ -447,10 +448,11 @@ public class ResourceLocalizationService extends CompositeService
     // 0) Create application tracking structs
     String userName = app.getUser();
     privateRsrc.putIfAbsent(userName, new LocalResourcesTrackerImpl(userName,
-        null, dispatcher, true, super.getConfig(), stateStore));
+        null, dispatcher, true, super.getConfig(), stateStore, dirsHandler));
     String appIdStr = app.getAppId().toString();
     appRsrc.putIfAbsent(appIdStr, new LocalResourcesTrackerImpl(app.getUser(),
-        app.getAppId(), dispatcher, false, super.getConfig(), stateStore));
+        app.getAppId(), dispatcher, false, super.getConfig(), stateStore,
+        dirsHandler));
     // 1) Signal container init
     //
     // This is handled by the ApplicationImpl state machine and allows

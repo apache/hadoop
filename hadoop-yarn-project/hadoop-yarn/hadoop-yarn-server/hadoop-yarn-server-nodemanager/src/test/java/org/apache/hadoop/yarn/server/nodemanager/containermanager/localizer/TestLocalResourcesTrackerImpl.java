@@ -529,7 +529,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, false, conf, stateStore);
+          appId, dispatcher, false, conf, stateStore, null);
       // Container 1 needs lr1 resource
       ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
@@ -610,7 +610,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, false, conf, stateStore);
+          appId, dispatcher, false, conf, stateStore, null);
       // Container 1 needs lr1 resource
       ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
@@ -672,7 +672,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, false, conf, stateStore);
+          appId, dispatcher, false, conf, stateStore, null);
       // Container 1 needs lr1 resource
       ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
@@ -725,7 +725,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTrackerImpl tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, true, conf, stateStore);
+          appId, dispatcher, true, conf, stateStore, null);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
           LocalResourceVisibility.PUBLIC);
       Assert.assertNull(tracker.getLocalizedResource(lr1));
