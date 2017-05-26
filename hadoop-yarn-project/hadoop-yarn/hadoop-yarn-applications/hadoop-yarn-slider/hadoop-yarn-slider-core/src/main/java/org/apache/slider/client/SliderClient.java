@@ -230,6 +230,9 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
   private RegistryOperations registryOperations;
 
+  private static EnumSet<YarnApplicationState> terminatedStates = EnumSet
+      .of(YarnApplicationState.FINISHED, YarnApplicationState.FAILED,
+          YarnApplicationState.KILLED);
   /**
    * Constructor
    */
@@ -699,7 +702,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     //TODO set retry window
     submissionContext.setResource(Resource.newInstance(
         conf.getLong(KEY_AM_RESOURCE_MEM, DEFAULT_KEY_AM_RESOURCE_MEM), 1));
-    submissionContext.setQueue(conf.get(KEY_YARN_QUEUE, DEFAULT_YARN_QUEUE));
+    submissionContext.setQueue(conf.get(KEY_YARN_QUEUE, app.getQueue()));
     submissionContext.setApplicationName(appName);
     submissionContext.setApplicationType(SliderKeys.APP_TYPE);
     Set<String> appTags =
@@ -1725,9 +1728,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           "Application " + appName + " doesn't exist in RM.");
     }
 
-    if (app.getYarnApplicationState().ordinal() >= YarnApplicationState.FINISHED
-        .ordinal()) {
-      log.info("Application {} is in a terminated state {}", appName,
+    if (terminatedStates.contains(app.getYarnApplicationState())) {
+      log.info("Application {} is already in a terminated state {}", appName,
           app.getYarnApplicationState());
       return EXIT_SUCCESS;
     }
@@ -1738,8 +1740,30 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           Messages.StopClusterRequestProto.newBuilder()
               .setMessage(freezeArgs.message).build();
       appMaster.stopCluster(r);
-      log.info("Application " + appName + " is gracefully stopped.");
-    } catch (IOException | YarnException e){
+      log.info("Application " + appName + " is being gracefully stopped...");
+      long startTime = System.currentTimeMillis();
+      int pollCount = 0;
+      while (true) {
+        Thread.sleep(200);
+        ApplicationReport report =
+            yarnClient.getApplicationReport(app.getApplicationId());
+        if (terminatedStates.contains(report.getYarnApplicationState())) {
+          log.info("Application " + appName + " is stopped.");
+          break;
+        }
+        // kill after 10 seconds.
+        if ((System.currentTimeMillis() - startTime) > 10000) {
+          log.info("Stop operation timeout stopping, forcefully kill the app "
+              + appName);
+          yarnClient
+              .killApplication(app.getApplicationId(), freezeArgs.message);
+          break;
+        }
+        if (++pollCount % 10 == 0) {
+          log.info("Waiting for application " + appName + " to be stopped.");
+        }
+      }
+    } catch (IOException | YarnException | InterruptedException e) {
       log.info("Failed to stop " + appName
           + " gracefully, forcefully kill the app.");
       yarnClient.killApplication(app.getApplicationId(), freezeArgs.message);
