@@ -179,13 +179,13 @@ public class ApplicationMaster {
 
   @VisibleForTesting
   @Private
-  public static enum DSEvent {
+  public enum DSEvent {
     DS_APP_ATTEMPT_START, DS_APP_ATTEMPT_END, DS_CONTAINER_START, DS_CONTAINER_END
   }
   
   @VisibleForTesting
   @Private
-  public static enum DSEntity {
+  public enum DSEntity {
     DS_APP_ATTEMPT, DS_CONTAINER
   }
 

@@ -406,7 +406,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
-  protected static enum ContainerState {
+  protected enum ContainerState {
     PREP, FAILED, RUNNING, DONE,
   }
 
@@ -423,7 +423,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
   /**
    * The type of the event of interacting with a container
    */
-  protected static enum ContainerEventType {
+  protected enum ContainerEventType {
     START_CONTAINER,
     STOP_CONTAINER,
     QUERY_CONTAINER,

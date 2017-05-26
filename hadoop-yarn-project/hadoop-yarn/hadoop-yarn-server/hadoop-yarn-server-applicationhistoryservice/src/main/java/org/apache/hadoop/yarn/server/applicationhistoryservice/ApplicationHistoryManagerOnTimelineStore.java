@@ -740,7 +740,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
      }
    }
 
-  private static enum ApplicationReportField {
+  private enum ApplicationReportField {
     ALL, // retrieve all the fields
     USER_AND_ACLS // retrieve user and ACLs info only
   }
