@@ -52,7 +52,8 @@ public class DU extends CachingGetSpaceUsed {
     try {
       duShell.startRefresh();
     } catch (IOException ioe) {
-      LOG.warn("Could not get disk usage information", ioe);
+      LOG.warn("Could not get disk usage information for path {}",
+          getDirPath(), ioe);
     }
   }
 
