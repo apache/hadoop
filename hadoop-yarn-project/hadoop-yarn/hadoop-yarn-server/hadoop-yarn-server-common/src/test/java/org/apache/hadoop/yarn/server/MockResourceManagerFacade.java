@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -116,6 +117,8 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
+import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
@@ -145,11 +148,11 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.utils.AMRMClientUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Strings;
 
 /**
@@ -171,10 +174,23 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   private AtomicInteger containerIndex = new AtomicInteger(0);
   private Configuration conf;
 
+  private boolean shouldReRegisterNext = false;
+
+  // For unit test synchronization
+  private static Object syncObj = new Object();
+
+  public static Object getSyncObj() {
+    return syncObj;
+  }
+
   public MockResourceManagerFacade(Configuration conf,
       int startContainerIndex) {
     this.conf = conf;
     this.containerIndex.set(startContainerIndex);
+  }
+
+  public void setShouldReRegisterNext() {
+    shouldReRegisterNext = true;
   }
 
   private static String getAppIdentifier() throws IOException {
@@ -197,14 +213,31 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     String amrmToken = getAppIdentifier();
     LOG.info("Registering application attempt: " + amrmToken);
 
+    shouldReRegisterNext = false;
+
+    synchronized (syncObj) {
+      syncObj.notifyAll();
+      // We reuse the port number to indicate whether the unit test want us to
+      // wait here
+      if (request.getRpcPort() > 1000) {
+        LOG.info("Register call in RM start waiting");
+        try {
+          syncObj.wait();
+          LOG.info("Register call in RM wait finished");
+        } catch (InterruptedException e) {
+          LOG.info("Register call in RM wait interrupted", e);
+        }
+      }
+    }
+
     synchronized (applicationContainerIdMap) {
-      Assert.assertFalse(
-          "The application id is already registered: " + amrmToken,
-          applicationContainerIdMap.containsKey(amrmToken));
+      if (applicationContainerIdMap.containsKey(amrmToken)) {
+        throw new InvalidApplicationMasterRequestException(
+            AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE);
+      }
       // Keep track of the containers that are returned to this application
       applicationContainerIdMap.put(amrmToken, new ArrayList<ContainerId>());
     }
-
     return RegisterApplicationMasterResponse.newInstance(null, null, null, null,
         null, request.getHost(), null);
   }
@@ -215,6 +248,12 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       throws YarnException, IOException {
     String amrmToken = getAppIdentifier();
     LOG.info("Finishing application attempt: " + amrmToken);
+
+    if (shouldReRegisterNext) {
+      String message = "AM is not registered, should re-register.";
+      LOG.warn(message);
+      throw new ApplicationMasterNotRegisteredException(message);
+    }
 
     synchronized (applicationContainerIdMap) {
       // Remove the containers that were being tracked for this application
@@ -251,6 +290,13 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     }
 
     String amrmToken = getAppIdentifier();
+    LOG.info("Allocate from application attempt: " + amrmToken);
+
+    if (shouldReRegisterNext) {
+      String message = "AM is not registered, should re-register.";
+      LOG.warn(message);
+      throw new ApplicationMasterNotRegisteredException(message);
+    }
 
     ArrayList<Container> containerList = new ArrayList<Container>();
     if (request.getAskList() != null) {
@@ -384,6 +430,33 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) throws YarnException, IOException {
+    String appId = "";
+    boolean foundApp = false;
+    if (request.getApplicationId() != null) {
+      appId = request.getApplicationId().toString();
+      synchronized (applicationContainerIdMap) {
+        for (Entry<String, List<ContainerId>> entry : applicationContainerIdMap
+            .entrySet()) {
+          ApplicationAttemptId attemptId =
+              ApplicationAttemptId.fromString(entry.getKey());
+          if (attemptId.getApplicationId().equals(request.getApplicationId())) {
+            // Remove the apptempt and the containers that were being tracked
+            List<ContainerId> ids =
+                applicationContainerIdMap.remove(entry.getKey());
+            if (ids != null) {
+              for (ContainerId c : ids) {
+                allocatedContainerMap.remove(c);
+              }
+            }
+            foundApp = true;
+          }
+        }
+      }
+    }
+    if (!foundApp) {
+      throw new YarnException("The application id is NOT registered: " + appId);
+    }
+    LOG.info("Force killing application: " + appId);
     return KillApplicationResponse.newInstance(true);
   }
 

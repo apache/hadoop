@@ -211,15 +211,13 @@ public class ApplicationMasterService extends AbstractService implements
     synchronized (lock) {
       AllocateResponse lastResponse = lock.getAllocateResponse();
       if (hasApplicationMasterRegistered(applicationAttemptId)) {
-        String message =
-            "Application Master is already registered : "
-                + appID;
+        String message = AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE + appID;
         LOG.warn(message);
         RMAuditLogger.logFailure(
-            this.rmContext.getRMApps()
-                .get(appID).getUser(),
-            AuditConstants.REGISTER_AM, "", "ApplicationMasterService", message,
-            appID, applicationAttemptId);
+          this.rmContext.getRMApps()
+            .get(appID).getUser(),
+          AuditConstants.REGISTER_AM, "", "ApplicationMasterService", message,
+          appID, applicationAttemptId);
         throw new InvalidApplicationMasterRequestException(message);
       }
 
