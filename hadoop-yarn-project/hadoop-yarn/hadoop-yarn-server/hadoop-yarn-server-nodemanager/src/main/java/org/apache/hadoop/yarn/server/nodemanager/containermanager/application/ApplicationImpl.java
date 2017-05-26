@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.FlowContextProto;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
@@ -108,13 +109,6 @@ public class ApplicationImpl implements Application {
   }
 
   public ApplicationImpl(Dispatcher dispatcher, String user,
-      ApplicationId appId, Credentials credentials, Context context,
-      long recoveredLogInitedTime) {
-    this(dispatcher, user, null, appId, credentials, context,
-      recoveredLogInitedTime);
-  }
-
-  public ApplicationImpl(Dispatcher dispatcher, String user,
       FlowContext flowContext, ApplicationId appId, Credentials credentials,
       Context context, long recoveredLogInitedTime) {
     this.dispatcher = dispatcher;
@@ -172,6 +166,15 @@ public class ApplicationImpl implements Application {
 
     public long getFlowRunId() {
       return flowRunId;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("{");
+      sb.append("Flow Name=").append(getFlowName());
+      sb.append(" Flow Versioin=").append(getFlowVersion());
+      sb.append(" Flow Run Id=").append(getFlowRunId()).append(" }");
+      return sb.toString();
     }
   }
 
@@ -391,6 +394,16 @@ public class ApplicationImpl implements Application {
     }
 
     builder.setAppLogAggregationInitedTime(app.applicationLogInitedTimestamp);
+
+    builder.clearFlowContext();
+    if (app.flowContext != null && app.flowContext.getFlowName() != null
+        && app.flowContext.getFlowVersion() != null) {
+      FlowContextProto fcp = FlowContextProto.newBuilder()
+          .setFlowName(app.flowContext.getFlowName())
+          .setFlowVersion(app.flowContext.getFlowVersion())
+          .setFlowRunId(app.flowContext.getFlowRunId()).build();
+      builder.setFlowContext(fcp);
+    }
 
     return builder.build();
   }
