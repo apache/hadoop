@@ -94,14 +94,6 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
   public LocalResourcesTrackerImpl(String user, ApplicationId appId,
       Dispatcher dispatcher, boolean useLocalCacheDirectoryManager,
-      Configuration conf, NMStateStoreService stateStore) {
-    this(user, appId, dispatcher,
-        new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>(),
-        useLocalCacheDirectoryManager, conf, stateStore, null);
-  }
-
-  public LocalResourcesTrackerImpl(String user, ApplicationId appId,
-      Dispatcher dispatcher, boolean useLocalCacheDirectoryManager,
       Configuration conf, NMStateStoreService stateStore,
       LocalDirsHandlerService dirHandler) {
     this(user, appId, dispatcher,
@@ -527,5 +519,10 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       mgr = directoryManagers.get(localDirPath);
     }
     return mgr;
+  }
+
+  @VisibleForTesting
+  LocalDirsHandlerService getDirsHandler() {
+    return dirsHandler;
   }
 }
