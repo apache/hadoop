@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 public class NMAuditLogger {
   private static final Log LOG = LogFactory.getLog(NMAuditLogger.class);
 
-  static enum Keys {USER, OPERATION, TARGET, RESULT, IP, 
+  enum Keys {USER, OPERATION, TARGET, RESULT, IP,
                     DESCRIPTION, APPID, CONTAINERID}
 
   public static class AuditConstants {
