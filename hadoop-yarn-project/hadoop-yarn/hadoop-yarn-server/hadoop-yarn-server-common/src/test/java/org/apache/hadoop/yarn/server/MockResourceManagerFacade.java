@@ -116,7 +116,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
-import org.mortbay.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
 
 /**
  * Mock Resource Manager facade implementation that exposes all the methods
@@ -165,8 +168,9 @@ public class MockResourceManagerFacade
     Log.info("Registering application attempt: " + amrmToken);
 
     synchronized (applicationContainerIdMap) {
-      Assert.assertFalse("The application id is already registered: "
-          + amrmToken, applicationContainerIdMap.containsKey(amrmToken));
+      Assert.assertFalse(
+          "The application id is already registered: " + amrmToken,
+          applicationContainerIdMap.containsKey(amrmToken));
       // Keep track of the containers that are returned to this application
       applicationContainerIdMap.put(amrmToken,
           new ArrayList<ContainerId>());
