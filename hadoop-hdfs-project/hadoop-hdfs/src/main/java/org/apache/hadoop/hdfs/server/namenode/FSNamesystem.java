@@ -4682,9 +4682,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         while (it.hasNext()) {
           Block b = it.next();
           BlockInfoContiguous blockInfo = blockManager.getStoredBlock(b);
-          if (blockInfo.getBlockCollection().getStoragePolicyID()
-              == lpPolicy.getId()) {
-            filesToDelete.add(blockInfo.getBlockCollection());
+          if (blockInfo == null) {
+            LOG.info("Cannot find block info for block " + b);
+          } else {
+            if (blockInfo.getBlockCollection().getStoragePolicyID()
+                == lpPolicy.getId()) {
+              filesToDelete.add(blockInfo.getBlockCollection());
+            }
           }
         }
 

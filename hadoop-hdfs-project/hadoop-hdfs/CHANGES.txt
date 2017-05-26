@@ -326,6 +326,8 @@ Release 2.7.4 - UNRELEASED
     HDFS-11445. FSCK shows overall health stauts as corrupt even one replica is corrupt. 
     (Brahma Reddy Battula)
 
+    Fix NPE in LazyPersistFileScrubber. (Inigo Goiri via shv)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
