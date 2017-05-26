@@ -202,7 +202,7 @@ public class BlockManagerImpl implements BlockManager {
    */
   @Override
   public AllocatedBlock allocateBlock(final long size) throws IOException {
-    boolean createContainer = false;
+    boolean createContainer;
     Pipeline pipeline;
     if (size < 0 || size > containerSize) {
       throw new SCMException("Unsupported block size",
@@ -223,11 +223,13 @@ public class BlockManagerImpl implements BlockManager {
           throw new SCMException("Unable to allocate container for the block",
               FAILED_TO_ALLOCATE_CONTAINER);
         }
+          createContainer = true;
       } else {
         candidates = openContainers.entrySet().parallelStream()
             .filter(e -> (e.getValue() + size < containerSize))
             .map(e -> e.getKey())
             .collect(Collectors.toList());
+        createContainer = false;
       }
 
       if (candidates.size() == 0) {

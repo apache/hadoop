@@ -33,6 +33,7 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numVolumeInfos;
   private @Metric MutableCounterLong numBucketCreates;
   private @Metric MutableCounterLong numBucketInfos;
+  private @Metric MutableCounterLong numKeyBlockAllocate;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -40,6 +41,7 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numVolumeInfoFails;
   private @Metric MutableCounterLong numBucketCreateFails;
   private @Metric MutableCounterLong numBucketInfoFails;
+  private @Metric MutableCounterLong numKeyBlockAllocateFails;
 
   public KSMMetrics() {
   }
@@ -89,6 +91,14 @@ public class KSMMetrics {
 
   public void incNumBucketInfoFails() {
     numBucketInfoFails.incr();
+  }
+
+  public void incNumKeyBlockAllocates() {
+    numKeyBlockAllocate.incr();
+  }
+
+  public void incNumKeyBlockAllocateFails() {
+    numKeyBlockAllocateFails.incr();
   }
 
   @VisibleForTesting
@@ -141,4 +151,13 @@ public class KSMMetrics {
     return numBucketInfoFails.value();
   }
 
+  @VisibleForTesting
+  public long getNumKeyBlockAllocates() {
+    return numKeyBlockAllocate.value();
+  }
+
+  @VisibleForTesting
+  public long getNumKeyBlockAllocateFailes() {
+    return numKeyBlockAllocateFails.value();
+  }
 }

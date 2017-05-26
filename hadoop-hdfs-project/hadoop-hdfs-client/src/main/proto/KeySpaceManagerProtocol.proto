@@ -210,6 +210,33 @@ message InfoBucketResponse {
 
 }
 
+
+message KeyArgs {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    required uint64 dataSize = 4;
+}
+
+message KeyInfo {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    required uint64 dataSize = 4;
+    required string blockKey = 5;
+    required string containerName = 6;
+    required bool shouldCreateContainer = 7;
+}
+
+message CreateKeyRequest {
+    required KeyArgs keyArgs = 1;
+}
+
+message CreateKeyResponse {
+    required Status status = 1;
+    optional KeyInfo keyInfo = 2;
+}
+
 /**
  The KSM service that takes care of Ozone namespace.
 */
@@ -261,4 +288,10 @@ service KeySpaceManagerService {
     */
     rpc infoBucket(InfoBucketRequest)
         returns(InfoBucketResponse);
+
+    /**
+        Get key block.
+    */
+    rpc createKey(CreateKeyRequest)
+        returns(CreateKeyResponse);
 }

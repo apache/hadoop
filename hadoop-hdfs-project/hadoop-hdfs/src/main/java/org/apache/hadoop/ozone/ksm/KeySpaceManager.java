@@ -20,17 +20,25 @@ package org.apache.hadoop.ozone.ksm;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
+import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocolPB
     .KeySpaceManagerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
+import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +71,7 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   private final MetadataManager metadataManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
+  private final KeyManager keyManager;
   private final KSMMetrics metrics;
 
   public KeySpaceManager(OzoneConfiguration conf) throws IOException {
@@ -85,6 +94,31 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     volumeManager = new VolumeManagerImpl(metadataManager, conf);
     bucketManager = new BucketManagerImpl(metadataManager);
     metrics = KSMMetrics.create();
+    keyManager = new KeyManagerImpl(getScmBlockClient(conf), metadataManager);
+  }
+
+  /**
+   * Create a scm block client, used by putKey() and getKey().
+   *
+   * @param conf
+   * @return
+   * @throws IOException
+   */
+  private ScmBlockLocationProtocol getScmBlockClient(OzoneConfiguration conf)
+      throws IOException {
+    RPC.setProtocolEngine(conf, ScmBlockLocationProtocolPB.class,
+        ProtobufRpcEngine.class);
+    long scmVersion =
+        RPC.getProtocolVersion(ScmBlockLocationProtocolPB.class);
+    InetSocketAddress scmBlockAddress =
+        OzoneClientUtils.getScmAddressForBlockClients(conf);
+    ScmBlockLocationProtocolClientSideTranslatorPB scmBlockLocationClient =
+        new ScmBlockLocationProtocolClientSideTranslatorPB(
+            RPC.getProxy(ScmBlockLocationProtocolPB.class, scmVersion,
+                scmBlockAddress, UserGroupInformation.getCurrentUser(), conf,
+                NetUtils.getDefaultSocketFactory(conf),
+                Client.getRpcTimeout(conf)));
+    return scmBlockLocationClient;
   }
 
   /**
@@ -373,4 +407,20 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     }
   }
 
+  /**
+   * Allocate a key block.
+   * @param args - attributes of the key.
+   * @return
+   * @throws IOException
+   */
+  @Override
+  public KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException {
+    try {
+      metrics.incNumKeyBlockAllocates();
+      return keyManager.allocateKey(args);
+    } catch (Exception ex) {
+      metrics.incNumKeyBlockAllocateFails();
+      throw ex;
+    }
+  }
 }

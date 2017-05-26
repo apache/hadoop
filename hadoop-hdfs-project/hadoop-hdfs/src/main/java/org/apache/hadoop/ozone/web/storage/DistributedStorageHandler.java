@@ -29,6 +29,8 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset
     .LengthInputStream;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
+import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
@@ -53,6 +55,7 @@ import org.apache.hadoop.ozone.web.response.*;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.apache.hadoop.scm.storage.ChunkOutputStream;
+import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -279,15 +282,29 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public OutputStream newKeyWriter(KeyArgs args) throws IOException,
       OzoneException {
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setDataSize(args.getSize())
+        .build();
+    // contact KSM to allocate a block for key.
     String containerKey = buildContainerKey(args.getVolumeName(),
         args.getBucketName(), args.getKeyName());
-    KeyInfo key = new KeyInfo();
-    key.setKeyName(args.getKeyName());
-    key.setCreatedOn(dateToString(new Date()));
-    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
-    return new ChunkOutputStream(containerKey, key.getKeyName(),
-        xceiverClientManager, xceiverClient, args.getRequestID(),
-        chunkSize);
+    KsmKeyInfo keyInfo = keySpaceManagerClient.allocateKey(keyArgs);
+    // TODO the following createContainer and key writes may fail, in which
+    // case we should revert the above allocateKey to KSM.
+    String containerName = keyInfo.getContainerName();
+    XceiverClientSpi xceiverClient = getContainer(containerName);
+    if (keyInfo.getShouldCreateContainer()) {
+      LOG.debug("Need to create container {} for key: {}/{}/{}", containerName,
+          args.getVolumeName(), args.getBucketName(), args.getKeyName());
+      ContainerProtocolCalls.createContainer(
+          xceiverClient, args.getRequestID());
+    }
+    // establish a connection to the container to write the key
+    return new ChunkOutputStream(containerKey, args.getKeyName(),
+        xceiverClientManager, xceiverClient, args.getRequestID(), chunkSize);
   }
 
   @Override
@@ -332,6 +349,13 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public ListKeys listKeys(ListArgs args) throws IOException, OzoneException {
     throw new UnsupportedOperationException("listKeys not implemented");
+  }
+
+  private XceiverClientSpi getContainer(String containerName)
+      throws IOException {
+    Pipeline pipeline =
+        storageContainerLocationClient.getContainer(containerName);
+    return xceiverClientManager.acquireClient(pipeline);
   }
 
   /**
