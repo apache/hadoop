@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.permission.AclEntry;
 
 /** AclPermission parameter. */
@@ -33,7 +34,7 @@ public class AclPermissionParam extends StringParam {
   /** Default parameter value. */
   public static final String DEFAULT = "";
 
-  private static final Domain DOMAIN = new Domain(NAME,
+  private static Domain domain = new Domain(NAME,
       Pattern.compile(DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
 
   /**
@@ -42,11 +43,25 @@ public class AclPermissionParam extends StringParam {
    * @param str a string representation of the parameter value.
    */
   public AclPermissionParam(final String str) {
-    super(DOMAIN, str == null || str.equals(DEFAULT) ? null : str);
+    super(domain, str == null || str.equals(DEFAULT) ? null : str);
   }
 
   public AclPermissionParam(List<AclEntry> acl) {
-    super(DOMAIN,parseAclSpec(acl).equals(DEFAULT) ? null : parseAclSpec(acl));
+    super(domain, parseAclSpec(acl).equals(DEFAULT) ? null : parseAclSpec(acl));
+  }
+
+  @VisibleForTesting
+  public static Domain getAclPermissionPattern() {
+    return domain;
+  }
+
+  @VisibleForTesting
+  public static void setAclPermissionPattern(Domain dm) {
+    domain = dm;
+  }
+
+  public static void setAclPermissionPattern(String pattern) {
+    domain = new Domain(NAME, Pattern.compile(pattern));
   }
 
   @Override
