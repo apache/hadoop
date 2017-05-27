@@ -22,7 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -32,8 +34,9 @@ import org.apache.hadoop.fs.Path;
 public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   private Map<AuthorizationComponent, Boolean> authRules;
+  private boolean performOwnerMatch;
 
-  // The full qualified URL to the root directory
+ // The full qualified URL to the root directory
   private String qualifiedPrefixUrl;
 
   public MockWasbAuthorizerImpl(NativeAzureFileSystem fs) {
@@ -43,15 +46,22 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   @Override
   public void init(Configuration conf) {
+    init(conf, false);
+  }
+
+  /*
+  authorization matches owner with currentUserShortName while evaluating auth rules
+  if currentUserShortName is set to a string that is not empty
+  */
+  public void init(Configuration conf, boolean matchOwner) {
     authRules = new HashMap<AuthorizationComponent, Boolean>();
+    this.performOwnerMatch = matchOwner;
   }
 
   public void addAuthRule(String wasbAbsolutePath,
       String accessType, boolean access) {
-
-    wasbAbsolutePath = qualifiedPrefixUrl + wasbAbsolutePath;
-
-    AuthorizationComponent component = wasbAbsolutePath.endsWith("*")
+        wasbAbsolutePath = qualifiedPrefixUrl + wasbAbsolutePath;
+        AuthorizationComponent component = wasbAbsolutePath.endsWith("*")
         ? new AuthorizationComponent("^" + wasbAbsolutePath.replace("*", ".*"), accessType)
         : new AuthorizationComponent(wasbAbsolutePath, accessType);
 
@@ -59,18 +69,40 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
   }
 
   @Override
-  public boolean authorize(String wasbAbsolutePath, String accessType)
+  public boolean authorize(String wasbAbsolutePath, String accessType, String owner)
       throws WasbAuthorizationException {
 
     if (wasbAbsolutePath.endsWith(NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
       return true;
     }
 
+    String currentUserShortName = "";
+    if (this.performOwnerMatch) {
+      try {
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        currentUserShortName = ugi.getShortUserName();
+      } catch (Exception e) {
+        //no op
+      }
+    }
+
+    // In case of root("/"), owner match does not happen because owner is returned as empty string.
+    // we try to force owner match just for purpose of tests to make sure all operations work seemlessly with owner.
+    if (this.performOwnerMatch
+      && StringUtils.equalsIgnoreCase(wasbAbsolutePath, qualifiedPrefixUrl + "/")) {
+      owner = currentUserShortName;
+    }
+
+    boolean shouldEvaluateOwnerAccess = owner != null && !owner.isEmpty()
+      && this.performOwnerMatch;
+
+    boolean isOwnerMatch =  StringUtils.equalsIgnoreCase(currentUserShortName, owner);
+
     AuthorizationComponent component =
         new AuthorizationComponent(wasbAbsolutePath, accessType);
 
     if (authRules.containsKey(component)) {
-      return authRules.get(component);
+      return shouldEvaluateOwnerAccess ? isOwnerMatch && authRules.get(component) : authRules.get(component);
     } else {
       // Regex-pattern match if we don't have a straight match
       for (Map.Entry<AuthorizationComponent, Boolean> entry : authRules.entrySet()) {
@@ -79,11 +111,15 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
         String keyAccess = key.getAccessType();
 
         if (keyPath.endsWith("*") && Pattern.matches(keyPath, wasbAbsolutePath) && keyAccess.equals(accessType)) {
-          return entry.getValue();
+          return shouldEvaluateOwnerAccess ? isOwnerMatch && entry.getValue() : entry.getValue();
         }
       }
       return false;
     }
+  }
+
+  public void deleteAllAuthRules() {
+    authRules.clear();
   }
 }
 
