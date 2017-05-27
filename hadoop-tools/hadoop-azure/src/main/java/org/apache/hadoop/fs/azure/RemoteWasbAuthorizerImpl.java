@@ -87,6 +87,12 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   private static final String DELEGATION_TOKEN_QUERY_PARAM_NAME =
       "delegation";
 
+  /**
+   *  Query parameter name for sending owner of the specific resource {@value}
+   */
+  private static final String WASB_RESOURCE_OWNER_QUERY_PARAM_NAME =
+      "wasb_resource_owner";
+
   private WasbRemoteCallHelper remoteCallHelper = null;
   private String delegationToken;
   private boolean isSecurityEnabled;
@@ -119,7 +125,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   }
 
   @Override
-  public boolean authorize(String wasbAbsolutePath, String accessType)
+  public boolean authorize(String wasbAbsolutePath, String accessType, String resourceOwner)
       throws WasbAuthorizationException, IOException {
 
     try {
