@@ -200,7 +200,7 @@ public class NativeAzureFileSystem extends FileSystem {
       JsonNode oldFolderName = json.get("OldFolderName");
       JsonNode newFolderName = json.get("NewFolderName");
       if (oldFolderName == null || newFolderName == null) {
-    	  this.committed = false;
+        this.committed = false;
       } else {
         this.srcKey = oldFolderName.textValue();
         this.dstKey = newFolderName.textValue();
@@ -349,7 +349,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       return contents;
     }
-    
+
     /**
      * This is an exact copy of org.codehaus.jettison.json.JSONObject.quote 
      * method.
@@ -639,7 +639,7 @@ public class NativeAzureFileSystem extends FileSystem {
     return "wasb";
   }
 
-  
+
   /**
    * <p>
    * A {@link FileSystem} for reading and writing files stored on <a
@@ -1441,12 +1441,14 @@ public class NativeAzureFileSystem extends FileSystem {
       requestingAccessForPath = requestingAccessForPath.makeQualified(getUri(), getWorkingDirectory());
       originalPath = originalPath.makeQualified(getUri(), getWorkingDirectory());
 
-      if (!this.authorizer.authorize(requestingAccessForPath.toString(), accessType.toString())) {
+      String owner = getOwnerForPath(requestingAccessForPath);
+
+      if (!this.authorizer.authorize(requestingAccessForPath.toString(), accessType.toString(), owner)) {
         throw new WasbAuthorizationException(operation
             + " operation for Path : " + originalPath.toString() + " not allowed");
       }
 
-    }
+   }
   }
 
   /**
@@ -3172,5 +3174,41 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Return to the caller with the randomized key.
     return randomizedKey;
+  }
+
+  /*
+   * Helper method to retrieve owner information for a given path.
+   * The method returns empty string in case the file is not found or the metadata does not contain owner information
+  */
+  @VisibleForTesting
+  public String getOwnerForPath(Path absolutePath) throws IOException {
+    String owner = "";
+    FileMetadata meta = null;
+    String key = pathToKey(absolutePath);
+    try {
+
+      meta = store.retrieveMetadata(key);
+
+      if (meta != null) {
+        owner = meta.getPermissionStatus().getUserName();
+        LOG.debug("Retrieved '{}' as owner for path - {}", owner, absolutePath);
+      } else {
+        // meta will be null if file/folder doen not exist
+        LOG.debug("Cannot find file/folder - '{}'. Returning owner as empty string", absolutePath);
+      }
+    } catch(IOException ex) {
+
+          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+          boolean isfileNotFoundException = innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException);
+
+          // should not throw when the exception is related to blob/container/file/folder not found
+          if (!isfileNotFoundException) {
+            String errorMsg = "Could not retrieve owner information for path - " + absolutePath;
+            LOG.error(errorMsg);
+            throw new IOException(errorMsg, ex);
+          }
+      }
+    return owner;
   }
 }

@@ -1504,37 +1504,29 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override // FsDatasetSpi
-  public ReplicaHandler createTemporary(
-      StorageType storageType, String storageId, ExtendedBlock b)
+  public ReplicaHandler createTemporary(StorageType storageType,
+      String storageId, ExtendedBlock b, boolean isTransfer)
       throws IOException {
     long startTimeMs = Time.monotonicNow();
     long writerStopTimeoutMs = datanode.getDnConf().getXceiverStopTimeout();
     ReplicaInfo lastFoundReplicaInfo = null;
+    boolean isInPipeline = false;
     do {
       try (AutoCloseableLock lock = datasetLock.acquire()) {
         ReplicaInfo currentReplicaInfo =
             volumeMap.get(b.getBlockPoolId(), b.getBlockId());
         if (currentReplicaInfo == lastFoundReplicaInfo) {
-          if (lastFoundReplicaInfo != null) {
-            invalidate(b.getBlockPoolId(), new Block[] { lastFoundReplicaInfo });
-          }
-          FsVolumeReference ref =
-              volumes.getNextVolume(storageType, storageId, b.getNumBytes());
-          FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
-          ReplicaInPipeline newReplicaInfo;
-          try {
-            newReplicaInfo = v.createTemporary(b);
-          } catch (IOException e) {
-            IOUtils.cleanup(null, ref);
-            throw e;
-          }
-
-          volumeMap.add(b.getBlockPoolId(), newReplicaInfo.getReplicaInfo());
-          return new ReplicaHandler(newReplicaInfo, ref);
+          break;
         } else {
-          if (!(currentReplicaInfo.getGenerationStamp() < b.getGenerationStamp()
-                && (currentReplicaInfo.getState() == ReplicaState.TEMPORARY
-                    || currentReplicaInfo.getState() == ReplicaState.RBW))) {
+          isInPipeline = currentReplicaInfo.getState() == ReplicaState.TEMPORARY
+              || currentReplicaInfo.getState() == ReplicaState.RBW;
+          /*
+           * If the current block is old, reject.
+           * else If transfer request, then accept it.
+           * else if state is not RBW/Temporary, then reject
+           */
+          if ((currentReplicaInfo.getGenerationStamp() >= b.getGenerationStamp())
+              || (!isTransfer && !isInPipeline)) {
             throw new ReplicaAlreadyExistsException("Block " + b
                 + " already exists in state " + currentReplicaInfo.getState()
                 + " and thus cannot be created.");
@@ -1542,7 +1534,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           lastFoundReplicaInfo = currentReplicaInfo;
         }
       }
-
+      if (!isInPipeline) {
+        continue;
+      }
       // Hang too long, just bail out. This is not supposed to happen.
       long writerStopMs = Time.monotonicNow() - startTimeMs;
       if (writerStopMs > writerStopTimeoutMs) {
@@ -1555,6 +1549,29 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // Stop the previous writer
       ((ReplicaInPipeline)lastFoundReplicaInfo).stopWriter(writerStopTimeoutMs);
     } while (true);
+
+    if (lastFoundReplicaInfo != null) {
+      // Old blockfile should be deleted synchronously as it might collide
+      // with the new block if allocated in same volume.
+      // Do the deletion outside of lock as its DISK IO.
+      invalidate(b.getBlockPoolId(), new Block[] { lastFoundReplicaInfo },
+          false);
+    }
+    try (AutoCloseableLock lock = datasetLock.acquire()) {
+      FsVolumeReference ref = volumes.getNextVolume(storageType, storageId, b
+          .getNumBytes());
+      FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
+      ReplicaInPipeline newReplicaInfo;
+      try {
+        newReplicaInfo = v.createTemporary(b);
+      } catch (IOException e) {
+        IOUtils.cleanup(null, ref);
+        throw e;
+      }
+
+      volumeMap.add(b.getBlockPoolId(), newReplicaInfo.getReplicaInfo());
+      return new ReplicaHandler(newReplicaInfo, ref);
+    }
   }
 
   /**
@@ -1877,6 +1894,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override // FsDatasetSpi
   public void invalidate(String bpid, Block invalidBlks[]) throws IOException {
+    invalidate(bpid, invalidBlks, true);
+  }
+
+  private void invalidate(String bpid, Block[] invalidBlks, boolean async)
+      throws IOException {
     final List<String> errors = new ArrayList<String>();
     for (int i = 0; i < invalidBlks.length; i++) {
       final ReplicaInfo removing;
@@ -1947,13 +1969,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // If the block is cached, start uncaching it.
       cacheManager.uncacheBlock(bpid, invalidBlks[i].getBlockId());
 
-      // Delete the block asynchronously to make sure we can do it fast enough.
-      // It's ok to unlink the block file before the uncache operation
-      // finishes.
       try {
-        asyncDiskService.deleteAsync(v.obtainReference(), removing,
-            new ExtendedBlock(bpid, invalidBlks[i]),
-            dataStorage.getTrashDirectoryForReplica(bpid, removing));
+        if (async) {
+          // Delete the block asynchronously to make sure we can do it fast
+          // enough.
+          // It's ok to unlink the block file before the uncache operation
+          // finishes.
+          asyncDiskService.deleteAsync(v.obtainReference(), removing,
+              new ExtendedBlock(bpid, invalidBlks[i]),
+              dataStorage.getTrashDirectoryForReplica(bpid, removing));
+        } else {
+          asyncDiskService.deleteSync(v.obtainReference(), removing,
+              new ExtendedBlock(bpid, invalidBlks[i]),
+              dataStorage.getTrashDirectoryForReplica(bpid, removing));
+        }
       } catch (ClosedChannelException e) {
         LOG.warn("Volume " + v + " is closed, ignore the deletion task for " +
             "block " + invalidBlks[i]);

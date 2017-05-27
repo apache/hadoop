@@ -3250,7 +3250,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } else if(truncateRecovery) {
         recoveryBlock.setGenerationStamp(blockRecoveryId);
       }
-      uc.initializeBlockRecovery(lastBlock, blockRecoveryId);
+      uc.initializeBlockRecovery(lastBlock, blockRecoveryId, true);
       leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
@@ -3870,9 +3870,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         while (it.hasNext()) {
           Block b = it.next();
           BlockInfo blockInfo = blockManager.getStoredBlock(b);
-          BlockCollection bc = getBlockCollection(blockInfo);
-          if (bc.getStoragePolicyID() == lpPolicy.getId()) {
-            filesToDelete.add(bc);
+          if (blockInfo == null) {
+            LOG.info("Cannot find block info for block " + b);
+          } else {
+            BlockCollection bc = getBlockCollection(blockInfo);
+            if (bc.getStoragePolicyID() == lpPolicy.getId()) {
+              filesToDelete.add(bc);
+            }
           }
         }
 
@@ -4962,8 +4966,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     // Update old block with the new generation stamp and new length
-    lastBlock.setNumBytes(newBlock.getNumBytes());
-    lastBlock.setGenerationStampAndVerifyReplicas(newBlock.getGenerationStamp());
+    blockManager.updateLastBlock(lastBlock, newBlock);
 
     // find the DatanodeDescriptor objects
     final DatanodeStorageInfo[] storages = blockManager.getDatanodeManager()

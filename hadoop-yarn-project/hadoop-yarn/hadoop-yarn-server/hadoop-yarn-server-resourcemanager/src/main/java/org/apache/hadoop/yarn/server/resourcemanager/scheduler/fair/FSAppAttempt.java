@@ -1286,24 +1286,21 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public void updateDemand() {
-    demand = Resources.createResource(0);
     // Demand is current consumption plus outstanding requests
-    Resources.addTo(demand, getCurrentConsumption());
+    Resource tmpDemand = Resources.clone(getCurrentConsumption());
 
     // Add up outstanding resource requests
-    try {
-      writeLock.lock();
-      for (SchedulerRequestKey k : getSchedulerKeys()) {
-        PendingAsk pendingAsk = getPendingAsk(k, ResourceRequest.ANY);
-        if (pendingAsk.getCount() > 0) {
-          Resources.multiplyAndAddTo(demand,
-              pendingAsk.getPerAllocationResource(),
-              pendingAsk.getCount());
-        }
+    for (SchedulerRequestKey k : getSchedulerKeys()) {
+      PendingAsk pendingAsk = getPendingAsk(k, ResourceRequest.ANY);
+      if (pendingAsk.getCount() > 0) {
+        Resources.multiplyAndAddTo(tmpDemand,
+            pendingAsk.getPerAllocationResource(),
+            pendingAsk.getCount());
       }
-    } finally {
-      writeLock.unlock();
     }
+
+    // Update demand
+    demand = tmpDemand;
   }
 
   @Override

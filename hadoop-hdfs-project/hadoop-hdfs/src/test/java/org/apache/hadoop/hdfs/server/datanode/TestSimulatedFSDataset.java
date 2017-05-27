@@ -368,7 +368,7 @@ public class TestSimulatedFSDataset {
           ExtendedBlock block = new ExtendedBlock(newbpid,1);
           try {
             // it will throw an exception if the block pool is not found
-            fsdataset.createTemporary(StorageType.DEFAULT, null, block);
+            fsdataset.createTemporary(StorageType.DEFAULT, null, block, false);
           } catch (IOException ioe) {
             // JUnit does not capture exception in non-main thread,
             // so cache it and then let main thread throw later.
