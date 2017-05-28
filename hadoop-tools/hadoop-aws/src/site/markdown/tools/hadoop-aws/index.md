@@ -109,8 +109,7 @@ Do not inadvertently share these credentials through means such as
 
 If you do any of these: change your credentials immediately!
 
-### Warning #5: The S3 client provided by Amazon EMR are not from the Apache
-Software foundation, and are only supported by Amazon.
+### Warning #5: The S3 client provided by Amazon EMR are not from the Apache Software foundation, and are only supported by Amazon.
 
 Specifically: on Amazon EMR, s3a is not supported, and amazon recommend
 a different filesystem implementation. If you are using Amazon EMR, follow
