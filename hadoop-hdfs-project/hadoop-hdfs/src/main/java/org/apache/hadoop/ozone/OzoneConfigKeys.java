@@ -83,10 +83,9 @@ public final class OzoneConfigKeys {
       = ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY;
   public static final String DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT
       = ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT;
-  public static final String DFS_CONTAINER_RATIS_CONF =
-      "dfs.container.ratis.conf";
-  public static final String DFS_CONTAINER_RATIS_DATANODE_ADDRESS =
-      "dfs.container.ratis.datanode.address";
+  /** A unique ID to identify a Ratis server. */
+  public static final String DFS_CONTAINER_RATIS_SERVER_ID =
+      "dfs.container.ratis.server.id";
   public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =
       "dfs.container.ratis.datanode.storage.dir";
 

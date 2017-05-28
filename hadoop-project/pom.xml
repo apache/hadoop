@@ -99,7 +99,7 @@
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
     <!-- Apache Ratis version -->
-    <ratis.version>0.1-SNAPSHOT</ratis.version>
+    <ratis.version>0.1.1-alpha-SNAPSHOT</ratis.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>

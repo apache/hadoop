@@ -22,13 +22,10 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.ratis.RatisHelper;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.ratis.client.ClientFactory;
 import org.apache.ratis.client.RaftClient;
-import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.protocol.RaftClientReply;
-import org.apache.ratis.protocol.RaftPeer;
-import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.shaded.com.google.protobuf.ShadedProtoUtil;
@@ -36,10 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * An abstract implementation of {@link XceiverClientSpi} using Ratis.
@@ -67,24 +62,6 @@ public final  class XceiverClientRatis implements XceiverClientSpi {
     this.rpcType = rpcType;
   }
 
-  static RaftClient newRaftClient(Pipeline pipeline, RpcType rpcType) {
-    final List<RaftPeer> peers = pipeline.getMachines().stream()
-        .map(dn -> dn.getXferAddr())
-        .map(addr -> new RaftPeer(new RaftPeerId(addr), addr))
-        .collect(Collectors.toList());
-
-    final RaftProperties properties = new RaftProperties();
-    final ClientFactory factory = ClientFactory.cast(rpcType.newFactory(
-        properties, null));
-
-    return RaftClient.newBuilder()
-        .setClientRpc(factory.newRaftClientRpc())
-        .setServers(peers)
-        .setLeaderId(new RaftPeerId(pipeline.getLeader().getXferAddr()))
-        .setProperties(properties)
-        .build();
-  }
-
   @Override
   public Pipeline getPipeline() {
     return pipeline;
@@ -92,7 +69,8 @@ public final  class XceiverClientRatis implements XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
-    if (!client.compareAndSet(null, newRaftClient(pipeline, rpcType))) {
+    if (!client.compareAndSet(null,
+        RatisHelper.newRaftClient(rpcType, getPipeline()))) {
       throw new IllegalStateException("Client is already connected.");
     }
   }

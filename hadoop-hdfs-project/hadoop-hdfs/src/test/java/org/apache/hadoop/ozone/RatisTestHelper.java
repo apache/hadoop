@@ -26,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.stream.Collectors;
 
 /**
  * Helpers for Ratis tests.
@@ -34,23 +33,17 @@ import java.util.stream.Collectors;
 public interface RatisTestHelper {
   Logger LOG = LoggerFactory.getLogger(RatisTestHelper.class);
 
-  static void initRatisConf(
-      RpcType rpc, Pipeline pipeline, Configuration conf) {
+  static void initRatisConf(RpcType rpc, Configuration conf) {
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY, true);
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY, rpc.name());
     LOG.info(OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY
         + " = " + rpc.name());
-    final String s = pipeline.getMachines().stream()
-            .map(dn -> dn.getXferAddr())
-            .collect(Collectors.joining(","));
-    conf.setStrings(OzoneConfigKeys.DFS_CONTAINER_RATIS_CONF, s);
-    LOG.info(OzoneConfigKeys.DFS_CONTAINER_RATIS_CONF + " = " + s);
   }
 
   static XceiverClientRatis newXceiverClientRatis(
       RpcType rpcType, Pipeline pipeline, OzoneConfiguration conf)
       throws IOException {
-    initRatisConf(rpcType, pipeline, conf);
+    initRatisConf(rpcType, conf);
     return XceiverClientRatis.newXceiverClientRatis(pipeline, conf);
   }
 }
