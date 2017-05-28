@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
@@ -102,12 +103,11 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     if (!useRatis) {
       return;
     }
-    final String[] ids = dnConf.getStrings(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_CONF);
-    // TODO: use the i-th raft server as the i-th datanode address
-    //       this only work for one Raft cluster
-    setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_ADDRESS,
-        ids[i]);
+    final String address = ContainerTestHelper.createLocalAddress();
+    setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_SERVER_ID,
+        address);
+    setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+        String.valueOf(NetUtils.createSocketAddr(address).getPort()));
     setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
         getInstanceStorageDir(i, -1).getCanonicalPath());
   }
@@ -206,16 +206,13 @@ public final class MiniOzoneCluster extends MiniDFSCluster
    */
   public void waitOzoneReady() throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> {
-      if (scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY)
-          >= numDataNodes) {
-        return true;
-      }
-      LOG.info("Waiting for cluster to be ready. Got {} of {} DN Heartbeats.",
-          scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY),
-          numDataNodes);
-
-      return false;
-    }, 1000, 5 * 60 * 1000); //wait for 5 mins.
+      final int healthy = scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY);
+      final boolean isReady = healthy >= numDataNodes;
+      LOG.info("{}. Got {} of {} DN Heartbeats.",
+            isReady? "Cluster is ready" : "Waiting for cluster to be ready",
+            healthy, numDataNodes);
+      return isReady;
+    }, 1000, 60 * 1000); //wait for 1 min.
   }
 
   /**

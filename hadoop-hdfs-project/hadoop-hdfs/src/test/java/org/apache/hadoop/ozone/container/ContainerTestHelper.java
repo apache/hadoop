@@ -80,6 +80,11 @@ public final class ContainerTestHelper {
     return createPipeline(containerName, 1);
   }
 
+  public static String createLocalAddress() throws IOException {
+    try(ServerSocket s = new ServerSocket(0)) {
+      return "127.0.0.1:" + s.getLocalPort();
+    }
+  }
   public static DatanodeID createDatanodeID() throws IOException {
     ServerSocket socket = new ServerSocket(0);
     int port = socket.getLocalPort();
@@ -100,13 +105,26 @@ public final class ContainerTestHelper {
   public static Pipeline createPipeline(String containerName, int numNodes)
       throws IOException {
     Preconditions.checkArgument(numNodes >= 1);
-    final DatanodeID leader = createDatanodeID();
-    Pipeline pipeline = new Pipeline(leader.getDatanodeUuid());
+    final List<DatanodeID> ids = new ArrayList<>(numNodes);
+    for(int i = 0; i < numNodes; i++) {
+      ids.add(createDatanodeID());
+    }
+    return createPipeline(containerName, ids);
+  }
+
+  public static Pipeline createPipeline(
+      String containerName, Iterable<DatanodeID> ids)
+      throws IOException {
+    Objects.requireNonNull(ids, "ids == null");
+    final Iterator<DatanodeID> i = ids.iterator();
+    Preconditions.checkArgument(i.hasNext());
+    final DatanodeID leader = i.next();
+    final Pipeline pipeline = new Pipeline(leader.getDatanodeUuid());
     pipeline.setContainerName(containerName);
     pipeline.addMember(leader);
 
-    for(int i = 1; i < numNodes; i++) {
-      pipeline.addMember(createDatanodeID());
+    for(; i.hasNext();) {
+      pipeline.addMember(i.next());
     }
     return pipeline;
   }

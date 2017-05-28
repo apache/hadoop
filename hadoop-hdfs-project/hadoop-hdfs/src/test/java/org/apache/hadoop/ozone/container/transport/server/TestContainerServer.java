@@ -40,7 +40,11 @@ import org.apache.hadoop.scm.XceiverClientRatis;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.RatisHelper;
+import org.apache.ratis.client.RaftClient;
+import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
+import org.apache.ratis.util.CheckedBiConsumer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -87,7 +91,8 @@ public class TestContainerServer {
         (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
             pipeline.getLeader().getContainerPort()),
         XceiverClient::new,
-        (dn, conf) -> new XceiverServer(conf, new TestContainerDispatcher()));
+        (dn, conf) -> new XceiverServer(conf, new TestContainerDispatcher()),
+        (dn, p) -> {});
   }
 
   @FunctionalInterface
@@ -110,7 +115,8 @@ public class TestContainerServer {
   static XceiverServerRatis newXceiverServerRatis(
       DatanodeID dn, OzoneConfiguration conf) throws IOException {
     final String id = dn.getXferAddr();
-    conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_ADDRESS, id);
+    conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_SERVER_ID, id);
+    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT, dn.getContainerPort());
     final String dir = TEST_DIR + id.replace(':', '_');
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
@@ -118,13 +124,22 @@ public class TestContainerServer {
     return XceiverServerRatis.newXceiverServerRatis(conf, dispatcher);
   }
 
+  static void initXceiverServerRatis(
+      RpcType rpc, DatanodeID id, Pipeline pipeline) throws IOException {
+    final RaftPeer p = RatisHelper.toRaftPeer(id);
+    final RaftPeer[] peers = RatisHelper.toRaftPeerArray(pipeline);
+    final RaftClient client = RatisHelper.newRaftClient(rpc, p);
+    client.reinitialize(peers, p.getId());
+  }
+
+
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
       throws Exception {
     runTestClientServer(numNodes,
-        (pipeline, conf) -> RatisTestHelper.initRatisConf(
-            rpc, pipeline, conf),
+        (pipeline, conf) -> RatisTestHelper.initRatisConf(rpc, conf),
         XceiverClientRatis::newXceiverClientRatis,
-        TestContainerServer::newXceiverServerRatis);
+        TestContainerServer::newXceiverServerRatis,
+        (dn, p) -> initXceiverServerRatis(rpc, dn, p));
   }
 
   static void runTestClientServer(
@@ -133,7 +148,8 @@ public class TestContainerServer {
       CheckedBiFunction<Pipeline, OzoneConfiguration, XceiverClientSpi,
           IOException> createClient,
       CheckedBiFunction<DatanodeID, OzoneConfiguration, XceiverServerSpi,
-          IOException> createServer)
+          IOException> createServer,
+      CheckedBiConsumer<DatanodeID, Pipeline, IOException> initServer)
       throws Exception {
     final List<XceiverServerSpi> servers = new ArrayList<>();
     XceiverClientSpi client = null;
@@ -148,6 +164,7 @@ public class TestContainerServer {
         final XceiverServerSpi s = createServer.apply(dn, conf);
         servers.add(s);
         s.start();
+        initServer.accept(dn, pipeline);
       }
 
       client = createClient.apply(pipeline, conf);
