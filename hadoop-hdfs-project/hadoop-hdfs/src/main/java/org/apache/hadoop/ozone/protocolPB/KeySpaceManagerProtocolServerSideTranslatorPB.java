@@ -38,9 +38,9 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.CreateKeyRequest;
+    .KeySpaceManagerProtocolProtos.LocateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.CreateKeyResponse;
+    .KeySpaceManagerProtocolProtos.LocateKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto
@@ -105,6 +105,10 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         return Status.BUCKET_ALREADY_EXISTS;
       case FAILED_BUCKET_NOT_FOUND:
         return Status.BUCKET_NOT_FOUND;
+      case FAILED_KEY_ALREADY_EXISTS:
+        return Status.KEY_ALREADY_EXISTS;
+      case FAILED_KEY_NOT_FOUND:
+        return Status.KEY_NOT_FOUND;
       default:
         return Status.INTERNAL_ERROR;
       }
@@ -221,11 +225,11 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public CreateKeyResponse createKey(
-      RpcController controller, CreateKeyRequest request
+  public LocateKeyResponse createKey(
+      RpcController controller, LocateKeyRequest request
   ) throws ServiceException {
-    CreateKeyResponse.Builder resp =
-        CreateKeyResponse.newBuilder();
+    LocateKeyResponse.Builder resp =
+        LocateKeyResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
       KsmKeyArgs ksmKeyArgs = new KsmKeyArgs.Builder()
@@ -235,6 +239,29 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
           .setDataSize(keyArgs.getDataSize())
           .build();
       KsmKeyInfo keyInfo = impl.allocateKey(ksmKeyArgs);
+      resp.setKeyInfo(keyInfo.getProtobuf());
+      resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public LocateKeyResponse lookupKey(
+      RpcController controller, LocateKeyRequest request
+  ) throws ServiceException {
+    LocateKeyResponse.Builder resp =
+        LocateKeyResponse.newBuilder();
+    try {
+      KeyArgs keyArgs = request.getKeyArgs();
+      KsmKeyArgs ksmKeyArgs = new KsmKeyArgs.Builder()
+          .setVolumeName(keyArgs.getVolumeName())
+          .setBucketName(keyArgs.getBucketName())
+          .setKeyName(keyArgs.getKeyName())
+          .setDataSize(keyArgs.getDataSize())
+          .build();
+      KsmKeyInfo keyInfo = impl.lookupKey(ksmKeyArgs);
       resp.setKeyInfo(keyInfo.getProtobuf());
       resp.setStatus(Status.OK);
     } catch (IOException e) {

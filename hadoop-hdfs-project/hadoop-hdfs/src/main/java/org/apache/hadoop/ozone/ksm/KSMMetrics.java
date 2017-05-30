@@ -33,7 +33,8 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numVolumeInfos;
   private @Metric MutableCounterLong numBucketCreates;
   private @Metric MutableCounterLong numBucketInfos;
-  private @Metric MutableCounterLong numKeyBlockAllocate;
+  private @Metric MutableCounterLong numKeyAllocate;
+  private @Metric MutableCounterLong numKeyLookup;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -41,7 +42,8 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numVolumeInfoFails;
   private @Metric MutableCounterLong numBucketCreateFails;
   private @Metric MutableCounterLong numBucketInfoFails;
-  private @Metric MutableCounterLong numKeyBlockAllocateFails;
+  private @Metric MutableCounterLong numKeyAllocateFails;
+  private @Metric MutableCounterLong numKeyLookupFails;
 
   public KSMMetrics() {
   }
@@ -93,12 +95,20 @@ public class KSMMetrics {
     numBucketInfoFails.incr();
   }
 
-  public void incNumKeyBlockAllocates() {
-    numKeyBlockAllocate.incr();
+  public void incNumKeyAllocates() {
+    numKeyAllocate.incr();
   }
 
-  public void incNumKeyBlockAllocateFails() {
-    numKeyBlockAllocateFails.incr();
+  public void incNumKeyAllocateFails() {
+    numKeyAllocateFails.incr();
+  }
+
+  public void incNumKeyLookups() {
+    numKeyLookup.incr();
+  }
+
+  public void incNumKeyLookupFails() {
+    numKeyLookupFails.incr();
   }
 
   @VisibleForTesting
@@ -152,12 +162,22 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumKeyBlockAllocates() {
-    return numKeyBlockAllocate.value();
+  public long getNumKeyAllocates() {
+    return numKeyAllocate.value();
   }
 
   @VisibleForTesting
-  public long getNumKeyBlockAllocateFailes() {
-    return numKeyBlockAllocateFails.value();
+  public long getNumKeyAllocateFails() {
+    return numKeyAllocateFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumKeyLookups() {
+    return numKeyLookup.value();
+  }
+
+  @VisibleForTesting
+  public long getNumKeyLookupFails() {
+    return numKeyLookupFails.value();
   }
 }

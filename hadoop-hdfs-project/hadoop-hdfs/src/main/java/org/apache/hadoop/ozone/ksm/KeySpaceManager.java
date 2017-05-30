@@ -408,18 +408,37 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   }
 
   /**
-   * Allocate a key block.
+   * Allocate a key.
+   *
    * @param args - attributes of the key.
-   * @return
+   * @return KsmKeyInfo - the info about the allocated key.
    * @throws IOException
    */
   @Override
   public KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException {
     try {
-      metrics.incNumKeyBlockAllocates();
+      metrics.incNumKeyAllocates();
       return keyManager.allocateKey(args);
     } catch (Exception ex) {
-      metrics.incNumKeyBlockAllocateFails();
+      metrics.incNumKeyAllocateFails();
+      throw ex;
+    }
+  }
+
+  /**
+   * Lookup a key.
+   *
+   * @param args - attributes of the key.
+   * @return KsmKeyInfo - the info about the requested key.
+   * @throws IOException
+   */
+  @Override
+  public KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException {
+    try {
+      metrics.incNumKeyLookups();
+      return keyManager.lookupKey(args);
+    } catch (Exception ex) {
+      metrics.incNumKeyLookupFails();
       throw ex;
     }
   }

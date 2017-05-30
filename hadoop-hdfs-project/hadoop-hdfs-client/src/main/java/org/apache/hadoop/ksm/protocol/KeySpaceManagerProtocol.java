@@ -117,7 +117,20 @@ public interface KeySpaceManagerProtocol {
 
   /**
    * Allocate a block to a container, the block is returned to the client.
+   *
+   * @param args the args of the key.
+   * @return KsmKeyInfo isntacne that client uses to talk to container.
+   * @throws IOException
    */
   KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException;
+
+  /**
+   * Look up for the container of an existing key.
+   *
+   * @param args the args of the key.
+   * @return KsmKeyInfo isntacne that client uses to talk to container.
+   * @throws IOException
+   */
+  KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException;
 
 }

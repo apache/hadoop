@@ -316,11 +316,21 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public LengthInputStream newKeyReader(KeyArgs args) throws IOException,
       OzoneException {
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setDataSize(args.getSize())
+        .build();
+    KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
     String containerKey = buildContainerKey(args.getVolumeName(),
         args.getBucketName(), args.getKeyName());
-    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
+    String containerName = keyInfo.getContainerName();
+    XceiverClientSpi xceiverClient = getContainer(containerName);
     boolean success = false;
     try {
+      LOG.debug("get key accessing {} {}",
+          xceiverClient.getPipeline().getContainerName(), containerKey);
       KeyData containerKeyData = containerKeyDataForRead(
           xceiverClient.getPipeline().getContainerName(), containerKey);
       GetKeyResponseProto response = getKey(xceiverClient, containerKeyData,

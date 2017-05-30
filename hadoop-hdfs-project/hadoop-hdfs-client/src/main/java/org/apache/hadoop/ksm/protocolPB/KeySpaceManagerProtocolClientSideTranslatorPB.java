@@ -42,9 +42,9 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.CreateKeyRequest;
+    .KeySpaceManagerProtocolProtos.LocateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.CreateKeyResponse;
+    .KeySpaceManagerProtocolProtos.LocateKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto
@@ -330,7 +330,7 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
    */
   @Override
   public KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException {
-    CreateKeyRequest.Builder req = CreateKeyRequest.newBuilder();
+    LocateKeyRequest.Builder req = LocateKeyRequest.newBuilder();
     KeyArgs keyArgs = KeyArgs.newBuilder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
@@ -338,14 +338,37 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
         .setDataSize(args.getDataSize()).build();
     req.setKeyArgs(keyArgs);
 
-    final CreateKeyResponse resp;
+    final LocateKeyResponse resp;
     try {
       resp = rpcProxy.createKey(NULL_RPC_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
     if (resp.getStatus() != Status.OK) {
-      throw new IOException("Get key block failed, error:" +
+      throw new IOException("Get key failed, error:" +
+          resp.getStatus());
+    }
+    return KsmKeyInfo.getFromProtobuf(resp.getKeyInfo());
+  }
+
+  @Override
+  public KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException {
+    LocateKeyRequest.Builder req = LocateKeyRequest.newBuilder();
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setDataSize(args.getDataSize()).build();
+    req.setKeyArgs(keyArgs);
+
+    final LocateKeyResponse resp;
+    try {
+      resp = rpcProxy.lookupKey(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new IOException("Lookup key failed, error:" +
           resp.getStatus());
     }
     return KsmKeyInfo.getFromProtobuf(resp.getKeyInfo());
