@@ -26,7 +26,6 @@ var Router = Ember.Router.extend({
 Router.map(function() {
   this.route('yarn-apps', function () {
     this.route('apps');
-    this.route('services');
   });
   this.route('yarn-services');
   this.route('yarn-nodes', function(){
@@ -50,11 +49,14 @@ Router.map(function() {
       '/yarn-container-log/:node_id/:node_addr/:container_id/:filename' });
 
   this.route('cluster-overview');
-  this.route('yarn-app', { path: '/yarn-app/:app_id' });
+  this.route('yarn-app', function() {
+    this.route('info', {path: '/:app_id/info'});
+    this.route('attempts', {path: '/:app_id/attempts'});
+    this.route('charts', {path: '/:app_id/charts'});
+  });
   this.route('yarn-app-attempt', { path: '/yarn-app-attempt/:app_attempt_id'});
   this.route('error');
   this.route('notfound', { path: '*:' });
-  this.route('yarn-app-attempts', { path: '/yarn-app-attempts/:app_id' });
   this.route('yarn-queues', { path: '/yarn-queues/:queue_name' });
 
   this.route('yarn-flow-activity');

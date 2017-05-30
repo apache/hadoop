@@ -16,15 +16,22 @@
  * limitations under the License.
  */
 
-import { moduleFor, test } from 'ember-qunit';
+import Ember from 'ember';
+import AbstractRoute from '../abstract';
+import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-moduleFor('controller:yarn-app-attempts', 'Unit | Controller | yarn app attempts', {
-  // Specify the other units that are required for this test.
-  // needs: ['controller:foo']
-});
+export default AbstractRoute.extend(AppAttemptMixin, {
+  model(param, transition) {
+    transition.send('updateBreadcrumbs', param.app_id, param.service);
+    return Ember.RSVP.hash({
+      appId: param.app_id,
+      serviceName: param.service,
+      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store)
+    });
+  },
 
-// Replace this with your real tests.
-test('it exists', function(assert) {
-  let controller = this.subject();
-  assert.ok(controller);
+  unloadAll() {
+    this.store.unloadAll('yarn-app');
+    this.store.unloadAll('yarn-app-timeline');
+  }
 });

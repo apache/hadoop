@@ -1,4 +1,4 @@
-/**
+{{!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,16 +14,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+}}
 
-import { moduleFor, test } from 'ember-qunit';
-
-moduleFor('route:yarn-app-attempts', 'Unit | Route | yarn app attempts', {
-  // Specify the other units that are required for this test.
-  // needs: ['controller:foo']
-});
-
-test('it exists', function(assert) {
-  let route = this.subject();
-  assert.ok(route);
-});
+<div class="row">
+  {{timeline-view
+    parent-id="attempt-timeline-div"
+    my-id="timeline-view"
+    height="100%"
+    rmModel=model.attempts
+    label="shortAppAttemptId"
+    attemptModel=true
+    serviceName=model.serviceName
+  }}
+</div>

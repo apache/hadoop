@@ -32,7 +32,7 @@ function createColumn() {
     minWidth: "300px",
     getCellContent: function (row) {
       return {
-        routeName: 'yarn-app',
+        routeName: 'yarn-app.info',
         id: row.get('appId'),
         displayText: row.get('appId')
       };

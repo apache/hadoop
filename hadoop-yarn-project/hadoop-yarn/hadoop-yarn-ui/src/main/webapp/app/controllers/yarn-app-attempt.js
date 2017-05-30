@@ -34,10 +34,10 @@ export default Ember.Controller.extend({
       routeName: 'yarn-apps.apps'
     }, {
       text: `App [${appId}]`,
-      href: `#/yarn-app/${appId}`
+      href: `#/yarn-app/${appId}/info`
     }, {
       text: "Attempts",
-      href: `#/yarn-app-attempts/${appId}`
+      href: `#/yarn-app/${appId}/attempts`
     }, {
       text: `Attempt [${attemptId}]`
     }];
@@ -50,10 +50,10 @@ export default Ember.Controller.extend({
         routeName: 'yarn-services'
       }, {
         text: `${serviceName} [${appId}]`,
-        href: `#/yarn-app/${appId}?service=${serviceName}`
+        href: `#/yarn-app/${appId}/info?service=${serviceName}`
       }, {
         text: "Attempts",
-        href: `#/yarn-app-attempts/${appId}?service=${serviceName}`
+        href: `#/yarn-app/${appId}/attempts?service=${serviceName}`
       }, {
         text: `Attempt [${attemptId}]`
       }];

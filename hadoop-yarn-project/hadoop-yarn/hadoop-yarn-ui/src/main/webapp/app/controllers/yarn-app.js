@@ -19,42 +19,44 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
-  queryParams: ["service"],
-  service: undefined,
+  appId: '',
+  serviceName: undefined,
 
-  breadcrumbs: Ember.computed("model.app.id", function () {
-    var appId = this.get("model.app.id");
-    var serviceName = this.get('service');
+  breadcrumbs: [{
+    text: "Home",
+    routeName: 'application'
+  }, {
+    text: "Applications",
+    routeName: 'yarn-apps.apps'
+  }, {
+    text: 'App'
+  }],
+
+  updateBreadcrumbs(appId, serviceName, tailCrumbs) {
     var breadcrumbs = [{
       text: "Home",
       routeName: 'application'
-    },{
-      text: "Applications",
-      routeName: 'yarn-apps.apps'
-    }, {
-      text: `App [${appId}]`,
-      href: `#/yarn-app/${appId}`
     }];
-    if (serviceName) {
-      breadcrumbs = [{
-        text: "Home",
-        routeName: 'application'
-      }, {
+    if (appId && serviceName) {
+      breadcrumbs.push({
         text: "Services",
         routeName: 'yarn-services'
       }, {
         text: `${serviceName} [${appId}]`,
-        href: `#/yarn-app/${appId}?service=${serviceName}`
-      }];
+        href: `#/yarn-app/${appId}/info?service=${serviceName}`
+      });
+    } else {
+      breadcrumbs.push({
+        text: "Applications",
+        routeName: 'yarn-apps.apps'
+      }, {
+        text: `App [${appId}]`,
+        href: `#/yarn-app/${appId}/info`
+      });
     }
-    return breadcrumbs;
-  }),
-
-  amHostHttpAddressFormatted: Ember.computed('model.app.amHostHttpAddress', function() {
-    var amHostAddress = this.get('model.app.amHostHttpAddress');
-    if (amHostAddress && amHostAddress.indexOf('://') < 0) {
-      amHostAddress = 'http://' + amHostAddress;
+    if (tailCrumbs) {
+      breadcrumbs.pushObjects(tailCrumbs);
     }
-    return amHostAddress;
-  })
+    this.set('breadcrumbs', breadcrumbs);
+  }
 });

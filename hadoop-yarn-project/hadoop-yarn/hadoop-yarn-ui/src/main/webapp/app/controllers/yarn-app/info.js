@@ -16,14 +16,17 @@
  * limitations under the License.
  */
 
-import AbstractRoute from './abstract';
+import Ember from 'ember';
 
-export default AbstractRoute.extend({
-  actions: {
-    updateBreadcrumbs(appId, serviceName, tailCrumbs) {
-      var controller = this.controllerFor('yarn-app');
-      controller.setProperties({appId: appId, serviceName: serviceName});
-      controller.updateBreadcrumbs(appId, serviceName, tailCrumbs);
+export default Ember.Controller.extend({
+  queryParams: ["service"],
+  service: undefined,
+
+  amHostHttpAddressFormatted: Ember.computed('model.app.amHostHttpAddress', function() {
+    var amHostAddress = this.get('model.app.amHostHttpAddress');
+    if (amHostAddress && amHostAddress.indexOf('://') < 0) {
+      amHostAddress = 'http://' + amHostAddress;
     }
-  }
+    return amHostAddress;
+  })
 });

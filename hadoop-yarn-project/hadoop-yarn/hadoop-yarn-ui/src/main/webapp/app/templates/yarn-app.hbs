@@ -18,14 +18,13 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
-{{#if model.app}}
 <div class="col-md-12 container-fluid">
   <div class="row">
 
     <div class="col-md-2 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
-          {{#if service}}
+          {{#if serviceName}}
             Service
           {{else}}
             Application
@@ -34,13 +33,14 @@
         <div class="panel-body">
           <ul class="nav nav-pills nav-stacked" id="stacked-menu">
             <ul class="nav nav-pills nav-stacked collapse in">
-              {{#link-to 'yarn-app' tagName="li"}}
-                {{#link-to 'yarn-app' model.app.id (query-params service=service)}}Information
-                {{/link-to}}
+              {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
+                {{#link-to 'yarn-app.info' appId (query-params service=serviceName)}}Information{{/link-to}}
               {{/link-to}}
-              {{#link-to 'yarn-app-attempts' tagName="li"}}
-                {{#link-to 'yarn-app-attempts' model.app.id (query-params service=service)}}Attempts List
-                {{/link-to}}
+              {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
+                {{#link-to 'yarn-app.attempts' appId (query-params service=serviceName)}}Attempts List{{/link-to}}
+              {{/link-to}}
+              {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
+                {{#link-to 'yarn-app.charts' appId (query-params service=serviceName)}}Resource Usage{{/link-to}}
               {{/link-to}}
             </ul>
           </ul>
@@ -49,174 +49,7 @@
     </div>
 
     <div class="col-md-10 container-fluid">
-      <div class="row">
-        <div class="col-md-12">
-          {{app-timeout-bar app=model.app}}
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-md-12 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">Basic Info</div>
-            <div class="x-scroll">
-              <table class="display table table-striped table-bordered"
-                     cellspacing="0" width="100%">
-                <thead>
-                  <tr>
-                    <th>Application ID</th>
-                    <th>Name</th>
-                    <th>User</th>
-                    <th>Queue</th>
-                    <th>State</th>
-                    <th>Final Status</th>
-                    <th>Start Time</th>
-                    <th>Elapsed Time</th>
-                    <th>Finished Time</th>
-                    <th>Priority</th>
-                    <th>Progress</th>
-                    <th>Is Unmanaged AM</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  <tr>
-                    <td>{{model.app.id}}</td>
-                    <td>{{model.app.appName}}</td>
-                    <td>{{model.app.user}}</td>
-                    <td>{{model.app.queue}}</td>
-                    <td>{{model.app.state}}</td>
-                    <td>
-                      <span class={{model.app.finalStatusStyle}}>
-                        {{model.app.finalStatus}}
-                      </span>
-                    </td>
-                    <td>{{model.app.startTime}}</td>
-                    <td>{{model.app.formattedElapsedTime}}</td>
-                    <td>{{model.app.validatedFinishedTs}}</td>
-                    <td>{{model.app.priority}}</td>
-                    <td>
-                      <div class="progress" style="margin-bottom: 0;">
-                        <div class="progress-bar" role="progressbar"
-                             aria-valuenow="60" aria-valuemin="0"
-                             aria-valuemax="100"
-                             style={{model.app.progressStyle}}>
-                          {{model.app.progress}}%
-                        </div>
-                      </div>
-                    </td>
-                    <td>{{model.app.unmanagedApplication}}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="row">
-        {{#if model.app.diagnostics}}
-          <div class="col-md-12 container-fluid">
-            {{#if model.app.isFailed}}
-              <div class="panel panel-danger">
-                <div class="panel-heading">
-                  Diagnostics
-                </div>
-                <div class="panel-body">{{model.app.diagnostics}}</div>
-              </div>
-            {{else}}
-              <div class="panel panel-default">
-                <div class="panel-heading">
-                  Diagnostics
-                </div>
-                <div class="panel-body">{{model.app.diagnostics}}</div>
-              </div>
-            {{/if}}
-          </div>
-        {{/if}}
-      </div>
-
-      <div class="row">
-        <div class="col-md-8 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">Scheduling Info</div>
-            <table class="display table table-striped table-bordered"
-                   cellspacing="0" width="100%">
-              <thead>
-              <tr>
-                <th>Allocated Resource</th>
-                <th>Running Containers</th>
-                <th>Preempted Resource</th>
-                <th>Num Non-AM container preempted</th>
-                <th>Num AM container preempted</th>
-                <th>Aggregated Resource Usage</th>
-              </tr>
-              </thead>
-
-              <tbody>
-              <tr>
-                <td>{{model.app.allocatedResource}}</td>
-                <td>{{model.app.runningContainersNumber}}</td>
-                <td>{{model.app.preemptedResource}}</td>
-                <td>{{model.app.numAMContainerPreempted}}</td>
-                <td>{{model.app.numAMContainerPreempted}}</td>
-                <td>{{model.app.aggregatedResourceUsage}}</td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="col-md-4 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">Application Master Info</div>
-            <table class="display table table-striped table-bordered"
-                   cellspacing="0" width="100%">
-              <thead>
-              <tr>
-                <th>Master Container Log</th>
-                <th>Master Node</th>
-                <th>Master Node Label Expression</th>
-              </tr>
-              </thead>
-
-              <tbody>
-              <tr>
-                <td><a href="{{model.app.amContainerLogs}}" target="_blank">Link</a></td>
-                <td><a href="{{amHostHttpAddressFormatted}}" target="_blank">Link</a></td>
-                <td>{{model.app.amNodeLabelExpression}}</td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {{#if model.nodes}}
-        {{#if model.rmContainers}}
-          <div class="row" id="stackd-bar-chart-mem">
-            {{per-app-memusage-by-nodes-stacked-barchart
-            nodes=model.nodes
-            rmContainers=model.rmContainers
-            parentId="stackd-bar-chart-mem"
-            title=(concat 'Memory usage by nodes for: [' model.app.id ']')}}
-          </div>
-
-          <hr>
-
-          <div class="row" id="stackd-bar-chart-ncontainer">
-            {{per-app-ncontainers-by-nodes-stacked-barchart
-            nodes=model.nodes
-            rmContainers=model.rmContainers
-            parentId="stackd-bar-chart-ncontainer"
-            title=(concat 'Running #Containers by nodes for: [' model.app.id ']')}}
-          </div>
-        {{/if}}
-      {{/if}}
-
-
+      {{outlet}}
     </div>
   </div>
 </div>
-{{/if}}
-{{outlet}}

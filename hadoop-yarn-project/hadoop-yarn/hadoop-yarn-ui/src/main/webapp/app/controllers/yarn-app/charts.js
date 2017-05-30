@@ -17,19 +17,12 @@
  */
 
 import Ember from 'ember';
-import AbstractRoute from './abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param) {
-    return Ember.RSVP.hash({
-      appId: param.app_id,
-      attempts: this.fetchAttemptListFromRMorATS(param.app_id, this.store)
-    });
-  },
+export default Ember.Controller.extend({
+  queryParams: ["service"],
+  service: undefined,
 
-  unloadAll() {
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-timeline-appattempt');
-  }
+  isRunningApp: Ember.computed('model.app.state', function() {
+    return this.get('model.app.state') === "RUNNING";
+  })
 });

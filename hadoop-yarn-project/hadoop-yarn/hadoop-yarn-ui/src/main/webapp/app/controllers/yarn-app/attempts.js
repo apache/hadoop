@@ -20,38 +20,5 @@ import Ember from 'ember';
 
 export default Ember.Controller.extend({
   queryParams: ["service"],
-  service: undefined,
-
-  breadcrumbs: Ember.computed("model.appId", function () {
-    var appId = this.get("model.appId");
-    var serviceName = this.get('service');
-    var breadcrumbs = [{
-      text: "Home",
-      routeName: 'application'
-    },{
-      text: "Applications",
-      routeName: 'yarn-apps.apps'
-    }, {
-      text: `App [${appId}]`,
-      href: `#/yarn-app/${appId}`
-    }, {
-      text: "Attempts",
-    }];
-    if (serviceName) {
-      breadcrumbs = [{
-        text: "Home",
-        routeName: 'application'
-      }, {
-        text: "Services",
-        routeName: 'yarn-services'
-      }, {
-        text: `${serviceName} [${appId}]`,
-        href: `#/yarn-app/${appId}?service=${serviceName}`
-      }, {
-        text: "Attempts"
-      }];
-    }
-    return breadcrumbs;
-  })
-
+  service: undefined
 });

@@ -18,7 +18,7 @@
 
 import { moduleFor, test } from 'ember-qunit';
 
-moduleFor('controller:yarn-apps/services', 'Unit | Controller | yarn apps/services', {
+moduleFor('controller:yarn-app/info', 'Unit | Controller | yarn app/info', {
   // Specify the other units that are required for this test.
   // needs: ['controller:foo']
 });
