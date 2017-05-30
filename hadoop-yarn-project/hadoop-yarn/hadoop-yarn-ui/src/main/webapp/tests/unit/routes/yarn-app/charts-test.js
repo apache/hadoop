@@ -16,18 +16,14 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import { moduleFor, test } from 'ember-qunit';
 
-export default Ember.Route.extend({
-  model() {
-      return Ember.RSVP.hash({
-        apps: this.store.query('yarn-app', {
-          applicationTypes: "org-apache-slider"
-      }),
-    });
-  },
+moduleFor('route:yarn-app/charts', 'Unit | Route | yarn app/charts', {
+  // Specify the other units that are required for this test.
+  // needs: ['controller:foo']
+});
 
-  unloadAll() {
-    this.store.unloadAll('yarn-app');
-  }
+test('it exists', function(assert) {
+  let route = this.subject();
+  assert.ok(route);
 });

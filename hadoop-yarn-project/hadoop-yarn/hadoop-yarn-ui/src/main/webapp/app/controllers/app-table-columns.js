@@ -38,7 +38,7 @@ export default Ember.Controller.extend({
           getCellContent: function(row) {
             return {
               displayText: row.id,
-              href: `#/yarn-app/${row.id}`
+              href: `#/yarn-app/${row.id}/info`
             };
           }
       }, {
@@ -112,7 +112,7 @@ export default Ember.Controller.extend({
       getCellContent: function(row) {
         return {
           displayText: row.get('appName'),
-          href: `#/yarn-app/${row.id}?service=${row.get('appName')}`
+          href: `#/yarn-app/${row.id}/info?service=${row.get('appName')}`
         };
       }
     }, {
