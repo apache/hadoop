@@ -99,6 +99,9 @@ Release 2.7.4 - UNRELEASED
     YARN-6615. AmIpFilter drops query parameters on redirect. (Wilfred
     Spiegelenburg via jlowe)
 
+    YARN-6304. Skip rm.transitionToActive call to RM if RM is already active.
+    (Rohith Sharma K S via junping_du)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
