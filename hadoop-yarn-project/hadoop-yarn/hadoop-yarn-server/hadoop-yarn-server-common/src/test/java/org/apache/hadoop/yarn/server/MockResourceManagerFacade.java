@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -118,6 +118,7 @@ import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -167,6 +168,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   private static final Logger LOG =
       LoggerFactory.getLogger(MockResourceManagerFacade.class);
 
+  private HashSet<ApplicationId> applicationMap = new HashSet<>();
   private HashMap<String, List<ContainerId>> applicationContainerIdMap =
       new HashMap<String, List<ContainerId>>();
   private HashMap<ContainerId, Container> allocatedContainerMap =
@@ -424,37 +426,25 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) throws YarnException, IOException {
+    ApplicationId appId = null;
+    if (request.getApplicationSubmissionContext() != null) {
+      appId = request.getApplicationSubmissionContext().getApplicationId();
+    }
+    LOG.info("Application submitted: " + appId);
+    applicationMap.add(appId);
     return SubmitApplicationResponse.newInstance();
   }
 
   @Override
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) throws YarnException, IOException {
-    String appId = "";
-    boolean foundApp = false;
+    ApplicationId appId = null;
     if (request.getApplicationId() != null) {
-      appId = request.getApplicationId().toString();
-      synchronized (applicationContainerIdMap) {
-        for (Entry<String, List<ContainerId>> entry : applicationContainerIdMap
-            .entrySet()) {
-          ApplicationAttemptId attemptId =
-              ApplicationAttemptId.fromString(entry.getKey());
-          if (attemptId.getApplicationId().equals(request.getApplicationId())) {
-            // Remove the apptempt and the containers that were being tracked
-            List<ContainerId> ids =
-                applicationContainerIdMap.remove(entry.getKey());
-            if (ids != null) {
-              for (ContainerId c : ids) {
-                allocatedContainerMap.remove(c);
-              }
-            }
-            foundApp = true;
-          }
-        }
+      appId = request.getApplicationId();
+      if (!applicationMap.remove(appId)) {
+        throw new ApplicationNotFoundException(
+            "Trying to kill an absent application: " + appId);
       }
-    }
-    if (!foundApp) {
-      throw new YarnException("The application id is NOT registered: " + appId);
     }
     LOG.info("Force killing application: " + appId);
     return KillApplicationResponse.newInstance(true);
