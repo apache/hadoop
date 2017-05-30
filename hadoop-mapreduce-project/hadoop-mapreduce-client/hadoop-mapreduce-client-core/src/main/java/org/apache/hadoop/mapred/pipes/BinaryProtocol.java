@@ -68,7 +68,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
    * The integer codes to represent the different messages. These must match
    * the C++ codes or massive confusion will result.
    */
-  private static enum MessageType { START(0),
+  private enum MessageType { START(0),
                                     SET_JOB_CONF(1),
                                     SET_INPUT_TYPES(2),
                                     RUN_MAP(3),

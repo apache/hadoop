@@ -358,7 +358,7 @@ public class TaskLog {
    * The filter for userlogs.
    */
   @InterfaceAudience.Private
-  public static enum LogName {
+  public enum LogName {
     /** Log on the stdout of the task. */
     STDOUT ("stdout"),
 

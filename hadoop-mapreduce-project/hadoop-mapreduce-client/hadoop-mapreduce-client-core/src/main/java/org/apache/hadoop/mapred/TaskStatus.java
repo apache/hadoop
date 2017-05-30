@@ -45,12 +45,12 @@ public abstract class TaskStatus implements Writable, Cloneable {
   //enumeration for reporting current phase of a task.
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public static enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE, CLEANUP}
+  public enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE, CLEANUP}
 
   // what state is the task in?
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
+  public enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED,
                             COMMIT_PENDING, FAILED_UNCLEAN, KILLED_UNCLEAN, PREEMPTED}
     
   private final TaskAttemptID taskid;

@@ -87,7 +87,7 @@ public class HistoryFileManager extends AbstractService {
   private static final Log LOG = LogFactory.getLog(HistoryFileManager.class);
   private static final Log SUMMARY_LOG = LogFactory.getLog(JobSummary.class);
 
-  private static enum HistoryInfoState {
+  private enum HistoryInfoState {
     IN_INTERMEDIATE, IN_DONE, DELETED, MOVE_FAILED
   };
   

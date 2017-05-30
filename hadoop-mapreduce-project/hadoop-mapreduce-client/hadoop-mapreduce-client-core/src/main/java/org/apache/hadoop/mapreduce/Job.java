@@ -79,7 +79,7 @@ public class Job extends JobContextImpl implements JobContext {
   private static final Log LOG = LogFactory.getLog(Job.class);
 
   @InterfaceStability.Evolving
-  public static enum JobState {DEFINE, RUNNING};
+  public enum JobState {DEFINE, RUNNING};
   private static final long MAX_JOBSTATUS_AGE = 1000 * 2;
   public static final String OUTPUT_FILTER = "mapreduce.client.output.filter";
   /** Key in mapred-*.xml that sets completionPollInvervalMillis */
@@ -104,7 +104,7 @@ public class Job extends JobContextImpl implements JobContext {
   public static final boolean DEFAULT_USE_WILDCARD_FOR_LIBJARS = true;
 
   @InterfaceStability.Evolving
-  public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
+  public enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
 
   static {
     ConfigUtil.loadResources();

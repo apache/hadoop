@@ -48,7 +48,7 @@ public class MRBench extends Configured implements Tool{
   private static Path INPUT_DIR = new Path(BASE_DIR, DEFAULT_INPUT_SUB);
   private static Path OUTPUT_DIR = new Path(BASE_DIR, DEFAULT_OUTPUT_SUB);
   
-  public static enum Order {RANDOM, ASCENDING, DESCENDING}; 
+  public enum Order {RANDOM, ASCENDING, DESCENDING};
   
   /**
    * Takes input format as text lines, runs some processing on it and 

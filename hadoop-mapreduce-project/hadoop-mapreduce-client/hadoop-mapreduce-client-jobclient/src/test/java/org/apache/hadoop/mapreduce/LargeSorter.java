@@ -67,7 +67,7 @@ public class LargeSorter extends Configured implements Tool {
   /**
    * User counters
    */
-  static enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
+  enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
   
   /**
    * A custom input format that creates virtual inputs of a single string
