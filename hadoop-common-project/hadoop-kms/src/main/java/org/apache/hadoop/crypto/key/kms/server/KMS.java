@@ -60,7 +60,7 @@ import java.util.Map;
 @InterfaceAudience.Private
 public class KMS {
 
-  public static enum KMSOp {
+  public enum KMSOp {
     CREATE_KEY, DELETE_KEY, ROLL_NEW_VERSION, INVALIDATE_CACHE,
     GET_KEYS, GET_KEYS_METADATA,
     GET_KEY_VERSIONS, GET_METADATA, GET_KEY_VERSION, GET_CURRENT_KEY,

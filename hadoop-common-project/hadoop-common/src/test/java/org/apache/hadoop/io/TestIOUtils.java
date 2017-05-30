@@ -253,7 +253,7 @@ public class TestIOUtils {
     }
   }
 
-  private static enum NoEntry3Filter implements FilenameFilter {
+  private enum NoEntry3Filter implements FilenameFilter {
     INSTANCE;
 
     @Override

@@ -118,7 +118,7 @@ abstract class CommandWithDestination extends FsCommand {
     }
   }
   
-  protected static enum FileAttribute {
+  protected enum FileAttribute {
     TIMESTAMPS, OWNERSHIP, PERMISSION, ACL, XATTR;
 
     public static FileAttribute getAttribute(char symbol) {

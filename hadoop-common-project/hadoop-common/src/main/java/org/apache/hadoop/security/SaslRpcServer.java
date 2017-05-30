@@ -68,7 +68,7 @@ public class SaslRpcServer {
   public static final String SASL_DEFAULT_REALM = "default";
   private static SaslServerFactory saslFactory;
 
-  public static enum QualityOfProtection {
+  public enum QualityOfProtection {
     AUTHENTICATION("auth"),
     INTEGRITY("auth-int"),
     PRIVACY("auth-conf");
@@ -218,7 +218,7 @@ public class SaslRpcServer {
 
   /** Authentication method */
   @InterfaceStability.Evolving
-  public static enum AuthMethod {
+  public enum AuthMethod {
     SIMPLE((byte) 80, ""),
     KERBEROS((byte) 81, "GSSAPI"),
     @Deprecated
