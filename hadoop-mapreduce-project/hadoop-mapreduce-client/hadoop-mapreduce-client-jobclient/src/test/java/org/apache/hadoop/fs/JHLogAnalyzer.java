@@ -162,7 +162,7 @@ public class JHLogAnalyzer {
     Configuration.addDefaultResource("hdfs-site.xml");
   }
 
-  static enum StatSeries {
+  enum StatSeries {
     STAT_ALL_SLOT_TIME
           (AccumulatingReducer.VALUE_TYPE_LONG + "allSlotTime"),
     STAT_FAILED_SLOT_TIME

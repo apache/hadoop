@@ -114,7 +114,7 @@ public class MRApps extends Apps {
     throw new YarnRuntimeException("Unknown task type: "+ type.toString());
   }
 
-  public static enum TaskAttemptStateUI {
+  public enum TaskAttemptStateUI {
     NEW(
         new TaskAttemptState[] { TaskAttemptState.NEW,
             TaskAttemptState.STARTING }),
@@ -136,7 +136,7 @@ public class MRApps extends Apps {
     }
   }
 
-  public static enum TaskStateUI {
+  public enum TaskStateUI {
     RUNNING(
         new TaskState[]{TaskState.RUNNING}),
     PENDING(new TaskState[]{TaskState.SCHEDULED}),

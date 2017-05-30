@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.Server;
 public class HSAuditLogger {
   private static final Log LOG = LogFactory.getLog(HSAuditLogger.class);
 
-  static enum Keys {
+  enum Keys {
     USER, OPERATION, TARGET, RESULT, IP, PERMISSIONS, DESCRIPTION
   }
 

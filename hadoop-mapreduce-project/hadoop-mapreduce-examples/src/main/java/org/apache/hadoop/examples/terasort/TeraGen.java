@@ -68,7 +68,7 @@ import org.apache.hadoop.util.ToolRunner;
 public class TeraGen extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(TeraGen.class);
 
-  public static enum Counters {CHECKSUM}
+  public enum Counters {CHECKSUM}
 
   /**
    * An input format that assigns ranges of longs to each mapper.

@@ -71,7 +71,7 @@ class Fetcher<K,V> extends Thread {
   private static final String FETCH_RETRY_AFTER_HEADER = "Retry-After";
 
   protected final Reporter reporter;
-  private static enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
+  private enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
                                     CONNECTION, WRONG_REDUCE}
   
   private final static String SHUFFLE_ERR_GRP_NAME = "Shuffle Errors";

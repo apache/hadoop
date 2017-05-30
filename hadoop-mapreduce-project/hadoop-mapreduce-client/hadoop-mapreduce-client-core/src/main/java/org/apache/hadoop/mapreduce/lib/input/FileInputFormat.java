@@ -85,7 +85,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
   
   @Deprecated
-  public static enum Counter { 
+  public enum Counter {
     BYTES_READ
   }
 

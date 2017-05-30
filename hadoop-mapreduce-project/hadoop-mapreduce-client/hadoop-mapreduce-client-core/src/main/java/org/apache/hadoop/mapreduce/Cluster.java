@@ -54,7 +54,7 @@ import org.apache.hadoop.security.token.Token;
 public class Cluster {
   
   @InterfaceStability.Evolving
-  public static enum JobTrackerStatus {INITIALIZING, RUNNING};
+  public enum JobTrackerStatus {INITIALIZING, RUNNING};
 
   private ClientProtocolProvider clientProtocolProvider;
   private ClientProtocol client;

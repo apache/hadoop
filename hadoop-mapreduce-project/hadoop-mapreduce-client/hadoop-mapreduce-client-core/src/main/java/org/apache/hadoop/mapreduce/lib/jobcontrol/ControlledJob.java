@@ -52,7 +52,7 @@ public class ControlledJob {
   private static final Log LOG = LogFactory.getLog(ControlledJob.class);
 
   // A job will be in one of the following states
-  public static enum State {SUCCESS, WAITING, RUNNING, READY, FAILED,
+  public enum State {SUCCESS, WAITING, RUNNING, READY, FAILED,
                             DEPENDENT_FAILED}; 
   public static final String CREATE_DIR = "mapreduce.jobcontrol.createdir.ifnotexist";
   private State state;
