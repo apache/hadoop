@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.iq80.leveldb.DBException;
@@ -102,6 +103,33 @@ public class KeyManagerImpl implements KeyManager {
           volumeName, bucketName, keyName, ex);
       throw new KSMException(ex.getMessage(),
           KSMException.ResultCodes.FAILED_INTERNAL_ERROR);
+    } finally {
+      metadataManager.writeLock().unlock();
+    }
+  }
+
+  @Override
+  public KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException {
+    Preconditions.checkNotNull(args);
+    metadataManager.writeLock().lock();
+    String volumeName = args.getVolumeName();
+    String bucketName = args.getBucketName();
+    String keyName = args.getKeyName();
+    try {
+      byte[] keyKey = metadataManager.getDBKeyForKey(
+          volumeName, bucketName, keyName);
+      byte[] value = metadataManager.get(keyKey);
+      if (value == null) {
+        LOG.error("Key: {} not found", keyKey);
+        throw new KSMException("Key not found",
+            KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+      }
+      return KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(value));
+    } catch (DBException ex) {
+      LOG.error("Get key failed for volume:{} bucket:{} key:{}",
+          volumeName, bucketName, keyName, ex);
+      throw new KSMException(ex.getMessage(),
+          KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
     } finally {
       metadataManager.writeLock().unlock();
     }

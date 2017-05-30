@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -37,10 +38,13 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.Random;
@@ -53,6 +57,9 @@ public class TestKeySpaceManager {
   private static StorageHandler storageHandler;
   private static UserArgs userArgs;
   private static KSMMetrics ksmMetrics;
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -197,14 +204,22 @@ public class TestKeySpaceManager {
     Assert.assertEquals(0, ksmMetrics.getNumBucketInfoFails());
   }
 
+  /**
+   * Basic test of both putKey and getKey from KSM, as one can not be tested
+   * without the other.
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
   @Test
-  public void testGetKeyWriter() throws IOException, OzoneException {
+  public void testGetKeyWriterReader() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
-    Assert.assertEquals(0, ksmMetrics.getNumKeyBlockAllocates());
+    long numKeyAllocates = ksmMetrics.getNumKeyAllocates();
+    long numKeyLookups = ksmMetrics.getNumKeyLookups();
 
     VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
     createVolumeArgs.setUserName(userName);
@@ -219,10 +234,94 @@ public class TestKeySpaceManager {
 
     String dataString = RandomStringUtils.randomAscii(100);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
-    keyArgs.setSize(4096);
+    keyArgs.setSize(100);
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
     }
-    Assert.assertEquals(1, ksmMetrics.getNumKeyBlockAllocates());
+    Assert.assertEquals(1 + numKeyAllocates, ksmMetrics.getNumKeyAllocates());
+
+    byte[] data = new byte[dataString.length()];
+    try (InputStream in = storageHandler.newKeyReader(keyArgs)) {
+      in.read(data);
+    }
+    Assert.assertEquals(dataString, DFSUtil.bytes2String(data));
+    Assert.assertEquals(1 + numKeyLookups, ksmMetrics.getNumKeyLookups());
+  }
+
+  /**
+   * Test write the same key twice, the second write should fail, as currently
+   * key overwrite is not supported.
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
+  @Test
+  public void testKeyOverwrite() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    long numKeyAllocateFails = ksmMetrics.getNumKeyAllocateFails();
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
+    bucketArgs.setAddAcls(new LinkedList<>());
+    bucketArgs.setRemoveAcls(new LinkedList<>());
+    bucketArgs.setStorageType(StorageType.DISK);
+    storageHandler.createBucket(bucketArgs);
+
+    KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    keyArgs.setSize(100);
+    String dataString = RandomStringUtils.randomAscii(100);
+    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
+      stream.write(dataString.getBytes());
+    }
+    // try to put the same keyArg, should raise KEY_ALREADY_EXISTS exception
+    exception.expect(IOException.class);
+    exception.expectMessage("KEY_ALREADY_EXISTS");
+    KeyArgs keyArgs2 = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    storageHandler.newKeyWriter(keyArgs2);
+    Assert.assertEquals(1 + numKeyAllocateFails,
+        ksmMetrics.getNumKeyAllocateFails());
+  }
+
+  /**
+   * Test get a non-exiting key.
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
+  @Test
+  public void testGetNonExistKey() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    long numKeyLookupFails = ksmMetrics.getNumKeyLookupFails();
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
+    bucketArgs.setAddAcls(new LinkedList<>());
+    bucketArgs.setRemoveAcls(new LinkedList<>());
+    bucketArgs.setStorageType(StorageType.DISK);
+    storageHandler.createBucket(bucketArgs);
+
+    KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    // try to get the key, should fail as it hasn't been created
+    exception.expect(IOException.class);
+    exception.expectMessage("KEY_NOT_FOUND");
+    storageHandler.newKeyReader(keyArgs);
+    Assert.assertEquals(1 + numKeyLookupFails,
+        ksmMetrics.getNumKeyLookupFails());
   }
 }

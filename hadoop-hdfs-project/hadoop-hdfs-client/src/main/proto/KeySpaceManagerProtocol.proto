@@ -48,8 +48,10 @@ enum Status {
     BUCKET_NOT_FOUND = 8;
     BUCKET_NOT_EMPTY = 9;
     BUCKET_ALREADY_EXISTS = 10;
-    ACCESS_DENIED = 11;
-    INTERNAL_ERROR = 12;
+    KEY_ALREADY_EXISTS = 11;
+    KEY_NOT_FOUND = 12;
+    ACCESS_DENIED = 13;
+    INTERNAL_ERROR = 14;
 }
 
 
@@ -228,11 +230,11 @@ message KeyInfo {
     required bool shouldCreateContainer = 7;
 }
 
-message CreateKeyRequest {
+message LocateKeyRequest {
     required KeyArgs keyArgs = 1;
 }
 
-message CreateKeyResponse {
+message LocateKeyResponse {
     required Status status = 1;
     optional KeyInfo keyInfo = 2;
 }
@@ -290,8 +292,14 @@ service KeySpaceManagerService {
         returns(InfoBucketResponse);
 
     /**
-        Get key block.
+        Get key.
     */
-    rpc createKey(CreateKeyRequest)
-        returns(CreateKeyResponse);
+    rpc createKey(LocateKeyRequest)
+        returns(LocateKeyResponse);
+
+    /**
+       Look up for an existing key.
+    */
+    rpc lookupKey(LocateKeyRequest)
+        returns(LocateKeyResponse);
 }
