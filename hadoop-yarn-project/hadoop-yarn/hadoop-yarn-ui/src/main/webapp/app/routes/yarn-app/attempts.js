@@ -16,14 +16,22 @@
  * limitations under the License.
  */
 
-import AbstractRoute from './abstract';
+import Ember from 'ember';
+import AbstractRoute from '../abstract';
+import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend({
-  actions: {
-    updateBreadcrumbs(appId, serviceName, tailCrumbs) {
-      var controller = this.controllerFor('yarn-app');
-      controller.setProperties({appId: appId, serviceName: serviceName});
-      controller.updateBreadcrumbs(appId, serviceName, tailCrumbs);
-    }
+export default AbstractRoute.extend(AppAttemptMixin, {
+  model(param, transition) {
+    transition.send('updateBreadcrumbs', param.app_id, param.service, [{text: 'Attempts'}]);
+    return Ember.RSVP.hash({
+      appId: param.app_id,
+      serviceName: param.service,
+      attempts: this.fetchAttemptListFromRMorATS(param.app_id, this.store)
+    });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-app-attempt');
+    this.store.unloadAll('yarn-timeline-appattempt');
   }
 });

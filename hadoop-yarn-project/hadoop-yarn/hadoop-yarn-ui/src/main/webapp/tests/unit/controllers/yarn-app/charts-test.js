@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import TableDefinition from 'em-table/utils/table-definition';
-import AppTableController from '../app-table-columns';
+import { moduleFor, test } from 'ember-qunit';
 
-export default AppTableController.extend({
-  queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
-  tableDefinition: TableDefinition.create(),
-  searchText: Ember.computed.alias('tableDefinition.searchText'),
-  sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),
-  sortOrder: Ember.computed.alias('tableDefinition.sortOrder'),
-  pageNum: Ember.computed.alias('tableDefinition.pageNum'),
-  rowCount: Ember.computed.alias('tableDefinition.rowCount')
+moduleFor('controller:yarn-app/charts', 'Unit | Controller | yarn app/charts', {
+  // Specify the other units that are required for this test.
+  // needs: ['controller:foo']
+});
+
+// Replace this with your real tests.
+test('it exists', function(assert) {
+  let controller = this.subject();
+  assert.ok(controller);
 });
