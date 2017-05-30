@@ -47,7 +47,7 @@ public final class OpensslCipher {
   public static final int DECRYPT_MODE = 0;
   
   /** Currently only support AES/CTR/NoPadding. */
-  private static enum AlgMode {
+  private enum AlgMode {
     AES_CTR;
     
     static int get(String algorithm, String mode) 
@@ -61,7 +61,7 @@ public final class OpensslCipher {
     }
   }
   
-  private static enum Padding {
+  private enum Padding {
     NoPadding;
     
     static int get(String padding) throws NoSuchPaddingException {

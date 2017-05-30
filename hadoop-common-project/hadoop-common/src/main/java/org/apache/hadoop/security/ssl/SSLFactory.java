@@ -57,7 +57,7 @@ public class SSLFactory implements ConnectionConfigurator {
   static final Logger LOG = LoggerFactory.getLogger(SSLFactory.class);
 
   @InterfaceAudience.Private
-  public static enum Mode { CLIENT, SERVER }
+  public enum Mode { CLIENT, SERVER }
 
   public static final String SSL_CLIENT_CONF_KEY = "hadoop.ssl.client.conf";
   public static final String SSL_CLIENT_CONF_DEFAULT = "ssl-client.xml";

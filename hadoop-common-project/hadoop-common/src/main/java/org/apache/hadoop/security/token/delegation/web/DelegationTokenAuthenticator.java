@@ -74,7 +74,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * DelegationToken operations.
    */
   @InterfaceAudience.Private
-  public static enum DelegationTokenOperation {
+  public enum DelegationTokenOperation {
     GETDELEGATIONTOKEN(HTTP_GET, true),
     RENEWDELEGATIONTOKEN(HTTP_PUT, true),
     CANCELDELEGATIONTOKEN(HTTP_PUT, false);

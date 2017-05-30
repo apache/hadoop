@@ -570,7 +570,7 @@ public class NativeIO {
     private static native String getOwner(FileDescriptor fd) throws IOException;
 
     /** Supported list of Windows access right flags */
-    public static enum AccessRight {
+    public enum AccessRight {
       ACCESS_READ (0x0001),      // FILE_READ_DATA
       ACCESS_WRITE (0x0002),     // FILE_WRITE_DATA
       ACCESS_EXECUTE (0x0020);   // FILE_EXECUTE
