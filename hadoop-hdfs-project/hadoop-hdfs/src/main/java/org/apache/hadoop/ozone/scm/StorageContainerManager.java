@@ -29,6 +29,7 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.ozone.protocolPB
@@ -85,6 +86,7 @@ import org.apache.hadoop.ozone.scm.container.Mapping;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +100,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collection;
 import java.util.UUID;
 
 import static org.apache.hadoop.ozone.protocol.proto
@@ -159,6 +162,10 @@ public class StorageContainerManager
   /** SCM mxbean. */
   private ObjectName scmInfoBeanName;
 
+  /** SCM super user. */
+  private final String scmUsername;
+  private final Collection<String> scmAdminUsernames;
+
   /**
    * Creates a new StorageContainerManager.  Configuration will be updated with
    * information on the actual listening addresses used for RPC servers.
@@ -178,6 +185,13 @@ public class StorageContainerManager
     scmContainerManager = new ContainerMapping(conf, scmNodeManager, cacheSize);
     scmBlockManager = new BlockManagerImpl(conf, scmNodeManager,
         scmContainerManager, cacheSize);
+
+    scmAdminUsernames = conf.getTrimmedStringCollection(
+        OzoneConfigKeys.OZONE_ADMINISTRATORS);
+    scmUsername = UserGroupInformation.getCurrentUser().getUserName();
+    if (!scmAdminUsernames.contains(scmUsername)) {
+      scmAdminUsernames.add(scmUsername);
+    }
 
     RPC.setProtocolEngine(conf, StorageContainerDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -401,6 +415,7 @@ public class StorageContainerManager
    */
   @Override
   public Pipeline allocateContainer(String containerName) throws IOException {
+    checkAdminAccess();
     return scmContainerManager.allocateContainer(containerName,
         ScmClient.ReplicationFactor.ONE);
   }
@@ -410,6 +425,7 @@ public class StorageContainerManager
    */
   @Override
   public Pipeline getContainer(String containerName) throws IOException {
+    checkAdminAccess();
     return scmContainerManager.getContainer(containerName);
   }
 
@@ -418,6 +434,7 @@ public class StorageContainerManager
    */
   @Override
   public void deleteContainer(String containerName) throws IOException {
+    checkAdminAccess();
     scmContainerManager.deleteContainer(containerName);
   }
 
@@ -433,6 +450,7 @@ public class StorageContainerManager
   @Override
   public Pipeline allocateContainer(String containerName,
       ScmClient.ReplicationFactor replicationFactor) throws IOException {
+    checkAdminAccess();
     return scmContainerManager.allocateContainer(containerName,
         replicationFactor);
   }
@@ -670,5 +688,22 @@ public class StorageContainerManager
       results.add(new DeleteBlockResult(key, resultCode));
     }
     return results;
+  }
+
+  @VisibleForTesting
+  public String getPpcRemoteUsername() {
+    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
+    return user == null ? null : user.getUserName();
+  }
+
+  private void checkAdminAccess() throws IOException {
+    String remoteUser = getPpcRemoteUsername();
+    if(remoteUser != null) {
+      if (!scmAdminUsernames.contains(remoteUser)) {
+        throw new IOException(
+            "Access denied for user " + remoteUser
+                + ". Superuser privilege is required.");
+      }
+    }
   }
 }

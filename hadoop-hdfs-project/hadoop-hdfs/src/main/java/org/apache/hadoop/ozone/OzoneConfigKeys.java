@@ -64,6 +64,16 @@ public final class OzoneConfigKeys {
   public static final String OZONE_KEY_CACHE = "ozone.key.cache.size";
   public static final int OZONE_KEY_CACHE_DEFAULT = 1024;
 
+  /**
+   * Ozone administrator users delimited by comma.
+   * If not set, only the user who launches an ozone service will be the
+   * admin user. This property must be set if ozone services are started by
+   * different users. Otherwise the RPC layer will reject calls from
+   * other servers which are started by users not in the list.
+   * */
+  public static final String OZONE_ADMINISTRATORS =
+      "ozone.administrators";
+
   public static final String OZONE_CONTAINER_TASK_WAIT =
       "ozone.container.task.wait.seconds";
   public static final long OZONE_CONTAINER_TASK_WAIT_DEFAULT = 5;
