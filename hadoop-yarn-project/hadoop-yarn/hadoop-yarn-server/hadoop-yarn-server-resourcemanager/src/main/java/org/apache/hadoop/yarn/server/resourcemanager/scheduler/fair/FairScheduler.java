@@ -366,20 +366,31 @@ public class FairScheduler extends
    */
   @VisibleForTesting
   public void update() {
+    FSQueue rootQueue = queueMgr.getRootQueue();
+
+    // Update demands and fairshares
+    writeLock.lock();
     try {
-      writeLock.lock();
-
-      FSQueue rootQueue = queueMgr.getRootQueue();
-
       // Recursively update demands for all queues
       rootQueue.updateDemand();
-
-      Resource clusterResource = getClusterResource();
-      rootQueue.update(clusterResource, shouldAttemptPreemption());
+      rootQueue.update(getClusterResource());
 
       // Update metrics
       updateRootQueueMetrics();
+    } finally {
+      writeLock.unlock();
+    }
 
+    readLock.lock();
+    try {
+      // Update starvation stats and identify starved applications
+      if (shouldAttemptPreemption()) {
+        for (FSLeafQueue queue : queueMgr.getLeafQueues()) {
+          queue.updateStarvedApps();
+        }
+      }
+
+      // Log debug information
       if (LOG.isDebugEnabled()) {
         if (--updatesToSkipForDebug < 0) {
           updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
@@ -387,7 +398,7 @@ public class FairScheduler extends
         }
       }
     } finally {
-      writeLock.unlock();
+      readLock.unlock();
     }
   }
 
