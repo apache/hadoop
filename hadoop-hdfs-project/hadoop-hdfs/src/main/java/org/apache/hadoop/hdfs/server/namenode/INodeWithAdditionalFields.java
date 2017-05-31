@@ -33,7 +33,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public abstract class INodeWithAdditionalFields extends INode
     implements LinkedElement {
-  static enum PermissionStatusFormat {
+  enum PermissionStatusFormat {
     MODE(null, 16),
     GROUP(MODE.BITS, 25),
     USER(GROUP.BITS, 23);

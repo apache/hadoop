@@ -96,7 +96,7 @@ class BPServiceActor implements Runnable {
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
 
-  static enum RunningState {
+  enum RunningState {
     CONNECTING, INIT_FAILED, RUNNING, EXITED, FAILED;
   }
 

@@ -1185,7 +1185,7 @@ class BlockReceiver implements Closeable {
     return handler;
   }
 
-  private static enum PacketResponderType {
+  private enum PacketResponderType {
     NON_PIPELINE, LAST_IN_PIPELINE, HAS_DOWNSTREAM_IN_PIPELINE
   }
 
