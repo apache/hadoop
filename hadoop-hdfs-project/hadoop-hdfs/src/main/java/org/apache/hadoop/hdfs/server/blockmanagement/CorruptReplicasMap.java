@@ -46,7 +46,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class CorruptReplicasMap{
 
   /** The corruption reason code */
-  public static enum Reason {
+  public enum Reason {
     NONE,                // not specified.
     ANY,                 // wildcard reason
     GENSTAMP_MISMATCH,   // mismatch in generation stamps

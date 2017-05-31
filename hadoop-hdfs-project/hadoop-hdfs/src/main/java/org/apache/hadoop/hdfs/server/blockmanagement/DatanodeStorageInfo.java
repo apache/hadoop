@@ -398,7 +398,7 @@ public class DatanodeStorageInfo {
     this.remaining = remaining;
   }
 
-  static enum AddBlockResult {
+  enum AddBlockResult {
     ADDED, REPLACED, ALREADY_EXIST
   }
 }
