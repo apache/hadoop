@@ -83,6 +83,7 @@ public class TestProvidedImpl {
   private static final String BASE_DIR =
       new FileSystemTestHelper().getTestRootDir();
   private static final int NUM_LOCAL_INIT_VOLUMES = 1;
+  //only support one provided volume for now.
   private static final int NUM_PROVIDED_INIT_VOLUMES = 1;
   private static final String[] BLOCK_POOL_IDS = {"bpid-0", "bpid-1"};
   private static final int NUM_PROVIDED_BLKS = 10;
@@ -208,6 +209,39 @@ public class TestProvidedImpl {
     }
   }
 
+  public static class TestProvidedVolumeDF
+      implements ProvidedVolumeDF, Configurable {
+
+    @Override
+    public void setConf(Configuration conf) {
+    }
+
+    @Override
+    public Configuration getConf() {
+      return null;
+    }
+
+    @Override
+    public long getCapacity() {
+      return Long.MAX_VALUE;
+    }
+
+    @Override
+    public long getSpaceUsed() {
+      return -1;
+    }
+
+    @Override
+    public long getBlockPoolUsed(String bpid) {
+      return -1;
+    }
+
+    @Override
+    public long getAvailable() {
+      return Long.MAX_VALUE;
+    }
+  }
+
   private static Storage.StorageDirectory createLocalStorageDirectory(
       File root, Configuration conf)
       throws SecurityException, IOException {
@@ -299,8 +333,8 @@ public class TestProvidedImpl {
   public void setUp() throws IOException {
     datanode = mock(DataNode.class);
     storage = mock(DataStorage.class);
-    this.conf = new Configuration();
-    this.conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
+    conf = new Configuration();
+    conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
 
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
@@ -312,8 +346,10 @@ public class TestProvidedImpl {
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
 
-    this.conf.setClass(DFSConfigKeys.DFS_PROVIDER_CLASS,
+    conf.setClass(DFSConfigKeys.DFS_PROVIDER_CLASS,
         TestFileRegionProvider.class, FileRegionProvider.class);
+    conf.setClass(DFSConfigKeys.DFS_PROVIDER_DF_CLASS,
+        TestProvidedVolumeDF.class, ProvidedVolumeDF.class);
 
     blkToPathMap = new HashMap<Long, String>();
     providedVolumes = new LinkedList<FsVolumeImpl>();
@@ -333,17 +369,43 @@ public class TestProvidedImpl {
     for (String bpid : BLOCK_POOL_IDS) {
       dataset.addBlockPool(bpid, conf);
     }
-
-    assertEquals(NUM_LOCAL_INIT_VOLUMES + NUM_PROVIDED_INIT_VOLUMES,
-        getNumVolumes());
-    assertEquals(0, dataset.getNumFailedVolumes());
   }
 
   @Test
-  public void testProvidedStorageID() throws IOException {
+  public void testProvidedVolumeImpl() throws IOException {
+
+    assertEquals(NUM_LOCAL_INIT_VOLUMES + NUM_PROVIDED_INIT_VOLUMES,
+        getNumVolumes());
+    assertEquals(NUM_PROVIDED_INIT_VOLUMES, providedVolumes.size());
+    assertEquals(0, dataset.getNumFailedVolumes());
+
+    TestProvidedVolumeDF df = new TestProvidedVolumeDF();
+
     for (int i = 0; i < providedVolumes.size(); i++) {
+      //check basic information about provided volume
       assertEquals(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT,
           providedVolumes.get(i).getStorageID());
+      assertEquals(StorageType.PROVIDED,
+          providedVolumes.get(i).getStorageType());
+
+      //check the df stats of the volume
+      assertEquals(df.getAvailable(), providedVolumes.get(i).getAvailable());
+      assertEquals(df.getBlockPoolUsed(BLOCK_POOL_IDS[CHOSEN_BP_ID]),
+          providedVolumes.get(i).getBlockPoolUsed(
+              BLOCK_POOL_IDS[CHOSEN_BP_ID]));
+
+      providedVolumes.get(i).shutdownBlockPool(
+          BLOCK_POOL_IDS[1 - CHOSEN_BP_ID], null);
+      try {
+        assertEquals(df.getBlockPoolUsed(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]),
+            providedVolumes.get(i).getBlockPoolUsed(
+                BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]));
+        //should not be triggered
+        assertTrue(false);
+      } catch (IOException e) {
+        LOG.info("Expected exception: " + e);
+      }
+
     }
   }
 
@@ -385,6 +447,8 @@ public class TestProvidedImpl {
       BlockIterator iter =
           vol.newBlockIterator(BLOCK_POOL_IDS[CHOSEN_BP_ID], "temp");
       Set<Long> blockIdsUsed = new HashSet<Long>();
+
+      assertEquals(BLOCK_POOL_IDS[CHOSEN_BP_ID], iter.getBlockPoolId());
       while(!iter.atEnd()) {
         ExtendedBlock eb = iter.nextBlock();
         long blkId = eb.getBlockId();
@@ -394,9 +458,25 @@ public class TestProvidedImpl {
         blockIdsUsed.add(blkId);
       }
       assertEquals(NUM_PROVIDED_BLKS, blockIdsUsed.size());
+
+      // rewind the block iterator
+      iter.rewind();
+      while(!iter.atEnd()) {
+        ExtendedBlock eb = iter.nextBlock();
+        long blkId = eb.getBlockId();
+        //the block should have already appeared in the first scan.
+        assertTrue(blockIdsUsed.contains(blkId));
+        blockIdsUsed.remove(blkId);
+      }
+      //none of the blocks should remain in blockIdsUsed
+      assertEquals(0, blockIdsUsed.size());
+
+      //the other block pool should not contain any blocks!
+      BlockIterator nonProvidedBpIter =
+          vol.newBlockIterator(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID], "temp");
+      assertEquals(null, nonProvidedBpIter.nextBlock());
     }
   }
-
 
   @Test
   public void testRefresh() throws IOException {

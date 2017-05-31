@@ -191,7 +191,11 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
 
   @Override
   long getBlockPoolUsed(String bpid) throws IOException {
-    return df.getBlockPoolUsed(bpid);
+    if (bpSlices.containsKey(bpid)) {
+      return df.getBlockPoolUsed(bpid);
+    } else {
+      throw new IOException("block pool " + bpid + " is not found");
+    }
   }
 
   @Override
