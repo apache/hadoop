@@ -40,6 +40,7 @@ message DeletionServiceDeleteTaskProto {
   optional int64 deletionTime = 4;
   repeated string basedirs = 5;
   repeated int32 successorIds = 6;
+  optional string taskType = 7;
 }
 
 message LocalizedResourceProto {
