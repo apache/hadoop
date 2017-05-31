@@ -393,42 +393,64 @@ To resolve this, restart the Azure Emulator.  Ensure it v3.2 or later.
 
 It's also possible to run tests against a live Azure Storage account by saving a
 file to `src/test/resources/azure-auth-keys.xml` and setting
-`fs.azure.test.account.name` to the name of the storage account.
+the name of the storage account and its access key.
 
 For example:
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>fs.azure.test.account.name</name>
+    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+    <value>{ACCOUNT ACCESS KEY}</value>
+  </property>
+</configuration>
+```
 
-    <?xml version="1.0"?>
-    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-    <configuration>
-      <property>
-        <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
-        <value>YOUR ACCESS KEY</value>
-      </property>
+To run contract tests, set the WASB file system URI in `src/test/resources/azure-auth-keys.xml`
+and the account access key. For example:
 
-      <property>
-        <name>fs.azure.test.account.name</name>
-        <value>youraccount</value>
-      </property>
-    </configuration>
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>fs.contract.test.fs.wasb</name>
+    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
+    <description>The name of the azure file system for testing.</description>
+  </property>
+  <property>
+    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+    <value>{ACCOUNT ACCESS KEY}</value>
+  </property>
+</configuration>
+```
 
-To run contract tests add live Azure Storage account by saving a
-file to `src/test/resources/azure-auth-keys.xml`.
-For example:
+Overall, to run all the tests using `mvn test`,  a sample `azure-auth-keys.xml` is like following:
 
-    <?xml version="1.0"?>
-    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-    <configuration>
-      <property>
-        <name>fs.contract.test.fs.wasb</name>
-        <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
-        <description>The name of the azure file system for testing.</description>
-      </property>
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>fs.azure.test.account.name</name>
+    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+    <value>{ACCOUNT ACCESS KEY}</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.wasb</name>
+    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
+  </property>
+</configuration>
+```
 
-      <property>
-        <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-        <value>{ACCOUNTKEY}</value>
-      </property>
-    </configuration>
-
-DO NOT ADD azure-auth-keys.xml TO REVISION CONTROL.  The keys to your Azure
+DO NOT ADD `azure-auth-keys.xml` TO REVISION CONTROL.  The keys to your Azure
 Storage account are a secret and must not be shared.
+
