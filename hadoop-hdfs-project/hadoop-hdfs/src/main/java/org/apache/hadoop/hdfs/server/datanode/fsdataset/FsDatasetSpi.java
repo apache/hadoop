@@ -314,13 +314,14 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Creates a temporary replica and returns the meta information of the replica
    * .
-   *
    * @param b block
+   * @param isTransfer whether for transfer
+   *
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
   ReplicaHandler createTemporary(StorageType storageType,
-      ExtendedBlock b) throws IOException;
+      ExtendedBlock b, boolean isTransfer) throws IOException;
 
   /**
    * Creates a RBW replica and returns the meta info of the replica
