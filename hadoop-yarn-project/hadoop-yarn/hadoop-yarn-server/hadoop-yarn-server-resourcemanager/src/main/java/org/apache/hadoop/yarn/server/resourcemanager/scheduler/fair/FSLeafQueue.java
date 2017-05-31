@@ -198,13 +198,10 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
-  public void updateInternal(boolean checkStarvation) {
+  void updateInternal() {
     readLock.lock();
     try {
       policy.computeShares(runnableApps, getFairShare());
-      if (checkStarvation) {
-        updateStarvedApps();
-      }
     } finally {
       readLock.unlock();
     }
@@ -283,8 +280,10 @@ public class FSLeafQueue extends FSQueue {
    * If this queue is starving due to fairshare, there must be at least
    * one application that is starved. And, even if the queue is not
    * starved due to fairshare, there might still be starved applications.
+   *
+   * Caller does not need read/write lock on the leaf queue.
    */
-  private void updateStarvedApps() {
+  void updateStarvedApps() {
     // Fetch apps with pending demand
     TreeSet<FSAppAttempt> appsWithDemand = fetchAppsWithDemand(false);
 
