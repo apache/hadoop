@@ -367,6 +367,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11583. Parent spans are not initialized to NullScope for every
     DFSPacket. (Masatake Iwasaki via aajisaka)
 
+    HDFS-11741. Long running balancer may fail due to expired DataEncryptionKey.
+        Contributed by Wei-Chiu Chuang and Xiao Chen.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
