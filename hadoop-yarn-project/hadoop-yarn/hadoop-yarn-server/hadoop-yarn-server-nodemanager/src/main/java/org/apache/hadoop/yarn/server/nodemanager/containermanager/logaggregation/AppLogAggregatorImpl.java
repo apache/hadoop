@@ -69,6 +69,8 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
@@ -258,19 +260,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       return;
     }
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Credentials systemCredentials =
-          context.getSystemCredentialsForApps().get(appId);
-      if (systemCredentials != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding new framework-token for " + appId
-              + " for log-aggregation: " + systemCredentials.getAllTokens()
-              + "; userUgi=" + userUgi);
-        }
-        // this will replace old token
-        userUgi.addCredentials(systemCredentials);
-      }
-    }
+    addCredentials();
 
     // Create a set of Containers whose logs will be uploaded in this cycle.
     // It includes:
@@ -332,9 +322,12 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             finishedContainers.contains(container));
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
-          this.delService.delete(this.userUgi.getShortUserName(), null,
-              uploadedFilePathsInThisCycle
-                  .toArray(new Path[uploadedFilePathsInThisCycle.size()]));
+          List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
+          uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
+          DeletionTask deletionTask = new FileDeletionTask(delService,
+              this.userUgi.getShortUserName(), null,
+              uploadedFilePathsInThisCycleList);
+          delService.delete(deletionTask);
         }
 
         // This container is finished, and all its logs have been uploaded,
@@ -352,11 +345,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
 
       long currentTime = System.currentTimeMillis();
-      final Path renamedPath = this.rollingMonitorInterval <= 0
-              ? remoteNodeLogFileForApp : new Path(
-                remoteNodeLogFileForApp.getParent(),
-                remoteNodeLogFileForApp.getName() + "_"
-                    + currentTime);
+      final Path renamedPath = getRenamedPath(currentTime);
 
       final boolean rename = uploadedLogsInThisCycle;
       try {
@@ -393,6 +382,28 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     } finally {
       sendLogAggregationReport(logAggregationSucceedInThisCycle,
           diagnosticMessage, appFinished);
+    }
+  }
+
+  private Path getRenamedPath(long currentTime) {
+    return this.rollingMonitorInterval <= 0 ? remoteNodeLogFileForApp
+        : new Path(remoteNodeLogFileForApp.getParent(),
+        remoteNodeLogFileForApp.getName() + "_" + currentTime);
+  }
+
+  private void addCredentials() {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      Credentials systemCredentials =
+          context.getSystemCredentialsForApps().get(appId);
+      if (systemCredentials != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding new framework-token for " + appId
+              + " for log-aggregation: " + systemCredentials.getAllTokens()
+              + "; userUgi=" + userUgi);
+        }
+        // this will replace old token
+        userUgi.addCredentials(systemCredentials);
+      }
     }
   }
 
@@ -561,8 +572,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
 
     if (localAppLogDirs.size() > 0) {
-      this.delService.delete(this.userUgi.getShortUserName(), null,
-        localAppLogDirs.toArray(new Path[localAppLogDirs.size()]));
+      List<Path> localAppLogDirsList = new ArrayList<>();
+      localAppLogDirsList.addAll(localAppLogDirs);
+      DeletionTask deletionTask = new FileDeletionTask(delService,
+          this.userUgi.getShortUserName(), null, localAppLogDirsList);
+      this.delService.delete(deletionTask);
     }
   }
 

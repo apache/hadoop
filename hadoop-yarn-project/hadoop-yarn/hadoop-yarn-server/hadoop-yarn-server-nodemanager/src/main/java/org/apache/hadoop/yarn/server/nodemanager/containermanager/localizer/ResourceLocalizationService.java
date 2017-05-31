@@ -95,7 +95,6 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Localize
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.DirectoryCollection.DirsChangeListener;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
@@ -113,6 +112,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalCacheCleaner.LocalCacheCleanerStats;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
@@ -604,7 +604,9 @@ public class ResourceLocalizationService extends CompositeService
   private void submitDirForDeletion(String userName, Path dir) {
     try {
       lfs.getFileStatus(dir);
-      delService.delete(userName, dir, new Path[] {});
+      FileDeletionTask deletionTask = new FileDeletionTask(delService, userName,
+          dir, null);
+      delService.delete(deletionTask);
     } catch (UnsupportedFileSystemException ue) {
       LOG.warn("Local dir " + dir + " is an unsupported filesystem", ue);
     } catch (IOException ie) {
@@ -1234,10 +1236,13 @@ public class ResourceLocalizationService extends CompositeService
           event.getResource().unlock();
         }
         if (!paths.isEmpty()) {
-          delService.delete(context.getUser(),
-              null, paths.toArray(new Path[paths.size()]));
+          FileDeletionTask deletionTask = new FileDeletionTask(delService,
+              context.getUser(), null, paths);
+          delService.delete(deletionTask);
         }
-        delService.delete(null, nmPrivateCTokensPath, new Path[] {});
+        FileDeletionTask deletionTask = new FileDeletionTask(delService, null,
+            nmPrivateCTokensPath, null);
+        delService.delete(deletionTask);
       }
     }
 
@@ -1456,7 +1461,9 @@ public class ResourceLocalizationService extends CompositeService
         String appName = fileStatus.getPath().getName();
         if (appName.matches("^application_\\d+_\\d+_DEL_\\d+$")) {
           LOG.info("delete app log dir," + appName);
-          del.delete(null, fileStatus.getPath());
+          FileDeletionTask deletionTask = new FileDeletionTask(del, null,
+              fileStatus.getPath(), null);
+          del.delete(deletionTask);
         }
       }
     }
@@ -1516,7 +1523,9 @@ public class ResourceLocalizationService extends CompositeService
               ||
               status.getPath().getName()
                   .matches(".*" + ContainerLocalizer.FILECACHE + "_DEL_.*")) {
-            del.delete(null, status.getPath(), new Path[] {});
+            FileDeletionTask deletionTask = new FileDeletionTask(del, null,
+                status.getPath(), null);
+            del.delete(deletionTask);
           }
         } catch (IOException ex) {
           // Do nothing, just give the warning
@@ -1530,24 +1539,25 @@ public class ResourceLocalizationService extends CompositeService
   private void cleanUpFilesPerUserDir(FileContext lfs, DeletionService del,
       Path userDirPath) throws IOException {
     RemoteIterator<FileStatus> userDirStatus = lfs.listStatus(userDirPath);
-    FileDeletionTask dependentDeletionTask =
-        del.createFileDeletionTask(null, userDirPath, new Path[] {});
+    FileDeletionTask dependentDeletionTask = new FileDeletionTask(del, null,
+        userDirPath, new ArrayList<Path>());
     if (userDirStatus != null && userDirStatus.hasNext()) {
       List<FileDeletionTask> deletionTasks = new ArrayList<FileDeletionTask>();
       while (userDirStatus.hasNext()) {
         FileStatus status = userDirStatus.next();
         String owner = status.getOwner();
-        FileDeletionTask deletionTask =
-            del.createFileDeletionTask(owner, null,
-              new Path[] { status.getPath() });
-        deletionTask.addFileDeletionTaskDependency(dependentDeletionTask);
+        List<Path> pathList = new ArrayList<>();
+        pathList.add(status.getPath());
+        FileDeletionTask deletionTask = new FileDeletionTask(del, owner, null,
+            pathList);
+        deletionTask.addDeletionTaskDependency(dependentDeletionTask);
         deletionTasks.add(deletionTask);
       }
       for (FileDeletionTask task : deletionTasks) {
-        del.scheduleFileDeletionTask(task);
+        del.delete(task);
       }
     } else {
-      del.scheduleFileDeletionTask(dependentDeletionTask);
+      del.delete(dependentDeletionTask);
     }
   }
   
