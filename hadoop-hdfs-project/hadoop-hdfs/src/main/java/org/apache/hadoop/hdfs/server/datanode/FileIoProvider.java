@@ -149,7 +149,24 @@ public class FileIoProvider {
     final long begin = profilingEventHook.beforeFileIo(volume, SYNC, 0);
     try {
       faultInjectorEventHook.beforeFileIo(volume, SYNC, 0);
-      fos.getChannel().force(true);
+      IOUtils.fsync(fos.getChannel(), false);
+      profilingEventHook.afterFileIo(volume, SYNC, begin, 0);
+    } catch (Exception e) {
+      onFailure(volume, begin);
+      throw e;
+    }
+  }
+
+  /**
+   * Sync the given directory changes to durable device.
+   * @throws IOException
+   */
+  public void dirSync(@Nullable FsVolumeSpi volume, File dir)
+      throws IOException {
+    final long begin = profilingEventHook.beforeFileIo(volume, SYNC, 0);
+    try {
+      faultInjectorEventHook.beforeFileIo(volume, SYNC, 0);
+      IOUtils.fsync(dir);
       profilingEventHook.afterFileIo(volume, SYNC, begin, 0);
     } catch (Exception e) {
       onFailure(volume, begin);
