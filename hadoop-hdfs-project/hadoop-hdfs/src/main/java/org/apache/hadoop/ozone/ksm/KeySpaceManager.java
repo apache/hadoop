@@ -335,7 +335,13 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
    */
   @Override
   public void deleteVolume(String volume) throws IOException {
-
+    try {
+      metrics.incNumVolumeDeletes();
+      volumeManager.deleteVolume(volume);
+    } catch (Exception ex) {
+      metrics.incNumVolumeDeleteFails();
+      throw ex;
+    }
   }
 
   /**

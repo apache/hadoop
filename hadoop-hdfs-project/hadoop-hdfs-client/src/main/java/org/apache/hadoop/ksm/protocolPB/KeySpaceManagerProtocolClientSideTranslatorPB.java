@@ -59,6 +59,10 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.SetVolumePropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.InfoVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.InfoVolumeResponse;
@@ -233,7 +237,18 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
    */
   @Override
   public void deleteVolume(String volume) throws IOException {
-
+    DeleteVolumeRequest.Builder req = DeleteVolumeRequest.newBuilder();
+    req.setVolumeName(volume);
+    final DeleteVolumeResponse resp;
+    try {
+      resp = rpcProxy.deleteVolume(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new
+          IOException("Delete Volume failed, error:" + resp.getStatus());
+    }
   }
 
   /**

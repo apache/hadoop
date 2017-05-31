@@ -21,6 +21,7 @@ import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.LevelDBStore;
+import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
@@ -188,4 +189,22 @@ public class MetadataManagerImpl implements  MetadataManager {
     }
   }
 
+  /**
+   * Given a volume, check if it is empty, i.e there are no buckets inside it.
+   * @param volume - Volume name
+   * @return true if the volume is empty
+   */
+  public boolean isVolumeEmpty(String volume) throws IOException {
+    try (DBIterator iterator = store.getIterator()) {
+      String dbVolumeRootName = OzoneConsts.KSM_VOLUME_PREFIX + volume
+          + OzoneConsts.KSM_BUCKET_PREFIX;
+      byte[] dbVolumeRootKey = DFSUtil.string2Bytes(dbVolumeRootName);
+      // Seek to the root of the volume and look for the next key
+      iterator.seek(dbVolumeRootKey);
+      String firstBucketKey = DFSUtil.bytes2String(iterator.next().getKey());
+      // if the key starts with /<volume name>
+      // then there is at least one bucket
+      return !firstBucketKey.startsWith(OzoneConsts.KSM_VOLUME_PREFIX + volume);
+    }
+  }
 }

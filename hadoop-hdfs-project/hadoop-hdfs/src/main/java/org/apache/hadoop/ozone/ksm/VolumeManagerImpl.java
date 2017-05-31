@@ -167,8 +167,8 @@ public class VolumeManagerImpl implements VolumeManager {
   public void setOwner(String volume, String owner) throws IOException {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(owner);
-    List<Map.Entry<byte[], byte[]>> putbatch = new LinkedList<>();
-    List<byte[]> deletebatch = new LinkedList<>();
+    List<Map.Entry<byte[], byte[]>> putBatch = new LinkedList<>();
+    List<byte[]> deleteBatch = new LinkedList<>();
     metadataManager.writeLock().lock();
     try {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
@@ -182,8 +182,8 @@ public class VolumeManagerImpl implements VolumeManager {
       Preconditions.checkState(volume.equalsIgnoreCase(volumeInfo.getVolume()));
 
       delVolumeFromOwnerList(volume, volumeArgs.getOwnerName(),
-          putbatch, deletebatch);
-      addVolumeToOwnerList(volume, owner, putbatch);
+          putBatch, deleteBatch);
+      addVolumeToOwnerList(volume, owner, putBatch);
 
       KsmVolumeArgs newVolumeArgs =
           KsmVolumeArgs.newBuilder().setVolume(volumeArgs.getVolume())
@@ -193,9 +193,9 @@ public class VolumeManagerImpl implements VolumeManager {
               .build();
 
       VolumeInfo newVolumeInfo = newVolumeArgs.getProtobuf();
-      putbatch.add(batchEntry(dbVolumeKey, newVolumeInfo.toByteArray()));
+      putBatch.add(batchEntry(dbVolumeKey, newVolumeInfo.toByteArray()));
 
-      metadataManager.batchPutDelete(putbatch, deletebatch);
+      metadataManager.batchPutDelete(putBatch, deleteBatch);
     } catch (IOException ex) {
       LOG.error("Changing volume ownership failed for user:{} volume:{}",
           owner, volume, ex);
@@ -269,6 +269,45 @@ public class VolumeManagerImpl implements VolumeManager {
       throw ex;
     } finally {
       metadataManager.readLock().unlock();
+    }
+  }
+
+  /**
+   * Deletes an existing empty volume.
+   *
+   * @param volume - Name of the volume.
+   * @throws IOException
+   */
+  @Override
+  public void deleteVolume(String volume) throws IOException {
+    Preconditions.checkNotNull(volume);
+    metadataManager.writeLock().lock();
+    try {
+      List<Map.Entry<byte[], byte[]>> putBatch = new LinkedList<>();
+      List<byte[]> deleteBatch = new LinkedList<>();
+      byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
+      byte[] volInfo = metadataManager.get(dbVolumeKey);
+      if (volInfo == null) {
+        throw new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
+      }
+
+      if (!metadataManager.isVolumeEmpty(volume)) {
+        throw new KSMException(ResultCodes.FAILED_VOLUME_NOT_EMPTY);
+      }
+
+      VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
+      Preconditions.checkState(volume.equalsIgnoreCase(volumeInfo.getVolume()));
+      // delete the volume from the owner list
+      // as well as delete the volume entry
+      delVolumeFromOwnerList(volume, volumeInfo.getOwnerName(),
+          putBatch, deleteBatch);
+      deleteBatch.add(dbVolumeKey);
+      metadataManager.batchPutDelete(putBatch, deleteBatch);
+    } catch (IOException ex) {
+      LOG.error("Delete volume failed for volume:{}", volume, ex);
+      throw ex;
+    } finally {
+      metadataManager.writeLock().unlock();
     }
   }
 }

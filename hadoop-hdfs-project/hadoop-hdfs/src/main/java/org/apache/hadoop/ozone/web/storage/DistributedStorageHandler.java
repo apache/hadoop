@@ -162,7 +162,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void deleteVolume(VolumeArgs args)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException("deleteVolume not implemented");
+    keySpaceManagerClient.deleteVolume(args.getVolumeName());
   }
 
   @Override

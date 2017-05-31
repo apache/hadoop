@@ -104,6 +104,8 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         return Status.USER_TOO_MANY_VOLUMES;
       case FAILED_VOLUME_NOT_FOUND:
         return Status.VOLUME_NOT_FOUND;
+      case FAILED_VOLUME_NOT_EMPTY:
+        return Status.VOLUME_NOT_EMPTY;
       case FAILED_USER_NOT_FOUND:
         return Status.USER_NOT_FOUND;
       case FAILED_BUCKET_ALREADY_EXISTS:
@@ -186,7 +188,14 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
   public DeleteVolumeResponse deleteVolume(
       RpcController controller, DeleteVolumeRequest request)
       throws ServiceException {
-    return null;
+    DeleteVolumeResponse.Builder resp = DeleteVolumeResponse.newBuilder();
+    resp.setStatus(Status.OK);
+    try {
+      impl.deleteVolume(request.getVolumeName());
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
   }
 
   @Override
