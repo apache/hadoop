@@ -68,7 +68,7 @@ public final class KsmBucketArgs {
    */
   private KsmBucketArgs(String volumeName, String bucketName,
       List<OzoneAclInfo> addAcls, List<OzoneAclInfo> removeAcls,
-      boolean isVersionEnabled, StorageTypeProto storageType) {
+      Boolean isVersionEnabled, StorageTypeProto storageType) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.addAcls = addAcls;
@@ -113,7 +113,7 @@ public final class KsmBucketArgs {
    * Returns true if bucket version is enabled, else false.
    * @return isVersionEnabled
    */
-  public boolean getIsVersionEnabled() {
+  public Boolean getIsVersionEnabled() {
     return isVersionEnabled;
   }
 
@@ -219,7 +219,8 @@ public final class KsmBucketArgs {
         bucketArgs.getBucketName(),
         bucketArgs.getAddAclsList(),
         bucketArgs.getRemoveAclsList(),
-        bucketArgs.getIsVersionEnabled(),
-        bucketArgs.getStorageType());
+        bucketArgs.hasIsVersionEnabled() ? bucketArgs.getIsVersionEnabled() :
+        null,
+        bucketArgs.hasStorageType() ? bucketArgs.getStorageType() : null);
   }
 }

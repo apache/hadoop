@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset
     .LengthInputStream;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
@@ -38,6 +39,7 @@ import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
+import org.apache.hadoop.ozone.web.request.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.ScmConfigKeys;
@@ -222,21 +224,44 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void setBucketAcls(BucketArgs args)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException("setBucketAcls not implemented");
+    List<OzoneAcl> removeAcls = args.getRemoveAcls();
+    List<OzoneAcl> addAcls = args.getAddAcls();
+    if(removeAcls != null || addAcls != null) {
+      KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+      builder.setVolumeName(args.getVolumeName())
+          .setBucketName(args.getBucketName());
+      if(removeAcls != null && !removeAcls.isEmpty()) {
+        builder.setRemoveAcls(args.getRemoveAcls().stream().map(
+            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+      }
+      if(addAcls != null && !addAcls.isEmpty()) {
+        builder.setAddAcls(args.getAddAcls().stream().map(
+            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+      }
+      keySpaceManagerClient.setBucketProperty(builder.build());
+    }
   }
 
   @Override
   public void setBucketVersioning(BucketArgs args)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException(
-        "setBucketVersioning not implemented");
+    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    builder.setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setIsVersionEnabled(getBucketVersioningProtobuf(
+            args.getVersioning()));
+    keySpaceManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void setBucketStorageClass(BucketArgs args)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException(
-        "setBucketStorageClass not implemented");
+    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    builder.setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setStorageType(PBHelperClient.convertStorageType(
+            args.getStorageType()));
+    keySpaceManagerClient.setBucketProperty(builder.build());
   }
 
   @Override

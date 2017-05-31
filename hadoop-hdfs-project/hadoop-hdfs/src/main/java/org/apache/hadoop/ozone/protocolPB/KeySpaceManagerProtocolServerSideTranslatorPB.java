@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
@@ -33,6 +34,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.InfoBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.InfoBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.SetBucketPropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.SetBucketPropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -265,6 +270,22 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
       resp.setKeyInfo(keyInfo.getProtobuf());
       resp.setStatus(Status.OK);
     } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public SetBucketPropertyResponse setBucketProperty(
+      RpcController controller, SetBucketPropertyRequest request)
+      throws ServiceException {
+    SetBucketPropertyResponse.Builder resp =
+        SetBucketPropertyResponse.newBuilder();
+    try {
+      impl.setBucketProperty(KsmBucketArgs.getFromProtobuf(
+          request.getBucketArgs()));
+      resp.setStatus(Status.OK);
+    } catch(IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
     }
     return resp.build();

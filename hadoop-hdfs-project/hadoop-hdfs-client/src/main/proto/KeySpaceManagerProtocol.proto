@@ -239,6 +239,14 @@ message LocateKeyResponse {
     optional KeyInfo keyInfo = 2;
 }
 
+message SetBucketPropertyRequest {
+    required BucketArgs bucketArgs = 1;
+}
+
+message SetBucketPropertyResponse {
+    required Status status = 1;
+}
+
 /**
  The KSM service that takes care of Ozone namespace.
 */
@@ -290,6 +298,12 @@ service KeySpaceManagerService {
     */
     rpc infoBucket(InfoBucketRequest)
         returns(InfoBucketResponse);
+
+    /**
+        Sets bucket properties.
+    */
+    rpc setBucketProperty(SetBucketPropertyRequest)
+        returns(SetBucketPropertyResponse);
 
     /**
         Get key.
