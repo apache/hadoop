@@ -219,7 +219,19 @@ class FsDatasetAsyncDiskService {
         volumeRef, blockFile, metaFile, block, trashDirectory);
     execute(((FsVolumeImpl) volumeRef.getVolume()).getCurrentDir(), deletionTask);
   }
-  
+
+  /**
+   * Delete the block file and meta file from the disk synchronously, adjust
+   * dfsUsed statistics accordingly.
+   */
+  void deleteSync(FsVolumeReference volumeRef, File blockFile, File metaFile,
+      ExtendedBlock block, String trashDirectory) {
+    LOG.info("Deleting " + block.getLocalBlock() + " file " + blockFile);
+    ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(
+        volumeRef, blockFile, metaFile, block, trashDirectory);
+    deletionTask.run();
+  }
+
   /** A task for deleting a block file and its associated meta file, as well
    *  as decrement the dfs usage of the volume.
    *  Optionally accepts a trash directory. If one is specified then the files
