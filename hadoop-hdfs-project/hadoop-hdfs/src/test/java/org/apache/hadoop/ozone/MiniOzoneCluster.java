@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone;
 
+import java.io.File;
 import java.util.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
@@ -125,6 +126,15 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     } catch (IOException e) {
       String errorMessage = "Cleaning up metadata directories failed." + e;
       assertFalse(errorMessage, true);
+    }
+
+    try {
+      final String localStorage =
+          conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+              OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+      FileUtils.deleteDirectory(new File(localStorage));
+    } catch (IOException e) {
+      LOG.error("Cleaning up local storage failed", e);
     }
   }
 
