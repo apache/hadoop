@@ -31,7 +31,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
-import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -68,6 +67,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionMatcher;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.junit.Assert;
 import org.apache.commons.io.FileUtils;
@@ -1066,7 +1066,8 @@ public class TestResourceLocalizationService {
       verify(containerBus, times(3)).handle(argThat(matchesContainerLoc));
         
       // Verify deletion of localization token.
-      verify(delService).delete((String)isNull(), eq(localizationTokenPath));
+      verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+          delService, null, localizationTokenPath, null)));
     } finally {
       spyService.stop();
       dispatcher.stop();
@@ -1340,8 +1341,8 @@ public class TestResourceLocalizationService {
       Thread.sleep(50);
     }
     // Verify if downloading resources were submitted for deletion.
-    verify(delService).delete(eq(user), (Path) eq(null),
-        argThat(new DownloadingPathsMatcher(paths)));
+    verify(delService, times(2)).delete(argThat(new FileDeletionMatcher(
+        delService, user, null, new ArrayList<>(paths))));
 
     LocalResourcesTracker tracker = spyService.getLocalResourcesTracker(
         LocalResourceVisibility.PRIVATE, "user0", appId);
@@ -2753,15 +2754,19 @@ public class TestResourceLocalizationService {
       for (int i = 0; i < containerLocalDirs.size(); ++i) {
         if (i == 2) {
           try {
-            verify(delService).delete(user, containerLocalDirs.get(i));
-            verify(delService).delete(null, nmLocalContainerDirs.get(i));
+            verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+                delService, user, containerLocalDirs.get(i), null)));
+            verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+                delService, null, nmLocalContainerDirs.get(i), null)));
             Assert.fail("deletion attempts for invalid dirs");
           } catch (Throwable e) {
             continue;
           }
         } else {
-          verify(delService).delete(user, containerLocalDirs.get(i));
-          verify(delService).delete(null, nmLocalContainerDirs.get(i));
+          verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+              delService, user, containerLocalDirs.get(i), null)));
+          verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+              delService, null, nmLocalContainerDirs.get(i), null)));
         }
       }
 
@@ -2802,15 +2807,19 @@ public class TestResourceLocalizationService {
       for (int i = 0; i < containerLocalDirs.size(); ++i) {
         if (i == 3) {
           try {
-            verify(delService).delete(user, containerLocalDirs.get(i));
-            verify(delService).delete(null, nmLocalContainerDirs.get(i));
+            verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+                delService, user, containerLocalDirs.get(i), null)));
+            verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+                delService, null, nmLocalContainerDirs.get(i), null)));
             Assert.fail("deletion attempts for invalid dirs");
           } catch (Throwable e) {
             continue;
           }
         } else {
-          verify(delService).delete(user, appLocalDirs.get(i));
-          verify(delService).delete(null, nmLocalAppDirs.get(i));
+          verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+              delService, user, containerLocalDirs.get(i), null)));
+          verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+              delService, null, nmLocalContainerDirs.get(i), null)));
         }
       }
 

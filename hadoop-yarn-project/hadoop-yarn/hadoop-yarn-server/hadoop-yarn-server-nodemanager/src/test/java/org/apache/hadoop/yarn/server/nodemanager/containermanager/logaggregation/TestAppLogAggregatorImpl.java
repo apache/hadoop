@@ -42,17 +42,16 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -311,16 +310,18 @@ public class TestAppLogAggregatorImpl {
         @Override
         public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
           Set<String> paths = new HashSet<>();
-          Object[] args = invocationOnMock.getArguments();
-          for(int i = 2; i < args.length; i++) {
-            Path path = (Path) args[i];
-            paths.add(path.toUri().getRawPath());
+          Object[] tasks = invocationOnMock.getArguments();
+          for(int i = 0; i < tasks.length; i++) {
+            FileDeletionTask task = (FileDeletionTask) tasks[i];
+            for (Path path: task.getBaseDirs()) {
+              paths.add(path.toUri().getRawPath());
+            }
           }
           verifyFilesToDelete(expectedPathsForDeletion, paths);
           return null;
         }
       }).doNothing().when(deletionServiceWithExpectedFiles).delete(
-          any(String.class), any(Path.class), Matchers.<Path>anyVararg());
+          any(FileDeletionTask.class));
 
     return deletionServiceWithExpectedFiles;
   }
