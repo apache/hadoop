@@ -88,13 +88,17 @@ public class BlockStorageMovementTracker implements Runnable {
           long trackId = result.getTrackId();
           List<Future<BlockMovementResult>> blocksMoving = moverTaskFutures
               .get(trackId);
+          if (blocksMoving == null) {
+            LOG.warn("Future task doesn't exist for trackId " + trackId);
+            continue;
+          }
           blocksMoving.remove(future);
 
           List<BlockMovementResult> resultPerTrackIdList =
               addMovementResultToTrackIdList(result);
 
           // Completed all the scheduled blocks movement under this 'trackId'.
-          if (blocksMoving.isEmpty()) {
+          if (blocksMoving.isEmpty() || moverTaskFutures.get(trackId) == null) {
             synchronized (moverTaskFutures) {
               moverTaskFutures.remove(trackId);
             }
