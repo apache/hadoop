@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
@@ -238,13 +239,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setConfigurationProvider(configurationProvider);
 
     // load core-site.xml
-    InputStream coreSiteXMLInputStream =
-        this.configurationProvider.getConfigurationInputStream(this.conf,
-            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
-    if (coreSiteXMLInputStream != null) {
-      this.conf.addResource(coreSiteXMLInputStream,
-          YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
-    }
+    loadConfigurationXml(YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
 
     // Do refreshUserToGroupsMappings with loaded core-site.xml
     Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
@@ -257,13 +252,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     ProxyUsers.refreshSuperUserGroupsConfiguration(this.conf);
 
     // load yarn-site.xml
-    InputStream yarnSiteXMLInputStream =
-        this.configurationProvider.getConfigurationInputStream(this.conf,
-            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    if (yarnSiteXMLInputStream != null) {
-      this.conf.addResource(yarnSiteXMLInputStream,
-          YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    }
+    loadConfigurationXml(YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
     validateConfigs(this.conf);
     
@@ -337,6 +326,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
+  }
+
+  private void loadConfigurationXml(String configurationFile)
+      throws YarnException, IOException {
+    InputStream configurationInputStream =
+        this.configurationProvider.getConfigurationInputStream(this.conf,
+            configurationFile);
+    if (configurationInputStream != null) {
+      this.conf.addResource(configurationInputStream, configurationFile);
+    }
   }
 
   protected EmbeddedElector createEmbeddedElector() throws IOException {
