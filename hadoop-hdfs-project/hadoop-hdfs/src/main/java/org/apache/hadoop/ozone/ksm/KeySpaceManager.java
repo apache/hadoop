@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
@@ -442,4 +443,23 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
       throw ex;
     }
   }
+
+  /**
+   * Sets bucket property from args.
+   * @param args - BucketArgs.
+   * @throws IOException
+   */
+  @Override
+  public void setBucketProperty(KsmBucketArgs args)
+      throws IOException {
+    try {
+      metrics.incNumBucketModifies();
+      bucketManager.setBucketProperty(args);
+    } catch (Exception ex) {
+      metrics.incNumBucketModifyFails();
+      throw ex;
+    }
+
+  }
+
 }

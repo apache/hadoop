@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ksm.protocol;
 
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
@@ -114,6 +115,13 @@ public interface KeySpaceManagerProtocol {
    */
   KsmBucketInfo getBucketInfo(String volumeName, String bucketName)
       throws IOException;
+
+  /**
+   * Sets bucket property from args.
+   * @param args - BucketArgs.
+   * @throws IOException
+   */
+  void setBucketProperty(KsmBucketArgs args) throws IOException;
 
   /**
    * Allocate a block to a container, the block is returned to the client.

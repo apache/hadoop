@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 
 import java.io.IOException;
@@ -36,4 +37,11 @@ public interface BucketManager {
    */
   KsmBucketInfo getBucketInfo(String volumeName, String bucketName)
       throws IOException;
+
+  /**
+   * Sets bucket property from args.
+   * @param args - BucketArgs.
+   * @throws IOException
+   */
+  void setBucketProperty(KsmBucketArgs args) throws IOException;
 }
