@@ -104,4 +104,10 @@ public interface MetadataManager {
    * @return bytes of DB key.
    */
   byte[] getDBKeyForKey(String volume, String bucket, String key);
+
+  /**
+   * Given a volume, check if it is empty, i.e there are no buckets inside it.
+   * @param volume - Volume name
+   */
+  boolean isVolumeEmpty(String volume) throws IOException;
 }

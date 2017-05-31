@@ -56,4 +56,12 @@ public interface VolumeManager {
    * @throws IOException
    */
   KsmVolumeArgs getVolumeInfo(String volume) throws IOException;
+
+  /**
+   * Deletes an existing empty volume.
+   *
+   * @param volume - Name of the volume.
+   * @throws IOException
+   */
+  void deleteVolume(String volume) throws IOException;
 }
