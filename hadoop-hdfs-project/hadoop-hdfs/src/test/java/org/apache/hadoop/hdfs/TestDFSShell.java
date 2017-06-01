@@ -541,7 +541,7 @@ public class TestDFSShell {
       argv = new String[3];
       argv[0] = "-mv";
       argv[1] = srcFs.getUri() + "/testfile";
-      argv[2] = "hdfs://localhost/testfile2";
+      argv[2] = "hdfs://" + srcFs.getUri().getHost() + "/testfile2";
       int ret = ToolRunner.run(shell, argv);
       assertEquals("mv should have succeeded", 0, ret);
     } finally {

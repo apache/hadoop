@@ -335,6 +335,9 @@ Release 2.7.4 - UNRELEASED
 
     Fix NPE in LazyPersistFileScrubber. (Inigo Goiri via shv)
 
+    HDFS-11893. Fix TestDFSShell.testMoveWithTargetPortEmpty failure.
+    (Contributed by Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
