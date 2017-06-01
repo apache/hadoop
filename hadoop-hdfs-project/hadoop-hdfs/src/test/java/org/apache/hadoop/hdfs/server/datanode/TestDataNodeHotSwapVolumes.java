@@ -666,10 +666,12 @@ public class TestDataNodeHotSwapVolumes {
             // Bypass the argument to FsDatasetImpl#finalizeBlock to verify that
             // the block is not removed, since the volume reference should not
             // be released at this point.
-            data.finalizeBlock((ExtendedBlock) invocation.getArguments()[0]);
+            data.finalizeBlock((ExtendedBlock) invocation.getArguments()[0],
+              (boolean) invocation.getArguments()[1]);
             return null;
           }
-        }).when(dn.data).finalizeBlock(any(ExtendedBlock.class));
+        }).when(dn.data).finalizeBlock(any(ExtendedBlock.class),
+            Mockito.anyBoolean());
 
     final CyclicBarrier barrier = new CyclicBarrier(2);
 

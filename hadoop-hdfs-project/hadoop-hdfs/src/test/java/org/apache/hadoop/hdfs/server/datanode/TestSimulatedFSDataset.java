@@ -96,7 +96,7 @@ public class TestSimulatedFSDataset {
         out.close();
       }
       b.setNumBytes(blockIdToLen(i));
-      fsdataset.finalizeBlock(b);
+      fsdataset.finalizeBlock(b, false);
       assertEquals(blockIdToLen(i), fsdataset.getLength(b));
     }
     return bytesAdded;
@@ -295,7 +295,7 @@ public class TestSimulatedFSDataset {
     }
     
     try {
-      fsdataset.finalizeBlock(b);
+      fsdataset.finalizeBlock(b, false);
       assertTrue("Expected an IO exception", false);
     } catch (IOException e) {
       // ok - as expected
