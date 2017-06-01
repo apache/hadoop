@@ -241,6 +241,9 @@ are testing. For example, you can use `-skipExistingTable` (`-s` for short) to s
 and continue to create other tables rather than failing the schema creation. By default, the tables
 will have a schema prefix of "prod.". When no option or '-help' ('-h' for short) is provided, the
 command usage is printed.
+and continue to create other tables rather than failing the schema creation. When no option or '-help'
+('-h' for short) is provided, the command usage is printed. By default, the tables
+will have a schema prefix of "prod."
 
 #### Enabling Timeline Service v.2
 Following are the basic configurations to start Timeline service v.2:
