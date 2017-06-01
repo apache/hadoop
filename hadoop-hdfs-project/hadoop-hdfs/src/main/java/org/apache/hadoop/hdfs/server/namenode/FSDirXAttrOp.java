@@ -170,7 +170,7 @@ class FSDirXAttrOp {
       src = iip.getPath();
       checkXAttrChangeAccess(fsd, iip, xAttr, pc);
 
-      List<XAttr> removedXAttrs = unprotectedRemoveXAttrs(fsd, src, xAttrs);
+      List<XAttr> removedXAttrs = unprotectedRemoveXAttrs(fsd, iip, xAttrs);
       if (removedXAttrs != null && !removedXAttrs.isEmpty()) {
         fsd.getEditLog().logRemoveXAttrs(src, removedXAttrs, logRetryCache);
       } else {
@@ -184,10 +184,9 @@ class FSDirXAttrOp {
   }
 
   static List<XAttr> unprotectedRemoveXAttrs(
-      FSDirectory fsd, final String src, final List<XAttr> toRemove)
+      FSDirectory fsd, final INodesInPath iip, final List<XAttr> toRemove)
       throws IOException {
     assert fsd.hasWriteLock();
-    INodesInPath iip = fsd.getINodesInPath(src, DirOp.WRITE);
     INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);

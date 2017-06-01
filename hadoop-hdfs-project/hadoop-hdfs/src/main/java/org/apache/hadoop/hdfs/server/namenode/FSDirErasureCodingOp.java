@@ -242,7 +242,7 @@ final class FSDirErasureCodingOp {
 
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
     xattrs.add(ecXAttr);
-    FSDirXAttrOp.unprotectedRemoveXAttrs(fsd, srcIIP.getPath(), xattrs);
+    FSDirXAttrOp.unprotectedRemoveXAttrs(fsd, srcIIP, xattrs);
     return xattrs;
   }
 
