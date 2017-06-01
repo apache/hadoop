@@ -53,7 +53,12 @@ import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.response.*;
+import org.apache.hadoop.ozone.web.response.ListVolumes;
+import org.apache.hadoop.ozone.web.response.VolumeInfo;
+import org.apache.hadoop.ozone.web.response.VolumeOwner;
+import org.apache.hadoop.ozone.web.response.ListBuckets;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.apache.hadoop.scm.storage.ChunkOutputStream;
@@ -73,9 +78,6 @@ import java.util.HashSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
-import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.getKey;
 
 /**
  * A {@link StorageHandler} implementation that distributes object storage
@@ -356,10 +358,11 @@ public final class DistributedStorageHandler implements StorageHandler {
     try {
       LOG.debug("get key accessing {} {}",
           xceiverClient.getPipeline().getContainerName(), containerKey);
-      KeyData containerKeyData = containerKeyDataForRead(
-          xceiverClient.getPipeline().getContainerName(), containerKey);
-      GetKeyResponseProto response = getKey(xceiverClient, containerKeyData,
-          args.getRequestID());
+      KeyData containerKeyData = OzoneContainerTranslation
+          .containerKeyDataForRead(
+              xceiverClient.getPipeline().getContainerName(), containerKey);
+      GetKeyResponseProto response = ContainerProtocolCalls
+          .getKey(xceiverClient, containerKeyData, args.getRequestID());
       long length = 0;
       List<ChunkInfo> chunks = response.getKeyData().getChunksList();
       for (ChunkInfo chunk : chunks) {

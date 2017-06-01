@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.ozone.web.response;
 
-
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 /**
  * Volume Owner represents the owner of a volume.
@@ -30,7 +29,7 @@ import org.codehaus.jackson.map.annotate.JsonSerialize;
  */
 @InterfaceAudience.Private
 public class VolumeOwner {
-  @JsonSerialize(include=JsonSerialize.Inclusion.NON_NULL)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String name;
 
   /**
