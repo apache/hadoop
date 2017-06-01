@@ -18,23 +18,23 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.scm.ratis.RatisManager;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.ratis.RatisHelper;
 import org.apache.hadoop.scm.XceiverClientRatis;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.ratis.client.RaftClient;
-import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.util.CheckedBiConsumer;
 import org.apache.ratis.util.CollectionUtils;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -93,25 +93,29 @@ public class TestOzoneContainerRatis {
         .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL)
         .numDataNodes(numNodes)
         .build();
-    cluster.waitOzoneReady();
-
-    final String containerName = OzoneUtils.getRequestID();
-    final List<DataNode> datanodes = cluster.getDataNodes();
-    final Pipeline pipeline = ContainerTestHelper.createPipeline(containerName,
-        CollectionUtils.as(datanodes, DataNode::getDatanodeId));
-
-    LOG.info("pipeline=" + pipeline);
-    // Create Ratis cluster
-    final RaftPeer[] peers = RatisHelper.toRaftPeerArray(pipeline);
-    for(RaftPeer p : peers) {
-      final RaftClient client = RatisHelper.newRaftClient(rpc, p);
-      client.reinitialize(peers, p.getId());
-    }
-
-    LOG.info("reinitialize done");
-    final XceiverClientSpi client = XceiverClientRatis.newXceiverClientRatis(
-        pipeline, conf);
     try {
+      cluster.waitOzoneReady();
+
+      final String containerName = OzoneUtils.getRequestID();
+      final List<DataNode> datanodes = cluster.getDataNodes();
+      final Pipeline pipeline = ContainerTestHelper.createPipeline(
+          containerName,
+          CollectionUtils.as(datanodes, DataNode::getDatanodeId));
+      LOG.info("pipeline=" + pipeline);
+
+      // Create Ratis cluster
+      final String ratisId = "ratis1";
+      final RatisManager manager = RatisManager.newRatisManager(conf);
+      manager.createRatisCluster(ratisId, pipeline.getMachines());
+      LOG.info("Created RatisCluster " + ratisId);
+
+      // check Ratis cluster members
+      final List<DatanodeID> dns = manager.getDatanodes(ratisId);
+      Assert.assertEquals(pipeline.getMachines(), dns);
+
+      // run test
+      final XceiverClientSpi client = XceiverClientRatis.newXceiverClientRatis(
+          pipeline, conf);
       test.accept(containerName, client);
     } finally {
       cluster.shutdown();
