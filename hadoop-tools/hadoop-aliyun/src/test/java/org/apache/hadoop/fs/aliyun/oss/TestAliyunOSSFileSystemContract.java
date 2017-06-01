@@ -38,11 +38,6 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * Tests a live Aliyun OSS system.
- *
- * This uses BlockJUnit4ClassRunner because FileSystemContractBaseTest from
- * TestCase which uses the old Junit3 runner that doesn't ignore assumptions
- * properly making it impossible to skip the tests if we don't have a valid
- * bucket.
  */
 public class TestAliyunOSSFileSystemContract
     extends FileSystemContractBaseTest {
