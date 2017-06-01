@@ -338,6 +338,8 @@ Release 2.7.4 - UNRELEASED
     HDFS-11893. Fix TestDFSShell.testMoveWithTargetPortEmpty failure.
     (Contributed by Brahma Reddy Battula)
 
+    HDFS-5042. Completed files lost after power failure. (vinayakumarb via kihwal)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
