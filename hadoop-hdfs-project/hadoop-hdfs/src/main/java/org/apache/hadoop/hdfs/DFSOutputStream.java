@@ -346,6 +346,7 @@ public class DFSOutputStream extends FSOutputSummer
     volatile int errorIndex = -1;
     // Restarting node index
     AtomicInteger restartingNodeIndex = new AtomicInteger(-1);
+    volatile boolean waitForRestart = true;
     private long restartDeadline = 0; // Deadline of DN restart
     private BlockConstructionStage stage;  // block construction stage
     private long bytesSent = 0; // number of bytes that've been sent
@@ -353,6 +354,8 @@ public class DFSOutputStream extends FSOutputSummer
 
     /** Nodes have been used in the pipeline before and have failed. */
     private final List<DatanodeInfo> failed = new ArrayList<DatanodeInfo>();
+    /** Restarting Nodes */
+    private final List<DatanodeInfo> restartingNodes = new ArrayList<>();
     /** The times have retried to recover pipeline, for the same packet. */
     private volatile int pipelineRecoveryCount = 0;
     /** Has the current block been hflushed? */
@@ -792,6 +795,13 @@ public class DFSOutputStream extends FSOutputSummer
         return true;
       }
 
+      /*
+       * Treat all nodes as remote for test when skip enabled.
+       */
+      if (DFSClientFaultInjector.get().skipRollingRestartWait()) {
+        return false;
+      }
+
       // Is it a local node?
       InetAddress addr = null;
       try {
@@ -852,10 +862,14 @@ public class DFSOutputStream extends FSOutputSummer
                 .getHeaderFlag(i));
               // Restart will not be treated differently unless it is
               // the local node or the only one in the pipeline.
-              if (PipelineAck.isRestartOOBStatus(reply) &&
-                  shouldWaitForRestart(i)) {
-                restartDeadline = dfsClient.getConf().datanodeRestartTimeout
-                    + Time.monotonicNow();
+              if (PipelineAck.isRestartOOBStatus(reply)) {
+                if (shouldWaitForRestart(i)) {
+                  restartDeadline = dfsClient.getConf().datanodeRestartTimeout
+                      + Time.monotonicNow();
+                  waitForRestart = true;
+                } else {
+                  waitForRestart = false;
+                }
                 setRestartingNodeIndex(i);
                 String message = "A datanode is restarting: " + targets[i];
                 DFSClient.LOG.info(message);
@@ -1171,18 +1185,24 @@ public class DFSOutputStream extends FSOutputSummer
         // This process will be repeated until the deadline or the datanode
         // starts back up.
         if (restartingNodeIndex.get() >= 0) {
-          // 4 seconds or the configured deadline period, whichever is shorter.
-          // This is the retry interval and recovery will be retried in this
-          // interval until timeout or success.
-          long delay = Math.min(dfsClient.getConf().datanodeRestartTimeout,
-              4000L);
-          try {
-            Thread.sleep(delay);
-          } catch (InterruptedException ie) {
-            lastException.set(new IOException("Interrupted while waiting for " +
-                "datanode to restart. " + nodes[restartingNodeIndex.get()]));
-            streamerClosed = true;
-            return false;
+          if (!waitForRestart) {
+            setErrorIndex(restartingNodeIndex.get());
+          } else {
+            // 4 seconds or the configured deadline period, whichever is
+            // shorter.
+            // This is the retry interval and recovery will be retried in this
+            // interval until timeout or success.
+            long delay = Math.min(dfsClient.getConf().datanodeRestartTimeout,
+                4000L);
+            try {
+              Thread.sleep(delay);
+            } catch (InterruptedException ie) {
+              lastException.set(new IOException("Interrupted while waiting for "
+                  + "datanode to restart. " + nodes[restartingNodeIndex
+                      .get()]));
+              streamerClosed = true;
+              return false;
+            }
           }
         }
         boolean isRecovery = hasError;
@@ -1204,9 +1224,14 @@ public class DFSOutputStream extends FSOutputSummer
             streamerClosed = true;
             return false;
           }
-          DFSClient.LOG.warn("Error Recovery for block " + block +
-              " in pipeline " + pipelineMsg + 
-              ": bad datanode " + nodes[errorIndex]);
+          String reason = "bad.";
+          if (restartingNodeIndex.get() == errorIndex) {
+            reason = "restarting.";
+            restartingNodes.add(nodes[errorIndex]);
+          }
+          DFSClient.LOG.warn("Error Recovery for block " + block
+              + " in pipeline " + pipelineMsg + ": datanode " + errorIndex + "("
+              + nodes[errorIndex] + ") is " + reason);
           failed.add(nodes[errorIndex]);
 
           DatanodeInfo[] newnodes = new DatanodeInfo[nodes.length-1];
@@ -1229,7 +1254,7 @@ public class DFSOutputStream extends FSOutputSummer
             } else if (errorIndex < restartingNodeIndex.get()) {
               // the node index has shifted.
               restartingNodeIndex.decrementAndGet();
-            } else {
+            } else if (waitForRestart) {
               // this shouldn't happen...
               assert false;
             }
@@ -1458,7 +1483,11 @@ public class DFSOutputStream extends FSOutputSummer
           blockStream = out;
           result =  true; // success
           restartingNodeIndex.set(-1);
+          waitForRestart = true;
           hasError = false;
+          // remove all restarting nodes from failed nodes list
+          failed.removeAll(restartingNodes);
+          restartingNodes.clear();
         } catch (IOException ie) {
           if (restartingNodeIndex.get() == -1) {
             DFSClient.LOG.info("Exception in createBlockOutputStream", ie);
@@ -1489,9 +1518,14 @@ public class DFSOutputStream extends FSOutputSummer
             errorIndex = 0;
           }
           // Check whether there is a restart worth waiting for.
-          if (checkRestart && shouldWaitForRestart(errorIndex)) {
-            restartDeadline = dfsClient.getConf().datanodeRestartTimeout +
-                Time.monotonicNow();
+          if (checkRestart) {
+            if (shouldWaitForRestart(errorIndex)) {
+              restartDeadline = dfsClient.getConf().datanodeRestartTimeout
+                  + Time.monotonicNow();
+              waitForRestart = true;
+            } else {
+              waitForRestart = false;
+            }
             restartingNodeIndex.set(errorIndex);
             errorIndex = -1;
             DFSClient.LOG.info("Waiting for the datanode to be restarted: " +

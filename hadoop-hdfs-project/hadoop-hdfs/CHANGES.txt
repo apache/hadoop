@@ -340,6 +340,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-5042. Completed files lost after power failure. (vinayakumarb via kihwal)
 
+    HDFS-11856. Ability to re-add upgrading nodes to pipeline for future
+    pipeline updates. (vinayakumarb via kihwal)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

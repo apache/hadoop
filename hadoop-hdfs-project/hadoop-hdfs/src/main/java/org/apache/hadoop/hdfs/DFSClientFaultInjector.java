@@ -33,6 +33,10 @@ public class DFSClientFaultInjector {
   public static DFSClientFaultInjector instance = new DFSClientFaultInjector();
   public static AtomicLong exceptionNum = new AtomicLong(0);
 
+  public static void set(DFSClientFaultInjector dfsClientFaultInjector) {
+    instance = dfsClientFaultInjector;
+  }
+
   public static DFSClientFaultInjector get() {
     return instance;
   }
@@ -54,4 +58,8 @@ public class DFSClientFaultInjector {
   public void fetchFromDatanodeException() {}
 
   public void readFromDatanodeDelay() {}
+
+  public boolean skipRollingRestartWait() {
+    return false;
+  }
 }
