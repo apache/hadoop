@@ -333,7 +333,7 @@ Release 2.7.4 - UNRELEASED
     HDFS-11445. FSCK shows overall health stauts as corrupt even one replica is corrupt. 
     (Brahma Reddy Battula)
 
-    Fix NPE in LazyPersistFileScrubber. (Inigo Goiri via shv)
+    HDFS-11078. Fix NPE in LazyPersistFileScrubber. (Inigo Goiri via shv)
 
     HDFS-11893. Fix TestDFSShell.testMoveWithTargetPortEmpty failure.
     (Contributed by Brahma Reddy Battula)
