@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.web.handlers;
 
-
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -33,7 +32,6 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
@@ -51,9 +49,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_COMPONENT;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RESOURCE;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_REQUEST;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_USER;
-
-
-
 
 /**
  * This class abstracts way the repetitive tasks in

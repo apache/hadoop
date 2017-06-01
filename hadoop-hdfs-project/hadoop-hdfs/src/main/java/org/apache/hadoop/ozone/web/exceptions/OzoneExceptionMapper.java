@@ -22,7 +22,7 @@ package org.apache.hadoop.ozone.web.exceptions;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
-import org.apache.log4j.MDC;
+import org.slf4j.MDC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

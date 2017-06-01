@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.ozone.web.request;
 
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.headers.Header;
-import org.codehaus.jackson.annotate.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * represents an OzoneQuota Object that can be applied to

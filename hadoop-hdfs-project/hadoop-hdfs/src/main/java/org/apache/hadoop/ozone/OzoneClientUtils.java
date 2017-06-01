@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone;
 import com.google.common.base.Optional;
 
 import com.google.common.net.HostAndPort;
-import org.apache.avro.reflect.Nullable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -585,8 +584,7 @@ public final class OzoneClientUtils {
    * @param conf configuration
    * @return a {@link CloseableHttpClient} instance.
    */
-  public static CloseableHttpClient newHttpClient(
-      @Nullable Configuration conf) {
+  public static CloseableHttpClient newHttpClient(Configuration conf) {
     int socketTimeout = OzoneConfigKeys
         .OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT;
     int connectionTimeout = OzoneConfigKeys

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.scm.storage;
 
-import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.*;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -179,8 +177,8 @@ public class ChunkInputStream extends InputStream {
       throws IOException {
     final ReadChunkResponseProto readChunkResponse;
     try {
-      readChunkResponse = readChunk(xceiverClient, chunks.get(readChunkOffset),
-          key, traceID);
+      readChunkResponse = ContainerProtocolCalls.readChunk(xceiverClient,
+          chunks.get(readChunkOffset), key, traceID);
     } catch (IOException e) {
       throw new IOException("Unexpected OzoneException", e);
     }
