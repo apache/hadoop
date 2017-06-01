@@ -45,11 +45,14 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockFormatProvider;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockProvider;
 import org.apache.hadoop.hdfs.server.common.BlockFormat;
 import org.apache.hadoop.hdfs.server.common.FileRegionProvider;
 import org.apache.hadoop.hdfs.server.common.TextFileRegionFormat;
 import org.apache.hadoop.hdfs.server.common.TextFileRegionProvider;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 
 import org.junit.After;
@@ -406,9 +409,9 @@ public class TestNameNodeProvidedImplementation {
     createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
         FixedBlockResolver.class);
     startCluster(NNDIRPATH, 2, null,
-        new StorageType[][] {
-                {StorageType.PROVIDED},
-                {StorageType.DISK}},
+        new StorageType[][]{
+            {StorageType.PROVIDED},
+            {StorageType.DISK}},
         false);
 
     String filename = "/" + filePrefix + (numFiles - 1) + fileSuffix;
@@ -432,5 +435,68 @@ public class TestNameNodeProvidedImplementation {
     DatanodeInfo[] infos = getAndCheckBlockLocations(client, filename, 1);
     assertEquals(cluster.getDataNodes().get(0).getDatanodeUuid(),
         infos[0].getDatanodeUuid());
+  }
+
+  @Test
+  public void testProvidedDatanodeFailures() throws Exception {
+    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+            FixedBlockResolver.class);
+    startCluster(NNDIRPATH, 3, null,
+        new StorageType[][] {
+            {StorageType.PROVIDED},
+            {StorageType.PROVIDED},
+            {StorageType.DISK}},
+        false);
+
+    DataNode providedDatanode1 = cluster.getDataNodes().get(0);
+    DataNode providedDatanode2 = cluster.getDataNodes().get(1);
+
+    DFSClient client = new DFSClient(new InetSocketAddress("localhost",
+            cluster.getNameNodePort()), cluster.getConfiguration(0));
+
+    if (numFiles >= 1) {
+      String filename = "/" + filePrefix + (numFiles - 1) + fileSuffix;
+
+      DatanodeInfo[] dnInfos = getAndCheckBlockLocations(client, filename, 1);
+      //the location should be one of the provided DNs available
+      assertTrue(
+          dnInfos[0].getDatanodeUuid().equals(
+              providedDatanode1.getDatanodeUuid())
+          || dnInfos[0].getDatanodeUuid().equals(
+              providedDatanode2.getDatanodeUuid()));
+
+      //stop the 1st provided datanode
+      MiniDFSCluster.DataNodeProperties providedDNProperties1 =
+          cluster.stopDataNode(0);
+
+      //make NameNode detect that datanode is down
+      BlockManagerTestUtil.noticeDeadDatanode(
+          cluster.getNameNode(),
+          providedDatanode1.getDatanodeId().getXferAddr());
+
+      //should find the block on the 2nd provided datanode
+      dnInfos = getAndCheckBlockLocations(client, filename, 1);
+      assertEquals(providedDatanode2.getDatanodeUuid(),
+          dnInfos[0].getDatanodeUuid());
+
+      //stop the 2nd provided datanode
+      cluster.stopDataNode(1);
+      // make NameNode detect that datanode is down
+      BlockManagerTestUtil.noticeDeadDatanode(
+          cluster.getNameNode(),
+          providedDatanode2.getDatanodeId().getXferAddr());
+
+      getAndCheckBlockLocations(client, filename, 0);
+
+      //restart the provided datanode
+      cluster.restartDataNode(providedDNProperties1, true);
+      cluster.waitActive();
+
+      //should find the block on the 1st provided datanode now
+      dnInfos = getAndCheckBlockLocations(client, filename, 1);
+      //not comparing UUIDs as the datanode can now have a different one.
+      assertEquals(providedDatanode1.getDatanodeId().getXferAddr(),
+          dnInfos[0].getXferAddr());
+    }
   }
 }

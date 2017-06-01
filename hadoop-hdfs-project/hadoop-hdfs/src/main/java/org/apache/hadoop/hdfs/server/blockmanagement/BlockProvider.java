@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.ProvidedStorageMap.ProvidedBlockList;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,14 +53,23 @@ public abstract class BlockProvider implements Iterable<Block> {
    * start the processing of block report for provided blocks.
    * @throws IOException
    */
-  void start() throws IOException {
+  void start(BlockReportContext context) throws IOException {
     assert lock.hasWriteLock() : "Not holding write lock";
     if (hasDNs) {
       return;
     }
-    LOG.info("Calling process first blk report from storage: " + storage);
-    // first pass; periodic refresh should call bm.processReport
-    bm.processFirstBlockReport(storage, new ProvidedBlockList(iterator()));
+    if (storage.getBlockReportCount() == 0) {
+      LOG.info("Calling process first blk report from storage: " + storage);
+      // first pass; periodic refresh should call bm.processReport
+      bm.processFirstBlockReport(storage, new ProvidedBlockList(iterator()));
+    } else {
+      bm.processReport(storage, new ProvidedBlockList(iterator()), context);
+    }
     hasDNs = true;
+  }
+
+  void stop() {
+    assert lock.hasWriteLock() : "Not holding write lock";
+    hasDNs = false;
   }
 }
