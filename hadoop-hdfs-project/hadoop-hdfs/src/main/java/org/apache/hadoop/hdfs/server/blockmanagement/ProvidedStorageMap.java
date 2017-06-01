@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.util.RwLock;
@@ -103,17 +104,18 @@ public class ProvidedStorageMap {
   /**
    * @param dn datanode descriptor
    * @param s data node storage
+   * @param context the block report context
    * @return the {@link DatanodeStorageInfo} for the specified datanode.
    * If {@code s} corresponds to a provided storage, the storage info
    * representing provided storage is returned.
    * @throws IOException
    */
-  DatanodeStorageInfo getStorage(DatanodeDescriptor dn, DatanodeStorage s)
-      throws IOException {
+  DatanodeStorageInfo getStorage(DatanodeDescriptor dn, DatanodeStorage s,
+      BlockReportContext context) throws IOException {
     if (providedEnabled && storageId.equals(s.getStorageID())) {
       if (StorageType.PROVIDED.equals(s.getStorageType())) {
         // poll service, initiate
-        blockProvider.start();
+        blockProvider.start(context);
         dn.injectStorage(providedStorageInfo);
         return providedDescriptor.getProvidedStorage(dn, s);
       }
@@ -132,6 +134,15 @@ public class ProvidedStorageMap {
       return new LocatedBlockBuilder(maxValue);
     }
     return new ProvidedBlocksBuilder(maxValue);
+  }
+
+  public void removeDatanode(DatanodeDescriptor dnToRemove) {
+    if (providedDescriptor != null) {
+      int remainingDatanodes = providedDescriptor.remove(dnToRemove);
+      if (remainingDatanodes == 0) {
+        blockProvider.stop();
+      }
+    }
   }
 
   /**
@@ -282,7 +293,7 @@ public class ProvidedStorageMap {
 
     DatanodeStorageInfo createProvidedStorage(DatanodeStorage ds) {
       assert null == storageMap.get(ds.getStorageID());
-      DatanodeStorageInfo storage = new DatanodeStorageInfo(this, ds);
+      DatanodeStorageInfo storage = new ProvidedDatanodeStorageInfo(this, ds);
       storage.setHeartbeatedSinceFailover(true);
       storageMap.put(storage.getStorageID(), storage);
       return storage;
@@ -381,6 +392,22 @@ public class ProvidedStorageMap {
       }
     }
 
+    int remove(DatanodeDescriptor dnToRemove) {
+      // this operation happens under the FSNamesystem lock;
+      // no additional synchronization required.
+      if (dnToRemove != null) {
+        DatanodeDescriptor storedDN = dns.get(dnToRemove.getDatanodeUuid());
+        if (storedDN != null) {
+          dns.remove(dnToRemove.getDatanodeUuid());
+        }
+      }
+      return dns.size();
+    }
+
+    int activeProvidedDatanodes() {
+      return dns.size();
+    }
+
     @Override
     public boolean equals(Object obj) {
       return (this == obj) || super.equals(obj);
@@ -392,6 +419,25 @@ public class ProvidedStorageMap {
     }
   }
 
+  /**
+   * The DatanodeStorageInfo used for the provided storage.
+   */
+  static class ProvidedDatanodeStorageInfo extends DatanodeStorageInfo {
+
+    ProvidedDatanodeStorageInfo(ProvidedDescriptor dn, DatanodeStorage ds) {
+      super(dn, ds);
+    }
+
+    @Override
+    boolean removeBlock(BlockInfo b) {
+      ProvidedDescriptor dn = (ProvidedDescriptor) getDatanodeDescriptor();
+      if (dn.activeProvidedDatanodes() == 0) {
+        return super.removeBlock(b);
+      } else {
+        return false;
+      }
+    }
+  }
   /**
    * Used to emulate block reports for provided blocks.
    */

@@ -119,9 +119,9 @@ public class TestProvidedStorageMap {
 
     when(nameSystemLock.hasWriteLock()).thenReturn(true);
     DatanodeStorageInfo dns1Provided = providedMap.getStorage(dn1,
-            dn1ProvidedStorage);
+            dn1ProvidedStorage, null);
     DatanodeStorageInfo dns1Disk = providedMap.getStorage(dn1,
-            dn1DiskStorage);
+            dn1DiskStorage, null);
 
     assertTrue("The provided storages should be equal",
             dns1Provided == providedMapStorage);
@@ -131,7 +131,7 @@ public class TestProvidedStorageMap {
     DatanodeStorageInfo dnsDisk = new DatanodeStorageInfo(dn1, dn1DiskStorage);
     dn1.injectStorage(dnsDisk);
     assertTrue("Disk storage must match the injected storage info",
-            dnsDisk == providedMap.getStorage(dn1, dn1DiskStorage));
+            dnsDisk == providedMap.getStorage(dn1, dn1DiskStorage, null));
 
     //create a 2nd datanode
     DatanodeDescriptor dn2 = createDatanodeDescriptor(5010);
@@ -142,12 +142,10 @@ public class TestProvidedStorageMap {
             StorageType.PROVIDED);
 
     DatanodeStorageInfo dns2Provided = providedMap.getStorage(
-            dn2, dn2ProvidedStorage);
+            dn2, dn2ProvidedStorage, null);
     assertTrue("The provided storages should be equal",
             dns2Provided == providedMapStorage);
     assertTrue("The DatanodeDescriptor should contain the provided storage",
             dn2.getStorageInfo(providedStorageID) == providedMapStorage);
-
-
   }
 }
