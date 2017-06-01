@@ -24,6 +24,7 @@ import java.util.NoSuchElementException;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -188,8 +189,15 @@ public abstract class BlockInfo extends Block
     int len = getCapacity();
     for(int idx = 0; idx < len; idx++) {
       DatanodeStorageInfo cur = getStorageInfo(idx);
-      if(cur != null && cur.getDatanodeDescriptor() == dn) {
-        return cur;
+      if(cur != null) {
+        if (cur.getStorageType() == StorageType.PROVIDED) {
+          //if block resides on provided storage, only match the storage ids
+          if (dn.getStorageInfo(cur.getStorageID()) != null) {
+            return cur;
+          }
+        } else if (cur.getDatanodeDescriptor() == dn) {
+          return cur;
+        }
       }
     }
     return null;
