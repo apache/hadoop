@@ -360,12 +360,14 @@ public class TestKeySpaceManager {
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
     }
-    // try to put the same keyArg, should raise KEY_ALREADY_EXISTS exception
-    exception.expect(IOException.class);
-    exception.expectMessage("KEY_ALREADY_EXISTS");
+
+    // We allow the key overwrite to be successful. Please note : Till HDFS-11922
+    // is fixed this causes a data block leak on the data node side. That is
+    // this overwrite only overwrites the keys on KSM. We need to garbage
+    // collect those blocks from datanode.
     KeyArgs keyArgs2 = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     storageHandler.newKeyWriter(keyArgs2);
-    Assert.assertEquals(1 + numKeyAllocateFails,
+    Assert.assertEquals(numKeyAllocateFails,
         ksmMetrics.getNumKeyAllocateFails());
   }
 

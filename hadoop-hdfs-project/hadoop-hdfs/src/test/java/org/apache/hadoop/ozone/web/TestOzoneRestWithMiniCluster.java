@@ -62,6 +62,7 @@ public class TestOzoneRestWithMiniCluster {
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster.waitOzoneReady();
     ozoneClient = cluster.createOzoneClient();
   }
 
