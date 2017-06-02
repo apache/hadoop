@@ -201,10 +201,14 @@ public class MetadataManagerImpl implements  MetadataManager {
       byte[] dbVolumeRootKey = DFSUtil.string2Bytes(dbVolumeRootName);
       // Seek to the root of the volume and look for the next key
       iterator.seek(dbVolumeRootKey);
-      String firstBucketKey = DFSUtil.bytes2String(iterator.next().getKey());
-      // if the key starts with /<volume name>
-      // then there is at least one bucket
-      return !firstBucketKey.startsWith(OzoneConsts.KSM_VOLUME_PREFIX + volume);
+      if (iterator.hasNext()) {
+        String firstBucketKey = DFSUtil.bytes2String(iterator.next().getKey());
+        // if the key starts with /<volume name>/
+        // then there is at least one bucket
+        return !firstBucketKey.startsWith(dbVolumeRootName);
+      } else {
+        return true;
+      }
     }
   }
 }

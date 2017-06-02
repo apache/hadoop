@@ -187,26 +187,41 @@ public class TestKeySpaceManager {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String volumeName1 = volumeName + "_A";
+    String volumeName2 = volumeName + "_AA";
+    VolumeArgs volumeArgs = null;
+    VolumeInfo volumeInfo = null;
 
-    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
-    createVolumeArgs.setUserName(userName);
-    createVolumeArgs.setAdminName(adminName);
-    storageHandler.createVolume(createVolumeArgs);
+    // Create 2 empty volumes with same prefix.
+    volumeArgs = new VolumeArgs(volumeName1, userArgs);
+    volumeArgs.setUserName(userName);
+    volumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(volumeArgs);
 
-    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, userArgs);
-    VolumeInfo retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
-    Assert.assertTrue(retVolumeInfo.getVolumeName().equals(volumeName));
-    Assert.assertTrue(retVolumeInfo.getOwner().getName().equals(userName));
+    volumeArgs = new VolumeArgs(volumeName2, userArgs);
+    volumeArgs.setUserName(userName);
+    volumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(volumeArgs);
+
+    volumeArgs  = new VolumeArgs(volumeName1, userArgs);
+    volumeInfo = storageHandler.getVolumeInfo(volumeArgs);
+    Assert.assertTrue(volumeInfo.getVolumeName().equals(volumeName1));
+    Assert.assertTrue(volumeInfo.getOwner().getName().equals(userName));
     Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
 
-    storageHandler.deleteVolume(createVolumeArgs);
+    // Volume with _A should be able to delete as it is empty.
+    storageHandler.deleteVolume(volumeArgs);
 
-    try {
-      retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
-    } catch (IOException ex) {
-      Assert.assertEquals(ex.getMessage(),
-          "Info Volume failed, error:VOLUME_NOT_FOUND");
-    }
+    // Make sure volume with _AA suffix still exists.
+    volumeArgs = new VolumeArgs(volumeName2, userArgs);
+    volumeInfo = storageHandler.getVolumeInfo(volumeArgs);
+    Assert.assertTrue(volumeInfo.getVolumeName().equals(volumeName2));
+
+    // Make sure volume with _A suffix is successfully deleted.
+    exception.expect(IOException.class);
+    exception.expectMessage("Info Volume failed, error:VOLUME_NOT_FOUND");
+    volumeArgs = new VolumeArgs(volumeName1, userArgs);
+    storageHandler.getVolumeInfo(volumeArgs);
   }
 
   // Create a volume and a bucket inside the volume,
