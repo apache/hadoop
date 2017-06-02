@@ -141,7 +141,7 @@ public class HdfsConstants {
 
   // type of the datanode report
   public enum DatanodeReportType {
-    ALL, LIVE, DEAD, DECOMMISSIONING, ENTERING_MAINTENANCE
+    ALL, LIVE, DEAD, DECOMMISSIONING, ENTERING_MAINTENANCE, IN_MAINTENANCE
   }
 
   /* Hidden constructor */

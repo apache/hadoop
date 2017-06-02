@@ -1354,6 +1354,9 @@ public class DatanodeManager {
     final boolean listEnteringMaintenanceNodes =
         type == DatanodeReportType.ALL ||
         type == DatanodeReportType.ENTERING_MAINTENANCE;
+    final boolean listInMaintenanceNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.IN_MAINTENANCE;
 
     ArrayList<DatanodeDescriptor> nodes;
     final HostSet foundNodes = new HostSet();
@@ -1366,11 +1369,13 @@ public class DatanodeManager {
         final boolean isDead = isDatanodeDead(dn);
         final boolean isDecommissioning = dn.isDecommissionInProgress();
         final boolean isEnteringMaintenance = dn.isEnteringMaintenance();
+        final boolean isInMaintenance = dn.isInMaintenance();
 
         if (((listLiveNodes && !isDead) ||
             (listDeadNodes && isDead) ||
             (listDecommissioningNodes && isDecommissioning) ||
-            (listEnteringMaintenanceNodes && isEnteringMaintenance)) &&
+            (listEnteringMaintenanceNodes && isEnteringMaintenance) ||
+            (listInMaintenanceNodes && isInMaintenance)) &&
             hostConfigManager.isIncluded(dn)) {
           nodes.add(dn);
         }

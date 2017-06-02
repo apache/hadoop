@@ -17,11 +17,18 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,8 +51,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -1123,5 +1133,89 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     } else {
       return null;
     }
+  }
+
+  @Test(timeout = 120000)
+  public void testReportMaintenanceNodes() throws Exception {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    LOG.info("Starting testReportMaintenanceNodes");
+    int expirationInMs = 30 * 1000;
+    int numNodes = 2;
+    setMinMaintenanceR(numNodes);
+
+    startCluster(1, numNodes);
+    getCluster().waitActive();
+
+    FileSystem fileSys = getCluster().getFileSystem(0);
+    getConf().set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
+        fileSys.getUri().toString());
+    DFSAdmin dfsAdmin = new DFSAdmin(getConf());
+
+    FSNamesystem fsn = getCluster().getNameNode().getNamesystem();
+    assertEquals(numNodes, fsn.getNumLiveDataNodes());
+
+    int ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-report", "-enteringmaintenance", "-inmaintenance"});
+    assertEquals(0, ret);
+    assertThat(out.toString(),
+        is(allOf(containsString("Entering maintenance datanodes (0):"),
+            containsString("In maintenance datanodes (0):"),
+            not(containsString(
+                getCluster().getDataNodes().get(0).getDisplayName())),
+            not(containsString(
+                getCluster().getDataNodes().get(1).getDisplayName())))));
+
+    final Path file = new Path("/testReportMaintenanceNodes.dat");
+    writeFile(fileSys, file, numNodes, 1);
+
+    DatanodeInfo[] nodes = getFirstBlockReplicasDatanodeInfos(fileSys, file);
+    // Request maintenance for DataNodes1. The DataNode1 will not transition
+    // to the next state AdminStates.IN_MAINTENANCE immediately since there
+    // are not enough candidate nodes to satisfy the min maintenance
+    // replication.
+    DatanodeInfo maintenanceDN = takeNodeOutofService(0,
+        nodes[0].getDatanodeUuid(), Time.now() + expirationInMs, null, null,
+        AdminStates.ENTERING_MAINTENANCE);
+    assertEquals(1, fsn.getNumEnteringMaintenanceDataNodes());
+
+    // reset stream
+    out.reset();
+    err.reset();
+
+    ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-report", "-enteringmaintenance"});
+    assertEquals(0, ret);
+    assertThat(out.toString(),
+        is(allOf(containsString("Entering maintenance datanodes (1):"),
+            containsString(nodes[0].getXferAddr()),
+            not(containsString(nodes[1].getXferAddr())))));
+
+    // reset stream
+    out.reset();
+    err.reset();
+
+    // start a new datanode to make state transition to
+    // AdminStates.IN_MAINTENANCE
+    getCluster().startDataNodes(getConf(), 1, true, null, null);
+    getCluster().waitActive();
+
+    waitNodeState(maintenanceDN, AdminStates.IN_MAINTENANCE);
+    assertEquals(1, fsn.getNumInMaintenanceLiveDataNodes());
+
+    ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-report", "-inmaintenance"});
+    assertEquals(0, ret);
+    assertThat(out.toString(),
+        is(allOf(containsString("In maintenance datanodes (1):"),
+            containsString(nodes[0].getXferAddr()),
+            not(containsString(nodes[1].getXferAddr())),
+            not(containsString(
+                getCluster().getDataNodes().get(2).getDisplayName())))));
+
+    cleanupFile(getCluster().getFileSystem(), file);
   }
 }
