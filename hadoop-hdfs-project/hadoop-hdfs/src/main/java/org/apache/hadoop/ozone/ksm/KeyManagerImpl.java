@@ -73,18 +73,23 @@ public class KeyManagerImpl implements KeyManager {
         throw new KSMException("Bucket not found",
             KSMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
       }
-      // TODO throw exception if key exists, may change to support key
-      // overwrite in the future
-      //Check if key already exists.
-      if(metadataManager.get(keyKey) != null) {
-        LOG.error("key already exist: {}/{}/{} ", volumeName, bucketName,
-            keyName);
-        throw new KSMException("Key already exist",
-            KSMException.ResultCodes.FAILED_KEY_ALREADY_EXISTS);
-      }
 
+      // TODO: Garbage collect deleted blocks due to overwrite of a key.
+      // FIXME: BUG: Please see HDFS-11922.
+      // If user overwrites a key, then we are letting it pass without
+      // corresponding process.
+      // In reality we need to garbage collect those blocks by telling SCM to
+      // clean up those blocks when it can. Right now making this change
+      // allows us to pass tests that expect ozone can overwrite a key.
+
+
+      // When we talk to SCM make sure that we ask for at least a byte in the
+      // block. This way even if the call is for a zero length key, we back it
+      // with a actual SCM block.
+      // TODO : Review this decision later. We can get away with only a
+      // metadata entry in case of 0 length key.
       AllocatedBlock allocatedBlock =
-          scmBlockClient.allocateBlock(args.getDataSize());
+          scmBlockClient.allocateBlock(Math.max(args.getDataSize(), 1));
       KsmKeyInfo keyBlock = new KsmKeyInfo.Builder()
           .setVolumeName(args.getVolumeName())
           .setBucketName(args.getBucketName())
@@ -98,7 +103,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.debug("Key {} allocated in volume {} bucket {}",
           keyName, volumeName, bucketName);
       return keyBlock;
-    } catch (DBException ex) {
+    } catch (Exception ex) {
       LOG.error("Key allocation failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new KSMException(ex.getMessage(),

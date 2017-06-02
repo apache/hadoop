@@ -423,6 +423,8 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       if (!ozoneHandlerType.isPresent()) {
         throw new IllegalArgumentException(
             "The Ozone handler type must be specified.");
+      } else {
+        conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, ozoneHandlerType.get());
       }
     }
 
