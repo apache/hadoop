@@ -65,6 +65,8 @@ public final class TimelineSchemaCreator {
   private static final String APP_TO_FLOW_TABLE_NAME_SHORT = "a2f";
   private static final String TTL_OPTION_SHORT = "m";
   private static final String ENTITY_TABLE_NAME_SHORT = "e";
+  private static final String HELP_SHORT = "h";
+  private static final String CREATE_TABLES_SHORT = "c";
 
   public static void main(String[] args) throws Exception {
 
@@ -79,54 +81,44 @@ public final class TimelineSchemaCreator {
     // Grab the arguments we're looking for.
     CommandLine commandLine = parseArgs(otherArgs);
 
-    // Grab the entityTableName argument
-    String entityTableName
-        = commandLine.getOptionValue(ENTITY_TABLE_NAME_SHORT);
-    if (StringUtils.isNotBlank(entityTableName)) {
-      hbaseConf.set(EntityTable.TABLE_NAME_CONF_NAME, entityTableName);
-    }
-    String entityTableTTLMetrics = commandLine.getOptionValue(TTL_OPTION_SHORT);
-    if (StringUtils.isNotBlank(entityTableTTLMetrics)) {
-      int metricsTTL = Integer.parseInt(entityTableTTLMetrics);
-      new EntityTable().setMetricsTTL(metricsTTL, hbaseConf);
-    }
-    // Grab the appToflowTableName argument
-    String appToflowTableName = commandLine.getOptionValue(
-        APP_TO_FLOW_TABLE_NAME_SHORT);
-    if (StringUtils.isNotBlank(appToflowTableName)) {
-      hbaseConf.set(AppToFlowTable.TABLE_NAME_CONF_NAME, appToflowTableName);
-    }
-    // Grab the applicationTableName argument
-    String applicationTableName = commandLine.getOptionValue(
-        APP_TABLE_NAME_SHORT);
-    if (StringUtils.isNotBlank(applicationTableName)) {
-      hbaseConf.set(ApplicationTable.TABLE_NAME_CONF_NAME,
-          applicationTableName);
-    }
-
-    List<Exception> exceptions = new ArrayList<>();
-    try {
-      boolean skipExisting
-          = commandLine.hasOption(SKIP_EXISTING_TABLE_OPTION_SHORT);
-      if (skipExisting) {
-        LOG.info("Will skip existing tables and continue on htable creation "
-            + "exceptions!");
+    if (commandLine.hasOption(HELP_SHORT)) {
+      // -help option has the highest precedence
+      printUsage();
+    } else if (commandLine.hasOption(CREATE_TABLES_SHORT)) {
+      // Grab the entityTableName argument
+      String entityTableName = commandLine.getOptionValue(
+          ENTITY_TABLE_NAME_SHORT);
+      if (StringUtils.isNotBlank(entityTableName)) {
+        hbaseConf.set(EntityTable.TABLE_NAME_CONF_NAME, entityTableName);
       }
-      createAllTables(hbaseConf, skipExisting);
-      LOG.info("Successfully created HBase schema. ");
-    } catch (IOException e) {
-      LOG.error("Error in creating hbase tables: " + e.getMessage());
-      exceptions.add(e);
-    }
-
-    if (exceptions.size() > 0) {
-      LOG.warn("Schema creation finished with the following exceptions");
-      for (Exception e : exceptions) {
-        LOG.warn(e.getMessage());
+      // Grab the TTL argument
+      String entityTableTTLMetrics =commandLine.getOptionValue(
+          TTL_OPTION_SHORT);
+      if (StringUtils.isNotBlank(entityTableTTLMetrics)) {
+        int metricsTTL = Integer.parseInt(entityTableTTLMetrics);
+        new EntityTable().setMetricsTTL(metricsTTL, hbaseConf);
       }
-      System.exit(-1);
+      // Grab the appToflowTableName argument
+      String appToflowTableName = commandLine.getOptionValue(
+          APP_TO_FLOW_TABLE_NAME_SHORT);
+      if (StringUtils.isNotBlank(appToflowTableName)) {
+        hbaseConf.set(AppToFlowTable.TABLE_NAME_CONF_NAME, appToflowTableName);
+      }
+      // Grab the applicationTableName argument
+      String applicationTableName = commandLine.getOptionValue(
+          APP_TABLE_NAME_SHORT);
+      if (StringUtils.isNotBlank(applicationTableName)) {
+        hbaseConf.set(ApplicationTable.TABLE_NAME_CONF_NAME,
+            applicationTableName);
+      }
+
+      // create all table schemas in hbase
+      final boolean skipExisting = commandLine.hasOption(
+          SKIP_EXISTING_TABLE_OPTION_SHORT);
+      createAllSchemas(hbaseConf, skipExisting);
     } else {
-      LOG.info("Schema creation finished successfully");
+      // print usage information if -create is not specified
+      printUsage();
     }
   }
 
@@ -142,7 +134,16 @@ public final class TimelineSchemaCreator {
     Options options = new Options();
 
     // Input
-    Option o = new Option(ENTITY_TABLE_NAME_SHORT, "entityTableName", true,
+    Option o = new Option(HELP_SHORT, "help", false, "print help information");
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option(CREATE_TABLES_SHORT, "create", false,
+        "a mandatory option to create hbase tables");
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option(ENTITY_TABLE_NAME_SHORT, "entityTableName", true,
         "entity table name");
     o.setArgName("entityTableName");
     o.setRequired(false);
@@ -185,6 +186,57 @@ public final class TimelineSchemaCreator {
     }
 
     return commandLine;
+  }
+
+  private static void printUsage() {
+    StringBuilder usage = new StringBuilder("Command Usage: \n");
+    usage.append("TimelineSchemaCreator [-help] Display help info" +
+        " for all commands. Or\n");
+    usage.append("TimelineSchemaCreator -create [OPTIONAL_OPTIONS]" +
+        " Create hbase tables.\n\n");
+    usage.append("The Optional options for creating tables include: \n");
+    usage.append("[-entityTableName <Entity Table Name>] " +
+        "The name of the Entity table\n");
+    usage.append("[-metricsTTL <Entity Table Metrics TTL>]" +
+        " TTL for metrics in the Entity table\n");
+    usage.append("[-appToflowTableName <AppToflow Table Name>]" +
+        " The name of the AppToFlow table\n");
+    usage.append("[-applicationTableName <Application Table Name>]" +
+        " The name of the Application table\n");
+    usage.append("[-skipExistingTable] Whether to skip existing" +
+        " hbase tables\n");
+    System.out.println(usage.toString());
+  }
+
+  /**
+   * Create all table schemas and log success or exception if failed.
+   * @param hbaseConf the hbase configuration to create tables with
+   * @param skipExisting whether to skip existing hbase tables
+   */
+  private static void createAllSchemas(Configuration hbaseConf,
+      boolean skipExisting) {
+    List<Exception> exceptions = new ArrayList<>();
+    try {
+      if (skipExisting) {
+        LOG.info("Will skip existing tables and continue on htable creation "
+            + "exceptions!");
+      }
+      createAllTables(hbaseConf, skipExisting);
+      LOG.info("Successfully created HBase schema. ");
+    } catch (IOException e) {
+      LOG.error("Error in creating hbase tables: " + e.getMessage());
+      exceptions.add(e);
+    }
+
+    if (exceptions.size() > 0) {
+      LOG.warn("Schema creation finished with the following exceptions");
+      for (Exception e : exceptions) {
+        LOG.warn(e.getMessage());
+      }
+      System.exit(-1);
+    } else {
+      LOG.info("Schema creation finished successfully");
+    }
   }
 
   @VisibleForTesting
