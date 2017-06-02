@@ -254,7 +254,8 @@ Finally, run the schema creator tool to create the necessary tables:
 
 The `TimelineSchemaCreator` tool supports a few options that may come handy especially when you
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
-and continue to create other tables rather than failing the schema creation. By default, the tables
+and continue to create other tables rather than failing the schema creation. When no option or '-help'
+('-h' for short) is provided, the command usage is printed. By default, the tables
 will have a schema prefix of "prod."
 
 #### Enabling Timeline Service v.2
