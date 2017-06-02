@@ -421,7 +421,8 @@ public class DFSAdmin extends FsShell {
    * "hdfs dfsadmin"
    */
   private static final String commonUsageSummary =
-    "\t[-report [-live] [-dead] [-decommissioning]]\n" +
+    "\t[-report [-live] [-dead] [-decommissioning] " +
+    "[-enteringmaintenance] [-inmaintenance]]\n" +
     "\t[-safemode <enter | leave | get | wait>]\n" +
     "\t[-saveNamespace [-beforeShutdown]]\n" +
     "\t[-rollEdits]\n" +
@@ -544,48 +545,51 @@ public class DFSAdmin extends FsShell {
     final boolean listDead = StringUtils.popOption("-dead", args);
     final boolean listDecommissioning =
         StringUtils.popOption("-decommissioning", args);
+    final boolean listEnteringMaintenance =
+        StringUtils.popOption("-enteringmaintenance", args);
+    final boolean listInMaintenance =
+        StringUtils.popOption("-inmaintenance", args);
+
 
     // If no filter flags are found, then list all DN types
-    boolean listAll = (!listLive && !listDead && !listDecommissioning);
+    boolean listAll = (!listLive && !listDead && !listDecommissioning
+        && !listEnteringMaintenance && !listInMaintenance);
 
     if (listAll || listLive) {
-      DatanodeInfo[] live = dfs.getDataNodeStats(DatanodeReportType.LIVE);
-      if (live.length > 0 || listLive) {
-        System.out.println("Live datanodes (" + live.length + "):\n");
-      }
-      if (live.length > 0) {
-        for (DatanodeInfo dn : live) {
-          System.out.println(dn.getDatanodeReport());
-          System.out.println();
-        }
-      }
+      printDataNodeReports(dfs, DatanodeReportType.LIVE, listLive, "Live");
     }
 
     if (listAll || listDead) {
-      DatanodeInfo[] dead = dfs.getDataNodeStats(DatanodeReportType.DEAD);
-      if (dead.length > 0 || listDead) {
-        System.out.println("Dead datanodes (" + dead.length + "):\n");
-      }
-      if (dead.length > 0) {
-        for (DatanodeInfo dn : dead) {
-          System.out.println(dn.getDatanodeReport());
-          System.out.println();
-        }
-      }
+      printDataNodeReports(dfs, DatanodeReportType.DEAD, listDead, "Dead");
     }
 
     if (listAll || listDecommissioning) {
-      DatanodeInfo[] decom =
-          dfs.getDataNodeStats(DatanodeReportType.DECOMMISSIONING);
-      if (decom.length > 0 || listDecommissioning) {
-        System.out.println("Decommissioning datanodes (" + decom.length
-            + "):\n");
-      }
-      if (decom.length > 0) {
-        for (DatanodeInfo dn : decom) {
-          System.out.println(dn.getDatanodeReport());
-          System.out.println();
-        }
+      printDataNodeReports(dfs, DatanodeReportType.DECOMMISSIONING,
+          listDecommissioning, "Decommissioning");
+    }
+
+    if (listAll || listEnteringMaintenance) {
+      printDataNodeReports(dfs, DatanodeReportType.ENTERING_MAINTENANCE,
+          listEnteringMaintenance, "Entering maintenance");
+    }
+
+    if (listAll || listInMaintenance) {
+      printDataNodeReports(dfs, DatanodeReportType.IN_MAINTENANCE,
+          listInMaintenance, "In maintenance");
+    }
+  }
+
+  private static void printDataNodeReports(DistributedFileSystem dfs,
+      DatanodeReportType type, boolean listNodes, String nodeState)
+      throws IOException {
+    DatanodeInfo[] nodes = dfs.getDataNodeStats(type);
+    if (nodes.length > 0 || listNodes) {
+      System.out.println(nodeState + " datanodes (" + nodes.length + "):\n");
+    }
+    if (nodes.length > 0) {
+      for (DatanodeInfo dn : nodes) {
+        System.out.println(dn.getDatanodeReport());
+        System.out.println();
       }
     }
   }
@@ -986,12 +990,13 @@ public class DFSAdmin extends FsShell {
       "hdfs dfsadmin\n" +
       commonUsageSummary;
 
-    String report ="-report [-live] [-dead] [-decommissioning]:\n" +
-      "\tReports basic filesystem information and statistics. \n" +
-      "\tThe dfs usage can be different from \"du\" usage, because it\n" +
-      "\tmeasures raw space used by replication, checksums, snapshots\n" +
-      "\tand etc. on all the DNs.\n" +
-      "\tOptional flags may be used to filter the list of displayed DNs.\n";
+    String report ="-report [-live] [-dead] [-decommissioning] "
+        + "[-enteringmaintenance] [-inmaintenance]:\n" +
+        "\tReports basic filesystem information and statistics. \n" +
+        "\tThe dfs usage can be different from \"du\" usage, because it\n" +
+        "\tmeasures raw space used by replication, checksums, snapshots\n" +
+        "\tand etc. on all the DNs.\n" +
+        "\tOptional flags may be used to filter the list of displayed DNs.\n";
 
     String safemode = "-safemode <enter|leave|get|wait|forceExit>:  Safe mode " +
         "maintenance command.\n" +
@@ -1779,7 +1784,8 @@ public class DFSAdmin extends FsShell {
   private static void printUsage(String cmd) {
     if ("-report".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-report] [-live] [-dead] [-decommissioning]");
+          + " [-report] [-live] [-dead] [-decommissioning]"
+          + " [-enteringmaintenance] [-inmaintenance]");
     } else if ("-safemode".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-safemode enter | leave | get | wait | forceExit]");
@@ -1917,7 +1923,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-report".equals(cmd)) {
-      if (argv.length > 4) {
+      if (argv.length > 6) {
         printUsage(cmd);
         return exitCode;
       }
