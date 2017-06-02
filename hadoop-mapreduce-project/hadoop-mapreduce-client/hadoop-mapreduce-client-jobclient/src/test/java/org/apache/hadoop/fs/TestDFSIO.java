@@ -1042,7 +1042,7 @@ public class TestDFSIO implements Tool {
         "        Number of files: " + tasks,
         " Total MBytes processed: " + df.format(toMB(size)),
         "      Throughput mb/sec: " + df.format(size * 1000.0 / (time * MEGA)),
-        "Total Throughput mb/sec: " + df.format(toMB(size) / ((float)execTime)),
+        "Total Throughput mb/sec: " + df.format(toMB(size) * 1000.0 / ((float)execTime)),
         " Average IO rate mb/sec: " + df.format(med),
         "  IO rate std deviation: " + df.format(stdDev),
         "     Test exec time sec: " + df.format((float)execTime / 1000),
