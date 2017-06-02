@@ -154,6 +154,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
     (Uma Maheswara Rao G via amarrk)
 
+    HADOOP-14474. Use OpenJDK 7 instead of Oracle JDK 7 to avoid
+    oracle-java7-installer failures. (Akira Ajisaka via xiao)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
