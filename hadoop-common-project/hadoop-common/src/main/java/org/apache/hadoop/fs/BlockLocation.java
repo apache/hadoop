@@ -22,6 +22,7 @@ import java.io.Serializable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  * Represents the network location of a block, information about the hosts
@@ -114,27 +115,27 @@ public class BlockLocation implements Serializable {
     if (names == null) {
       this.names = EMPTY_STR_ARRAY;
     } else {
-      this.names = names;
+      this.names = StringInterner.internStringsInArray(names);
     }
     if (hosts == null) {
       this.hosts = EMPTY_STR_ARRAY;
     } else {
-      this.hosts = hosts;
+      this.hosts = StringInterner.internStringsInArray(hosts);
     }
     if (cachedHosts == null) {
       this.cachedHosts = EMPTY_STR_ARRAY;
     } else {
-      this.cachedHosts = cachedHosts;
+      this.cachedHosts = StringInterner.internStringsInArray(cachedHosts);
     }
     if (topologyPaths == null) {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
-      this.topologyPaths = topologyPaths;
+      this.topologyPaths = StringInterner.internStringsInArray(topologyPaths);
     }
     if (storageIds == null) {
       this.storageIds = EMPTY_STR_ARRAY;
     } else {
-      this.storageIds = storageIds;
+      this.storageIds = StringInterner.internStringsInArray(storageIds);
     }
     if (storageTypes == null) {
       this.storageTypes = EMPTY_STORAGE_TYPE_ARRAY;
@@ -238,7 +239,7 @@ public class BlockLocation implements Serializable {
     if (hosts == null) {
       this.hosts = EMPTY_STR_ARRAY;
     } else {
-      this.hosts = hosts;
+      this.hosts = StringInterner.internStringsInArray(hosts);
     }
   }
 
@@ -249,7 +250,7 @@ public class BlockLocation implements Serializable {
     if (cachedHosts == null) {
       this.cachedHosts = EMPTY_STR_ARRAY;
     } else {
-      this.cachedHosts = cachedHosts;
+      this.cachedHosts = StringInterner.internStringsInArray(cachedHosts);
     }
   }
 
@@ -260,7 +261,7 @@ public class BlockLocation implements Serializable {
     if (names == null) {
       this.names = EMPTY_STR_ARRAY;
     } else {
-      this.names = names;
+      this.names = StringInterner.internStringsInArray(names);
     }
   }
 
@@ -271,7 +272,7 @@ public class BlockLocation implements Serializable {
     if (topologyPaths == null) {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
-      this.topologyPaths = topologyPaths;
+      this.topologyPaths = StringInterner.internStringsInArray(topologyPaths);
     }
   }
 
@@ -279,7 +280,7 @@ public class BlockLocation implements Serializable {
     if (storageIds == null) {
       this.storageIds = EMPTY_STR_ARRAY;
     } else {
-      this.storageIds = storageIds;
+      this.storageIds = StringInterner.internStringsInArray(storageIds);
     }
   }
 

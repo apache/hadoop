@@ -36,7 +36,7 @@ class UnreliableImplementation implements UnreliableInterface {
   private String identifier;
   private TypeOfExceptionToFailWith exceptionToFailWith;
   
-  public static enum TypeOfExceptionToFailWith {
+  public enum TypeOfExceptionToFailWith {
     UNRELIABLE_EXCEPTION,
     STANDBY_EXCEPTION,
     IO_EXCEPTION,

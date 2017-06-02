@@ -1552,7 +1552,7 @@ public abstract class Server {
   }
 
   @InterfaceAudience.Private
-  public static enum AuthProtocol {
+  public enum AuthProtocol {
     NONE(0),
     SASL(-33);
     

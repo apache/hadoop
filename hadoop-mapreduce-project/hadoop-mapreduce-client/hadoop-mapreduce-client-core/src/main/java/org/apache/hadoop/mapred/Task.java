@@ -90,7 +90,7 @@ abstract public class Task implements Writable, Configurable {
    * @deprecated Provided for compatibility. Use {@link TaskCounter} instead.
    */
   @Deprecated
-  public static enum Counter { 
+  public enum Counter {
     MAP_INPUT_RECORDS, 
     MAP_OUTPUT_RECORDS,
     MAP_SKIPPED_RECORDS,

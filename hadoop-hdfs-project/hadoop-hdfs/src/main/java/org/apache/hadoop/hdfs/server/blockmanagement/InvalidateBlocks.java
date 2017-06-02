@@ -70,13 +70,14 @@ class InvalidateBlocks {
   }
 
   private void printBlockDeletionTime(final Logger log) {
-    log.info(DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY
-        + " is set to " + DFSUtil.durationToString(pendingPeriodInMs));
+    log.info("{} is set to {}",
+        DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
+        DFSUtil.durationToString(pendingPeriodInMs));
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy MMM dd HH:mm:ss");
     Calendar calendar = new GregorianCalendar();
     calendar.add(Calendar.SECOND, (int) (this.pendingPeriodInMs / 1000));
-    log.info("The block deletion will start around "
-        + sdf.format(calendar.getTime()));
+    log.info("The block deletion will start around {}",
+        sdf.format(calendar.getTime()));
   }
 
   /** @return the number of blocks to be invalidated . */
@@ -173,11 +174,9 @@ class InvalidateBlocks {
   synchronized List<Block> invalidateWork(final DatanodeDescriptor dn) {
     final long delay = getInvalidationDelay();
     if (delay > 0) {
-      if (BlockManager.LOG.isDebugEnabled()) {
-        BlockManager.LOG
-            .debug("Block deletion is delayed during NameNode startup. "
-                + "The deletion will start after " + delay + " ms.");
-      }
+      BlockManager.LOG
+          .debug("Block deletion is delayed during NameNode startup. "
+              + "The deletion will start after {} ms.", delay);
       return null;
     }
     final LightWeightHashSet<Block> set = node2blocks.get(dn);

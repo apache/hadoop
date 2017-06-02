@@ -46,7 +46,7 @@ class OperationOutput {
   private static final String MEASUREMENT_SEP = "*";
   private static final String STRING_SEP = ";";
 
-  static enum OutputType {
+  enum OutputType {
     STRING, FLOAT, LONG, DOUBLE, INTEGER
   }
 

@@ -59,6 +59,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -987,7 +989,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         replicaInfo, smallBufferSize, conf);
 
     // Finalize the copied files
-    newReplicaInfo = finalizeReplica(block.getBlockPoolId(), newReplicaInfo);
+    newReplicaInfo = finalizeReplica(block.getBlockPoolId(), newReplicaInfo,
+        false);
     try (AutoCloseableLock lock = datasetLock.acquire()) {
       // Increment numBlocks here as this block moved without knowing to BPS
       FsVolumeImpl volume = (FsVolumeImpl) newReplicaInfo.getVolume();
@@ -1290,7 +1293,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           replicaInfo.bumpReplicaGS(newGS);
           // finalize the replica if RBW
           if (replicaInfo.getState() == ReplicaState.RBW) {
-            finalizeReplica(b.getBlockPoolId(), replicaInfo);
+            finalizeReplica(b.getBlockPoolId(), replicaInfo, false);
           }
           return replicaInfo;
         }
@@ -1604,7 +1607,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * Complete the block write!
    */
   @Override // FsDatasetSpi
-  public void finalizeBlock(ExtendedBlock b) throws IOException {
+  public void finalizeBlock(ExtendedBlock b, boolean fsyncDir)
+      throws IOException {
     try (AutoCloseableLock lock = datasetLock.acquire()) {
       if (Thread.interrupted()) {
         // Don't allow data modifications from interrupted threads
@@ -1616,12 +1620,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         // been opened for append but never modified
         return;
       }
-      finalizeReplica(b.getBlockPoolId(), replicaInfo);
+      finalizeReplica(b.getBlockPoolId(), replicaInfo, fsyncDir);
     }
   }
 
   private ReplicaInfo finalizeReplica(String bpid,
-      ReplicaInfo replicaInfo) throws IOException {
+      ReplicaInfo replicaInfo, boolean fsyncDir) throws IOException {
     try (AutoCloseableLock lock = datasetLock.acquire()) {
       ReplicaInfo newReplicaInfo = null;
       if (replicaInfo.getState() == ReplicaState.RUR &&
@@ -1636,6 +1640,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
         newReplicaInfo = v.addFinalizedBlock(
             bpid, replicaInfo, replicaInfo, replicaInfo.getBytesReserved());
+        /*
+         * Sync the directory after rename from tmp/rbw to Finalized if
+         * configured. Though rename should be atomic operation, sync on both
+         * dest and src directories are done because IOUtils.fsync() calls
+         * directory's channel sync, not the journal itself.
+         */
+        if (fsyncDir && newReplicaInfo instanceof FinalizedReplica
+            && replicaInfo instanceof LocalReplica) {
+          FinalizedReplica finalizedReplica = (FinalizedReplica) newReplicaInfo;
+          finalizedReplica.fsyncDirectory();
+          LocalReplica localReplica = (LocalReplica) replicaInfo;
+          localReplica.fsyncDirectory();
+        }
         if (v.isTransientStorage()) {
           releaseLockedMemory(
               replicaInfo.getOriginalBytesReserved()
@@ -2601,11 +2618,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
         newReplicaInfo.setNumBytes(newlength);
         volumeMap.add(bpid, newReplicaInfo.getReplicaInfo());
-        finalizeReplica(bpid, newReplicaInfo.getReplicaInfo());
+        finalizeReplica(bpid, newReplicaInfo.getReplicaInfo(), false);
       }
     }
     // finalize the block
-    return finalizeReplica(bpid, rur);
+    return finalizeReplica(bpid, rur, false);
   }
 
   @Override // FsDatasetSpi

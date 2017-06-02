@@ -61,7 +61,7 @@ public static final String COMPRESS_TYPE = "mapreduce.output.fileoutputformat.co
 public static final String OUTDIR = "mapreduce.output.fileoutputformat.outputdir";
 
   @Deprecated
-  public static enum Counter {
+  public enum Counter {
     BYTES_WRITTEN
   }
 

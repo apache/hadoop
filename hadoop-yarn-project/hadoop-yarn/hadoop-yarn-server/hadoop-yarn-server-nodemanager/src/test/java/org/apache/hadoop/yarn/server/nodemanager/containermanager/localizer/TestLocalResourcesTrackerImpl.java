@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -54,6 +55,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceLocalizedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionMatcher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
@@ -823,7 +825,8 @@ public class TestLocalResourcesTrackerImpl {
       Path rPath = tracker.getPathForLocalization(req1, base_path,
           delService);
       Assert.assertFalse(lfs.util().exists(rPath));
-      verify(delService, times(1)).delete(eq(user), eq(conflictPath));
+      verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+          delService, user, conflictPath, null)));
     } finally {
       lfs.delete(base_path, true);
       if (dispatcher != null) {

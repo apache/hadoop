@@ -102,7 +102,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     }
   }
   
-  private static enum ContainerState {
+  private enum ContainerState {
     PREP, FAILED, RUNNING, DONE, KILLED_BEFORE_LAUNCH
   }
 

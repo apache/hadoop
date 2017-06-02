@@ -16,35 +16,14 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
 import AbstractRoute from './abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param) {
-    return Ember.RSVP.hash({
-      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
-
-      rmContainers: this.store.find('yarn-app', param.app_id).then(function() {
-        return this.store.query('yarn-app-attempt', {appId: param.app_id}).then(function (attempts) {
-          if (attempts && attempts.get('firstObject')) {
-            var appAttemptId = attempts.get('firstObject').get('appAttemptId');
-            return this.store.query('yarn-container', {
-              app_attempt_id: appAttemptId
-            });
-          }
-        }.bind(this));
-      }.bind(this)),
-
-      nodes: this.store.findAll('yarn-rm-node', {reload: true}),
-    });
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-container');
-    this.store.unloadAll('yarn-rm-node');
-    this.store.unloadAll('yarn-app-timeline');
+export default AbstractRoute.extend({
+  actions: {
+    updateBreadcrumbs(appId, serviceName, tailCrumbs) {
+      var controller = this.controllerFor('yarn-app');
+      controller.setProperties({appId: appId, serviceName: serviceName});
+      controller.updateBreadcrumbs(appId, serviceName, tailCrumbs);
+    }
   }
 });

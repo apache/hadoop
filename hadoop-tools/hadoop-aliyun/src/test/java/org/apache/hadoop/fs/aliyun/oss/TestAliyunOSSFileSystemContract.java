@@ -20,24 +20,24 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
+
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assume.*;
-import org.apache.hadoop.fs.FileStatus;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeNotNull;
+import static org.junit.Assume.assumeTrue;
+
 /**
  * Tests a live Aliyun OSS system.
- *
- * This uses BlockJUnit4ClassRunner because FileSystemContractBaseTest from
- * TestCase which uses the old Junit3 runner that doesn't ignore assumptions
- * properly making it impossible to skip the tests if we don't have a valid
- * bucket.
  */
 public class TestAliyunOSSFileSystemContract
     extends FileSystemContractBaseTest {

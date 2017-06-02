@@ -139,7 +139,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String UPLOAD_CONTENT_TYPE= "application/octet-stream";
 
-  public static enum FILE_TYPE {
+  public enum FILE_TYPE {
     FILE, DIRECTORY, SYMLINK;
 
     public static FILE_TYPE getType(FileStatus fileStatus) {
@@ -210,7 +210,7 @@ public class HttpFSFileSystem extends FileSystem
   private static final String HTTP_DELETE = "DELETE";
 
   @InterfaceAudience.Private
-  public static enum Operation {
+  public enum Operation {
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),

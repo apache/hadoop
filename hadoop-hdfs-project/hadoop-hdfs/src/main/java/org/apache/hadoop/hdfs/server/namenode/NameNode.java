@@ -209,7 +209,7 @@ public class NameNode extends ReconfigurableBase implements
   /**
    * Categories of operations supported by the namenode.
    */
-  public static enum OperationCategory {
+  public enum OperationCategory {
     /** Operations that are state agnostic */
     UNCHECKED,
     /** Read operation that does not change the namespace state */

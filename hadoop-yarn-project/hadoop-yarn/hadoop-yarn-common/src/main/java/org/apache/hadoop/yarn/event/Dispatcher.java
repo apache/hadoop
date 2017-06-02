@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  * event handlers based on event types.
  * 
  */
-@SuppressWarnings("rawtypes")
 @Public
 @Evolving
 public interface Dispatcher {
