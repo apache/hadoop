@@ -118,7 +118,7 @@ Hence on Cluster X, where the `core-site.xml` is set to make the default fs to u
 
     * It is an URI for referring a pathname on another cluster such as Cluster Y. In particular, the command for copying files from cluster Y to Cluster Z looks like:
 
-            distcp viewfs://clusterY:/pathSrc viewfs://clusterZ/pathDest
+            distcp viewfs://clusterY/pathSrc viewfs://clusterZ/pathDest
 
 4.  `viewfs://clusterX-webhdfs/foo/bar` and `viewfs://clusterX-hftp/foo/bar`
 
