@@ -37,7 +37,7 @@ import org.apache.hadoop.conf.Configured;
 @Public
 @Evolving
 public abstract class ResourceCalculatorProcessTree extends Configured {
-  static final Log LOG = LogFactory
+  static protected final Log LOG = LogFactory
       .getLog(ResourceCalculatorProcessTree.class);
   public static final int UNAVAILABLE = -1;
 
