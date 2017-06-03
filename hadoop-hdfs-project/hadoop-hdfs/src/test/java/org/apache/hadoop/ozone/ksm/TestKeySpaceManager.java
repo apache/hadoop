@@ -258,6 +258,51 @@ public class TestKeySpaceManager {
     Assert.assertTrue(retVolumeInfo.getOwner().getName().equals(userName));
   }
 
+  // Create a volume and test Volume access for a different user
+  @Test(timeout = 60000)
+  public void testAccessVolume() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String[] groupName =
+        {"group" + RandomStringUtils.randomNumeric(5)};
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    createVolumeArgs.setGroups(groupName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, userName,
+        OzoneAcl.OzoneACLRights.READ_WRITE);
+    Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, userAcl));
+    OzoneAcl group = new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, groupName[0],
+        OzoneAcl.OzoneACLRights.READ);
+    Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, group));
+
+    // Create a different user and access should fail
+    String falseUserName = "user" + RandomStringUtils.randomNumeric(5);
+    OzoneAcl falseUserAcl =
+        new OzoneAcl(OzoneAcl.OzoneACLType.USER, falseUserName,
+            OzoneAcl.OzoneACLRights.READ_WRITE);
+    Assert.assertFalse(storageHandler
+        .checkVolumeAccess(volumeName, falseUserAcl));
+    // Checking access with user name and Group Type should fail
+    OzoneAcl falseGroupAcl = new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, userName,
+        OzoneAcl.OzoneACLRights.READ_WRITE);
+    Assert.assertFalse(storageHandler
+        .checkVolumeAccess(volumeName, falseGroupAcl));
+
+    // Access for acl type world should also fail
+    OzoneAcl worldAcl =
+        new OzoneAcl(OzoneAcl.OzoneACLType.WORLD, "",
+            OzoneAcl.OzoneACLRights.READ);
+    Assert.assertFalse(storageHandler.checkVolumeAccess(volumeName, worldAcl));
+
+    Assert.assertEquals(0, ksmMetrics.getNumVolumeCheckAccessFails());
+    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
+  }
+
   @Test(timeout = 60000)
   public void testCreateBucket() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);

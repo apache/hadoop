@@ -22,6 +22,8 @@ import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import java.io.IOException;
 import java.util.List;
 
@@ -56,10 +58,13 @@ public interface KeySpaceManagerProtocol {
   /**
    * Checks if the specified user can access this volume.
    * @param volume - volume
-   * @param userName - user name
+   * @param userAcl - user acls which needs to be checked for access
+   * @return true if the user has required access for the volume,
+   *         false otherwise
    * @throws IOException
    */
-  void checkVolumeAccess(String volume, String userName) throws IOException;
+  boolean checkVolumeAccess(String volume, OzoneAclInfo userAcl)
+      throws IOException;
 
   /**
    * Gets the volume information.

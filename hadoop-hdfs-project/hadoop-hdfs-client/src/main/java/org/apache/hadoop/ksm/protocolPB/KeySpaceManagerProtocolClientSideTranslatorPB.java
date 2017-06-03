@@ -67,9 +67,15 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.InfoVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CheckVolumeAccessRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CheckVolumeAccessResponse;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -196,13 +202,32 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
    * Checks if the specified user can access this volume.
    *
    * @param volume - volume
-   * @param userName - user name
+   * @param userAcl - user acls which needs to be checked for access
+   * @return true if the user has required access for the volume,
+   *         false otherwise
    * @throws IOException
    */
   @Override
-  public void checkVolumeAccess(String volume, String userName) throws
+  public boolean checkVolumeAccess(String volume, OzoneAclInfo userAcl) throws
       IOException {
+    CheckVolumeAccessRequest.Builder req =
+        CheckVolumeAccessRequest.newBuilder();
+    req.setVolumeName(volume).setUserAcl(userAcl);
+    final CheckVolumeAccessResponse resp;
+    try {
+      resp = rpcProxy.checkVolumeAccess(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
 
+    if (resp.getStatus() == Status.ACCESS_DENIED) {
+      return false;
+    } else if (resp.getStatus() == Status.OK) {
+      return true;
+    } else {
+      throw new
+          IOException("Check Volume Access failed, error:" + resp.getStatus());
+    }
   }
 
   /**

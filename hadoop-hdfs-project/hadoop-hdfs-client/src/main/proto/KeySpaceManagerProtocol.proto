@@ -61,6 +61,7 @@ message VolumeInfo {
     required string volume = 3;
     optional uint64 quotaInBytes = 4;
     repeated KeyValue metadata = 5;
+    repeated OzoneAclInfo volumeAcls = 6;
 }
 
 /**
@@ -93,11 +94,11 @@ message SetVolumePropertyResponse {
 }
 
 /**
-    Checks if a specified user has access to the volume.
-*/
+ * Checks if the user has specified permissions for the volume
+ */
 message CheckVolumeAccessRequest {
     required string volumeName = 1;
-    required string userName = 2;
+    required OzoneAclInfo userAcl = 2;
 }
 
 message CheckVolumeAccessResponse {

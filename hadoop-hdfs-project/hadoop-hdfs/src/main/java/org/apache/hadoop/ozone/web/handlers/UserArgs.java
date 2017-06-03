@@ -35,6 +35,7 @@ public class UserArgs {
   private final UriInfo uri;
   private final Request request;
   private final HttpHeaders headers;
+  private String[] groups;
 
 
   /**
@@ -109,6 +110,24 @@ public class UserArgs {
    */
   public void setUserName(String userName) {
     this.userName = userName;
+  }
+
+  /**
+   * Returns list of groups.
+   *
+   * @return String[]
+   */
+  public String[] getGroups() {
+    return this.groups;
+  }
+
+  /**
+   * Sets the group list.
+   *
+   * @param groups list of groups
+   */
+  public void setGroups(String[] groups) {
+    this.groups = groups;
   }
 
   /**

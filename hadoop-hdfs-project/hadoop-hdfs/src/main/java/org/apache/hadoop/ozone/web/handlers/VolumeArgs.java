@@ -64,11 +64,13 @@ public class VolumeArgs extends UserArgs {
    * @param request  - Http Request
    * @param info - URI info
    * @param headers - http headers
+   * @param groups - list of groups allowed to access the volume
    */
   public VolumeArgs(String userName, String volumeName, String requestID,
                     String hostName, Request request, UriInfo info,
-                    HttpHeaders headers) {
+                    HttpHeaders headers, String[] groups) {
     super(userName, requestID, hostName, request, info, headers);
+    super.setGroups(groups);
     this.volumeName = volumeName;
   }
 
@@ -81,7 +83,7 @@ public class VolumeArgs extends UserArgs {
   public VolumeArgs(String volumeName, UserArgs userArgs) {
     this(userArgs.getUserName(), volumeName, userArgs.getRequestID(),
          userArgs.getHostName(), userArgs.getRequest(), userArgs.getUri(),
-         userArgs.getHeaders());
+         userArgs.getHeaders(), userArgs.getGroups());
   }
 
   /**

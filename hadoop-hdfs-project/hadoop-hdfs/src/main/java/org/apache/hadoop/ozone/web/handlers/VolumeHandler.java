@@ -92,6 +92,7 @@ public class VolumeHandler implements Volume {
           }
 
           args.setUserName(volumeOwner);
+          args.setGroups(auth.getGroups(args));
           if (!quota.equals(Header.OZONE_QUOTA_UNDEFINED)) {
             setQuotaArgs(args, quota);
           }

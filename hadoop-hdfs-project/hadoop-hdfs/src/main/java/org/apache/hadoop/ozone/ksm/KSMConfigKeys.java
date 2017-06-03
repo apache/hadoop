@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.ksm;
 
+import org.apache.hadoop.ozone.web.request.OzoneAcl;
 /**
  * KSM Constants.
  */
@@ -46,4 +47,15 @@ public final class KSMConfigKeys {
   public static final String OZONE_KSM_USER_MAX_VOLUME =
       "ozone.ksm.user.max.volume";
   public static final int OZONE_KSM_USER_MAX_VOLUME_DEFAULT = 1024;
+
+  // KSM Default user/group permissions
+  public static final String OZONE_KSM_USER_RIGHTS =
+      "ozone.ksm.user.rights";
+  public static final OzoneAcl.OzoneACLRights OZONE_KSM_USER_RIGHTS_DEFAULT =
+      OzoneAcl.OzoneACLRights.READ_WRITE;
+
+  public static final String OZONE_KSM_GROUP_RIGHTS =
+      "ozone.ksm.group.rights";
+  public static final OzoneAcl.OzoneACLRights OZONE_KSM_GROUP_RIGHTS_DEFAULT =
+      OzoneAcl.OzoneACLRights.READ_WRITE;
 }

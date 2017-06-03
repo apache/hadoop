@@ -39,6 +39,7 @@ import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
+import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.web.request.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -92,7 +93,8 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final KeySpaceManagerProtocolClientSideTranslatorPB
       keySpaceManagerClient;
   private final XceiverClientManager xceiverClientManager;
-
+  private final OzoneAcl.OzoneACLRights userRights;
+  private final OzoneAcl.OzoneACLRights groupRights;
   private int chunkSize;
 
   /**
@@ -113,6 +115,10 @@ public final class DistributedStorageHandler implements StorageHandler {
 
     chunkSize = conf.getInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
         ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT);
+    userRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_USER_RIGHTS,
+        KSMConfigKeys.OZONE_KSM_USER_RIGHTS_DEFAULT);
+    groupRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS,
+        KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS_DEFAULT);
     if(chunkSize > ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE) {
       LOG.warn("The chunk size ({}) is not allowed to be more than"
           + " the maximum size ({}),"
@@ -126,13 +132,23 @@ public final class DistributedStorageHandler implements StorageHandler {
   public void createVolume(VolumeArgs args) throws IOException, OzoneException {
     long quota = args.getQuota() == null ?
         OzoneConsts.MAX_QUOTA_IN_BYTES : args.getQuota().sizeInBytes();
-    KsmVolumeArgs volumeArgs = KsmVolumeArgs.newBuilder()
-        .setAdminName(args.getAdminName())
+    OzoneAcl userAcl =
+        new OzoneAcl(OzoneAcl.OzoneACLType.USER,
+            args.getUserName(), userRights);
+    KsmVolumeArgs.Builder builder = KsmVolumeArgs.newBuilder();
+    builder.setAdminName(args.getAdminName())
         .setOwnerName(args.getUserName())
         .setVolume(args.getVolumeName())
         .setQuotaInBytes(quota)
-        .build();
-    keySpaceManagerClient.createVolume(volumeArgs);
+        .addOzoneAcls(KSMPBHelper.convertOzoneAcl(userAcl));
+    if (args.getGroups() != null) {
+      for (String group : args.getGroups()) {
+        OzoneAcl groupAcl =
+            new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, group, groupRights);
+        builder.addOzoneAcls(KSMPBHelper.convertOzoneAcl(groupAcl));
+      }
+    }
+    keySpaceManagerClient.createVolume(builder.build());
   }
 
   @Override
@@ -150,9 +166,10 @@ public final class DistributedStorageHandler implements StorageHandler {
   }
 
   @Override
-  public boolean checkVolumeAccess(VolumeArgs args)
+  public boolean checkVolumeAccess(String volume, OzoneAcl acl)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException("checkVolumeAccessnot implemented");
+    return keySpaceManagerClient
+        .checkVolumeAccess(volume, KSMPBHelper.convertOzoneAcl(acl));
   }
 
   @Override

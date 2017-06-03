@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
+import org.apache.hadoop.ozone.web.request.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
@@ -106,17 +107,18 @@ public class LocalStorageHandler implements StorageHandler {
   /**
    * Checks if a Volume exists and the user specified has access to the volume.
    *
-   * @param args - volumeArgs
+   * @param volume - Volume Name
+   * @param acl - Ozone acl which needs to be compared for access
    * @return - Boolean - True if the user can modify the volume. This is
    * possible for owners of the volume and admin users
    * @throws IOException
    */
   @Override
-  public boolean checkVolumeAccess(VolumeArgs args)
+  public boolean checkVolumeAccess(String volume, OzoneAcl acl)
       throws IOException, OzoneException {
     OzoneMetadataManager oz =
         OzoneMetadataManager.getOzoneMetadataManager(conf);
-    return oz.checkVolumeAccess(args);
+    return oz.checkVolumeAccess(volume, acl);
   }
 
   /**
