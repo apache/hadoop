@@ -1022,14 +1022,14 @@ public class TestBalancer {
     if (!p.getExcludedNodes().isEmpty()) {
       args.add("-exclude");
       if (useFile) {
-        excludeHostsFile = new File ("exclude-hosts-file");
+        excludeHostsFile = GenericTestUtils.getTestDir("exclude-hosts-file");
         PrintWriter pw = new PrintWriter(excludeHostsFile);
         for (String host : p.getExcludedNodes()) {
           pw.write( host + "\n");
         }
         pw.close();
         args.add("-f");
-        args.add("exclude-hosts-file");
+        args.add(excludeHostsFile.getAbsolutePath());
       } else {
         args.add(StringUtils.join(p.getExcludedNodes(), ','));
       }
@@ -1039,14 +1039,14 @@ public class TestBalancer {
     if (!p.getIncludedNodes().isEmpty()) {
       args.add("-include");
       if (useFile) {
-        includeHostsFile = new File ("include-hosts-file");
+        includeHostsFile = GenericTestUtils.getTestDir("include-hosts-file");
         PrintWriter pw = new PrintWriter(includeHostsFile);
         for (String host : p.getIncludedNodes()) {
           pw.write( host + "\n");
         }
         pw.close();
         args.add("-f");
-        args.add("include-hosts-file");
+        args.add(includeHostsFile.getAbsolutePath());
       } else {
         args.add(StringUtils.join(p.getIncludedNodes(), ','));
       }
