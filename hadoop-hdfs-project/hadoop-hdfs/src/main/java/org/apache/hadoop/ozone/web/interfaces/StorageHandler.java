@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
+import org.apache.hadoop.ozone.web.request.OzoneAcl;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
@@ -80,18 +81,20 @@ public interface StorageHandler {
       throws IOException, OzoneException;
 
   /**
-   * Checks if a Volume exists and the user specified has access to the
-   * Volume.
+   * Checks if a Volume exists and the user with a role specified has access
+   * to the Volume.
    *
-   * @param args - Volume Args
+   * @param volume - Volume Name whose access permissions needs to be checked
+   * @param acl - requested acls which needs to be checked for access
    *
-   * @return - Boolean - True if the user can modify the volume.
+   * @return - Boolean - True if the user with a role can access the volume.
    * This is possible for owners of the volume and admin users
    *
    * @throws IOException
    * @throws OzoneException
    */
-  boolean checkVolumeAccess(VolumeArgs args) throws IOException, OzoneException;
+  boolean checkVolumeAccess(String volume, OzoneAcl acl)
+      throws IOException, OzoneException;
 
 
   /**

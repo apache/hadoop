@@ -19,9 +19,12 @@ package org.apache.hadoop.ksm.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.KeyValue;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,6 +41,7 @@ public final class KsmVolumeArgs {
   private final String volume;
   private final long quotaInBytes;
   private final Map<String, String> keyValueMap;
+  private final KsmOzoneAclMap aclMap;
 
   /**
    * Private constructor, constructed via builder.
@@ -45,15 +49,18 @@ public final class KsmVolumeArgs {
    * @param ownerName  - Volume owner's name
    * @param volume - volume name
    * @param quotaInBytes - Volume Quota in bytes.
-   * @param  keyValueMap - keyValue map.
+   * @param keyValueMap - keyValue map.
+   * @param aclMap - User to access rights map.
    */
   private KsmVolumeArgs(String adminName, String ownerName, String volume,
-                        long quotaInBytes, Map<String, String> keyValueMap) {
+                        long quotaInBytes, Map<String, String> keyValueMap,
+                        KsmOzoneAclMap aclMap) {
     this.adminName = adminName;
     this.ownerName = ownerName;
     this.volume = volume;
     this.quotaInBytes = quotaInBytes;
     this.keyValueMap = keyValueMap;
+    this.aclMap = aclMap;
   }
 
   /**
@@ -92,6 +99,9 @@ public final class KsmVolumeArgs {
     return keyValueMap;
   }
 
+  public KsmOzoneAclMap getAclMap() {
+    return aclMap;
+  }
   /**
    * Returns new builder class that builds a KsmVolumeArgs.
    *
@@ -110,12 +120,14 @@ public final class KsmVolumeArgs {
     private String volume;
     private long quotaInBytes;
     private Map<String, String> keyValueMap;
+    private KsmOzoneAclMap aclMap;
 
     /**
      * Constructs a builder.
      */
     Builder() {
       keyValueMap = new HashMap<>();
+      aclMap = new KsmOzoneAclMap();
     }
 
     public Builder setAdminName(String adminName) {
@@ -143,6 +155,11 @@ public final class KsmVolumeArgs {
       return this;
     }
 
+    public Builder addOzoneAcls(OzoneAclInfo acl) throws IOException {
+      aclMap.addAcl(acl);
+      return this;
+    }
+
     /**
      * Constructs a CreateVolumeArgument.
      * @return CreateVolumeArgs.
@@ -152,31 +169,36 @@ public final class KsmVolumeArgs {
       Preconditions.checkNotNull(ownerName);
       Preconditions.checkNotNull(volume);
       return new KsmVolumeArgs(adminName, ownerName, volume, quotaInBytes,
-          keyValueMap);
+          keyValueMap, aclMap);
     }
   }
 
   public VolumeInfo getProtobuf() {
-    List<KeyValue> list = new LinkedList<>();
+    List<KeyValue> metadataList = new LinkedList<>();
     for (Map.Entry<String, String> entry : keyValueMap.entrySet()) {
-      list.add(KeyValue.newBuilder().setKey(entry.getKey()).
+      metadataList.add(KeyValue.newBuilder().setKey(entry.getKey()).
           setValue(entry.getValue()).build());
     }
+    List<OzoneAclInfo> aclList = aclMap.ozoneAclGetProtobuf();
 
     return VolumeInfo.newBuilder()
         .setAdminName(adminName)
         .setOwnerName(ownerName)
         .setVolume(volume)
         .setQuotaInBytes(quotaInBytes)
-        .addAllMetadata(list)
+        .addAllMetadata(metadataList)
+        .addAllVolumeAcls(aclList)
         .build();
   }
 
   public static KsmVolumeArgs getFromProtobuf(VolumeInfo volInfo) {
+    Map<String, String> kvMap = volInfo.getMetadataList().stream()
+        .collect(Collectors.toMap(KeyValue::getKey,
+            KeyValue::getValue));
+    KsmOzoneAclMap aclMap =
+        KsmOzoneAclMap.ozoneAclGetFromProtobuf(volInfo.getVolumeAclsList());
+
     return new KsmVolumeArgs(volInfo.getAdminName(), volInfo.getOwnerName(),
-        volInfo.getVolume(), volInfo.getQuotaInBytes(),
-        volInfo.getMetadataList().stream()
-            .collect(Collectors.toMap(KeyValue::getKey,
-                KeyValue::getValue)));
+        volInfo.getVolume(), volInfo.getQuotaInBytes(), kvMap, aclMap);
   }
 }

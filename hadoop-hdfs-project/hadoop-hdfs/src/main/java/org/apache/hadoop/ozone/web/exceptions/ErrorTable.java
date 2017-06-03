@@ -183,9 +183,11 @@ public final class ErrorTable {
     OzoneException err =
         new OzoneException(e.getHttpCode(), e.getShortMessage(),
                            e.getMessage());
-    err.setRequestId(args.getRequestID());
-    err.setResource(args.getResourceName());
-    err.setHostID(args.getHostName());
+    if (args != null) {
+      err.setRequestId(args.getRequestID());
+      err.setResource(args.getResourceName());
+      err.setHostID(args.getHostName());
+    }
     return err;
   }
 

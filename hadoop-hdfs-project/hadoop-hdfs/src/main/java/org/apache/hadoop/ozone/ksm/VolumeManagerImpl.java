@@ -21,6 +21,8 @@ import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
@@ -179,7 +181,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
       VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
       KsmVolumeArgs volumeArgs = KsmVolumeArgs.getFromProtobuf(volumeInfo);
-      Preconditions.checkState(volume.equalsIgnoreCase(volumeInfo.getVolume()));
+      Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
 
       delVolumeFromOwnerList(volume, volumeArgs.getOwnerName(),
           putBatch, deleteBatch);
@@ -224,7 +226,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
       VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
       KsmVolumeArgs volumeArgs = KsmVolumeArgs.getFromProtobuf(volumeInfo);
-      Preconditions.checkState(volume.equalsIgnoreCase(volumeInfo.getVolume()));
+      Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
 
       KsmVolumeArgs newVolumeArgs =
           KsmVolumeArgs.newBuilder().setVolume(volumeArgs.getVolume())
@@ -262,7 +264,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
       VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
       KsmVolumeArgs volumeArgs = KsmVolumeArgs.getFromProtobuf(volumeInfo);
-      Preconditions.checkState(volume.equalsIgnoreCase(volumeInfo.getVolume()));
+      Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
       return volumeArgs;
     } catch (IOException ex) {
       LOG.error("Info volume failed for volume:{}", volume, ex);
@@ -296,7 +298,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
 
       VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
-      Preconditions.checkState(volume.equalsIgnoreCase(volumeInfo.getVolume()));
+      Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
       // delete the volume from the owner list
       // as well as delete the volume entry
       delVolumeFromOwnerList(volume, volumeInfo.getOwnerName(),
@@ -308,6 +310,39 @@ public class VolumeManagerImpl implements VolumeManager {
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Checks if the specified user with a role can access this volume.
+   *
+   * @param volume - volume
+   * @param userAcl - user acl which needs to be checked for access
+   * @return true if the user has access for the volume, false otherwise
+   * @throws IOException
+   */
+  public boolean checkVolumeAccess(String volume, OzoneAclInfo userAcl)
+      throws IOException {
+    Preconditions.checkNotNull(volume);
+    Preconditions.checkNotNull(userAcl);
+    metadataManager.readLock().lock();
+    try {
+      byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
+      byte[] volInfo = metadataManager.get(dbVolumeKey);
+      if (volInfo == null) {
+        throw  new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
+      }
+
+      VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
+      KsmVolumeArgs volumeArgs = KsmVolumeArgs.getFromProtobuf(volumeInfo);
+      Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
+      return volumeArgs.getAclMap().hasAccess(userAcl);
+    } catch (IOException ex) {
+      LOG.error("Check volume access failed for volume:{} user:{} rights:{}",
+          volume, userAcl.getName(), userAcl.getRights(), ex);
+      throw ex;
+    } finally {
+      metadataManager.readLock().unlock();
     }
   }
 }

@@ -53,6 +53,13 @@ public class OzoneAcl {
     this.name = name;
     this.rights = rights;
     this.type = type;
+    if (type == OzoneACLType.WORLD && name.length() != 0) {
+      throw new IllegalArgumentException("Unexpected name part in world type");
+    }
+    if (((type == OzoneACLType.USER) || (type == OzoneACLType.GROUP))
+        && (name.length() == 0)) {
+      throw new IllegalArgumentException("User or group name is required");
+    }
   }
 
   /**
@@ -74,14 +81,6 @@ public class OzoneAcl {
     OzoneACLType aclType = OzoneACLType.valueOf(parts[0].toUpperCase());
     OzoneACLRights rights = OzoneACLRights.getACLRight(parts[2].toLowerCase());
 
-    if (((aclType == OzoneACLType.USER) || (aclType == OzoneACLType.GROUP))
-        && (parts[1].length() == 0)) {
-      throw new IllegalArgumentException("User or group name is required");
-    }
-
-    if ((aclType == OzoneACLType.WORLD) && (parts[1].length() != 0)) {
-      throw new IllegalArgumentException("Unexpected name part in world type");
-    }
     // TODO : Support sanitation of these user names by calling into
     // userAuth Interface.
     return new OzoneAcl(aclType, parts[1], rights);

@@ -33,6 +33,8 @@ import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocolPB
     .KeySpaceManagerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
@@ -300,13 +302,21 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
    * Checks if the specified user can access this volume.
    *
    * @param volume - volume
-   * @param userName - user name
+   * @param userAcl - user acls which needs to be checked for access
+   * @return true if the user has required access for the volume,
+   *         false otherwise
    * @throws IOException
    */
   @Override
-  public void checkVolumeAccess(String volume, String userName) throws
-      IOException {
-
+  public boolean checkVolumeAccess(String volume, OzoneAclInfo userAcl)
+      throws IOException {
+    try {
+      metrics.incNumVolumeCheckAccesses();
+      return volumeManager.checkVolumeAccess(volume, userAcl);
+    } catch (Exception ex) {
+      metrics.incNumVolumeCheckAccessFails();
+      throw ex;
+    }
   }
 
   /**

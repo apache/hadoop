@@ -17,6 +17,8 @@
 package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 
 import java.io.IOException;
 
@@ -64,4 +66,15 @@ public interface VolumeManager {
    * @throws IOException
    */
   void deleteVolume(String volume) throws IOException;
+
+  /**
+   * Checks if the specified user with a role can access this volume.
+   *
+   * @param volume - volume
+   * @param userAcl - user acl which needs to be checked for access
+   * @return true if the user has access for the volume, false otherwise
+   * @throws IOException
+   */
+  boolean checkVolumeAccess(String volume, OzoneAclInfo userAcl)
+      throws IOException;
 }

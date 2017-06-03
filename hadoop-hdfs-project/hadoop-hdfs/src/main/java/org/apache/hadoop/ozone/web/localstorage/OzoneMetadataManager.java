@@ -324,23 +324,25 @@ public final class OzoneMetadataManager {
   /**
    * Checks if you are the owner of a specific volume.
    *
-   * @param args - VolumeArgs
+   * @param volume - Volume Name whose access permissions needs to be checked
+   * @param acl - requested acls which needs to be checked for access
    * @return - True if you are the owner, false otherwise
    * @throws OzoneException
    */
-  public boolean checkVolumeAccess(VolumeArgs args) throws OzoneException {
+  public boolean checkVolumeAccess(String volume, OzoneAcl acl)
+      throws OzoneException {
     lock.readLock().lock();
     try {
       byte[] volumeInfo =
-          metadataDB.get(args.getVolumeName().getBytes(encoding));
+          metadataDB.get(volume.getBytes(encoding));
       if (volumeInfo == null) {
-        throw ErrorTable.newError(ErrorTable.VOLUME_NOT_FOUND, args);
+        throw ErrorTable.newError(ErrorTable.VOLUME_NOT_FOUND, null);
       }
 
       VolumeInfo info = VolumeInfo.parse(new String(volumeInfo, encoding));
-      return info.getOwner().getName().equals(args.getUserName());
+      return info.getOwner().getName().equals(acl.getName());
     } catch (IOException | DBException ex) {
-      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
+      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, null, ex);
     } finally {
       lock.readLock().unlock();
     }

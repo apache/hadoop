@@ -165,7 +165,21 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
   public CheckVolumeAccessResponse checkVolumeAccess(
       RpcController controller, CheckVolumeAccessRequest request)
       throws ServiceException {
-    return null;
+    CheckVolumeAccessResponse.Builder resp =
+        CheckVolumeAccessResponse.newBuilder();
+    resp.setStatus(Status.OK);
+    try {
+      boolean access = impl.checkVolumeAccess(request.getVolumeName(),
+          request.getUserAcl());
+      // if no access, set the response status as access denied
+      if (!access) {
+        resp.setStatus(Status.ACCESS_DENIED);
+      }
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+
+    return resp.build();
   }
 
   @Override
