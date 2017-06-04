@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributeProvider.AccessControlEnforcer;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
@@ -485,18 +486,20 @@ class FSPermissionChecker implements AccessControlEnforcer {
    * @param pc for permission checker, null for no checking
    * @param iip path to verify
    * @param resolveLink whether last inode may be a symlink
+   * @param operation which needs the traversal to be checked.
    * @throws AccessControlException
    * @throws UnresolvedPathException
    * @throws ParentNotDirectoryException
    */
   static void checkTraverse(FSPermissionChecker pc, INodesInPath iip,
-      boolean resolveLink) throws AccessControlException,
+      boolean resolveLink, DirOp operation) throws AccessControlException,
           UnresolvedPathException, ParentNotDirectoryException {
     try {
       if (pc == null || pc.isSuperUser()) {
         checkSimpleTraverse(iip);
       } else {
-        pc.checkPermission(iip, false, null, null, null, null, false);
+        FsAction action = operation == DirOp.READ || operation == DirOp.READ_LINK ? FsAction.READ : FsAction.WRITE;
+        pc.checkPermission(iip, false, null, null, action, null, false);
       }
     } catch (TraverseAccessControlException tace) {
       // unwrap the non-ACE (unresolved, parent not dir) exception

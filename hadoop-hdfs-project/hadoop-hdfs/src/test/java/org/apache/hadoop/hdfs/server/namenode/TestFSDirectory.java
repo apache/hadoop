@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.AccessControlException;
@@ -49,6 +50,11 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -390,6 +396,27 @@ public class TestFSDirectory {
                                             EnumSet.of(XAttrSetFlag.CREATE,
                                                        XAttrSetFlag.REPLACE));
     verifyXAttrsPresent(newXAttrs, 4);
+  }
+
+  @Test
+  public void testPermissionCheckerCalledProperly() throws IllegalArgumentException, IOException {
+      hdfs.mkdirs(new Path("/dir1/dir2"));
+      hdfs.createNewFile(new Path("/dir1/file"));
+
+      mockPermissionCheckerAndTest("/", DirOp.READ, FsAction.READ);
+      mockPermissionCheckerAndTest("/dir1", DirOp.READ, FsAction.READ);
+      mockPermissionCheckerAndTest("/dir1/file", DirOp.READ, FsAction.READ);
+      mockPermissionCheckerAndTest("/dir1/file3", DirOp.READ_LINK, FsAction.READ);
+
+      mockPermissionCheckerAndTest("/dir1/file", DirOp.WRITE, FsAction.WRITE);
+      mockPermissionCheckerAndTest("/dir1/file2", DirOp.CREATE, FsAction.WRITE);
+      mockPermissionCheckerAndTest("/dir1/file3", DirOp.CREATE_LINK, FsAction.WRITE);
+  }
+
+  private void mockPermissionCheckerAndTest(String path, DirOp operation, FsAction expectedAction) throws IOException {
+      FSPermissionChecker checker = mock(FSPermissionChecker.class);
+      fsdir.resolvePath(checker, path, operation);
+      verify(checker).checkPermission(any(INodesInPath.class), eq(false), (FsAction) isNull(), (FsAction) isNull(), eq(expectedAction) , (FsAction) isNull(), eq(false));
   }
 
   @Test
