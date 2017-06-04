@@ -27,15 +27,16 @@
   <artifactId>hadoop-yarn-ui</artifactId>
   <version>2.9.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN UI</name>
-  <packaging>${packaging.type}</packaging>
+  <packaging>${packagingType}</packaging>
 
   <properties>
-    <packaging.type>pom</packaging.type>
-    <webappTgtDir>${basedir}/target/src/main/webapp</webappTgtDir>
-    <node.executable>node</node.executable>
-    <nodeVersion>v0.12.2</nodeVersion>
-    <npmVersion>2.10.0</npmVersion>
-    <keep-ui-build-cache>false</keep-ui-build-cache>
+    <packagingType>pom</packagingType>
+
+    <webappDir>${basedir}/target/webapp</webappDir>
+    <nodeExecutable>${basedir}/target/webapp/node/node</nodeExecutable>
+    <packageManagerScript>node/yarn/dist/bin/yarn.js</packageManagerScript>
+
+    <keepUIBuildCache>false</keepUIBuildCache>
   </properties>
 
   <build>
@@ -48,7 +49,9 @@
           <excludes>
             <exclude>src/main/webapp/jsconfig.json</exclude>
             <exclude>src/main/webapp/bower.json</exclude>
+            <exclude>src/main/webapp/bower-shrinkwrap.json</exclude>
             <exclude>src/main/webapp/package.json</exclude>
+            <exclude>src/main/webapp/yarn.lock</exclude>
             <exclude>src/main/webapp/testem.json</exclude>
             <exclude>src/main/webapp/public/assets/images/**/*</exclude>
             <exclude>src/main/webapp/public/assets/images/*</exclude>
@@ -58,6 +61,7 @@
             <exclude>src/main/webapp/.ember-cli</exclude>
             <exclude>src/main/webapp/.jshintrc</exclude>
             <exclude>src/main/webapp/.watchmanconfig</exclude>
+            <exclude>src/main/webapp/WEB-INF/wro.xml</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -66,14 +70,14 @@
         <artifactId>maven-clean-plugin</artifactId>
         <version>3.0.0</version>
         <configuration>
-          <skip>${keep-ui-build-cache}</skip>
+          <skip>${keepUIBuildCache}</skip>
           <followSymLinks>false</followSymLinks>
           <filesets>
             <fileset>
-              <directory>${webappTgtDir}/bower_components</directory>
+              <directory>${webappDir}/bower_components</directory>
             </fileset>
             <fileset>
-              <directory>${webappTgtDir}/node_modules</directory>
+              <directory>${webappDir}/node_modules</directory>
             </fileset>
           </filesets>
         </configuration>
@@ -90,60 +94,82 @@
       </activation>
 
       <properties>
-        <packaging.type>war</packaging.type>
+        <packagingType>war</packagingType>
       </properties>
 
       <build>
         <plugins>
-          <!-- prepare source code -->
+          <!-- Copy files into target for build -->
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <artifactId>maven-resources-plugin</artifactId>
             <executions>
               <execution>
-                <id>prepare-source-code</id>
-                <phase>generate-sources</phase>
+                <id>copy-resources</id>
+                <!-- here the phase you need -->
+                <phase>validate</phase>
                 <goals>
-                  <goal>run</goal>
+                  <goal>copy-resources</goal>
                 </goals>
                 <configuration>
-                  <target>
-                    <copy toDir="${basedir}/target/src/main/webapp">
-                      <fileset dir="${basedir}/src/main/webapp"/>
-                    </copy>
-
-                    <copy toDir="${basedir}/target/src/public">
-                      <fileset dir="${basedir}/public"/>
-                    </copy>
-                  </target>
+                  <outputDirectory>${webappDir}</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/src/main/webapp</directory>
+                      <filtering>true</filtering>
+                      <excludes>
+                        <exclude>node_modules/**/*</exclude>
+                        <exclude>bower_components/**/*</exclude>
+                        <exclude>tmp/**/*</exclude>
+                        <exclude>dist/**/*</exclude>
+                      </excludes>
+                    </resource>
+                  </resources>
                 </configuration>
               </execution>
             </executions>
           </plugin>
 
-
-          <!-- Bower install & grunt build-->
           <plugin>
-            <artifactId>exec-maven-plugin</artifactId>
             <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+          <!-- Install Node, Yarn, Bower & dependencies -->
+          <plugin>
+            <groupId>com.github.eirslett</groupId>
+            <artifactId>frontend-maven-plugin</artifactId>
+            <version>1.2</version>
+            <configuration>
+              <workingDirectory>${webappDir}</workingDirectory>
+            </configuration>
             <executions>
+
+              <!-- Install all dependencies -->
               <execution>
-                <phase>generate-sources</phase>
-                <id>npm install</id>
+                <phase>generate-resources</phase>
+                <id>install node and yarn</id>
                 <goals>
-                  <goal>exec</goal>
+                  <goal>install-node-and-yarn</goal>
                 </goals>
                 <configuration>
-                  <workingDirectory>${webappTgtDir}</workingDirectory>
-                  <executable>npm</executable>
-                  <arguments>
-                    <argument>install</argument>
-                  </arguments>
+                  <nodeVersion>v5.12.0</nodeVersion>
+                  <yarnVersion>v0.21.3</yarnVersion>
                 </configuration>
               </execution>
               <execution>
-                <phase>generate-sources</phase>
+                <phase>generate-resources</phase>
+                <id>yarn install</id>
+                <goals>
+                  <goal>yarn</goal>
+                </goals>
+                <configuration>
+                  <arguments>install</arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <phase>generate-resources</phase>
                 <id>bower install</id>
+                <configuration>
+                  <arguments>install</arguments>
+                </configuration>
                 <goals>
                   <goal>exec</goal>
                 </goals>
@@ -156,33 +182,83 @@
                   </arguments>
                 </configuration>
               </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+
+              <!-- Build -->
               <execution>
                 <id>ember build</id>
-                <phase>generate-sources</phase>
+                <phase>generate-resources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <workingDirectory>${webappTgtDir}</workingDirectory>
-                  <executable>ember</executable>
+                  <workingDirectory>${webappDir}</workingDirectory>
+                  <executable>${nodeExecutable}</executable>
                   <arguments>
-                    <argument>build</argument>
-                    <argument>-prod</argument>
-                    <argument>--output-path</argument>
-                    <argument>${basedir}/target/dist</argument>
+                    <argument>${packageManagerScript}</argument>
+                    <argument>run</argument>
+                    <argument>build:mvn</argument>
                   </arguments>
                 </configuration>
               </execution>
+
             </executions>
+          </plugin>
+
+          <!-- Asset minifier -->
+          <plugin>
+            <groupId>ro.isdc.wro4j</groupId>
+            <artifactId>wro4j-maven-plugin</artifactId>
+            <version>1.7.9</version>
+            <executions>
+              <execution>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <minimize>true</minimize>
+              <targetGroups>yarn-ui,vendor</targetGroups>
+              <destinationFolder>${basedir}/target/minified-resources/assets</destinationFolder>
+              <contextFolder>${webappDir}/dist/assets</contextFolder>
+              <wroFile>${webappDir}/WEB-INF/wro.xml</wroFile>
+            </configuration>
           </plugin>
 
           <!-- Package into war -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-war-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+              </execution>
+            </executions>
             <configuration>
-              <webXml>${basedir}/src/main/webapp/WEB-INF/web.xml</webXml>
-              <warSourceDirectory>${basedir}/target/dist</warSourceDirectory>
+              <webXml>${webappDir}/WEB-INF/web.xml</webXml>
+              <warSourceDirectory>${webappDir}/dist</warSourceDirectory>
+              <webResources>
+                <resource>
+                  <filtering>false</filtering>
+                  <directory>${basedir}/target/minified-resources</directory>
+                </resource>
+              </webResources>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <configuration>
+              <skipIfEmpty>true</skipIfEmpty>
             </configuration>
           </plugin>
 
@@ -190,4 +266,5 @@
       </build>
     </profile>
   </profiles>
+
 </project>

@@ -1,4 +1,7 @@
 {
   "directory": "bower_components",
-  "analytics": false
+  "analytics": false,
+  "resolvers": [
+    "bower-shrinkwrap-resolver-ext"
+  ]
 }

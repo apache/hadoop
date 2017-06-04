@@ -8,8 +8,9 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "ember build",
-    "start": "ember server"
+    "build": "TMPDIR=tmp node ./node_modules/ember-cli/bin/ember build",
+    "start": "TMPDIR=tmp node ./node_modules/ember-cli/bin/ember server",
+    "build:mvn": "TMPDIR=tmp node/node ./node_modules/ember-cli/bin/ember build -prod"
   },
   "repository": "",
   "engines": {
@@ -18,12 +19,14 @@
   "author": "",
   "license": "Apache",
   "devDependencies": {
+    "bower": "1.7.7",
+    "bower-shrinkwrap-resolver-ext": "0.1.0",
     "broccoli-asset-rev": "2.4.2",
     "broccoli-funnel": "1.0.1",
     "em-table": "0.7.0",
     "ember-array-contains-helper": "1.0.2",
     "ember-bootstrap": "0.5.1",
-    "ember-cli": "1.13.13",
+    "ember-cli": "1.13.14",
     "ember-cli-app-version": "1.0.0",
     "ember-cli-babel": "5.1.6",
     "ember-cli-content-security-policy": "0.4.0",
@@ -44,8 +47,10 @@
     "ember-lodash": "0.0.10",
     "ember-resolver": "2.0.3",
     "ember-spin-spinner": "0.2.3",
-    "ember-truth-helpers": "1.2.0",
-    "select2": "4.0.0"
+    "ember-truth-helpers": "1.3.0",
+    "loader.js": "4.2.3",
+    "select2": "4.0.0",
+    "testem": "0.9.11"
   },
   "dependencies": {
     "em-helpers": "^0.8.0",
