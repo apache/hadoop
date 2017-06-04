@@ -1725,10 +1725,10 @@ public class FSDirectory implements Closeable {
   }
 
   void checkTraverse(FSPermissionChecker pc, INodesInPath iip,
-      boolean resolveLink) throws AccessControlException,
+      boolean resolveLink, DirOp dirOp) throws AccessControlException,
         UnresolvedPathException, ParentNotDirectoryException {
     FSPermissionChecker.checkTraverse(
-        isPermissionEnabled ? pc : null, iip, resolveLink);
+        isPermissionEnabled ? pc : null, iip, resolveLink, dirOp);
   }
 
   void checkTraverse(FSPermissionChecker pc, INodesInPath iip,
@@ -1745,7 +1745,7 @@ public class FSDirectory implements Closeable {
         resolveLink = true;
         break;
     }
-    checkTraverse(pc, iip, resolveLink);
+    checkTraverse(pc, iip, resolveLink, dirOp);
     boolean allowSnapshot = (dirOp == DirOp.READ || dirOp == DirOp.READ_LINK);
     if (!allowSnapshot && iip.isSnapshot()) {
       throw new SnapshotAccessControlException(
