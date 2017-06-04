@@ -524,6 +524,7 @@ public class AdminService extends CompositeService implements
     checkRMStatus(user.getShortUserName(), argName, "refresh Service ACLs.");
 
     refreshServiceAcls();
+    refreshActiveServicesAcls();
     RMAuditLogger.logSuccess(user.getShortUserName(), argName,
             "AdminService");
 
@@ -537,6 +538,13 @@ public class AdminService extends CompositeService implements
             YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
 
     refreshServiceAcls(conf, policyProvider);
+  }
+
+  private void refreshActiveServicesAcls() throws IOException, YarnException  {
+    PolicyProvider policyProvider = RMPolicyProvider.getInstance();
+    Configuration conf =
+        getConfiguration(new Configuration(false),
+            YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
     rmContext.getClientRMService().refreshServiceAcls(conf, policyProvider);
     rmContext.getApplicationMasterService().refreshServiceAcls(
         conf, policyProvider);
