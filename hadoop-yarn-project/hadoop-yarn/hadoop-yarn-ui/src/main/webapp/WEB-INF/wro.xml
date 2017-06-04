@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<groups xmlns="http://www.isdc.ro/wro">
+  <group name='vendor'>
+    <js>/vendor.js</js>
+  </group>
+  <group name='yarn-ui'>
+    <js>/yarn-ui.js</js>
+  </group>
+</groups>
