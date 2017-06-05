@@ -52,4 +52,15 @@ public interface KeyManager {
    * @throws IOException
    */
   KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException;
+
+  /**
+   * Deletes an object by an object key. The key will be immediately removed
+   * from KSM namespace and become invisible to clients. The object data
+   * will be removed in async manner that might retain for some time.
+   *
+   * @param args the args of the key provided by client.
+   * @throws IOException if specified key doesn't exist or
+   * some other I/O errors while deleting an object.
+   */
+  void deleteKey(KsmKeyArgs args) throws IOException;
 }

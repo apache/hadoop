@@ -218,7 +218,7 @@ message KeyArgs {
     required string volumeName = 1;
     required string bucketName = 2;
     required string keyName = 3;
-    required uint64 dataSize = 4;
+    optional uint64 dataSize = 4;
 }
 
 message KeyInfo {
@@ -316,5 +316,11 @@ service KeySpaceManagerService {
        Look up for an existing key.
     */
     rpc lookupKey(LocateKeyRequest)
+        returns(LocateKeyResponse);
+
+    /**
+       Delete an existing key.
+    */
+    rpc deleteKey(LocateKeyRequest)
         returns(LocateKeyResponse);
 }

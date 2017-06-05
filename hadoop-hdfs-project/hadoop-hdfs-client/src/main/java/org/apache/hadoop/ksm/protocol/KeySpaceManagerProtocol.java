@@ -146,4 +146,12 @@ public interface KeySpaceManagerProtocol {
    */
   KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException;
 
+  /**
+   * Deletes an existing key.
+   *
+   * @param args the args of the key.
+   * @throws IOException
+   */
+  void deleteKey(KsmKeyArgs args) throws IOException;
+
 }

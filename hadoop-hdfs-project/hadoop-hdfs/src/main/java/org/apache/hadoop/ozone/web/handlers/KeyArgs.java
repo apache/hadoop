@@ -23,7 +23,6 @@ package org.apache.hadoop.ozone.web.handlers;
  */
 public class KeyArgs extends BucketArgs {
   private String key;
-  private boolean delete;
   private String hash;
   private long size;
 
@@ -41,30 +40,23 @@ public class KeyArgs extends BucketArgs {
   }
 
   /**
+   * Constructor for Key Args.
+   *
+   * @param objectName - Key
+   * @param args - Bucket Args
+   */
+  public KeyArgs(String objectName, BucketArgs args) {
+    super(args);
+    this.key = objectName;
+  }
+
+  /**
    * Get Key Name.
    *
    * @return String
    */
   public String getKeyName() {
     return this.key;
-  }
-
-  /**
-   * Checks if this request is for a Delete key.
-   *
-   * @return boolean
-   */
-  public boolean isDelete() {
-    return delete;
-  }
-
-  /**
-   * Sets the key request as a Delete Request.
-   *
-   * @param delete bool, indicating if this is a delete request
-   */
-  public void setDelete(boolean delete) {
-    this.delete = delete;
   }
 
   /**

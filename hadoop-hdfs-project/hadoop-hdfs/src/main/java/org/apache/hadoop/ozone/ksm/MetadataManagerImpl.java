@@ -115,6 +115,16 @@ public class MetadataManagerImpl implements  MetadataManager {
   }
 
   /**
+   * Deletes the key on Metadata DB.
+   *
+   * @param key - key name
+   */
+  @Override
+  public void deleteKey(byte[] key) {
+    store.delete(key);
+  }
+
+  /**
    * Returns the read lock used on Metadata DB.
    * @return readLock
    */

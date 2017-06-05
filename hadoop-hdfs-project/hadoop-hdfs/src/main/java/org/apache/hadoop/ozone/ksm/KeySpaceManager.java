@@ -461,6 +461,23 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   }
 
   /**
+   * Deletes an existing key.
+   *
+   * @param args - attributes of the key.
+   * @throws IOException
+   */
+  @Override
+  public void deleteKey(KsmKeyArgs args) throws IOException {
+    try {
+      metrics.incNumKeyDeletes();
+      keyManager.deleteKey(args);
+    } catch (Exception ex) {
+      metrics.incNumKeyDeleteFails();
+      throw ex;
+    }
+  }
+
+  /**
    * Sets bucket property from args.
    * @param args - BucketArgs.
    * @throws IOException

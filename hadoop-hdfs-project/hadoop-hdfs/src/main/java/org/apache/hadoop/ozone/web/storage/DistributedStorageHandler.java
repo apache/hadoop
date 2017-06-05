@@ -398,7 +398,12 @@ public final class DistributedStorageHandler implements StorageHandler {
 
   @Override
   public void deleteKey(KeyArgs args) throws IOException, OzoneException {
-    throw new UnsupportedOperationException("deleteKey not implemented");
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+    keySpaceManagerClient.deleteKey(keyArgs);
   }
 
   @Override

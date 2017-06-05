@@ -446,6 +446,33 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
   }
 
   /**
+   * Deletes an existing key.
+   *
+   * @param args the args of the key.
+   * @throws IOException
+   */
+  @Override
+  public void deleteKey(KsmKeyArgs args) throws IOException {
+    LocateKeyRequest.Builder req = LocateKeyRequest.newBuilder();
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName()).build();
+    req.setKeyArgs(keyArgs);
+
+    final LocateKeyResponse resp;
+    try {
+      resp = rpcProxy.deleteKey(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new IOException("Delete key failed, error:" +
+          resp.getStatus());
+    }
+  }
+
+  /**
    * Return the proxy object underlying this protocol translator.
    *
    * @return the proxy object underlying this protocol translator.
