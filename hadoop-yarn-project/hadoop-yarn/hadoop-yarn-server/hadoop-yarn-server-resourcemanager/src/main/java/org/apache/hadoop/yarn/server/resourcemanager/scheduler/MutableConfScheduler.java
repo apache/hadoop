@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedConfUpdateInfo;
 
 import java.io.IOException;
 
@@ -36,7 +36,7 @@ public interface MutableConfScheduler extends ResourceScheduler {
    * @throws IOException if update is invalid
    */
   void updateConfiguration(UserGroupInformation user,
-      QueueConfigsUpdateInfo confUpdate) throws IOException;
+      SchedConfUpdateInfo confUpdate) throws IOException;
 
   /**
    * Get the scheduler configuration.

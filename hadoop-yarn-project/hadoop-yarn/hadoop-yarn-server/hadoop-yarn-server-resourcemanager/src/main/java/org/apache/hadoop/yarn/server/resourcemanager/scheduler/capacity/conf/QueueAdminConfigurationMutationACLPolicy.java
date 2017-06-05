@@ -22,15 +22,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ConfigurationMutationACLPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedConfUpdateInfo;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -40,16 +42,29 @@ import java.util.Set;
 public class QueueAdminConfigurationMutationACLPolicy implements
     ConfigurationMutationACLPolicy {
 
+  private Configuration conf;
   private RMContext rmContext;
+  private YarnAuthorizationProvider authorizer;
 
   @Override
-  public void init(Configuration conf, RMContext context) {
+  public void init(Configuration config, RMContext context) {
+    this.conf = config;
     this.rmContext = context;
+    this.authorizer = YarnAuthorizationProvider.getInstance(conf);
   }
 
   @Override
   public boolean isMutationAllowed(UserGroupInformation user,
-      QueueConfigsUpdateInfo confUpdate) {
+      SchedConfUpdateInfo confUpdate) {
+    // If there are global config changes, check if user is admin.
+    Map<String, String> globalParams = confUpdate.getGlobalParams();
+    if (globalParams != null && globalParams.size() != 0) {
+      if (!authorizer.isAdmin(user)) {
+        return false;
+      }
+    }
+
+    // Check if user is admin of all modified queues.
     Set<String> queues = new HashSet<>();
     for (QueueConfigInfo addQueueInfo : confUpdate.getAddQueueInfo()) {
       queues.add(addQueueInfo.getQueue());
@@ -71,7 +86,6 @@ public class QueueAdminConfigurationMutationACLPolicy implements
         // Queue is not found, do nothing.
       }
       String parentPath = queuePath;
-      // TODO: handle global config change.
       while (queueInfo == null) {
         // We are adding a queue (whose parent we are possibly also adding).
         // Check ACL of lowest parent queue which already exists.
