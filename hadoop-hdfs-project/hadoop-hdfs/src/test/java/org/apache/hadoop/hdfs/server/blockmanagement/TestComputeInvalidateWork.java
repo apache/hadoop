@@ -63,6 +63,7 @@ public class TestComputeInvalidateWork {
     namesystem = cluster.getNamesystem();
     bm = namesystem.getBlockManager();
     nodes = bm.getDatanodeManager().getHeartbeatManager().getDatanodes();
+    BlockManagerTestUtil.stopReplicationThread(bm);
     assertEquals(nodes.length, NUM_OF_DATANODES);
   }
 
