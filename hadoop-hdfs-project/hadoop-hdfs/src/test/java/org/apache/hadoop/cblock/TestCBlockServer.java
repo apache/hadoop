@@ -29,6 +29,10 @@ import org.junit.Test;
 import java.util.HashSet;
 import java.util.List;
 
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -45,6 +49,8 @@ public class TestCBlockServer {
   public static void setup() throws Exception {
     ScmClient storageClient = new MockStorageClient();
     conf = new OzoneConfiguration();
+    conf.set(DFS_CBLOCK_SERVICERPC_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY, "127.0.0.1:0");
     cBlockManager = new CBlockManager(conf, storageClient);
     cBlockManager.start();
   }

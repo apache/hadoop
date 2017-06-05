@@ -28,7 +28,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -63,6 +68,8 @@ public class TestCBlockServerPersistence {
         "/testCblockPersistence.dat"));
     try {
       ScmClient storageClient = new MockStorageClient();
+      conf.set(DFS_CBLOCK_SERVICERPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY, "127.0.0.1:0");
       cBlockManager = new CBlockManager(conf, storageClient);
       cBlockManager.start();
       cBlockManager.createVolume(userName, volumeName1, volumeSize1, blockSize);
@@ -84,6 +91,8 @@ public class TestCBlockServerPersistence {
       OzoneConfiguration conf1 = new OzoneConfiguration();
       conf1.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, path.concat(
           "/testCblockPersistence.dat"));
+      conf1.set(DFS_CBLOCK_SERVICERPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf1.set(DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY, "127.0.0.1:0");
       cBlockManager1 = new CBlockManager(conf1, storageClient1);
       cBlockManager1.start();
       List<VolumeDescriptor> allVolumes1 = cBlockManager1.getAllVolumes();

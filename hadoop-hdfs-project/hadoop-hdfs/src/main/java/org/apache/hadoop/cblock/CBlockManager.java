@@ -24,13 +24,17 @@ import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.proto.CBlockClientProtocol;
 import org.apache.hadoop.cblock.proto.CBlockServiceProtocol;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
-import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
+import org.apache.hadoop.cblock.protocol.proto
+    .CBlockClientServerProtocolProtos;
 import org.apache.hadoop.cblock.protocol.proto.CBlockServiceProtocolProtos;
 import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolPB;
-import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolServerSideTranslatorPB;
+import org.apache.hadoop.cblock.protocolPB
+    .CBlockClientServerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
-import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolServerSideTranslatorPB;
+import org.apache.hadoop.cblock.protocolPB
+    .CBlockServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -42,7 +46,8 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocolPB
+    .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.utils.LevelDBStore;
@@ -58,22 +63,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CONTAINER_SIZE_GB_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_ADDRESS_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_BIND_HOST_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_IPADDRESS_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_IPADDRESS_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_PORT_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_PORT_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_ADDRESS_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_ADDRESS_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_BIND_HOST_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_CONTAINER_SIZE_GB_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_JSCSIRPC_BIND_HOST_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SCM_IPADDRESS_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SCM_IPADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SCM_PORT_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SCM_PORT_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_BIND_HOST_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
 
 /**
  * The main entry point of CBlock operations, ALL the CBlock operations
@@ -118,10 +135,8 @@ public class CBlockManager implements CBlockServiceProtocol,
     RPC.setProtocolEngine(conf, CBlockClientServerProtocolPB.class,
         ProtobufRpcEngine.class);
     // start service for client command-to-cblock server service
-    InetSocketAddress serviceRpcAddr = NetUtils.createSocketAddr(
-        conf.getTrimmed(DFS_CBLOCK_SERVICERPC_ADDRESS_KEY,
-            DFS_CBLOCK_SERVICERPC_ADDRESS_DEFAULT), -1,
-        DFS_CBLOCK_SERVICERPC_ADDRESS_KEY);
+    InetSocketAddress serviceRpcAddr =
+        OzoneClientUtils.getCblockServiceRpcAddr(conf);
     BlockingService cblockProto =
         CBlockServiceProtocolProtos
             .CBlockServiceProtocolService
@@ -133,14 +148,15 @@ public class CBlockManager implements CBlockServiceProtocol,
         DFS_CBLOCK_SERVICERPC_BIND_HOST_KEY,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT);
-
+    InetSocketAddress cblockServiceRpcAddress =
+        OzoneClientUtils.updateListenAddress(conf,
+            DFS_CBLOCK_SERVICERPC_ADDRESS_KEY, serviceRpcAddr, cblockService);
     LOG.info("CBlock manager listening for client commands on: {}",
-        serviceRpcAddr);
+        cblockServiceRpcAddress);
     // now start service for cblock client-to-cblock server communication
-    InetSocketAddress serverRpcAddr = NetUtils.createSocketAddr(
-        conf.get(DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY,
-            DFS_CBLOCK_JSCSIRPC_ADDRESS_DEFAULT), -1,
-        DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY);
+
+    InetSocketAddress serverRpcAddr =
+        OzoneClientUtils.getCblockServerRpcAddr(conf);
     BlockingService serverProto =
         CBlockClientServerProtocolProtos
             .CBlockClientServerProtocolService
@@ -153,8 +169,11 @@ public class CBlockManager implements CBlockServiceProtocol,
         DFS_CBLOCK_JSCSIRPC_BIND_HOST_KEY,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT);
+    InetSocketAddress cblockServerRpcAddress =
+        OzoneClientUtils.updateListenAddress(conf,
+            DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY, serverRpcAddr, cblockServer);
     LOG.info("CBlock server listening for client commands on: {}",
-        serverRpcAddr);
+        cblockServerRpcAddress);
   }
 
   public void start() {

@@ -22,17 +22,24 @@ import org.apache.hadoop.cblock.meta.VolumeDescriptor;
 import org.apache.hadoop.cblock.util.MockStorageClient;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.List;
 
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -53,7 +60,16 @@ public class TestCBlockCLI {
     outContent = new ByteArrayOutputStream();
     ScmClient storageClient = new MockStorageClient();
     conf = new OzoneConfiguration();
-    conf.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, "/tmp/testCblockCli.dat");
+    String path = GenericTestUtils
+        .getTempPath(TestCBlockCLI.class.getSimpleName());
+    File filePath = new File(path);
+    if (!filePath.exists() && !filePath.mkdirs()) {
+      throw new IOException("Unable to create test DB dir");
+    }
+    conf.set(DFS_CBLOCK_SERVICERPC_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, path.concat(
+        "/testCblockCli.dat"));
     cBlockManager = new CBlockManager(conf, storageClient);
     cBlockManager.start();
     testPrintOut = new PrintStream(outContent);

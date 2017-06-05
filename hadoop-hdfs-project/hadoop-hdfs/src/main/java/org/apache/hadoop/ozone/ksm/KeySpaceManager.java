@@ -91,7 +91,7 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     ksmRpcServer = startRpcServer(conf, ksmNodeRpcAddr,
         KeySpaceManagerProtocolPB.class, ksmService,
         handlerCount);
-    ksmRpcAddress = updateListenAddress(conf,
+    ksmRpcAddress = OzoneClientUtils.updateListenAddress(conf,
         OZONE_KSM_ADDRESS_KEY, ksmNodeRpcAddr, ksmRpcServer);
     metadataManager = new MetadataManagerImpl(conf);
     volumeManager = new VolumeManagerImpl(metadataManager, conf);
@@ -188,27 +188,6 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     return addr != null ? String.format("%s is listening at %s",
         description, addr.toString()) :
         String.format("%s not started", description);
-  }
-
-  /**
-   * After starting an RPC server, updates configuration with the actual
-   * listening address of that server. The listening address may be different
-   * from the configured address if, for example, the configured address uses
-   * port 0 to request use of an ephemeral port.
-   *
-   * @param conf configuration to update
-   * @param rpcAddressKey configuration key for RPC server address
-   * @param addr configured address
-   * @param rpcServer started RPC server.
-   */
-  private static InetSocketAddress updateListenAddress(OzoneConfiguration conf,
-      String rpcAddressKey, InetSocketAddress addr, RPC.Server rpcServer) {
-    InetSocketAddress listenAddr = rpcServer.getListenerAddress();
-    InetSocketAddress updatedAddr = new InetSocketAddress(
-        addr.getHostString(), listenAddr.getPort());
-    conf.set(rpcAddressKey,
-        listenAddr.getHostString() + ":" + listenAddr.getPort());
-    return updatedAddr;
   }
 
   /**
