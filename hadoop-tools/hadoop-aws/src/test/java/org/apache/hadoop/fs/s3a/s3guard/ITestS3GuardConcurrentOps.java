@@ -78,7 +78,7 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
             Constants.S3GUARD_METASTORE_DYNAMO));
 
     DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
-    ms.initialize(conf);
+    ms.initialize(getFileSystem());
     DynamoDB db = ms.getDynamoDB();
 
     String tableName = "testConcurrentTableCreations" + new Random().nextInt();
