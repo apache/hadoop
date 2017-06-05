@@ -341,6 +341,11 @@ public class TransferFsImage {
       FileInputStream infile, DataTransferThrottler throttler,
       Canceler canceler) throws IOException {
     byte buf[] = new byte[IO_FILE_BUFFER_SIZE];
+    long total = 0;
+    int num = 1;
+    IOException ioe = null;
+    String reportStr = "Sending fileName: " + localfile.getAbsolutePath()
+        + ", fileSize: " + localfile.length() + ".";
     try {
       CheckpointFaultInjector.getInstance()
           .aboutToSendFile(localfile);
@@ -354,7 +359,6 @@ public class TransferFsImage {
           // and the rest of the image will be sent over the wire
           infile.read(buf);
       }
-      int num = 1;
       while (num > 0) {
         if (canceler != null && canceler.isCancelled()) {
           throw new SaveNamespaceCancelledException(
@@ -370,16 +374,29 @@ public class TransferFsImage {
           LOG.warn("SIMULATING A CORRUPT BYTE IN IMAGE TRANSFER!");
           buf[0]++;
         }
-        
+
         out.write(buf, 0, num);
+        total += num;
         if (throttler != null) {
           throttler.throttle(num, canceler);
         }
       }
     } catch (EofException e) {
-      LOG.info("Connection closed by client");
+      reportStr += " Connection closed by client.";
+      ioe = e;
       out = null; // so we don't close in the finally
+    } catch (IOException ie) {
+      ioe = ie;
+      throw ie;
     } finally {
+      reportStr += " Sent total: " + total +
+          " bytes. Size of last segment intended to send: " + num
+          + " bytes.";
+      if (ioe != null) {
+        LOG.info(reportStr, ioe);
+      } else {
+        LOG.info(reportStr);
+      }
       if (out != null) {
         out.close();
       }
@@ -487,6 +504,7 @@ public class TransferFsImage {
       stream = new DigestInputStream(stream, digester);
     }
     boolean finishedReceiving = false;
+    int num = 1;
 
     List<FileOutputStream> outputStreams = Lists.newArrayList();
 
@@ -518,7 +536,6 @@ public class TransferFsImage {
         }
       }
       
-      int num = 1;
       byte[] buf = new byte[IO_FILE_BUFFER_SIZE];
       while (num > 0) {
         num = stream.read(buf);
@@ -567,8 +584,8 @@ public class TransferFsImage {
         // exception that makes it look like a server-side problem!
         deleteTmpFiles(localPaths);
         throw new IOException("File " + url + " received length " + received +
-                              " is not of the advertised size " +
-                              advertisedSize);
+            " is not of the advertised size " + advertisedSize +
+            ". Fsimage name: " + fsImageName + " lastReceived: " + num);
       }
     }
     xferStats.insert(
