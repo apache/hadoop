@@ -101,6 +101,7 @@ Each metrics record contains tags such as Hostname and port (number to which ser
 | `RpcAuthorizationSuccesses` | Total number of authorization successes |
 | `NumOpenConnections` | Current number of open connections |
 | `CallQueueLength` | Current length of the call queue |
+| `numDroppedConnections` | Total number of dropped connections |
 | `rpcQueueTime`*num*`sNumOps` | Shows total number of RPC calls (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcQueueTime`*num*`s50thPercentileLatency` | Shows the 50th percentile of RPC queue time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcQueueTime`*num*`s75thPercentileLatency` | Shows the 75th percentile of RPC queue time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |

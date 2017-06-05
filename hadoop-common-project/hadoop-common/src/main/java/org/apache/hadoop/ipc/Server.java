@@ -63,6 +63,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -876,6 +877,7 @@ public abstract class Server {
           if (channel.isOpen()) {
             IOUtils.cleanup(null, channel);
           }
+          connectionManager.droppedConnections.getAndIncrement();
           continue;
         }
         key.attach(c);  // so closeCurrentConnection can get the object
@@ -2709,6 +2711,16 @@ public abstract class Server {
   }
 
   /**
+   * The number of RPC connections dropped due to
+   * too many connections.
+   * @return the number of dropped rpc connections
+   */
+  public long getNumDroppedConnections() {
+    return connectionManager.getDroppedConnections();
+
+  }
+
+  /**
    * The number of rpc calls in the queue.
    * @return The number of rpc calls in the queue.
    */
@@ -2817,7 +2829,8 @@ public abstract class Server {
   }
   
   private class ConnectionManager {
-    final private AtomicInteger count = new AtomicInteger();    
+    final private AtomicInteger count = new AtomicInteger();
+    final private AtomicLong droppedConnections = new AtomicLong();
     final private Set<Connection> connections;
     /* Map to maintain the statistics per User */
     final private Map<String, Integer> userToConnectionsMap;
@@ -2902,6 +2915,11 @@ public abstract class Server {
 
     Map<String, Integer> getUserToConnectionsMap() {
       return userToConnectionsMap;
+    }
+
+
+    long getDroppedConnections() {
+      return droppedConnections.get();
     }
 
     int size() {

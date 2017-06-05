@@ -113,6 +113,10 @@ public class RpcMetrics {
     return server.getCallQueueLen();
   }
 
+  @Metric("Number of dropped connections") public long numDroppedConnections() {
+    return server.getNumDroppedConnections();
+  }
+
   // Public instrumentation methods that could be extracted to an
   // abstract class if we decide to do custom instrumentation classes a la
   // JobTrackerInstrumenation. The methods with //@Override comment are

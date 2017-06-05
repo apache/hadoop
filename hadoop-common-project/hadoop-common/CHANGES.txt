@@ -39,6 +39,8 @@ Release 2.7.4 - UNRELEASED
     HADOOP-11703. git should ignore .DS_Store files on Mac OS X (Abin Shahab
     via aw)
 
+    HADOOP-14440. Add metrics for connections dropped. (Eric Badger via kihwal)
+
   OPTIMIZATIONS
 
     HADOOP-14138. Remove S3A ref from META-INF service discovery, rely on
