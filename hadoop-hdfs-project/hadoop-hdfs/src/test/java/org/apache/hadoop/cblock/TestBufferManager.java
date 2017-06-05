@@ -55,7 +55,7 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.
     DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS;
 
 /**
- * Tests for Tests for local cache.
+ * Tests for Local Cache Buffer Manager.
  */
 public class TestBufferManager {
   private final static long GB = 1024 * 1024 * 1024;
@@ -310,6 +310,8 @@ public class TestBufferManager {
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
+    flushTestConfig
+        .setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 120);
 
     String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
     String userName = "user" + RandomStringUtils.randomNumeric(4);

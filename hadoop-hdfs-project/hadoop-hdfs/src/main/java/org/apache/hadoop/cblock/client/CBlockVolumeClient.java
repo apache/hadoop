@@ -22,6 +22,7 @@ import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -29,11 +30,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HOSTNAME_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_PORT_DEFAULT;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_PORT_KEY;
 
 /**
  * Implementation of client used by CBlock command line tool.
@@ -45,12 +41,7 @@ public class CBlockVolumeClient {
   public CBlockVolumeClient(OzoneConfiguration conf) throws IOException {
     this.conf = conf;
     long version = RPC.getProtocolVersion(CBlockServiceProtocolPB.class);
-    String serverAddress = conf.get(DFS_CBLOCK_SERVICERPC_HOSTNAME_KEY,
-        DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT);
-    int serverPort = conf.getInt(DFS_CBLOCK_SERVICERPC_PORT_KEY,
-        DFS_CBLOCK_SERVICERPC_PORT_DEFAULT);
-    InetSocketAddress address = new InetSocketAddress(
-        serverAddress, serverPort);
+    InetSocketAddress address = OzoneClientUtils.getCblockServiceRpcAddr(conf);
     // currently the largest supported volume is about 8TB, which might take
     // > 20 seconds to finish creating containers. thus set timeout to 30 sec.
     cblockClient = new CBlockServiceProtocolClientSideTranslatorPB(

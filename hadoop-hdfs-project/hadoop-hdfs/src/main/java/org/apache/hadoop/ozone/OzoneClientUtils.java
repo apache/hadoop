@@ -23,6 +23,7 @@ import com.google.common.net.HostAndPort;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.http.client.config.RequestConfig;
@@ -38,6 +39,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_SERVICERPC_PORT_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_JSCSI_PORT_DEFAULT;
 
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
@@ -300,6 +312,44 @@ public final class OzoneClientUtils {
   }
 
   /**
+   * Retrieve the socket address that is used by CBlock Service.
+   * @param conf
+   * @return Target InetSocketAddress for the CBlock Service endpoint.
+   */
+  public static InetSocketAddress getCblockServiceRpcAddr(
+      Configuration conf) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf,
+        DFS_CBLOCK_SERVICERPC_ADDRESS_KEY);
+
+    // If no port number is specified then we'll just try the defaultBindPort.
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        DFS_CBLOCK_SERVICERPC_ADDRESS_KEY);
+
+    return NetUtils.createSocketAddr(
+        host.or(DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT) + ":" +
+            port.or(DFS_CBLOCK_SERVICERPC_PORT_DEFAULT));
+  }
+
+  /**
+   * Retrieve the socket address that is used by CBlock Server.
+   * @param conf
+   * @return Target InetSocketAddress for the CBlock Server endpoint.
+   */
+  public static InetSocketAddress getCblockServerRpcAddr(
+      Configuration conf) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf,
+        DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY);
+
+    // If no port number is specified then we'll just try the defaultBindPort.
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY);
+
+    return NetUtils.createSocketAddr(
+        host.or(DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT) + ":" +
+            port.or(DFS_CBLOCK_JSCSI_PORT_DEFAULT));
+  }
+
+  /**
    * Retrieve the hostname, trying the supplied config keys in order.
    * Each config value may be absent, or if present in the format
    * host:port (the :port part is optional).
@@ -558,6 +608,28 @@ public final class OzoneClientUtils {
   public static int getContainerPort(Configuration conf) {
     return conf.getInt(ScmConfigKeys.DFS_CONTAINER_IPC_PORT, ScmConfigKeys
         .DFS_CONTAINER_IPC_PORT_DEFAULT);
+  }
+
+  /**
+   * After starting an RPC server, updates configuration with the actual
+   * listening address of that server. The listening address may be different
+   * from the configured address if, for example, the configured address uses
+   * port 0 to request use of an ephemeral port.
+   *
+   * @param conf configuration to update
+   * @param rpcAddressKey configuration key for RPC server address
+   * @param addr configured address
+   * @param rpcServer started RPC server.
+   */
+  public static InetSocketAddress updateListenAddress(
+      OzoneConfiguration conf, String rpcAddressKey,
+      InetSocketAddress addr, RPC.Server rpcServer) {
+    InetSocketAddress listenAddr = rpcServer.getListenerAddress();
+    InetSocketAddress updatedAddr = new InetSocketAddress(
+        addr.getHostString(), listenAddr.getPort());
+    conf.set(rpcAddressKey,
+        listenAddr.getHostString() + ":" + listenAddr.getPort());
+    return updatedAddr;
   }
 
   /**
