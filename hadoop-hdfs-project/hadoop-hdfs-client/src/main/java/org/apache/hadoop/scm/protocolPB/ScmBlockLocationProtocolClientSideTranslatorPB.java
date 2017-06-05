@@ -155,7 +155,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   @Override
   public List<DeleteBlockResult> deleteBlocks(Set<String> keys)
       throws IOException {
-    Preconditions.checkArgument(keys == null || keys.isEmpty(),
+    Preconditions.checkArgument(keys != null && !keys.isEmpty(),
         "keys to be deleted cannot be null or empty");
     DeleteScmBlocksRequestProto request = DeleteScmBlocksRequestProto
         .newBuilder()

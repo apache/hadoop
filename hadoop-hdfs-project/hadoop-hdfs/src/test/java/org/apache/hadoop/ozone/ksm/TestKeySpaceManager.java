@@ -47,9 +47,10 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Random;
-import java.util.List;
+import java.util.Set;
 
 /**
  * Test Key Space Manager operation in distributed handler scenario.
@@ -450,4 +451,54 @@ public class TestKeySpaceManager {
     Assert.assertEquals(1 + numKeyLookupFails,
         ksmMetrics.getNumKeyLookupFails());
   }
+
+  /**
+   * Test delete keys for ksm.
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
+  @Test
+  public void testDeleteKey() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    long numKeyDeletes = ksmMetrics.getNumKeyDeletes();
+    long numKeyDeleteFails = ksmMetrics.getNumKeyDeletesFails();
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
+    storageHandler.createBucket(bucketArgs);
+
+    KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
+    keyArgs.setSize(100);
+    String dataString = RandomStringUtils.randomAscii(100);
+    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
+      stream.write(dataString.getBytes());
+    }
+
+    storageHandler.deleteKey(keyArgs);
+    Assert.assertEquals(1 + numKeyDeletes, ksmMetrics.getNumKeyDeletes());
+
+    // Check the block key in SCM, make sure it's deleted.
+    Set<String> keys = new HashSet<>();
+    keys.add(keyArgs.getResourceName());
+    exception.expect(IOException.class);
+    exception.expectMessage("Specified block key does not exist");
+    cluster.getStorageContainerManager().getBlockLocations(keys);
+
+    // Delete the key again to test deleting non-existing key.
+    exception.expect(IOException.class);
+    exception.expectMessage("KEY_NOT_FOUND");
+    storageHandler.deleteKey(keyArgs);
+    Assert.assertEquals(1 + numKeyDeleteFails,
+        ksmMetrics.getNumKeyDeletesFails());
+  }
+
 }
