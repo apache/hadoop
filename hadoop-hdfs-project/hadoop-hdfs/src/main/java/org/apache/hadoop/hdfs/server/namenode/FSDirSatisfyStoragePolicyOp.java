@@ -51,7 +51,6 @@ final class FSDirSatisfyStoragePolicyOp {
 
     assert fsd.getFSNamesystem().hasWriteLock();
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -62,8 +61,11 @@ final class FSDirSatisfyStoragePolicyOp {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
       XAttr satisfyXAttr = unprotectedSatisfyStoragePolicy(iip, bm, fsd);
-      xAttrs.add(satisfyXAttr);
-      fsd.getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
+      if (satisfyXAttr != null) {
+        List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
+        xAttrs.add(satisfyXAttr);
+        fsd.getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
+      }
     } finally {
       fsd.writeUnlock();
     }
@@ -79,16 +81,19 @@ final class FSDirSatisfyStoragePolicyOp {
 
     // TODO: think about optimization here, label the dir instead
     // of the sub-files of the dir.
-    if (inode.isFile()) {
+    if (inode.isFile() && inode.asFile().numBlocks() != 0) {
       candidateNodes.add(inode);
     } else if (inode.isDirectory()) {
       for (INode node : inode.asDirectory().getChildrenList(snapshotId)) {
-        if (node.isFile()) {
+        if (node.isFile() && node.asFile().numBlocks() != 0) {
           candidateNodes.add(node);
         }
       }
     }
 
+    if (candidateNodes.isEmpty()) {
+      return null;
+    }
     // If node has satisfy xattr, then stop adding it
     // to satisfy movement queue.
     if (inodeHasSatisfyXAttr(candidateNodes)) {

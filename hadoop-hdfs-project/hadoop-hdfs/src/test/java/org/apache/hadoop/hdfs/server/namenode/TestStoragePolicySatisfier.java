@@ -907,6 +907,38 @@ public class TestStoragePolicySatisfier {
     }
   }
 
+  /**
+   * Test SPS with empty file.
+   * 1. Create one empty file.
+   * 2. Call satisfyStoragePolicy for empty file.
+   * 3. SPS should skip this file and xattr should not be added for empty file.
+   */
+  @Test(timeout = 300000)
+  public void testSPSWhenFileLengthIsZero() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(new Configuration()).numDataNodes(0)
+          .build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path filePath = new Path("/zeroSizeFile");
+      DFSTestUtil.createFile(fs, filePath, 0, (short) 1, 0);
+      FSEditLog editlog = cluster.getNameNode().getNamesystem().getEditLog();
+      long lastWrittenTxId = editlog.getLastWrittenTxId();
+      fs.satisfyStoragePolicy(filePath);
+      Assert.assertEquals("Xattr should not be added for the file",
+          lastWrittenTxId, editlog.getLastWrittenTxId());
+      INode inode = cluster.getNameNode().getNamesystem().getFSDirectory()
+          .getINode(filePath.toString());
+      Assert.assertTrue("XAttrFeature should be null for file",
+          inode.getXAttrFeature() == null);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   private String createFileAndSimulateFavoredNodes(int favoredNodesCount)
       throws IOException {
     ArrayList<DataNode> dns = hdfsCluster.getDataNodes();
