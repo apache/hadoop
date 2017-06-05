@@ -112,6 +112,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4250. NPE in AppSchedulingInfo#isRequestLabelChanged.
     (Brahma Reddy Battula via rohithsharmaks)
 
+    YARN-1471. The SLS simulator is not running the preemption policy
+    for CapacityScheduler (Carlo Curino via cdouglas) Backport by Ye Zhou.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
