@@ -816,6 +816,27 @@ public class NativeAzureFileSystem extends FileSystem {
       }
     }
 
+    @Override
+    public synchronized  void readFully(long position, byte[] buffer, int offset, int length)
+        throws IOException {
+      validatePositionedReadArgs(position, buffer, offset, length);
+
+      int nread = 0;
+      while (nread < length) {
+        // In case BlobInputStream is used, mark() can act as a hint to read ahead only this
+        // length instead of 4 MB boundary.
+        in.mark(length - nread);
+        int nbytes = read(position + nread,
+            buffer,
+            offset + nread,
+            length - nread);
+        if (nbytes < 0) {
+          throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
+        }
+        nread += nbytes;
+      }
+    }
+
     /*
      * Reads up to len bytes of data from the input stream into an array of
      * bytes. An attempt is made to read as many as len bytes, but a smaller
@@ -886,9 +907,13 @@ public class NativeAzureFileSystem extends FileSystem {
         if (pos < 0) {
           throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
         }
-        IOUtils.closeStream(in);
-        in = store.retrieve(key);
-        this.pos = in.skip(pos);
+        if (this.pos > pos) {
+          IOUtils.closeStream(in);
+          in = store.retrieve(key);
+          this.pos = in.skip(pos);
+        } else {
+          this.pos += in.skip(pos - this.pos);
+        }
         LOG.debug("Seek to position {}. Bytes skipped {}", pos,
           this.pos);
       } catch(IOException e) {
