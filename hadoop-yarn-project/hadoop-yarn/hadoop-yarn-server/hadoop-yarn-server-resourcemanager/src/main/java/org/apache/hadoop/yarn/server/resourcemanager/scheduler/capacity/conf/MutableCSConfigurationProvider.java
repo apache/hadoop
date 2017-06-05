@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedConfUpdateInfo;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -98,7 +98,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
 
   @Override
   public void mutateConfiguration(UserGroupInformation user,
-      QueueConfigsUpdateInfo confUpdate) throws IOException {
+      SchedConfUpdateInfo confUpdate) throws IOException {
     if (!aclMutationPolicy.isMutationAllowed(user, confUpdate)) {
       throw new AccessControlException("User is not admin of all modified" +
           " queues.");
@@ -126,7 +126,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
 
 
   private Map<String, String> constructKeyValueConfUpdate(
-      QueueConfigsUpdateInfo mutationInfo) throws IOException {
+      SchedConfUpdateInfo mutationInfo) throws IOException {
     CapacityScheduler cs = (CapacityScheduler) rmContext.getScheduler();
     CapacitySchedulerConfiguration proposedConf =
         new CapacitySchedulerConfiguration(cs.getConfiguration(), false);
@@ -139,6 +139,10 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     }
     for (QueueConfigInfo updateQueueInfo : mutationInfo.getUpdateQueueInfo()) {
       updateQueue(updateQueueInfo, proposedConf, confUpdate);
+    }
+    for (Map.Entry<String, String> global : mutationInfo.getGlobalParams()
+        .entrySet()) {
+      confUpdate.put(global.getKey(), global.getValue());
     }
     return confUpdate;
   }
