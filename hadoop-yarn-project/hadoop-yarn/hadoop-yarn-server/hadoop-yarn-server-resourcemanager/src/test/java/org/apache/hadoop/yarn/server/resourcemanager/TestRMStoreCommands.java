@@ -87,8 +87,13 @@ public class TestRMStoreCommands {
           ZKRMStateStore.ROOT_ZNODE_NAME + "/" + RMStateStore.RM_APP_ROOT;
       String appIdPath = appRootPath + "/" + appId;
       curatorFramework.create().forPath(appIdPath);
-      assertEquals("Application node for " + appId + "should exist",
-          appId, curatorFramework.getChildren().forPath(appRootPath).get(0));
+      for (String path : curatorFramework.getChildren().forPath(appRootPath)) {
+        if (path.equals(ZKRMStateStore.RM_APP_ROOT_HIERARCHIES)) {
+          continue;
+        }
+        assertEquals("Application node for " + appId + " should exist",
+            appId, path);
+      }
       try {
         ResourceManager.removeApplication(conf, appId);
       } catch (Exception e) {
@@ -96,8 +101,10 @@ public class TestRMStoreCommands {
             "rm state store.");
       }
       assertTrue("After remove app from store there should be no child nodes" +
-          " in app root path",
-          curatorFramework.getChildren().forPath(appRootPath).isEmpty());
+          " for application in app root path",
+          curatorFramework.getChildren().forPath(appRootPath).size() == 1 &&
+          curatorFramework.getChildren().forPath(appRootPath).get(0).equals(
+              ZKRMStateStore.RM_APP_ROOT_HIERARCHIES));
     }
   }
 }

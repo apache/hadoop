@@ -261,6 +261,7 @@ public class CallQueueManager<E> {
       Class<? extends BlockingQueue<E>> queueClassToUse, int maxSize,
       String ns, Configuration conf) {
     int priorityLevels = parseNumLevels(ns, conf);
+    this.scheduler.stop();
     RpcScheduler newScheduler = createScheduler(schedulerClass, priorityLevels,
         ns, conf);
     BlockingQueue<E> newQ = createCallQueueInstance(queueClassToUse,

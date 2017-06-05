@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,6 +71,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -99,6 +101,7 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nonnull;
 
@@ -198,6 +201,15 @@ public class DistributedFileSystem extends FileSystem {
   public Path getHomeDirectory() {
     return makeQualified(new Path(homeDirPrefix + "/"
         + dfs.ugi.getShortUserName()));
+  }
+
+  /**
+   * Returns the hedged read metrics object for this client.
+   *
+   * @return object of DFSHedgedReadMetrics
+   */
+  public DFSHedgedReadMetrics getHedgedReadMetrics() {
+    return dfs.getHedgedReadMetrics();
   }
 
   /**
@@ -452,17 +464,20 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Same as
    * {@link #create(Path, FsPermission, EnumSet<CreateFlag>, int, short, long,
-   * Progressable, ChecksumOpt)} with the addition of favoredNodes that is a
-   * hint to where the namenode should place the file blocks.
-   * The favored nodes hint is not persisted in HDFS. Hence it may be honored
-   * at the creation time only. And with favored nodes, blocks will be pinned
-   * on the datanodes to prevent balancing move the block. HDFS could move the
-   * blocks during replication, to move the blocks from favored nodes. A value
-   * of null means no favored nodes for this create.
-   * Another addition is ecPolicyName. A non-null ecPolicyName specifies an
+   * Progressable, ChecksumOpt)} with a few additions. First, addition of
+   * favoredNodes that is a hint to where the namenode should place the file
+   * blocks. The favored nodes hint is not persisted in HDFS. Hence it may be
+   * honored at the creation time only. And with favored nodes, blocks will be
+   * pinned on the datanodes to prevent balancing move the block. HDFS could
+   * move the blocks during replication, to move the blocks from favored nodes.
+   * A value of null means no favored nodes for this create.
+   * The second addition is ecPolicyName. A non-null ecPolicyName specifies an
    * explicit erasure coding policy for this file, overriding the inherited
-   * policy. A null ecPolicyName means the file will inherit its EC policy from
-   * an ancestor (the default).
+   * policy. A null ecPolicyName means the file will inherit its EC policy or
+   * replication policy from its ancestor (the default).
+   * ecPolicyName and SHOULD_REPLICATE CreateFlag are mutually exclusive. It's
+   * invalid to set both SHOULD_REPLICATE and a non-null ecPolicyName.
+   *
    */
   private HdfsDataOutputStream create(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
@@ -2522,6 +2537,33 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Retrieve all the erasure coding codecs and coders supported by this file
+   * system.
+   *
+   * @return all erasure coding codecs and coders supported by this file system.
+   * @throws IOException
+   */
+  public HashMap<String, String> getAllErasureCodingCodecs()
+      throws IOException {
+    return dfs.getErasureCodingCodecs();
+  }
+
+  /**
+   * Add Erasure coding policies to HDFS. For each policy input, schema and
+   * cellSize are musts, name and id are ignored. They will be automatically
+   * created and assigned by Namenode once the policy is successfully added, and
+   * will be returned in the response.
+   *
+   * @param policies The user defined ec policy list to add.
+   * @return Return the response list of adding operations.
+   * @throws IOException
+   */
+  public AddECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies)  throws IOException {
+    return dfs.addErasureCodingPolicies(policies);
+  }
+
+  /**
    * Unset the erasure coding policy from the source path.
    *
    * @param path     The directory to unset the policy
@@ -2568,7 +2610,6 @@ public class DistributedFileSystem extends FileSystem {
     } catch (IOException ioe) {
       DFSClient.LOG.warn("Exception while checking whether encryption zone is "
           + "supported", ioe);
-      return super.getTrashRoot(path);
     }
 
     String parentSrc = path.isRoot()?
@@ -2653,6 +2694,7 @@ public class DistributedFileSystem extends FileSystem {
     private final DistributedFileSystem dfs;
     private InetSocketAddress[] favoredNodes = null;
     private String ecPolicyName = null;
+    private boolean shouldReplicate  = false;
 
     public HdfsDataOutputStreamBuilder(DistributedFileSystem dfs, Path path) {
       super(dfs, path);
@@ -2674,6 +2716,14 @@ public class DistributedFileSystem extends FileSystem {
       return ecPolicyName;
     }
 
+    /**
+     * Enforce the file to be a striped file with erasure coding policy
+     * 'policyName', no matter what its parent directory's replication
+     * or erasure coding policy is. Don't call this function and
+     * enforceReplicate() in the same builder since they have conflict
+     * of interest.
+     *
+     */
     public HdfsDataOutputStreamBuilder setEcPolicyName(
         @Nonnull final String policyName) {
       Preconditions.checkNotNull(policyName);
@@ -2681,9 +2731,33 @@ public class DistributedFileSystem extends FileSystem {
       return this;
     }
 
+    public boolean shouldReplicate() {
+      return shouldReplicate;
+    }
+
+    /**
+     * Enforce the file to be a replicated file, no matter what its parent
+     * directory's replication or erasure coding policy is. Don't call this
+     * function and setEcPolicyName() in the same builder since they have
+     * conflict of interest.
+     */
+    public HdfsDataOutputStreamBuilder replicate() {
+      shouldReplicate  = true;
+      return this;
+    }
+
     @Override
     public HdfsDataOutputStream build() throws IOException {
-      return dfs.create(getPath(), getPermission(), getFlags(),
+      Preconditions.checkState(
+          !(shouldReplicate() && (!StringUtils.isEmpty(getEcPolicyName()))),
+          "shouldReplicate and ecPolicyName are " +
+              "exclusive parameters. Set both is not allowed!");
+
+      EnumSet<CreateFlag> createFlags = getFlags();
+      if (shouldReplicate()) {
+        createFlags.add(CreateFlag.SHOULD_REPLICATE);
+      }
+      return dfs.create(getPath(), getPermission(), createFlags,
           getBufferSize(), getReplication(), getBlockSize(),
           getProgress(), getChecksumOpt(), getFavoredNodes(),
           getEcPolicyName());

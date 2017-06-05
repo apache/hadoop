@@ -110,15 +110,50 @@ void getExceptionInfo(const char *excName, int noPrintFlags,
     }
 }
 
+/**
+ * getExceptionUtilString: A helper function that calls 'methodName' in
+ * ExceptionUtils. The function 'methodName' should have a return type of a
+ * java String.
+ *
+ * @param env        The JNI environment.
+ * @param exc        The exception to get information for.
+ * @param methodName The method of ExceptionUtils to call that has a String
+ *                    return type.
+ *
+ * @return           A C-type string containing the string returned by
+ *                   ExceptionUtils.'methodName', or NULL on failure.
+ */
+static char* getExceptionUtilString(JNIEnv *env, jthrowable exc, char *methodName)
+{
+    jthrowable jthr;
+    jvalue jVal;
+    jstring jStr = NULL;
+    char *excString = NULL;
+    jthr = invokeMethod(env, &jVal, STATIC, NULL,
+        "org/apache/commons/lang/exception/ExceptionUtils",
+        methodName, "(Ljava/lang/Throwable;)Ljava/lang/String;", exc);
+    if (jthr) {
+        destroyLocalReference(env, jthr);
+        return NULL;
+    }
+    jStr = jVal.l;
+    jthr = newCStr(env, jStr, &excString);
+    if (jthr) {
+        destroyLocalReference(env, jthr);
+        return NULL;
+    }
+    destroyLocalReference(env, jStr);
+    return excString;
+}
+
 int printExceptionAndFreeV(JNIEnv *env, jthrowable exc, int noPrintFlags,
         const char *fmt, va_list ap)
 {
     int i, noPrint, excErrno;
     char *className = NULL;
-    jstring jStr = NULL;
-    jvalue jVal;
     jthrowable jthr;
     const char *stackTrace;
+    const char *rootCause;
 
     jthr = classNameOfObject(exc, env, &className);
     if (jthr) {
@@ -139,32 +174,30 @@ int printExceptionAndFreeV(JNIEnv *env, jthrowable exc, int noPrintFlags,
         noPrint = 0;
         excErrno = EINTERNAL;
     }
+
+    // We don't want to use ExceptionDescribe here, because that requires a
+    // pending exception. Instead, use ExceptionUtils.
+    rootCause = getExceptionUtilString(env, exc, "getRootCauseMessage");
+    stackTrace = getExceptionUtilString(env, exc, "getStackTrace");
+    // Save the exception details in the thread-local state.
+    setTLSExceptionStrings(rootCause, stackTrace);
+
     if (!noPrint) {
         vfprintf(stderr, fmt, ap);
         fprintf(stderr, " error:\n");
 
-        // We don't want to  use ExceptionDescribe here, because that requires a
-        // pending exception.  Instead, use ExceptionUtils.
-        jthr = invokeMethod(env, &jVal, STATIC, NULL, 
-            "org/apache/commons/lang/exception/ExceptionUtils",
-            "getStackTrace", "(Ljava/lang/Throwable;)Ljava/lang/String;", exc);
-        if (jthr) {
-            fprintf(stderr, "(unable to get stack trace for %s exception: "
-                    "ExceptionUtils::getStackTrace error.)\n", className);
-            destroyLocalReference(env, jthr);
+        if (!rootCause) {
+            fprintf(stderr, "(unable to get root cause for %s)\n", className);
         } else {
-            jStr = jVal.l;
-            stackTrace = (*env)->GetStringUTFChars(env, jStr, NULL);
-            if (!stackTrace) {
-                fprintf(stderr, "(unable to get stack trace for %s exception: "
-                        "GetStringUTFChars error.)\n", className);
-            } else {
-                fprintf(stderr, "%s", stackTrace);
-                (*env)->ReleaseStringUTFChars(env, jStr, stackTrace);
-            }
+            fprintf(stderr, "%s", rootCause);
+        }
+        if (!stackTrace) {
+            fprintf(stderr, "(unable to get stack trace for %s)\n", className);
+        } else {
+            fprintf(stderr, "%s", stackTrace);
         }
     }
-    destroyLocalReference(env, jStr);
+
     destroyLocalReference(env, exc);
     free(className);
     return excErrno;

@@ -29,9 +29,14 @@
  *
  * If you encounter an exception, return a local reference to it.  The caller is
  * responsible for freeing the local reference, by calling a function like
- * PrintExceptionAndFree.  (You can also free exceptions directly by calling
+ * printExceptionAndFree. (You can also free exceptions directly by calling
  * DeleteLocalRef.  However, that would not produce an error message, so it's
  * usually not what you want.)
+ *
+ * The root cause and stack trace exception strings retrieved from the last
+ * exception that happened on a thread are stored in the corresponding
+ * thread local state and are accessed by hdfsGetLastExceptionRootCause and
+ * hdfsGetLastExceptionStackTrace respectively.
  */
 
 #include "platform.h"
@@ -81,7 +86,8 @@ void getExceptionInfo(const char *excName, int noPrintFlags,
                       int *excErrno, int *shouldPrint);
 
 /**
- * Print out information about an exception and free it.
+ * Store the information about an exception in the thread-local state and print
+ * it and free the jthrowable object.
  *
  * @param env             The JNI environment
  * @param exc             The exception to print and free
@@ -97,7 +103,8 @@ int printExceptionAndFreeV(JNIEnv *env, jthrowable exc, int noPrintFlags,
         const char *fmt, va_list ap);
 
 /**
- * Print out information about an exception and free it.
+ * Store the information about an exception in the thread-local state and print
+ * it and free the jthrowable object.
  *
  * @param env             The JNI environment
  * @param exc             The exception to print and free
@@ -113,7 +120,8 @@ int printExceptionAndFree(JNIEnv *env, jthrowable exc, int noPrintFlags,
         const char *fmt, ...) TYPE_CHECKED_PRINTF_FORMAT(4, 5);
 
 /**
- * Print out information about the pending exception and free it.
+ * Store the information about the pending exception in the thread-local state
+ * and print it and free the jthrowable object.
  *
  * @param env             The JNI environment
  * @param noPrintFlags    Flags which determine which exceptions we should NOT

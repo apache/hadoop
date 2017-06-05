@@ -68,6 +68,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
     super(context, exec, deletionContext, nodeStatusUpdater, metrics,
         dirsHandler);
+    dispatcher.disableExitOnDispatchException();
   }
 
   @Override
@@ -189,11 +190,6 @@ public class DummyContainerManager extends ContainerManagerImpl {
     };
   }
 
-  @Override
-  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-    // do nothing
-  }
-  
   @Override
   protected void authorizeStartAndResourceIncreaseRequest(
       NMTokenIdentifier nmTokenIdentifier,

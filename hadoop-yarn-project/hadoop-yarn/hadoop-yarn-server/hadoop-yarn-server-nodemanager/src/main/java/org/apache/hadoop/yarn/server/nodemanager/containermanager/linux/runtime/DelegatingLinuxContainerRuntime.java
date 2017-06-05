@@ -70,11 +70,12 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
   private LinuxContainerRuntime pickContainerRuntime(
       Map<String, String> environment){
     LinuxContainerRuntime runtime;
-
-    if (DockerLinuxContainerRuntime.isDockerContainerRequested(environment)){
+    //Sandbox checked first to ensure DockerRuntime doesn't circumvent controls
+    if (javaSandboxLinuxContainerRuntime.isSandboxContainerRequested()){
+        runtime = javaSandboxLinuxContainerRuntime;
+    } else if (DockerLinuxContainerRuntime
+        .isDockerContainerRequested(environment)){
       runtime = dockerLinuxContainerRuntime;
-    } else if (javaSandboxLinuxContainerRuntime.isSandboxContainerRequested()) {
-      runtime = javaSandboxLinuxContainerRuntime;
     } else {
       runtime = defaultLinuxContainerRuntime;
     }

@@ -211,12 +211,14 @@ public class TestReconstructStripedBlocks {
       Path p = new Path("/test2RecoveryTasksForSameBlockGroup");
       final byte[] data = new byte[fileLen];
       DFSTestUtil.writeFile(fs, p, data);
+      DFSTestUtil.waitForReplication(fs, p, groupSize, 5000);
 
       LocatedStripedBlock lb = (LocatedStripedBlock)fs.getClient()
           .getLocatedBlocks(p.toString(), 0).get(0);
       LocatedBlock[] lbs = StripedBlockUtil.parseStripedBlockGroup(lb,
           cellSize, dataBlocks, parityBlocks);
 
+      BlockManagerTestUtil.getComputedDatanodeWork(bm);
       assertEquals(0, getNumberOfBlocksToBeErasureCoded(cluster));
       assertEquals(0, bm.getPendingReconstructionBlocksCount());
 

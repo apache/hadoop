@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRecoveredEvent;
@@ -94,14 +95,6 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
   public LocalResourcesTrackerImpl(String user, ApplicationId appId,
       Dispatcher dispatcher, boolean useLocalCacheDirectoryManager,
-      Configuration conf, NMStateStoreService stateStore) {
-    this(user, appId, dispatcher,
-        new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>(),
-        useLocalCacheDirectoryManager, conf, stateStore, null);
-  }
-
-  public LocalResourcesTrackerImpl(String user, ApplicationId appId,
-      Dispatcher dispatcher, boolean useLocalCacheDirectoryManager,
       Configuration conf, NMStateStoreService stateStore,
       LocalDirsHandlerService dirHandler) {
     this(user, appId, dispatcher,
@@ -121,9 +114,9 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
     this.useLocalCacheDirectoryManager = useLocalCacheDirectoryManager;
     if (this.useLocalCacheDirectoryManager) {
       directoryManagers =
-          new ConcurrentHashMap<Path, LocalCacheDirectoryManager>();
+          new ConcurrentHashMap<>();
       inProgressLocalResourcesMap =
-          new ConcurrentHashMap<LocalResourceRequest, Path>();
+          new ConcurrentHashMap<>();
     }
     this.conf = conf;
     this.stateStore = stateStore;
@@ -401,7 +394,9 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       return false;
     } else { // ResourceState is LOCALIZED or INIT
       if (ResourceState.LOCALIZED.equals(rsrc.getState())) {
-        delService.delete(getUser(), getPathToDelete(rsrc.getLocalPath()));
+        FileDeletionTask deletionTask = new FileDeletionTask(delService,
+            getUser(), getPathToDelete(rsrc.getLocalPath()), null);
+        delService.delete(deletionTask);
       }
       removeResource(rem.getRequest());
       LOG.info("Removed " + rsrc.getLocalPath() + " from localized cache");
@@ -496,7 +491,9 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       LOG.warn("Directory " + uniquePath + " already exists, " +
           "try next one.");
       if (delService != null) {
-        delService.delete(getUser(), uniquePath);
+        FileDeletionTask deletionTask = new FileDeletionTask(delService,
+            getUser(), uniquePath, null);
+        delService.delete(deletionTask);
       }
     }
 
@@ -527,5 +524,10 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       mgr = directoryManagers.get(localDirPath);
     }
     return mgr;
+  }
+
+  @VisibleForTesting
+  LocalDirsHandlerService getDirsHandler() {
+    return dirsHandler;
   }
 }

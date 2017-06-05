@@ -20,11 +20,9 @@ package org.apache.hadoop.fs.azure;
 
 import static org.junit.Assume.assumeNotNull;
 
-import org.apache.hadoop.fs.FileSystem;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.junit.After;
 import org.junit.Before;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +38,8 @@ public abstract class AbstractWasbTestBase {
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractWasbTestBase.class);
 
-  protected FileSystem fs;
+  @VisibleForTesting
+  protected NativeAzureFileSystem fs;
   private AzureBlobStorageTestAccount testAccount;
 
   @Before

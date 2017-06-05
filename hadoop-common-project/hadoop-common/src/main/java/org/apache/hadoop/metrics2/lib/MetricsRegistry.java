@@ -18,19 +18,18 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import java.util.Collection;
-import java.util.Map;
-
 import com.google.common.collect.Maps;
-import com.google.common.base.MoreObjects;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MsInfo;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.StringJoiner;
 
 /**
  * An optional metrics registry class for creating and maintaining a
@@ -440,9 +439,12 @@ public class MetricsRegistry {
     }
   }
 
-  @Override public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("info", metricsInfo).add("tags", tags()).add("metrics", metrics())
+  @Override
+  public String toString() {
+    return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+        .add("info=" + metricsInfo.toString())
+        .add("tags=" + tags())
+        .add("metrics=" + metrics())
         .toString();
   }
 

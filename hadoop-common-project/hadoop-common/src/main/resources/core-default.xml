@@ -517,9 +517,19 @@
 
 <property>
   <name>hadoop.security.sensitive-config-keys</name>
-  <value>secret$,password$,ssl.keystore.pass$,fs.s3.*[Ss]ecret.?[Kk]ey,fs.azure.account.key.*,dfs.webhdfs.oauth2.[a-z]+.token,hadoop.security.sensitive-config-keys</value>
-  <description>A comma-separated list of regular expressions to match against
-      configuration keys that should be redacted where appropriate, for
+  <value>
+      secret$
+      password$
+      ssl.keystore.pass$
+      fs.s3.*[Ss]ecret.?[Kk]ey
+      fs.s3a.*.server-side-encryption.key
+      fs.azure.account.key.*
+      credential$
+      oauth.*token$
+      hadoop.security.sensitive-config-keys
+  </value>
+  <description>A comma-separated or multi-line list of regular expressions to
+      match configuration keys that should be redacted where appropriate, for
       example, when logging modified properties during a reconfiguration,
       private credentials should not be logged.
   </description>
@@ -658,7 +668,7 @@
 
 <property>
   <name>io.erasurecode.codec.rs.rawcoders</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
+  <value>rs_native,rs_java</value>
   <description>
     Comma separated raw coder implementations for the rs codec. The earlier
     factory is prior to followings in case of failure of creating raw coders.
@@ -667,7 +677,7 @@
 
 <property>
   <name>io.erasurecode.codec.rs-legacy.rawcoders</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
+  <value>rs-legacy_java</value>
   <description>
     Comma separated raw coder implementations for the rs-legacy codec. The earlier
     factory is prior to followings in case of failure of creating raw coders.
@@ -676,7 +686,7 @@
 
 <property>
   <name>io.erasurecode.codec.xor.rawcoders</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
+  <value>xor_native,xor_java</value>
   <description>
     Comma separated raw coder implementations for the xor codec. The earlier
     factory is prior to followings in case of failure of creating raw coders.
@@ -1151,7 +1161,18 @@
 <property>
   <name>fs.s3a.server-side-encryption-algorithm</name>
   <description>Specify a server-side encryption algorithm for s3a: file system.
-    Unset by default, and the only other currently allowable value is AES256.
+    Unset by default.  It supports the following values: 'AES256' (for SSE-S3),
+    'SSE-KMS' and 'SSE-C'.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.server-side-encryption.key</name>
+  <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
+    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
+    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
+    you'll be using your default's S3 KMS key, otherwise you should set this property to
+    the specific KMS key id.
   </description>
 </property>
 

@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -115,6 +116,14 @@ public class ContainerRelaunch extends ContainerLaunch {
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs)
           .build());
+    } catch (ConfigurationException e) {
+      LOG.error("Failed to launch container due to configuration error.", e);
+      dispatcher.getEventHandler().handle(new ContainerExitEvent(
+          containerId, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+          e.getMessage()));
+      // Mark the node as unhealthy
+      getContext().getNodeStatusUpdater().reportException(e);
+      return ret;
     } catch (Throwable e) {
       LOG.warn("Failed to relaunch container.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(

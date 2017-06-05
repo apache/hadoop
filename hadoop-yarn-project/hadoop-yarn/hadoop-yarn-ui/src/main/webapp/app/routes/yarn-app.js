@@ -16,37 +16,14 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-
 import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      app: this.store.find('yarn-app', param.app_id),
-
-      rmContainers: this.store.find('yarn-app', param.app_id).then(function() {
-        return this.store.query('yarn-app-attempt', {appId: param.app_id}).then(function (attempts) {
-          if (attempts && attempts.get('firstObject')) {
-            var appAttemptId = attempts.get('firstObject').get('appAttemptId');
-            var rmContainers = this.store.query('yarn-container',
-              {
-                app_attempt_id: appAttemptId,
-                is_rm: true
-              });
-            return rmContainers;
-          }
-        }.bind(this));
-      }.bind(this)),
-
-      nodes: this.store.findAll('yarn-rm-node'),
-    });
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-container');
-    this.store.unloadAll('yarn-rm-node');
+  actions: {
+    updateBreadcrumbs(appId, serviceName, tailCrumbs) {
+      var controller = this.controllerFor('yarn-app');
+      controller.setProperties({appId: appId, serviceName: serviceName});
+      controller.updateBreadcrumbs(appId, serviceName, tailCrumbs);
+    }
   }
 });

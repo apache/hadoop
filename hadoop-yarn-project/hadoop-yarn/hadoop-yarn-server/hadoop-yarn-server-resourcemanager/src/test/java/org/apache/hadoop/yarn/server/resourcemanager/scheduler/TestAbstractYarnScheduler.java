@@ -807,8 +807,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     try {
       rm.start();
 
-      conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, false);
       DrainDispatcher privateDispatcher = new DrainDispatcher();
+      privateDispatcher.disableExitOnDispatchException();
       SleepHandler sleepHandler = new SleepHandler();
       ResourceTrackerService privateResourceTrackerService =
           getPrivateResourceTrackerService(privateDispatcher, rm, sleepHandler);

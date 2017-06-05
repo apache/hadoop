@@ -19,8 +19,10 @@ package org.apache.hadoop.hdfs.net;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -204,10 +206,24 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
-        // all excluded nodes should be DatanodeDescriptor
-        Preconditions.checkArgument(excludedNode instanceof DatanodeDescriptor);
-        availableCount -= ((DatanodeDescriptor) excludedNode)
-            .hasStorageType(type) ? 1 : 0;
+        if (excludedNode instanceof DatanodeDescriptor) {
+          availableCount -= ((DatanodeDescriptor) excludedNode)
+              .hasStorageType(type) ? 1 : 0;
+        } else if (excludedNode instanceof DFSTopologyNodeImpl) {
+          availableCount -= ((DFSTopologyNodeImpl) excludedNode)
+              .getSubtreeStorageCount(type);
+        } else if (excludedNode instanceof DatanodeInfo) {
+          // find out the corresponding DatanodeDescriptor object, beacuse
+          // we need to get its storage type info.
+          // could be expensive operation, fortunately the size of excluded
+          // nodes set is supposed to be very small.
+          String nodeLocation = excludedNode.getNetworkLocation()
+              + "/" + excludedNode.getName();
+          DatanodeDescriptor dn = (DatanodeDescriptor)getNode(nodeLocation);
+          availableCount -= dn.hasStorageType(type)? 1 : 0;
+        } else {
+          LOG.error("Unexpected node type: {}.", excludedNode.getClass());
+        }
       }
     }
     if (availableCount <= 0) {

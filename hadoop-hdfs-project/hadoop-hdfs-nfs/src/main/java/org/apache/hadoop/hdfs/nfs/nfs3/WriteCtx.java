@@ -44,7 +44,7 @@ class WriteCtx {
    * wait for prerequisite writes. NO_DUMP: sequential write, no need to dump
    * since it will be written to HDFS soon. DUMPED: already dumped to a file.
    */
-  public static enum DataState {
+  public enum DataState {
     ALLOW_DUMP,
     NO_DUMP,
     DUMPED

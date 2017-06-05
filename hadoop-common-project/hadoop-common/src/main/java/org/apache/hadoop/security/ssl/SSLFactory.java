@@ -39,7 +39,6 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -58,7 +57,7 @@ public class SSLFactory implements ConnectionConfigurator {
   static final Logger LOG = LoggerFactory.getLogger(SSLFactory.class);
 
   @InterfaceAudience.Private
-  public static enum Mode { CLIENT, SERVER }
+  public enum Mode { CLIENT, SERVER }
 
   public static final String SSL_CLIENT_CONF_KEY = "hadoop.ssl.client.conf";
   public static final String SSL_CLIENT_CONF_DEFAULT = "ssl-client.xml";
@@ -140,13 +139,11 @@ public class SSLFactory implements ConnectionConfigurator {
 
     enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS_KEY,
         SSL_ENABLED_PROTOCOLS_DEFAULT);
-    String excludeCiphersConf =
-        sslConf.get(SSL_SERVER_EXCLUDE_CIPHER_LIST, "");
-    if (excludeCiphersConf.isEmpty()) {
-      excludeCiphers = new LinkedList<String>();
-    } else {
-      LOG.debug("will exclude cipher suites: {}", excludeCiphersConf);
-      excludeCiphers = Arrays.asList(excludeCiphersConf.split(","));
+    excludeCiphers = Arrays.asList(
+        sslConf.getTrimmedStrings(SSL_SERVER_EXCLUDE_CIPHER_LIST));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("will exclude cipher suites: {}",
+          StringUtils.join(",", excludeCiphers));
     }
   }
 

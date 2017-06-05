@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.0.0-alpha3-SNAPSHOT</version>
+    <version>3.0.0-alpha4-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.0.0-alpha3-SNAPSHOT</version>
+  <version>3.0.0-alpha4-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -88,8 +88,9 @@
     <zookeeper.version>3.4.9</zookeeper.version>
     <curator.version>2.12.0</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
+    <spotbugs.version>3.1.0-RC1</spotbugs.version>
 
-    <tomcat.version>6.0.48</tomcat.version>
+    <guava.version>11.0.2</guava.version>
     <guice.version>4.0</guice.version>
     <joda-time.version>2.9.4</joda-time.version>
 
@@ -122,7 +123,6 @@
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
     <maven-war-plugin.version>2.4</maven-war-plugin.version>
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
-    <maven-project-info-reports-plugin.version>2.9</maven-project-info-reports-plugin.version>
     <maven-pdf-plugin.version>1.2</maven-pdf-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
     <build-helper-maven-plugin.version>1.9</build-helper-maven-plugin.version>
@@ -143,6 +143,12 @@
         <groupId>com.squareup.okhttp</groupId>
         <artifactId>okhttp</artifactId>
         <version>2.4.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.okhttp3</groupId>
+        <artifactId>mockwebserver</artifactId>
+        <version>3.7.0</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>jdiff</groupId>
@@ -485,7 +491,7 @@
         <artifactId>hadoop-openstack</artifactId>
         <version>${project.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-azure</artifactId>
@@ -519,7 +525,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>21.0</version>
+        <version>${guava.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -672,7 +678,7 @@
         <artifactId>guice</artifactId>
         <version>${guice.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>cglib</groupId>
         <artifactId>cglib</artifactId>
@@ -1170,7 +1176,7 @@
        <version>1.46</version>
        <scope>test</scope>
      </dependency>
-      
+
      <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
@@ -1264,7 +1270,7 @@
         <dependency>
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-simplekdc</artifactId>
-          <version>1.0.0-RC2</version>
+          <version>1.0.0</version>
         </dependency>
     </dependencies>
   </dependencyManagement>
@@ -1362,6 +1368,13 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
           <version>${findbugs.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -1382,11 +1395,6 @@
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-maven-plugin</artifactId>
           <version>${avro.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-project-info-reports-plugin</artifactId>
-          <version>${maven-project-info-reports-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

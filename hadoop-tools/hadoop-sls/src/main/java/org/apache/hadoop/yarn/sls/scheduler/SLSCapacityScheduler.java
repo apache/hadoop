@@ -28,7 +28,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -36,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
-import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.codahale.metrics.Timer;
@@ -96,16 +95,6 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       } catch (Exception e) {
         e.printStackTrace();
       }
-
-      ShutdownHookManager.get().addShutdownHook(new Runnable() {
-        @Override public void run() {
-          try {
-            schedulerMetrics.tearDown();
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-        }
-      }, SLSUtils.SHUTDOWN_HOOK_PRIORITY);
     }
   }
 
@@ -344,7 +333,6 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       initQueueMetrics(child);
     }
   }
-
   @Override
   public void serviceInit(Configuration configuration) throws Exception {
     super.serviceInit(configuration);
@@ -354,6 +342,17 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
     }
   }
 
+  @Override
+  public void serviceStop() throws Exception {
+    try {
+      schedulerMetrics.tearDown();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    super.serviceStop();
+  }
+
+
   public SchedulerMetrics getSchedulerMetrics() {
     return schedulerMetrics;
   }
@@ -361,5 +360,13 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   @Override
   public Configuration getConf() {
     return conf;
+  }
+
+  public String getRealQueueName(String queue) throws YarnException {
+    if (getQueue(queue) == null) {
+      throw new YarnException("Can't find the queue by the given name: " + queue
+          + "! Please check if queue " + queue + " is in the allocation file.");
+    }
+    return getQueue(queue).getQueueName();
   }
 }

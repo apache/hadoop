@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.zip.GZIPInputStream;
 
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.*;
 
 public class TestGridmixSubmission extends CommonJobTest {
@@ -185,7 +186,7 @@ public class TestGridmixSubmission extends CommonJobTest {
       DebugGridmix.main(argv);
 
     } catch (ExitUtil.ExitException e) {
-      assertEquals("ExitException", e.getMessage());
+      assertExceptionContains(ExitUtil.EXIT_EXCEPTION_MESSAGE, e);
       ExitUtil.resetFirstExitException();
     } finally {
       System.setErr(oldOut);

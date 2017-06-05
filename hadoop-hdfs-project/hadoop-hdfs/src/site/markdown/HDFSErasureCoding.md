@@ -73,6 +73,16 @@ Architecture
 
     Directory-level EC policies only affect new files created within the directory. Once a file has been created, its erasure coding policy can be queried but not changed. If an erasure coded file is renamed to a directory with a different EC policy, the file retains its existing EC policy. Converting a file to a different EC policy requires rewriting its data; do this by copying the file (e.g. via distcp) rather than renaming it.
 
+    We allow users to define their own EC policies via an XML file, which must have the following three parts:
+
+       1. _layoutversion:_ This indicates the version of EC policy XML file format.
+
+       2. _schemas:_ This includes all the user defined EC schemas.
+
+       3. _policies:_ This includes all the user defined EC policies, and each policy consists of schema id and the size of a striping cell (cellsize).
+
+    A sample EC policy XML file named user_ec_policies.xml.template is in the Hadoop conf directory, which user can reference.
+
  *  **Intel ISA-L**
     Intel ISA-L stands for Intel Intelligent Storage Acceleration Library. ISA-L is an open-source collection of optimized low-level functions designed for storage applications. It includes fast block Reed-Solomon type erasure codes optimized for Intel AVX and AVX2 instruction sets.
     HDFS erasure coding can leverage ISA-L to accelerate encoding and decoding calculation. ISA-L supports most major operating systems, including Linux and Windows.
@@ -107,11 +117,15 @@ Deployment
   be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as
   there are at least 14 DataNodes in the cluster.
 
-  The codec implementation for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
-  `io.erasurecode.codec.rs.rawcoder` for the default RS codec,
-  `io.erasurecode.codec.rs-legacy.rawcoder` for the legacy RS codec,
-  `io.erasurecode.codec.xor.rawcoder` for the XOR codec.
-  The default implementations for all of these codecs are pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
+  The codec implementations for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
+  `io.erasurecode.codec.rs.rawcoders` for the default RS codec,
+  `io.erasurecode.codec.rs-legacy.rawcoders` for the legacy RS codec,
+  `io.erasurecode.codec.xor.rawcoders` for the XOR codec.
+  User can also configure self-defined codec with configuration key like:
+  `io.erasurecode.codec.self-defined-codec.rawcoders`.
+  The values for these key are lists of coder names with a fall-back mechanism.
+  All these codecs have implementations in pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
+  The default implementation for RS Legacy is pure Java, and the default implementations for default RS and XOR are native implementations using Intel ISA-L library.
 
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 
@@ -140,6 +154,8 @@ Deployment
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
+         [-addPolicies -policyFile <file>]
+         [-listCodecs]
          [-usage [cmd ...]]
          [-help [cmd ...]]
 
@@ -164,3 +180,11 @@ Below are the details about each command.
  *  `[-listPolicies]`
 
      Lists the set of enabled erasure coding policies. These names are suitable for use with the `setPolicy` command.
+
+ *  `[-addPolicies -policyFile <file>]`
+
+     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB.
+
+ *  `[-listCodecs]`
+
+     Get the list of supported erasure coding codecs and coders in system. A coder is an implementation of a codec. A codec can have different implementations, thus different coders. The coders for a codec are listed in a fall back order.

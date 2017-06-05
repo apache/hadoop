@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.xml.sax.SAXException;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.Iterator;
 import java.util.Set;
@@ -533,8 +532,9 @@ public class QueueManager {
   @VisibleForTesting
   boolean isQueueNameValid(String node) {
     // use the same white space trim as in QueueMetrics() otherwise things fail
-    // guava uses a different definition for whitespace than java.
+    // This needs to trim additional Unicode whitespace characters beyond what
+    // the built-in JDK methods consider whitespace. See YARN-5272.
     return !node.isEmpty() &&
-        node.equals(CharMatcher.whitespace().trimFrom(node));
+        node.equals(FairSchedulerUtilities.trimQueueName(node));
   }
 }

@@ -125,6 +125,7 @@ class BlockReceiver implements Closeable {
   private boolean isPenultimateNode = false;
 
   private boolean syncOnClose;
+  private volatile boolean dirSyncOnFinalize;
   private long restartBudget;
   /** the reference of the volume where the block receiver writes to */
   private ReplicaHandler replicaHandler;
@@ -151,7 +152,8 @@ class BlockReceiver implements Closeable {
       final DataNode datanode, DataChecksum requestedChecksum,
       CachingStrategy cachingStrategy,
       final boolean allowLazyPersist,
-      final boolean pinning) throws IOException {
+      final boolean pinning,
+      final String storageId) throws IOException {
     try{
       this.block = block;
       this.in = in;
@@ -197,6 +199,7 @@ class BlockReceiver implements Closeable {
             + "\n allowLazyPersist=" + allowLazyPersist + ", pinning=" + pinning
             + ", isClient=" + isClient + ", isDatanode=" + isDatanode
             + ", responseInterval=" + responseInterval
+            + ", storageID=" + (storageId != null ? storageId : "null")
         );
       }
 
@@ -204,11 +207,13 @@ class BlockReceiver implements Closeable {
       // Open local disk out
       //
       if (isDatanode) { //replication or move
-        replicaHandler = datanode.data.createTemporary(storageType, block);
+        replicaHandler =
+            datanode.data.createTemporary(storageType, storageId, block, false);
       } else {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
-          replicaHandler = datanode.data.createRbw(storageType, block, allowLazyPersist);
+          replicaHandler = datanode.data.createRbw(storageType, storageId,
+              block, allowLazyPersist);
           datanode.notifyNamenodeReceivingBlock(
               block, replicaHandler.getReplica().getStorageUuid());
           break;
@@ -232,8 +237,8 @@ class BlockReceiver implements Closeable {
         case TRANSFER_RBW:
         case TRANSFER_FINALIZED:
           // this is a transfer destination
-          replicaHandler =
-              datanode.data.createTemporary(storageType, block);
+          replicaHandler = datanode.data.createTemporary(storageType, storageId,
+              block, isTransfer);
           break;
         default: throw new IOException("Unsupported stage " + stage + 
               " while receiving block " + block + " from " + inAddr);
@@ -543,6 +548,9 @@ class BlockReceiver implements Closeable {
     // avoid double sync'ing on close
     if (syncBlock && lastPacketInBlock) {
       this.syncOnClose = false;
+      // sync directory for finalize irrespective of syncOnClose config since
+      // sync is requested.
+      this.dirSyncOnFinalize = true;
     }
 
     // update received bytes
@@ -933,6 +941,7 @@ class BlockReceiver implements Closeable {
       boolean isReplaceBlock) throws IOException {
 
     syncOnClose = datanode.getDnConf().syncOnClose;
+    dirSyncOnFinalize = syncOnClose;
     boolean responderClosed = false;
     mirrorOut = mirrOut;
     mirrorAddr = mirrAddr;
@@ -975,7 +984,7 @@ class BlockReceiver implements Closeable {
           } else {
             // for isDatnode or TRANSFER_FINALIZED
             // Finalize the block.
-            datanode.data.finalizeBlock(block);
+            datanode.data.finalizeBlock(block, dirSyncOnFinalize);
           }
         }
         datanode.metrics.incrBlocksWritten();
@@ -1181,7 +1190,7 @@ class BlockReceiver implements Closeable {
     return handler;
   }
 
-  private static enum PacketResponderType {
+  private enum PacketResponderType {
     NON_PIPELINE, LAST_IN_PIPELINE, HAS_DOWNSTREAM_IN_PIPELINE
   }
 
@@ -1498,7 +1507,7 @@ class BlockReceiver implements Closeable {
         BlockReceiver.this.close();
         endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
         block.setNumBytes(replicaInfo.getNumBytes());
-        datanode.data.finalizeBlock(block);
+        datanode.data.finalizeBlock(block, dirSyncOnFinalize);
       }
 
       if (pinning) {

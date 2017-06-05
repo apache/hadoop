@@ -18,11 +18,14 @@
 package org.apache.hadoop.hdfs.net;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.net.InnerNode;
 import org.apache.hadoop.net.InnerNodeImpl;
 import org.apache.hadoop.net.Node;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -35,6 +38,9 @@ import java.util.HashMap;
  * in block placement.
  */
 public class DFSTopologyNodeImpl extends InnerNodeImpl {
+
+  public static final Logger LOG =
+      LoggerFactory.getLogger(DFSTopologyNodeImpl.class);
 
   static final InnerNodeImpl.Factory FACTORY
       = new DFSTopologyNodeImpl.Factory();
@@ -127,8 +133,68 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
     }
   }
 
+  /**
+   * Called when add() is called to add a node that already exist.
+   *
+   * In normal execution, nodes are added only once and this should not happen.
+   * However if node restarts, we may run into the case where the same node
+   * tries to add itself again with potentially different storage type info.
+   * In this case this method will update the meta data according to the new
+   * storage info.
+   *
+   * Note that it is important to also update all the ancestors if we do have
+   * updated the local node storage info.
+   *
+   * @param dnDescriptor the node that is added another time, with potentially
+   *                     different storage types.
+   */
+  private void updateExistingDatanode(DatanodeDescriptor dnDescriptor) {
+    if (childrenStorageInfo.containsKey(dnDescriptor.getName())) {
+      // all existing node should have an entry in childrenStorageInfo
+      boolean same = dnDescriptor.getStorageTypes().size()
+          == childrenStorageInfo.get(dnDescriptor.getName()).keySet().size();
+      for (StorageType type :
+          childrenStorageInfo.get(dnDescriptor.getName()).keySet()) {
+        same = same && dnDescriptor.hasStorageType(type);
+      }
+      if (same) {
+        // if the storage type hasn't been changed, do nothing.
+        return;
+      }
+      // not same means we need to update the storage info.
+      DFSTopologyNodeImpl parent = (DFSTopologyNodeImpl)getParent();
+      for (StorageType type :
+          childrenStorageInfo.get(dnDescriptor.getName()).keySet()) {
+        if (!dnDescriptor.hasStorageType(type)) {
+          // remove this type, because the new storage info does not have it.
+          // also need to remove decrement the count for all the ancestors.
+          // since this is the parent of n, where n is a datanode,
+          // the map must have 1 as the value of all keys
+          childrenStorageInfo.get(dnDescriptor.getName()).remove(type);
+          decStorageTypeCount(type);
+          if (parent != null) {
+            parent.childRemoveStorage(getName(), type);
+          }
+        }
+      }
+      for (StorageType type : dnDescriptor.getStorageTypes()) {
+        if (!childrenStorageInfo.get(dnDescriptor.getName())
+            .containsKey(type)) {
+          // there is a new type in new storage info, add this locally,
+          // as well as all ancestors.
+          childrenStorageInfo.get(dnDescriptor.getName()).put(type, 1);
+          incStorageTypeCount(type);
+          if (parent != null) {
+            parent.childAddStorage(getName(), type);
+          }
+        }
+      }
+    }
+  }
+
   @Override
   public boolean add(Node n) {
+    LOG.debug("adding node {}", n.getName());
     if (!isAncestor(n)) {
       throw new IllegalArgumentException(n.getName()
           + ", which is located at " + n.getNetworkLocation()
@@ -149,6 +215,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
         for(int i=0; i<children.size(); i++) {
           if (children.get(i).getName().equals(n.getName())) {
             children.set(i, n);
+            updateExistingDatanode(dnDescriptor);
             return false;
           }
         }
@@ -227,6 +294,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
 
   @Override
   public boolean remove(Node n) {
+    LOG.debug("removing node {}", n.getName());
     if (!isAncestor(n)) {
       throw new IllegalArgumentException(n.getName()
           + ", which is located at " + n.getNetworkLocation()
@@ -297,6 +365,75 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
         numOfLeaves--;
       }
       return isRemoved;
+    }
+  }
+
+  /**
+   * Called by a child node of the current node to increment a storage count.
+   *
+   * lock is needed as different datanodes may call recursively to modify
+   * the same parent.
+   * TODO : this may not happen at all, depending on how heartheat is processed
+   * @param childName the name of the child that tries to add the storage type
+   * @param type the type being incremented.
+   */
+  public synchronized void childAddStorage(
+      String childName, StorageType type) {
+    LOG.debug("child add storage: {}:{}", childName, type);
+    // childrenStorageInfo should definitely contain this node already
+    // because updateStorage is called after node added
+    Preconditions.checkArgument(childrenStorageInfo.containsKey(childName));
+    EnumMap<StorageType, Integer> typeCount =
+        childrenStorageInfo.get(childName);
+    if (typeCount.containsKey(type)) {
+      typeCount.put(type, typeCount.get(type) + 1);
+    } else {
+      // Please be aware that, the counts are always "number of datanodes in
+      // this subtree" rather than "number of storages in this storage".
+      // so if the caller is a datanode, it should always be this branch rather
+      // than the +1 branch above. This depends on the caller in
+      // DatanodeDescriptor to make sure only when a *new* storage type is added
+      // it calls this. (should not call this when a already existing storage
+      // is added).
+      // but no such restriction for inner nodes.
+      typeCount.put(type, 1);
+    }
+    if (storageTypeCounts.containsKey(type)) {
+      storageTypeCounts.put(type, storageTypeCounts.get(type) + 1);
+    } else {
+      storageTypeCounts.put(type, 1);
+    }
+    if (getParent() != null) {
+      ((DFSTopologyNodeImpl)getParent()).childAddStorage(getName(), type);
+    }
+  }
+
+  /**
+   * Called by a child node of the current node to decrement a storage count.
+   *
+   * @param childName the name of the child removing a storage type.
+   * @param type the type being removed.
+   */
+  public synchronized void childRemoveStorage(
+      String childName, StorageType type) {
+    LOG.debug("child remove storage: {}:{}", childName, type);
+    Preconditions.checkArgument(childrenStorageInfo.containsKey(childName));
+    EnumMap<StorageType, Integer> typeCount =
+        childrenStorageInfo.get(childName);
+    Preconditions.checkArgument(typeCount.containsKey(type));
+    if (typeCount.get(type) > 1) {
+      typeCount.put(type, typeCount.get(type) - 1);
+    } else {
+      typeCount.remove(type);
+    }
+    Preconditions.checkArgument(storageTypeCounts.containsKey(type));
+    if (storageTypeCounts.get(type) > 1) {
+      storageTypeCounts.put(type, storageTypeCounts.get(type) - 1);
+    } else {
+      storageTypeCounts.remove(type);
+    }
+    if (getParent() != null) {
+      ((DFSTopologyNodeImpl)getParent()).childRemoveStorage(getName(), type);
     }
   }
 }

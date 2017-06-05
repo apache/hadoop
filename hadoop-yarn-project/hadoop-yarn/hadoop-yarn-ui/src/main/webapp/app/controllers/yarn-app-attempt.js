@@ -19,10 +19,14 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
+  queryParams: ["service"],
+  service: undefined,
 
   breadcrumbs: Ember.computed("model.attempt.appId", function () {
     var appId = this.get("model.attempt.appId");
-    return [{
+    var attemptId = this.get("model.attempt.id");
+    var serviceName = this.get('service');
+    var breadcrumbs = [{
       text: "Home",
       routeName: 'application'
     },{
@@ -30,11 +34,31 @@ export default Ember.Controller.extend({
       routeName: 'yarn-apps.apps'
     }, {
       text: `App [${appId}]`,
-      routeName: 'yarn-app',
-      model: appId
+      href: `#/yarn-app/${appId}/info`
     }, {
-      text: "Attempt",
+      text: "Attempts",
+      href: `#/yarn-app/${appId}/attempts`
+    }, {
+      text: `Attempt [${attemptId}]`
     }];
+    if (serviceName) {
+      breadcrumbs = [{
+        text: "Home",
+        routeName: 'application'
+      }, {
+        text: "Services",
+        routeName: 'yarn-services'
+      }, {
+        text: `${serviceName} [${appId}]`,
+        href: `#/yarn-app/${appId}/info?service=${serviceName}`
+      }, {
+        text: "Attempts",
+        href: `#/yarn-app/${appId}/attempts?service=${serviceName}`
+      }, {
+        text: `Attempt [${attemptId}]`
+      }];
+    }
+    return breadcrumbs;
   })
 
 });

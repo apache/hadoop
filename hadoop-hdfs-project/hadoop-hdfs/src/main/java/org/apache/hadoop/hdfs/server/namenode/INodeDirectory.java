@@ -256,9 +256,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
     getDirectorySnapshottableFeature().setSnapshotQuota(snapshotQuota);
   }
 
-  public Snapshot addSnapshot(int id, String name) throws SnapshotException,
-      QuotaExceededException {
-    return getDirectorySnapshottableFeature().addSnapshot(this, id, name);
+  public Snapshot addSnapshot(int id, String name,
+      final LeaseManager leaseManager, final boolean captureOpenFiles)
+      throws SnapshotException, QuotaExceededException {
+    return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
+        leaseManager, captureOpenFiles);
   }
 
   public Snapshot removeSnapshot(
@@ -628,10 +630,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
   @Override
   public ContentSummaryComputationContext computeContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null && snapshotId == Snapshot.CURRENT_STATE_ID) {
-      sf.computeContentSummary4Snapshot(summary);
+      final ContentCounts counts = new ContentCounts.Builder().build();
+      // if the getContentSummary call is against a non-snapshot path, the
+      // computation should include all the deleted files/directories
+      sf.computeContentSummary4Snapshot(summary.getBlockStoragePolicySuite(),
+          counts);
+      summary.getCounts().addContents(counts);
+      // Also add ContentSummary to snapshotCounts (So we can extract it
+      // later from the ContentSummary of all).
+      summary.getSnapshotCounts().addContents(counts);
     }
     final DirectoryWithQuotaFeature q = getDirectoryWithQuotaFeature();
     if (q != null && snapshotId == Snapshot.CURRENT_STATE_ID) {

@@ -19,13 +19,16 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
@@ -46,6 +49,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -563,5 +568,129 @@ public class TestErasureCodingPolicies {
     assertEquals(ecPolicyOnFile, fs.getErasureCodingPolicy(filePath0));
     assertEquals(ecPolicyOnDir, fs.getErasureCodingPolicy(dirPath));
     fs.delete(dirPath, true);
+  }
+
+  /**
+   * Enforce file as replicated file without regarding its parent's EC policy.
+   */
+  @Test
+  public void testEnforceAsReplicatedFile() throws Exception {
+    final Path dirPath = new Path("/striped");
+    final Path filePath = new Path(dirPath, "file");
+
+    fs.mkdirs(dirPath);
+    fs.setErasureCodingPolicy(dirPath, EC_POLICY.getName());
+
+    final String ecPolicyName = "RS-10-4-64k";
+    fs.newFSDataOutputStreamBuilder(filePath).build().close();
+    assertEquals(EC_POLICY, fs.getErasureCodingPolicy(filePath));
+    fs.delete(filePath, true);
+
+    fs.newFSDataOutputStreamBuilder(filePath)
+        .setEcPolicyName(ecPolicyName)
+        .build()
+        .close();
+    assertEquals(ecPolicyName, fs.getErasureCodingPolicy(filePath).getName());
+    fs.delete(filePath, true);
+
+    try {
+      fs.newFSDataOutputStreamBuilder(filePath)
+          .setEcPolicyName(ecPolicyName)
+          .replicate()
+          .build().close();
+      Assert.fail("shouldReplicate and ecPolicyName are exclusive " +
+          "parameters. Set both is not allowed.");
+    }catch (Exception e){
+      GenericTestUtils.assertExceptionContains("shouldReplicate and " +
+          "ecPolicyName are exclusive parameters. Set both is not allowed!", e);
+    }
+
+    try {
+      final DFSClient dfsClient = fs.getClient();
+      dfsClient.create(filePath.toString(), null,
+          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE,
+              CreateFlag.SHOULD_REPLICATE), false, (short) 1, 1024, null, 1024,
+          null, null, ecPolicyName);
+      Assert.fail("SHOULD_REPLICATE flag and ecPolicyName are exclusive " +
+          "parameters. Set both is not allowed.");
+    }catch (Exception e){
+      GenericTestUtils.assertExceptionContains("SHOULD_REPLICATE flag and " +
+          "ecPolicyName are exclusive parameters. Set both is not allowed!", e);
+    }
+
+    fs.newFSDataOutputStreamBuilder(filePath)
+        .replicate()
+        .build()
+        .close();
+    assertNull(fs.getErasureCodingPolicy(filePath));
+    fs.delete(dirPath, true);
+  }
+
+  @Test
+  public void testGetAllErasureCodingCodecs() throws Exception {
+    HashMap<String, String> allECCodecs = fs
+        .getAllErasureCodingCodecs();
+    assertTrue("At least 3 system codecs should be enabled",
+        allECCodecs.size() >= 3);
+    System.out.println("Erasure Coding Codecs: Codec [Coder List]");
+    for (String codec : allECCodecs.keySet()) {
+      String coders = allECCodecs.get(codec);
+      if (codec != null && coders != null) {
+        System.out.println("\t" + codec.toUpperCase() + "["
+            + coders.toUpperCase() + "]");
+      }
+    }
+  }
+
+  @Test
+  public void testAddErasureCodingPolicies() throws Exception {
+    // Test nonexistent codec name
+    ECSchema toAddSchema = new ECSchema("testcodec", 3, 2);
+    ErasureCodingPolicy newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 128 * 1024);
+    ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[]{newPolicy};
+    AddECPolicyResponse[] responses =
+        fs.addErasureCodingPolicies(policyArray);
+    assertEquals(1, responses.length);
+    assertFalse(responses[0].isSucceed());
+
+    // Test too big cell size
+    toAddSchema = new ECSchema("rs", 3, 2);
+    newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 128 * 1024 * 1024);
+    policyArray = new ErasureCodingPolicy[]{newPolicy};
+    responses = fs.addErasureCodingPolicies(policyArray);
+    assertEquals(1, responses.length);
+    assertFalse(responses[0].isSucceed());
+
+    // Test other invalid cell size
+    toAddSchema = new ECSchema("rs", 3, 2);
+    int[] cellSizes = {0, -1, 1023};
+    for (int cellSize: cellSizes) {
+      try {
+        new ErasureCodingPolicy(toAddSchema, cellSize);
+        Assert.fail("Invalid cell size should be detected.");
+      } catch (Exception e){
+        GenericTestUtils.assertExceptionContains("cellSize must be", e);
+      }
+    }
+
+    // Test duplicate policy
+    ErasureCodingPolicy policy0 =
+        SystemErasureCodingPolicies.getPolicies().get(0);
+    policyArray  = new ErasureCodingPolicy[]{policy0};
+    responses = fs.addErasureCodingPolicies(policyArray);
+    assertEquals(1, responses.length);
+    assertFalse(responses[0].isSucceed());
+
+    // Test add policy successfully
+    newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 1 * 1024 * 1024);
+    policyArray  = new ErasureCodingPolicy[]{newPolicy};
+    responses = fs.addErasureCodingPolicies(policyArray);
+    assertEquals(1, responses.length);
+    assertTrue(responses[0].isSucceed());
+    assertEquals(SystemErasureCodingPolicies.getPolicies().size() + 1,
+        ErasureCodingPolicyManager.getInstance().getPolicies().length);
   }
 }

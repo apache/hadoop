@@ -1123,7 +1123,7 @@ public class TestFileCreation {
     doCreateTest(CreationMethod.PATH_FROM_URI);
   }
   
-  private static enum CreationMethod {
+  private enum CreationMethod {
     DIRECT_NN_RPC,
     PATH_FROM_URI,
     PATH_FROM_STRING

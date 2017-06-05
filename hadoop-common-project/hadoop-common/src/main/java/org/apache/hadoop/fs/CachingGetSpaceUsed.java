@@ -65,6 +65,9 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
    *
    * @param path        the path to check disk usage in
    * @param interval    refresh the disk usage at this interval
+   * @param jitter      randomize the refresh interval timing by this amount;
+   *                    the actual interval will be chosen uniformly between
+   *                    {@code interval-jitter} and {@code interval+jitter}
    * @param initialUsed use this value until next refresh
    * @throws IOException if we fail to refresh the disk usage
    */

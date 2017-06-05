@@ -134,7 +134,7 @@ public class TestAMSimulator {
     String queue = "default";
     List<ContainerSimulator> containers = new ArrayList<>();
     app.init(1, 1000, containers, rm, null, 0, 1000000L, "user1", queue,
-        true, appId);
+        true, appId, null, 0);
     app.firstStep();
 
     verifySchedulerMetrics(appId);

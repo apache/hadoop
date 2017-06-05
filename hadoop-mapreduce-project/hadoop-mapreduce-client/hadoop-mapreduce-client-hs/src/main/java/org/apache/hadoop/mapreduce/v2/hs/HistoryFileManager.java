@@ -87,7 +87,7 @@ public class HistoryFileManager extends AbstractService {
   private static final Log LOG = LogFactory.getLog(HistoryFileManager.class);
   private static final Log SUMMARY_LOG = LogFactory.getLog(JobSummary.class);
 
-  private static enum HistoryInfoState {
+  private enum HistoryInfoState {
     IN_INTERMEDIATE, IN_DONE, DELETED, MOVE_FAILED
   };
   
@@ -407,17 +407,12 @@ public class HistoryFileManager extends AbstractService {
         }
         JobId jobId = jobIndexInfo.getJobId();
 
-        List<Path> paths = new ArrayList<Path>(2);
         if (historyFile == null) {
           LOG.info("No file for job-history with " + jobId + " found in cache!");
-        } else {
-          paths.add(historyFile);
         }
 
         if (confFile == null) {
           LOG.info("No file for jobConf with " + jobId + " found in cache!");
-        } else {
-          paths.add(confFile);
         }
 
         if (summaryFile == null || !intermediateDoneDirFc.util().exists(

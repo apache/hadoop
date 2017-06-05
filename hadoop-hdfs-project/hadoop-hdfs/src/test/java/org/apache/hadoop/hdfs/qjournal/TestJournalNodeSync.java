@@ -57,6 +57,7 @@ public class TestJournalNodeSync {
   @Before
   public void setUpMiniCluster() throws IOException {
     final Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_JOURNALNODE_SYNC_INTERVAL_KEY, 1000L);
     qjmhaCluster = new MiniQJMHACluster.Builder(conf).setNumNameNodes(2)
       .build();

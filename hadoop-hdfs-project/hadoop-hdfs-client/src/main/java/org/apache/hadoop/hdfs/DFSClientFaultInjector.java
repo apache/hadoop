@@ -57,4 +57,8 @@ public class DFSClientFaultInjector {
   public void fetchFromDatanodeException() {}
 
   public void readFromDatanodeDelay() {}
+
+  public boolean skipRollingRestartWait() {
+    return false;
+  }
 }

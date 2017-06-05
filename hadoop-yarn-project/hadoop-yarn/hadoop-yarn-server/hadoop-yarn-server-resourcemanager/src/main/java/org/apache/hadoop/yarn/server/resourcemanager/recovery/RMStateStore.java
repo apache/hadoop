@@ -1129,18 +1129,18 @@ public abstract class RMStateStore extends AbstractService {
       Exception failureCause) {
     boolean isFenced = false;
     LOG.error("State store operation failed ", failureCause);
+
     if (HAUtil.isHAEnabled(getConfig())) {
-      LOG.warn("State-store fenced ! Transitioning RM to standby");
+      rmDispatcher.getEventHandler().handle(
+          new RMFatalEvent(RMFatalEventType.STATE_STORE_FENCED,
+              failureCause));
       isFenced = true;
-      resourceManager.handleTransitionToStandByInNewThread();
-    } else if (YarnConfiguration.shouldRMFailFast(getConfig())) {
-      LOG.fatal("Fail RM now due to state-store error!");
+    } else {
       rmDispatcher.getEventHandler().handle(
           new RMFatalEvent(RMFatalEventType.STATE_STORE_OP_FAILED,
               failureCause));
-    } else {
-      LOG.warn("Skip the state-store error.");
     }
+
     return isFenced;
   }
  

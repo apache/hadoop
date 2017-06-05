@@ -473,9 +473,16 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         }
       } else if (key[prefixlen] == OTHER_INFO_COLUMN[0]) {
         if (otherInfo) {
-          entity.addOtherInfo(
-              parseRemainingKey(key, prefixlen + OTHER_INFO_COLUMN.length),
-              fstConf.asObject(iterator.peekNext().getValue()));
+          Object o = null;
+          String keyStr = parseRemainingKey(key,
+              prefixlen + OTHER_INFO_COLUMN.length);
+          try {
+            o = fstConf.asObject(iterator.peekNext().getValue());
+            entity.addOtherInfo(keyStr, o);
+          } catch (Exception e) {
+            LOG.warn("Error while decoding "
+                + entityId + ":otherInfo:" + keyStr, e);
+          }
         }
       } else if (key[prefixlen] == RELATED_ENTITIES_COLUMN[0]) {
         if (relatedEntities) {
@@ -1338,7 +1345,12 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       TimelineEvent event = new TimelineEvent();
       event.setTimestamp(ts);
       event.setEventType(tstype);
-      Object o = fstConf.asObject(value);
+      Object o = null;
+      try {
+        o = fstConf.asObject(value);
+      } catch (Exception e) {
+        LOG.warn("Error while decoding " + tstype, e);
+      }
       if (o == null) {
         event.setEventInfo(null);
       } else if (o instanceof Map) {
@@ -1362,8 +1374,13 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     KeyParser kp = new KeyParser(key, offset);
     String name = kp.getNextString();
     byte[] bytes = kp.getRemainingBytes();
-    Object value = fstConf.asObject(bytes);
-    entity.addPrimaryFilter(name, value);
+    Object value = null;
+    try {
+      value = fstConf.asObject(bytes);
+      entity.addPrimaryFilter(name, value);
+    } catch (Exception e) {
+      LOG.warn("Error while decoding " + name, e);
+    }
   }
 
   /**

@@ -58,7 +58,7 @@ public class HdfsFileStatus {
   public static final byte[] EMPTY_NAME = new byte[0];
 
   /**
-   * Constructor
+   * Constructor.
    * @param length the number of bytes the file has
    * @param isdir if the path is a directory
    * @param block_replication the replication factor
@@ -68,9 +68,13 @@ public class HdfsFileStatus {
    * @param permission permission
    * @param owner the owner of the path
    * @param group the group of the path
+   * @param symlink symlink target encoded in java UTF8 or null
    * @param path the local name in java UTF8 encoding the same as that in-memory
    * @param fileId the file id
+   * @param childrenNum the number of children. Used by directory.
    * @param feInfo the file's encryption info
+   * @param storagePolicy ID which specifies storage policy
+   * @param ecPolicy the erasure coding policy
    */
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
       long blocksize, long modification_time, long access_time,
@@ -157,7 +161,7 @@ public class HdfsFileStatus {
 
   /**
    * Get FsPermission associated with the file.
-   * @return permssion
+   * @return permission
    */
   public final FsPermission getPermission() {
     return permission;
@@ -180,7 +184,7 @@ public class HdfsFileStatus {
   }
 
   /**
-   * Check if the local name is empty
+   * Check if the local name is empty.
    * @return true if the name is empty
    */
   public final boolean isEmptyLocalName() {
@@ -188,7 +192,7 @@ public class HdfsFileStatus {
   }
 
   /**
-   * Get the string representation of the local name
+   * Get the string representation of the local name.
    * @return the local name in string
    */
   public final String getLocalName() {
@@ -196,7 +200,7 @@ public class HdfsFileStatus {
   }
 
   /**
-   * Get the Java UTF8 representation of the local name
+   * Get the Java UTF8 representation of the local name.
    * @return the local name in java UTF8
    */
   public final byte[] getLocalNameInBytes() {
@@ -204,7 +208,7 @@ public class HdfsFileStatus {
   }
 
   /**
-   * Get the string representation of the full path name
+   * Get the string representation of the full path name.
    * @param parent the parent path
    * @return the full path in string
    */
@@ -222,7 +226,7 @@ public class HdfsFileStatus {
   }
 
   /**
-   * Get the full path
+   * Get the full path.
    * @param parent the parent path
    * @return the full path
    */
@@ -254,6 +258,10 @@ public class HdfsFileStatus {
     return feInfo;
   }
 
+  /**
+   * Get the erasure coding policy if it's set.
+   * @return the erasure coding policy
+   */
   public ErasureCodingPolicy getErasureCodingPolicy() {
     return ecPolicy;
   }

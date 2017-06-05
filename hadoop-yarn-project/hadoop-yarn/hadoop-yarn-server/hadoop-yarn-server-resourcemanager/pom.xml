@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha3-SNAPSHOT</version>
+    <version>3.0.0-alpha4-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-  <version>3.0.0-alpha3-SNAPSHOT</version>
+  <version>3.0.0-alpha4-SNAPSHOT</version>
   <name>Apache Hadoop YARN ResourceManager</name>
 
   <properties>
@@ -347,6 +347,7 @@
             <exclude>src/test/resources/submit-reservation.json</exclude>
             <exclude>src/test/resources/delete-reservation.json</exclude>
             <exclude>src/test/resources/update-reservation.json</exclude>
+            <exclude>src/test/resources/invariants.txt</exclude>
           </excludes>
         </configuration>
       </plugin>

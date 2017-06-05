@@ -144,6 +144,25 @@
       </comparators>
     </test>
 
+    <test>
+      <description>help: addPolicies command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help addPolicies</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Add a list of erasure coding policies</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>[-addPolicies -policyFile &lt;file&gt;]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   <!-- Test erasure code commands -->
     <test>
       <description>setPolicy : set erasure coding policy on a directory to encode files</description>
@@ -311,6 +330,25 @@
       </comparators>
     </test>
 
+    <test>
+      <description>addPolicies : add a list of ECPolicies</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -addPolicies -policyFile CLITEST_DATA/test_ec_policies.xml</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Add ErasureCodingPolicy XOR-2-1-128k succeed</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Add ErasureCodingPolicy RS-6-3-64k failed</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
 <!-- Test illegal parameters -->
     <test>
       <description>setPolicy : illegal parameters - path is missing</description>
@@ -473,5 +511,64 @@
       </comparators>
     </test>
 
+    <test>
+      <description>addPolicies : illegal parameters - policyFile is missing</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -addPolicies /etc</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Please specify the path with -policyFile</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>addPolicies : illegal parameters - too many parameters</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -addPolicies -policyFile /ecdir /ecdir2</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-addPolicies: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listCodecs : illegal parameters - too many parameters</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listCodecs /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-listCodecs: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listCodecs : successful list codecs</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listCodecs</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Erasure Coding Codecs: Codec [Coder List]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

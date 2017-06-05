@@ -54,6 +54,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.junit.After;
@@ -200,7 +202,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
     // so it transitions to standby.
     ResourceManager rm = cluster.getResourceManager(
         cluster.getActiveRMIndex());
-    rm.handleTransitionToStandByInNewThread();
+    rm.getRMContext().getDispatcher().getEventHandler().handle(
+        new RMFatalEvent(RMFatalEventType.STATE_STORE_FENCED, "test"));
     verifyRMTransitionToStandby(rm);
     verifyConnections();
   }

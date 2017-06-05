@@ -509,8 +509,8 @@ public class TestCheckpoint {
       Mockito.reset(faultInjector);
       secondary.shutdown(); // secondary namenode crash!
 
-      // start new instance of secondary and verify that 
-      // a new rollEditLog suceedes inspite of the fact that 
+      // start new instance of secondary and verify that
+      // a new rollEditLog succeeds inspite of the fact that
       // edits.new already exists.
       //
       secondary = startSecondaryNameNode(conf);

@@ -31,8 +31,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.Authenticator;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -42,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Iterator;
 
 import static org.apache.hadoop.fs.azure.WasbRemoteCallHelper.REMOTE_CALL_SUCCESS_CODE;
 
@@ -90,6 +87,12 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   private static final String DELEGATION_TOKEN_QUERY_PARAM_NAME =
       "delegation";
 
+  /**
+   *  Query parameter name for sending owner of the specific resource {@value}
+   */
+  private static final String WASB_RESOURCE_OWNER_QUERY_PARAM_NAME =
+      "wasb_resource_owner";
+
   private WasbRemoteCallHelper remoteCallHelper = null;
   private String delegationToken;
   private boolean isSecurityEnabled;
@@ -104,15 +107,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   public void init(Configuration conf)
       throws WasbAuthorizationException, IOException {
     LOG.debug("Initializing RemoteWasbAuthorizerImpl instance");
-    Iterator<Token<? extends TokenIdentifier>> tokenIterator = null;
-    try {
-          delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
-    } catch (IOException e) {
-      final String msg = "Error in fetching the WASB delegation token";
-      LOG.error(msg, e);
-      throw new IOException(msg, e);
-    }
-
+    setDelegationToken();
     remoteAuthorizerServiceUrl = SecurityUtils
         .getRemoteAuthServiceUrls(conf);
 
@@ -130,9 +125,17 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   }
 
   @Override
-  public boolean authorize(String wasbAbsolutePath, String accessType)
+  public boolean authorize(String wasbAbsolutePath, String accessType, String resourceOwner)
       throws WasbAuthorizationException, IOException {
+
       try {
+
+        /* Make an exception for the internal -RenamePending files */
+        if (wasbAbsolutePath.endsWith(NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
+          return true;
+        }
+
+        setDelegationToken();
         URIBuilder uriBuilder = new URIBuilder(remoteAuthorizerServiceUrl);
         uriBuilder.setPath("/" + CHECK_AUTHORIZATION_OP);
         uriBuilder.addParameter(WASB_ABSOLUTE_PATH_QUERY_PARAM_NAME,
@@ -143,6 +146,10 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
           uriBuilder.addParameter(DELEGATION_TOKEN_QUERY_PARAM_NAME,
               delegationToken);
         }
+        if (resourceOwner != null && StringUtils.isNotEmpty(resourceOwner)) {
+          uriBuilder.addParameter(WASB_RESOURCE_OWNER_QUERY_PARAM_NAME,
+              resourceOwner);
+        }
 
         String responseBody = null;
         UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -152,10 +159,6 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
         } else {
           uriBuilder.addParameter(Constants.DOAS_PARAM, ugi.getShortUserName());
         }
-        if (isSecurityEnabled && !connectUgi.hasKerberosCredentials()) {
-          connectUgi = UserGroupInformation.getLoginUser();
-        }
-        connectUgi.checkTGTAndReloginFromKeytab();
 
         try {
           responseBody = connectUgi
@@ -203,13 +206,17 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
           return authorizerResponse.getAuthorizationResult();
         } else {
           throw new WasbAuthorizationException("Remote authorization"
-              + " serivce encountered an error "
+              + " service encountered an error "
               + authorizerResponse.getResponseMessage());
         }
       } catch (URISyntaxException | WasbRemoteCallException
           | JsonParseException | JsonMappingException ex) {
         throw new WasbAuthorizationException(ex);
       }
+  }
+
+  private void setDelegationToken() throws IOException {
+    this.delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
   }
 }
 
@@ -220,7 +227,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
  * response in the following JSON format
  * {
  *    "responseCode" : 0 or non-zero <int>,
- *    "responseMessage" : relavant message of failure <String>
+ *    "responseMessage" : relevant message of failure <String>
  *    "authorizationResult" : authorization result <boolean>
  *                            true - if auhorization allowed
  *                            false - otherwise.

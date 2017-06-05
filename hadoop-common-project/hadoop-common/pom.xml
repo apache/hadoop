@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.0.0-alpha3-SNAPSHOT</version>
+    <version>3.0.0-alpha4-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-common</artifactId>
-  <version>3.0.0-alpha3-SNAPSHOT</version>
+  <version>3.0.0-alpha4-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -322,6 +322,11 @@
       <groupId>com.fasterxml</groupId>
       <artifactId>aalto-xml</artifactId>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>mockwebserver</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

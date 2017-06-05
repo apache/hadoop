@@ -72,7 +72,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     LogFactory.getLog(FileInputFormat.class);
   
   @Deprecated
-  public static enum Counter { 
+  public enum Counter {
     BYTES_READ
   }
 

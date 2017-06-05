@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.List;
@@ -1092,19 +1094,28 @@ public class Journal implements Closeable {
     committedTxnId.set(startTxId - 1);
   }
 
-  synchronized boolean renameTmpSegment(File tmpFile, File finalFile,
+  synchronized boolean moveTmpSegmentToCurrent(File tmpFile, File finalFile,
       long endTxId) throws IOException {
     final boolean success;
     if (endTxId <= committedTxnId.get()) {
-      success = tmpFile.renameTo(finalFile);
-      if (!success) {
-        LOG.warn("Unable to rename edits file from " + tmpFile + " to " +
+      if (!finalFile.getParentFile().exists()) {
+        LOG.error(finalFile.getParentFile() + " doesn't exist. Aborting tmp " +
+            "segment move to current directory");
+        return false;
+      }
+      Files.move(tmpFile.toPath(), finalFile.toPath(),
+          StandardCopyOption.ATOMIC_MOVE);
+      if (finalFile.exists() && FileUtil.canRead(finalFile)) {
+        success = true;
+      } else {
+        success = false;
+        LOG.warn("Unable to move edits file from " + tmpFile + " to " +
             finalFile);
       }
     } else {
       success = false;
       LOG.error("The endTxId of the temporary file is not less than the " +
-          "last committed transaction id. Aborting renaming to final file" +
+          "last committed transaction id. Aborting move to final file" +
           finalFile);
     }
 

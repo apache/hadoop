@@ -2022,6 +2022,17 @@
 </property>
 
 <property>
+  <name>dfs.datanode.fileio.profiling.sampling.percentage</name>
+  <value>0</value>
+  <description>
+    This setting controls the percentage of file I/O events which will be
+    profiled for DataNode disk statistics. The default value of 0 disables
+    disk statistics. Set to an integer value between 1 and 100 to enable disk
+    statistics.
+  </description>
+</property>
+
+<property>
   <name>hadoop.user.group.metrics.percentiles.intervals</name>
   <value></value>
   <description>
@@ -2740,7 +2751,11 @@
   <name>dfs.namenode.lock.detailed-metrics.enabled</name>
   <value>false</value>
   <description>If true, the namenode will keep track of how long various
-    operations hold the Namesystem lock for and emit this as metrics.
+    operations hold the Namesystem lock for and emit this as metrics. These
+    metrics have names of the form FSN(Read|Write)LockNanosOperationName,
+    where OperationName denotes the name of the operation that initiated the
+    lock hold (this will be OTHER for certain uncategorized operations) and
+    they export the hold time values in nanoseconds.
   </description>
 </property>
 
@@ -2935,6 +2950,13 @@
     The NameNode will enforce this when setting an erasure coding policy
     on a directory. By default, none of the built-in erasure coding
     policies are enabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.ec.policies.max.cellsize</name>
+  <value>4194304</value>
+  <description>The maximum cell size of erasure coding policy. Default is 4MB.
   </description>
 </property>
 
@@ -3824,7 +3846,7 @@
 
 <property>
   <name>dfs.journalnode.enable.sync</name>
-  <value>true</value>
+  <value>false</value>
   <description>
     If true, the journal nodes wil sync with each other. The journal nodes
     will periodically gossip with other journal nodes to compare edit log
@@ -4150,6 +4172,23 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.namenode.snapshot.capture.openfiles</name>
+    <value>false</value>
+    <description>
+      If true, snapshots taken will have an immutable shared copy of
+      the open files that have valid leases. Even after the open files
+      grow or shrink in size, snapshot will always have the previous
+      point-in-time version of the open files, just like all other
+      closed files. Default is false.
+      Note: The file length captured for open files in snapshot is
+      whats recorded in NameNode at the time of snapshot and it may
+      be shorter than what the client has written till then. In order
+      to capture the latest length, the client can call hflush/hsync
+      with the flag SyncFlag.UPDATE_LENGTH on the open files handles.
+    </description>
+  </property>
+
 <property>
   <name>dfs.pipeline.ecn</name>
   <value>false</value>
@@ -4470,6 +4509,14 @@
       then the disk is declared as failed. This setting supports
       multiple time unit suffixes as described in dfs.heartbeat.interval.
       If no suffix is specified then milliseconds is assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.use.dfs.network.topology</name>
+    <value>false</value>
+    <description>
+      Enables DFSNetworkTopology to choose nodes for placing replicas.
     </description>
   </property>
 

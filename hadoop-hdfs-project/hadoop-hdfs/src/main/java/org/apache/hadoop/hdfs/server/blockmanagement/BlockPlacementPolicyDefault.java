@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -713,13 +714,28 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     boolean badTarget = false;
     DatanodeStorageInfo firstChosen = null;
     while (numOfReplicas > 0) {
-      DatanodeDescriptor chosenNode = chooseDataNode(scope, excludedNodes);
+      // the storage type that current node has
+      StorageType includeType = null;
+      DatanodeDescriptor chosenNode = null;
+      if (clusterMap instanceof DFSNetworkTopology) {
+        for (StorageType type : storageTypes.keySet()) {
+          chosenNode = chooseDataNode(scope, excludedNodes, type);
+
+          if (chosenNode != null) {
+            includeType = type;
+            break;
+          }
+        }
+      } else {
+        chosenNode = chooseDataNode(scope, excludedNodes);
+      }
+
       if (chosenNode == null) {
         break;
       }
       Preconditions.checkState(excludedNodes.add(chosenNode), "chosenNode "
           + chosenNode + " is already in excludedNodes " + excludedNodes);
-      if (LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled() && builder != null) {
         builder.append("\nNode ").append(NodeBase.getPath(chosenNode))
             .append(" [");
       }
@@ -729,6 +745,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
             .entrySet().iterator(); iter.hasNext();) {
           Map.Entry<StorageType, Integer> entry = iter.next();
+
+          // If there is one storage type the node has already contained,
+          // then no need to loop through other storage type.
+          if (includeType != null && entry.getKey() != includeType) {
+            continue;
+          }
+
           storage = chooseStorage4Block(
               chosenNode, blocksize, results, entry.getKey());
           if (storage != null) {
@@ -748,7 +771,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           }
         }
 
-        if (LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled() && builder != null) {
           builder.append("\n]");
         }
 
@@ -779,6 +802,17 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected DatanodeDescriptor chooseDataNode(final String scope,
       final Collection<Node> excludedNodes) {
     return (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNodes);
+  }
+
+  /**
+   * Choose a datanode from the given <i>scope</i> with specified
+   * storage type.
+   * @return the chosen node, if there is any.
+   */
+  protected DatanodeDescriptor chooseDataNode(final String scope,
+      final Collection<Node> excludedNodes, StorageType type) {
+    return (DatanodeDescriptor) ((DFSNetworkTopology) clusterMap)
+        .chooseRandomWithStorageTypeTwoTrial(scope, excludedNodes, type);
   }
 
   /**

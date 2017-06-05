@@ -352,6 +352,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY = "dfs.namenode.startup.delay.block.deletion.sec";
   public static final long    DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT = 0L;
 
+  public static final String DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES =
+      HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES;
+  public static final boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT =
+      HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT;
+
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;
@@ -565,6 +570,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_NAMENODE_EC_POLICIES_ENABLED_KEY = "dfs.namenode.ec.policies.enabled";
   public static final String  DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT = "";
+  public static final String  DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_KEY = "dfs.namenode.ec.policies.max.cellsize";
+  public static final int     DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_DEFAULT = 4 * 1024 * 1024;
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_KEY = "dfs.datanode.ec.reconstruction.stripedread.threads";
   public static final int     DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_DEFAULT = 20;
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY = "dfs.datanode.ec.reconstruction.stripedread.buffer.size";
@@ -726,10 +733,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_DEFAULT = false;
   public static final String
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY =
-      "dfs.datanode.fileio.profiling.sampling.fraction";
-  public static final double
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT = 0.0;
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY =
+      "dfs.datanode.fileio.profiling.sampling.percentage";
+  public static final int
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT = 0;
 
   //Keys with no defaults
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
@@ -1079,6 +1086,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String HTTPFS_BUFFER_SIZE_KEY =
       "httpfs.buffer.size";
   public static final int HTTP_BUFFER_SIZE_DEFAULT = 4096;
+
+  public static final String DFS_USE_DFS_NETWORK_TOPOLOGY_KEY =
+      "dfs.use.dfs.network.topology";
+  public static final boolean DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT = false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated

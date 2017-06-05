@@ -29,8 +29,8 @@ import java.nio.ByteBuffer;
 public class TestDummyRawCoder extends TestRawCoderBase {
   @Before
   public void setup() {
-    encoderClass = DummyRawEncoder.class;
-    decoderClass = DummyRawDecoder.class;
+    encoderFactoryClass = DummyRawErasureCoderFactory.class;
+    decoderFactoryClass = DummyRawErasureCoderFactory.class;
     setAllowDump(false);
     setChunkSize(baseChunkSize);
   }

@@ -251,7 +251,7 @@ abstract public class ViewFileSystemBaseTest {
         fsTarget.isFile(new Path(targetTestRoot,"user/foo")));
     
     // Delete the created file
-    Assert.assertTrue("Delete should suceed",
+    Assert.assertTrue("Delete should succeed",
         fsView.delete(new Path("/user/foo"), false));
     Assert.assertFalse("File should not exist after delete",
         fsView.exists(new Path("/user/foo")));
@@ -266,7 +266,7 @@ abstract public class ViewFileSystemBaseTest {
         fsTarget.isFile(new Path(targetTestRoot,"dir2/foo")));
     
     // Delete the created file
-    Assert.assertTrue("Delete should suceed",
+    Assert.assertTrue("Delete should succeed",
         fsView.delete(new Path("/internalDir/linkToDir2/foo"), false));
     Assert.assertFalse("File should not exist after delete",
         fsView.exists(new Path("/internalDir/linkToDir2/foo")));
@@ -370,7 +370,7 @@ abstract public class ViewFileSystemBaseTest {
   public void testRenameAcrossMounts1() throws IOException {
     fileSystemTestHelper.createFile(fsView, "/user/foo");
     fsView.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
-    /* - code if we had wanted this to suceed
+    /* - code if we had wanted this to succeed
     Assert.assertFalse(fSys.exists(new Path("/user/foo")));
     Assert.assertFalse(fSysLocal.exists(new Path(targetTestRoot,"user/foo")));
     Assert.assertTrue(fSys.isFile(FileSystemTestHelper.getTestRootPath(fSys,"/user2/fooBarBar")));

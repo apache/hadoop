@@ -63,7 +63,7 @@ public enum Content {
   public static class CountsMap
       extends EnumCounters.Map<CountsMap.Key, Content, Counts> {
     /** The key type of the map. */
-    public static enum Key { CURRENT, SNAPSHOT }
+    public enum Key { CURRENT, SNAPSHOT }
 
     CountsMap() {
       super(FACTORY);

@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -186,6 +187,11 @@ public class DatanodeManager {
    */
   private final boolean dataNodeDiskStatsEnabled;
 
+  /**
+   * If we use DfsNetworkTopology to choose nodes for placing replicas.
+   */
+  private final boolean useDfsNetworkTopology;
+
   @Nullable
   private final SlowPeerTracker slowPeerTracker;
   @Nullable
@@ -205,8 +211,17 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-     
-    networktopology = NetworkTopology.getInstance(conf);
+
+    // TODO: Enables DFSNetworkTopology by default after more stress
+    // testings/validations.
+    this.useDfsNetworkTopology = conf.getBoolean(
+        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
+        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
+    if (useDfsNetworkTopology) {
+      networktopology = DFSNetworkTopology.getInstance(conf);
+    } else {
+      networktopology = NetworkTopology.getInstance(conf);
+    }
 
     this.heartbeatManager = new HeartbeatManager(namesystem, blockManager, conf);
     this.decomManager = new DecommissionManager(namesystem, blockManager,
@@ -215,9 +230,10 @@ public class DatanodeManager {
     this.dataNodePeerStatsEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
-    this.dataNodeDiskStatsEnabled = Util.isDiskStatsEnabled(conf.getDouble(
-        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
-        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT));
+    this.dataNodeDiskStatsEnabled = Util.isDiskStatsEnabled(conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
+        DFSConfigKeys.
+            DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT));
 
     final Timer timer = new Timer();
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
@@ -626,10 +642,11 @@ public class DatanodeManager {
       String format, Object... args) throws UnregisteredNodeException {
     storageIDs = storageIDs == null ? new String[0] : storageIDs;
     if (datanodeID.length != storageIDs.length) {
+      // Error for pre-2.0.0-alpha clients.
       final String err = (storageIDs.length == 0?
           "Missing storageIDs: It is likely that the HDFS client,"
           + " who made this call, is running in an older version of Hadoop"
-          + " which does not support storageIDs."
+          + "(pre-2.0.0-alpha)  which does not support storageIDs."
           : "Length mismatched: storageIDs.length=" + storageIDs.length + " != "
           ) + " datanodeID.length=" + datanodeID.length;
       throw new HadoopIllegalArgumentException(
@@ -1424,6 +1441,9 @@ public class DatanodeManager {
     final boolean listEnteringMaintenanceNodes =
         type == DatanodeReportType.ALL ||
         type == DatanodeReportType.ENTERING_MAINTENANCE;
+    final boolean listInMaintenanceNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.IN_MAINTENANCE;
 
     ArrayList<DatanodeDescriptor> nodes;
     final HostSet foundNodes = new HostSet();
@@ -1436,11 +1456,13 @@ public class DatanodeManager {
         final boolean isDead = isDatanodeDead(dn);
         final boolean isDecommissioning = dn.isDecommissionInProgress();
         final boolean isEnteringMaintenance = dn.isEnteringMaintenance();
+        final boolean isInMaintenance = dn.isInMaintenance();
 
         if (((listLiveNodes && !isDead) ||
             (listDeadNodes && isDead) ||
             (listDecommissioningNodes && isDecommissioning) ||
-            (listEnteringMaintenanceNodes && isEnteringMaintenance)) &&
+            (listEnteringMaintenanceNodes && isEnteringMaintenance) ||
+            (listInMaintenanceNodes && isInMaintenance)) &&
             hostConfigManager.isIncluded(dn)) {
           nodes.add(dn);
         }

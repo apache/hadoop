@@ -145,11 +145,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   private static final int SLEEP_AFTER_FAILURE_TO_BECOME_ACTIVE = 1000;
 
-  private static enum ConnectionState {
+  private enum ConnectionState {
     DISCONNECTED, CONNECTED, TERMINATED
   };
 
-  static enum State {
+  enum State {
     INIT, ACTIVE, STANDBY, NEUTRAL
   };
 

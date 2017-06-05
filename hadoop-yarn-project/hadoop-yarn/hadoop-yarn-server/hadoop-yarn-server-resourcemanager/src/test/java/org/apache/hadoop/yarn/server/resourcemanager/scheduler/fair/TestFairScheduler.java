@@ -874,6 +874,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     QueueInfo queueInfo = scheduler.getQueueInfo("queueA", false, false);
     Assert.assertEquals(0.25f, queueInfo.getCapacity(), 0.0f);
     Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
+    // test queueMetrics
+    Assert.assertEquals(0, queueInfo.getQueueStatistics()
+        .getAllocatedContainers());
+    Assert.assertEquals(0, queueInfo.getQueueStatistics()
+        .getAllocatedMemoryMB());
     queueInfo = scheduler.getQueueInfo("queueB", false, false);
     Assert.assertEquals(0.75f, queueInfo.getCapacity(), 0.0f);
     Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
@@ -889,9 +894,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     queueInfo = scheduler.getQueueInfo("queueA", false, false);
     Assert.assertEquals(0.25f, queueInfo.getCapacity(), 0.0f);
     Assert.assertEquals(0.5f, queueInfo.getCurrentCapacity(), 0.0f);
+    // test queueMetrics
+    Assert.assertEquals(1, queueInfo.getQueueStatistics()
+        .getAllocatedContainers());
+    Assert.assertEquals(1024, queueInfo.getQueueStatistics()
+        .getAllocatedMemoryMB());
     queueInfo = scheduler.getQueueInfo("queueB", false, false);
     Assert.assertEquals(0.75f, queueInfo.getCapacity(), 0.0f);
     Assert.assertEquals(1.0f, queueInfo.getCurrentCapacity(), 0.0f);
+    // test queueMetrics
+    Assert.assertEquals(1, queueInfo.getQueueStatistics()
+        .getAllocatedContainers());
+    Assert.assertEquals(6144, queueInfo.getQueueStatistics()
+        .getAllocatedMemoryMB());
   }
 
   @Test

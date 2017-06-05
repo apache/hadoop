@@ -20,12 +20,15 @@ package org.apache.hadoop.fs.s3a;
 
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
+import static org.junit.Assume.*;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 
@@ -48,19 +51,19 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   @Rule
   public TestName methodName = new TestName();
 
-  @Before
-  public void nameThread() {
+  private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
-  @Override
+  @Before
   public void setUp() throws Exception {
+    nameThread();
     Configuration conf = new Configuration();
 
     fs = S3ATestUtils.createTestFileSystem(conf);
+    assumeNotNull(fs);
     basePath = fs.makeQualified(
         S3ATestUtils.createTestPath(new Path("s3afilesystemcontract")));
-    super.setUp();
   }
 
   @Override
@@ -68,16 +71,14 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     return basePath;
   }
 
-  @Override
+  @Test
   public void testMkdirsWithUmask() throws Exception {
     // not supported
   }
 
-  @Override
+  @Test
   public void testRenameDirectoryAsExistingDirectory() throws Exception {
-    if (!renameSupported()) {
-      return;
-    }
+    assumeTrue(renameSupported());
 
     Path src = path("testRenameDirectoryAsExisting/dir");
     fs.mkdirs(src);
@@ -97,7 +98,7 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
         fs.exists(path(dst + "/subdir/file2")));
   }
 
-//  @Override
+  @Test
   public void testMoveDirUnderParent() throws Throwable {
     // not support because
     // Fails if dst is a directory that is not empty.

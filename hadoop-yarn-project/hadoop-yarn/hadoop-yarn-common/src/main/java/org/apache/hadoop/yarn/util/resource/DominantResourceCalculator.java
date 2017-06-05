@@ -239,4 +239,9 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return smaller.getMemorySize() <= bigger.getMemorySize()
         && smaller.getVirtualCores() <= bigger.getVirtualCores();
   }
+
+  @Override
+  public boolean isAnyMajorResourceZero(Resource resource) {
+    return resource.getMemorySize() == 0f || resource.getVirtualCores() == 0;
+  }
 }

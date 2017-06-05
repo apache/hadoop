@@ -25,6 +25,8 @@ import java.util.regex.Pattern;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 
+import org.apache.hadoop.util.StringUtils;
+
 /**
  * Tool for redacting sensitive information when displaying config parameters.
  *
@@ -42,7 +44,8 @@ public class ConfigRedactor {
     String sensitiveRegexList = conf.get(
         HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS,
         HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT);
-    List<String> sensitiveRegexes = Arrays.asList(sensitiveRegexList.split(","));
+    List<String> sensitiveRegexes =
+        Arrays.asList(StringUtils.getTrimmedStrings(sensitiveRegexList));
     compiledPatterns = new ArrayList<Pattern>();
     for (String regex : sensitiveRegexes) {
       Pattern p = Pattern.compile(regex);

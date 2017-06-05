@@ -21,11 +21,13 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 
 import com.google.common.collect.Lists;
 
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -47,6 +49,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -168,12 +171,17 @@ import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncrypt
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCodingPolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CodecProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
@@ -240,6 +248,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   private final static GetErasureCodingPoliciesRequestProto
       VOID_GET_EC_POLICIES_REQUEST = GetErasureCodingPoliciesRequestProto
+      .newBuilder().build();
+
+  private final static GetErasureCodingCodecsRequestProto
+      VOID_GET_EC_CODEC_REQUEST = GetErasureCodingCodecsRequestProto
       .newBuilder().build();
 
   public ClientNamenodeProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
@@ -1625,6 +1637,27 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
+  public AddECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies) throws IOException {
+    List<ErasureCodingPolicyProto> protos = Arrays.stream(policies)
+        .map(PBHelperClient::convertErasureCodingPolicy)
+        .collect(Collectors.toList());
+    AddErasureCodingPoliciesRequestProto req =
+        AddErasureCodingPoliciesRequestProto.newBuilder()
+        .addAllEcPolicies(protos).build();
+    try {
+      AddErasureCodingPoliciesResponseProto rep = rpcProxy
+          .addErasureCodingPolicies(null, req);
+      AddECPolicyResponse[] responses = rep.getResponsesList().stream()
+          .map(PBHelperClient::convertAddECPolicyResponse)
+          .toArray(AddECPolicyResponse[]::new);
+      return responses;
+    }  catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
   public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
     try {
       GetErasureCodingPoliciesResponseProto response = rpcProxy
@@ -1638,6 +1671,21 @@ public class ClientNamenodeProtocolTranslatorPB implements
             PBHelperClient.convertErasureCodingPolicy(ecPolicyProto);
       }
       return ecPolicies;
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    try {
+      GetErasureCodingCodecsResponseProto response = rpcProxy
+          .getErasureCodingCodecs(null, VOID_GET_EC_CODEC_REQUEST);
+      HashMap<String, String> ecCodecs = new HashMap<String, String>();
+      for (CodecProto codec : response.getCodecList()) {
+        ecCodecs.put(codec.getCodec(), codec.getCoders());
+      }
+      return ecCodecs;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

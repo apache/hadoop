@@ -171,6 +171,10 @@ public interface HdfsClientConfigKeys {
       "dfs.data.transfer.client.tcpnodelay";
   boolean DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT = true;
 
+  String DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES =
+      "dfs.namenode.snapshot.capture.openfiles";
+  boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT = false;
+
   /**
    * These are deprecated config keys to client code.
    */

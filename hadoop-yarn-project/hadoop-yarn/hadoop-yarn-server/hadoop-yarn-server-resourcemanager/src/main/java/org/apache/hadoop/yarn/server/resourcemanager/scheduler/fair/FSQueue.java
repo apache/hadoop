@@ -253,6 +253,9 @@ public abstract class FSQueue implements Queue, Schedulable {
     stats.setAllocatedVCores(getMetrics().getAllocatedVirtualCores());
     stats.setPendingVCores(getMetrics().getPendingVirtualCores());
     stats.setReservedVCores(getMetrics().getReservedVirtualCores());
+    stats.setAllocatedContainers(getMetrics().getAllocatedContainers());
+    stats.setPendingContainers(getMetrics().getPendingContainers());
+    stats.setReservedContainers(getMetrics().getReservedContainers());
     return stats;
   }
   
@@ -323,16 +326,23 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   /**
    * Recomputes the shares for all child queues and applications based on this
-   * queue's current share, and checks for starvation.
+   * queue's current share.
    *
-   * @param checkStarvation whether to check for fairshare or minshare
-   *                        starvation on update
+   * To be called holding the scheduler writelock.
    */
-  abstract void updateInternal(boolean checkStarvation);
+  abstract void updateInternal();
 
-  public void update(Resource fairShare, boolean checkStarvation) {
+  /**
+   * Set the queue's fairshare and update the demand/fairshare of child
+   * queues/applications.
+   *
+   * To be called holding the scheduler writelock.
+   *
+   * @param fairShare
+   */
+  public void update(Resource fairShare) {
     setFairShare(fairShare);
-    updateInternal(checkStarvation);
+    updateInternal();
   }
 
   /**

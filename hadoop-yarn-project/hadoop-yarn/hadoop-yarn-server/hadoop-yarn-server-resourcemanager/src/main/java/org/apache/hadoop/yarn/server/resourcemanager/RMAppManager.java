@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,7 +70,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
 
 /**
@@ -178,6 +179,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("state", app.getState())
           .add("trackingUrl", trackingUrl)
           .add("appMasterHost", host)
+          .add("submitTime", app.getSubmitTime())
           .add("startTime", app.getStartTime())
           .add("finishTime", app.getFinishTime())
           .add("finalStatus", app.getFinalApplicationStatus())
@@ -207,6 +209,17 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @VisibleForTesting
   public void logApplicationSummary(ApplicationId appId) {
     ApplicationSummary.logAppSummary(rmContext.getRMApps().get(appId));
+  }
+
+  private static <V> V getChecked(Future<V> future) throws YarnException {
+    try {
+      return future.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new YarnException(e);
+    } catch (ExecutionException e) {
+      throw new YarnException(e);
+    }
   }
 
   protected synchronized int getCompletedAppsListSize() {
@@ -640,7 +653,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       this.rmContext.getStateStore()
           .updateApplicationStateSynchronously(appState, false, future);
 
-      Futures.getChecked(future, YarnException.class);
+      getChecked(future);
 
       // update in-memory
       ((RMAppImpl) app).updateApplicationTimeout(newExpireTime);
@@ -677,7 +690,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         return;
       }
 
-      Futures.getChecked(future, YarnException.class);
+      getChecked(future);
 
       // update in-memory
       ((RMAppImpl) app).setApplicationPriority(appPriority);
@@ -760,7 +773,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         false, future);
 
     try {
-      Futures.getChecked(future, YarnException.class);
+      getChecked(future);
     } catch (YarnException ex) {
       if (!toSuppressException) {
         throw ex;

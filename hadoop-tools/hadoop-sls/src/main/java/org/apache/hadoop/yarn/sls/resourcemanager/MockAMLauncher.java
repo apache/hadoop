@@ -65,6 +65,11 @@ public class MockAMLauncher extends ApplicationMasterLauncher
     // Do nothing
   }
 
+  @Override
+  protected void serviceStop() throws Exception {
+    // Do nothing
+  }
+
   private void setupAMRMToken(RMAppAttempt appAttempt) {
     // Setup AMRMToken
     Token<AMRMTokenIdentifier> amrmToken =

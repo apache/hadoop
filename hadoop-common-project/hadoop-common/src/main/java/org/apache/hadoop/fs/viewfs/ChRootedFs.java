@@ -132,7 +132,7 @@ class ChRootedFs extends AbstractFileSystem {
    * Strip out the root from the path.
    * 
    * @param p - fully qualified path p
-   * @return -  the remaining path  without the begining /
+   * @return -  the remaining path  without the beginning /
    */
   public String stripOutRoot(final Path p) {
     try {

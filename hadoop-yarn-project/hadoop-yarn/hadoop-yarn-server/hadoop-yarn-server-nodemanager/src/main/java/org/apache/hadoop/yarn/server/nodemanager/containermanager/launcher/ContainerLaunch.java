@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
@@ -200,24 +201,19 @@ public class ContainerLaunch implements Callable<Integer> {
       FileContext lfs = FileContext.getLocalFSFileContext();
 
       Path nmPrivateContainerScriptPath = dirsHandler.getLocalPathForWrite(
-              getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-                  + CONTAINER_SCRIPT);
+          getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+              + CONTAINER_SCRIPT);
       Path nmPrivateTokensPath = dirsHandler.getLocalPathForWrite(
-              getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-                  + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
-                      containerIdStr));
+          getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+              containerIdStr));
       Path nmPrivateClasspathJarDir = dirsHandler.getLocalPathForWrite(
-              getContainerPrivateDir(appIdStr, containerIdStr));
+          getContainerPrivateDir(appIdStr, containerIdStr));
       DataOutputStream containerScriptOutStream = null;
       DataOutputStream tokensOutStream = null;
 
       // Select the working directory for the container
-      Path containerWorkDir =
-          dirsHandler.getLocalPathForWrite(ContainerLocalizer.USERCACHE
-              + Path.SEPARATOR + user + Path.SEPARATOR
-              + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
-              + Path.SEPARATOR + containerIdStr,
-              LocalDirAllocator.SIZE_UNKNOWN, false);
+      Path containerWorkDir = deriveContainerWorkDir();
       recordContainerWorkDir(containerID, containerWorkDir.toString());
 
       String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
@@ -246,27 +242,23 @@ public class ContainerLaunch implements Callable<Integer> {
           appDirs.add(new Path(appsdir, appIdStr));
         }
         containerScriptOutStream =
-          lfs.create(nmPrivateContainerScriptPath,
-              EnumSet.of(CREATE, OVERWRITE));
+            lfs.create(nmPrivateContainerScriptPath,
+                EnumSet.of(CREATE, OVERWRITE));
 
         // Set the token location too.
         environment.put(
-            ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME, 
+            ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME,
             new Path(containerWorkDir,
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
             containerLogDirs, localResources, nmPrivateClasspathJarDir);
 
-        exec.prepareContainer(new ContainerPrepareContext.Builder()
-            .setContainer(container)
-            .setLocalizedResources(localResources)
-            .setUser(user)
-            .setContainerLocalDirs(containerLocalDirs)
-            .setCommands(launchContext.getCommands()).build());
+        prepareContainer(localResources, containerLocalDirs);
+
         // Write out the environment
         exec.writeLaunchEnv(containerScriptOutStream, environment,
-          localResources, launchContext.getCommands(),
+            localResources, launchContext.getCommands(),
             new Path(containerLogDirs.get(0)), user);
         // /////////// End of writing out container-script
 
@@ -294,6 +286,14 @@ public class ContainerLaunch implements Callable<Integer> {
           .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs).build());
+    } catch (ConfigurationException e) {
+      LOG.error("Failed to launch container due to configuration error.", e);
+      dispatcher.getEventHandler().handle(new ContainerExitEvent(
+          containerID, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+          e.getMessage()));
+      // Mark the node as unhealthy
+      context.getNodeStatusUpdater().reportException(e);
+      return ret;
     } catch (Throwable e) {
       LOG.warn("Failed to launch container.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
@@ -306,6 +306,39 @@ public class ContainerLaunch implements Callable<Integer> {
 
     handleContainerExitCode(ret, containerLogDir);
     return ret;
+  }
+
+  private Path deriveContainerWorkDir() throws IOException {
+
+    final String containerWorkDirPath =
+        ContainerLocalizer.USERCACHE +
+        Path.SEPARATOR +
+        container.getUser() +
+        Path.SEPARATOR +
+        ContainerLocalizer.APPCACHE +
+        Path.SEPARATOR +
+        app.getAppId().toString() +
+        Path.SEPARATOR +
+        container.getContainerId().toString();
+
+    final Path containerWorkDir =
+        dirsHandler.getLocalPathForWrite(
+          containerWorkDirPath,
+          LocalDirAllocator.SIZE_UNKNOWN, false);
+
+    return containerWorkDir;
+  }
+
+  private void prepareContainer(Map<Path, List<String>> localResources,
+      List<String> containerLocalDirs) throws IOException {
+
+    exec.prepareContainer(new ContainerPrepareContext.Builder()
+        .setContainer(container)
+        .setLocalizedResources(localResources)
+        .setUser(container.getUser())
+        .setContainerLocalDirs(containerLocalDirs)
+        .setCommands(container.getLaunchContext().getCommands())
+        .build());
   }
 
   @SuppressWarnings("unchecked")
@@ -396,7 +429,8 @@ public class ContainerLaunch implements Callable<Integer> {
   }
 
   @SuppressWarnings("unchecked")
-  protected int launchContainer(ContainerStartContext ctx) throws IOException {
+  protected int launchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
     ContainerId containerId = container.getContainerId();
     if (container.isMarkedForKilling()) {
       LOG.info("Container " + containerId + " not launched as it has already "
@@ -1106,104 +1140,112 @@ public class ContainerLaunch implements Callable<Integer> {
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.
     if (Shell.WINDOWS) {
-      
-      String inputClassPath = environment.get(Environment.CLASSPATH.name());
 
-      if (inputClassPath != null && !inputClassPath.isEmpty()) {
-
-        //On non-windows, localized resources
-        //from distcache are available via the classpath as they were placed
-        //there but on windows they are not available when the classpath
-        //jar is created and so they "are lost" and have to be explicitly
-        //added to the classpath instead.  This also means that their position
-        //is lost relative to other non-distcache classpath entries which will
-        //break things like mapreduce.job.user.classpath.first.  An environment
-        //variable can be set to indicate that distcache entries should come
-        //first
-
-        boolean preferLocalizedJars = Boolean.parseBoolean(
-          environment.get(Environment.CLASSPATH_PREPEND_DISTCACHE.name())
-          );
-
-        boolean needsSeparator = false;
-        StringBuilder newClassPath = new StringBuilder();
-        if (!preferLocalizedJars) {
-          newClassPath.append(inputClassPath);
-          needsSeparator = true;
-        }
-
-        // Localized resources do not exist at the desired paths yet, because the
-        // container launch script has not run to create symlinks yet.  This
-        // means that FileUtil.createJarWithClassPath can't automatically expand
-        // wildcards to separate classpath entries for each file in the manifest.
-        // To resolve this, append classpath entries explicitly for each
-        // resource.
-        for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
-          boolean targetIsDirectory = new File(entry.getKey().toUri().getPath())
-            .isDirectory();
-
-          for (String linkName : entry.getValue()) {
-            // Append resource.
-            if (needsSeparator) {
-              newClassPath.append(File.pathSeparator);
-            } else {
-              needsSeparator = true;
-            }
-            newClassPath.append(pwd.toString())
-              .append(Path.SEPARATOR).append(linkName);
-
-            // FileUtil.createJarWithClassPath must use File.toURI to convert
-            // each file to a URI to write into the manifest's classpath.  For
-            // directories, the classpath must have a trailing '/', but
-            // File.toURI only appends the trailing '/' if it is a directory that
-            // already exists.  To resolve this, add the classpath entries with
-            // explicit trailing '/' here for any localized resource that targets
-            // a directory.  Then, FileUtil.createJarWithClassPath will guarantee
-            // that the resulting entry in the manifest's classpath will have a
-            // trailing '/', and thus refer to a directory instead of a file.
-            if (targetIsDirectory) {
-              newClassPath.append(Path.SEPARATOR);
-            }
-          }
-        }
-        if (preferLocalizedJars) {
-          if (needsSeparator) {
-            newClassPath.append(File.pathSeparator);
-          }
-          newClassPath.append(inputClassPath);
-        }
-
-        // When the container launches, it takes the parent process's environment
-        // and then adds/overwrites with the entries from the container launch
-        // context.  Do the same thing here for correct substitution of
-        // environment variables in the classpath jar manifest.
-        Map<String, String> mergedEnv = new HashMap<String, String>(
-          System.getenv());
-        mergedEnv.putAll(environment);
-        
-        // this is hacky and temporary - it's to preserve the windows secure
-        // behavior but enable non-secure windows to properly build the class
-        // path for access to job.jar/lib/xyz and friends (see YARN-2803)
-        Path jarDir;
-        if (exec instanceof WindowsSecureContainerExecutor) {
-          jarDir = nmPrivateClasspathJarDir;
-        } else {
-          jarDir = pwd; 
-        }
-        String[] jarCp = FileUtil.createJarWithClassPath(
-          newClassPath.toString(), jarDir, pwd, mergedEnv);
-        // In a secure cluster the classpath jar must be localized to grant access
-        Path localizedClassPathJar = exec.localizeClasspathJar(
-            new Path(jarCp[0]), pwd, container.getUser());
-        String replacementClassPath = localizedClassPathJar.toString() + jarCp[1];
-        environment.put(Environment.CLASSPATH.name(), replacementClassPath);
-      }
+      sanitizeWindowsEnv(environment, pwd,
+          resources, nmPrivateClasspathJarDir);
     }
     // put AuxiliaryService data to environment
     for (Map.Entry<String, ByteBuffer> meta : containerManager
         .getAuxServiceMetaData().entrySet()) {
       AuxiliaryServiceHelper.setServiceDataIntoEnv(
           meta.getKey(), meta.getValue(), environment);
+    }
+  }
+
+  private void sanitizeWindowsEnv(Map<String, String> environment, Path pwd,
+      Map<Path, List<String>> resources, Path nmPrivateClasspathJarDir)
+      throws IOException {
+
+    String inputClassPath = environment.get(Environment.CLASSPATH.name());
+
+    if (inputClassPath != null && !inputClassPath.isEmpty()) {
+
+      //On non-windows, localized resources
+      //from distcache are available via the classpath as they were placed
+      //there but on windows they are not available when the classpath
+      //jar is created and so they "are lost" and have to be explicitly
+      //added to the classpath instead.  This also means that their position
+      //is lost relative to other non-distcache classpath entries which will
+      //break things like mapreduce.job.user.classpath.first.  An environment
+      //variable can be set to indicate that distcache entries should come
+      //first
+
+      boolean preferLocalizedJars = Boolean.parseBoolean(
+              environment.get(Environment.CLASSPATH_PREPEND_DISTCACHE.name())
+      );
+
+      boolean needsSeparator = false;
+      StringBuilder newClassPath = new StringBuilder();
+      if (!preferLocalizedJars) {
+        newClassPath.append(inputClassPath);
+        needsSeparator = true;
+      }
+
+      // Localized resources do not exist at the desired paths yet, because the
+      // container launch script has not run to create symlinks yet.  This
+      // means that FileUtil.createJarWithClassPath can't automatically expand
+      // wildcards to separate classpath entries for each file in the manifest.
+      // To resolve this, append classpath entries explicitly for each
+      // resource.
+      for (Map.Entry<Path, List<String>> entry : resources.entrySet()) {
+        boolean targetIsDirectory = new File(entry.getKey().toUri().getPath())
+                .isDirectory();
+
+        for (String linkName : entry.getValue()) {
+          // Append resource.
+          if (needsSeparator) {
+            newClassPath.append(File.pathSeparator);
+          } else {
+            needsSeparator = true;
+          }
+          newClassPath.append(pwd.toString())
+                  .append(Path.SEPARATOR).append(linkName);
+
+          // FileUtil.createJarWithClassPath must use File.toURI to convert
+          // each file to a URI to write into the manifest's classpath.  For
+          // directories, the classpath must have a trailing '/', but
+          // File.toURI only appends the trailing '/' if it is a directory that
+          // already exists.  To resolve this, add the classpath entries with
+          // explicit trailing '/' here for any localized resource that targets
+          // a directory.  Then, FileUtil.createJarWithClassPath will guarantee
+          // that the resulting entry in the manifest's classpath will have a
+          // trailing '/', and thus refer to a directory instead of a file.
+          if (targetIsDirectory) {
+            newClassPath.append(Path.SEPARATOR);
+          }
+        }
+      }
+      if (preferLocalizedJars) {
+        if (needsSeparator) {
+          newClassPath.append(File.pathSeparator);
+        }
+        newClassPath.append(inputClassPath);
+      }
+
+      // When the container launches, it takes the parent process's environment
+      // and then adds/overwrites with the entries from the container launch
+      // context.  Do the same thing here for correct substitution of
+      // environment variables in the classpath jar manifest.
+      Map<String, String> mergedEnv = new HashMap<String, String>(
+              System.getenv());
+      mergedEnv.putAll(environment);
+
+      // this is hacky and temporary - it's to preserve the windows secure
+      // behavior but enable non-secure windows to properly build the class
+      // path for access to job.jar/lib/xyz and friends (see YARN-2803)
+      Path jarDir;
+      if (exec instanceof WindowsSecureContainerExecutor) {
+        jarDir = nmPrivateClasspathJarDir;
+      } else {
+        jarDir = pwd;
+      }
+      String[] jarCp = FileUtil.createJarWithClassPath(
+              newClassPath.toString(), jarDir, pwd, mergedEnv);
+      // In a secure cluster the classpath jar must be localized to grant access
+      Path localizedClassPathJar = exec.localizeClasspathJar(
+              new Path(jarCp[0]), pwd, container.getUser());
+      String replacementClassPath = localizedClassPathJar.toString() + jarCp[1];
+      environment.put(Environment.CLASSPATH.name(), replacementClassPath);
     }
   }
 

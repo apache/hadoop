@@ -43,10 +43,11 @@ public interface WasbAuthorizerInterface {
 
    * @param wasbAbolutePath : Absolute WASB Path used for access.
    * @param accessType : Type of access
+   * @param owner : owner of the file/folder specified in the wasb path
    * @return : true - If access allowed false - If access is not allowed.
    * @throws WasbAuthorizationException - On authorization exceptions
    * @throws IOException - When not able to reach the authorizer
    */
-  boolean authorize(String wasbAbolutePath, String accessType)
+  boolean authorize(String wasbAbolutePath, String accessType, String owner)
       throws WasbAuthorizationException, IOException;
 }

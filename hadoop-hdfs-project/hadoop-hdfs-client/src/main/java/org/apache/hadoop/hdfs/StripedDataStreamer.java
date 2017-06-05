@@ -100,9 +100,11 @@ public class StripedDataStreamer extends DataStreamer {
 
     DatanodeInfo[] nodes = lb.getLocations();
     StorageType[] storageTypes = lb.getStorageTypes();
+    String[] storageIDs = lb.getStorageIDs();
 
     // Connect to the DataNode. If fail the internal error state will be set.
-    success = createBlockOutputStream(nodes, storageTypes, 0L, false);
+    success = createBlockOutputStream(nodes, storageTypes, storageIDs, 0L,
+        false);
 
     if (!success) {
       block.setCurrentBlock(null);
@@ -121,7 +123,8 @@ public class StripedDataStreamer extends DataStreamer {
 
   @Override
   protected void setupPipelineInternal(DatanodeInfo[] nodes,
-      StorageType[] nodeStorageTypes) throws IOException {
+      StorageType[] nodeStorageTypes, String[] nodeStorageIDs)
+      throws IOException {
     boolean success = false;
     while (!success && !streamerClosed() && dfsClient.clientRunning) {
       if (!handleRestartingDatanode()) {
@@ -141,7 +144,8 @@ public class StripedDataStreamer extends DataStreamer {
       // set up the pipeline again with the remaining nodes. when a striped
       // data streamer comes here, it must be in external error state.
       assert getErrorState().hasExternalError();
-      success = createBlockOutputStream(nodes, nodeStorageTypes, newGS, true);
+      success = createBlockOutputStream(nodes, nodeStorageTypes,
+          nodeStorageIDs, newGS, true);
 
       failPacket4Testing();
       getErrorState().checkRestartingNodeDeadline(nodes);

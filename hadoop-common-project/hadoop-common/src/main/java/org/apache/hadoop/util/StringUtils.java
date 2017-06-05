@@ -440,10 +440,11 @@ public class StringUtils {
   }
   
   /**
-   * Splits a comma separated value <code>String</code>, trimming leading and
-   * trailing whitespace on each value.
+   * Splits a comma or newline separated value <code>String</code>, trimming
+   * leading and trailing whitespace on each value.
    *
-   * @param str a comma separated <code>String</code> with values, may be null
+   * @param str a comma or newline separated <code>String</code> with values,
+   *            may be null
    * @return an array of <code>String</code> values, empty array if null String
    *         input
    */
@@ -452,7 +453,7 @@ public class StringUtils {
       return emptyStringArray;
     }
 
-    return str.trim().split("\\s*,\\s*");
+    return str.trim().split("\\s*[,\n]\\s*");
   }
 
   final public static String[] emptyStringArray = {};
@@ -675,11 +676,11 @@ public class StringUtils {
    * @param msg content of the message
    * @return a message for logging
    */
-  private static String toStartupShutdownString(String prefix, String [] msg) {
+  public static String toStartupShutdownString(String prefix, String[] msg) {
     StringBuilder b = new StringBuilder(prefix);
     b.append("\n/************************************************************");
     for(String s : msg)
-      b.append("\n" + prefix + s);
+      b.append("\n").append(prefix).append(s);
     b.append("\n************************************************************/");
     return b.toString();
   }
@@ -710,21 +711,7 @@ public class StringUtils {
                                      final LogAdapter LOG) { 
     final String hostname = NetUtils.getHostname();
     final String classname = clazz.getSimpleName();
-    LOG.info(
-        toStartupShutdownString("STARTUP_MSG: ", new String[] {
-            "Starting " + classname,
-            "  user = " + System.getProperty("user.name"),
-            "  host = " + hostname,
-            "  args = " + Arrays.asList(args),
-            "  version = " + VersionInfo.getVersion(),
-            "  classpath = " + System.getProperty("java.class.path"),
-            "  build = " + VersionInfo.getUrl() + " -r "
-                         + VersionInfo.getRevision()  
-                         + "; compiled by '" + VersionInfo.getUser()
-                         + "' on " + VersionInfo.getDate(),
-            "  java = " + System.getProperty("java.version") }
-        )
-      );
+    LOG.info(createStartupShutdownMessage(classname, hostname, args));
 
     if (SystemUtils.IS_OS_UNIX) {
       try {
@@ -745,11 +732,34 @@ public class StringUtils {
   }
 
   /**
+   * Generate the text for the startup/shutdown message of processes.
+   * @param classname short classname of the class
+   * @param hostname hostname
+   * @param args Command arguments
+   * @return a string to log.
+   */
+  public static String createStartupShutdownMessage(String classname,
+      String hostname, String[] args) {
+    return toStartupShutdownString("STARTUP_MSG: ", new String[] {
+        "Starting " + classname,
+        "  host = " + hostname,
+        "  args = " + Arrays.asList(args),
+        "  version = " + VersionInfo.getVersion(),
+        "  classpath = " + System.getProperty("java.class.path"),
+        "  build = " + VersionInfo.getUrl() + " -r "
+                     + VersionInfo.getRevision()  
+                     + "; compiled by '" + VersionInfo.getUser()
+                     + "' on " + VersionInfo.getDate(),
+        "  java = " + System.getProperty("java.version") }
+    );
+  }
+
+  /**
    * The traditional binary prefixes, kilo, mega, ..., exa,
    * which can be represented by a 64-bit integer.
    * TraditionalBinaryPrefix symbol are case insensitive. 
    */
-  public static enum TraditionalBinaryPrefix {
+  public enum TraditionalBinaryPrefix {
     KILO(10),
     MEGA(KILO.bitShift + 10),
     GIGA(MEGA.bitShift + 10),

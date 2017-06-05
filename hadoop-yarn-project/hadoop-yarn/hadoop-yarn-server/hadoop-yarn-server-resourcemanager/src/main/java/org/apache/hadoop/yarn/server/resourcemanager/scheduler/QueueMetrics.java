@@ -142,20 +142,29 @@ public class QueueMetrics implements MetricsSource {
    */
   @Private
   public synchronized static void clearQueueMetrics() {
-    queueMetrics.clear();
+    QUEUE_METRICS.clear();
   }
-  
+
   /**
    * Simple metrics cache to help prevent re-registrations.
    */
-  protected final static Map<String, QueueMetrics> queueMetrics =
+  private static final Map<String, QueueMetrics> QUEUE_METRICS =
       new HashMap<String, QueueMetrics>();
-  
+
+  /**
+   * Returns the metrics cache to help prevent re-registrations.
+   *
+   * @return A string to {@link QueueMetrics} map.
+   */
+  protected static Map<String, QueueMetrics> getQueueMetrics() {
+    return QUEUE_METRICS;
+  }
+
   public synchronized 
   static QueueMetrics forQueue(MetricsSystem ms, String queueName,
                                       Queue parent, boolean enableUserMetrics,
 				      Configuration conf) {
-    QueueMetrics metrics = queueMetrics.get(queueName);
+    QueueMetrics metrics = QUEUE_METRICS.get(queueName);
     if (metrics == null) {
       metrics =
           new QueueMetrics(ms, queueName, parent, enableUserMetrics, conf).
@@ -168,7 +177,7 @@ public class QueueMetrics implements MetricsSource {
                 sourceName(queueName).toString(), 
                 "Metrics for queue: " + queueName, metrics);
       }
-      queueMetrics.put(queueName, metrics);
+      QUEUE_METRICS.put(queueName, metrics);
     }
 
     return metrics;

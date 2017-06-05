@@ -183,11 +183,12 @@ to a dynamically (table coprocessor).
 
 Finally, run the schema creator tool to create the necessary tables:
 
-    bin/hbase org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator
+    bin/hadoop org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator -create
 
 The `TimelineSchemaCreator` tool supports a few options that may come handy especially when you
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
-and continue to create other tables rather than failing the schema creation.
+and continue to create other tables rather than failing the schema creation. When no option or '-help'
+('-h' for short) is provided, the command usage is printed.
 
 #### Enabling Timeline Service v.2
 Following are the basic configurations to start Timeline service v.2:

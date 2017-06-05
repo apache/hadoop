@@ -52,7 +52,7 @@ public class JobStatus implements Writable, Cloneable {
   /**
    * Current state of the job 
    */
-  public static enum State {
+  public enum State {
     RUNNING(1),
     SUCCEEDED(2),
     FAILED(3),

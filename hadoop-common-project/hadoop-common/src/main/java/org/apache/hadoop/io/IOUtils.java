@@ -27,6 +27,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.util.Shell;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -356,5 +357,57 @@ public class IOUtils {
       throw e.getCause();
     }
     return list;
+  }
+
+  /**
+   * Ensure that any writes to the given file is written to the storage device
+   * that contains it. This method opens channel on given File and closes it
+   * once the sync is done.<br>
+   * Borrowed from Uwe Schindler in LUCENE-5588
+   * @param fileToSync the file to fsync
+   */
+  public static void fsync(File fileToSync) throws IOException {
+    if (!fileToSync.exists()) {
+      throw new FileNotFoundException(
+          "File/Directory " + fileToSync.getAbsolutePath() + " does not exist");
+    }
+    boolean isDir = fileToSync.isDirectory();
+    // If the file is a directory we have to open read-only, for regular files
+    // we must open r/w for the fsync to have an effect. See
+    // http://blog.httrack.com/blog/2013/11/15/
+    // everything-you-always-wanted-to-know-about-fsync/
+    try(FileChannel channel = FileChannel.open(fileToSync.toPath(),
+        isDir ? StandardOpenOption.READ : StandardOpenOption.WRITE)){
+      fsync(channel, isDir);
+    }
+  }
+
+  /**
+   * Ensure that any writes to the given file is written to the storage device
+   * that contains it. This method opens channel on given File and closes it
+   * once the sync is done.
+   * Borrowed from Uwe Schindler in LUCENE-5588
+   * @param channel Channel to sync
+   * @param isDir if true, the given file is a directory (Channel should be
+   *          opened for read and ignore IOExceptions, because not all file
+   *          systems and operating systems allow to fsync on a directory)
+   * @throws IOException
+   */
+  public static void fsync(FileChannel channel, boolean isDir)
+      throws IOException {
+    try {
+      channel.force(true);
+    } catch (IOException ioe) {
+      if (isDir) {
+        assert !(Shell.LINUX
+            || Shell.MAC) : "On Linux and MacOSX fsyncing a directory"
+                + " should not throw IOException, we just don't want to rely"
+                + " on that in production (undocumented)" + ". Got: " + ioe;
+        // Ignore exception if it is a directory
+        return;
+      }
+      // Throw original exception
+      throw ioe;
+    }
   }
 }

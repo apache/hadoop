@@ -299,9 +299,6 @@ public class NodeManager extends CompositeService
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-
-    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
-
     rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
@@ -463,8 +460,6 @@ public class NodeManager extends CompositeService
       @Override
       public void run() {
         try {
-          LOG.info("Notifying ContainerManager to block new container-requests");
-          containerManager.setBlockNewContainerRequests(true);
           if (!rmWorkPreservingRestartEnabled) {
             LOG.info("Cleaning up running containers on resync");
             containerManager.cleanupContainersOnNMResync();

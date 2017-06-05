@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
@@ -127,6 +128,12 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private static final Log LOG = LogFactory.getLog(
       DockerLinuxContainerRuntime.class);
+
+  // This validates that the image is a proper docker image
+  public static final String DOCKER_IMAGE_PATTERN =
+      "^(([a-zA-Z0-9.-]+)(:\\d+)?/)?([a-z0-9_./-]+)(:[\\w.-]+)?$";
+  private static final Pattern dockerImagePattern =
+      Pattern.compile(DOCKER_IMAGE_PATTERN);
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -413,20 +420,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     validateContainerNetworkType(network);
 
-    if (imageName == null) {
-      throw new ContainerExecutionException(ENV_DOCKER_CONTAINER_IMAGE
-          + " not set!");
-    }
+    validateImageName(imageName);
 
     String containerIdStr = container.getContainerId().toString();
     String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
     Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
     //List<String> -> stored as List -> fetched/converted to List<String>
     //we can't do better here thanks to type-erasure
-    @SuppressWarnings("unchecked")
-    List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
-    @SuppressWarnings("unchecked")
-    List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
     @SuppressWarnings("unchecked")
     List<String> filecacheDirs = ctx.getExecutionAttribute(FILECACHE_DIRS);
     @SuppressWarnings("unchecked")
@@ -489,9 +489,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     addCGroupParentIfRequired(resourcesOpts, containerIdStr, runCommand);
 
-    Path nmPrivateContainerScriptPath = ctx.getExecutionAttribute(
-        NM_PRIVATE_CONTAINER_SCRIPT_PATH);
-
     String disableOverride = environment.get(
         ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE);
 
@@ -511,33 +508,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
         containerIdStr);
-    PrivilegedOperation launchOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
-
-    launchOp.appendArgs(runAsUser, ctx.getExecutionAttribute(USER),
-        Integer.toString(PrivilegedOperation
-            .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
-        ctx.getExecutionAttribute(APPID),
-        containerIdStr, containerWorkDir.toString(),
-        nmPrivateContainerScriptPath.toUri().getPath(),
-        ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
-        ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
-        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-            localDirs),
-        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-            logDirs),
-        commandFile,
-        resourcesOpts);
-
-    String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
-
-    if (tcCommandFile != null) {
-      launchOp.appendArgs(tcCommandFile);
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Launching container with cmd: " + runCommand
-          .getCommandWithArguments());
-    }
+    PrivilegedOperation launchOp = buildLaunchOp(ctx,
+        commandFile, runCommand);
 
     try {
       privilegedOperationExecutor.executePrivilegedOperation(null,
@@ -634,5 +606,66 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.error("Error when executing command.", e);
     }
     return null;
+  }
+
+
+
+  private PrivilegedOperation buildLaunchOp(ContainerRuntimeContext ctx,
+      String commandFile, DockerRunCommand runCommand) {
+
+    String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
+    String containerIdStr = ctx.getContainer().getContainerId().toString();
+    Path nmPrivateContainerScriptPath = ctx.getExecutionAttribute(
+            NM_PRIVATE_CONTAINER_SCRIPT_PATH);
+    Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
+    //we can't do better here thanks to type-erasure
+    @SuppressWarnings("unchecked")
+    List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
+    @SuppressWarnings("unchecked")
+    List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
+    String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
+
+    PrivilegedOperation launchOp = new PrivilegedOperation(
+            PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
+
+    launchOp.appendArgs(runAsUser, ctx.getExecutionAttribute(USER),
+            Integer.toString(PrivilegedOperation
+                    .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
+            ctx.getExecutionAttribute(APPID),
+            containerIdStr,
+            containerWorkDir.toString(),
+            nmPrivateContainerScriptPath.toUri().getPath(),
+            ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
+            ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                    localDirs),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                    logDirs),
+            commandFile,
+            resourcesOpts);
+
+    String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
+
+    if (tcCommandFile != null) {
+      launchOp.appendArgs(tcCommandFile);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Launching container with cmd: " + runCommand
+              .getCommandWithArguments());
+    }
+
+    return launchOp;
+  }
+
+  public static void validateImageName(String imageName)
+      throws ContainerExecutionException {
+    if (imageName == null || imageName.isEmpty()) {
+      throw new ContainerExecutionException(
+          ENV_DOCKER_CONTAINER_IMAGE + " not set!");
+    }
+    if (!dockerImagePattern.matcher(imageName).matches()) {
+      throw new ContainerExecutionException("Image name '" + imageName
+          + "' doesn't match docker image name pattern");
+    }
   }
 }

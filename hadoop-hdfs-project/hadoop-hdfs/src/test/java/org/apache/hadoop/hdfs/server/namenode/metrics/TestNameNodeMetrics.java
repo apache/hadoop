@@ -157,7 +157,7 @@ public class TestNameNodeMetrics {
    * Test that capacity metrics are exported and pass
    * basic sanity tests.
    */
-  @Test (timeout = 1800)
+  @Test (timeout = 10000)
   public void testCapacityMetrics() throws Exception {
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     long capacityTotal = MetricsAsserts.getLongGauge("CapacityTotal", rb);

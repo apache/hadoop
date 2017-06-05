@@ -1510,7 +1510,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public static enum AuthenticationMethod {
+  public enum AuthenticationMethod {
     // currently we support only one auth per method, but eventually a 
     // subtype is needed to differentiate, ex. if digest is token or ldap
     SIMPLE(AuthMethod.SIMPLE,

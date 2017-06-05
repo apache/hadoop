@@ -79,6 +79,7 @@ Each metrics record contains tags such as Hostname and port (number to which ser
 | `RpcAuthorizationSuccesses` | Total number of authorization successes |
 | `NumOpenConnections` | Current number of open connections |
 | `CallQueueLength` | Current length of the call queue |
+| `numDroppedConnections` | Total number of dropped connections |
 | `rpcQueueTime`*num*`sNumOps` | Shows total number of RPC calls (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcQueueTime`*num*`s50thPercentileLatency` | Shows the 50th percentile of RPC queue time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcQueueTime`*num*`s75thPercentileLatency` | Shows the 75th percentile of RPC queue time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
@@ -283,6 +284,21 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `WritesFromLocalClient` | Total number of write operations from local client |
 | `WritesFromRemoteClient` | Total number of write operations from remote client |
 | `BlocksGetLocalPathInfo` | Total number of operations to get local path names of blocks |
+| `RamDiskBlocksWrite` | Total number of blocks written to memory |
+| `RamDiskBlocksWriteFallback` | Total number of blocks written to memory but not satisfied (failed-over to disk) |
+| `RamDiskBytesWrite` | Total number of bytes written to memory |
+| `RamDiskBlocksReadHits` | Total number of times a block in memory was read |
+| `RamDiskBlocksEvicted` | Total number of blocks evicted in memory |
+| `RamDiskBlocksEvictedWithoutRead` | Total number of blocks evicted in memory without ever being read from memory |
+| `RamDiskBlocksEvictionWindowMsNumOps` | Number of blocks evicted in memory|
+| `RamDiskBlocksEvictionWindowMsAvgTime` | Average time of blocks in memory before being evicted in milliseconds |
+| `RamDiskBlocksEvictionWindows`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of latency between memory write and eviction in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `RamDiskBlocksLazyPersisted` | Total number of blocks written to disk by lazy writer |
+| `RamDiskBlocksDeletedBeforeLazyPersisted` | Total number of blocks deleted by application before being persisted to disk |
+| `RamDiskBytesLazyPersisted` | Total number of bytes written to disk by lazy writer |
+| `RamDiskBlocksLazyPersistWindowMsNumOps` | Number of blocks written to disk by lazy writer |
+| `RamDiskBlocksLazyPersistWindowMsAvgTime` | Average time of blocks written to disk by lazy writer in milliseconds |
+| `RamDiskBlocksLazyPersistWindows`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of latency between memory write and disk persist in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 | `FsyncCount` | Total number of fsync |
 | `VolumeFailures` | Total number of volume failures occurred |
 | `ReadBlockOpNumOps` | Total number of read operations |
@@ -322,6 +338,10 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `RemoteBytesRead` | Number of bytes read by remote clients |
 | `RemoteBytesWritten` | Number of bytes written by remote clients |
 | `BPServiceActorInfo` | The information about a block pool service actor |
+| `BlocksInPendingIBR` | Number of blocks in pending incremental block report (IBR) |
+| `BlocksReceivingInPendingIBR` | Number of blocks at receiving status in pending incremental block report (IBR) |
+| `BlocksReceivedInPendingIBR` | Number of blocks at received status in pending incremental block report (IBR) |
+| `BlocksDeletedInPendingIBR` | Number of blocks at deleted status in pending incremental block report (IBR) |
 | `EcReconstructionTasks` | Total number of erasure coding reconstruction tasks |
 | `EcFailedReconstructionTasks` | Total number of erasure coding failed reconstruction tasks |
 | `EcDecodingTimeNanos` | Total number of nanoseconds spent by decoding tasks |
@@ -334,8 +354,8 @@ FsVolume
 
 Per-volume metrics contain Datanode Volume IO related statistics. Per-volume
 metrics are off by default. They can be enabled by setting `dfs.datanode
-.fileio.profiling.sampling.fraction` to a fraction between 0.0 and 1.0.
-Setting this value to 0.0 would mean profiling is not enabled. But enabling
+.fileio.profiling.percentage.fraction` to an integer value between 1 and 100.
+Setting this value to 0 would mean profiling is not enabled. But enabling
 per-volume metrics may have a performance impact. Each metrics record
 contains tags such as Hostname as additional information along with metrics.
 

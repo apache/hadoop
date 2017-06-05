@@ -53,6 +53,7 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
@@ -167,6 +168,23 @@ public class S3AFileSystem extends FileSystem {
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
 
+  /** Add any deprecated keys. */
+  @SuppressWarnings("deprecation")
+  private static void addDeprecatedKeys() {
+    Configuration.addDeprecations(
+        new Configuration.DeprecationDelta[]{
+            // never shipped in an ASF release, but did get into the wild.
+            new Configuration.DeprecationDelta(
+                OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
+                SERVER_SIDE_ENCRYPTION_KEY)
+        });
+    Configuration.reloadExistingConfigurations();
+  }
+
+  static {
+    addDeprecatedKeys();
+  }
+
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem
@@ -251,18 +269,7 @@ public class S3AFileSystem extends FileSystem {
 
       initMultipartUploads(conf);
 
-      serverSideEncryptionAlgorithm = S3AEncryptionMethods.getMethod(
-          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
-      if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-          StringUtils.isBlank(getServerSideEncryptionKey(getConf()))) {
-        throw new IOException(Constants.SSE_C_NO_KEY_ERROR);
-      }
-      if(S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm) &&
-          StringUtils.isNotBlank(getServerSideEncryptionKey(
-            getConf()))) {
-        throw new IOException(Constants.SSE_S3_WITH_KEY_ERROR);
-      }
-      LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
+      serverSideEncryptionAlgorithm = getEncryptionAlgorithm(conf);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
 
@@ -1104,11 +1111,26 @@ public class S3AFileSystem extends FileSystem {
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
    * @param deleteRequest keys to delete on the s3-backend
+   * @throws MultiObjectDeleteException one or more of the keys could not
+   * be deleted.
+   * @throws AmazonClientException amazon-layer failure.
    */
-  private void deleteObjects(DeleteObjectsRequest deleteRequest) {
+  private void deleteObjects(DeleteObjectsRequest deleteRequest)
+      throws MultiObjectDeleteException, AmazonClientException {
     incrementWriteOperations();
     incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
-    s3.deleteObjects(deleteRequest);
+    try {
+      s3.deleteObjects(deleteRequest);
+    } catch (MultiObjectDeleteException e) {
+      // one or more of the operations failed.
+      List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
+      LOG.error("Partial failure of delete, {} errors", errors.size(), e);
+      for (MultiObjectDeleteException.DeleteError error : errors) {
+        LOG.error("{}: \"{}\" - {}",
+            error.getKey(), error.getCode(), error.getMessage());
+      }
+      throw e;
+    }
   }
 
   /**
@@ -1318,10 +1340,15 @@ public class S3AFileSystem extends FileSystem {
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
+   * @throws MultiObjectDeleteException one or more of the keys could not
+   * be deleted in a multiple object delete operation.
+   * @throws AmazonClientException amazon-layer failure.
    */
-  private void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+  @VisibleForTesting
+  void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean clearKeys, boolean deleteFakeDir)
-      throws AmazonClientException, InvalidRequestException {
+      throws MultiObjectDeleteException, AmazonClientException,
+      InvalidRequestException {
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
       return;
@@ -1732,7 +1759,9 @@ public class S3AFileSystem extends FileSystem {
       createFakeDirectory(key);
     }
     S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username);
-    deleteUnnecessaryFakeDirectories(f.getParent());
+    // this is complicated because getParent(a/b/c/) returns a/b/c, but
+    // we want a/b. See HADOOP-14428 for more details.
+    deleteUnnecessaryFakeDirectories(new Path(f.toString()).getParent());
     return true;
   }
 
@@ -2004,28 +2033,43 @@ public class S3AFileSystem extends FileSystem {
    * delSrc indicates if the source should be removed
    * @param delSrc whether to delete the src
    * @param overwrite whether to overwrite an existing file
-   * @param src path
+   * @param src Source path: must be on local filesystem
    * @param dst path
    * @throws IOException IO problem
    * @throws FileAlreadyExistsException the destination file exists and
-   * overwrite==false
+   * overwrite==false, or if the destination is a directory.
+   * @throws FileNotFoundException if the source file does not exit
    * @throws AmazonClientException failure in the AWS SDK
+   * @throws IllegalArgumentException if the source path is not on the local FS
    */
   private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
       Path src, Path dst)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
     incrementStatistic(INVOCATION_COPY_FROM_LOCAL_FILE);
-    final String key = pathToKey(dst);
-
-    if (!overwrite && exists(dst)) {
-      throw new FileAlreadyExistsException(dst + " already exists");
-    }
     LOG.debug("Copying local file from {} to {}", src, dst);
 
     // Since we have a local file, we don't need to stream into a temporary file
     LocalFileSystem local = getLocal(getConf());
     File srcfile = local.pathToFile(src);
+    if (!srcfile.exists()) {
+      throw new FileNotFoundException("No file: " + src);
+    }
+    if (!srcfile.isFile()) {
+      throw new FileNotFoundException("Not a file: " + src);
+    }
 
+    try {
+      FileStatus status = getFileStatus(dst);
+      if (!status.isFile()) {
+        throw new FileAlreadyExistsException(dst + " exists and is not a file");
+      }
+      if (!overwrite) {
+        throw new FileAlreadyExistsException(dst + " already exists");
+      }
+    } catch (FileNotFoundException e) {
+      // no destination, all is well
+    }
+    final String key = pathToKey(dst);
     final ObjectMetadata om = newObjectMetadata(srcfile.length());
     PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
     UploadInfo info = putObject(putObjectRequest);
@@ -2245,6 +2289,7 @@ public class S3AFileSystem extends FileSystem {
     while (!path.isRoot()) {
       String key = pathToKey(path);
       key = (key.endsWith("/")) ? key : (key + "/");
+      LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
       keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
       path = path.getParent();
     }

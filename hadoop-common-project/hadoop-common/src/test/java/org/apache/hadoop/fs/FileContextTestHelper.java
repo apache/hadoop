@@ -216,7 +216,7 @@ public final class FileContextTestHelper {
     return containsPath(fc, new Path(path), dirList);
   }
   
-  public static enum fileType {isDir, isFile, isSymlink};
+  public enum fileType {isDir, isFile, isSymlink};
   
   public static void checkFileStatus(FileContext aFc, String path,
       fileType expectedType) throws IOException {

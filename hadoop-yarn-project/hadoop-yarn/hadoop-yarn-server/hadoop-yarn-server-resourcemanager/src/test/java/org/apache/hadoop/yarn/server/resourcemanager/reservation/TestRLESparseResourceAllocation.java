@@ -524,7 +524,61 @@ public class TestRLESparseResourceAllocation {
     }
   }
 
-  private void setupArrays(TreeMap<Long, Resource> a, TreeMap<Long, Resource> b) {
+  @Test
+  public void testMaxPeriodicCapacity() {
+    long[] timeSteps = {0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L};
+    int[] alloc = {2, 5, 7, 10, 3, 4, 6, 8};
+    RLESparseResourceAllocation rleSparseVector =
+        ReservationSystemTestUtil.generateRLESparseResourceAllocation(
+            alloc, timeSteps);
+    LOG.info(rleSparseVector.toString());
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(0, 1),
+        Resource.newInstance(10, 10));
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(0, 2),
+        Resource.newInstance(7, 7));
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(0, 3),
+        Resource.newInstance(10, 10));
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(0, 4),
+        Resource.newInstance(3, 3));
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(0, 5),
+        Resource.newInstance(4, 4));
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(0, 5),
+        Resource.newInstance(4, 4));
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(7, 5),
+        Resource.newInstance(8, 8));
+    Assert.assertEquals(
+        rleSparseVector.getMaximumPeriodicCapacity(10, 3),
+        Resource.newInstance(0, 0));
+  }
+
+  @Test
+  public void testGetMinimumCapacityInInterval() {
+    long[] timeSteps = {0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L};
+    int[] alloc = {2, 5, 7, 10, 3, 4, 0, 8};
+    RLESparseResourceAllocation rleSparseVector =
+        ReservationSystemTestUtil.generateRLESparseResourceAllocation(
+            alloc, timeSteps);
+    LOG.info(rleSparseVector.toString());
+    Assert.assertEquals(
+        rleSparseVector.getMinimumCapacityInInterval(
+            new ReservationInterval(1L, 3L)), Resource.newInstance(5, 5));
+    Assert.assertEquals(
+        rleSparseVector.getMinimumCapacityInInterval(
+            new ReservationInterval(2L, 5L)), Resource.newInstance(3, 3));
+    Assert.assertEquals(
+        rleSparseVector.getMinimumCapacityInInterval(
+            new ReservationInterval(1L, 7L)), Resource.newInstance(0, 0));
+  }
+
+  private void setupArrays(
+      TreeMap<Long, Resource> a, TreeMap<Long, Resource> b) {
     a.put(10L, Resource.newInstance(5, 5));
     a.put(20L, Resource.newInstance(10, 10));
     a.put(30L, Resource.newInstance(15, 15));

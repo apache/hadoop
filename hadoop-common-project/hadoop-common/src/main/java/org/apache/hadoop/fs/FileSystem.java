@@ -798,7 +798,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * The default implementation returns an array containing one element:
    * <pre>
-   * BlockLocation( { "localhost:50010" },  { "localhost" }, 0, file.getLen())
+   * BlockLocation( { "localhost:9866" },  { "localhost" }, 0, file.getLen())
    * </pre>>
    *
    * @param file FilesStatus to get data from
@@ -4144,8 +4144,12 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Create a new FSDataOutputStreamBuilder for the file with path.
    * @param path file path
    * @return a FSDataOutputStreamBuilder object to build the file
+   *
+   * HADOOP-14384. Temporarily reduce the visibility of method before the
+   * builder interface becomes stable.
    */
-  public FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
+  @InterfaceAudience.Private
+  protected FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
     return new FSDataOutputStreamBuilder(this, path);
   }
 }

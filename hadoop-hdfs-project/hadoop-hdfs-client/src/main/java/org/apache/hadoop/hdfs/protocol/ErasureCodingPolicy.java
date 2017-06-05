@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -28,13 +31,18 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
 @InterfaceStability.Evolving
 public final class ErasureCodingPolicy {
 
-  private final String name;
   private final ECSchema schema;
   private final int cellSize;
-  private final byte id;
+  private String name;
+  private byte id;
 
   public ErasureCodingPolicy(String name, ECSchema schema,
       int cellSize, byte id) {
+    Preconditions.checkNotNull(name);
+    Preconditions.checkNotNull(schema);
+    Preconditions.checkArgument(cellSize > 0, "cellSize must be positive");
+    Preconditions.checkArgument(cellSize % 1024 == 0,
+        "cellSize must be 1024 aligned");
     this.name = name;
     this.schema = schema;
     this.cellSize = cellSize;
@@ -45,8 +53,13 @@ public final class ErasureCodingPolicy {
     this(composePolicyName(schema, cellSize), schema, cellSize, id);
   }
 
-  private static String composePolicyName(ECSchema schema, int cellSize) {
-    assert cellSize % 1024 == 0;
+  public ErasureCodingPolicy(ECSchema schema, int cellSize) {
+    this(composePolicyName(schema, cellSize), schema, cellSize, (byte) -1);
+  }
+
+  public static String composePolicyName(ECSchema schema, int cellSize) {
+    Preconditions.checkArgument(cellSize % 1024 == 0,
+        "cellSize must be 1024 aligned");
     return schema.getCodecName().toUpperCase() + "-" +
         schema.getNumDataUnits() + "-" + schema.getNumParityUnits() +
         "-" + cellSize / 1024 + "k";
@@ -54,6 +67,10 @@ public final class ErasureCodingPolicy {
 
   public String getName() {
     return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
   }
 
   public ECSchema getSchema() {
@@ -80,33 +97,46 @@ public final class ErasureCodingPolicy {
     return id;
   }
 
+  public void setId(byte id) {
+    this.id = id;
+  }
+
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
+    if (o == null) {
       return false;
     }
-    ErasureCodingPolicy that = (ErasureCodingPolicy) o;
-
-    return that.getName().equals(name) &&
-        that.getCellSize() == cellSize &&
-        that.getSchema().equals(schema);
+    if (o == this) {
+      return true;
+    }
+    if (o.getClass() != getClass()) {
+      return false;
+    }
+    ErasureCodingPolicy rhs = (ErasureCodingPolicy) o;
+    return new EqualsBuilder()
+        .append(name, rhs.name)
+        .append(schema, rhs.schema)
+        .append(cellSize, rhs.cellSize)
+        .append(id, rhs.id)
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    int result = name.hashCode();
-    result = 31 * result + schema.hashCode();
-    result = 31 * result + cellSize;
-    return result;
+    return new HashCodeBuilder(303855623, 582626729)
+        .append(name)
+        .append(schema)
+        .append(cellSize)
+        .append(id)
+        .toHashCode();
   }
 
   @Override
   public String toString() {
     return "ErasureCodingPolicy=[" + "Name=" + name + ", "
         + "Schema=[" + schema.toString() + "], "
-        + "CellSize=" + cellSize + " " + "]";
+        + "CellSize=" + cellSize + ", "
+        + "Id=" + id
+        + "]";
   }
 }

@@ -1018,7 +1018,8 @@ public class DFSTestUtil {
       // send the request
       new Sender(out).transferBlock(b, new Token<BlockTokenIdentifier>(),
           dfsClient.clientName, new DatanodeInfo[]{datanodes[1]},
-          new StorageType[]{StorageType.DEFAULT});
+          new StorageType[]{StorageType.DEFAULT},
+          new String[0]);
       out.flush();
 
       return BlockOpResponseProto.parseDelimitedFrom(in);
@@ -1461,6 +1462,11 @@ public class DFSTestUtil {
     out.abort();
   }
 
+  public static void setPipeline(DFSOutputStream out, LocatedBlock lastBlock)
+      throws IOException {
+    out.getStreamer().setPipelineInConstruction(lastBlock);
+  }
+
   public static byte[] asArray(ByteBuffer buf) {
     byte arr[] = new byte[buf.remaining()];
     buf.duplicate().get(arr);
@@ -1872,7 +1878,11 @@ public class DFSTestUtil {
    */
   public static void setDatanodeDead(DatanodeInfo dn) {
     dn.setLastUpdate(0);
-    dn.setLastUpdateMonotonic(0);
+    // Set this to a large negative value.
+    // On short-lived VMs, the monotonic time can be less than the heartbeat
+    // expiry time. Setting this to 0 will fail to immediately mark the DN as
+    // dead.
+    dn.setLastUpdateMonotonic(Long.MIN_VALUE/2);
   }
 
   /**

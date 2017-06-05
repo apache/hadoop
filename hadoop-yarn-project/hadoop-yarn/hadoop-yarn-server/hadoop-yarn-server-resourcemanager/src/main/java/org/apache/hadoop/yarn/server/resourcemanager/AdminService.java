@@ -286,6 +286,9 @@ public class AdminService extends CompositeService implements
   @Override
   public synchronized void transitionToActive(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    if (isRMActive()) {
+      return;
+    }
     // call refreshAdminAcls before HA state transition
     // for the case that adminAcls have been updated in previous active RM
     try {
@@ -301,13 +304,12 @@ public class AdminService extends CompositeService implements
       // call all refresh*s for active RM to get the updated configurations.
       refreshAll();
     } catch (Exception e) {
-      LOG.error("RefreshAll failed so firing fatal event", e);
       rmContext
           .getDispatcher()
           .getEventHandler()
           .handle(
               new RMFatalEvent(RMFatalEventType.TRANSITION_TO_ACTIVE_FAILED,
-                  e));
+                  e, "failure to refresh configuration settings"));
       throw new ServiceFailedException(
           "Error on refreshAll during transition to Active", e);
     }

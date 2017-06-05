@@ -215,9 +215,9 @@
           var port = n.infoAddr.split(":")[1];
           var securePort = n.infoSecureAddr.split(":")[1];
           var dnHost = n.name.split(":")[0];
-          n.dnWebAddress = dnHost + ":" + port;
+          n.dnWebAddress = "http://" + dnHost + ":" + port;
           if (securePort != 0) {
-            n.dnWebAddress = dnHost + ":" + securePort;
+            n.dnWebAddress = "https://" + dnHost + ":" + securePort;
           }
 
           if (n.adminState === "In Service") {

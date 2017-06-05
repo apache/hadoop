@@ -110,7 +110,13 @@ public enum CreateFlag {
    * 'local' means the same host as the client is being run on.
    */
   @InterfaceAudience.LimitedPrivate({"HBase"})
-  NO_LOCAL_WRITE((short) 0x40);
+  NO_LOCAL_WRITE((short) 0x40),
+
+  /**
+   * Enforce the file to be a replicated file, no matter what its parent
+   * directory's replication or erasure coding policy is.
+   */
+  SHOULD_REPLICATE((short) 0x80);
 
   private final short mode;
 

@@ -39,6 +39,7 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
+#include <getopt.h>
 
 #include "config.h"
 
@@ -649,19 +650,21 @@ static int create_container_directories(const char* user, const char *app_id,
     const char *container_id, char* const* local_dir, char* const* log_dir, const char *work_dir) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
-  if (app_id == NULL || container_id == NULL || user == NULL || user_detail == NULL || user_detail->pw_name == NULL) {
+  if (user == NULL || app_id == NULL || container_id == NULL ||
+      local_dir == NULL || log_dir == NULL || work_dir == NULL ||
+      user_detail == NULL || user_detail->pw_name == NULL) {
     fprintf(LOGFILE,
             "Either app_id, container_id or the user passed is null.\n");
-    return -1;
+    return ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS;
   }
 
-  int result = -1;
+  int result = COULD_NOT_CREATE_WORK_DIRECTORIES;
   char* const* local_dir_ptr;
   for(local_dir_ptr = local_dir; *local_dir_ptr != NULL; ++local_dir_ptr) {
     char *container_dir = get_container_work_directory(*local_dir_ptr, user, app_id,
                                                 container_id);
     if (container_dir == NULL) {
-      return -1;
+      return OUT_OF_MEMORY;
     }
     if (mkdirs(container_dir, perms) == 0) {
       result = 0;
@@ -674,12 +677,12 @@ static int create_container_directories(const char* user, const char *app_id,
     return result;
   }
 
-  result = -1;
+  result = COULD_NOT_CREATE_APP_LOG_DIRECTORIES;
   // also make the directory for the container logs
   char *combined_name = malloc(strlen(app_id) + strlen(container_id) + 2);
   if (combined_name == NULL) {
     fprintf(LOGFILE, "Malloc of combined name failed\n");
-    result = -1;
+    result = OUT_OF_MEMORY;
   } else {
     sprintf(combined_name, "%s/%s", app_id, container_id);
 
@@ -688,7 +691,7 @@ static int create_container_directories(const char* user, const char *app_id,
       char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
       if (container_log_dir == NULL) {
         free(combined_name);
-        return -1;
+        return OUT_OF_MEMORY;
       } else if (mkdirs(container_log_dir, perms) != 0) {
     	free(container_log_dir);
       } else {
@@ -703,12 +706,12 @@ static int create_container_directories(const char* user, const char *app_id,
     return result;
   }
 
-  result = -1;
+  result = COULD_NOT_CREATE_TMP_DIRECTORIES;
   // also make the tmp directory
   char *tmp_dir = get_tmp_directory(work_dir);
 
   if (tmp_dir == NULL) {
-    return -1;
+    return OUT_OF_MEMORY;
   }
   if (mkdirs(tmp_dir, perms) == 0) {
     result = 0;
@@ -1139,7 +1142,166 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
+static char* escape_single_quote(const char *str) {
+  int p = 0;
+  int i = 0;
+  char replacement[] = "'\"'\"'";
+  size_t replacement_length = strlen(replacement);
+  size_t ret_size = strlen(str) * replacement_length + 1;
+  char *ret = (char *) calloc(ret_size, sizeof(char));
+  if(ret == NULL) {
+    exit(OUT_OF_MEMORY);
+  }
+  while(str[p] != '\0') {
+    if(str[p] == '\'') {
+      strncat(ret, replacement, ret_size - strlen(ret));
+      i += replacement_length;
+    }
+    else {
+      ret[i] = str[p];
+      ret[i + 1] = '\0';
+      i++;
+    }
+    p++;
+  }
+  return ret;
+}
+
+static void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg) {
+  char *tmp = escape_single_quote(arg);
+  strcat(*str, param);
+  strcat(*str, "'");
+  if(strlen(*str) + strlen(tmp) > *size) {
+    *str = (char *) realloc(*str, strlen(*str) + strlen(tmp) + 1024);
+    if(*str == NULL) {
+      exit(OUT_OF_MEMORY);
+    }
+    *size = strlen(*str) + strlen(tmp) + 1024;
+  }
+  strcat(*str, tmp);
+  strcat(*str, "' ");
+  free(tmp);
+}
+
+char** tokenize_docker_command(const char *input, int *split_counter) {
+  char *line = (char *)calloc(strlen(input) + 1, sizeof(char));
+  char **linesplit = (char **) malloc(sizeof(char *));
+  char *p = NULL;
+  int c = 0;
+  *split_counter = 0;
+  strncpy(line, input, strlen(input));
+
+  p = strtok(line, " ");
+  while(p != NULL) {
+    linesplit[*split_counter] = p;
+    (*split_counter)++;
+    linesplit = realloc(linesplit, (sizeof(char *) * (*split_counter + 1)));
+    if(linesplit == NULL) {
+      fprintf(ERRORFILE, "Cannot allocate memory to parse docker command %s",
+                 strerror(errno));
+      fflush(ERRORFILE);
+      exit(OUT_OF_MEMORY);
+    }
+    p = strtok(NULL, " ");
+  }
+  linesplit[*split_counter] = NULL;
+  return linesplit;
+}
+
+char* sanitize_docker_command(const char *line) {
+  static struct option long_options[] = {
+    {"name", required_argument, 0, 'n' },
+    {"user", required_argument, 0, 'u' },
+    {"rm", no_argument, 0, 'r' },
+    {"workdir", required_argument, 0, 'w' },
+    {"net", required_argument, 0, 'e' },
+    {"cgroup-parent", required_argument, 0, 'g' },
+    {"privileged", no_argument, 0, 'p' },
+    {"cap-add", required_argument, 0, 'a' },
+    {"cap-drop", required_argument, 0, 'o' },
+    {"device", required_argument, 0, 'i' },
+    {"detach", required_argument, 0, 't' },
+    {0, 0, 0, 0}
+  };
+
+  int c = 0;
+  int option_index = 0;
+  char *output = NULL;
+  size_t output_size = 0;
+  char **linesplit;
+  int split_counter = 0;
+  int len = strlen(line);
+
+  linesplit = tokenize_docker_command(line, &split_counter);
+
+  output_size = len * 2;
+  output = (char *) calloc(output_size, sizeof(char));
+  if(output == NULL) {
+    exit(OUT_OF_MEMORY);
+  }
+  strcat(output, linesplit[0]);
+  strcat(output, " ");
+  optind = 1;
+  while((c=getopt_long(split_counter, linesplit, "dv:", long_options, &option_index)) != -1) {
+    switch(c) {
+      case 'n':
+        quote_and_append_arg(&output, &output_size, "--name=", optarg);
+        break;
+      case 'w':
+        quote_and_append_arg(&output, &output_size, "--workdir=", optarg);
+        break;
+      case 'u':
+        quote_and_append_arg(&output, &output_size, "--user=", optarg);
+        break;
+      case 'e':
+        quote_and_append_arg(&output, &output_size, "--net=", optarg);
+        break;
+      case 'v':
+        quote_and_append_arg(&output, &output_size, "-v ", optarg);
+        break;
+      case 'a':
+        quote_and_append_arg(&output, &output_size, "--cap-add=", optarg);
+        break;
+      case 'o':
+        quote_and_append_arg(&output, &output_size, "--cap-drop=", optarg);
+        break;
+      case 'd':
+        strcat(output, "-d ");
+        break;
+      case 'r':
+        strcat(output, "--rm ");
+        break;
+      case 'g':
+        quote_and_append_arg(&output, &output_size, "--cgroup-parent=", optarg);
+        break;
+      case 'p':
+        strcat(output, "--privileged ");
+        break;
+      case 'i':
+        quote_and_append_arg(&output, &output_size, "--device=", optarg);
+        break;
+      case 't':
+        quote_and_append_arg(&output, &output_size, "--detach=", optarg);
+        break;
+      default:
+        fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);
+        fflush(LOGFILE);
+        return NULL;
+        break;
+    }
+  }
+
+  if(optind < split_counter) {
+    while(optind < split_counter) {
+      quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+    }
+  }
+
+  return output;
+}
+
 char* parse_docker_command_file(const char* command_file) {
+
   size_t len = 0;
   char *line = NULL;
   ssize_t read;
@@ -1149,16 +1311,23 @@ char* parse_docker_command_file(const char* command_file) {
    fprintf(ERRORFILE, "Cannot open file %s - %s",
                  command_file, strerror(errno));
    fflush(ERRORFILE);
-   exit(ERROR_OPENING_FILE);
+   exit(ERROR_OPENING_DOCKER_FILE);
   }
   if ((read = getline(&line, &len, stream)) == -1) {
      fprintf(ERRORFILE, "Error reading command_file %s\n", command_file);
      fflush(ERRORFILE);
-     exit(ERROR_READING_FILE);
+     exit(ERROR_READING_DOCKER_FILE);
   }
   fclose(stream);
 
-  return line;
+  char* ret = sanitize_docker_command(line);
+  if(ret == NULL) {
+    exit(ERROR_SANITIZING_DOCKER_COMMAND);
+  }
+  fprintf(LOGFILE, "Using command %s\n", ret);
+  fflush(LOGFILE);
+
+  return ret;
 }
 
 int run_docker(const char *command_file) {
@@ -1267,25 +1436,27 @@ int create_local_dirs(const char * user, const char *app_id,
   // Create container specific directories as user. If there are no resources
   // to localize for this container, app-directories and log-directories are
   // also created automatically as part of this call.
-  if (create_container_directories(user, app_id, container_id, local_dirs,
-                                   log_dirs, work_dir) != 0) {
+  int directory_create_result = create_container_directories(user, app_id,
+    container_id, local_dirs, log_dirs, work_dir);
+  if (directory_create_result != 0) {
     fprintf(ERRORFILE, "Could not create container dirs");
     fflush(ERRORFILE);
+    exit_code = directory_create_result;
     goto cleanup;
   }
 
-  // 700
+  // Copy script file with permissions 700
   if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
     fprintf(ERRORFILE, "Could not create copy file %d %s\n", container_file_source, script_file_dest);
     fflush(ERRORFILE);
-    exit_code = INVALID_COMMAND_PROVIDED;
+    exit_code = COULD_NOT_CREATE_SCRIPT_COPY;
     goto cleanup;
   }
 
-  // 600
+  // Copy credential file to permissions 600
   if (copy_file(cred_file_source, cred_file, cred_file_dest,
         S_IRUSR | S_IWUSR) != 0) {
-    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    exit_code = COULD_NOT_CREATE_CREDENTIALS_FILE;
     fprintf(ERRORFILE, "Could not copy file");
     fflush(ERRORFILE);
     goto cleanup;
@@ -1870,7 +2041,7 @@ static int delete_path(const char *full_path,
   /* Return an error if the path is null. */
   if (full_path == NULL) {
     fprintf(LOGFILE, "Path is null\n");
-    return UNABLE_TO_BUILD_PATH;
+    return PATH_TO_DELETE_IS_NULL;
   }
   ret = recursive_unlink_children(full_path);
   if (ret == ENOENT) {
@@ -2046,17 +2217,31 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
   fprintf(LOGFILE, "Failed to mount cgroup controller, not supported\n");
   return -1;
 #else
-  char *controller = malloc(strlen(pair));
-  char *mount_path = malloc(strlen(pair));
+  size_t len = strlen(pair);
+  char *controller = malloc(len);
+  char *mount_path = malloc(len);
   char hier_path[EXECUTOR_PATH_MAX];
   int result = 0;
+  struct stat sb;
 
-  if (get_kv_key(pair, controller, strlen(pair)) < 0 ||
-      get_kv_value(pair, mount_path, strlen(pair)) < 0) {
+  if (controller == NULL || mount_path == NULL) {
+    fprintf(LOGFILE, "Failed to mount cgroup controller; not enough memory\n");
+    result = OUT_OF_MEMORY;
+  }
+  if (get_kv_key(pair, controller, len) < 0 ||
+      get_kv_value(pair, mount_path, len) < 0) {
     fprintf(LOGFILE, "Failed to mount cgroup controller; invalid option: %s\n",
               pair);
     result = -1;
   } else {
+    if (stat(mount_path, &sb) != 0) {
+      // Create mount point, if it does not exist
+      const mode_t mount_perms = S_IRWXU | S_IRGRP | S_IXGRP;
+      if (mkdirs(mount_path, mount_perms) == 0) {
+        fprintf(LOGFILE, "Failed to create cgroup mount point %s at %s\n",
+          controller, mount_path);
+      }
+    }
     if (mount("none", mount_path, "cgroup", 0, controller) == 0) {
       char *buf = stpncpy(hier_path, mount_path, strlen(mount_path));
       *buf++ = '/';

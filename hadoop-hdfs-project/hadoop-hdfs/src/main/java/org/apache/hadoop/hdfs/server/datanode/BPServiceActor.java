@@ -96,7 +96,7 @@ class BPServiceActor implements Runnable {
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
 
-  static enum RunningState {
+  enum RunningState {
     CONNECTING, INIT_FAILED, RUNNING, EXITED, FAILED;
   }
 
@@ -623,6 +623,7 @@ class BPServiceActor implements Runnable {
     //
     while (shouldRun()) {
       try {
+        DataNodeFaultInjector.get().startOfferService();
         final long startTime = scheduler.monotonicNow();
 
         //
@@ -725,6 +726,8 @@ class BPServiceActor implements Runnable {
       } catch (IOException e) {
         LOG.warn("IOException in offerService", e);
         sleepAfterException();
+      } finally {
+        DataNodeFaultInjector.get().endOfferService();
       }
       processQueueMessages();
     } // while (shouldRun())

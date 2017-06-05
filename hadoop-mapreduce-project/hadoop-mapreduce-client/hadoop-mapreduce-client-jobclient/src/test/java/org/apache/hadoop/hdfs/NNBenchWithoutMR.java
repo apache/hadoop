@@ -93,7 +93,7 @@ public class NNBenchWithoutMR {
   
   /**
    * Create and write to a given number of files.  Repeat each remote
-   * operation until is suceeds (does not throw an exception).
+   * operation until is succeeds (does not throw an exception).
    *
    * @return the number of exceptions caught
    */
@@ -178,7 +178,7 @@ public class NNBenchWithoutMR {
     
   /**
    * Rename a given number of files.  Repeat each remote
-   * operation until is suceeds (does not throw an exception).
+   * operation until is succeeds (does not throw an exception).
    *
    * @return the number of exceptions caught
    */
@@ -208,7 +208,7 @@ public class NNBenchWithoutMR {
     
   /**
    * Delete a given number of files.  Repeat each remote
-   * operation until is suceeds (does not throw an exception).
+   * operation until is succeeds (does not throw an exception).
    *
    * @return the number of exceptions caught
    */

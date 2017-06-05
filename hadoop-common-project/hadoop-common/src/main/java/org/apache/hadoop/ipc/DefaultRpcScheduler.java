@@ -42,4 +42,8 @@ public class DefaultRpcScheduler implements RpcScheduler {
   public DefaultRpcScheduler(int priorityLevels, String namespace,
       Configuration conf) {
   }
+
+  @Override
+  public void stop() {
+  }
 }
