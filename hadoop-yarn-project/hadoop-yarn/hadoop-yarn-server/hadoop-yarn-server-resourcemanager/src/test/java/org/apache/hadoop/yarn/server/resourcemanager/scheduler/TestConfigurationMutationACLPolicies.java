@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueAdminConfigurationMutationACLPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedConfUpdateInfo;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -77,6 +77,7 @@ public class TestConfigurationMutationACLPolicies {
         .thenReturn(false);
     when(scheduler.getQueue(eq(queueName))).thenReturn(queue);
   }
+
   @Test
   public void testDefaultPolicy() {
     Configuration conf = new Configuration();
@@ -98,7 +99,7 @@ public class TestConfigurationMutationACLPolicies {
         ConfigurationMutationACLPolicy.class);
     policy = ConfigurationMutationACLPolicyFactory.getPolicy(conf);
     policy.init(conf, rmContext);
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     QueueConfigInfo configInfo = new QueueConfigInfo("root.a", EMPTY_MAP);
     updateInfo.getUpdateQueueInfo().add(configInfo);
     assertTrue(policy.isMutationAllowed(GOOD_USER, updateInfo));
@@ -114,7 +115,7 @@ public class TestConfigurationMutationACLPolicies {
     policy = ConfigurationMutationACLPolicyFactory.getPolicy(conf);
     policy.init(conf, rmContext);
     // Add root.b.b1. Should check ACL of root.b queue.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     QueueConfigInfo configInfo = new QueueConfigInfo("root.b.b2", EMPTY_MAP);
     updateInfo.getAddQueueInfo().add(configInfo);
     assertTrue(policy.isMutationAllowed(GOOD_USER, updateInfo));
@@ -130,7 +131,7 @@ public class TestConfigurationMutationACLPolicies {
     policy = ConfigurationMutationACLPolicyFactory.getPolicy(conf);
     policy.init(conf, rmContext);
     // Add root.b.b1.b11. Should check ACL of root.b queue.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     QueueConfigInfo configInfo = new QueueConfigInfo("root.b.b2.b21", EMPTY_MAP);
     updateInfo.getAddQueueInfo().add(configInfo);
     assertTrue(policy.isMutationAllowed(GOOD_USER, updateInfo));
@@ -146,8 +147,25 @@ public class TestConfigurationMutationACLPolicies {
     policy = ConfigurationMutationACLPolicyFactory.getPolicy(conf);
     policy.init(conf, rmContext);
     // Remove root.b.b1.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.b.b1");
+    assertTrue(policy.isMutationAllowed(GOOD_USER, updateInfo));
+    assertFalse(policy.isMutationAllowed(BAD_USER, updateInfo));
+  }
+
+  @Test
+  public void testQueueAdminPolicyGlobal() {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, GOOD_USER.getShortUserName());
+    conf.setClass(YarnConfiguration.RM_SCHEDULER_MUTATION_ACL_POLICY_CLASS,
+        QueueAdminConfigurationMutationACLPolicy.class,
+        ConfigurationMutationACLPolicy.class);
+    policy = ConfigurationMutationACLPolicyFactory.getPolicy(conf);
+    policy.init(conf, rmContext);
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    assertTrue(policy.isMutationAllowed(GOOD_USER, updateInfo));
+    assertTrue(policy.isMutationAllowed(BAD_USER, updateInfo));
+    updateInfo.getGlobalParams().put("globalKey", "globalValue");
     assertTrue(policy.isMutationAllowed(GOOD_USER, updateInfo));
     assertFalse(policy.isMutationAllowed(BAD_USER, updateInfo));
   }

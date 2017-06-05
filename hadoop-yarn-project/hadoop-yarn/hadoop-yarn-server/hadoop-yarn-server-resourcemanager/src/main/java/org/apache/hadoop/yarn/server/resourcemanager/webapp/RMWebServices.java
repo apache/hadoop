@@ -2415,10 +2415,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   }
 
   @PUT
-  @Path("/queues")
+  @Path("/sched-conf")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public synchronized Response updateSchedulerConfiguration(final QueueConfigsUpdateInfo
+  public synchronized Response updateSchedulerConfiguration(final SchedConfUpdateInfo
       mutationInfo, @Context HttpServletRequest hsr)
       throws AuthorizationException, InterruptedException {
     init();

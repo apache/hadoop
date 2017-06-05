@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.junit.After;
@@ -168,7 +168,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response;
 
     // Add parent queue root.d with two children d1 and d2.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> d1Capacity = new HashMap<>();
     d1Capacity.put(CapacitySchedulerConfiguration.CAPACITY, "25");
     d1Capacity.put(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY, "25");
@@ -187,9 +187,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getAddQueueInfo().add(d);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -211,7 +211,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response;
 
     // Add root.d with capacity 25, reducing root.b capacity from 75 to 50.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> dCapacity = new HashMap<>();
     dCapacity.put(CapacitySchedulerConfiguration.CAPACITY, "25");
     Map<String, String> bCapacity = new HashMap<>();
@@ -222,9 +222,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(b);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -244,13 +244,13 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     stopQueue("root.a.a2");
     // Remove root.a.a2
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.a.a2");
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -269,13 +269,13 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     stopQueue("root.c", "root.c.c1");
     // Remove root.c (parent queue)
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.c");
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -294,7 +294,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     stopQueue("root.a", "root.a.a1", "root.a.a2");
     // Remove root.a (parent queue) with capacity 25
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.a");
 
     // Set root.b capacity to 100
@@ -304,9 +304,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(b);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -326,7 +326,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     stopQueue("root.b", "root.c", "root.c.c1");
     // Remove root.b and root.c
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.b");
     updateInfo.getRemoveQueueInfo().add("root.c");
     Map<String, String> aCapacity = new HashMap<>();
@@ -336,9 +336,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(configInfo);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -354,7 +354,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response;
 
     // Set state of queues to STOPPED.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> stoppedParam = new HashMap<>();
     stoppedParam.put(CapacitySchedulerConfiguration.STATE,
         QueueState.STOPPED.toString());
@@ -364,9 +364,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     }
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -384,7 +384,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response;
 
     // Update config value.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> updateParam = new HashMap<>();
     updateParam.put(CapacitySchedulerConfiguration.MAXIMUM_AM_RESOURCE_SUFFIX,
         "0.2");
@@ -399,9 +399,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         0.001f);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -417,9 +417,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(aUpdateInfo);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -437,7 +437,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response;
 
     // Update root.a and root.b capacity to 50.
-    QueueConfigsUpdateInfo updateInfo = new QueueConfigsUpdateInfo();
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> updateParam = new HashMap<>();
     updateParam.put(CapacitySchedulerConfiguration.CAPACITY, "50");
     QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.a", updateParam);
@@ -447,9 +447,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("queues").queryParam("user.name", userName)
+            .path("sched-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo, QueueConfigsUpdateInfo.class),
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
                 MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -457,6 +457,47 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
     assertEquals(50.0f, newCSConf.getNonLabeledQueueCapacity("root.a"), 0.01f);
     assertEquals(50.0f, newCSConf.getNonLabeledQueueCapacity("root.b"), 0.01f);
+  }
+
+  @Test
+  public void testGlobalConfChange() throws Exception {
+    WebResource r = resource();
+
+    ClientResponse response;
+
+    // Set maximum-applications to 30000.
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    updateInfo.getGlobalParams().put(CapacitySchedulerConfiguration.PREFIX +
+        "maximum-applications", "30000");
+
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("sched-conf").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    assertEquals(30000, newCSConf.getMaximumSystemApplications());
+
+    updateInfo.getGlobalParams().put(CapacitySchedulerConfiguration.PREFIX +
+        "maximum-applications", null);
+    // Unset maximum-applications. Should be set to default.
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("sched-conf").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    assertEquals(CapacitySchedulerConfiguration
+        .DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS,
+        newCSConf.getMaximumSystemApplications());
   }
 
   @Override

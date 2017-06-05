@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedConfUpdateInfo;
 
 /**
  * Interface for determining whether configuration mutations are allowed.
@@ -41,7 +41,7 @@ public interface ConfigurationMutationACLPolicy {
    * @param confUpdate configurations to be updated
    * @return whether provided mutation is allowed or not
    */
-  boolean isMutationAllowed(UserGroupInformation user, QueueConfigsUpdateInfo
+  boolean isMutationAllowed(UserGroupInformation user, SchedConfUpdateInfo
       confUpdate);
 
 }

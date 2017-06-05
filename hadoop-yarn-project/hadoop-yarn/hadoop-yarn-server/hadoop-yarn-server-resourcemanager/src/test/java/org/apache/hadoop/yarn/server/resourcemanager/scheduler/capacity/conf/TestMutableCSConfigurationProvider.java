@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueConfigsUpdateInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedConfUpdateInfo;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,8 +47,8 @@ public class TestMutableCSConfigurationProvider {
 
   private MutableCSConfigurationProvider confProvider;
   private RMContext rmContext;
-  private QueueConfigsUpdateInfo goodUpdate;
-  private QueueConfigsUpdateInfo badUpdate;
+  private SchedConfUpdateInfo goodUpdate;
+  private SchedConfUpdateInfo badUpdate;
   private CapacityScheduler cs;
 
   private static final UserGroupInformation TEST_USER = UserGroupInformation
@@ -62,14 +62,14 @@ public class TestMutableCSConfigurationProvider {
     when(cs.getConfiguration()).thenReturn(
         new CapacitySchedulerConfiguration());
     confProvider = new MutableCSConfigurationProvider(rmContext);
-    goodUpdate = new QueueConfigsUpdateInfo();
+    goodUpdate = new SchedConfUpdateInfo();
     Map<String, String> goodUpdateMap = new HashMap<>();
     goodUpdateMap.put("goodKey", "goodVal");
     QueueConfigInfo goodUpdateInfo = new
         QueueConfigInfo("root.a", goodUpdateMap);
     goodUpdate.getUpdateQueueInfo().add(goodUpdateInfo);
 
-    badUpdate = new QueueConfigsUpdateInfo();
+    badUpdate = new SchedConfUpdateInfo();
     Map<String, String> badUpdateMap = new HashMap<>();
     badUpdateMap.put("badKey", "badVal");
     QueueConfigInfo badUpdateInfo = new

@@ -19,30 +19,34 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * Information for making scheduler configuration changes (supports adding,
- * removing, or updating a queue).
+ * removing, or updating a queue, as well as global scheduler conf changes).
  */
 @XmlRootElement(name = "schedConf")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueConfigsUpdateInfo {
+public class SchedConfUpdateInfo {
 
-  @XmlElement(name = "add")
+  @XmlElement(name = "add-queue")
   private ArrayList<QueueConfigInfo> addQueueInfo = new ArrayList<>();
 
-  @XmlElement(name = "remove")
+  @XmlElement(name = "remove-queue")
   private ArrayList<String> removeQueueInfo = new ArrayList<>();
 
-  @XmlElement(name = "update")
+  @XmlElement(name = "update-queue")
   private ArrayList<QueueConfigInfo> updateQueueInfo = new ArrayList<>();
 
-  public QueueConfigsUpdateInfo() {
+  private HashMap<String, String> global = new HashMap<>();
+
+  public SchedConfUpdateInfo() {
     // JAXB needs this
   }
 
@@ -56,5 +60,10 @@ public class QueueConfigsUpdateInfo {
 
   public ArrayList<QueueConfigInfo> getUpdateQueueInfo() {
     return updateQueueInfo;
+  }
+
+  @XmlElementWrapper(name = "global-updates")
+  public HashMap<String, String> getGlobalParams() {
+    return global;
   }
 }
