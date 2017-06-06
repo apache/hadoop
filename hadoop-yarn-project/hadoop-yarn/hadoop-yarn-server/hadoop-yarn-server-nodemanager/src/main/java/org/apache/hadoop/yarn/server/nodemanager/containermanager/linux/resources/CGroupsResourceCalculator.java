@@ -42,7 +42,6 @@ import java.util.regex.Pattern;
  * A cgroups file-system based Resource calculator without the process tree
  * features.
  */
-
 public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
   enum Result {
     Continue,
@@ -71,8 +70,8 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
   private final CpuTimeTracker cpuTimeTracker;
   private Clock clock;
 
-  private long mem = UNAVAILABLE;
-  private long memSw = UNAVAILABLE;
+  private final static Object LOCK = new Object();
+  private static boolean firstError = true;
 
   public CGroupsResourceCalculator(String pid) throws YarnException {
     this(pid, PROCFS, ResourceHandlerModule.getCGroupsHandler(),
@@ -115,36 +114,18 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
 
   @Override
   public long getRssMemorySize(int olderThanAge) {
-    if (olderThanAge > 0) {
+    if (olderThanAge > 1) {
       return 0;
     }
-    try {
-      processFile(memStat, (String line) -> {
-        mem = Long.parseLong(line);
-        return Result.Exit;
-      });
-      return mem;
-    } catch (YarnException e) {
-      LOG.warn("Failed to parse cgroups " + memswStat, e);
-    }
-    return UNAVAILABLE;
+    return getMemorySize(memStat);
   }
 
   @Override
   public long getVirtualMemorySize(int olderThanAge) {
-    if (olderThanAge > 0) {
+    if (olderThanAge > 1) {
       return 0;
     }
-    try {
-      processFile(memswStat, (String line) -> {
-        memSw = Long.parseLong(line);
-        return Result.Exit;
-      });
-      return memSw;
-    } catch (YarnException e) {
-      LOG.warn("Failed to parse cgroups " + memswStat, e);
-    }
-    return UNAVAILABLE;
+    return getMemorySize(memswStat);
   }
 
   @Override
@@ -186,6 +167,25 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     return true;
   }
 
+  private long getMemorySize(File cgroupUsageFile) {
+    long[] mem = new long[1];
+    try {
+      processFile(cgroupUsageFile, (String line) -> {
+        mem[0] = Long.parseLong(line);
+        return Result.Exit;
+      });
+      return mem[0];
+    } catch (YarnException e) {
+      synchronized (LOCK) {
+        if (firstError) {
+          LOG.warn("Failed to parse cgroups " + memswStat, e);
+          firstError = false;
+        }
+      }
+    }
+    return UNAVAILABLE;
+  }
+
   private void readTotalProcessJiffies() {
     try {
       final BigInteger[] totalCPUTimeJiffies = new BigInteger[1];
@@ -203,7 +203,12 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
       });
       processTotalJiffies = totalCPUTimeJiffies[0];
     } catch (YarnException e) {
-      LOG.warn("Failed to parse " + pid, e);
+      synchronized (LOCK) {
+        if (firstError) {
+          LOG.warn("Failed to parse " + pid, e);
+          firstError = false;
+        }
+      }
     }
   }
 
@@ -217,7 +222,22 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
       boolean mat = m.find();
       if (mat) {
         if (m.group(2).contains(controller.getName())) {
-          result[0] = m.group(3);
+          // Instead of returning the full path we compose it
+          // based on the last item as the container id
+          // This helps to avoid confusion within a privileged Docker container
+          // where the path is referred in /proc/<pid>/cgroup as
+          // /docker/<dcontainerid>/hadoop-yarn/<containerid>
+          // but it is /hadoop-yarn/<containerid> in the cgroups hierarchy
+          String cgroupPath = m.group(3);
+          String cgroup =
+              new File(cgroupPath).toPath().getFileName().toString();
+
+          if (cgroup!=null && !cgroup.isEmpty()) {
+            result[0] = cGroupsHandler.getRelativePathForCGroup(cgroup);
+          } else {
+            LOG.warn("Invalid cgroup path " + cgroupPath +
+                " for " + pidCgroupFile);
+          }
           return Result.Exit;
         }
       } else {
@@ -228,7 +248,7 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
       return Result.Continue;
     });
     if (result[0] == null) {
-      throw new YarnException(controller.getName() + "CGroup for " + pid +
+      throw new YarnException(controller.getName() + " CGroup for pid " + pid +
           " not found " + pidCgroupFile);
     }
     return result[0];
@@ -237,8 +257,8 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
   private void processFile(File file, Function<String, Result> processLine)
       throws YarnException {
     // Read "procfsDir/<pid>/stat" file - typically /proc/<pid>/stat
-    BufferedReader in = null;
-    InputStreamReader fReader = null;
+    BufferedReader in;
+    InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
           new FileInputStream(

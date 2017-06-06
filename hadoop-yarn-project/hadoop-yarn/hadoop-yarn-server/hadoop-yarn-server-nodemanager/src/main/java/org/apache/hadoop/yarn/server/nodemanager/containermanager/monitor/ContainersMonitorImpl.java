@@ -607,9 +607,11 @@ public class ContainersMonitorImpl extends AbstractService implements
         }
       }
 
-      pt = ResourceCalculatorProcessTree.
-              getResourceCalculatorProcessTree(
-                  pId, processTreeClass, conf);
+      if (pt == null) {
+        pt = ResourceCalculatorProcessTree.
+            getResourceCalculatorProcessTree(
+                pId, processTreeClass, conf);
+      }
       return pt;
     }
 

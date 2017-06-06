@@ -17,6 +17,10 @@ public class TestCGroupsResourceCalculator {
   ControlledClock clock = new ControlledClock();
   CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
 
+  public TestCGroupsResourceCalculator() {
+    when(cGroupsHandler.getRelativePathForCGroup(any())).thenReturn("/yarn/container_1");
+  }
+
   @Test
   public void testNoPid() throws Exception {
     try {
@@ -36,9 +40,9 @@ public class TestCGroupsResourceCalculator {
     try {
       FileUtils.writeStringToFile(
           new File(procfs, CGroupsResourceCalculator.CGROUP),
-          "7:devices:/yarn\n" +
-              "6:cpuacct,cpu:/yarn\n" +
-              "5:pids:/yarn\n");
+          "7:devices:/yarn/container_1\n" +
+              "6:cpuacct,cpu:/yarn/container_1\n" +
+              "5:pids:/yarn/container_1\n");
       try {
         CGroupsResourceCalculator calculator =
             new CGroupsResourceCalculator(
@@ -46,10 +50,10 @@ public class TestCGroupsResourceCalculator {
                 cGroupsHandler, clock);
       } catch (YarnException e) {
         Assert.assertTrue("Missing file should be caught",
-            e.getMessage().startsWith("memoryCGroup"));
+            e.getMessage().startsWith("memory CGroup"));
       }
     } finally {
-      FileUtils.deleteDirectory(procfs);
+      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
     }
   }
 
@@ -60,46 +64,44 @@ public class TestCGroupsResourceCalculator {
     try {
       FileUtils.writeStringToFile(
           new File(procfs, CGroupsResourceCalculator.CGROUP),
-          "7:devices:/yarn\n" +
-              "6:cpuacct,cpu:/yarn\n" +
-              "5:pids:/yarn\n" +
-              "4:memory:/yarn\n");
-      try {
-        CGroupsResourceCalculator calculator =
-            new CGroupsResourceCalculator(
-                "1234", "/tmp/" + this.getClass().getName(),
-                cGroupsHandler, clock);
-        Assert.assertEquals("cgroups should be missing",
-            (long)ResourceCalculatorProcessTree.UNAVAILABLE,
-            calculator.getRssMemorySize(0));
-      } catch (YarnException e) {
-        Assert.assertTrue("Missing file should be caught",
-            e.getMessage().startsWith("memoryCGroup"));
-      }
+          "7:devices:/yarn/container_1\n" +
+              "6:cpuacct,cpu:/yarn/container_1\n" +
+              "5:pids:/yarn/container_1\n" +
+              "4:memory:/yarn/container_1\n");
+
+      CGroupsResourceCalculator calculator =
+          new CGroupsResourceCalculator(
+              "1234", "/tmp/" + this.getClass().getName(),
+              cGroupsHandler, clock);
+      Assert.assertEquals("cgroups should be missing",
+          (long)ResourceCalculatorProcessTree.UNAVAILABLE,
+          calculator.getRssMemorySize(0));
     } finally {
-      FileUtils.deleteDirectory(procfs);
+      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
     }
   }
 
   @Test
   public void testCPUParsing() throws Exception {
     File cgcpuacctDir =
-        new File("/tmp/" + this.getClass().getName() + "/cgcpuacct/yarn");
+        new File("/tmp/" + this.getClass().getName() + "/cgcpuacct");
+    File cgcpuacctContainerDir =
+        new File(cgcpuacctDir, "/yarn/container_1");
     File procfs = new File("/tmp/" + this.getClass().getName() + "/1234");
     when(cGroupsHandler.getControllerPath(
         CGroupsHandler.CGroupController.CPUACCT)).
-        thenReturn(cgcpuacctDir.getParent());
+        thenReturn(cgcpuacctDir.getAbsolutePath());
     Assert.assertTrue("Setup error", procfs.mkdirs());
-    Assert.assertTrue("Setup error", cgcpuacctDir.mkdirs());
+    Assert.assertTrue("Setup error", cgcpuacctContainerDir.mkdirs());
     try {
       FileUtils.writeStringToFile(
           new File(procfs, CGroupsResourceCalculator.CGROUP),
-          "7:devices:/yarn\n" +
-              "6:cpuacct,cpu:/yarn\n" +
-              "5:pids:/yarn\n" +
-              "4:memory:/yarn\n");
+          "7:devices:/yarn/container_1\n" +
+              "6:cpuacct,cpu:/yarn/container_1\n" +
+              "5:pids:/yarn/container_1\n" +
+              "4:memory:/yarn/container_1\n");
       FileUtils.writeStringToFile(
-          new File(cgcpuacctDir, CGroupsResourceCalculator.CPU_STAT),
+          new File(cgcpuacctContainerDir, CGroupsResourceCalculator.CPU_STAT),
           "Can you handle this?\n" +
               "user 5415\n" +
               "system 3632");
@@ -111,31 +113,34 @@ public class TestCGroupsResourceCalculator {
           90470,
           calculator.getCumulativeCpuTime());
     } finally {
-      FileUtils.deleteDirectory(procfs);
-      FileUtils.deleteDirectory(cgcpuacctDir);
+      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
     }
   }
 
   @Test
   public void testMemoryParsing() throws Exception {
     File cgcpuacctDir =
-        new File("/tmp/" + this.getClass().getName() + "/cgcpuacct/yarn");
+        new File("/tmp/" + this.getClass().getName() + "/cgcpuacct");
+    File cgcpuacctContainerDir =
+        new File(cgcpuacctDir, "/yarn/container_1");
     File cgmemoryDir =
-        new File("/tmp/" + this.getClass().getName() + "/memory/yarn");
+        new File("/tmp/" + this.getClass().getName() + "/memory");
+    File cgMemoryContainerDir =
+        new File(cgmemoryDir, "/yarn/container_1");
     File procfs = new File("/tmp/" + this.getClass().getName() + "/1234");
     when(cGroupsHandler.getControllerPath(
         CGroupsHandler.CGroupController.MEMORY)).
-        thenReturn(cgmemoryDir.getParent());
+        thenReturn(cgmemoryDir.getAbsolutePath());
     Assert.assertTrue("Setup error", procfs.mkdirs());
-    Assert.assertTrue("Setup error", cgcpuacctDir.mkdirs());
-    Assert.assertTrue("Setup error", cgmemoryDir.mkdirs());
+    Assert.assertTrue("Setup error", cgcpuacctContainerDir.mkdirs());
+    Assert.assertTrue("Setup error", cgMemoryContainerDir.mkdirs());
     try {
       FileUtils.writeStringToFile(
           new File(procfs, CGroupsResourceCalculator.CGROUP),
-              "6:cpuacct,cpu:/yarn\n" +
-              "4:memory:/yarn\n");
+              "6:cpuacct,cpu:/yarn/container_1\n" +
+              "4:memory:/yarn/container_1\n");
       FileUtils.writeStringToFile(
-          new File(cgmemoryDir, CGroupsResourceCalculator.MEM_STAT),
+          new File(cgMemoryContainerDir, CGroupsResourceCalculator.MEM_STAT),
           "418496512\n");
 
       CGroupsResourceCalculator calculator =
@@ -153,15 +158,13 @@ public class TestCGroupsResourceCalculator {
 
       // Test the case where memsw is available
       FileUtils.writeStringToFile(
-          new File(cgmemoryDir, CGroupsResourceCalculator.MEMSW_STAT),
+          new File(cgMemoryContainerDir, CGroupsResourceCalculator.MEMSW_STAT),
           "418496513\n");
       Assert.assertEquals("Incorrect swap usage",
           418496513,
           calculator.getVirtualMemorySize());
     } finally {
-      FileUtils.deleteDirectory(procfs);
-      FileUtils.deleteDirectory(cgcpuacctDir);
-      FileUtils.deleteDirectory(cgmemoryDir);
+      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
     }
   }
 }
