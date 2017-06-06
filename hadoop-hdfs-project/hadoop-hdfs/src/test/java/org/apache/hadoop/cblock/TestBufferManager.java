@@ -112,6 +112,7 @@ public class TestBufferManager {
       // read the list from CBlockServer. So we mimic that action here.
       pipeline.setData(Longs.toByteArray(x));
       containerPipelines.add(pipeline);
+      xceiverClientManager.releaseClient(client);
     }
     return containerPipelines;
   }

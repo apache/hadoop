@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A Client for the storageContainer protocol.
  */
-public class XceiverClient implements XceiverClientSpi {
+public class XceiverClient extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClient.class);
   private final Pipeline pipeline;
   private final Configuration config;
@@ -55,6 +55,7 @@ public class XceiverClient implements XceiverClientSpi {
    * @param config -- Ozone Config
    */
   public XceiverClient(Pipeline pipeline, Configuration config) {
+    super();
     Preconditions.checkNotNull(pipeline);
     Preconditions.checkNotNull(config);
     this.pipeline = pipeline;

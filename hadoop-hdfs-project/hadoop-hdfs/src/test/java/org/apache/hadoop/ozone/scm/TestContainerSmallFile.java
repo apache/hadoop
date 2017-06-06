@@ -93,6 +93,7 @@ public class TestContainerSmallFile {
             traceID);
     String readData = response.getData().getData().toStringUtf8();
     Assert.assertEquals("data123", readData);
+    xceiverClientManager.releaseClient(client);
   }
 
   @Test
@@ -111,6 +112,7 @@ public class TestContainerSmallFile {
     ContainerProtos.GetSmallFileResponseProto response =
         ContainerProtocolCalls.readSmallFile(client, containerName, "key",
             traceID);
+    xceiverClientManager.releaseClient(client);
   }
 
   @Test
@@ -133,6 +135,7 @@ public class TestContainerSmallFile {
     ContainerProtos.GetSmallFileResponseProto response =
         ContainerProtocolCalls.readSmallFile(client, invalidName, "key",
             traceID);
+    xceiverClientManager.releaseClient(client);
   }
 }
 
