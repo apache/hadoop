@@ -20,11 +20,11 @@ package org.apache.hadoop.ozone.scm.block;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.container.Mapping;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -100,12 +100,8 @@ public class BlockManagerImpl implements BlockManager {
     this.nodeManager = nodeManager;
     this.containerManager = containerManager;
     this.cacheSize = cacheSizeMB;
-    String scmMetaDataDir = conf.get(OzoneConfigKeys
-        .OZONE_CONTAINER_METADATA_DIRS);
-    if ((scmMetaDataDir == null) || (scmMetaDataDir.isEmpty())) {
-      throw
-          new IllegalArgumentException("SCM metadata directory is not valid.");
-    }
+    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    String scmMetaDataDir = metaDir.getPath();
     Options options = new Options();
     options.cacheSize(this.cacheSize * OzoneConsts.MB);
 

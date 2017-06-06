@@ -22,12 +22,12 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -80,13 +80,8 @@ public class ContainerMapping implements Mapping {
     this.nodeManager = nodeManager;
     this.cacheSize = cacheSizeMB;
 
-    // TODO: Fix this checking.
-    String scmMetaDataDir = conf.get(OzoneConfigKeys
-        .OZONE_CONTAINER_METADATA_DIRS);
-    if ((scmMetaDataDir == null) || (scmMetaDataDir.isEmpty())) {
-      throw
-          new IllegalArgumentException("SCM metadata directory is not valid.");
-    }
+    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    String scmMetaDataDir = metaDir.getParent();
     Options options = new Options();
     options.cacheSize(this.cacheSize * OzoneConsts.MB);
 

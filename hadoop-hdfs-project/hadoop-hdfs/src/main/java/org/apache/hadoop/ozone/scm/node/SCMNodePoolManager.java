@@ -22,10 +22,10 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
@@ -82,11 +82,8 @@ public final class SCMNodePoolManager implements NodePoolManager {
       throws IOException {
     final int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    String scmMetaDataDir = conf.get(OzoneConfigKeys
-        .OZONE_CONTAINER_METADATA_DIRS);
-    if (scmMetaDataDir == null) {
-      throw new IllegalArgumentException("SCM metadata directory is invalid.");
-    }
+    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    String scmMetaDataDir = metaDir.getPath();
     Options options = new Options();
     options.cacheSize(cacheSize * OzoneConsts.MB);
 
