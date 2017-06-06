@@ -278,7 +278,7 @@ public class SFTPFileSystem extends FileSystem {
     // Using default block size since there is no way in SFTP channel to know of
     // block sizes on server. The assumption could be less than ideal.
     long blockSize = DEFAULT_BLOCK_SIZE;
-    long modTime = attr.getMTime() * 1000; // convert to milliseconds
+    long modTime = attr.getMTime() * 1000L; // convert to milliseconds
     long accessTime = attr.getATime() * 1000L;
     FsPermission permission = getPermissions(sftpFile);
     // not be able to get the real user group name, just use the user and group
