@@ -1425,7 +1425,7 @@ public class TestIPC {
   }
 
   private void checkVersionMismatch() throws IOException {
-    try (final ServerSocket listenSocket = new ServerSocket()) {
+    try (ServerSocket listenSocket = new ServerSocket()) {
       listenSocket.bind(null);
       InetSocketAddress addr =
           (InetSocketAddress) listenSocket.getLocalSocketAddress();

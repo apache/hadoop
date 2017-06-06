@@ -254,7 +254,7 @@ public class TestMiniDFSCluster {
   @Test
   public void testClusterNoStorageTypeSetForDatanodes() throws IOException {
     final Configuration conf = new HdfsConfiguration();
-    try (final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3).build()) {
       cluster.waitActive();
       ArrayList<DataNode> dataNodes = cluster.getDataNodes();

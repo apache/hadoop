@@ -303,7 +303,7 @@ public class TestYarnClient {
     int pollIntervalMs = 1000;
     conf.setLong(YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
         pollIntervalMs);
-    try (final YarnClient client = new MockYarnClient()) {
+    try (YarnClient client = new MockYarnClient()) {
       client.init(conf);
       client.start();
       // Submit the application and then interrupt it while its waiting
