@@ -349,6 +349,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11708. Positional read will fail if replicas moved to different DNs
     after stream is opened. (vinayakumarb)
 
+    HDFS-11743. Revert the incompatible fsck reporting output in HDFS-7933
+    from branch-2.7. (zhz)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
