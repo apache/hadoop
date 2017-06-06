@@ -272,12 +272,13 @@ public class DirListingMetadata {
           "host: %s", childUri);
       Preconditions.checkArgument(
           childUri.getHost().equals(parentUri.getHost()),
-          "childUri %s and parentUri %s should have the same host",
+          "childUri %s and parentUri %s must have the same host",
           childUri, parentUri);
-      Preconditions.checkNotNull(childUri.getScheme());
+      Preconditions.checkNotNull(childUri.getScheme(), "No scheme in path %s",
+          childUri);
     }
     Preconditions.checkArgument(!childPath.isRoot(),
-        "childPath cannot be the root path");
+        "childPath cannot be the root path: %s", childPath);
     Preconditions.checkArgument(childPath.getParent().equals(path),
         "childPath %s must be a child of %s", childPath, path);
   }
@@ -294,9 +295,9 @@ public class DirListingMetadata {
     Path p = status.getPath();
     Preconditions.checkNotNull(p, "Child status' path cannot be null");
     Preconditions.checkArgument(!p.isRoot(),
-        "childPath cannot be the root path");
+        "childPath cannot be the root path: %s", p);
     Preconditions.checkArgument(p.getParent().equals(path),
-        "childPath must be a child of path");
+        "childPath %s must be a child of %s", p, path);
     URI uri = p.toUri();
     URI parentUri = path.toUri();
     // If FileStatus' path is missing host, but should have one, add it.
@@ -305,7 +306,7 @@ public class DirListingMetadata {
         return new Path(new URI(parentUri.getScheme(), parentUri.getHost(),
             uri.getPath(), uri.getFragment()));
       } catch (URISyntaxException e) {
-        throw new IllegalArgumentException("FileStatus path invalid with " +
+        throw new IllegalArgumentException("FileStatus path invalid with" +
             " added " + parentUri.getScheme() + "://" + parentUri.getHost() +
             " added", e);
       }
@@ -315,6 +316,6 @@ public class DirListingMetadata {
 
   private void checkPathAbsolute(Path p) {
     Preconditions.checkNotNull(p, "path must be non-null");
-    Preconditions.checkArgument(p.isAbsolute(), "path must be absolute");
+    Preconditions.checkArgument(p.isAbsolute(), "path must be absolute: %s", p);
   }
 }
