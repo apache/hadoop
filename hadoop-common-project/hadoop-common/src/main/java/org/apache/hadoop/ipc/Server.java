@@ -82,6 +82,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
@@ -2406,7 +2407,9 @@ public abstract class Server {
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
 
       try {
-        queueCall(call);
+        internalQueueCall(call);
+      } catch (RpcServerException rse) {
+        throw rse;
       } catch (IOException ioe) {
         throw new FatalRpcServerException(
             RpcErrorCodeProto.ERROR_RPC_SERVER, ioe);
@@ -2544,9 +2547,19 @@ public abstract class Server {
   }
 
   public void queueCall(Call call) throws IOException, InterruptedException {
-    if (!callQueue.isClientBackoffEnabled()) {
+    // external non-rpc calls don't need server exception wrapper.
+    try {
+      internalQueueCall(call);
+    } catch (RpcServerException rse) {
+      throw (IOException)rse.getCause();
+    }
+  }
+
+  private void internalQueueCall(Call call)
+      throws IOException, InterruptedException {
+    try {
       callQueue.put(call); // queue the call; maybe blocked here
-    } else if (callQueue.shouldBackOff(call) || !callQueue.offer(call)) {
+    } catch (CallQueueOverflowException cqe) {
       // If rpc scheduler indicates back off based on performance degradation
       // such as response time or rpc queue is full, we will ask the client
       // to back off by throwing RetriableException. Whether the client will
@@ -2554,7 +2567,8 @@ public abstract class Server {
       // For example, IPC clients using FailoverOnNetworkExceptionRetry handle
       // RetriableException.
       rpcMetrics.incrClientBackoff();
-      throw new RetriableException("Server is too busy.");
+      // unwrap retriable exception.
+      throw cqe.getCause();
     }
   }
 
