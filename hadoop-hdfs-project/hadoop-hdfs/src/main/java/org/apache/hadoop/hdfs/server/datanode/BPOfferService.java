@@ -187,8 +187,8 @@ class BPOfferService {
       if (bpNSInfo != null) {
         return bpNSInfo.getBlockPoolID();
       } else {
-        LOG.warn("Block pool ID needed, but service not yet registered with NN",
-            new Exception("trace"));
+        LOG.warn("Block pool ID needed, but service not yet registered with " +
+                "NN, trace:", new Exception());
         return null;
       }
     } finally {
