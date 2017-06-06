@@ -1847,7 +1847,7 @@ public class TestBalancer {
     for(int i = 0; i < lengths.length; i++) {
       final long size = lengths[i];
       final Path p = new Path("/file" + i + "_size" + size);
-      try(final OutputStream out = dfs.create(p)) {
+      try(OutputStream out = dfs.create(p)) {
         for(int j = 0; j < size; j++) {
           out.write(j);
         }
