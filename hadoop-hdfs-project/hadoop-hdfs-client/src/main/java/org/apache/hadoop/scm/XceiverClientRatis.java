@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * An abstract implementation of {@link XceiverClientSpi} using Ratis.
  * The underlying RPC mechanism can be chosen via the constructor.
  */
-public final  class XceiverClientRatis implements XceiverClientSpi {
+public final class XceiverClientRatis extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientRatis.class);
 
   public static XceiverClientRatis newXceiverClientRatis(
@@ -58,6 +58,7 @@ public final  class XceiverClientRatis implements XceiverClientSpi {
 
   /** Constructs a client. */
   private XceiverClientRatis(Pipeline pipeline, RpcType rpcType) {
+    super();
     this.pipeline = pipeline;
     this.rpcType = rpcType;
   }

@@ -169,9 +169,10 @@ public class AsyncBlockWriter {
     } else {
       Pipeline pipeline = parentCache.getPipeline(block.getBlockID());
       String containerName = pipeline.getContainerName();
+      XceiverClientSpi client = null;
       try {
         long startTime = Time.monotonicNow();
-        XceiverClientSpi client = parentCache.getClientManager()
+        client = parentCache.getClientManager()
             .acquireClient(parentCache.getPipeline(block.getBlockID()));
         // BUG: fix the trace ID.
         ContainerProtocolCalls.writeSmallFile(client, containerName,
@@ -192,6 +193,9 @@ public class AsyncBlockWriter {
             block.getBlockID(), containerName, ex);
         throw ex;
       } finally {
+        if (client != null) {
+          parentCache.getClientManager().releaseClient(client);
+        }
         block.clearData();
       }
     }
