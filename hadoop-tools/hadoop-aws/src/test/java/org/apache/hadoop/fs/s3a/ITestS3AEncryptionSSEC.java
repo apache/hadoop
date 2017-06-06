@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardState;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -96,6 +97,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testCreateSubdirWithDifferentKey() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
     final Path[] path = new Path[1];
     intercept(java.nio.file.AccessDeniedException.class,
@@ -175,6 +177,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testListEncryptedDir() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
     Path nestedDirectory = S3ATestUtils.createTestPath(
          path(createFilename("/a/b/c/"))
@@ -236,6 +239,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testListStatusEncryptedDir() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
     Path nestedDirectory = S3ATestUtils.createTestPath(
          path(createFilename("/a/b/c/"))
@@ -294,6 +298,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testListStatusEncryptedFile() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
     Path nestedDirectory = S3ATestUtils.createTestPath(
         path(createFilename("/a/b/c/"))
@@ -329,6 +334,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testDeleteEncryptedObjectWithDifferentKey() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
     Path nestedDirectory = S3ATestUtils.createTestPath(
         path(createFilename("/a/b/c/"))
