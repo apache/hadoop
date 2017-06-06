@@ -275,18 +275,8 @@ public class TestReadAndSeekPageBlobAfterWrite {
         writesSinceHFlush++;
         output.flush();
         if ((i % SYNC_INTERVAL) == 0) {
-          long start = Time.monotonicNow();
           output.hflush();
           writesSinceHFlush = 0;
-          long end = Time.monotonicNow();
-
-          // A true, round-trip synchronous flush to Azure must take
-          // a significant amount of time or we are not syncing to storage correctly.
-          LOG.debug("hflush duration = " + (end - start) + " msec.");
-          assertTrue(String.format(
-            "hflush duration of %d, less than minimum expected of %d",
-            end - start, MINIMUM_EXPECTED_TIME),
-            end - start >= MINIMUM_EXPECTED_TIME);
         }
       }
     } finally {
