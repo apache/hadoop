@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.Type;
 import static org.apache.hadoop.ozone.scm.node.NodeManager.NODESTATE.DEAD;
@@ -99,6 +100,7 @@ public class TestNodeManager {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
         testDir.getAbsolutePath());
+    conf.setLong(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
     return conf;
   }
 
@@ -367,28 +369,30 @@ public class TestNodeManager {
   }
 
   /**
-   * Asserts that a single node moves from Healthy to stale node if it misses
-   * the heartbeat.
+   * Asserts that a single node moves from Healthy to stale node, then from
+   * stale node to dead node if it misses enough heartbeats.
    *
    * @throws IOException
    * @throws InterruptedException
    * @throws TimeoutException
    */
   @Test
-  public void testScmDetectStaleNode() throws IOException,
+  public void testScmDetectStaleAndDeadNode() throws IOException,
       InterruptedException, TimeoutException {
-    OzoneConfiguration conf = getConf();
     final int interval = 100;
     final int nodeCount = 10;
+
+    OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
-    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
-    // This should be 5 times more than  OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS
-    // and 3 times more than OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1, SECONDS);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
+    conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
+
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       List<DatanodeID> nodeList = createNodeSet(nodeManager, nodeCount,
-          "staleNode");
+          "Node");
+
       DatanodeID staleNode = SCMTestUtils.getDatanodeID(nodeManager);
 
       // Heartbeat once
@@ -401,13 +405,14 @@ public class TestNodeManager {
 
       // Wait for 2 seconds .. and heartbeat good nodes again.
       Thread.sleep(2 * 1000);
+
       for (DatanodeID dn : nodeList) {
         nodeManager.sendHeartbeat(dn, null);
       }
 
-      // Wait for 2 more seconds, 3 seconds is the stale window for this test
+      // Wait for 2 seconds, wait a total of 4 seconds to make sure that the
+      // node moves into stale state.
       Thread.sleep(2 * 1000);
-
       List<DatanodeID> staleNodeList = nodeManager.getNodes(NodeManager
           .NODESTATE.STALE);
       assertEquals("Expected to find 1 stale node",
@@ -416,51 +421,7 @@ public class TestNodeManager {
           1, staleNodeList.size());
       assertEquals("Stale node is not the expected ID", staleNode
           .getDatanodeUuid(), staleNodeList.get(0).getDatanodeUuid());
-    }
-  }
-
-  /**
-   * Asserts that a single node moves from Healthy to dead node if it misses
-   * enough heartbeats.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
-   */
-  @Test
-  public void testScmDetectDeadNode() throws IOException,
-      InterruptedException, TimeoutException {
-    final int interval = 100;
-    final int nodeCount = 10;
-
-    OzoneConfiguration conf = getConf();
-    conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
-    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
-    conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
-    conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
-
-
-    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
-      List<DatanodeID> nodeList = createNodeSet(nodeManager, nodeCount,
-          "Node");
-
-      DatanodeID deadNode = SCMTestUtils.getDatanodeID(nodeManager);
-
-      // Heartbeat once
-      nodeManager.sendHeartbeat(deadNode, null);
-
-      // Heartbeat all other nodes.
-      for (DatanodeID dn : nodeList) {
-        nodeManager.sendHeartbeat(dn, null);
-      }
-
-      // Wait for 2 seconds .. and heartbeat good nodes again.
-      Thread.sleep(2 * 1000);
-
-      for (DatanodeID dn : nodeList) {
-        nodeManager.sendHeartbeat(dn, null);
-      }
-      Thread.sleep(3 * 1000);
+      Thread.sleep(1000);
 
       // heartbeat good nodes again.
       for (DatanodeID dn : nodeList) {
@@ -471,13 +432,21 @@ public class TestNodeManager {
       // 7 seconds to make sure that the node moves into dead state.
       Thread.sleep(2 * 1000);
 
+      // the stale node has been removed
+      staleNodeList = nodeManager.getNodes(NodeManager
+          .NODESTATE.STALE);
+      assertEquals("Expected to find 1 stale node",
+          0, nodeManager.getNodeCount(STALE));
+      assertEquals("Expected to find 1 stale node",
+          0, staleNodeList.size());
+
       // Check for the dead node now.
       List<DatanodeID> deadNodeList = nodeManager.getNodes(DEAD);
       assertEquals("Expected to find 1 dead node", 1,
           nodeManager.getNodeCount(DEAD));
       assertEquals("Expected to find 1 dead node",
           1, deadNodeList.size());
-      assertEquals("Dead node is not the expected ID", deadNode
+      assertEquals("Dead node is not the expected ID", staleNode
           .getDatanodeUuid(), deadNodeList.get(0).getDatanodeUuid());
     }
   }
@@ -556,7 +525,7 @@ public class TestNodeManager {
 
     OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
-    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1, SECONDS);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
     conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
 
@@ -733,7 +702,7 @@ public class TestNodeManager {
 
     OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
-    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1, SECONDS);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
     conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
     conf.setInt(OZONE_SCM_MAX_HB_COUNT_TO_PROCESS, 7000);
@@ -822,7 +791,7 @@ public class TestNodeManager {
     final int staleCount = 3000;
     OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
-    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1, SECONDS);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
     conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
 
@@ -873,16 +842,17 @@ public class TestNodeManager {
    * lead to many nodes becoming stale or dead due to the fact that SCM is not
    * able to keep up with heartbeat processing. This test just verifies that SCM
    * will log that information.
+   * @throws TimeoutException
    */
   @Test
   public void testScmLogsHeartbeatFlooding() throws IOException,
-      InterruptedException {
+      InterruptedException, TimeoutException {
     final int healthyCount = 3000;
 
     // Make the HB process thread run slower.
     OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 500);
-    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1, SECONDS);
     conf.setInt(OZONE_SCM_MAX_HB_COUNT_TO_PROCESS, 500);
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
@@ -901,15 +871,14 @@ public class TestNodeManager {
       thread1.setDaemon(true);
       thread1.start();
 
-      Thread.sleep(6 * 1000);
-
+      GenericTestUtils.waitFor(() -> logCapturer.getOutput()
+          .contains("SCM is being "
+              + "flooded by heartbeats. Not able to keep up"
+              + " with the heartbeat counts."),
+          500, 20 * 1000);
 
       thread1.interrupt();
       logCapturer.stopCapturing();
-
-      assertThat(logCapturer.getOutput(), containsString("SCM is being " +
-          "flooded by heartbeats. Not able to keep up with the heartbeat " +
-          "counts."));
     }
   }
 
@@ -1025,7 +994,7 @@ public class TestNodeManager {
     final int interval = 100;
 
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
-    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1, SECONDS);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
     conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
 
