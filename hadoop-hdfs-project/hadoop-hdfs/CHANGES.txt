@@ -346,6 +346,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11856. Ability to re-add upgrading nodes to pipeline for future
     pipeline updates. (vinayakumarb via kihwal)
 
+    HDFS-11708. Positional read will fail if replicas moved to different DNs
+    after stream is opened. (vinayakumarb)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

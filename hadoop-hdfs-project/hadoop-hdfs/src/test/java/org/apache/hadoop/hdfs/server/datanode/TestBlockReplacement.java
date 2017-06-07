@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,16 +49,11 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
@@ -308,8 +302,8 @@ public class TestBlockReplacement {
    */
   private boolean replaceBlock( ExtendedBlock block, DatanodeInfo source,
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
-    return replaceBlock(block, source, sourceProxy, destination,
-        StorageType.DEFAULT);
+    return DFSTestUtil.replaceBlock(block, source, sourceProxy, destination,
+        StorageType.DEFAULT, Status.SUCCESS);
   }
 
   /*
@@ -321,29 +315,8 @@ public class TestBlockReplacement {
       DatanodeInfo sourceProxy,
       DatanodeInfo destination,
       StorageType targetStorageType) throws IOException, SocketException {
-    Socket sock = new Socket();
-    try {
-      sock.connect(NetUtils.createSocketAddr(destination.getXferAddr()),
-          HdfsServerConstants.READ_TIMEOUT);
-      sock.setKeepAlive(true);
-      // sendRequest
-      DataOutputStream out = new DataOutputStream(sock.getOutputStream());
-      new Sender(out).replaceBlock(block, targetStorageType,
-          BlockTokenSecretManager.DUMMY_TOKEN, source.getDatanodeUuid(),
-          sourceProxy);
-      out.flush();
-      // receiveResponse
-      DataInputStream reply = new DataInputStream(sock.getInputStream());
-
-      BlockOpResponseProto proto =
-          BlockOpResponseProto.parseDelimitedFrom(reply);
-      while (proto.getStatus() == Status.IN_PROGRESS) {
-        proto = BlockOpResponseProto.parseDelimitedFrom(reply);
-      }
-      return proto.getStatus() == Status.SUCCESS;
-    } finally {
-      sock.close();
-    }
+    return DFSTestUtil.replaceBlock(block, source, sourceProxy, destination,
+        targetStorageType, Status.SUCCESS);
   }
 
   /**

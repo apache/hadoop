@@ -56,7 +56,9 @@ import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
@@ -69,6 +71,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
@@ -1835,5 +1838,48 @@ public class DFSTestUtil {
         }
       }
     }, 1000, 60000);
+  }
+
+  /*
+   * Copy a block from sourceProxy to destination. If the block becomes
+   * over-replicated, preferably remove it from source.
+   * Return true if a block is successfully copied; otherwise false.
+   */
+  public static boolean replaceBlock(ExtendedBlock block, DatanodeInfo source,
+      DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
+    return replaceBlock(block, source, sourceProxy, destination,
+        StorageType.DEFAULT, Status.SUCCESS);
+  }
+
+  /*
+   * Replace block
+   */
+  public static boolean replaceBlock(ExtendedBlock block, DatanodeInfo source,
+      DatanodeInfo sourceProxy, DatanodeInfo destination,
+      StorageType targetStorageType, Status opStatus) throws IOException,
+      SocketException {
+    Socket sock = new Socket();
+    try {
+      sock.connect(NetUtils.createSocketAddr(destination.getXferAddr()),
+          HdfsServerConstants.READ_TIMEOUT);
+      sock.setKeepAlive(true);
+      // sendRequest
+      DataOutputStream out = new DataOutputStream(sock.getOutputStream());
+      new Sender(out).replaceBlock(block, targetStorageType,
+          BlockTokenSecretManager.DUMMY_TOKEN, source.getDatanodeUuid(),
+          sourceProxy);
+      out.flush();
+      // receiveResponse
+      DataInputStream reply = new DataInputStream(sock.getInputStream());
+
+      BlockOpResponseProto proto = BlockOpResponseProto.parseDelimitedFrom(
+          reply);
+      while (proto.getStatus() == Status.IN_PROGRESS) {
+        proto = BlockOpResponseProto.parseDelimitedFrom(reply);
+      }
+      return proto.getStatus() == opStatus;
+    } finally {
+      sock.close();
+    }
   }
 }
