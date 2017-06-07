@@ -62,6 +62,12 @@ public interface MetadataManager {
   void put(byte[] key, byte[] value);
 
   /**
+   * Deletes a Key from Metadata DB.
+   * @param key   - key
+   */
+  void delete(byte[] key);
+
+  /**
    * Performs batch Put and Delete to Metadata DB.
    * Can be used to do multiple puts and deletes atomically.
    * @param putList - list of Key/Value to put into DB
@@ -113,8 +119,18 @@ public interface MetadataManager {
   void deleteKey(byte[] key);
 
   /**
-   * Given a volume, check if it is empty, i.e there are no buckets inside it.
+   * Given a volume, check if it is empty,
+   * i.e there are no buckets inside it.
    * @param volume - Volume name
    */
   boolean isVolumeEmpty(String volume) throws IOException;
+
+  /**
+   * Given a volume/bucket, check if it is empty,
+   * i.e there are no keys inside it.
+   * @param volume - Volume name
+   * @param  bucket - Bucket name
+   * @return true if the bucket is empty
+   */
+  boolean isBucketEmpty(String volume, String bucket) throws IOException;
 }

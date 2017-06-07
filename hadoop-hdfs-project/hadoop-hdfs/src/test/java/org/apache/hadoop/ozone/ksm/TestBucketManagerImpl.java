@@ -41,6 +41,7 @@ import org.mockito.stubbing.Answer;
 import java.io.IOException;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -78,6 +79,27 @@ public class TestBucketManagerImpl {
                         + invocation.getArguments()[1]));
 
     Mockito.doAnswer(
+        new Answer<Boolean>() {
+          @Override
+          public Boolean answer(InvocationOnMock invocation)
+              throws Throwable {
+            String keyRootName =  OzoneConsts.KSM_VOLUME_PREFIX
+                + invocation.getArguments()[0]
+                + OzoneConsts.KSM_BUCKET_PREFIX
+                + invocation.getArguments()[1]
+                + OzoneConsts.KSM_KEY_PREFIX;
+            Iterator<String> keyIterator = metadataDB.keySet().iterator();
+            while(keyIterator.hasNext()) {
+              if(keyIterator.next().startsWith(keyRootName)) {
+                return false;
+              }
+            }
+            return true;
+          }
+        }).when(metadataManager).isBucketEmpty(any(String.class),
+        any(String.class));
+
+    Mockito.doAnswer(
         new Answer<Void>() {
           @Override
           public Void answer(InvocationOnMock invocation) throws Throwable {
@@ -93,6 +115,16 @@ public class TestBucketManagerImpl {
             metadataDB.get(DFSUtil.bytes2String(
                 (byte[])invocation.getArguments()[0]))
     );
+    Mockito.doAnswer(
+        new Answer<Void>() {
+          @Override
+          public Void answer(InvocationOnMock invocation) throws Throwable {
+            metadataDB.remove(DFSUtil.bytes2String(
+                (byte[])invocation.getArguments()[0]));
+            return null;
+          }
+        }).when(metadataManager).delete(any(byte[].class));
+
     for(String volumeName : volumesToCreate) {
       byte[] dummyVolumeInfo = DFSUtil.string2Bytes(volumeName);
       metadataDB.put(OzoneConsts.KSM_VOLUME_PREFIX + volumeName,
@@ -307,5 +339,62 @@ public class TestBucketManagerImpl {
     KsmBucketInfo updatedResult = bucketManager.getBucketInfo(
         "sampleVol", "bucketOne");
     Assert.assertTrue(updatedResult.getIsVersionEnabled());
+  }
+
+  @Test
+  public void testDeleteBucket() throws IOException {
+    thrown.expectMessage("Bucket not found");
+    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    BucketManager bucketManager = new BucketManagerImpl(metaMgr);
+    for(int i = 0; i < 5; i++) {
+      KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
+          .setVolumeName("sampleVol")
+          .setBucketName("bucket_" + i)
+          .build();
+      bucketManager.createBucket(bucketInfo);
+    }
+    for(int i = 0; i < 5; i++) {
+      Assert.assertEquals("bucket_" + i,
+          bucketManager.getBucketInfo(
+              "sampleVol", "bucket_" + i).getBucketName());
+    }
+    try {
+      bucketManager.deleteBucket("sampleVol", "bucket_1");
+      Assert.assertNotNull(bucketManager.getBucketInfo(
+          "sampleVol", "bucket_2"));
+    } catch(IOException ex) {
+      Assert.fail(ex.getMessage());
+    }
+    try {
+      bucketManager.getBucketInfo("sampleVol", "bucket_1");
+    } catch(KSMException ksmEx) {
+      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
+          ksmEx.getResult());
+      throw ksmEx;
+    }
+  }
+
+  @Test
+  public void testDeleteNonEmptyBucket() throws IOException {
+    thrown.expectMessage("Bucket is not empty");
+    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    BucketManager bucketManager = new BucketManagerImpl(metaMgr);
+    KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
+        .setVolumeName("sampleVol")
+        .setBucketName("bucketOne")
+        .build();
+    bucketManager.createBucket(bucketInfo);
+    //Create keys in bucket
+    metaMgr.put(DFSUtil.string2Bytes("/sampleVol/bucketOne/key_one"),
+        DFSUtil.string2Bytes("value_one"));
+    metaMgr.put(DFSUtil.string2Bytes("/sampleVol/bucketOne/key_two"),
+        DFSUtil.string2Bytes("value_two"));
+    try {
+      bucketManager.deleteBucket("sampleVol", "bucketOne");
+    } catch(KSMException ksmEx) {
+      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_EMPTY,
+          ksmEx.getResult());
+      throw ksmEx;
+    }
   }
 }

@@ -248,6 +248,16 @@ message SetBucketPropertyResponse {
     required Status status = 1;
 }
 
+message DeleteBucketRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+}
+
+message DeleteBucketResponse {
+    required Status status = 1;
+}
+
+
 /**
  The KSM service that takes care of Ozone namespace.
 */
@@ -323,4 +333,10 @@ service KeySpaceManagerService {
     */
     rpc deleteKey(LocateKeyRequest)
         returns(LocateKeyResponse);
+
+    /**
+       Deletes a bucket from volume if it is empty.
+    */
+    rpc deleteBucket(DeleteBucketRequest)
+        returns (DeleteBucketResponse);
 }

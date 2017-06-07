@@ -247,4 +247,47 @@ public class BucketManagerImpl implements BucketManager {
     }
     return acls;
   }
+
+  /**
+   * Deletes an existing empty bucket from volume.
+   * @param volumeName - Name of the volume.
+   * @param bucketName - Name of the bucket.
+   * @throws IOException
+   */
+  public void deleteBucket(String volumeName, String bucketName)
+      throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    metadataManager.writeLock().lock();
+    try {
+      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      //Check if volume exists
+      if(metadataManager.get(metadataManager.getVolumeKey(volumeName)) ==
+          null) {
+        LOG.error("volume: {} not found ", volumeName);
+        throw new KSMException("Volume doesn't exist",
+            KSMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
+      }
+      //Check if bucket exist
+      if(metadataManager.get(bucketKey) == null) {
+        LOG.error("bucket: {} not found ", bucketName);
+        throw new KSMException("Bucket doesn't exist",
+            KSMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+      }
+      //Check if bucket is empty
+      if(!metadataManager.isBucketEmpty(volumeName, bucketName)) {
+        LOG.error("bucket: {} is not empty ", bucketName);
+        throw new KSMException("Bucket is not empty",
+            KSMException.ResultCodes.FAILED_BUCKET_NOT_EMPTY);
+      }
+      metadataManager.delete(bucketKey);
+    } catch (IOException ex) {
+      LOG.error("Delete bucket failed for bucket:{} in volume:{}",
+          bucketName, volumeName, ex);
+      throw ex;
+    } finally {
+      metadataManager.writeLock().unlock();
+    }
+  }
+
 }

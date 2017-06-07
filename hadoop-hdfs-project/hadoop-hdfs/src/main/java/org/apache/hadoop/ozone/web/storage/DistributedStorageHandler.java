@@ -286,7 +286,8 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void deleteBucket(BucketArgs args)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException("deleteBucket not implemented");
+    keySpaceManagerClient.deleteBucket(args.getVolumeName(),
+        args.getBucketName());
   }
 
   @Override

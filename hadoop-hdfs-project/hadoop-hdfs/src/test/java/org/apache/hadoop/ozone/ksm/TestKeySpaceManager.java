@@ -98,6 +98,7 @@ public class TestKeySpaceManager {
   // Create a volume and test its attribute after creating them
   @Test(timeout = 60000)
   public void testCreateVolume() throws IOException, OzoneException {
+    long volumeCreateFailCount = ksmMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -111,12 +112,15 @@ public class TestKeySpaceManager {
     VolumeInfo retVolumeinfo = storageHandler.getVolumeInfo(getVolumeArgs);
     Assert.assertTrue(retVolumeinfo.getVolumeName().equals(volumeName));
     Assert.assertTrue(retVolumeinfo.getOwner().getName().equals(userName));
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
+    Assert.assertEquals(volumeCreateFailCount,
+        ksmMetrics.getNumVolumeCreateFails());
   }
 
   // Create a volume and modify the volume owner and then test its attributes
   @Test(timeout = 60000)
   public void testChangeVolumeOwner() throws IOException, OzoneException {
+    long volumeCreateFailCount = ksmMetrics.getNumVolumeCreateFails();
+    long volumeInfoFailCount = ksmMetrics.getNumVolumeInfoFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -136,13 +140,17 @@ public class TestKeySpaceManager {
     Assert.assertTrue(retVolumeInfo.getVolumeName().equals(volumeName));
     Assert.assertFalse(retVolumeInfo.getOwner().getName().equals(userName));
     Assert.assertTrue(retVolumeInfo.getOwner().getName().equals(newUserName));
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeInfoFails());
+    Assert.assertEquals(volumeCreateFailCount,
+        ksmMetrics.getNumVolumeCreateFails());
+    Assert.assertEquals(volumeInfoFailCount,
+        ksmMetrics.getNumVolumeInfoFails());
   }
 
   // Create a volume and modify the volume owner and then test its attributes
   @Test(timeout = 60000)
   public void testChangeVolumeQuota() throws IOException, OzoneException {
+    long numVolumeCreateFail = ksmMetrics.getNumVolumeCreateFails();
+    long numVolumeInfoFail = ksmMetrics.getNumVolumeInfoFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -178,13 +186,16 @@ public class TestKeySpaceManager {
     retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
     Assert.assertEquals(retVolumeInfo.getQuota().sizeInBytes(),
         OzoneConsts.MAX_QUOTA_IN_BYTES);
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeInfoFails());
+    Assert.assertEquals(numVolumeCreateFail,
+        ksmMetrics.getNumVolumeCreateFails());
+    Assert.assertEquals(numVolumeInfoFail,
+        ksmMetrics.getNumVolumeInfoFails());
   }
 
   // Create a volume and then delete it and then check for deletion
   @Test(timeout = 60000)
   public void testDeleteVolume() throws IOException, OzoneException {
+    long volumeCreateFailCount = ksmMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -208,7 +219,8 @@ public class TestKeySpaceManager {
     volumeInfo = storageHandler.getVolumeInfo(volumeArgs);
     Assert.assertTrue(volumeInfo.getVolumeName().equals(volumeName1));
     Assert.assertTrue(volumeInfo.getOwner().getName().equals(userName));
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
+    Assert.assertEquals(volumeCreateFailCount,
+        ksmMetrics.getNumVolumeCreateFails());
 
     // Volume with _A should be able to delete as it is empty.
     storageHandler.deleteVolume(volumeArgs);
@@ -229,6 +241,7 @@ public class TestKeySpaceManager {
   // then delete it and then check for deletion failure
   @Test(timeout = 60000)
   public void testFailedDeleteVolume() throws IOException, OzoneException {
+    long numVolumeCreateFails = ksmMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -243,7 +256,8 @@ public class TestKeySpaceManager {
     VolumeInfo retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
     Assert.assertTrue(retVolumeInfo.getVolumeName().equals(volumeName));
     Assert.assertTrue(retVolumeInfo.getOwner().getName().equals(userName));
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
+    Assert.assertEquals(numVolumeCreateFails,
+        ksmMetrics.getNumVolumeCreateFails());
 
     BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
     storageHandler.createBucket(bucketArgs);
@@ -306,6 +320,9 @@ public class TestKeySpaceManager {
 
   @Test(timeout = 60000)
   public void testCreateBucket() throws IOException, OzoneException {
+    long numVolumeCreateFail = ksmMetrics.getNumVolumeCreateFails();
+    long numBucketCreateFail = ksmMetrics.getNumBucketCreateFails();
+    long numBucketInfoFail = ksmMetrics.getNumBucketInfoFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -324,9 +341,89 @@ public class TestKeySpaceManager {
     BucketInfo bucketInfo = storageHandler.getBucketInfo(getBucketArgs);
     Assert.assertTrue(bucketInfo.getVolumeName().equals(volumeName));
     Assert.assertTrue(bucketInfo.getBucketName().equals(bucketName));
-    Assert.assertEquals(0, ksmMetrics.getNumVolumeCreateFails());
-    Assert.assertEquals(0, ksmMetrics.getNumBucketCreateFails());
-    Assert.assertEquals(0, ksmMetrics.getNumBucketInfoFails());
+    Assert.assertEquals(numVolumeCreateFail,
+        ksmMetrics.getNumVolumeCreateFails());
+    Assert.assertEquals(numBucketCreateFail,
+        ksmMetrics.getNumBucketCreateFails());
+    Assert.assertEquals(numBucketInfoFail,
+        ksmMetrics.getNumBucketInfoFails());
+  }
+
+  @Test(timeout = 60000)
+  public void testDeleteBucket() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
+    volumeArgs.setUserName(userName);
+    volumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(volumeArgs);
+    BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
+    storageHandler.createBucket(bucketArgs);
+    BucketArgs getBucketArgs = new BucketArgs(volumeName, bucketName,
+        userArgs);
+    BucketInfo bucketInfo = storageHandler.getBucketInfo(getBucketArgs);
+    Assert.assertTrue(bucketInfo.getVolumeName().equals(volumeName));
+    Assert.assertTrue(bucketInfo.getBucketName().equals(bucketName));
+    storageHandler.deleteBucket(bucketArgs);
+    exception.expect(IOException.class);
+    exception.expectMessage("Info Bucket failed, error: BUCKET_NOT_FOUND");
+    storageHandler.getBucketInfo(getBucketArgs);
+  }
+
+  @Test(timeout = 60000)
+  public void testDeleteNonExistingBucket() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
+    volumeArgs.setUserName(userName);
+    volumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(volumeArgs);
+    BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
+    storageHandler.createBucket(bucketArgs);
+    BucketArgs getBucketArgs = new BucketArgs(volumeName, bucketName,
+        userArgs);
+    BucketInfo bucketInfo = storageHandler.getBucketInfo(getBucketArgs);
+    Assert.assertTrue(bucketInfo.getVolumeName().equals(volumeName));
+    Assert.assertTrue(bucketInfo.getBucketName().equals(bucketName));
+    BucketArgs newBucketArgs = new BucketArgs(
+        volumeName, bucketName + "_invalid", userArgs);
+    exception.expect(IOException.class);
+    exception.expectMessage("Delete Bucket failed, error:BUCKET_NOT_FOUND");
+    storageHandler.deleteBucket(newBucketArgs);
+  }
+
+
+  @Test(timeout = 60000)
+  public void testDeleteNonEmptyBucket() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
+    volumeArgs.setUserName(userName);
+    volumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(volumeArgs);
+    BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
+    storageHandler.createBucket(bucketArgs);
+    BucketArgs getBucketArgs = new BucketArgs(volumeName, bucketName,
+        userArgs);
+    BucketInfo bucketInfo = storageHandler.getBucketInfo(getBucketArgs);
+    Assert.assertTrue(bucketInfo.getVolumeName().equals(volumeName));
+    Assert.assertTrue(bucketInfo.getBucketName().equals(bucketName));
+    String dataString = RandomStringUtils.randomAscii(100);
+    KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    keyArgs.setSize(100);
+    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
+      stream.write(dataString.getBytes());
+    }
+    exception.expect(IOException.class);
+    exception.expectMessage("Delete Bucket failed, error:BUCKET_NOT_EMPTY");
+    storageHandler.deleteBucket(bucketArgs);
   }
 
   /**
