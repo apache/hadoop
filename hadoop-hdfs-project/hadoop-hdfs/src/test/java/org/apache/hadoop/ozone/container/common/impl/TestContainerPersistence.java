@@ -760,17 +760,17 @@ public class TestContainerPersistence {
     Assert.assertEquals(expectedKeys.get(1), result.get(0).getKeyName());
 
 
-    // List key with preKev filter
+    // List key with startKey filter
     String k6 = expectedKeys.get(6);
     result = keyManager.listKey(pipeline, null, k6, 100);
 
-    Assert.assertEquals(3, result.size());
-    for (int i = 7; i < 10; i++) {
+    Assert.assertEquals(4, result.size());
+    for (int i = 6; i < 10; i++) {
       Assert.assertEquals(expectedKeys.get(i),
-          result.get(i - 7).getKeyName());
+          result.get(i - 6).getKeyName());
     }
 
-    // List key with both prefix and preKey filter
+    // List key with both prefix and startKey filter
     String k7 = expectedKeys.get(7);
     result = keyManager.listKey(pipeline, "k3", k7, 100);
     // k3 is after k7, enhance we get an empty result

@@ -60,11 +60,11 @@ public interface KeyManager {
    *
    * @param pipeline - pipeline.
    * @param prefix   - Prefix in needed.
-   * @param prevKey  - Key to Start from, EMPTY_STRING to begin.
+   * @param startKey  - Key to start from, EMPTY_STRING to begin.
    * @param count    - Number of keys to return.
    * @return List of Keys that match the criteria.
    */
-  List<KeyData> listKey(Pipeline pipeline, String prefix, String prevKey,
+  List<KeyData> listKey(Pipeline pipeline, String prefix, String startKey,
       int count) throws StorageContainerException;
 
   /**
