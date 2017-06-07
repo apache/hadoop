@@ -18,14 +18,15 @@
 package org.apache.hadoop.ksm.helpers;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.proto
-    .HdfsProtos.StorageTypeProto;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.BucketArgs;
-import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 
 /**
  * A class that encapsulates Bucket Arguments.
@@ -42,11 +43,11 @@ public final class KsmBucketArgs {
   /**
    * ACL's that are to be added for the bucket.
    */
-  private List<OzoneAclInfo> addAcls;
+  private List<OzoneAcl> addAcls;
   /**
    * ACL's that are to be removed from the bucket.
    */
-  private List<OzoneAclInfo> removeAcls;
+  private List<OzoneAcl> removeAcls;
   /**
    * Bucket Version flag.
    */
@@ -55,7 +56,7 @@ public final class KsmBucketArgs {
    * Type of storage to be used for this bucket.
    * [RAM_DISK, SSD, DISK, ARCHIVE]
    */
-  private StorageTypeProto storageType;
+  private StorageType storageType;
 
   /**
    * Private constructor, constructed via builder.
@@ -67,8 +68,8 @@ public final class KsmBucketArgs {
    * @param storageType - Storage type to be used.
    */
   private KsmBucketArgs(String volumeName, String bucketName,
-      List<OzoneAclInfo> addAcls, List<OzoneAclInfo> removeAcls,
-      Boolean isVersionEnabled, StorageTypeProto storageType) {
+      List<OzoneAcl> addAcls, List<OzoneAcl> removeAcls,
+      Boolean isVersionEnabled, StorageType storageType) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.addAcls = addAcls;
@@ -97,7 +98,7 @@ public final class KsmBucketArgs {
    * Returns the ACL's that are to be added.
    * @return List<OzoneAclInfo>
    */
-  public List<OzoneAclInfo> getAddAcls() {
+  public List<OzoneAcl> getAddAcls() {
     return addAcls;
   }
 
@@ -105,7 +106,7 @@ public final class KsmBucketArgs {
    * Returns the ACL's that are to be removed.
    * @return List<OzoneAclInfo>
    */
-  public List<OzoneAclInfo> getRemoveAcls() {
+  public List<OzoneAcl> getRemoveAcls() {
     return removeAcls;
   }
 
@@ -121,7 +122,7 @@ public final class KsmBucketArgs {
    * Returns the type of storage to be used.
    * @return StorageType
    */
-  public StorageTypeProto getStorageType() {
+  public StorageType getStorageType() {
     return storageType;
   }
 
@@ -140,10 +141,10 @@ public final class KsmBucketArgs {
   public static class Builder {
     private String volumeName;
     private String bucketName;
-    private List<OzoneAclInfo> addAcls;
-    private List<OzoneAclInfo> removeAcls;
+    private List<OzoneAcl> addAcls;
+    private List<OzoneAcl> removeAcls;
     private Boolean isVersionEnabled;
-    private StorageTypeProto storageType;
+    private StorageType storageType;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -155,12 +156,12 @@ public final class KsmBucketArgs {
       return this;
     }
 
-    public Builder setAddAcls(List<OzoneAclInfo> acls) {
+    public Builder setAddAcls(List<OzoneAcl> acls) {
       this.addAcls = acls;
       return this;
     }
 
-    public Builder setRemoveAcls(List<OzoneAclInfo> acls) {
+    public Builder setRemoveAcls(List<OzoneAcl> acls) {
       this.removeAcls = acls;
       return this;
     }
@@ -170,7 +171,7 @@ public final class KsmBucketArgs {
       return this;
     }
 
-    public Builder setStorageType(StorageTypeProto storage) {
+    public Builder setStorageType(StorageType storage) {
       this.storageType = storage;
       return this;
     }
@@ -195,16 +196,19 @@ public final class KsmBucketArgs {
     builder.setVolumeName(volumeName)
         .setBucketName(bucketName);
     if(addAcls != null && !addAcls.isEmpty()) {
-      builder.addAllAddAcls(addAcls);
+      builder.addAllAddAcls(addAcls.stream().map(
+          KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
     }
     if(removeAcls != null && !removeAcls.isEmpty()) {
-      builder.addAllRemoveAcls(removeAcls);
+      builder.addAllRemoveAcls(removeAcls.stream().map(
+          KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
     }
     if(isVersionEnabled != null) {
       builder.setIsVersionEnabled(isVersionEnabled);
     }
     if(storageType != null) {
-      builder.setStorageType(storageType);
+      builder.setStorageType(
+          PBHelperClient.convertStorageType(storageType));
     }
     return builder.build();
   }
@@ -217,10 +221,13 @@ public final class KsmBucketArgs {
   public static KsmBucketArgs getFromProtobuf(BucketArgs bucketArgs) {
     return new KsmBucketArgs(bucketArgs.getVolumeName(),
         bucketArgs.getBucketName(),
-        bucketArgs.getAddAclsList(),
-        bucketArgs.getRemoveAclsList(),
-        bucketArgs.hasIsVersionEnabled() ? bucketArgs.getIsVersionEnabled() :
-        null,
-        bucketArgs.hasStorageType() ? bucketArgs.getStorageType() : null);
+        bucketArgs.getAddAclsList().stream().map(
+            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
+        bucketArgs.getRemoveAclsList().stream().map(
+            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
+        bucketArgs.hasIsVersionEnabled() ?
+            bucketArgs.getIsVersionEnabled() : null,
+        bucketArgs.hasStorageType() ? PBHelperClient.convertStorageType(
+            bucketArgs.getStorageType()) : null);
   }
 }

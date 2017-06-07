@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web;
+package org.apache.hadoop.ozone;
 
-import org.apache.hadoop.ozone.web.request.OzoneAcl;
 import org.junit.Test;
 
 import java.util.HashMap;
