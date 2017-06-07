@@ -23,27 +23,33 @@ import javax.servlet.ServletException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineDelegationTokenSecretManagerService.TimelineDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
+/**
+ * Timeline authentication filter provides delegation token support for ATSv1
+ * and ATSv2.
+ */
 @Private
 @Unstable
 public class TimelineAuthenticationFilter
     extends DelegationTokenAuthenticationFilter {
 
-  private static TimelineDelegationTokenSecretManager secretManager;
+  private static AbstractDelegationTokenSecretManager
+      <TimelineDelegationTokenIdentifier> secretManager;
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
     filterConfig.getServletContext().setAttribute(
-        DelegationTokenAuthenticationFilter.DELEGATION_TOKEN_SECRET_MANAGER_ATTR,
-        secretManager);
+        DelegationTokenAuthenticationFilter.
+            DELEGATION_TOKEN_SECRET_MANAGER_ATTR, secretManager);
     super.init(filterConfig);
   }
 
   public static void setTimelineDelegationTokenSecretManager(
-      TimelineDelegationTokenSecretManager secretManager) {
-    TimelineAuthenticationFilter.secretManager = secretManager;
+      AbstractDelegationTokenSecretManager
+          <TimelineDelegationTokenIdentifier> secretMgr) {
+    TimelineAuthenticationFilter.secretManager = secretMgr;
   }
-
 }
