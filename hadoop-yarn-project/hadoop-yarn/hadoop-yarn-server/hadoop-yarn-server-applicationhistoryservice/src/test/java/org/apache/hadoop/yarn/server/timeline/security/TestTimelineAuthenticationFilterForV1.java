@@ -55,27 +55,31 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+/**
+ * Test cases for authentication via TimelineAuthenticationFilter while
+ * publishing entities for ATSv1.
+ */
 @RunWith(Parameterized.class)
-public class TestTimelineAuthenticationFilter {
+public class TestTimelineAuthenticationFilterForV1 {
 
   private static final String FOO_USER = "foo";
   private static final String BAR_USER = "bar";
   private static final String HTTP_USER = "HTTP";
 
-  private static final File testRootDir = new File(
+  private static final File TEST_ROOT_DIR = new File(
       System.getProperty("test.build.dir", "target/test-dir"),
-      TestTimelineAuthenticationFilter.class.getName() + "-root");
+          TestTimelineAuthenticationFilterForV1.class.getName() + "-root");
   private static File httpSpnegoKeytabFile = new File(
       KerberosTestUtils.getKeytabFile());
   private static String httpSpnegoPrincipal =
       KerberosTestUtils.getServerPrincipal();
   private static final String BASEDIR =
       System.getProperty("test.build.dir", "target/test-dir") + "/"
-          + TestTimelineAuthenticationFilter.class.getSimpleName();
+          + TestTimelineAuthenticationFilterForV1.class.getSimpleName();
 
   @Parameterized.Parameters
   public static Collection<Object[]> withSsl() {
-    return Arrays.asList(new Object[][] { { false }, { true } });
+    return Arrays.asList(new Object[][] {{false}, {true}});
   }
 
   private static MiniKdc testMiniKDC;
@@ -85,14 +89,14 @@ public class TestTimelineAuthenticationFilter {
   private static Configuration conf;
   private static boolean withSsl;
 
-  public TestTimelineAuthenticationFilter(boolean withSsl) {
-    TestTimelineAuthenticationFilter.withSsl = withSsl;
+  public TestTimelineAuthenticationFilterForV1(boolean withSsl) {
+    TestTimelineAuthenticationFilterForV1.withSsl = withSsl;
   }
 
   @BeforeClass
   public static void setup() {
     try {
-      testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
+      testMiniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
       testMiniKDC.start();
       testMiniKDC.createPrincipal(
           httpSpnegoKeytabFile, HTTP_USER + "/localhost");
@@ -111,11 +115,11 @@ public class TestTimelineAuthenticationFilter {
           KerberosAuthenticationHandler.KEYTAB,
           httpSpnegoKeytabFile.getAbsolutePath());
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-        "kerberos");
+          "kerberos");
       conf.set(YarnConfiguration.TIMELINE_SERVICE_PRINCIPAL,
-        httpSpnegoPrincipal);
+          httpSpnegoPrincipal);
       conf.set(YarnConfiguration.TIMELINE_SERVICE_KEYTAB,
-        httpSpnegoKeytabFile.getAbsolutePath());
+          httpSpnegoKeytabFile.getAbsolutePath());
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
           MemoryTimelineStore.class, TimelineStore.class);
@@ -136,8 +140,8 @@ public class TestTimelineAuthenticationFilter {
         FileUtil.fullyDelete(base);
         base.mkdirs();
         keystoresDir = new File(BASEDIR).getAbsolutePath();
-        sslConfDir =
-            KeyStoreTestUtil.getClasspathDir(TestTimelineAuthenticationFilter.class);
+        sslConfDir = KeyStoreTestUtil.getClasspathDir(
+            TestTimelineAuthenticationFilterForV1.class);
         KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
       }
 
@@ -145,6 +149,7 @@ public class TestTimelineAuthenticationFilter {
       testTimelineServer.init(conf);
       testTimelineServer.start();
     } catch (Exception e) {
+      e.printStackTrace();
       assertTrue("Couldn't setup TimelineServer", false);
     }
   }
@@ -181,14 +186,14 @@ public class TestTimelineAuthenticationFilter {
         TimelineClient client = createTimelineClientForUGI();
         TimelineEntity entityToStore = new TimelineEntity();
         entityToStore.setEntityType(
-            TestTimelineAuthenticationFilter.class.getName());
+            TestTimelineAuthenticationFilterForV1.class.getName());
         entityToStore.setEntityId("entity1");
         entityToStore.setStartTime(0L);
         TimelinePutResponse putResponse = client.putEntities(entityToStore);
         Assert.assertEquals(0, putResponse.getErrors().size());
         TimelineEntity entityToRead =
-            testTimelineServer.getTimelineStore().getEntity(
-                "entity1", TestTimelineAuthenticationFilter.class.getName(), null);
+            testTimelineServer.getTimelineStore().getEntity("entity1",
+                TestTimelineAuthenticationFilterForV1.class.getName(), null);
         Assert.assertNotNull(entityToRead);
         return null;
       }
@@ -202,13 +207,14 @@ public class TestTimelineAuthenticationFilter {
       public Void call() throws Exception {
         TimelineClient client = createTimelineClientForUGI();
         TimelineDomain domainToStore = new TimelineDomain();
-        domainToStore.setId(TestTimelineAuthenticationFilter.class.getName());
+        domainToStore.setId(
+            TestTimelineAuthenticationFilterForV1.class.getName());
         domainToStore.setReaders("*");
         domainToStore.setWriters("*");
         client.putDomain(domainToStore);
         TimelineDomain domainToRead =
             testTimelineServer.getTimelineStore().getDomain(
-                TestTimelineAuthenticationFilter.class.getName());
+                TestTimelineAuthenticationFilterForV1.class.getName());
         Assert.assertNotNull(domainToRead);
         return null;
       }
@@ -218,22 +224,24 @@ public class TestTimelineAuthenticationFilter {
   @Test
   public void testDelegationTokenOperations() throws Exception {
     TimelineClient httpUserClient =
-      KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<TimelineClient>() {
-        @Override
-        public TimelineClient call() throws Exception {
-          return createTimelineClientForUGI();
-        }
-      });
+        KerberosTestUtils.doAs(HTTP_USER + "/localhost",
+            new Callable<TimelineClient>() {
+            @Override
+            public TimelineClient call() throws Exception {
+              return createTimelineClientForUGI();
+            }
+          });
     UserGroupInformation httpUser =
-      KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<UserGroupInformation>() {
-        @Override
-        public UserGroupInformation call() throws Exception {
-          return UserGroupInformation.getCurrentUser();
-        }
-      });
+        KerberosTestUtils.doAs(HTTP_USER + "/localhost",
+            new Callable<UserGroupInformation>() {
+            @Override
+            public UserGroupInformation call() throws Exception {
+              return UserGroupInformation.getCurrentUser();
+            }
+          });
     // Let HTTP user to get the delegation for itself
     Token<TimelineDelegationTokenIdentifier> token =
-      httpUserClient.getDelegationToken(httpUser.getShortUserName());
+        httpUserClient.getDelegationToken(httpUser.getShortUserName());
     Assert.assertNotNull(token);
     TimelineDelegationTokenIdentifier tDT = token.decodeIdentifier();
     Assert.assertNotNull(tDT);
@@ -317,7 +325,8 @@ public class TestTimelineAuthenticationFilter {
       barUserClient.getDelegationToken(httpUser.getShortUserName());
       Assert.fail();
     } catch (Exception e) {
-      Assert.assertTrue(e.getCause() instanceof AuthorizationException || e.getCause() instanceof AuthenticationException);
+      Assert.assertTrue(e.getCause() instanceof AuthorizationException ||
+          e.getCause() instanceof AuthenticationException);
     }
   }
 }
