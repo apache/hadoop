@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +30,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -42,6 +42,8 @@ import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
+import org.apache.hadoop.yarn.server.timelineservice.security.TimelineV2DelegationTokenSecretManagerService;
+import org.apache.hadoop.yarn.server.util.timeline.TimelineServerUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -65,17 +67,51 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
 
   private volatile CollectorNodemanagerProtocol nmCollectorService;
 
+  private TimelineV2DelegationTokenSecretManagerService tokenMgrService;
+
+  private final boolean runningAsAuxService;
+
   static final String COLLECTOR_MANAGER_ATTR_KEY = "collector.manager";
 
   @VisibleForTesting
   protected NodeTimelineCollectorManager() {
+    this(true);
+  }
+
+  protected NodeTimelineCollectorManager(boolean asAuxService) {
     super(NodeTimelineCollectorManager.class.getName());
+    this.runningAsAuxService = asAuxService;
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    tokenMgrService = new TimelineV2DelegationTokenSecretManagerService();
+    addService(tokenMgrService);
+    super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
-    startWebApp();
+    if (UserGroupInformation.isSecurityEnabled() && !runningAsAuxService) {
+      // Do security login for cases where collector is running outside NM.
+      try {
+        doSecureLogin();
+      } catch(IOException ie) {
+        throw new YarnRuntimeException("Failed to login", ie);
+      }
+    }
     super.serviceStart();
+    startWebApp();
+  }
+
+  private void doSecureLogin() throws IOException {
+    Configuration conf = getConfig();
+    InetSocketAddress addr = NetUtils.createSocketAddr(conf.getTrimmed(
+        YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST), 0,
+                YarnConfiguration.TIMELINE_SERVICE_BIND_HOST);
+    SecurityUtil.login(conf, YarnConfiguration.TIMELINE_SERVICE_KEYTAB,
+        YarnConfiguration.TIMELINE_SERVICE_PRINCIPAL, addr.getHostName());
   }
 
   @Override
@@ -105,6 +141,12 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
    */
   private void startWebApp() {
     Configuration conf = getConfig();
+    String initializers = conf.get("hadoop.http.filter.initializers", "");
+    Set<String> defaultInitializers = new LinkedHashSet<String>();
+    TimelineServerUtils.addTimelineAuthFilter(
+        initializers, defaultInitializers, tokenMgrService);
+    TimelineServerUtils.setTimelineFilters(
+        conf, initializers, defaultInitializers);
     String bindAddress = conf.get(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST) + ":0";
     try {
@@ -114,16 +156,10 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
           .addEndpoint(URI.create(
               (YarnConfiguration.useHttps(conf) ? "https://" : "http://") +
                   bindAddress));
+      if (YarnConfiguration.useHttps(conf)) {
+        builder = WebAppUtils.loadSslConfiguration(builder, conf);
+      }
       timelineRestServer = builder.build();
-      // TODO: replace this by an authentication filter in future.
-      HashMap<String, String> options = new HashMap<>();
-      String username = conf.get(HADOOP_HTTP_STATIC_USER,
-          DEFAULT_HADOOP_HTTP_STATIC_USER);
-      options.put(HADOOP_HTTP_STATIC_USER, username);
-      HttpServer2.defineFilter(timelineRestServer.getWebAppContext(),
-          "static_user_filter_timeline",
-          StaticUserWebFilter.StaticUserFilter.class.getName(),
-          options, new String[] {"/*"});
 
       timelineRestServer.addJerseyResourcePackage(
           TimelineCollectorWebService.class.getPackage().getName() + ";"

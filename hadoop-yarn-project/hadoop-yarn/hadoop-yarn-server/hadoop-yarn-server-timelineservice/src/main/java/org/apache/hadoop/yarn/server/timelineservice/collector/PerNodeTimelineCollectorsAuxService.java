@@ -61,7 +61,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   private ScheduledExecutorService scheduler;
 
   public PerNodeTimelineCollectorsAuxService() {
-    this(new NodeTimelineCollectorManager());
+    this(new NodeTimelineCollectorManager(true));
   }
 
   @VisibleForTesting PerNodeTimelineCollectorsAuxService(
@@ -202,7 +202,8 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     PerNodeTimelineCollectorsAuxService auxService = null;
     try {
       auxService = collectorManager == null ?
-          new PerNodeTimelineCollectorsAuxService() :
+          new PerNodeTimelineCollectorsAuxService(
+              new NodeTimelineCollectorManager(false)) :
           new PerNodeTimelineCollectorsAuxService(collectorManager);
       ShutdownHookManager.get().addShutdownHook(new ShutdownHook(auxService),
           SHUTDOWN_HOOK_PRIORITY);
