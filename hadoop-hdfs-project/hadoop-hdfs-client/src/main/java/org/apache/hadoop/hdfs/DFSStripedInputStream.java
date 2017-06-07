@@ -236,7 +236,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     BlockReader reader = null;
     final ReaderRetryPolicy retry = new ReaderRetryPolicy();
     DFSInputStream.DNAddrPair dnInfo =
-        new DFSInputStream.DNAddrPair(null, null, null);
+        new DFSInputStream.DNAddrPair(null, null, null, null);
 
     while (true) {
       try {
