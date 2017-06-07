@@ -63,6 +63,8 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
   public static final boolean WINDOWS =
       System.getProperty("os.name").startsWith("Windows");
 
+  public PathFilter filter = null;
+
   /**
    *  Pre-compiled regular expressions to detect path formats.
    */

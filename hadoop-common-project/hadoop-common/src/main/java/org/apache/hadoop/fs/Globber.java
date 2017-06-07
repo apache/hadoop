@@ -231,7 +231,9 @@ class Globber {
         }
         for (FileStatus candidate : candidates) {
           if (globFilter.hasPattern()) {
-            FileStatus[] children = listStatus(candidate.getPath());
+            Path path = candidate.getPath();
+            path.filter = globFilter;
+            FileStatus[] children = listStatus(path);
             if (children.length == 1) {
               // If we get back only one result, this could be either a listing
               // of a directory with one entry, or it could reflect the fact
@@ -254,8 +256,8 @@ class Globber {
                 if (!child.isDirectory()) continue; 
               }
               // Set the child path based on the parent path.
-              child.setPath(new Path(candidate.getPath(),
-                      child.getPath().getName()));
+              child.setPath(new Path(candidate.getPath().toString() + Path.SEPARATOR
+                + child.getPath().getName()));
               if (globFilter.accept(child.getPath())) {
                 newCandidates.add(child);
               }

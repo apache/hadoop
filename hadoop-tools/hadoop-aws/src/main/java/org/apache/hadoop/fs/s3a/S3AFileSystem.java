@@ -1460,7 +1460,7 @@ public class S3AFileSystem extends FileSystem {
       Listing.FileStatusListingIterator files =
           listing.createFileStatusListingIterator(path,
               request,
-              ACCEPT_ALL,
+              (f.filter == null) ? ACCEPT_ALL : f.filter,
               new Listing.AcceptAllButSelfAndS3nDirs(path));
       result = new ArrayList<>(files.getBatchSize());
       while (files.hasNext()) {
