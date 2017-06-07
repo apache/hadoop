@@ -642,6 +642,8 @@ public class DFSInputStream extends FSInputStream
       chosenNode = retval.info;
       InetSocketAddress targetAddr = retval.addr;
       StorageType storageType = retval.storageType;
+      // Latest block if refreshed by chooseDatanode()
+      targetBlock = retval.block;
 
       try {
         blockReader = getBlockReader(targetBlock, offsetIntoBlock,
@@ -1090,7 +1092,7 @@ public class DFSInputStream extends FSInputStream
         chosenNode.getXferAddr(dfsClient.getConf().isConnectToDnViaHostname());
     DFSClient.LOG.debug("Connecting to datanode {}", dnAddr);
     InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr);
-    return new DNAddrPair(chosenNode, targetAddr, storageType);
+    return new DNAddrPair(chosenNode, targetAddr, storageType, block);
   }
 
   private static String getBestNodeDNAddrPairErrorString(
@@ -1122,12 +1124,13 @@ public class DFSInputStream extends FSInputStream
       byte[] buf, int offset,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
-    block = refreshLocatedBlock(block);
     while (true) {
       DNAddrPair addressPair = chooseDataNode(block, null);
+      // Latest block, if refreshed internally
+      block = addressPair.block;
       try {
-        actualGetFromOneDataNode(addressPair, block, start, end,
-            buf, offset, corruptedBlockMap);
+        actualGetFromOneDataNode(addressPair, start, end, buf, offset,
+            corruptedBlockMap);
         return;
       } catch (IOException e) {
         // Ignore. Already processed inside the function.
@@ -1149,8 +1152,8 @@ public class DFSInputStream extends FSInputStream
         int offset = bb.position();
         try (TraceScope ignored = dfsClient.getTracer().
             newScope("hedgedRead" + hedgedReadId, parentSpanId)) {
-          actualGetFromOneDataNode(datanode, block, start, end, buf,
-              offset, corruptedBlockMap);
+          actualGetFromOneDataNode(datanode, start, end, buf, offset,
+              corruptedBlockMap);
           return bb;
         }
       }
@@ -1161,18 +1164,17 @@ public class DFSInputStream extends FSInputStream
    * Used when reading contiguous blocks
    */
   private void actualGetFromOneDataNode(final DNAddrPair datanode,
-      LocatedBlock block, final long start, final long end, byte[] buf,
-      int offset, Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
+      final long start, final long end, byte[] buf, int offset,
+      Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
     final int length = (int) (end - start + 1);
-    actualGetFromOneDataNode(datanode, block, start, end, buf,
-        new int[]{offset}, new int[]{length}, corruptedBlockMap);
+    actualGetFromOneDataNode(datanode, start, end, buf, new int[] { offset },
+        new int[] { length }, corruptedBlockMap);
   }
 
   /**
    * Read data from one DataNode.
    * @param datanode the datanode from which to read data
-   * @param block the located block containing the requested data
    * @param startInBlk the startInBlk offset of the block
    * @param endInBlk the endInBlk offset of the block
    * @param buf the given byte array into which the data is read
@@ -1184,9 +1186,8 @@ public class DFSInputStream extends FSInputStream
    *                          block replica
    */
   void actualGetFromOneDataNode(final DNAddrPair datanode,
-      LocatedBlock block, final long startInBlk, final long endInBlk,
-      byte[] buf, int[] offsets, int[] lengths,
-      Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
+      final long startInBlk, final long endInBlk, byte[] buf,
+      int[] offsets, int[] lengths, Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
     DFSClientFaultInjector.get().startFetchFromDatanode();
     int refetchToken = 1; // only need to get a new access token once
@@ -1194,11 +1195,8 @@ public class DFSInputStream extends FSInputStream
     final int len = (int) (endInBlk - startInBlk + 1);
     checkReadPortions(offsets, lengths, len);
 
+    LocatedBlock block = datanode.block;
     while (true) {
-      // cached block locations may have been updated by chooseDataNode()
-      // or fetchBlockAt(). Always get the latest list of locations at the
-      // start of the loop.
-      block = refreshLocatedBlock(block);
       BlockReader reader = null;
       try {
         DFSClientFaultInjector.get().fetchFromDatanodeException();
@@ -1246,6 +1244,9 @@ public class DFSInputStream extends FSInputStream
           addToDeadNodes(datanode.info);
           throw new IOException(msg);
         }
+        // Refresh the block for updated tokens in case of token failures or
+        // encryption key failures.
+        block = refreshLocatedBlock(block);
       } finally {
         if (reader != null) {
           reader.close();
@@ -1300,7 +1301,6 @@ public class DFSInputStream extends FSInputStream
     ByteBuffer bb;
     int len = (int) (end - start + 1);
     int hedgedReadId = 0;
-    block = refreshLocatedBlock(block);
     while (true) {
       // see HDFS-6591, this metric is used to verify/catch unnecessary loops
       hedgedReadOpsLoopNumForTesting++;
@@ -1310,6 +1310,8 @@ public class DFSInputStream extends FSInputStream
         // chooseDataNode is a commitment. If no node, we go to
         // the NN to reget block locations. Only go here on first read.
         chosenNode = chooseDataNode(block, ignored);
+        // Latest block, if refreshed internally
+        block = chosenNode.block;
         bb = ByteBuffer.allocate(len);
         Callable<ByteBuffer> getFromDataNodeCallable = getFromOneDataNode(
             chosenNode, block, start, end, bb,
@@ -1344,6 +1346,8 @@ public class DFSInputStream extends FSInputStream
           if (chosenNode == null) {
             chosenNode = chooseDataNode(block, ignored);
           }
+          // Latest block, if refreshed internally
+          block = chosenNode.block;
           bb = ByteBuffer.allocate(len);
           Callable<ByteBuffer> getFromDataNodeCallable = getFromOneDataNode(
               chosenNode, block, start, end, bb,
@@ -1693,12 +1697,14 @@ public class DFSInputStream extends FSInputStream
     final DatanodeInfo info;
     final InetSocketAddress addr;
     final StorageType storageType;
+    final LocatedBlock block;
 
     DNAddrPair(DatanodeInfo info, InetSocketAddress addr,
-        StorageType storageType) {
+        StorageType storageType, LocatedBlock block) {
       this.info = info;
       this.addr = addr;
       this.storageType = storageType;
+      this.block = block;
     }
   }
 
