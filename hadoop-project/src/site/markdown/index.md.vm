@@ -79,7 +79,7 @@ Here is a short overview of the major features and improvements.
 
 *   MAPREDUCE
 
-    *   Allow node labels get specificed in submitting MR jobs
+    *   Allow node labels get specified in submitting MR jobs
 
     *   Add a new tool to combine aggregated logs into HAR files
 
