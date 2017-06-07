@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
-import org.apache.hadoop.ozone.web.request.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;

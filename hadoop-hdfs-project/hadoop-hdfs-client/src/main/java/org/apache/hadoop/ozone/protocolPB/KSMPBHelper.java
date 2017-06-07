@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
-import org.apache.hadoop.ozone.web.request.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto

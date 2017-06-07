@@ -18,15 +18,16 @@
 package org.apache.hadoop.ksm.helpers;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.proto
-    .HdfsProtos.StorageTypeProto;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.BucketInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A class that encapsulates Bucket Info.
@@ -43,7 +44,7 @@ public final class KsmBucketInfo {
   /**
    * ACL Information.
    */
-  private List<OzoneAclInfo> acls;
+  private List<OzoneAcl> acls;
   /**
    * Bucket Version flag.
    */
@@ -52,7 +53,7 @@ public final class KsmBucketInfo {
    * Type of storage to be used for this bucket.
    * [RAM_DISK, SSD, DISK, ARCHIVE]
    */
-  private StorageTypeProto storageType;
+  private StorageType storageType;
 
   /**
    * Private constructor, constructed via builder.
@@ -63,8 +64,8 @@ public final class KsmBucketInfo {
    * @param storageType - Storage type to be used.
    */
   private KsmBucketInfo(String volumeName, String bucketName,
-                        List<OzoneAclInfo> acls, boolean isVersionEnabled,
-                        StorageTypeProto storageType) {
+                        List<OzoneAcl> acls, boolean isVersionEnabled,
+                        StorageType storageType) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.acls = acls;
@@ -90,9 +91,9 @@ public final class KsmBucketInfo {
 
   /**
    * Returns the ACL's associated with this bucket.
-   * @return List<OzoneAclInfo>
+   * @return List<OzoneAcl>
    */
-  public List<OzoneAclInfo> getAcls() {
+  public List<OzoneAcl> getAcls() {
     return acls;
   }
 
@@ -106,9 +107,9 @@ public final class KsmBucketInfo {
 
   /**
    * Returns the type of storage to be used.
-   * @return StorageTypeProto
+   * @return StorageType
    */
-  public StorageTypeProto getStorageType() {
+  public StorageType getStorageType() {
     return storageType;
   }
 
@@ -127,15 +128,15 @@ public final class KsmBucketInfo {
   public static class Builder {
     private String volumeName;
     private String bucketName;
-    private List<OzoneAclInfo> acls;
+    private List<OzoneAcl> acls;
     private Boolean isVersionEnabled;
-    private StorageTypeProto storageType;
+    private StorageType storageType;
 
     Builder() {
       //Default values
       this.acls = new LinkedList<>();
       this.isVersionEnabled = false;
-      this.storageType = StorageTypeProto.DISK;
+      this.storageType = StorageType.DISK;
     }
 
     public Builder setVolumeName(String volume) {
@@ -148,7 +149,7 @@ public final class KsmBucketInfo {
       return this;
     }
 
-    public Builder setAcls(List<OzoneAclInfo> listOfAcls) {
+    public Builder setAcls(List<OzoneAcl> listOfAcls) {
       this.acls = listOfAcls;
       return this;
     }
@@ -158,7 +159,7 @@ public final class KsmBucketInfo {
       return this;
     }
 
-    public Builder setStorageType(StorageTypeProto storage) {
+    public Builder setStorageType(StorageType storage) {
       this.storageType = storage;
       return this;
     }
@@ -185,9 +186,11 @@ public final class KsmBucketInfo {
     return BucketInfo.newBuilder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
-        .addAllAcls(acls)
+        .addAllAcls(acls.stream().map(
+            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()))
         .setIsVersionEnabled(isVersionEnabled)
-        .setStorageType(storageType)
+        .setStorageType(PBHelperClient.convertStorageType(
+            storageType))
         .build();
   }
 
@@ -200,8 +203,10 @@ public final class KsmBucketInfo {
     return new KsmBucketInfo(
         bucketInfo.getVolumeName(),
         bucketInfo.getBucketName(),
-        bucketInfo.getAclsList(),
+        bucketInfo.getAclsList().stream().map(
+            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
         bucketInfo.getIsVersionEnabled(),
-        bucketInfo.getStorageType());
+        PBHelperClient.convertStorageType(
+            bucketInfo.getStorageType()));
   }
 }

@@ -16,18 +16,15 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions
     .KSMException.ResultCodes;
-import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
-import org.apache.hadoop.ozone.web.request.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -203,7 +200,7 @@ public class TestBucketManagerImpl {
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
-        .setStorageType(HdfsProtos.StorageTypeProto.DISK)
+        .setStorageType(StorageType.DISK)
         .setIsVersionEnabled(false)
         .build();
     bucketManager.createBucket(bucketInfo);
@@ -211,7 +208,7 @@ public class TestBucketManagerImpl {
         "sampleVol", "bucketOne");
     Assert.assertEquals("sampleVol", result.getVolumeName());
     Assert.assertEquals("bucketOne", result.getBucketName());
-    Assert.assertEquals(HdfsProtos.StorageTypeProto.DISK,
+    Assert.assertEquals(StorageType.DISK,
         result.getStorageType());
     Assert.assertEquals(false, result.getIsVersionEnabled());
   }
@@ -219,16 +216,16 @@ public class TestBucketManagerImpl {
   @Test
   public void testSetBucketPropertyAddACL() throws IOException {
     MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
-    List<OzoneAclInfo> acls = new LinkedList<>();
+    List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl ozoneAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "root", OzoneAcl.OzoneACLRights.READ);
-    acls.add(KSMPBHelper.convertOzoneAcl(ozoneAcl));
+    acls.add(ozoneAcl);
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
         .setAcls(acls)
-        .setStorageType(HdfsProtos.StorageTypeProto.DISK)
+        .setStorageType(StorageType.DISK)
         .setIsVersionEnabled(false)
         .build();
     bucketManager.createBucket(bucketInfo);
@@ -237,10 +234,10 @@ public class TestBucketManagerImpl {
     Assert.assertEquals("sampleVol", result.getVolumeName());
     Assert.assertEquals("bucketOne", result.getBucketName());
     Assert.assertEquals(1, result.getAcls().size());
-    List<OzoneAclInfo> addAcls = new LinkedList<>();
+    List<OzoneAcl> addAcls = new LinkedList<>();
     OzoneAcl newAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "ozone", OzoneAcl.OzoneACLRights.READ);
-    addAcls.add(KSMPBHelper.convertOzoneAcl(newAcl));
+    addAcls.add(newAcl);
     KsmBucketArgs bucketArgs = KsmBucketArgs.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
@@ -250,34 +247,33 @@ public class TestBucketManagerImpl {
     KsmBucketInfo updatedResult = bucketManager.getBucketInfo(
         "sampleVol", "bucketOne");
     Assert.assertEquals(2, updatedResult.getAcls().size());
-    Assert.assertTrue(updatedResult.getAcls().contains(
-        KSMPBHelper.convertOzoneAcl(newAcl)));
+    Assert.assertTrue(updatedResult.getAcls().contains(newAcl));
   }
 
   @Test
   public void testSetBucketPropertyRemoveACL() throws IOException {
     MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
-    List<OzoneAclInfo> acls = new LinkedList<>();
+    List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl aclOne = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "root", OzoneAcl.OzoneACLRights.READ);
     OzoneAcl aclTwo = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "ozone", OzoneAcl.OzoneACLRights.READ);
-    acls.add(KSMPBHelper.convertOzoneAcl(aclOne));
-    acls.add(KSMPBHelper.convertOzoneAcl(aclTwo));
+    acls.add(aclOne);
+    acls.add(aclTwo);
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
         .setAcls(acls)
-        .setStorageType(HdfsProtos.StorageTypeProto.DISK)
+        .setStorageType(StorageType.DISK)
         .setIsVersionEnabled(false)
         .build();
     bucketManager.createBucket(bucketInfo);
     KsmBucketInfo result = bucketManager.getBucketInfo(
         "sampleVol", "bucketOne");
     Assert.assertEquals(2, result.getAcls().size());
-    List<OzoneAclInfo> removeAcls = new LinkedList<>();
-    removeAcls.add(KSMPBHelper.convertOzoneAcl(aclTwo));
+    List<OzoneAcl> removeAcls = new LinkedList<>();
+    removeAcls.add(aclTwo);
     KsmBucketArgs bucketArgs = KsmBucketArgs.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
@@ -287,8 +283,7 @@ public class TestBucketManagerImpl {
     KsmBucketInfo updatedResult = bucketManager.getBucketInfo(
         "sampleVol", "bucketOne");
     Assert.assertEquals(1, updatedResult.getAcls().size());
-    Assert.assertFalse(updatedResult.getAcls().contains(
-        KSMPBHelper.convertOzoneAcl(aclTwo)));
+    Assert.assertFalse(updatedResult.getAcls().contains(aclTwo));
   }
 
   @Test
@@ -298,22 +293,22 @@ public class TestBucketManagerImpl {
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
-        .setStorageType(HdfsProtos.StorageTypeProto.DISK)
+        .setStorageType(StorageType.DISK)
         .build();
     bucketManager.createBucket(bucketInfo);
     KsmBucketInfo result = bucketManager.getBucketInfo(
         "sampleVol", "bucketOne");
-    Assert.assertEquals(HdfsProtos.StorageTypeProto.DISK,
+    Assert.assertEquals(StorageType.DISK,
         result.getStorageType());
     KsmBucketArgs bucketArgs = KsmBucketArgs.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
-        .setStorageType(HdfsProtos.StorageTypeProto.SSD)
+        .setStorageType(StorageType.SSD)
         .build();
     bucketManager.setBucketProperty(bucketArgs);
     KsmBucketInfo updatedResult = bucketManager.getBucketInfo(
         "sampleVol", "bucketOne");
-    Assert.assertEquals(HdfsProtos.StorageTypeProto.SSD,
+    Assert.assertEquals(StorageType.SSD,
         updatedResult.getStorageType());
   }
 

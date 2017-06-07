@@ -17,9 +17,7 @@
  */
 
 
-package org.apache.hadoop.ozone.web.request;
-
-import org.apache.hadoop.ozone.OzoneConsts;
+package org.apache.hadoop.ozone;
 
 import java.util.Objects;
 

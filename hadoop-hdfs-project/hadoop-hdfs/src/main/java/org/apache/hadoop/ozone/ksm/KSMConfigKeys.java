@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.ozone.ksm;
 
-import org.apache.hadoop.ozone.web.request.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneAcl;
 /**
  * KSM Constants.
  */

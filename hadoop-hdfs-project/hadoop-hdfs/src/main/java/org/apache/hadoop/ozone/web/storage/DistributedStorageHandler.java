@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto
 import org.apache.hadoop.hdfs.ozone.protocol.proto
     .ContainerProtos.KeyData;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset
     .LengthInputStream;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
@@ -40,7 +39,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
-import org.apache.hadoop.ozone.web.request.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.ScmConfigKeys;
@@ -78,7 +77,6 @@ import java.util.Locale;
 import java.util.HashSet;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * A {@link StorageHandler} implementation that distributes object storage
@@ -205,12 +203,10 @@ public final class DistributedStorageHandler implements StorageHandler {
     builder.setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName());
     if(args.getAddAcls() != null) {
-      builder.setAcls(args.getAddAcls().stream().map(
-          KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+      builder.setAcls(args.getAddAcls());
     }
     if(args.getStorageType() != null) {
-      builder.setStorageType(PBHelperClient.convertStorageType(
-          args.getStorageType()));
+      builder.setStorageType(args.getStorageType());
     }
     if(args.getVersioning() != null) {
       builder.setIsVersionEnabled(getBucketVersioningProtobuf(
@@ -250,12 +246,10 @@ public final class DistributedStorageHandler implements StorageHandler {
       builder.setVolumeName(args.getVolumeName())
           .setBucketName(args.getBucketName());
       if(removeAcls != null && !removeAcls.isEmpty()) {
-        builder.setRemoveAcls(args.getRemoveAcls().stream().map(
-            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+        builder.setRemoveAcls(args.getRemoveAcls());
       }
       if(addAcls != null && !addAcls.isEmpty()) {
-        builder.setAddAcls(args.getAddAcls().stream().map(
-            KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+        builder.setAddAcls(args.getAddAcls());
       }
       keySpaceManagerClient.setBucketProperty(builder.build());
     }
@@ -278,8 +272,7 @@ public final class DistributedStorageHandler implements StorageHandler {
     KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
     builder.setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
-        .setStorageType(PBHelperClient.convertStorageType(
-            args.getStorageType()));
+        .setStorageType(args.getStorageType());
     keySpaceManagerClient.setBucketProperty(builder.build());
   }
 
@@ -317,10 +310,8 @@ public final class DistributedStorageHandler implements StorageHandler {
     } else {
       bucketInfo.setVersioning(Versioning.DISABLED);
     }
-    bucketInfo.setStorageType(PBHelperClient.convertStorageType(
-        ksmBucketInfo.getStorageType()));
-    bucketInfo.setAcls(ksmBucketInfo.getAcls().stream().map(
-        KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+    bucketInfo.setStorageType(ksmBucketInfo.getStorageType());
+    bucketInfo.setAcls(ksmBucketInfo.getAcls());
     return bucketInfo;
   }
 
