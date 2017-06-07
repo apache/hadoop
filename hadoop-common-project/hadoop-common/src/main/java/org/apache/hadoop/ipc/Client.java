@@ -1107,7 +1107,8 @@ public class Client implements AutoCloseable {
                   return;
                 }
                 if (LOG.isDebugEnabled()) {
-                  LOG.debug(getName() + " sending #" + call.id);
+                  LOG.debug(getName() + " sending #" + call.id
+                      + " " + call.rpcRequest);
                 }
                 // RpcRequestHeader + RpcRequest
                 ipcStreams.sendRequest(buf.toByteArray());
