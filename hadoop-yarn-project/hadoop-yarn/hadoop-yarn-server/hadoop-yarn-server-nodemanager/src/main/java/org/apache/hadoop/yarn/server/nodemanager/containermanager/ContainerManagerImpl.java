@@ -1475,8 +1475,10 @@ public class ContainerManagerImpl extends CompositeService implements
       for (ApplicationId appID : appsFinishedEvent.getAppsToCleanup()) {
         Application app = this.context.getApplications().get(appID);
         if (app == null) {
-          LOG.warn("couldn't find application " + appID + " while processing"
-              + " FINISH_APPS event");
+          LOG.info("couldn't find application " + appID + " while processing"
+              + " FINISH_APPS event. The ResourceManager allocated resources"
+              + " for this application to the NodeManager but no active"
+              + " containers were found to process.");
           continue;
         }
 

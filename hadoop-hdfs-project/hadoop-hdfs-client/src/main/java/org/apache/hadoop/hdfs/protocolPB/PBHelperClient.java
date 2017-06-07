@@ -1723,6 +1723,10 @@ public class PBHelperClient {
     case LIVE: return DatanodeReportTypeProto.LIVE;
     case DEAD: return DatanodeReportTypeProto.DEAD;
     case DECOMMISSIONING: return DatanodeReportTypeProto.DECOMMISSIONING;
+    case ENTERING_MAINTENANCE:
+      return DatanodeReportTypeProto.ENTERING_MAINTENANCE;
+    case IN_MAINTENANCE:
+      return DatanodeReportTypeProto.IN_MAINTENANCE;
     default:
       throw new IllegalArgumentException("Unexpected data type report:" + t);
     }
@@ -2126,6 +2130,10 @@ public class PBHelperClient {
     case LIVE: return DatanodeReportType.LIVE;
     case DEAD: return DatanodeReportType.DEAD;
     case DECOMMISSIONING: return DatanodeReportType.DECOMMISSIONING;
+    case ENTERING_MAINTENANCE:
+      return DatanodeReportType.ENTERING_MAINTENANCE;
+    case IN_MAINTENANCE:
+      return DatanodeReportType.IN_MAINTENANCE;
     default:
       throw new IllegalArgumentException("Unexpected data type report:" + t);
     }

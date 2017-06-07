@@ -42,7 +42,7 @@ public class TestRollingAverages {
   public void testRollingAveragesEmptyRollover() throws Exception {
     final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     /* 5s interval and 2 windows */
-    try (final RollingAverages rollingAverages =
+    try (RollingAverages rollingAverages =
              new RollingAverages(5000, 2)) {
       /* Check it initially */
       rollingAverages.snapshot(rb, true);

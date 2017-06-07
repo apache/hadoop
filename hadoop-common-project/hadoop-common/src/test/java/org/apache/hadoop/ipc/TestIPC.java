@@ -1339,7 +1339,7 @@ public class TestIPC {
 
   @Test
   public void testMaxConnections() throws Exception {
-    conf.setInt("ipc.server.max.connections", 5);
+    conf.setInt("ipc.server.max.connections", 6);
     Server server = null;
     Thread connectors[] = new Thread[10];
 
@@ -1374,8 +1374,10 @@ public class TestIPC {
       }
 
       Thread.sleep(1000);
-      // server should only accept up to 5 connections
-      assertEquals(5, server.getNumOpenConnections());
+      // server should only accept up to 6 connections
+      assertEquals(6, server.getNumOpenConnections());
+      // server should drop the other 4 connections
+      assertEquals(4, server.getNumDroppedConnections());
 
       for (int i = 0; i < 10; i++) {
         connectors[i].join();
@@ -1423,7 +1425,7 @@ public class TestIPC {
   }
 
   private void checkVersionMismatch() throws IOException {
-    try (final ServerSocket listenSocket = new ServerSocket()) {
+    try (ServerSocket listenSocket = new ServerSocket()) {
       listenSocket.bind(null);
       InetSocketAddress addr =
           (InetSocketAddress) listenSocket.getLocalSocketAddress();

@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azure;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.PATH_DELIMITER;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -2043,11 +2042,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
         // Get blob reference and open the input buffer stream.
         CloudBlobWrapper blob = getBlobReference(key);
-      BufferedInputStream inBufStream = new BufferedInputStream(
-          openInputStream(blob));
 
         // Return a data input stream.
-        DataInputStream inDataStream = new DataInputStream(inBufStream);
+        DataInputStream inDataStream = new DataInputStream(openInputStream(blob));
         return inDataStream;
     } catch (Exception e) {
       // Re-throw as an Azure storage exception.

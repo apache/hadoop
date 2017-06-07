@@ -153,7 +153,7 @@ public class TestDataNodeFaultInjector {
       cluster.waitActive();
 
       final FileSystem fs = cluster.getFileSystem();
-      try (final FSDataOutputStream out = fs
+      try (FSDataOutputStream out = fs
           .create(new Path(baseDir, "test.data"), (short) 2)) {
         out.write(0x31);
         out.hflush();
