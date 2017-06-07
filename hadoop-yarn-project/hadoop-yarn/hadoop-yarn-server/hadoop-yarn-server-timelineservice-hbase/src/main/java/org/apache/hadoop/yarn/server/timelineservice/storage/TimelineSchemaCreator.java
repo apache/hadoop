@@ -61,9 +61,10 @@ public final class TimelineSchemaCreator {
   final static String NAME = TimelineSchemaCreator.class.getSimpleName();
   private static final Log LOG = LogFactory.getLog(TimelineSchemaCreator.class);
   private static final String SKIP_EXISTING_TABLE_OPTION_SHORT = "s";
+  private static final String APP_METRICS_TTL_OPTION_SHORT = "ma";
   private static final String APP_TABLE_NAME_SHORT = "a";
   private static final String APP_TO_FLOW_TABLE_NAME_SHORT = "a2f";
-  private static final String TTL_OPTION_SHORT = "m";
+  private static final String ENTITY_METRICS_TTL_OPTION_SHORT = "me";
   private static final String ENTITY_TABLE_NAME_SHORT = "e";
   private static final String HELP_SHORT = "h";
   private static final String CREATE_TABLES_SHORT = "c";
@@ -91,12 +92,12 @@ public final class TimelineSchemaCreator {
       if (StringUtils.isNotBlank(entityTableName)) {
         hbaseConf.set(EntityTable.TABLE_NAME_CONF_NAME, entityTableName);
       }
-      // Grab the TTL argument
-      String entityTableTTLMetrics =commandLine.getOptionValue(
-          TTL_OPTION_SHORT);
-      if (StringUtils.isNotBlank(entityTableTTLMetrics)) {
-        int metricsTTL = Integer.parseInt(entityTableTTLMetrics);
-        new EntityTable().setMetricsTTL(metricsTTL, hbaseConf);
+      // Grab the entity metrics TTL
+      String entityTableMetricsTTL = commandLine.getOptionValue(
+          ENTITY_METRICS_TTL_OPTION_SHORT);
+      if (StringUtils.isNotBlank(entityTableMetricsTTL)) {
+        int entityMetricsTTL = Integer.parseInt(entityTableMetricsTTL);
+        new EntityTable().setMetricsTTL(entityMetricsTTL, hbaseConf);
       }
       // Grab the appToflowTableName argument
       String appToflowTableName = commandLine.getOptionValue(
@@ -110,6 +111,13 @@ public final class TimelineSchemaCreator {
       if (StringUtils.isNotBlank(applicationTableName)) {
         hbaseConf.set(ApplicationTable.TABLE_NAME_CONF_NAME,
             applicationTableName);
+      }
+      // Grab the application metrics TTL
+      String applicationTableMetricsTTL = commandLine.getOptionValue(
+          APP_METRICS_TTL_OPTION_SHORT);
+      if (StringUtils.isNotBlank(applicationTableMetricsTTL)) {
+        int appMetricsTTL = Integer.parseInt(applicationTableMetricsTTL);
+        new ApplicationTable().setMetricsTTL(appMetricsTTL, hbaseConf);
       }
 
       // create all table schemas in hbase
@@ -149,9 +157,9 @@ public final class TimelineSchemaCreator {
     o.setRequired(false);
     options.addOption(o);
 
-    o = new Option(TTL_OPTION_SHORT, "metricsTTL", true,
+    o = new Option(ENTITY_METRICS_TTL_OPTION_SHORT, "entityMetricsTTL", true,
         "TTL for metrics column family");
-    o.setArgName("metricsTTL");
+    o.setArgName("entityMetricsTTL");
     o.setRequired(false);
     options.addOption(o);
 
@@ -164,6 +172,12 @@ public final class TimelineSchemaCreator {
     o = new Option(APP_TABLE_NAME_SHORT, "applicationTableName", true,
         "application table name");
     o.setArgName("applicationTableName");
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option(APP_METRICS_TTL_OPTION_SHORT, "applicationMetricsTTL", true,
+        "TTL for metrics column family");
+    o.setArgName("applicationMetricsTTL");
     o.setRequired(false);
     options.addOption(o);
 
@@ -197,12 +211,14 @@ public final class TimelineSchemaCreator {
     usage.append("The Optional options for creating tables include: \n");
     usage.append("[-entityTableName <Entity Table Name>] " +
         "The name of the Entity table\n");
-    usage.append("[-metricsTTL <Entity Table Metrics TTL>]" +
+    usage.append("[-entityMetricsTTL <Entity Table Metrics TTL>]" +
         " TTL for metrics in the Entity table\n");
     usage.append("[-appToflowTableName <AppToflow Table Name>]" +
         " The name of the AppToFlow table\n");
     usage.append("[-applicationTableName <Application Table Name>]" +
         " The name of the Application table\n");
+    usage.append("[-applicationMetricsTTL <Application Table Metrics TTL>]" +
+        " TTL for metrics in the Application table\n");
     usage.append("[-skipExistingTable] Whether to skip existing" +
         " hbase tables\n");
     System.out.println(usage.toString());
