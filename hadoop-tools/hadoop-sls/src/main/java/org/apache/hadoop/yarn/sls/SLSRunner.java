@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
@@ -243,6 +244,13 @@ public class SLSRunner extends Configured implements Tool {
         return new MockAMLauncher(se, this.rmContext, amMap);
       }
     };
+
+    // Across runs of parametrized tests, the JvmMetrics objects is retained,
+    // but is not registered correctly
+    JvmMetrics jvmMetrics = JvmMetrics.initSingleton("ResourceManager", null);
+    jvmMetrics.registerIfNeeded();
+
+    // Init and start the actual ResourceManager
     rm.init(rmConf);
     rm.start();
   }
