@@ -94,7 +94,7 @@ public class OfflineImageViewer {
           + "Optional command line arguments:\n"
           + "-p,--processor <arg>   Select which type of processor to apply\n"
           + "                       against image file."
-          + " (Ls|XML|Delimited|Indented|FileDistribution).\n"
+          + " (Ls|XML|Delimited|Indented|FileDistribution|NameDistribution).\n"
           + "-h,--help              Display usage information and exit\n"
           + "-printToScreen         For processors that write to a file, also\n"
           + "                       output to screen. On large image files this\n"
