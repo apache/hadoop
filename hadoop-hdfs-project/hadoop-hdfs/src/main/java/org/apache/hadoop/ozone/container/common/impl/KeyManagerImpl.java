@@ -20,9 +20,9 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.helpers.FilteredKeys;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
@@ -30,14 +30,15 @@ import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
-import org.apache.hadoop.ozone.container.common.helpers.FilteredKeys.KeyPrefixFilter;
-import org.apache.hadoop.ozone.container.common.helpers.FilteredKeys.PreKeyFilter;
+import org.apache.hadoop.utils.LevelDBKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .Result.IO_EXCEPTION;
@@ -169,7 +170,7 @@ public class KeyManagerImpl implements KeyManager {
    */
   @Override
   public List<KeyData> listKey(
-      Pipeline pipeline, String prefix, String prevKey, int count)
+      Pipeline pipeline, String prefix, String startKey, int count)
       throws StorageContainerException {
     Preconditions.checkNotNull(pipeline,
         "Pipeline cannot be null.");
@@ -178,10 +179,23 @@ public class KeyManagerImpl implements KeyManager {
     ContainerData cData = containerManager.readContainer(pipeline
         .getContainerName());
     LevelDBStore db = KeyUtils.getDB(cData, conf);
-    try (FilteredKeys filteredKeys = new FilteredKeys(db, count)) {
-      filteredKeys.addKeyFilter(new KeyPrefixFilter(prefix));
-      filteredKeys.addKeyFilter(new PreKeyFilter(db, prevKey));
-      return filteredKeys.getFilteredKeys();
+    try {
+      List<KeyData> result = new ArrayList<KeyData>();
+      byte[] startKeyInBytes = startKey == null ? null :
+          DFSUtil.string2Bytes(startKey);
+      KeyPrefixFilter prefixFilter = new KeyPrefixFilter(prefix);
+      List<Map.Entry<byte[], byte[]>> range =
+          db.getRangeKVs(startKeyInBytes, count, prefixFilter);
+      for(Map.Entry<byte[], byte[]> entry : range) {
+        String keyName = KeyUtils.getKeyName(entry.getKey());
+        KeyData value = KeyUtils.getKeyData(entry.getValue());
+        KeyData data = new KeyData(value.getContainerName(), keyName);
+        result.add(data);
+      }
+      return result;
+    } catch (IOException e) {
+      throw new StorageContainerException(e,
+          ContainerProtos.Result.IO_EXCEPTION);
     }
   }
 
