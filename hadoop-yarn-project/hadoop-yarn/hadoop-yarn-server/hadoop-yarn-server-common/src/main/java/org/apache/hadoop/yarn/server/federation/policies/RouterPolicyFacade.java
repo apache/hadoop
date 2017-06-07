@@ -95,7 +95,7 @@ public class RouterPolicyFacade {
         new FederationPolicyInitializationContext(configuration,
             subClusterResolver, federationFacade, homeSubcluster);
     FederationPolicyManager fallbackPolicyManager =
-        instantiatePolicyManager(configuration.getType());
+        FederationPolicyUtils.instantiatePolicyManager(configuration.getType());
     fallbackPolicyManager.setQueue(defaulKey);
 
     // add to the cache the fallback behavior
@@ -209,7 +209,7 @@ public class RouterPolicyFacade {
     FederationRouterPolicy routerPolicy = policyMap.get(queue);
 
     FederationPolicyManager federationPolicyManager =
-        instantiatePolicyManager(newType);
+        FederationPolicyUtils.instantiatePolicyManager(newType);
     // set queue, reinit policy if required (implementation lazily check
     // content of conf), and cache it
     federationPolicyManager.setQueue(queue);
@@ -222,23 +222,6 @@ public class RouterPolicyFacade {
       policyMap.put(queue, routerPolicy);
       cachedConfs.put(queue, conf);
     }
-  }
-
-  private static FederationPolicyManager instantiatePolicyManager(
-      String newType) throws FederationPolicyInitializationException {
-    FederationPolicyManager federationPolicyManager = null;
-    try {
-      // create policy instance and set queue
-      Class c = Class.forName(newType);
-      federationPolicyManager = (FederationPolicyManager) c.newInstance();
-    } catch (ClassNotFoundException e) {
-      throw new FederationPolicyInitializationException(e);
-    } catch (InstantiationException e) {
-      throw new FederationPolicyInitializationException(e);
-    } catch (IllegalAccessException e) {
-      throw new FederationPolicyInitializationException(e);
-    }
-    return federationPolicyManager;
   }
 
   /**

@@ -45,6 +45,12 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   private MockResourceManagerFacade mockRm;
 
   @Override
+  protected UnmanagedAMPoolManager createUnmanagedAMPoolManager(
+      ExecutorService threadPool) {
+    return new TestableUnmanagedAMPoolManager(threadPool);
+  }
+
+  @Override
   protected ApplicationMasterProtocol createHomeRMProxy(
       AMRMProxyApplicationContext appContext) {
     synchronized (this) {
