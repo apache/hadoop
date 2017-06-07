@@ -94,6 +94,7 @@ public class TestFileSystemOperationExceptionHandling
     AzureBlobStorageTestAccount testAccount = createTestAccount();
     setupInputStreamToTest(testAccount);
     inputStream.seek(5);
+    inputStream.read();
   }
 
   /*
