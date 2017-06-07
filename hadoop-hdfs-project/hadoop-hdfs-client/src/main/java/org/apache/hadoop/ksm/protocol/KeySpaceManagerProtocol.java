@@ -154,4 +154,11 @@ public interface KeySpaceManagerProtocol {
    */
   void deleteKey(KsmKeyArgs args) throws IOException;
 
+  /**
+   * Deletes an existing empty bucket from volume.
+   * @param volume - Name of the volume.
+   * @param bucket - Name of the bucket.
+   * @throws IOException
+   */
+  void deleteBucket(String volume, String bucket) throws IOException;
 }

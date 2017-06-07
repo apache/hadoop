@@ -45,6 +45,10 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.SetBucketPropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeResponse;
@@ -471,6 +475,29 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
           resp.getStatus());
     }
   }
+
+  /**
+   * Deletes an existing empty bucket from volume.
+   * @param volume - Name of the volume.
+   * @param bucket - Name of the bucket.
+   * @throws IOException
+   */
+  public void deleteBucket(String volume, String bucket) throws IOException {
+    DeleteBucketRequest.Builder req = DeleteBucketRequest.newBuilder();
+    req.setVolumeName(volume);
+    req.setBucketName(bucket);
+    final DeleteBucketResponse resp;
+    try {
+      resp = rpcProxy.deleteBucket(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new
+          IOException("Delete Bucket failed, error:" + resp.getStatus());
+    }
+  }
+
 
   /**
    * Return the proxy object underlying this protocol translator.

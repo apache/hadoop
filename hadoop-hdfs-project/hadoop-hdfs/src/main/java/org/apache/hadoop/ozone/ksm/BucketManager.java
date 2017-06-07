@@ -44,4 +44,12 @@ public interface BucketManager {
    * @throws IOException
    */
   void setBucketProperty(KsmBucketArgs args) throws IOException;
+
+  /**
+   * Deletes an existing empty bucket from volume.
+   * @param volumeName - Name of the volume.
+   * @param bucketName - Name of the bucket.
+   * @throws IOException
+   */
+  void deleteBucket(String volumeName, String bucketName) throws IOException;
 }

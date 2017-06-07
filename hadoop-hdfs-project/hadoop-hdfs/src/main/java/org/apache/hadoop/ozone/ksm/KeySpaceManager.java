@@ -471,7 +471,23 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
       metrics.incNumBucketModifyFails();
       throw ex;
     }
+  }
 
+
+  /**
+   * Deletes an existing empty bucket from volume.
+   * @param volume - Name of the volume.
+   * @param bucket - Name of the bucket.
+   * @throws IOException
+   */
+  public void deleteBucket(String volume, String bucket) throws IOException {
+    try {
+      metrics.incNumBucketDeletes();
+      bucketManager.deleteBucket(volume, bucket);
+    } catch (Exception ex) {
+      metrics.incNumBucketDeleteFails();
+      throw ex;
+    }
   }
 
 }

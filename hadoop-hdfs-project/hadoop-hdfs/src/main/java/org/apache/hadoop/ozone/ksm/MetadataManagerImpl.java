@@ -163,6 +163,14 @@ public class MetadataManagerImpl implements  MetadataManager {
   }
 
   /**
+   * Deletes a Key from Metadata DB.
+   * @param key   - key
+   */
+  public void delete(byte[] key) {
+    store.delete(key);
+  }
+
+  /**
    * Performs a batch Put and Delete from Metadata DB.
    * Can be used to do multiple puts and deletes atomically.
    * @param putList - list of key and value pairs to put to Metadata DB.
@@ -219,6 +227,29 @@ public class MetadataManagerImpl implements  MetadataManager {
       } else {
         return true;
       }
+    }
+  }
+
+  /**
+   * Given a volume/bucket, check if it is empty,
+   * i.e there are no keys inside it.
+   * @param volume - Volume name
+   * @param bucket - Bucket name
+   * @return true if the bucket is empty
+   */
+  public boolean isBucketEmpty(String volume, String bucket)
+      throws IOException {
+    try (DBIterator iterator = store.getIterator()) {
+      String keyRootName = OzoneConsts.KSM_VOLUME_PREFIX + volume
+          + OzoneConsts.KSM_BUCKET_PREFIX + bucket
+          + OzoneConsts.KSM_KEY_PREFIX;
+      byte[] keyRoot = DFSUtil.string2Bytes(keyRootName);
+      iterator.seek(keyRoot);
+      if(iterator.hasNext()) {
+        return !DFSUtil.bytes2String(iterator.next().getKey())
+            .startsWith(keyRootName);
+      }
+      return true;
     }
   }
 }

@@ -39,6 +39,10 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.SetBucketPropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateVolumeResponse;
@@ -112,6 +116,8 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         return Status.BUCKET_ALREADY_EXISTS;
       case FAILED_BUCKET_NOT_FOUND:
         return Status.BUCKET_NOT_FOUND;
+      case FAILED_BUCKET_NOT_EMPTY:
+        return Status.BUCKET_NOT_EMPTY;
       case FAILED_KEY_ALREADY_EXISTS:
         return Status.KEY_ALREADY_EXISTS;
       case FAILED_KEY_NOT_FOUND:
@@ -328,6 +334,20 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
           .build();
       impl.deleteKey(ksmKeyArgs);
       resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public DeleteBucketResponse deleteBucket(
+      RpcController controller, DeleteBucketRequest request)
+      throws ServiceException {
+    DeleteBucketResponse.Builder resp = DeleteBucketResponse.newBuilder();
+    resp.setStatus(Status.OK);
+    try {
+      impl.deleteBucket(request.getVolumeName(), request.getBucketName());
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
     }
