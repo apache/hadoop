@@ -521,6 +521,18 @@ public class TestRMWebServices extends JerseyTestBase {
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterSchedulerFifo(json);
   }
+   @Test
+  public void testpostScheduler() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler").post(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    verifyClusterSchedulerFifo(json);
+    //postscheduler(response);
+  }
 
   @Test
   public void testClusterSchedulerFifoSlash() throws JSONException, Exception {
