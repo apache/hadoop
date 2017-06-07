@@ -21,15 +21,20 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * S3 Client factory used for testing with eventual consistency fault injection.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
 
   @Override
   protected AmazonS3 newAmazonS3Client(AWSCredentialsProvider credentials,
       ClientConfiguration awsConf) {
-    return new InconsistentAmazonS3Client(credentials, awsConf);
+    LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
+    return new InconsistentAmazonS3Client(credentials, awsConf, getConf());
   }
 }

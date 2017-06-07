@@ -691,7 +691,7 @@ use requires the presence of secret credentials, where tests may be slow,
 and where finding out why something failed from nothing but the test output
 is critical.
 
-#### Subclasses Existing Shared Base Blasses
+#### Subclasses Existing Shared Base Classes
 
 Extend `AbstractS3ATestBase` or `AbstractSTestS3AHugeFiles` unless justifiable.
 These set things up for testing against the object stores, provide good threadnames,
@@ -798,7 +798,7 @@ We really appreciate this &mdash; you will too.
 
 ### How to keep your credentials really safe
 
-Although the `auth-keys.xml` file is marged as ignored in git and subversion,
+Although the `auth-keys.xml` file is marked as ignored in git and subversion,
 it is still in your source tree, and there's always that risk that it may
 creep out.
 
@@ -813,3 +813,126 @@ using an absolute XInclude reference to it.
 
 </configuration>
 ```
+
+# Failure Injection
+
+**Warning do not enable any type of failure injection in production.  The
+following settings are for test development only.**
+
+## Inconsistency Injection
+
+One of the challenges with S3A integration tests is the fact that S3 is an
+eventually-consistent storage system.  In practice, we rarely see delays in
+visibility of recently created objects both in listings (listStatus()) and
+when getting a single file's metadata (getFileStatus()).  Since this behavior
+is rare and non-deterministic, thorough integration testing is challenging.
+
+To address this, we developed a shim layer on top of the `AmazonS3Client`
+class which artificially delays certain paths from appearing in listings.
+This is implemented in the class `InconsistentAmazonS3Client`.
+
+### Enabling the InconsistentAmazonS3CClient
+
+There are two ways of enabling the `InconsistentAmazonS3Client`: at
+config-time, or programmatically.  For an example of programmatic test usage,
+see `ITestS3GuardListConsistency`.
+
+To enable the inconsistency injecting client via configuration, set the
+following class name for the client factory configuration:
+
+```xml
+<property>
+  <name>fs.s3a.s3.client.factory.impl</name>
+  <value>org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory</value>
+</property>
+```
+
+The inconsistent client works by:
+
+1. Choosing which objects will be "inconsistent" at the time the object is
+created or deleted.
+2. When listObjects is called, any keys that we have marked as
+inconsistent above will not be returned in the results (until the
+configured delay has elapsed).  Similarly, deleted items may be *added* to
+missing results to delay the visibility of the delete.
+
+There are two ways of choosing which keys (filenames) will be affected: By
+substring, and by random probability.
+
+```xml
+<property>
+  <name>fs.s3a.failinject.inconsistency.key.substring</name>
+  <value>DELAY_LISTING_ME</value>
+</property>
+
+<property>
+  <name>fs.s3a.failinject.inconsistency.probability</name>
+  <value>1.0</value>
+</property>
+```
+
+By default, any object which has the substring "DELAY_LISTING_ME" in its key
+will subject to delayed visibility.  For example, the path
+`s3a://my-bucket/test/DELAY_LISTING_ME/file.txt` would match this condition.
+To match all keys use the value "\*" (a single asterisk). This is a special
+value: *We don't support arbitrary wildcards.*
+
+The default probability of delaying an object is 1.0.  This means that *all*
+keys that match the substring will get delayed visibility. Note that we take
+the logical *and* of the two conditions (substring matches *and* probability
+random chance occurs).  Here are some example configurations:
+
+```
+| substring | probability |  behavior                                  |
+|-----------|-------------|--------------------------------------------|
+|           | 0.001       | An empty <value> tag in .xml config will   |
+|           |             | be interpreted as unset and revert to the  |
+|           |             | default value, "DELAY_LISTING_ME"          |
+|           |             |                                            |
+| *         | 0.001       | 1/1000 chance of *any* key being delayed.  |
+|           |             |                                            |
+| delay     | 0.01        | 1/100 chance of any key containing "delay" |
+|           |             |                                            |
+| delay     | 1.0         | All keys containing substring "delay" ..   |
+```
+
+You can also configure how long you want the delay in visibility to last.
+The default is 5000 milliseconds (five seconds).
+
+```xml
+<property>
+  <name>fs.s3a.failinject.inconsistency.msec</name>
+  <value>5000</value>
+</property>
+```
+
+#### Limitations of Inconsistency Injection
+
+Although we can delay visibility of an object or parent directory va the
+`InconsistentAmazonS3Client` we do not keep the key of that object from
+appearing in all prefix searches.  For example, if we create the following
+object with the default configuration above, in an otherwise empty bucket:
+
+```
+ s3a://bucket/a/b/c/DELAY_LISTING_ME
+```
+
+Then the following paths will still be visible as directories:
+
+```
+ s3a://bucket/a
+ s3a://bucket/a/b
+```
+
+Whereas getFileStatus() on the following *will* be subject to delayed
+visibility (FileNotFoundException until delay has elapsed):
+
+```
+ s3a://bucket/a/b/c
+ s3a://bucket/a/b/c/DELAY_LISTING_ME
+```
+
+ In real-life S3 inconsistency, however, we expect that all the above paths
+ (including `a` and `b`) will be subject to delayed visiblity.
+
+

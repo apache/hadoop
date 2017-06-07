@@ -435,4 +435,20 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_DYNAMO
       = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
+
+  /**
+   * Inconsistency (visibility delay) injection settings.
+   */
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_KEY =
+      "fs.s3a.failinject.inconsistency.key.substring";
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_MSEC =
+      "fs.s3a.failinject.inconsistency.msec";
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_PROBABILITY =
+      "fs.s3a.failinject.inconsistency.probability";
+
 }

@@ -29,8 +29,13 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,21 +48,37 @@ import java.util.Map;
  * inconsistency and/or errors.  Used for testing S3Guard.
  * Currently only delays listing visibility, not affecting GET.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class InconsistentAmazonS3Client extends AmazonS3Client {
 
   /**
    * Keys containing this substring will be subject to delayed visibility.
    */
-  public static final String DELAY_KEY_SUBSTRING = "DELAY_LISTING_ME";
+  public static final String DEFAULT_DELAY_KEY_SUBSTRING = "DELAY_LISTING_ME";
 
   /**
    * How many seconds affected keys will be delayed from appearing in listing.
    * This should probably be a config value.
    */
-  public static final long DELAY_KEY_MILLIS = 5 * 1000;
+  public static final long DEFAULT_DELAY_KEY_MSEC = 5 * 1000;
+
+  public static final float DEFAULT_DELAY_KEY_PROBABILITY = 1.0f;
+
+  /** Special config value since we can't store empty strings in XML. */
+  public static final String MATCH_ALL_KEYS = "*";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(InconsistentAmazonS3Client.class);
+
+  /** Empty string matches all keys. */
+  private String delayKeySubstring;
+
+  /** Probability to delay visibility of a matching key. */
+  private float delayKeyProbability;
+
+  /** Time in milliseconds to delay visibility of newly modified object. */
+  private long delayKeyMsec;
 
   /**
    * Composite of data we need to track about recently deleted objects:
@@ -91,8 +112,25 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   private Map<String, Long> delayedPutKeys = new HashMap<>();
 
   public InconsistentAmazonS3Client(AWSCredentialsProvider credentials,
-      ClientConfiguration clientConfiguration) {
+      ClientConfiguration clientConfiguration, Configuration conf) {
     super(credentials, clientConfiguration);
+    setupConfig(conf);
+  }
+
+  protected void setupConfig(Configuration conf) {
+
+    delayKeySubstring = conf.get(FAIL_INJECT_INCONSISTENCY_KEY,
+        DEFAULT_DELAY_KEY_SUBSTRING);
+    // "" is a substring of all strings, use it to match all keys.
+    if (delayKeySubstring.equals(MATCH_ALL_KEYS)) {
+      delayKeySubstring = "";
+    }
+    delayKeyProbability = conf.getFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY,
+        DEFAULT_DELAY_KEY_PROBABILITY);
+    delayKeyMsec = conf.getLong(FAIL_INJECT_INCONSISTENCY_MSEC,
+        DEFAULT_DELAY_KEY_MSEC);
+    LOG.info("Enabled with {} msec delay, substring {}, probability {}",
+        delayKeyMsec, delayKeySubstring, delayKeyProbability);
   }
 
   @Override
@@ -191,7 +229,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
       return false;
     }
     long currentTime = System.currentTimeMillis();
-    long deadline = enqueueTime + DELAY_KEY_MILLIS;
+    long deadline = enqueueTime + delayKeyMsec;
     if (currentTime >= deadline) {
       delayedDeletes.remove(key);
       LOG.debug("no longer delaying {}", key);
@@ -231,9 +269,15 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
    * @return true if we should delay
    */
   private boolean shouldDelay(String key) {
-    boolean delay = key.contains(DELAY_KEY_SUBSTRING);
+    boolean delay = key.contains(delayKeySubstring);
+    delay = delay && trueWithProbability(delayKeyProbability);
     LOG.debug("{} -> {}", key, delay);
     return delay;
+  }
+
+
+  private boolean trueWithProbability(float p) {
+    return Math.random() < p;
   }
 
   /**

@@ -43,7 +43,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.intOption;
 public class DefaultS3ClientFactory extends Configured implements
     S3ClientFactory {
 
-  private static final Logger LOG = S3AFileSystem.LOG;
+  protected static final Logger LOG = S3AFileSystem.LOG;
 
   @Override
   public AmazonS3 createS3Client(URI name) throws IOException {
