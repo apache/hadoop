@@ -271,6 +271,9 @@ public class Listing {
 
     @Override
     public FileStatus next() throws IOException {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
       return filteredStatusList.get(index++);
     }
   }

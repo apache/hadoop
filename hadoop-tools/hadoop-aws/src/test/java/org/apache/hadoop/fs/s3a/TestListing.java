@@ -29,7 +29,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Set;
+
+import static org.apache.hadoop.fs.s3a.Listing.ACCEPT_ALL;
+import static org.apache.hadoop.fs.s3a.Listing.ProvidedFileStatusIterator;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.
@@ -90,5 +94,25 @@ public class TestListing extends AbstractS3AMockTest {
       actualPaths.add(reconcilingIterator.next().getPath());
     }
     Assert.assertTrue(actualPaths.equals(expectedPaths));
+  }
+
+  @Test
+  public void testProvidedFileStatusIteratorEnd() throws Exception {
+    FileStatus[] statuses = {
+        new FileStatus(100, false, 1, 8192, 0, new Path("s3a://blah/blah"))
+    };
+    ProvidedFileStatusIterator it = new ProvidedFileStatusIterator(statuses,
+        ACCEPT_ALL, new Listing.AcceptAllButS3nDirs());
+
+    Assert.assertTrue("hasNext() should return true first time", it.hasNext());
+    Assert.assertNotNull("first element should not be null", it.next());
+    Assert.assertFalse("hasNext() should now be false", it.hasNext());
+    try {
+      it.next();
+      Assert.fail("next() should have thrown exception");
+    } catch (NoSuchElementException e) {
+      // Correct behavior.  Any other exceptions are propagated as failure.
+      return;
+    }
   }
 }
