@@ -1567,7 +1567,8 @@ public class PBHelperClient {
         snapshotSpaceConsumed(cs.getSnapshotSpaceConsumed()).
         quota(cs.getQuota()).
         spaceConsumed(cs.getSpaceConsumed()).
-        spaceQuota(cs.getSpaceQuota());
+        spaceQuota(cs.getSpaceQuota()).
+        erasureCodingPolicy(cs.getRedundancyPolicy());
     if (cs.hasTypeQuotaInfos()) {
       addStorageTypes(cs.getTypeQuotaInfos(), builder);
     }
@@ -2211,7 +2212,8 @@ public class PBHelperClient {
         setSnapshotSpaceConsumed(cs.getSnapshotSpaceConsumed()).
         setQuota(cs.getQuota()).
         setSpaceConsumed(cs.getSpaceConsumed()).
-        setSpaceQuota(cs.getSpaceQuota());
+        setSpaceQuota(cs.getSpaceQuota()).
+        setRedundancyPolicy(cs.getErasureCodingPolicy());
 
     if (cs.isTypeQuotaSet() || cs.isTypeConsumedAvailable()) {
       builder.setTypeQuotaInfos(getBuilder(cs));

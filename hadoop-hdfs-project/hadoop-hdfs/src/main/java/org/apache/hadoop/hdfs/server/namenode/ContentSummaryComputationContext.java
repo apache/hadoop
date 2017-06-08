@@ -21,6 +21,14 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.io.WritableUtils;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_ERASURECODING_POLICY;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -36,6 +44,8 @@ public class ContentSummaryComputationContext {
   private long sleepMilliSec = 0;
   private int sleepNanoSec = 0;
 
+  public static final String REPLICATED = "Replicated";
+  public static final Log LOG = LogFactory.getLog(INode.class);
   /**
    * Constructor
    *
@@ -137,5 +147,37 @@ public class ContentSummaryComputationContext {
             " FSNameSystem");
     return (bsps != null) ? bsps:
         fsn.getBlockManager().getStoragePolicySuite();
+  }
+
+  /** Get the erasure coding policy */
+  public String getErasureCodingPolicyName(INode inode) {
+    if (inode.isFile()) {
+      INodeFile iNodeFile = inode.asFile();
+      if (iNodeFile.isStriped()) {
+        byte ecPolicyId = iNodeFile.getErasureCodingPolicyID();
+        return fsn.getErasureCodingPolicyManager().getByID(ecPolicyId).getName();
+      } else {
+        return REPLICATED;
+      }
+    }
+    if (inode.isSymlink()) {
+      return "";
+    }
+    try {
+      final XAttrFeature xaf = inode.getXAttrFeature();
+      if (xaf != null) {
+        XAttr xattr = xaf.getXAttr(XATTR_ERASURECODING_POLICY);
+        if (xattr != null) {
+          ByteArrayInputStream bins = new ByteArrayInputStream(xattr.getValue());
+          DataInputStream din = new DataInputStream(bins);
+          String ecPolicyName = WritableUtils.readString(din);
+          return dir.getFSNamesystem().getErasureCodingPolicyManager().getEnabledPolicyByName(ecPolicyName).getName();
+        }
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Encountered error getting ec policy for " + inode.getFullPathName(), ioe);
+      return "";
+    }
+    return "";
   }
 }
