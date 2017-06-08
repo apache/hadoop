@@ -277,4 +277,20 @@ public class BucketManagerImpl implements BucketManager {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public List<KsmBucketInfo> listBuckets(String volumeName,
+      String startBucket, String bucketPrefix, int maxNumOfBuckets)
+      throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    metadataManager.readLock().lock();
+    try {
+      return metadataManager.listBuckets(
+          volumeName, startBucket, bucketPrefix, maxNumOfBuckets);
+    } finally {
+      metadataManager.readLock().unlock();
+    }
+  }
 }

@@ -20,6 +20,7 @@ import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * BucketManager handles all the bucket level operations.
@@ -52,4 +53,27 @@ public interface BucketManager {
    * @throws IOException
    */
   void deleteBucket(String volumeName, String bucketName) throws IOException;
+
+  /**
+   * Returns a list of buckets represented by {@link KsmBucketInfo}
+   * in the given volume.
+   *
+   * @param volumeName
+   *   Required parameter volume name determines buckets in which volume
+   *   to return.
+   * @param startBucket
+   *   Optional start bucket name parameter indicating where to start
+   *   the bucket listing from.
+   * @param bucketPrefix
+   *   Optional start key parameter, restricting the response to buckets
+   *   that begin with the specified name.
+   * @param maxNumOfBuckets
+   *   The maximum number of buckets to return. It ensures
+   *   the size of the result will not exceed this limit.
+   * @return a list of buckets.
+   * @throws IOException
+   */
+  List<KsmBucketInfo> listBuckets(String volumeName,
+      String startBucket, String bucketPrefix, int maxNumOfBuckets)
+      throws IOException;
 }

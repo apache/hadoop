@@ -384,6 +384,23 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   }
 
   /**
+   * {@inheritDoc}
+   */
+  @Override
+  public List<KsmBucketInfo> listBuckets(String volumeName,
+      String startKey, String prefix, int maxNumOfBuckets)
+      throws IOException {
+    try {
+      metrics.incNumBucketLists();
+      return bucketManager.listBuckets(volumeName,
+          startKey, prefix, maxNumOfBuckets);
+    } catch (IOException ex) {
+      metrics.incNumBucketListFails();
+      throw ex;
+    }
+  }
+
+  /**
    * Gets the bucket information.
    *
    * @param volume - Volume name.

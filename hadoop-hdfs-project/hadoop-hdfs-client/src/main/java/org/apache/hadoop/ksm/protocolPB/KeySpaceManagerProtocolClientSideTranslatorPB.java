@@ -75,6 +75,10 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CheckVolumeAccessResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListBucketsRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListBucketsResponse;
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
@@ -84,6 +88,8 @@ import org.apache.hadoop.ozone.protocol.proto
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 /**
  *  The client side implementation of KeySpaceManagerProtocol.
@@ -392,6 +398,49 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
     }
     if (resp.getStatus() != Status.OK) {
       throw new IOException("Setting bucket property failed, error: "
+          + resp.getStatus());
+    }
+  }
+
+  /**
+   * List buckets in a volume.
+   *
+   * @param volumeName
+   * @param startKey
+   * @param prefix
+   * @param count
+   * @return
+   * @throws IOException
+   */
+  @Override
+  public List<KsmBucketInfo> listBuckets(String volumeName,
+      String startKey, String prefix, int count) throws IOException {
+    List<KsmBucketInfo> buckets = new ArrayList<>();
+    ListBucketsRequest.Builder reqBuilder = ListBucketsRequest.newBuilder();
+    reqBuilder.setVolumeName(volumeName);
+    reqBuilder.setCount(count);
+    if (startKey != null) {
+      reqBuilder.setStartKey(startKey);
+    }
+    if (prefix != null) {
+      reqBuilder.setPrefix(prefix);
+    }
+    ListBucketsRequest request = reqBuilder.build();
+    final ListBucketsResponse resp;
+    try {
+      resp = rpcProxy.listBuckets(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
+    if (resp.getStatus() == Status.OK) {
+      buckets.addAll(
+          resp.getBucketInfoList().stream()
+              .map(KsmBucketInfo::getFromProtobuf)
+              .collect(Collectors.toList()));
+      return buckets;
+    } else {
+      throw new IOException("List Buckets failed, error: "
           + resp.getStatus());
     }
   }

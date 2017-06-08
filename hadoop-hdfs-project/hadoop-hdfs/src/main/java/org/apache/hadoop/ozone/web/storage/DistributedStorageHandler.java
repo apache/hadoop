@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.storage;
 
+import com.google.common.base.Strings;
 import org.apache.hadoop.hdfs.ozone.protocol.proto
     .ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdfs.ozone.protocol.proto
@@ -52,6 +53,7 @@ import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
+import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
@@ -293,7 +295,43 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public ListBuckets listBuckets(ListArgs args)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException("listBuckets not implemented");
+    ListBuckets result = new ListBuckets();
+    UserArgs userArgs = args.getArgs();
+    if (userArgs instanceof VolumeArgs) {
+      VolumeArgs va = (VolumeArgs) userArgs;
+      if (Strings.isNullOrEmpty(va.getVolumeName())) {
+        throw new IllegalArgumentException("Illegal argument,"
+            + " volume name cannot be null or empty.");
+      }
+
+      int maxNumOfKeys = args.getMaxKeys();
+      if (maxNumOfKeys <= 0 ||
+          maxNumOfKeys > OzoneConsts.MAX_LISTBUCKETS_SIZE) {
+        throw new IllegalArgumentException(
+            String.format("Illegal max number of keys specified,"
+                + " the value must be in range (0, %d], actual : %d.",
+                OzoneConsts.MAX_LISTBUCKETS_SIZE, maxNumOfKeys));
+      }
+
+      List<KsmBucketInfo> buckets =
+          keySpaceManagerClient.listBuckets(va.getVolumeName(),
+              args.getPrevKey(), args.getPrefix(), args.getMaxKeys());
+
+      // Convert the result for the web layer.
+      for (KsmBucketInfo bucketInfo : buckets) {
+        BucketInfo bk = new BucketInfo();
+        bk.setVolumeName(bucketInfo.getVolumeName());
+        bk.setBucketName(bucketInfo.getBucketName());
+        bk.setStorageType(bucketInfo.getStorageType());
+        bk.setAcls(bucketInfo.getAcls());
+        result.addBucket(bk);
+      }
+      return result;
+    } else {
+      throw new IllegalArgumentException("Illegal argument provided,"
+          + " expecting VolumeArgs type but met "
+          + userArgs.getClass().getSimpleName());
+    }
   }
 
   @Override

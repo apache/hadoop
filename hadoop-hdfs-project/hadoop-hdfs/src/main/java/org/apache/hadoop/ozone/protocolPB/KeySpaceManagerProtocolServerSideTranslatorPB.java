@@ -73,10 +73,16 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ListVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListBucketsRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListBucketsResponse;
+
+import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
 
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -348,6 +354,28 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
     resp.setStatus(Status.OK);
     try {
       impl.deleteBucket(request.getVolumeName(), request.getBucketName());
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public ListBucketsResponse listBuckets(
+      RpcController controller, ListBucketsRequest request)
+      throws ServiceException {
+    ListBucketsResponse.Builder resp =
+        ListBucketsResponse.newBuilder();
+    try {
+      List<KsmBucketInfo> buckets = impl.listBuckets(
+          request.getVolumeName(),
+          request.getStartKey(),
+          request.getPrefix(),
+          request.getCount());
+      for(KsmBucketInfo bucket : buckets) {
+        resp.addBucketInfo(bucket.getProtobuf());
+      }
+      resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
     }

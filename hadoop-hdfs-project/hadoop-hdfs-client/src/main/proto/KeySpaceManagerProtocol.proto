@@ -210,9 +210,19 @@ message InfoBucketRequest {
 message InfoBucketResponse {
     required Status status = 1;
     optional BucketInfo bucketInfo = 2;
-
 }
 
+message ListBucketsRequest {
+    required string volumeName = 1;
+    optional string startKey = 2;
+    optional string prefix = 3;
+    optional int32 count = 4;
+}
+
+message ListBucketsResponse {
+    required Status status = 1;
+    repeated BucketInfo bucketInfo = 2;
+}
 
 message KeyArgs {
     required string volumeName = 1;
@@ -339,4 +349,10 @@ service KeySpaceManagerService {
     */
     rpc deleteBucket(DeleteBucketRequest)
         returns (DeleteBucketResponse);
+
+    /**
+       List Buckets.
+    */
+    rpc listBuckets(ListBucketsRequest)
+    returns(ListBucketsResponse);
 }
