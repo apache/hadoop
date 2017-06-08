@@ -182,7 +182,6 @@ public class ContentSummary extends QuotaUsage implements Writable{
     this.snapshotFileCount = builder.snapshotFileCount;
     this.snapshotDirectoryCount = builder.snapshotDirectoryCount;
     this.snapshotSpaceConsumed = builder.snapshotSpaceConsumed;
-//    this.storagePolicy=builder.storagePolicy;
     this.erasureCodingPolicy=builder.erasureCodingPolicy;
   }
 
@@ -210,8 +209,6 @@ public class ContentSummary extends QuotaUsage implements Writable{
   public long getSnapshotSpaceConsumed() {
     return snapshotSpaceConsumed;
   }
-//
-//  public String getStoragePolicy() { return storagePolicy; }
 
   public String getErasureCodingPolicy() { return erasureCodingPolicy; }
 
