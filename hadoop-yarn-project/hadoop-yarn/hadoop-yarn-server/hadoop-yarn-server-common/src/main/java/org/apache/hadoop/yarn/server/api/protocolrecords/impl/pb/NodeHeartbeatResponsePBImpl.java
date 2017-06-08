@@ -598,7 +598,7 @@ public class NodeHeartbeatResponsePBImpl extends
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {

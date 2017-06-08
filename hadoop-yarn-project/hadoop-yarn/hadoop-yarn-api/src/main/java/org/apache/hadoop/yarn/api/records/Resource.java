@@ -23,7 +23,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
-import org.apache.hadoop.yarn.util.Records;
 
 
 /**
@@ -53,22 +52,49 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class Resource implements Comparable<Resource> {
 
+  private static class SimpleResource extends Resource {
+    private long memory;
+    private long vcores;
+    SimpleResource(long memory, long vcores) {
+      this.memory = memory;
+      this.vcores = vcores;
+    }
+    @Override
+    public int getMemory() {
+      return (int)memory;
+    }
+    @Override
+    public void setMemory(int memory) {
+      this.memory = memory;
+    }
+    @Override
+    public long getMemorySize() {
+      return memory;
+    }
+    @Override
+    public void setMemorySize(long memory) {
+      this.memory = memory;
+    }
+    @Override
+    public int getVirtualCores() {
+      return (int)vcores;
+    }
+    @Override
+    public void setVirtualCores(int vcores) {
+      this.vcores = vcores;
+    }
+  }
+
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemorySize(memory);
-    resource.setVirtualCores(vCores);
-    return resource;
+    return new SimpleResource(memory, vCores);
   }
 
   @Public
   @Stable
   public static Resource newInstance(long memory, int vCores) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemorySize(memory);
-    resource.setVirtualCores(vCores);
-    return resource;
+    return new SimpleResource(memory, vCores);
   }
 
   /**
@@ -165,6 +191,15 @@ public abstract class Resource implements Comparable<Resource> {
       return false;
     }
     return true;
+  }
+
+  @Override
+  public int compareTo(Resource other) {
+    long diff = this.getMemorySize() - other.getMemorySize();
+    if (diff == 0) {
+      diff = this.getVirtualCores() - other.getVirtualCores();
+    }
+    return diff == 0 ? 0 : (diff > 0 ? 1 : -1);
   }
 
   @Override

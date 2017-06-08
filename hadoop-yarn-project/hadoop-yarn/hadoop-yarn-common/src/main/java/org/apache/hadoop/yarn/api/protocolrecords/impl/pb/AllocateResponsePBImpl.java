@@ -748,7 +748,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   }
 
   private synchronized ResourceProto convertToProtoFormat(Resource r) {
-    return ((ResourcePBImpl) r).getProto();
+    return ProtoUtils.convertToProtoFormat(r);
   }
 
   private synchronized PreemptionMessagePBImpl convertFromProtoFormat(PreemptionMessageProto p) {

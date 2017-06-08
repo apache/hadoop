@@ -80,7 +80,7 @@ public class ResourceOptionPBImpl extends ResourceOption {
   
   private ResourceProto convertToProtoFormat(
       Resource resource) {
-    return ((ResourcePBImpl)resource).getProto();
+    return ProtoUtils.convertToProtoFormat(resource);
   }
   
   private ResourcePBImpl convertFromProtoFormat(

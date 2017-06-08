@@ -131,7 +131,7 @@ public class ContainerResourceIncreasePBImpl extends ContainerResourceIncrease {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl) t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   private Token convertFromProtoFormat(TokenProto p) {

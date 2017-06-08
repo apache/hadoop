@@ -107,7 +107,7 @@ public class ContainerResourceDecreasePBImpl extends ContainerResourceDecrease {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl) t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   private void mergeLocalToProto() {
