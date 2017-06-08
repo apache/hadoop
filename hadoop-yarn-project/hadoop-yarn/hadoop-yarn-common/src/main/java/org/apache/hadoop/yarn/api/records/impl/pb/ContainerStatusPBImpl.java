@@ -339,7 +339,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   }
 
   private ResourceProto convertToProtoFormat(Resource e) {
-    return ((ResourcePBImpl)e).getProto();
+    return ProtoUtils.convertToProtoFormat(e);
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {

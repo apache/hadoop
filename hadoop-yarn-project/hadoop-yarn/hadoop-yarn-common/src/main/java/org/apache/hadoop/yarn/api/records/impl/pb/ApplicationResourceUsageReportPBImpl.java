@@ -79,20 +79,14 @@ extends ApplicationResourceUsageReport {
   }
 
   private void mergeLocalToBuilder() {
-    if (this.usedResources != null
-        && !((ResourcePBImpl) this.usedResources).getProto().equals(
-            builder.getUsedResources())) {
+    if (this.usedResources != null) {
       builder.setUsedResources(convertToProtoFormat(this.usedResources));
     }
-    if (this.reservedResources != null
-        && !((ResourcePBImpl) this.reservedResources).getProto().equals(
-            builder.getReservedResources())) {
+    if (this.reservedResources != null) {
       builder.setReservedResources(
           convertToProtoFormat(this.reservedResources));
     }
-    if (this.neededResources != null
-        && !((ResourcePBImpl) this.neededResources).getProto().equals(
-            builder.getNeededResources())) {
+    if (this.neededResources != null) {
       builder.setNeededResources(convertToProtoFormat(this.neededResources));
     }
   }
@@ -257,7 +251,7 @@ extends ApplicationResourceUsageReport {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   @Override
