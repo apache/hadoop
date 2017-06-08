@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Verify;
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -637,8 +636,8 @@ public class FileUtil {
       }
     }
     // Exit condition -- ZipFile must exist.
-    Verify.verify(archiveName.exists(), "Expected archive file missing: {}",
-        archiveName.toPath());
+    Preconditions.checkState(archiveName.exists(),
+        "Expected archive file missing: {}", archiveName.toPath());
     long crc32 = checksum.getChecksum().getValue();
     checksum.close();
     return crc32;
