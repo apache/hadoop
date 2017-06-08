@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -72,6 +73,8 @@ public class LeaseManager {
 
   private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
   private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
+  private long lastHolderUpdateTime;
+  private String internalLeaseHolder;
 
   //
   // Used for handling lock-leases
@@ -92,7 +95,26 @@ public class LeaseManager {
   private Daemon lmthread;
   private volatile boolean shouldRunMonitor;
 
-  LeaseManager(FSNamesystem fsnamesystem) {this.fsnamesystem = fsnamesystem;}
+  LeaseManager(FSNamesystem fsnamesystem) {
+    this.fsnamesystem = fsnamesystem;
+    updateInternalLeaseHolder();
+  }
+
+  // Update the internal lease holder with the current time stamp.
+  private void updateInternalLeaseHolder() {
+    this.lastHolderUpdateTime = Time.monotonicNow();
+    this.internalLeaseHolder = HdfsServerConstants.NAMENODE_LEASE_HOLDER +
+        "-" + Time.formatTime(Time.now());
+  }
+
+  // Get the current internal lease holder name.
+  String getInternalLeaseHolder() {
+    long elapsed = Time.monotonicNow() - lastHolderUpdateTime;
+    if (elapsed > hardLimit) {
+      updateInternalLeaseHolder();
+    }
+    return internalLeaseHolder;
+  }
 
   Lease getLease(String holder) {
     return leases.get(holder);
@@ -372,6 +394,7 @@ public class LeaseManager {
       Long[] leaseINodeIds = files.toArray(new Long[files.size()]);
       FSDirectory fsd = fsnamesystem.getFSDirectory();
       String p = null;
+      String newHolder = getInternalLeaseHolder();
       for(Long id : leaseINodeIds) {
         try {
           INodesInPath iip = INodesInPath.fromINode(fsd.getInode(id));
@@ -383,8 +406,7 @@ public class LeaseManager {
           boolean completed = false;
           try {
             completed = fsnamesystem.internalReleaseLease(
-                leaseToCheck, p, iip,
-                HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+                leaseToCheck, p, iip, newHolder);
           } catch (IOException e) {
             LOG.warn("Cannot release the path " + p + " in the lease "
                 + leaseToCheck + ". It will be retried.", e);
