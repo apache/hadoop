@@ -36,6 +36,10 @@ import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.Status;
+import org.apache.hadoop.ozone.web.handlers.ListArgs;
+import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -51,6 +55,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Random;
 import java.util.Set;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Test Key Space Manager operation in distributed handler scenario.
@@ -598,4 +604,120 @@ public class TestKeySpaceManager {
         ksmMetrics.getNumKeyDeletesFails());
   }
 
+  @Test(timeout = 60000)
+  public void testListBuckets() throws IOException, OzoneException {
+    ListBuckets result = null;
+    ListArgs listBucketArgs = null;
+
+    // Create volume - volA.
+    final String volAname = "volA";
+    VolumeArgs volAArgs = new VolumeArgs(volAname, userArgs);
+    volAArgs.setUserName("userA");
+    volAArgs.setAdminName("adminA");
+    storageHandler.createVolume(volAArgs);
+
+    // Create 20 buckets in volA for tests.
+    for (int i=0; i<10; i++) {
+      // Create "/volA/aBucket_0" to "/volA/aBucket_9" buckets in volA volume.
+      BucketArgs aBuckets = new BucketArgs(volAname,
+          "aBucket_" + i, userArgs);
+      if(i % 3 == 0) {
+        aBuckets.setStorageType(StorageType.ARCHIVE);
+      } else {
+        aBuckets.setStorageType(StorageType.DISK);
+      }
+      storageHandler.createBucket(aBuckets);
+
+      // Create "/volA/bBucket_0" to "/volA/bBucket_9" buckets in volA volume.
+      BucketArgs bBuckets = new BucketArgs(volAname,
+          "bBucket_" + i, userArgs);
+      if(i % 3 == 0) {
+        bBuckets.setStorageType(StorageType.RAM_DISK);
+      } else {
+        bBuckets.setStorageType(StorageType.SSD);
+      }
+      storageHandler.createBucket(bBuckets);
+    }
+
+    VolumeArgs volArgs = new VolumeArgs(volAname, userArgs);
+
+    // List all buckets in volA.
+    listBucketArgs = new ListArgs(volArgs, null, 100, null);
+    result = storageHandler.listBuckets(listBucketArgs);
+    Assert.assertEquals(20, result.getBuckets().size());
+    List<BucketInfo> archiveBuckets = result.getBuckets().stream()
+        .filter(item -> item.getStorageType() == StorageType.ARCHIVE)
+        .collect(Collectors.toList());
+    Assert.assertEquals(4, archiveBuckets.size());
+
+    // List buckets with prefix "aBucket".
+    listBucketArgs = new ListArgs(volArgs, "aBucket", 100, null);
+    result = storageHandler.listBuckets(listBucketArgs);
+    Assert.assertEquals(10, result.getBuckets().size());
+    Assert.assertTrue(result.getBuckets().stream()
+        .allMatch(entry -> entry.getBucketName().startsWith("aBucket")));
+
+    // List a certain number of buckets.
+    listBucketArgs = new ListArgs(volArgs, null, 3, null);
+    result = storageHandler.listBuckets(listBucketArgs);
+    Assert.assertEquals(3, result.getBuckets().size());
+    Assert.assertEquals("aBucket_0",
+        result.getBuckets().get(0).getBucketName());
+    Assert.assertEquals("aBucket_1",
+        result.getBuckets().get(1).getBucketName());
+    Assert.assertEquals("aBucket_2",
+        result.getBuckets().get(2).getBucketName());
+
+    // List a certain number of buckets from the startKey.
+    listBucketArgs = new ListArgs(volArgs, null, 2, "bBucket_3");
+    result = storageHandler.listBuckets(listBucketArgs);
+    Assert.assertEquals(2, result.getBuckets().size());
+    Assert.assertEquals("bBucket_3",
+        result.getBuckets().get(0).getBucketName());
+    Assert.assertEquals("bBucket_4",
+        result.getBuckets().get(1).getBucketName());
+
+    // Provide an invalid bucket name as start key.
+    listBucketArgs = new ListArgs(volArgs, null, 100, "unknown_bucket_name");
+    try {
+      storageHandler.listBuckets(listBucketArgs);
+      Assert.fail("Expecting an error when the given bucket name is invalid.");
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof IOException);
+      Assert.assertTrue(e.getMessage().contains(Status.INTERNAL_ERROR.name()));
+    }
+
+    // Use all arguments.
+    listBucketArgs = new ListArgs(volArgs, "b", 5, "bBucket_8");
+    result = storageHandler.listBuckets(listBucketArgs);
+    Assert.assertEquals(2, result.getBuckets().size());
+    Assert.assertEquals("bBucket_8",
+        result.getBuckets().get(0).getBucketName());
+    Assert.assertEquals("bBucket_9",
+        result.getBuckets().get(1).getBucketName());
+
+    // Provide an invalid maxKeys argument.
+    try {
+      listBucketArgs = new ListArgs(volArgs, null, -1, null);
+      storageHandler.listBuckets(listBucketArgs);
+      Assert.fail("Expecting an error when the given"
+          + " maxKeys argument is invalid.");
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage()
+          .contains(String.format("the value must be in range (0, %d]",
+              OzoneConsts.MAX_LISTBUCKETS_SIZE)));
+    }
+
+    // Provide an invalid volume name.
+    VolumeArgs invalidVolArgs = new VolumeArgs("invalid_name", userArgs);
+    try {
+      listBucketArgs = new ListArgs(invalidVolArgs, null, 100, null);
+      storageHandler.listBuckets(listBucketArgs);
+      Assert.fail("Expecting an error when the given volume name is invalid.");
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof IOException);
+      Assert.assertTrue(e.getMessage()
+          .contains(Status.VOLUME_NOT_FOUND.name()));
+    }
+  }
 }

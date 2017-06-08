@@ -266,7 +266,6 @@ public class LevelDBStore implements Closeable {
       snapShot = db.getSnapshot();
       ReadOptions readOptions = new ReadOptions().snapshot(snapShot);
       dbIter = db.iterator(readOptions);
-      dbIter.seekToFirst();
       if (startKey == null) {
         dbIter.seekToFirst();
       } else {

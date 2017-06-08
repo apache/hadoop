@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -133,4 +135,26 @@ public interface MetadataManager {
    * @return true if the bucket is empty
    */
   boolean isBucketEmpty(String volume, String bucket) throws IOException;
+
+  /**
+   * Returns a list of buckets represented by {@link KsmBucketInfo}
+   * in the given volume.
+   *
+   * @param volumeName
+   *   the name of the volume. This argument is required,
+   *   this method returns buckets in this given volume.
+   * @param startBucket
+   *   the start bucket name. Only the buckets whose name is
+   *   after this value will be included in the result.
+   * @param bucketPrefix
+   *   bucket name prefix. Only the buckets whose name has
+   *   this prefix will be included in the result.
+   * @param maxNumOfBuckets
+   *   the maximum number of buckets to return. It ensures
+   *   the size of the result will not exceed this limit.
+   * @return a list of buckets.
+   * @throws IOException
+   */
+  List<KsmBucketInfo> listBuckets(String volumeName, String startBucket,
+      String bucketPrefix, int maxNumOfBuckets) throws IOException;
 }

@@ -106,6 +106,11 @@ public final class OzoneConsts {
    */
   public static final long MAX_QUOTA_IN_BYTES = 1024L * 1024 * TB;
 
+  /**
+   * Max number of keys returned per list buckets operation.
+   */
+  public static final int MAX_LISTBUCKETS_SIZE  = 1024;
+
   private OzoneConsts() {
     // Never Constructed
   }
