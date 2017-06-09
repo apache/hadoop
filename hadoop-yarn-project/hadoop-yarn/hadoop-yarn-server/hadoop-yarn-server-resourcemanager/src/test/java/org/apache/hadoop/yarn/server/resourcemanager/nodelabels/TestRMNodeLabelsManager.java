@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -703,5 +704,53 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     Assert.assertEquals(2, mgr.getLabelsToNodes().get("p1").size());
     assertLabelsToNodesEquals(
         mgr.getLabelsToNodes(), transposeNodeToLabels(mgr.getNodeLabels()));
+  }
+
+  @Test(timeout = 60000)
+  public void testBackwardsCompatableMirror() throws Exception {
+    lmgr = new RMNodeLabelsManager();
+    Configuration conf = new Configuration();
+    File tempDir = File.createTempFile("nlb", ".tmp");
+    tempDir.delete();
+    tempDir.mkdirs();
+    tempDir.deleteOnExit();
+    String tempDirName = tempDir.getAbsolutePath();
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR, tempDirName);
+
+    // The following are the contents of a 2.7-formatted levelDB file to be
+    // placed in nodelabel.mirror. There are 3 labels: 'a', 'b', and 'c'.
+    // host1 is labeled with 'a', host2 is labeled with 'b', and c is not
+    // associated with a node.
+    byte[] contents =
+      {
+          0x09, 0x0A, 0x01, 0x61, 0x0A, 0x01, 0x62, 0x0A, 0x01, 0x63, 0x20,
+          0x0A, 0x0E, 0x0A, 0x09, 0x0A, 0x05, 0x68, 0x6F, 0x73, 0x74, 0x32,
+          0x10, 0x00, 0x12, 0x01, 0x62, 0x0A, 0x0E, 0x0A, 0x09, 0x0A, 0x05,
+          0x68, 0x6F, 0x73, 0x74, 0x31, 0x10, 0x00, 0x12, 0x01, 0x61
+      };
+    File file = new File(tempDirName + "/nodelabel.mirror");
+    file.createNewFile();
+    FileOutputStream stream = new FileOutputStream(file);
+    stream.write(contents);
+    stream.close();
+
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    conf.set(YarnConfiguration.RM_SCHEDULER,
+        "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler");
+    Configuration withQueueLabels = getConfigurationWithQueueLabels(conf);
+
+    MockRM rm = initRM(withQueueLabels);
+    Set<String> labelNames = lmgr.getClusterNodeLabelNames();
+    Map<String, Set<NodeId>> labeledNodes = lmgr.getLabelsToNodes();
+
+    Assert.assertTrue(labelNames.contains("a"));
+    Assert.assertTrue(labelNames.contains("b"));
+    Assert.assertTrue(labelNames.contains("c"));
+    Assert.assertTrue(labeledNodes.get("a")
+        .contains(NodeId.newInstance("host1", 0)));
+    Assert.assertTrue(labeledNodes.get("b")
+        .contains(NodeId.newInstance("host2", 0)));
+
+    rm.stop();
   }
 }
