@@ -32,32 +32,6 @@ import "hdfs.proto";
 import "Ozone.proto";
 
 /**
- * keys - batch of object keys to find
- */
-message GetStorageContainerLocationsRequestProto {
-  repeated string keys = 1;
-}
-
-/**
- * locatedContainers - for each requested hash, nodes that currently host the
- *     container for that object key hash
- */
-message GetStorageContainerLocationsResponseProto {
-  repeated LocatedContainerProto locatedContainers = 1;
-}
-
-/**
- * Holds the nodes that currently host the container for an object key.
- */
-message LocatedContainerProto {
-  required string key = 1;
-  required string matchedKeyPrefix = 2;
-  required string containerName = 3;
-  repeated DatanodeInfoProto locations = 4;
-  required DatanodeInfoProto leader = 5;
-}
-
-/**
 * Request send to SCM asking where the container should be created.
 */
 message ContainerRequestProto {
@@ -106,13 +80,6 @@ message DeleteContainerResponseProto {
  * and response messages for details of the RPC calls.
  */
 service StorageContainerLocationProtocolService {
-  /**
-   * Find the set of nodes that currently host the container of an object, as
-   * identified by the object key hash.  This method supports batch lookup by
-   * passing multiple key hashes.
-   */
-  rpc getStorageContainerLocations(GetStorageContainerLocationsRequestProto)
-      returns(GetStorageContainerLocationsResponseProto);
 
   /**
    * Creates a container entry in SCM.

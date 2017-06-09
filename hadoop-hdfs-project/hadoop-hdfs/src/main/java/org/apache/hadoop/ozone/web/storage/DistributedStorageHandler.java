@@ -76,8 +76,6 @@ import java.util.Date;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.Locale;
-import java.util.HashSet;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -445,25 +443,6 @@ public final class DistributedStorageHandler implements StorageHandler {
       throws IOException {
     Pipeline pipeline =
         storageContainerLocationClient.getContainer(containerName);
-    return xceiverClientManager.acquireClient(pipeline);
-  }
-
-  /**
-   * Acquires an {@link XceiverClientSpi} connected to a {@link Pipeline}
-   * of nodes capable of serving container protocol operations.
-   * The container is selected based on the specified container key.
-   *
-   * @param containerKey container key
-   * @return XceiverClient connected to a container
-   * @throws IOException if an XceiverClient cannot be acquired
-   */
-  private XceiverClientSpi acquireXceiverClient(String containerKey)
-      throws IOException {
-    Set<LocatedContainer> locatedContainers =
-        storageContainerLocationClient.getStorageContainerLocations(
-            new HashSet<>(Arrays.asList(containerKey)));
-    Pipeline pipeline = newPipelineFromLocatedContainer(
-        locatedContainers.iterator().next());
     return xceiverClientManager.acquireClient(pipeline);
   }
 
