@@ -581,10 +581,12 @@ public class NativeAzureFileSystem extends FileSystem {
         // The rename already finished, so do nothing.
         ;
       } else {
-        throw new IOException(
-            "Attempting to complete rename of file " + srcKey + "/" + fileName
-            + " during folder rename redo, and file was not found in source "
-            + "or destination.");
+        // HADOOP-14512
+        LOG.warn(
+          "Attempting to complete rename of file " + srcKey + "/" + fileName
+          + " during folder rename redo, and file was not found in source "
+          + "or destination " + dstKey + "/" + fileName + ". "
+          + "This must mean the rename of this file has already completed");
       }
     }
 
