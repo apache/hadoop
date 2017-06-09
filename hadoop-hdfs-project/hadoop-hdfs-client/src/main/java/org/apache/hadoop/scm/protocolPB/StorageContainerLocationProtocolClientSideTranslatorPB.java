@@ -18,24 +18,17 @@ package org.apache.hadoop.scm.protocolPB;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.Sets;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.scm.client.ScmClient;
-import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.LocatedContainerProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
@@ -43,7 +36,6 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Set;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -69,38 +61,6 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   public StorageContainerLocationProtocolClientSideTranslatorPB(
       StorageContainerLocationProtocolPB rpcProxy) {
     this.rpcProxy = rpcProxy;
-  }
-
-  @Override
-  public Set<LocatedContainer> getStorageContainerLocations(Set<String> keys)
-      throws IOException {
-    GetStorageContainerLocationsRequestProto.Builder req =
-        GetStorageContainerLocationsRequestProto.newBuilder();
-    for (String key : keys) {
-      req.addKeys(key);
-    }
-    final GetStorageContainerLocationsResponseProto resp;
-    try {
-      resp = rpcProxy.getStorageContainerLocations(NULL_RPC_CONTROLLER,
-          req.build());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-    Set<LocatedContainer> locatedContainers =
-        Sets.newLinkedHashSetWithExpectedSize(resp.getLocatedContainersCount());
-    for (LocatedContainerProto locatedContainer :
-        resp.getLocatedContainersList()) {
-      Set<DatanodeInfo> locations = Sets.newLinkedHashSetWithExpectedSize(
-          locatedContainer.getLocationsCount());
-      for (DatanodeInfoProto location : locatedContainer.getLocationsList()) {
-        locations.add(PBHelperClient.convert(location));
-      }
-      locatedContainers.add(new LocatedContainer(locatedContainer.getKey(),
-          locatedContainer.getMatchedKeyPrefix(),
-          locatedContainer.getContainerName(), locations,
-          PBHelperClient.convert(locatedContainer.getLeader())));
-    }
-    return locatedContainers;
   }
 
   /**

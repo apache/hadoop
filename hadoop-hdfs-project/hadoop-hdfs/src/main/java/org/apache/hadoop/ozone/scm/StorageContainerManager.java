@@ -41,7 +41,6 @@ import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
@@ -374,14 +373,6 @@ public class StorageContainerManager
         .setErrorCode(rCmd.getError())
         .setClusterID(rCmd.getClusterID())
         .setDatanodeUUID(rCmd.getDatanodeUUID()).build();
-  }
-
-  // TODO : This code will move into KSM later. Write now this code is stubbed
-  // implementation that lets the ozone tests pass.
-  @Override
-  public Set<LocatedContainer> getStorageContainerLocations(Set<String> keys)
-      throws IOException {
-    throw new IOException("Not Implemented.");
   }
 
   /**

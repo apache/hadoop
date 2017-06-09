@@ -18,25 +18,12 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import java.io.IOException;
-import java.util.Set;
-
-import com.google.common.collect.Sets;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
-import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos
-    .GetStorageContainerLocationsRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos
-    .GetStorageContainerLocationsResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.LocatedContainerProto;
+
 import static org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
@@ -71,39 +58,6 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public StorageContainerLocationProtocolServerSideTranslatorPB(
       StorageContainerLocationProtocol impl) throws IOException {
     this.impl = impl;
-  }
-
-  @Override
-  public GetStorageContainerLocationsResponseProto getStorageContainerLocations(
-      RpcController unused, GetStorageContainerLocationsRequestProto req)
-      throws ServiceException {
-    Set<String> keys = Sets.newLinkedHashSetWithExpectedSize(
-        req.getKeysCount());
-    for (String key : req.getKeysList()) {
-      keys.add(key);
-    }
-    final Set<LocatedContainer> locatedContainers;
-    try {
-      locatedContainers = impl.getStorageContainerLocations(keys);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    GetStorageContainerLocationsResponseProto.Builder resp =
-        GetStorageContainerLocationsResponseProto.newBuilder();
-    for (LocatedContainer locatedContainer : locatedContainers) {
-      LocatedContainerProto.Builder locatedContainerProto =
-          LocatedContainerProto.newBuilder()
-              .setKey(locatedContainer.getKey())
-              .setMatchedKeyPrefix(locatedContainer.getMatchedKeyPrefix())
-              .setContainerName(locatedContainer.getContainerName());
-      for (DatanodeInfo location : locatedContainer.getLocations()) {
-        locatedContainerProto.addLocations(PBHelperClient.convert(location));
-      }
-      locatedContainerProto.setLeader(
-          PBHelperClient.convert(locatedContainer.getLeader()));
-      resp.addLocatedContainers(locatedContainerProto.build());
-    }
-    return resp.build();
   }
 
   @Override

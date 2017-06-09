@@ -19,7 +19,6 @@
 package org.apache.hadoop.scm.protocol;
 
 import java.io.IOException;
-import java.util.Set;
 
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -29,18 +28,6 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
  * that currently host a container.
  */
 public interface StorageContainerLocationProtocol {
-
-  /**
-   * Find the set of nodes that currently host the container of an object, as
-   * identified by the object key hash.  This method supports batch lookup by
-   * passing multiple key hashes.
-   *
-   * @param keys batch of object keys to find
-   * @return located containers for each object key
-   * @throws IOException if there is any failure
-   */
-  Set<LocatedContainer> getStorageContainerLocations(Set<String> keys)
-      throws IOException;
 
   /**
    * Asks SCM where a container should be allocated. SCM responds with the
