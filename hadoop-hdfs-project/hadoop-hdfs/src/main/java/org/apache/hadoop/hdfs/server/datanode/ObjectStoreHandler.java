@@ -114,6 +114,8 @@ public final class ObjectStoreHandler implements Closeable {
                   NetUtils.getDefaultSocketFactory(conf),
                   Client.getRpcTimeout(conf)));
 
+      RPC.setProtocolEngine(conf, KeySpaceManagerProtocolPB.class,
+          ProtobufRpcEngine.class);
       long ksmVersion =
           RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
       InetSocketAddress ksmAddress = OzoneClientUtils.getKsmAddress(conf);
