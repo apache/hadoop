@@ -51,30 +51,18 @@ import java.util.Map;
 public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
 
   /**
-   * The configuration prefix of timeline HTTP authentication
+   * The configuration prefix of timeline HTTP authentication.
    */
   public static final String PREFIX = "yarn.timeline-service.http-authentication.";
 
   @VisibleForTesting
   Map<String, String> filterConfig;
 
-  /**
-   * Initializes {@link TimelineAuthenticationFilter}
-   * <p>
-   * Propagates to {@link TimelineAuthenticationFilter} configuration all YARN
-   * configuration properties prefixed with {@value #PREFIX}
-   *
-   * @param container
-   *          The filter container
-   * @param conf
-   *          Configuration for run-time parameters
-   */
-  @Override
-  public void initFilter(FilterContainer container, Configuration conf) {
+  protected void setAuthFilterConfig(Configuration conf) {
     filterConfig = new HashMap<String, String>();
 
     // setting the cookie path to root '/' so it is used for all resources.
-    filterConfig.put(TimelineAuthenticationFilter.COOKIE_PATH, "/");
+    filterConfig.put(AuthenticationFilter.COOKIE_PATH, "/");
 
     for (Map.Entry<String, String> entry : conf) {
       String name = entry.getKey();
@@ -95,6 +83,41 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
       }
     }
 
+    // Resolve _HOST into bind address
+    String bindAddress = conf.get(HttpServer2.BIND_ADDRESS);
+    String principal =
+        filterConfig.get(KerberosAuthenticationHandler.PRINCIPAL);
+    if (principal != null) {
+      try {
+        principal = SecurityUtil.getServerPrincipal(principal, bindAddress);
+      } catch (IOException ex) {
+        throw new RuntimeException("Could not resolve Kerberos principal " +
+            "name: " + ex.toString(), ex);
+      }
+      filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL,
+          principal);
+    }
+  }
+
+  protected Map<String, String> getFilterConfig() {
+    return filterConfig;
+  }
+
+  /**
+   * Initializes {@link TimelineAuthenticationFilter}
+   * <p>
+   * Propagates to {@link TimelineAuthenticationFilter} configuration all YARN
+   * configuration properties prefixed with {@value #PREFIX}
+   *
+   * @param container
+   *          The filter container
+   * @param conf
+   *          Configuration for run-time parameters
+   */
+  @Override
+  public void initFilter(FilterContainer container, Configuration conf) {
+    setAuthFilterConfig(conf);
+
     String authType = filterConfig.get(AuthenticationFilter.AUTH_TYPE);
     if (authType.equals(PseudoAuthenticationHandler.TYPE)) {
       filterConfig.put(AuthenticationFilter.AUTH_TYPE,
@@ -102,23 +125,7 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
     } else if (authType.equals(KerberosAuthenticationHandler.TYPE)) {
       filterConfig.put(AuthenticationFilter.AUTH_TYPE,
           KerberosDelegationTokenAuthenticationHandler.class.getName());
-
-      // Resolve _HOST into bind address
-      String bindAddress = conf.get(HttpServer2.BIND_ADDRESS);
-      String principal =
-          filterConfig.get(KerberosAuthenticationHandler.PRINCIPAL);
-      if (principal != null) {
-        try {
-          principal = SecurityUtil.getServerPrincipal(principal, bindAddress);
-        } catch (IOException ex) {
-          throw new RuntimeException(
-              "Could not resolve Kerberos principal name: " + ex.toString(), ex);
-        }
-        filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL,
-            principal);
-      }
     }
-
     filterConfig.put(DelegationTokenAuthenticationHandler.TOKEN_KIND,
         TimelineDelegationTokenIdentifier.KIND_NAME.toString());
 
