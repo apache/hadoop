@@ -80,10 +80,12 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
   private static final byte[] AUTHENTICATE_SUCCESS_MSG =
       {48, 12, 2, 1, 1, 97, 7, 10, 1, 0, 4, 0, 4, 0};
 
+  private final String userDN = "CN=some_user,DC=test,DC=com";
+
   @Before
   public void setupMocks() throws NamingException {
     when(getUserSearchResult().getNameInNamespace()).
-        thenReturn("CN=some_user,DC=test,DC=com");
+        thenReturn(userDN);
   }
   
   @Test
@@ -94,6 +96,66 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         any(SearchControls.class)))
         .thenReturn(getUserNames(), getGroupNames());
     doTestGetGroups(Arrays.asList(getTestGroups()), 2);
+  }
+
+  @Test
+  public void testGetGroupsWithDifferentBaseDNs() throws Exception {
+    Configuration conf = new Configuration();
+    // Set this, so we don't throw an exception
+    conf.set(LdapGroupsMapping.LDAP_URL_KEY, "ldap://test");
+    String userBaseDN = "ou=Users,dc=xxx,dc=com ";
+    String groupBaseDN = " ou=Groups,dc=xxx,dc=com";
+    conf.set(LdapGroupsMapping.USER_BASE_DN_KEY, userBaseDN);
+    conf.set(LdapGroupsMapping.GROUP_BASE_DN_KEY, groupBaseDN);
+
+    doTestGetGroupsWithBaseDN(conf, userBaseDN.trim(), groupBaseDN.trim());
+  }
+
+  @Test
+  public void testGetGroupsWithDefaultBaseDN() throws Exception {
+    Configuration conf = new Configuration();
+    // Set this, so we don't throw an exception
+    conf.set(LdapGroupsMapping.LDAP_URL_KEY, "ldap://test");
+    String baseDN = " dc=xxx,dc=com ";
+    conf.set(LdapGroupsMapping.BASE_DN_KEY, baseDN);
+    doTestGetGroupsWithBaseDN(conf, baseDN.trim(), baseDN.trim());
+  }
+
+  /**
+   * Helper method to do the LDAP getGroups operation using given user base DN
+   * and group base DN.
+   * @param conf The created configuration
+   * @param userBaseDN user base DN
+   * @param groupBaseDN group base DN
+   * @throws NamingException if error happens when getting groups
+   */
+  private void doTestGetGroupsWithBaseDN(Configuration conf, String userBaseDN,
+      String groupBaseDN) throws NamingException {
+    final LdapGroupsMapping groupsMapping = getGroupsMapping();
+    groupsMapping.setConf(conf);
+
+    final String userName = "some_user";
+
+    // The search functionality of the mock context is reused, so we will
+    // return the user NamingEnumeration first, and then the group
+    when(getContext().search(anyString(), anyString(), any(Object[].class),
+        any(SearchControls.class)))
+        .thenReturn(getUserNames(), getGroupNames());
+
+    List<String> groups = groupsMapping.getGroups(userName);
+    Assert.assertEquals(Arrays.asList(getTestGroups()), groups);
+
+    // We should have searched for the username and groups with default base dn
+    verify(getContext(), times(1)).search(userBaseDN,
+        LdapGroupsMapping.USER_SEARCH_FILTER_DEFAULT,
+        new Object[]{userName},
+        LdapGroupsMapping.SEARCH_CONTROLS);
+
+    verify(getContext(), times(1)).search(groupBaseDN,
+        "(&" + LdapGroupsMapping.GROUP_SEARCH_FILTER_DEFAULT + "(" +
+            LdapGroupsMapping.GROUP_MEMBERSHIP_ATTR_DEFAULT + "={0}))",
+        new Object[]{userDN},
+        LdapGroupsMapping.SEARCH_CONTROLS);
   }
 
   @Test
