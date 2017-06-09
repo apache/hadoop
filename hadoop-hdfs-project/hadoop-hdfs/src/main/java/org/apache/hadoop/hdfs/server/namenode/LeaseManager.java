@@ -79,6 +79,8 @@ public class LeaseManager {
   private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
   static final int INODE_FILTER_WORKER_COUNT_MAX = 4;
   static final int INODE_FILTER_WORKER_TASK_MIN = 512;
+  private long lastHolderUpdateTime;
+  private String internalLeaseHolder;
 
   // Used for handling lock-leases
   // Mapping: leaseHolder -> Lease
@@ -97,7 +99,26 @@ public class LeaseManager {
   private Daemon lmthread;
   private volatile boolean shouldRunMonitor;
 
-  LeaseManager(FSNamesystem fsnamesystem) {this.fsnamesystem = fsnamesystem;}
+  LeaseManager(FSNamesystem fsnamesystem) {
+    this.fsnamesystem = fsnamesystem;
+    updateInternalLeaseHolder();
+  }
+
+  // Update the internal lease holder with the current time stamp.
+  private void updateInternalLeaseHolder() {
+    this.lastHolderUpdateTime = Time.monotonicNow();
+    this.internalLeaseHolder = HdfsServerConstants.NAMENODE_LEASE_HOLDER +
+        "-" + Time.formatTime(Time.now());
+  }
+
+  // Get the current internal lease holder name.
+  String getInternalLeaseHolder() {
+    long elapsed = Time.monotonicNow() - lastHolderUpdateTime;
+    if (elapsed > hardLimit) {
+      updateInternalLeaseHolder();
+    }
+    return internalLeaseHolder;
+  }
 
   Lease getLease(String holder) {
     return leases.get(holder);
@@ -467,6 +488,7 @@ public class LeaseManager {
       Long[] leaseINodeIds = files.toArray(new Long[files.size()]);
       FSDirectory fsd = fsnamesystem.getFSDirectory();
       String p = null;
+      String newHolder = getInternalLeaseHolder();
       for(Long id : leaseINodeIds) {
         try {
           INodesInPath iip = INodesInPath.fromINode(fsd.getInode(id));
@@ -478,8 +500,7 @@ public class LeaseManager {
           boolean completed = false;
           try {
             completed = fsnamesystem.internalReleaseLease(
-                leaseToCheck, p, iip,
-                HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+                leaseToCheck, p, iip, newHolder);
           } catch (IOException e) {
             LOG.warn("Cannot release the path " + p + " in the lease "
                 + leaseToCheck + ". It will be retried.", e);

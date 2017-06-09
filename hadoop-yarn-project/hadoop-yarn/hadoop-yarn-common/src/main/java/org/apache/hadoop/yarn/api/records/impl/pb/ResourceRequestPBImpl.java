@@ -217,7 +217,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
   
   @Override

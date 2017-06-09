@@ -253,14 +253,10 @@ public class NodeReportPBImpl extends NodeReport {
             builder.getNodeId())) {
       builder.setNodeId(convertToProtoFormat(this.nodeId));
     }
-    if (this.used != null
-        && !((ResourcePBImpl) this.used).getProto().equals(
-            builder.getUsed())) {
+    if (this.used != null) {
       builder.setUsed(convertToProtoFormat(this.used));
     }
-    if (this.capability != null
-        && !((ResourcePBImpl) this.capability).getProto().equals(
-            builder.getCapability())) {
+    if (this.capability != null) {
       builder.setCapability(convertToProtoFormat(this.capability));
     }
     if (this.labels != null) {
@@ -310,7 +306,7 @@ public class NodeReportPBImpl extends NodeReport {
   }
 
   private ResourceProto convertToProtoFormat(Resource r) {
-    return ((ResourcePBImpl) r).getProto();
+    return ProtoUtils.convertToProtoFormat(r);
   }
 
   private ResourceUtilizationPBImpl convertFromProtoFormat(

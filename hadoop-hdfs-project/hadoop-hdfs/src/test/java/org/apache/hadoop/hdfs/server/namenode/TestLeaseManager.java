@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Lists;
@@ -97,6 +98,19 @@ public class TestLeaseManager {
     //Initiate a call to checkLease. This should exit within the test timeout
     lm.checkLeases();
     assertTrue(lm.countLease() < numLease);
+  }
+
+  /**
+   * Test whether the internal lease holder name is updated properly.
+   */
+  @Test
+  public void testInternalLeaseHolder() throws Exception {
+    LeaseManager lm = new LeaseManager(makeMockFsNameSystem());
+    // Set the hard lease limit to 500ms.
+    lm.setLeasePeriod(100L, 500L);
+    String holder = lm.getInternalLeaseHolder();
+    Thread.sleep(1000);
+    assertNotEquals(holder, lm.getInternalLeaseHolder());
   }
 
   @Test

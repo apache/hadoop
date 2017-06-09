@@ -91,6 +91,7 @@ public class TestFileSystemOperationsExceptionHandlingMultiThreaded
     renameThread.join();
 
     inputStream.seek(5);
+    inputStream.read();
   }
 
   @Test(expected=FileNotFoundException.class)
