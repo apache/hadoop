@@ -593,6 +593,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
       // cannot authenticate (Since a 401 requires Server to send
       // WWW-Authenticate header as well)..
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Response={}({}), resetting authToken",
+            conn.getResponseCode(), conn.getResponseMessage());
+      }
       KMSClientProvider.this.authToken =
           new DelegationTokenAuthenticatedURL.Token();
       if (authRetryCount > 0) {
@@ -1010,11 +1014,13 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           public Token<?> run() throws Exception {
             // Not using the cached token here.. Creating a new token here
             // everytime.
+            LOG.debug("Getting new token from {}, renewer:{}", url, renewer);
             return authUrl.getDelegationToken(url,
                 new DelegationTokenAuthenticatedURL.Token(), renewer, doAsUser);
           }
         });
         if (token != null) {
+          LOG.debug("New token received: ({})", token);
           credentials.addToken(token.getService(), token);
           tokens = new Token<?>[] { token };
         } else {

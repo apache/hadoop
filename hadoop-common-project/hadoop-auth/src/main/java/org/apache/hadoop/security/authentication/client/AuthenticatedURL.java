@@ -388,6 +388,7 @@ public class AuthenticatedURL {
       // not opened via this instance.
       token.cookieHandler.put(null, conn.getHeaderFields());
     } else {
+      LOG.trace("Setting token value to null ({}), resp={}", token, respCode);
       token.set(null);
       throw new AuthenticationException("Authentication failed, status: " + conn.getResponseCode() +
                                         ", message: " + conn.getResponseMessage());

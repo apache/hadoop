@@ -29,6 +29,8 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -60,6 +62,9 @@ import java.util.Map;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DelegationTokenAuthenticatedURL.class);
 
   /**
    * Constant used in URL's query string to perform a proxy user request, the
@@ -283,17 +288,23 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
     Map<String, String> extraParams = new HashMap<String, String>();
     org.apache.hadoop.security.token.Token<? extends TokenIdentifier> dToken
         = null;
+    LOG.debug("Connecting to url {} with token {} as {}", url, token, doAs);
     // if we have valid auth token, it takes precedence over a delegation token
     // and we don't even look for one.
     if (!token.isSet()) {
       // delegation token
       Credentials creds = UserGroupInformation.getCurrentUser().
           getCredentials();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Token not set, looking for delegation token. Creds:{}",
+            creds.getAllTokens());
+      }
       if (!creds.getAllTokens().isEmpty()) {
         InetSocketAddress serviceAddr = new InetSocketAddress(url.getHost(),
             url.getPort());
         Text service = SecurityUtil.buildTokenService(serviceAddr);
         dToken = creds.getToken(service);
+        LOG.debug("Using delegation token {} from service:{}", dToken, service);
         if (dToken != null) {
           if (useQueryStringForDelegationToken()) {
             // delegation token will go in the query string, injecting it

@@ -635,6 +635,7 @@ extends AbstractDelegationTokenIdentifier>
       Collection<TokenIdent> expiredTokens) throws IOException {
     for (TokenIdent ident : expiredTokens) {
       logExpireToken(ident);
+      LOG.info("Removing expired token " + formatTokenId(ident));
       removeStoredToken(ident);
     }
   }
