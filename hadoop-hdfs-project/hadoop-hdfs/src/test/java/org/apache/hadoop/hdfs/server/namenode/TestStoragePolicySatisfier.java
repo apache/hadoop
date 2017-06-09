@@ -764,6 +764,50 @@ public class TestStoragePolicySatisfier {
   }
 
   /**
+   * If replica with expected storage type already exist in source DN then that
+   * DN should be skipped.
+   */
+  @Test(timeout = 300000)
+  public void testSPSWhenReplicaWithExpectedStorageAlreadyAvailableInSource()
+      throws Exception {
+    StorageType[][] diskTypes = new StorageType[][] {
+        {StorageType.DISK, StorageType.ARCHIVE},
+        {StorageType.DISK, StorageType.ARCHIVE},
+        {StorageType.DISK, StorageType.ARCHIVE}};
+
+    try {
+      hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
+          storagesPerDatanode, capacity);
+      dfs = hdfsCluster.getFileSystem();
+      // 1. Write two replica on disk
+      DFSTestUtil.createFile(dfs, new Path(file), DEFAULT_BLOCK_SIZE,
+          (short) 2, 0);
+      // 2. Change policy to COLD, so third replica will be written to ARCHIVE.
+      dfs.setStoragePolicy(new Path(file), "COLD");
+
+      // 3.Change replication factor to 3.
+      dfs.setReplication(new Path(file), (short) 3);
+
+      DFSTestUtil
+          .waitExpectedStorageType(file, StorageType.DISK, 2, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000,
+          dfs);
+
+      // 4. Change policy to HOT, so we can move the all block to DISK.
+      dfs.setStoragePolicy(new Path(file), "HOT");
+
+      // 4. Satisfy the policy.
+      dfs.satisfyStoragePolicy(new Path(file));
+
+      // 5. Block should move successfully .
+      DFSTestUtil
+          .waitExpectedStorageType(file, StorageType.DISK, 3, 30000, dfs);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  /**
    * Tests that movements should not be assigned when there is no space in
    * target DN.
    */

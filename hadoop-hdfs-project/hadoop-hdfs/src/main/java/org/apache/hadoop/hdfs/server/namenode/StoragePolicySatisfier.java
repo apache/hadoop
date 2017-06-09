@@ -501,15 +501,20 @@ public class StoragePolicySatisfier implements Runnable {
     // avoid choosing a target which already has this block.
     for (int i = 0; i < sourceWithStorageList.size(); i++) {
       StorageTypeNodePair existingTypeNodePair = sourceWithStorageList.get(i);
-      StorageTypeNodePair chosenTarget = chooseTargetTypeInSameNode(blockInfo,
-          existingTypeNodePair.dn, expected);
-      if (chosenTarget != null) {
-        sourceNodes.add(existingTypeNodePair.dn);
-        sourceStorageTypes.add(existingTypeNodePair.storageType);
-        targetNodes.add(chosenTarget.dn);
-        targetStorageTypes.add(chosenTarget.storageType);
-        expected.remove(chosenTarget.storageType);
-        // TODO: We can increment scheduled block count for this node?
+
+      // Check whether the block replica is already placed in the expected
+      // storage type in this source datanode.
+      if (!expected.contains(existingTypeNodePair.storageType)) {
+        StorageTypeNodePair chosenTarget = chooseTargetTypeInSameNode(
+            blockInfo, existingTypeNodePair.dn, expected);
+        if (chosenTarget != null) {
+          sourceNodes.add(existingTypeNodePair.dn);
+          sourceStorageTypes.add(existingTypeNodePair.storageType);
+          targetNodes.add(chosenTarget.dn);
+          targetStorageTypes.add(chosenTarget.storageType);
+          expected.remove(chosenTarget.storageType);
+          // TODO: We can increment scheduled block count for this node?
+        }
       }
       // To avoid choosing this excludeNodes as targets later
       excludeNodes.add(existingTypeNodePair.dn);
