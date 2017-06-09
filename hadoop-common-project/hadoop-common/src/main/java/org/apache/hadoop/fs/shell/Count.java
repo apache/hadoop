@@ -93,7 +93,7 @@ public class Count extends FsCommand {
           "the storage types.\n" +
           "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and \n" +
           "the usage against the quota without the detailed content summary."+
-          "The -"+ OPTION_ECPOLICY +" option shows the storage type and erasure coding policy.";
+          "The -"+ OPTION_ECPOLICY +" option shows the erasure coding policy.";
 
   private boolean showQuotas;
   private boolean humanReadable;
@@ -152,21 +152,21 @@ public class Count extends FsCommand {
     }
 
     if (cf.getOpt(OPTION_HEADER)) {
-      String headString=null;
+      StringBuilder headString=new StringBuilder();
       if (showQuotabyType) {
-        headString=QuotaUsage.getStorageTypeHeader(storageTypes);
+        headString.append(QuotaUsage.getStorageTypeHeader(storageTypes));
       } else {
         if (showQuotasAndUsageOnly) {
-          headString=QuotaUsage.getHeader();
+          headString.append(QuotaUsage.getHeader());
         } else {
-          headString=ContentSummary.getHeader(showQuotas);
+          headString.append(ContentSummary.getHeader(showQuotas));
         }
       }
       if(displayPolicy){
-        headString+="ERASURECODING_POLICY";
+        headString.append("ERASURECODING_POLICY ");
       }
-      headString+="PATHNAME";
-      out.println(headString);
+      headString.append("PATHNAME");
+      out.println(headString.toString());
     }
   }
 
@@ -187,22 +187,26 @@ public class Count extends FsCommand {
 
   @Override
   protected void processPath(PathData src) throws IOException {
-    String outputString=null;
+    StringBuilder outputString=new StringBuilder();
     if (showQuotasAndUsageOnly || showQuotabyType) {
       QuotaUsage usage = src.fs.getQuotaUsage(src.path);
-      outputString=usage.toString(isHumanReadable(), showQuotabyType, storageTypes);
+      outputString.append(usage.
+          toString(isHumanReadable(), showQuotabyType, storageTypes));
     } else {
       ContentSummary summary = src.fs.getContentSummary(src.path);
-      outputString=summary.
-          toString(showQuotas, isHumanReadable(), excludeSnapshots);
+      outputString.append(summary.
+          toString(showQuotas, isHumanReadable(), excludeSnapshots));
     }
     if(displayPolicy){
       ContentSummary summary = src.fs.getContentSummary(src.path);
-      outputString+=summary.getErasureCodingPolicy();
-      outputString+=" ";
+      if(!summary.getErasureCodingPolicy().equals("Replicated")){
+        outputString.append("EC:");
+      }
+      outputString.append(summary.getErasureCodingPolicy());
+      outputString.append(" ");
     }
-    outputString+=src;
-    out.println(outputString);
+    outputString.append(src);
+    out.println(outputString.toString());
   }
 
   /**
