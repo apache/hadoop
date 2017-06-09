@@ -88,13 +88,14 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
       config.setInt("hfile.format.version", 3);
       server = new TimelineReaderServer() {
         @Override
-        protected void setupOptions(Configuration conf) {
-          // The parent code tries to use HttpServer2 from this version of
-          // Hadoop, but the tests are loading in HttpServer2 from
-          // ${hbase-compatible-hadoop.version}. This version uses Jetty 9
+        protected void addFilters(Configuration conf) {
+          // The parent code uses hadoop-common jar from this version of
+          // Hadoop, but the tests are using hadoop-common jar from
+          // ${hbase-compatible-hadoop.version}.  This version uses Jetty 9
           // while ${hbase-compatible-hadoop.version} uses Jetty 6, and there
           // are many differences, including classnames and packages.
-          // We do nothing here, so that we don't cause a NoSuchMethodError.
+          // We do nothing here, so that we don't cause a NoSuchMethodError or
+          // NoClassDefFoundError.
           // Once ${hbase-compatible-hadoop.version} is changed to Hadoop 3,
           // we should be able to remove this @Override.
         }
