@@ -629,6 +629,7 @@ extends AbstractDelegationTokenIdentifier>
     // don't hold lock on 'this' to avoid edit log updates blocking token ops
     for (TokenIdent ident : expiredTokens) {
       logExpireToken(ident);
+      LOG.info("Removing expired token " + formatTokenId(ident));
       removeStoredToken(ident);
     }
   }

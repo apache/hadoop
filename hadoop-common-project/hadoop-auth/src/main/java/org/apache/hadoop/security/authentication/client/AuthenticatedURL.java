@@ -14,6 +14,8 @@
 package org.apache.hadoop.security.authentication.client;
 
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -59,6 +61,8 @@ import java.util.Map;
  * </pre>
  */
 public class AuthenticatedURL {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AuthenticatedURL.class);
 
   /**
    * Name of the HTTP cookie used for the authentication token between the client and the server.
@@ -265,15 +269,19 @@ public class AuthenticatedURL {
               value = value.substring(0, separator);
             }
             if (value.length() > 0) {
+              LOG.trace("Setting token value to {} ({}), resp={}", value,
+                  token, respCode);
               token.set(value);
             }
           }
         }
       }
     } else if (respCode == HttpURLConnection.HTTP_NOT_FOUND) {
+      LOG.trace("Setting token value to null ({}), resp={}", token, respCode);
       token.set(null);
       throw new FileNotFoundException(conn.getURL().toString());
     } else {
+      LOG.trace("Setting token value to null ({}), resp={}", token, respCode);
       token.set(null);
       throw new AuthenticationException("Authentication failed" +
           ", URL: " + conn.getURL() +
