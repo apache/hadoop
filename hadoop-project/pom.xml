@@ -50,7 +50,7 @@
 
     <kafka.version>0.8.2.1</kafka.version>
 
-    <hbase.version>1.2.4</hbase.version>
+    <hbase.version>1.2.6</hbase.version>
     <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
