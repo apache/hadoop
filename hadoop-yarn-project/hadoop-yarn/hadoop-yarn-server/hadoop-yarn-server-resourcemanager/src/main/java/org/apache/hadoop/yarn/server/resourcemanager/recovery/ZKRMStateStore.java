@@ -144,6 +144,11 @@ import java.util.Set;
  * Also, AMRMToken has been removed from ApplicationAttemptState.
  *
  * Changes from 1.2 to 1.3, Addition of ReservationSystem state.
+ *
+ * Changes from 1.3 to 1.4 - Change the structure of application znode by
+ * splitting it in 2 parts, depending on a configurable split index. This limits
+ * the number of application znodes returned in a single call while loading
+ * app state.
  */
 @Private
 @Unstable
@@ -159,7 +164,7 @@ public class ZKRMStateStore extends RMStateStore {
   @VisibleForTesting
   public static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO = Version
-      .newInstance(2, 0);
+      .newInstance(1, 4);
   @VisibleForTesting
   public static final String RM_APP_ROOT_HIERARCHIES = "HIERARCHIES";
 
