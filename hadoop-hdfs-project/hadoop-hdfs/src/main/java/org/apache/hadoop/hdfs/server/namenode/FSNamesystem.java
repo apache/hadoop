@@ -3743,9 +3743,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Perform resource checks and cache the results.
    */
   void checkAvailableResources() {
+    long resourceCheckTime = monotonicNow();
     Preconditions.checkState(nnResourceChecker != null,
         "nnResourceChecker not initialized");
     hasResourcesAvailable = nnResourceChecker.hasAvailableDiskSpace();
+    resourceCheckTime = monotonicNow() - resourceCheckTime;
+    NameNode.getNameNodeMetrics().addResourceCheckTime(resourceCheckTime);
   }
 
   /**
