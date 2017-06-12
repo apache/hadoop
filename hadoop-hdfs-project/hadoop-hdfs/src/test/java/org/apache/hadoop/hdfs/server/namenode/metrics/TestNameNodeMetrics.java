@@ -22,8 +22,13 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
@@ -60,9 +65,11 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -681,6 +688,36 @@ public class TestNameNodeMetrics {
         DFSTestUtil.createFile(fsEDEK, filePath, 1024, (short) 3, 1L);
 
         assertQuantileGauges("GenerateEDEKTime1s", rb);
+      }
+    }
+  }
+
+  @Test
+  public void testResourceCheck() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(0)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .build();
+    try {
+      MockNameNodeResourceChecker mockResourceChecker =
+          new MockNameNodeResourceChecker(conf);
+      tmpCluster.getNameNode(0).getNamesystem()
+          .setNNResourceChecker(mockResourceChecker);
+      NNHAServiceTarget haTarget = new NNHAServiceTarget(conf,
+          DFSUtil.getNamenodeNameServiceId(
+              new HdfsConfiguration()), "nn1");
+      HAServiceProtocol rpc = haTarget.getHealthMonitorProxy(conf, conf.getInt(
+          HA_HM_RPC_TIMEOUT_KEY, HA_HM_RPC_TIMEOUT_DEFAULT));
+
+      MetricsRecordBuilder rb = getMetrics(NN_METRICS);
+      for (long i = 0; i < 10; i++) {
+        rpc.monitorHealth();
+        assertQuantileGauges("ResourceCheckTime1s", rb);
+      }
+    } finally {
+      if (tmpCluster != null) {
+        tmpCluster.shutdown();
       }
     }
   }
