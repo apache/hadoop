@@ -858,9 +858,6 @@ public class INodeFile extends INodeWithAdditionalFields
         counts.addTypeSpace(t, fileLen);
       }
     }
-    if (isStriped()) {
-      String ecPolicyName = summary.getErasureCodingPolicyName(this);
-    }
     return summary;
   }
 
