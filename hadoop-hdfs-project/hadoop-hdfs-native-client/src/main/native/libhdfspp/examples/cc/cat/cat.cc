@@ -36,7 +36,8 @@
 
 #include <google/protobuf/stubs/common.h>
 
-#define BUF_SIZE 4096
+const std::size_t BUF_SIZE = 1048576; //1 MB
+static char input_buffer[BUF_SIZE];
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {
@@ -81,7 +82,6 @@ int main(int argc, char *argv[]) {
   //wrapping file_raw into a unique pointer to guarantee deletion
   std::unique_ptr<hdfs::FileHandle> file(file_raw);
 
-  char input_buffer[BUF_SIZE];
   ssize_t total_bytes_read = 0;
   size_t last_bytes_read = 0;
 

@@ -18,6 +18,8 @@
 #ifndef HDFSPP_STATINFO_H_
 #define HDFSPP_STATINFO_H_
 
+#include <string>
+
 namespace hdfs {
 
 /**
@@ -31,31 +33,25 @@ struct StatInfo {
     IS_SYMLINK = 3
   };
 
-  int                   file_type;
-  ::std::string         path;
-  ::std::string         full_path;
-  unsigned long int     length;
-  unsigned long int     permissions;  //Octal number as in POSIX permissions; e.g. 0777
-  ::std::string         owner;
-  ::std::string         group;
-  unsigned long int     modification_time;
-  unsigned long int     access_time;
-  ::std::string         symlink;
-  unsigned int          block_replication;
-  unsigned long int     blocksize;
-  unsigned long int     fileid;
-  unsigned long int     children_num;
-  StatInfo()
-      : file_type(0),
-        length(0),
-        permissions(0),
-        modification_time(0),
-        access_time(0),
-        block_replication(0),
-        blocksize(0),
-        fileid(0),
-        children_num(0) {
-  }
+  int          file_type;
+  std::string  path;
+  std::string  full_path;
+  uint64_t     length;
+  uint64_t     permissions;  //Octal number as in POSIX permissions; e.g. 0777
+  std::string  owner;
+  std::string  group;
+  uint64_t     modification_time;
+  uint64_t     access_time;
+  std::string  symlink;
+  uint32_t     block_replication;
+  uint64_t     blocksize;
+  uint64_t     fileid;
+  uint64_t     children_num;
+
+  StatInfo();
+
+  //Converts StatInfo object to std::string (hdfs_ls format)
+  std::string str() const;
 };
 
 }

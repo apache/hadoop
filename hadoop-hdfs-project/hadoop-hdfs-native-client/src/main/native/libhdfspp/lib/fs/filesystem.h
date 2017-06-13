@@ -87,6 +87,10 @@ public:
 
   Status GetFileInfo(const std::string &path, StatInfo & stat_info) override;
 
+  void GetContentSummary(const std::string &path,
+        const std::function<void(const Status &, const ContentSummary &)> &handler) override;
+  Status GetContentSummary(const std::string &path, ContentSummary & stat_info) override;
+
   /**
    * Retrieves the file system information such as the total raw size of all files in the filesystem
    * and the raw capacity of the filesystem
@@ -160,6 +164,18 @@ public:
   Status DeleteSnapshot(const std::string &path, const std::string &name) override;
 
   /**
+   * Renames the directory snapshot specified by path from old_name to new_name
+   *
+   *  @param path       Path to the snapshotted directory (must be non-blank)
+   *  @param old_name   Current name of the snapshot (must be non-blank)
+   *  @param new_name   New name of the snapshot (must be non-blank)
+   **/
+  void RenameSnapshot(const std::string &path, const std::string &old_name,
+      const std::string &new_name, const std::function<void(const Status &)> &handler) override;
+  Status RenameSnapshot(const std::string &path, const std::string &old_name,
+      const std::string &new_name) override;
+
+  /**
    * Allows snapshots to be made on the specified directory
    *
    *  @param path    Path to the directory to be made snapshottable (must be non-empty)
@@ -188,6 +204,8 @@ public:
   std::shared_ptr<LibhdfsEvents> get_event_handlers();
 
   Options get_options();
+
+  std::string get_cluster_name();
 
 private:
   /**

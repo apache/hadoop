@@ -30,6 +30,8 @@
 #include "common/util_c.h"
 
 #define SCHEME "hdfs"
+#define BUF_SIZE 1048576 //1 MB
+static char input_buffer[BUF_SIZE];
 
 int main(int argc, char** argv) {
 
@@ -83,8 +85,6 @@ int main(int argc, char** argv) {
     hdfsFreeBuilder(builder);
     return 1;
   }
-
-  char input_buffer[4096];
 
   ssize_t read_bytes_count = 0;
   ssize_t last_read_bytes = 0;

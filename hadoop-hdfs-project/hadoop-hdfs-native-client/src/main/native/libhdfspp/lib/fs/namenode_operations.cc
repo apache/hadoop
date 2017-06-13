@@ -247,6 +247,45 @@ void NameNodeOperations::GetFileInfo(const std::string & path,
   });
 }
 
+void NameNodeOperations::GetContentSummary(const std::string & path,
+  std::function<void(const Status &, const ContentSummary &)> handler)
+{
+  using ::hadoop::hdfs::GetContentSummaryRequestProto;
+  using ::hadoop::hdfs::GetContentSummaryResponseProto;
+
+  LOG_TRACE(kFileSystem, << "NameNodeOperations::GetContentSummary("
+                           << FMT_THIS_ADDR << ", path=" << path << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("GetContentSummary: argument 'path' cannot be empty"), ContentSummary());
+    return;
+  }
+
+  GetContentSummaryRequestProto req;
+  req.set_path(path);
+
+  auto resp = std::make_shared<GetContentSummaryResponseProto>();
+
+  namenode_.GetContentSummary(&req, resp, [resp, handler, path](const Status &stat) {
+    if (stat.ok()) {
+      // For non-existant files, the server will respond with an OK message but
+      //   no summary in the protobuf.
+      if(resp -> has_summary()){
+          struct ContentSummary content_summary;
+          content_summary.path = path;
+          ContentSummaryProtoToContentSummary(content_summary, resp->summary());
+          handler(stat, content_summary);
+        } else {
+          std::string errormsg = "No such file or directory: " + path;
+          Status statNew = Status::PathNotFound(errormsg.c_str());
+          handler(statNew, ContentSummary());
+        }
+    } else {
+      handler(stat, ContentSummary());
+    }
+  });
+}
+
 void NameNodeOperations::GetFsStats(
     std::function<void(const Status &, const FsInfo &)> handler) {
   using ::hadoop::hdfs::GetFsStatusRequestProto;
@@ -300,7 +339,10 @@ void NameNodeOperations::GetListing(
         for (::hadoop::hdfs::HdfsFileStatusProto const& fs : resp->dirlist().partiallisting()) {
           StatInfo si;
           si.path = fs.path();
-          si.full_path = path + fs.path() + "/";
+          si.full_path = path + fs.path();
+          if(si.full_path.back() != '/'){
+            si.full_path += "/";
+          }
           HdfsFileStatusProtoToStatInfo(si, fs);
           stat_infos.push_back(si);
         }
@@ -554,6 +596,41 @@ void NameNodeOperations::DeleteSnapshot(const std::string & path,
       });
 }
 
+void NameNodeOperations::RenameSnapshot(const std::string & path, const std::string & old_name,
+    const std::string & new_name, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::RenameSnapshotRequestProto;
+  using ::hadoop::hdfs::RenameSnapshotResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::RenameSnapshot(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", old_name=" << old_name << ", new_name=" << new_name << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("RenameSnapshot: argument 'path' cannot be empty"));
+    return;
+  }
+  if (old_name.empty()) {
+    handler(Status::InvalidArgument("RenameSnapshot: argument 'old_name' cannot be empty"));
+    return;
+  }
+  if (new_name.empty()) {
+    handler(Status::InvalidArgument("RenameSnapshot: argument 'new_name' cannot be empty"));
+    return;
+  }
+
+  RenameSnapshotRequestProto req;
+  req.set_snapshotroot(path);
+  req.set_snapshotoldname(old_name);
+  req.set_snapshotnewname(new_name);
+
+  auto resp = std::make_shared<RenameSnapshotResponseProto>();
+
+  namenode_.RenameSnapshot(&req, resp,
+      [handler](const Status &stat) {
+        handler(stat);
+      });
+}
+
 void NameNodeOperations::AllowSnapshot(const std::string & path, std::function<void(const Status &)> handler) {
   using ::hadoop::hdfs::AllowSnapshotRequestProto;
   using ::hadoop::hdfs::AllowSnapshotResponseProto;
@@ -619,6 +696,17 @@ void NameNodeOperations::HdfsFileStatusProtoToStatInfo(
   stat_info.blocksize = fs.blocksize();
   stat_info.fileid = fs.fileid();
   stat_info.children_num = fs.childrennum();
+}
+
+void NameNodeOperations::ContentSummaryProtoToContentSummary(
+    hdfs::ContentSummary & content_summary,
+    const ::hadoop::hdfs::ContentSummaryProto & csp) {
+  content_summary.length = csp.length();
+  content_summary.filecount = csp.filecount();
+  content_summary.directorycount = csp.directorycount();
+  content_summary.quota = csp.quota();
+  content_summary.spaceconsumed = csp.spaceconsumed();
+  content_summary.spacequota = csp.spacequota();
 }
 
 void NameNodeOperations::GetFsStatsResponseProtoToFsInfo(

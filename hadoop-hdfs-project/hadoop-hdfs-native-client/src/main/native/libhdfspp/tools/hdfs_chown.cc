@@ -23,24 +23,27 @@
 #include "tools_common.h"
 
 void usage(){
-  std::cout << "Usage: hdfs_chmod [OPTION] <MODE[,MODE]... | OCTALMODE> FILE"
+  std::cout << "Usage: hdfs_chown [OPTION] [OWNER][:[GROUP]] FILE"
       << std::endl
-      << std::endl << "Change the permissions of each FILE to MODE."
-      << std::endl << "The user must be the owner of the file, or else a super-user."
-      << std::endl << "Additional information is in the Permissions Guide:"
+      << std::endl << "Change the owner and/or group of each FILE to OWNER and/or GROUP."
+      << std::endl << "The user must be a super-user. Additional information is in the Permissions Guide:"
       << std::endl << "https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html"
       << std::endl
       << std::endl << "  -R  operate on files and directories recursively"
       << std::endl << "  -h  display this help and exit"
       << std::endl
+      << std::endl << "Owner is unchanged if missing.  Group is unchanged if missing."
+      << std::endl << "OWNER and GROUP may be numeric as well as symbolic."
+      << std::endl
       << std::endl << "Examples:"
-      << std::endl << "hdfs_chmod -R 755 hdfs://localhost.localdomain:9433/dir/file"
-      << std::endl << "hdfs_chmod 777 /dir/file"
+      << std::endl << "hdfs_chown -R new_owner:new_group hdfs://localhost.localdomain:8020/dir/file"
+      << std::endl << "hdfs_chown new_owner /dir/file"
       << std::endl;
 }
 
-struct SetPermissionState {
-  const uint16_t permissions;
+struct SetOwnerState {
+  const std::string username;
+  const std::string groupname;
   const std::function<void(const hdfs::Status &)> handler;
   //The request counter is incremented once every time SetOwner async call is made
   uint64_t request_counter;
@@ -50,9 +53,11 @@ struct SetPermissionState {
   hdfs::Status status;
   //Shared variables will need protection with a lock
   std::mutex lock;
-  SetPermissionState(const uint16_t permissions_, const std::function<void(const hdfs::Status &)> & handler_,
+  SetOwnerState(const std::string & username_, const std::string & groupname_,
+                const std::function<void(const hdfs::Status &)> & handler_,
               uint64_t request_counter_, bool find_is_done_)
-      : permissions(permissions_),
+      : username(username_),
+        groupname(groupname_),
         handler(handler_),
         request_counter(request_counter_),
         find_is_done(find_is_done_),
@@ -82,7 +87,6 @@ int main(int argc, char *argv[]) {
     case 'h':
       usage();
       exit(EXIT_SUCCESS);
-      break;
     case '?':
       if (isprint(optopt))
         std::cerr << "Unknown option `-" << (char) optopt << "'." << std::endl;
@@ -94,8 +98,17 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
   }
-  std::string permissions = argv[optind];
+  std::string owner_and_group = argv[optind];
   std::string uri_path = argv[optind + 1];
+
+  std::string owner, group;
+  size_t owner_end = owner_and_group.find(":");
+  if(owner_end == std::string::npos) {
+    owner = owner_and_group;
+  } else {
+    owner = owner_and_group.substr(0, owner_end);
+    group = owner_and_group.substr(owner_end + 1);
+  }
 
   //Building a URI object from the given uri_path
   hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
@@ -104,34 +117,26 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  //TODO: HDFS-9539 Currently options can be returned empty
-  hdfs::Options options = *hdfs::getOptions();
-
-  //TODO: HDFS-9539 - until then we increase the time-out to allow all recursive async calls to finish
-  options.rpc_timeout = std::numeric_limits<int>::max();
-
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), options);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), true);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  /* wrap async FileSystem::SetPermission with promise to make it a blocking call */
+  /* wrap async FileSystem::SetOwner with promise to make it a blocking call */
   std::shared_ptr<std::promise<hdfs::Status>> promise = std::make_shared<std::promise<hdfs::Status>>();
   std::future<hdfs::Status> future(promise->get_future());
   auto handler = [promise](const hdfs::Status &s) {
     promise->set_value(s);
   };
 
-  //strtol() is reading the value with base 8, NULL because we are reading in just one value.
-  uint16_t perm = strtol(permissions.c_str(), NULL, 8);
   if(!recursive){
-    fs->SetPermission(uri->get_path(), perm, handler);
+    fs->SetOwner(uri->get_path(), owner, group, handler);
   }
   else {
     //Allocating shared state, which includes:
     //username and groupname to be set, handler to be called, request counter, and a boolean to keep track if find is done
-    std::shared_ptr<SetPermissionState> state = std::make_shared<SetPermissionState>(perm, handler, 0, false);
+    std::shared_ptr<SetOwnerState> state = std::make_shared<SetOwnerState>(owner, group, handler, 0, false);
 
     // Keep requesting more from Find until we process the entire listing. Call handler when Find is done and reques counter is 0.
     // Find guarantees that the handler will only be called once at a time so we do not need locking in handlerFind.
@@ -156,7 +161,7 @@ int main(int argc, char *argv[]) {
         for (hdfs::StatInfo const& s : stat_infos) {
           //Launch an asynchronous call to SetOwner for every returned result
           state->request_counter++;
-          fs->SetPermission(s.full_path, state->permissions, handlerSetOwner);
+          fs->SetOwner(s.full_path, state->username, state->groupname, handlerSetOwner);
         }
       }
 
