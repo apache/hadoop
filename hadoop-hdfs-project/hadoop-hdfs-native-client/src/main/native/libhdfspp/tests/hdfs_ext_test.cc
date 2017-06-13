@@ -121,6 +121,8 @@ TEST_F(HdfsExtTest, TestSnapshotOperations) {
   EXPECT_EQ((int) std::errc::invalid_argument, errno);
   EXPECT_EQ(-1, hdfsDeleteSnapshot(fs, nullptr, "Bad"));
   EXPECT_EQ((int) std::errc::invalid_argument, errno);
+  EXPECT_EQ(-1, hdfsRenameSnapshot(fs, nullptr, "Bad", "Bad"));
+  EXPECT_EQ((int) std::errc::invalid_argument, errno);
   EXPECT_EQ(-1, hdfsDisallowSnapshot(fs, nullptr));
   EXPECT_EQ((int) std::errc::invalid_argument, errno);
 
@@ -136,6 +138,8 @@ TEST_F(HdfsExtTest, TestSnapshotOperations) {
   EXPECT_EQ((int) std::errc::no_such_file_or_directory, errno);
   EXPECT_EQ(-1, hdfsDeleteSnapshot(fs, path.c_str(), "Bad"));
   EXPECT_EQ((int) std::errc::no_such_file_or_directory, errno);
+  EXPECT_EQ(-1, hdfsRenameSnapshot(fs, path.c_str(), "Bad", "Bad"));
+  EXPECT_EQ((int) std::errc::no_such_file_or_directory, errno);
   EXPECT_EQ(-1, hdfsDisallowSnapshot(fs, path.c_str()));
   EXPECT_EQ((int) std::errc::no_such_file_or_directory, errno);
 
@@ -146,6 +150,8 @@ TEST_F(HdfsExtTest, TestSnapshotOperations) {
   EXPECT_EQ(-1, hdfsCreateSnapshot(fs, path.c_str(), "Bad"));
   EXPECT_EQ((int) std::errc::not_a_directory, errno);
   EXPECT_EQ(-1, hdfsDeleteSnapshot(fs, path.c_str(), "Bad"));
+  EXPECT_EQ((int) std::errc::not_a_directory, errno);
+  EXPECT_EQ(-1, hdfsRenameSnapshot(fs, path.c_str(), "Bad", "Bad"));
   EXPECT_EQ((int) std::errc::not_a_directory, errno);
   EXPECT_EQ(-1, hdfsDisallowSnapshot(fs, path.c_str()));
   EXPECT_EQ((int) std::errc::not_a_directory, errno);
@@ -167,8 +173,11 @@ TEST_F(HdfsExtTest, TestSnapshotOperations) {
   EXPECT_STREQ("Good", file_infos[0].mName);
   hdfsFreeFileInfo(file_infos, 1);
 
+  //Verify snapshot renamed
+  EXPECT_EQ(0, hdfsRenameSnapshot(fs, dirName.c_str(), "Good", "Best"));
+
   //Verify snapshot deleted
-  EXPECT_EQ(0, hdfsDeleteSnapshot(fs, dirName.c_str(), "Good"));
+  EXPECT_EQ(0, hdfsDeleteSnapshot(fs, dirName.c_str(), "Best"));
   EXPECT_EQ(nullptr, file_infos = hdfsListDirectory(fs, snapDir.c_str(), &size));
   EXPECT_EQ(0, size);
   hdfsFreeFileInfo(file_infos, 0);

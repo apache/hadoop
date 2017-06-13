@@ -21,6 +21,7 @@
 #include "rpc/rpc_engine.h"
 #include "hdfspp/statinfo.h"
 #include "hdfspp/fsinfo.h"
+#include "hdfspp/content_summary.h"
 #include "common/namenode_info.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
@@ -67,7 +68,10 @@ public:
     std::function<void(const Status &)> handler);
 
   void GetFileInfo(const std::string & path,
-      std::function<void(const Status &, const StatInfo &)> handler);
+    std::function<void(const Status &, const StatInfo &)> handler);
+
+  void GetContentSummary(const std::string & path,
+    std::function<void(const Status &, const ContentSummary &)> handler);
 
   void GetFsStats(std::function<void(const Status &, const FsInfo &)> handler);
 
@@ -97,6 +101,9 @@ public:
   void DeleteSnapshot(const std::string & path, const std::string & name,
       std::function<void(const Status &)> handler);
 
+  void RenameSnapshot(const std::string & path, const std::string & old_name, const std::string & new_name,
+      std::function<void(const Status &)> handler);
+
   void AllowSnapshot(const std::string & path,
       std::function<void(const Status &)> handler);
 
@@ -107,6 +114,7 @@ public:
 
 private:
   static void HdfsFileStatusProtoToStatInfo(hdfs::StatInfo & si, const ::hadoop::hdfs::HdfsFileStatusProto & fs);
+  static void ContentSummaryProtoToContentSummary(hdfs::ContentSummary & content_summary, const ::hadoop::hdfs::ContentSummaryProto & csp);
   static void DirectoryListingProtoToStatInfo(std::shared_ptr<std::vector<StatInfo>> stat_infos, const ::hadoop::hdfs::DirectoryListingProto & dl);
   static void GetFsStatsResponseProtoToFsInfo(hdfs::FsInfo & fs_info, const std::shared_ptr<::hadoop::hdfs::GetFsStatsResponseProto> & fs);
 

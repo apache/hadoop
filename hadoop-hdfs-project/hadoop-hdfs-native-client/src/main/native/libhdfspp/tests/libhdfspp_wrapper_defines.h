@@ -97,5 +97,6 @@
 #define hdfsFind libhdfspp_hdfsFind
 #define hdfsCreateSnapshot libhdfspp_hdfsCreateSnapshot
 #define hdfsDeleteSnapshot libhdfspp_hdfsDeleteSnapshot
+#define hdfsRenameSnapshot libhdfspp_hdfsRenameSnapshot
 #define hdfsAllowSnapshot libhdfspp_hdfsAllowSnapshot
 #define hdfsDisallowSnapshot libhdfspp_hdfsDisallowSnapshot

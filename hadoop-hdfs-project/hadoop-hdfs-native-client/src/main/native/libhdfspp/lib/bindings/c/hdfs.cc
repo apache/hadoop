@@ -1094,6 +1094,37 @@ int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
   }
 }
 
+
+int hdfsRenameSnapshot(hdfsFS fs, const char* path, const char* old_name, const char* new_name) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    if (!old_name) {
+      return Error(Status::InvalidArgument("hdfsRenameSnapshot: argument 'old_name' cannot be NULL"));
+    }
+    if (!new_name) {
+      return Error(Status::InvalidArgument("hdfsRenameSnapshot: argument 'new_name' cannot be NULL"));
+    }
+    Status stat;
+    stat = fs->get_impl()->RenameSnapshot(*abs_path, old_name, new_name);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+
+}
+
 int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
   try {
     errno = 0;

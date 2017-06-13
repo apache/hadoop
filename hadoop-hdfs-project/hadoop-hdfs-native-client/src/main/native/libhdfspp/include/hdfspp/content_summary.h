@@ -15,32 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef HDFSPP_FSINFO_H_
-#define HDFSPP_FSINFO_H_
+#ifndef HDFSPP_CONTENT_SUMMARY_H_
+#define HDFSPP_CONTENT_SUMMARY_H_
 
 #include <string>
 
 namespace hdfs {
 
 /**
- * Information that is assumed to be unchanging about a file system for the duration of
- * the operations.
+ * Content summary is assumed to be unchanging for the duration of the operation
  */
-struct FsInfo {
+struct ContentSummary {
+  uint64_t length;
+  uint64_t filecount;
+  uint64_t directorycount;
+  uint64_t quota;
+  uint64_t spaceconsumed;
+  uint64_t spacequota;
+  std::string path;
 
-  uint64_t capacity;
-  uint64_t used;
-  uint64_t remaining;
-  uint64_t under_replicated;
-  uint64_t corrupt_blocks;
-  uint64_t missing_blocks;
-  uint64_t missing_repl_one_blocks;
-  uint64_t blocks_in_future;
+  ContentSummary();
 
-  FsInfo();
+  //Converts ContentSummary object to std::string (hdfs_count format)
+  std::string str(bool include_quota) const;
 
-  //Converts FsInfo object to std::string (hdfs_df format)
-  std::string str(const std::string fs_name) const;
+  //Converts ContentSummary object to std::string (hdfs_du format)
+  std::string str_du() const;
 };
 
 }

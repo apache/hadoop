@@ -23,21 +23,18 @@
 #include "tools_common.h"
 
 void usage(){
-  std::cout << "Usage: hdfs_chown [OPTION] [OWNER][:[GROUP]] FILE"
+  std::cout << "Usage: hdfs_chgrp [OPTION] GROUP FILE"
       << std::endl
-      << std::endl << "Change the owner and/or group of each FILE to OWNER and/or GROUP."
-      << std::endl << "The user must be a super-user. Additional information is in the Permissions Guide:"
+      << std::endl << "Change the group association of each FILE to GROUP."
+      << std::endl << "The user must be the owner of files. Additional information is in the Permissions Guide:"
       << std::endl << "https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html"
       << std::endl
       << std::endl << "  -R  operate on files and directories recursively"
       << std::endl << "  -h  display this help and exit"
       << std::endl
-      << std::endl << "Owner is unchanged if missing.  Group is unchanged if missing."
-      << std::endl << "OWNER and GROUP may be numeric as well as symbolic."
-      << std::endl
       << std::endl << "Examples:"
-      << std::endl << "hdfs_chown -R new_owner:new_group hdfs://localhost.localdomain:9433/dir/file"
-      << std::endl << "hdfs_chown new_owner /dir/file"
+      << std::endl << "hdfs_chgrp -R new_group hdfs://localhost.localdomain:8020/dir/file"
+      << std::endl << "hdfs_chgrp new_group /dir/file"
       << std::endl;
 }
 
@@ -87,7 +84,6 @@ int main(int argc, char *argv[]) {
     case 'h':
       usage();
       exit(EXIT_SUCCESS);
-      break;
     case '?':
       if (isprint(optopt))
         std::cerr << "Unknown option `-" << (char) optopt << "'." << std::endl;
@@ -99,17 +95,10 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
   }
-  std::string owner_and_group = argv[optind];
+  std::string group = argv[optind];
+  //Owner stays the same, just group association changes.
+  std::string owner = "";
   std::string uri_path = argv[optind + 1];
-
-  std::string owner, group;
-  size_t owner_end = owner_and_group.find(":");
-  if(owner_end == std::string::npos) {
-    owner = owner_and_group;
-  } else {
-    owner = owner_and_group.substr(0, owner_end);
-    group = owner_and_group.substr(owner_end + 1);
-  }
 
   //Building a URI object from the given uri_path
   hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
@@ -118,13 +107,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  //TODO: HDFS-9539 Currently options can be returned empty
-  hdfs::Options options = *hdfs::getOptions();
-
-  //TODO: HDFS-9539 - until then we increase the time-out to allow all recursive async calls to finish
-  options.rpc_timeout = std::numeric_limits<int>::max();
-
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), options);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), true);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);

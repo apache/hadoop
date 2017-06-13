@@ -21,8 +21,8 @@
 
 namespace hdfs {
 
-  std::shared_ptr<hdfs::Options> getOptions() {
-    std::shared_ptr<hdfs::Options> options = std::make_shared<hdfs::Options>();
+  std::shared_ptr<hdfs::FileSystem> doConnect(hdfs::URI & uri, bool max_timeout) {
+    hdfs::Options options;
     //Setting the config path to the default: "$HADOOP_CONF_DIR" or "/etc/hadoop/conf"
     hdfs::ConfigurationLoader loader;
     //Loading default config files core-site.xml and hdfs-site.xml from the config path
@@ -30,12 +30,12 @@ namespace hdfs {
     //TODO: HDFS-9539 - after this is resolved, valid config will always be returned.
     if(config){
       //Loading options from the config
-      *options = config->GetOptions();
+      options = config->GetOptions();
     }
-    return options;
-  }
-
-  std::shared_ptr<hdfs::FileSystem> doConnect(hdfs::URI & uri, hdfs::Options & options) {
+    if(max_timeout){
+      //TODO: HDFS-9539 - until then we increase the time-out to allow all recursive async calls to finish
+      options.rpc_timeout = std::numeric_limits<int>::max();
+    }
     IoService * io_service = IoService::New();
     //Wrapping fs into a shared pointer to guarantee deletion
     std::shared_ptr<hdfs::FileSystem> fs(hdfs::FileSystem::New(io_service, "", options));
@@ -67,4 +67,49 @@ namespace hdfs {
     return fs;
   }
 
+  #define BUF_SIZE 1048576 //1 MB
+  static char input_buffer[BUF_SIZE];
+
+  void readFile(std::shared_ptr<hdfs::FileSystem> fs, std::string path, off_t offset, std::FILE* dst_file, bool to_delete) {
+    ssize_t total_bytes_read = 0;
+    size_t last_bytes_read = 0;
+
+    hdfs::FileHandle *file_raw = nullptr;
+    hdfs::Status status = fs->Open(path, &file_raw);
+    if (!status.ok()) {
+      std::cerr << "Could not open file " << path << ". " << status.ToString() << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    //wrapping file_raw into a unique pointer to guarantee deletion
+    std::unique_ptr<hdfs::FileHandle> file(file_raw);
+
+    do{
+      //Reading file chunks
+      status = file->PositionRead(input_buffer, sizeof(input_buffer), offset, &last_bytes_read);
+      if(status.ok()) {
+        //Writing file chunks to stdout
+        fwrite(input_buffer, last_bytes_read, 1, dst_file);
+        total_bytes_read += last_bytes_read;
+        offset += last_bytes_read;
+      } else {
+        if(status.is_invalid_offset()){
+          //Reached the end of the file
+          if(to_delete) {
+            //Deleting the file (recursive set to false)
+            hdfs::Status status = fs->Delete(path, false);
+            if (!status.ok()) {
+              std::cerr << "Error deleting the source file: " << path
+                << " " << status.ToString() << std::endl;
+              exit(EXIT_FAILURE);
+            }
+          }
+          break;
+        } else {
+          std::cerr << "Error reading the file: " << status.ToString() << std::endl;
+          exit(EXIT_FAILURE);
+        }
+      }
+    } while (last_bytes_read > 0);
+    return;
+  }
 }

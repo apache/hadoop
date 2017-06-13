@@ -252,6 +252,35 @@ Status FileSystemImpl::GetFileInfo(const std::string &path,
   return stat;
 }
 
+Status FileSystemImpl::GetContentSummary(const std::string &path,
+                                         ContentSummary & content_summary) {
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::[sync]GetContentSummary("
+                                 << FMT_THIS_ADDR << ", path="
+                                 << path << ") called");
+
+  auto callstate = std::make_shared<std::promise<std::tuple<Status, ContentSummary>>>();
+  std::future<std::tuple<Status, ContentSummary>> future(callstate->get_future());
+
+  /* wrap async FileSystem::GetContentSummary with promise to make it a blocking call */
+  auto h = [callstate](const Status &s, const ContentSummary &si) {
+    callstate->set_value(std::make_tuple(s, si));
+  };
+
+  GetContentSummary(path, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = std::get<0>(returnstate);
+  ContentSummary cs = std::get<1>(returnstate);
+
+  if (!stat.ok()) {
+    return stat;
+  }
+
+  content_summary = cs;
+  return stat;
+}
+
 Status FileSystemImpl::GetFsStats(FsInfo & fs_info) {
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::[sync]GetFsStats(" << FMT_THIS_ADDR << ") called");
@@ -502,6 +531,29 @@ Status FileSystemImpl::DeleteSnapshot(const std::string &path,
   };
 
   DeleteSnapshot(path, name, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = returnstate;
+
+  return stat;
+}
+
+Status FileSystemImpl::RenameSnapshot(const std::string &path,
+    const std::string &old_name, const std::string &new_name) {
+  LOG_DEBUG(kFileSystem,
+    << "FileSystemImpl::[sync]RenameSnapshot(" << FMT_THIS_ADDR << ", path=" << path <<
+    ", old_name=" << old_name << ", new_name=" << new_name << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::RenameSnapshot with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  RenameSnapshot(path, old_name, new_name, h);
 
   /* block until promise is set */
   auto returnstate = future.get();

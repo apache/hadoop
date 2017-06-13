@@ -330,6 +330,17 @@ LIBHDFS_EXTERNAL
 int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name);
 
 /**
+ * Renames the directory snapshot specified by path from old_name to new_name
+ *
+ *  @param fs         The filesystem (required)
+ *  @param path       Path to the snapshotted directory (must be non-blank)
+ *  @param old_name   Current name of the snapshot (must be non-blank)
+ *  @param new_name   New name of the snapshot (must be non-blank)
+ *  @return           0 on success, corresponding errno on failure
+ **/
+int hdfsRenameSnapshot(hdfsFS fs, const char* path, const char* old_name, const char* new_name);
+
+/**
  * Allows snapshots to be made on the specified directory
  *
  *  @param fs      The filesystem (required)

@@ -24,6 +24,7 @@
 #include "hdfspp/block_location.h"
 #include "hdfspp/statinfo.h"
 #include "hdfspp/fsinfo.h"
+#include "hdfspp/content_summary.h"
 
 #include <functional>
 #include <memory>
@@ -276,6 +277,14 @@ class FileSystem {
   virtual Status GetFileInfo(const std::string &path, StatInfo & stat_info) = 0;
 
   /**
+   * Returns the number of directories, files and bytes under the given path
+   **/
+  virtual void
+  GetContentSummary(const std::string &path,
+                  const std::function<void(const Status &, const ContentSummary &)> &handler) = 0;
+  virtual Status GetContentSummary(const std::string &path, ContentSummary & stat_info) = 0;
+
+  /**
    * Retrieves the file system information as a whole, such as the total raw size of all files in the filesystem
    * and the raw capacity of the filesystem
    *
@@ -305,7 +314,7 @@ class FileSystem {
 
   /**
    * Returns the locations of all known blocks for the indicated file (or part of it), or an error
-   * if the information clould not be found
+   * if the information could not be found
    */
   virtual void GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) = 0;
@@ -418,6 +427,18 @@ class FileSystem {
       const std::string &name) = 0;
 
   /**
+   * Renames the directory snapshot specified by path from old_name to new_name
+   *
+   *  @param path       Path to the snapshotted directory (must be non-blank)
+   *  @param old_name   Current name of the snapshot (must be non-blank)
+   *  @param new_name   New name of the snapshot (must be non-blank)
+   **/
+  virtual void RenameSnapshot(const std::string &path, const std::string &old_name,
+      const std::string &new_name, const std::function<void(const Status &)> &handler) = 0;
+  virtual Status RenameSnapshot(const std::string &path, const std::string &old_name,
+      const std::string &new_name) = 0;
+
+  /**
    * Allows snapshots to be made on the specified directory
    *
    *  @param path    Path to the directory to be made snapshottable (must be non-empty)
@@ -454,6 +475,8 @@ class FileSystem {
   virtual void SetFsEventCallback(fs_event_callback callback) = 0;
 
   virtual Options get_options() = 0;
+
+  virtual std::string get_cluster_name() = 0;
 };
 }
 

@@ -479,6 +479,15 @@ void FileSystemImpl::GetFileInfo(
   nn_.GetFileInfo(path, handler);
 }
 
+void FileSystemImpl::GetContentSummary(
+    const std::string &path,
+    const std::function<void(const Status &, const ContentSummary &)> &handler) {
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::GetContentSummary("
+                                 << FMT_THIS_ADDR << ", path="
+                                 << path << ") called");
+
+  nn_.GetContentSummary(path, handler);
+}
 
 void FileSystemImpl::GetFsStats(
     const std::function<void(const Status &, const FsInfo &)> &handler) {
@@ -515,13 +524,16 @@ void FileSystemImpl::GetListing(
   LOG_DEBUG(kFileSystem, << "FileSystemImpl::GetListing("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
-
+  std::string path_fixed = path;
+  if(path.back() != '/'){
+    path_fixed += "/";
+  }
   // Caputure the state and push it into the shim
-  auto callback = [this, path, handler](const Status &stat, const std::vector<StatInfo> & stat_infos, bool has_more) {
-    GetListingShim(stat, stat_infos, has_more, path, handler);
+  auto callback = [this, path_fixed, handler](const Status &stat, const std::vector<StatInfo> & stat_infos, bool has_more) {
+    GetListingShim(stat, stat_infos, has_more, path_fixed, handler);
   };
 
-  nn_.GetListing(path, callback);
+  nn_.GetListing(path_fixed, callback);
 }
 
 
@@ -772,6 +784,28 @@ void FileSystemImpl::DeleteSnapshot(const std::string &path,
   nn_.DeleteSnapshot(path, name, handler);
 }
 
+void FileSystemImpl::RenameSnapshot(const std::string &path,
+    const std::string &old_name, const std::string &new_name,
+    const std::function<void(const Status &)> &handler) {
+  LOG_DEBUG(kFileSystem,
+    << "FileSystemImpl::RenameSnapshot(" << FMT_THIS_ADDR << ", path=" << path <<
+    ", old_name=" << old_name << ", new_name=" << new_name << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("RenameSnapshot: argument 'path' cannot be empty"));
+    return;
+  }
+  if (old_name.empty()) {
+    handler(Status::InvalidArgument("RenameSnapshot: argument 'old_name' cannot be empty"));
+    return;
+  }
+  if (new_name.empty()) {
+    handler(Status::InvalidArgument("RenameSnapshot: argument 'new_name' cannot be empty"));
+    return;
+  }
+
+  nn_.RenameSnapshot(path, old_name, new_name, handler);
+}
 
 void FileSystemImpl::AllowSnapshot(const std::string &path,
     const std::function<void(const Status &)> &handler) {
@@ -815,6 +849,10 @@ std::shared_ptr<LibhdfsEvents> FileSystemImpl::get_event_handlers() {
 
 Options FileSystemImpl::get_options() {
   return options_;
+}
+
+std::string FileSystemImpl::get_cluster_name() {
+  return cluster_name_;
 }
 
 }

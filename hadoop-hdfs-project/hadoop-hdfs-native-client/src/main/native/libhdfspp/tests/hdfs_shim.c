@@ -504,6 +504,10 @@ int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
   return libhdfspp_hdfsDeleteSnapshot(fs->libhdfsppRep, path, name);
 }
 
+int hdfsRenameSnapshot(hdfsFS fs, const char* path, const char* old_name, const char* new_name) {
+  return libhdfspp_hdfsRenameSnapshot(fs->libhdfsppRep, path, old_name, new_name);
+}
+
 int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
   return libhdfspp_hdfsAllowSnapshot(fs->libhdfsppRep, path);
 }

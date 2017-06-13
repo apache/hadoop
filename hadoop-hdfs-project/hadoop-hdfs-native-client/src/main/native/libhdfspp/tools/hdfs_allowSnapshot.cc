@@ -22,22 +22,22 @@
 #include "tools_common.h"
 
 void usage(){
-  std::cout << "Usage: hdfs_cat [OPTION] FILE"
+  std::cout << "Usage: hdfs_allowSnapshot [OPTION] PATH"
       << std::endl
-      << std::endl << "Concatenate FILE to standard output."
+      << std::endl << "Allowing snapshots of a directory at PATH to be created."
+      << std::endl << "If the operation completes successfully, the directory becomes snapshottable."
       << std::endl
-      << std::endl << "  -h  display this help and exit"
+      << std::endl << "  -h        display this help and exit"
       << std::endl
       << std::endl << "Examples:"
-      << std::endl << "hdfs_cat hdfs://localhost.localdomain:9433/dir/file"
-      << std::endl << "hdfs_cat /dir/file"
+      << std::endl << "hdfs_allowSnapshot hdfs://localhost.localdomain:8020/dir"
+      << std::endl << "hdfs_allowSnapshot /dir1/dir2"
       << std::endl;
 }
 
-#define BUF_SIZE 4096
-
 int main(int argc, char *argv[]) {
-  if (argc != 2) {
+  //We should have at least 2 arguments
+  if (argc < 2) {
     usage();
     exit(EXIT_FAILURE);
   }
@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
     case 'h':
       usage();
       exit(EXIT_SUCCESS);
-      break;
     case '?':
       if (isprint(optopt))
         std::cerr << "Unknown option `-" << (char) optopt << "'." << std::endl;
@@ -64,7 +63,6 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
   }
-
   std::string uri_path = argv[optind];
 
   //Building a URI object from the given uri_path
@@ -74,45 +72,17 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  //TODO: HDFS-9539 Currently options can be returned empty
-  hdfs::Options options = *hdfs::getOptions();
-
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), options);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), false);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  hdfs::FileHandle *file_raw = nullptr;
-  hdfs::Status status = fs->Open(uri->get_path(), &file_raw);
+  hdfs::Status status = fs->AllowSnapshot(uri->get_path());
   if (!status.ok()) {
-    std::cerr << "Could not open file " << uri->get_path() << ". " << status.ToString() << std::endl;
+    std::cerr << "Error: " << status.ToString() << std::endl;
     exit(EXIT_FAILURE);
   }
-  //wrapping file_raw into a unique pointer to guarantee deletion
-  std::unique_ptr<hdfs::FileHandle> file(file_raw);
-
-  char input_buffer[BUF_SIZE];
-  ssize_t total_bytes_read = 0;
-  size_t last_bytes_read = 0;
-
-  do{
-    //Reading file chunks
-    status = file->Read(input_buffer, sizeof(input_buffer), &last_bytes_read);
-    if(status.ok()) {
-      //Writing file chunks to stdout
-      fwrite(input_buffer, last_bytes_read, 1, stdout);
-      total_bytes_read += last_bytes_read;
-    } else {
-      if(status.is_invalid_offset()){
-        //Reached the end of the file
-        break;
-      } else {
-        std::cerr << "Error reading the file: " << status.ToString() << std::endl;
-        exit(EXIT_FAILURE);
-      }
-    }
-  } while (last_bytes_read > 0);
 
   // Clean up static data and prevent valgrind memory leaks
   google::protobuf::ShutdownProtobufLibrary();

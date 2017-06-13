@@ -23,17 +23,15 @@
 #include "hdfspp/hdfspp.h"
 #include "common/hdfs_configuration.h"
 #include "common/configuration_loader.h"
-
 #include <mutex>
 
 namespace hdfs {
 
-  //Pull configurations and get the Options object
-  std::shared_ptr<hdfs::Options> getOptions();
-
   //Build all necessary objects and perform the connection
-  std::shared_ptr<hdfs::FileSystem> doConnect(hdfs::URI & uri, hdfs::Options & options);
+  std::shared_ptr<hdfs::FileSystem> doConnect(hdfs::URI & uri, bool max_timeout);
 
+  //Open HDFS file at offset, read it to destination file, optionally delete source file
+  void readFile(std::shared_ptr<hdfs::FileSystem> fs, std::string path, off_t offset, std::FILE* dst_file, bool to_delete);
 }
 
 #endif

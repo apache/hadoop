@@ -97,5 +97,6 @@
 #undef hdfsFind
 #undef hdfsCreateSnapshot
 #undef hdfsDeleteSnapshot
+#undef hdfsRenameSnapshot
 #undef hdfsAllowSnapshot
 #undef hdfsDisallowSnapshot
