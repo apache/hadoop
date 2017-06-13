@@ -111,6 +111,11 @@ public final class MiniOzoneCluster extends MiniDFSCluster
         String.valueOf(NetUtils.createSocketAddr(address).getPort()));
     setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
         getInstanceStorageDir(i, -1).getCanonicalPath());
+    String containerMetaDirs = dnConf.get(
+        OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS) + "-dn-" + i;
+    Files.createDirectories(Paths.get(containerMetaDirs));
+    setConf(i, dnConf, OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+        containerMetaDirs);
   }
 
   static void setConf(int i, Configuration conf, String key, String value) {
@@ -406,7 +411,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
 
       // If user has not specified a path, create a UUID for this miniCluster
       // and create SCM under that directory.
-      Path scmPath = Paths.get(path, runID.toString(), "scm");
+      Path scmPath = Paths.get(path, runID.toString(), "cont-meta");
       Files.createDirectories(scmPath);
       conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS, scmPath
           .toString());
