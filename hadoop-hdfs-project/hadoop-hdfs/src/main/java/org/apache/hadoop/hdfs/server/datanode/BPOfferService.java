@@ -181,19 +181,25 @@ class BPOfferService {
     return nameserviceId;
   }
 
-  String getBlockPoolId() {
+  String getBlockPoolId(boolean quiet) {
     readLock();
     try {
       if (bpNSInfo != null) {
         return bpNSInfo.getBlockPoolID();
       } else {
-        LOG.warn("Block pool ID needed, but service not yet registered with " +
-                "NN, trace:", new Exception());
+        if (!quiet) {
+          LOG.warn("Block pool ID needed, but service not yet registered with "
+              + "NN, trace:", new Exception());
+        }
         return null;
       }
     } finally {
       readUnlock();
     }
+  }
+
+  String getBlockPoolId() {
+    return getBlockPoolId(false);
   }
 
   boolean hasBlockPoolId() {
