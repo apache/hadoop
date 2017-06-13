@@ -149,13 +149,14 @@ public class ContentSummaryComputationContext {
         fsn.getBlockManager().getStoragePolicySuite();
   }
 
-  /** Get the erasure coding policy */
+  /** Get the erasure coding policy. */
   public String getErasureCodingPolicyName(INode inode) {
     if (inode.isFile()) {
       INodeFile iNodeFile = inode.asFile();
       if (iNodeFile.isStriped()) {
         byte ecPolicyId = iNodeFile.getErasureCodingPolicyID();
-        return fsn.getErasureCodingPolicyManager().getByID(ecPolicyId).getName();
+        return fsn.getErasureCodingPolicyManager()
+            .getByID(ecPolicyId).getName();
       } else {
         return REPLICATED;
       }
@@ -168,14 +169,19 @@ public class ContentSummaryComputationContext {
       if (xaf != null) {
         XAttr xattr = xaf.getXAttr(XATTR_ERASURECODING_POLICY);
         if (xattr != null) {
-          ByteArrayInputStream bins = new ByteArrayInputStream(xattr.getValue());
+          ByteArrayInputStream bins =
+              new ByteArrayInputStream(xattr.getValue());
           DataInputStream din = new DataInputStream(bins);
           String ecPolicyName = WritableUtils.readString(din);
-          return dir.getFSNamesystem().getErasureCodingPolicyManager().getEnabledPolicyByName(ecPolicyName).getName();
+          return dir.getFSNamesystem()
+              .getErasureCodingPolicyManager()
+              .getEnabledPolicyByName(ecPolicyName)
+              .getName();
         }
       }
     } catch (IOException ioe) {
-      LOG.warn("Encountered error getting ec policy for " + inode.getFullPathName(), ioe);
+      LOG.warn("Encountered error getting ec policy for "
+          + inode.getFullPathName(), ioe);
       return "";
     }
     return "";

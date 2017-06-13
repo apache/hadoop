@@ -210,7 +210,9 @@ public class ContentSummary extends QuotaUsage implements Writable{
     return snapshotSpaceConsumed;
   }
 
-  public String getErasureCodingPolicy() { return erasureCodingPolicy; }
+  public String getErasureCodingPolicy() {
+    return erasureCodingPolicy;
+  }
 
   @Override
   @InterfaceAudience.Private
