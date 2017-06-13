@@ -242,8 +242,8 @@ public class TestTimelineClient {
     TimelineClientImpl client = createTimelineClient(conf);
     TimelineClientImpl clientFake =
         createTimelineClientFakeTimelineClientRetryOp(conf);
-    TestTimlineDelegationTokenSecretManager dtManager =
-        new TestTimlineDelegationTokenSecretManager();
+    TestTimelineDelegationTokenSecretManager dtManager =
+        new TestTimelineDelegationTokenSecretManager();
     try {
       dtManager.startThreads();
       Thread.sleep(3000);
@@ -492,10 +492,10 @@ public class TestTimelineClient {
     Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
   }
 
-  private static class TestTimlineDelegationTokenSecretManager extends
+  private static class TestTimelineDelegationTokenSecretManager extends
       AbstractDelegationTokenSecretManager<TimelineDelegationTokenIdentifier> {
 
-    public TestTimlineDelegationTokenSecretManager() {
+    public TestTimelineDelegationTokenSecretManager() {
       super(100000, 100000, 100000, 100000);
     }
 
