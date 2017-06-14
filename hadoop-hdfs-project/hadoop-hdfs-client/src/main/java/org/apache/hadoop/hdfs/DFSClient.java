@@ -1919,12 +1919,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Returns count of blocks with one of more replica missing.
+   * Returns aggregated count of blocks with less redundancy.
    * @throws IOException
    */
-  public long getUnderReplicatedBlocksCount() throws IOException {
-    return getStateByIndex(ClientProtocol.
-        GET_STATS_UNDER_REPLICATED_IDX);
+  public long getLowRedundancyBlocksCount() throws IOException {
+    return getStateByIndex(ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX);
   }
 
   /**

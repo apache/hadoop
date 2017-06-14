@@ -195,7 +195,7 @@ public class BlockManager implements BlockStatsMXBean {
     return pendingReconstructionBlocksCount;
   }
   /** Used by metrics */
-  public long getUnderReplicatedBlocksCount() {
+  public long getLowRedundancyBlocksCount() {
     return lowRedundancyBlocksCount;
   }
   /** Used by metrics */
@@ -229,6 +229,51 @@ public class BlockManager implements BlockStatsMXBean {
   /** Used by metrics. */
   public long getNumTimedOutPendingReconstructions() {
     return pendingReconstruction.getNumTimedOuts();
+  }
+
+  /** Used by metrics. */
+  public long getLowRedundancyBlocksStat() {
+    return neededReconstruction.getLowRedundancyBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getCorruptBlocksStat() {
+    return corruptReplicas.getCorruptBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getMissingBlocksStat() {
+    return neededReconstruction.getCorruptBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getMissingReplicationOneBlocksStat() {
+    return neededReconstruction.getCorruptReplicationOneBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getPendingDeletionBlocksStat() {
+    return invalidateBlocks.getBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getLowRedundancyECBlockGroupsStat() {
+    return neededReconstruction.getLowRedundancyECBlockGroupsStat();
+  }
+
+  /** Used by metrics. */
+  public long getCorruptECBlockGroupsStat() {
+    return corruptReplicas.getCorruptECBlockGroupsStat();
+  }
+
+  /** Used by metrics. */
+  public long getMissingECBlockGroupsStat() {
+    return neededReconstruction.getCorruptECBlockGroupsStat();
+  }
+
+  /** Used by metrics. */
+  public long getPendingDeletionECBlockGroupsStat() {
+    return invalidateBlocks.getECBlockGroupsStat();
   }
 
   /**
@@ -2244,6 +2289,14 @@ public class BlockManager implements BlockStatsMXBean {
     return bmSafeMode.getBytesInFuture();
   }
 
+  public long getBytesInFutureReplicatedBlocksStat() {
+    return bmSafeMode.getBytesInFutureBlocks();
+  }
+
+  public long getBytesInFutureStripedBlocksStat() {
+    return bmSafeMode.getBytesInFutureECBlockGroups();
+  }
+
   /**
    * Removes the blocks from blocksmap and updates the safemode blocks total.
    * @param blocks An instance of {@link BlocksMapUpdateInfo} which contains a
@@ -4245,7 +4298,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   public long getMissingReplOneBlocksCount() {
     // not locking
-    return this.neededReconstruction.getCorruptReplOneBlockSize();
+    return this.neededReconstruction.getCorruptReplicationOneBlockSize();
   }
 
   public BlockInfo addBlockCollection(BlockInfo block,

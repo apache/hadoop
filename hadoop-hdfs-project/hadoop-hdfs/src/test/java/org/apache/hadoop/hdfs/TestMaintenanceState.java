@@ -549,7 +549,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     FileSystem fileSys = getCluster().getFileSystem(0);
     FSNamesystem ns = getCluster().getNamesystem(0);
 
-    writeFile(fileSys, file, replicas, 1);
+    writeFile(fileSys, file, replicas, 25);
 
     DatanodeInfo nodeOutofService = takeNodeOutofService(0,
         getFirstBlockFirstReplicaUuid(fileSys, file), Long.MAX_VALUE, null,

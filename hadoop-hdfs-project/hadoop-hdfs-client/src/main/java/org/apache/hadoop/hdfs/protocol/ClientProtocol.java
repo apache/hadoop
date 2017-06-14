@@ -731,10 +731,19 @@ public interface ClientProtocol {
   @Idempotent
   boolean recoverLease(String src, String clientName) throws IOException;
 
+  /**
+   * Constants to index the array of aggregated stats returned by
+   * {@link #getStats()}.
+   */
   int GET_STATS_CAPACITY_IDX = 0;
   int GET_STATS_USED_IDX = 1;
   int GET_STATS_REMAINING_IDX = 2;
+  /**
+   * Use {@link #GET_STATS_LOW_REDUNDANCY_IDX} instead.
+   */
+  @Deprecated
   int GET_STATS_UNDER_REPLICATED_IDX = 3;
+  int GET_STATS_LOW_REDUNDANCY_IDX = 3;
   int GET_STATS_CORRUPT_BLOCKS_IDX = 4;
   int GET_STATS_MISSING_BLOCKS_IDX = 5;
   int GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX = 6;
@@ -743,25 +752,39 @@ public interface ClientProtocol {
   int STATS_ARRAY_LENGTH = 9;
 
   /**
-   * Get a set of statistics about the filesystem.
-   * Right now, only eight values are returned.
+   * Get an array of aggregated statistics combining blocks of both type
+   * {@link BlockType#CONTIGUOUS} and {@link BlockType#STRIPED} in the
+   * filesystem. Use public constants like {@link #GET_STATS_CAPACITY_IDX} in
+   * place of actual numbers to index into the array.
    * <ul>
    * <li> [0] contains the total storage capacity of the system, in bytes.</li>
    * <li> [1] contains the total used space of the system, in bytes.</li>
    * <li> [2] contains the available storage of the system, in bytes.</li>
-   * <li> [3] contains number of under replicated blocks in the system.</li>
-   * <li> [4] contains number of blocks with a corrupt replica. </li>
+   * <li> [3] contains number of low redundancy blocks in the system.</li>
+   * <li> [4] contains number of corrupt blocks. </li>
    * <li> [5] contains number of blocks without any good replicas left. </li>
    * <li> [6] contains number of blocks which have replication factor
    *          1 and have lost the only replica. </li>
-   * <li> [7] contains number of bytes  that are at risk for deletion. </li>
+   * <li> [7] contains number of bytes that are at risk for deletion. </li>
    * <li> [8] contains number of pending deletion blocks. </li>
    * </ul>
-   * Use public constants like {@link #GET_STATS_CAPACITY_IDX} in place of
-   * actual numbers to index into the array.
    */
   @Idempotent
   long[] getStats() throws IOException;
+
+  /**
+   * Get statistics pertaining to blocks of type {@link BlockType#CONTIGUOUS}
+   * in the filesystem.
+   */
+  @Idempotent
+  BlocksStats getBlocksStats() throws IOException;
+
+  /**
+   * Get statistics pertaining to blocks of type {@link BlockType#STRIPED}
+   * in the filesystem.
+   */
+  @Idempotent
+  ECBlockGroupsStats getECBlockGroupsStats() throws IOException;
 
   /**
    * Get a report on the system's current datanodes.

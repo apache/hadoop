@@ -410,7 +410,7 @@ public class TestDecommissioningStatus {
 
     // All nodes are dead and decommed. Blocks should be missing.
     long  missingBlocks = bm.getMissingBlocksCount();
-    long underreplicated = bm.getUnderReplicatedBlocksCount();
+    long underreplicated = bm.getLowRedundancyBlocksCount();
     assertTrue(missingBlocks > 0);
     assertTrue(underreplicated > 0);
 
@@ -440,7 +440,7 @@ public class TestDecommissioningStatus {
 
     // Blocks should be still be under-replicated
     Thread.sleep(2000);  // Let replication monitor run
-    assertEquals(underreplicated, bm.getUnderReplicatedBlocksCount());
+    assertEquals(underreplicated, bm.getLowRedundancyBlocksCount());
 
     // Start up a node.
     LOG.info("Starting two more nodes");
@@ -448,13 +448,13 @@ public class TestDecommissioningStatus {
     cluster.waitActive();
     // Replication should fix it.
     int count = 0;
-    while((bm.getUnderReplicatedBlocksCount() > 0 ||
+    while((bm.getLowRedundancyBlocksCount() > 0 ||
         bm.getPendingReconstructionBlocksCount() > 0) &&
         count++ < 10) {
       Thread.sleep(1000);
     }
 
-    assertEquals(0, bm.getUnderReplicatedBlocksCount());
+    assertEquals(0, bm.getLowRedundancyBlocksCount());
     assertEquals(0, bm.getPendingReconstructionBlocksCount());
     assertEquals(0, bm.getMissingBlocksCount());
 

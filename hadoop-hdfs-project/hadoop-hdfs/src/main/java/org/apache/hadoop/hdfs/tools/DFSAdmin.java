@@ -523,7 +523,7 @@ public class DFSAdmin extends FsShell {
      * counts.
      */
     System.out.println("Under replicated blocks: " + 
-                       dfs.getUnderReplicatedBlocksCount());
+                       dfs.getLowRedundancyBlocksCount());
     System.out.println("Blocks with corrupt replicas: " + 
                        dfs.getCorruptBlocksCount());
     System.out.println("Missing blocks: " + 
