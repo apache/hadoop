@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto
     .ContainerProtos.GetKeyResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto
     .ContainerProtos.KeyData;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset
     .LengthInputStream;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
@@ -45,7 +44,6 @@ import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -73,7 +71,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Set;
 import java.util.TimeZone;
 import java.util.Locale;
 import java.util.List;
@@ -468,24 +465,5 @@ public final class DistributedStorageHandler implements StorageHandler {
         new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
     sdf.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
     return sdf.format(date);
-  }
-
-  /**
-   * Translates a set of container locations, ordered such that the first is the
-   * leader, into a corresponding {@link Pipeline} object.
-   *
-   * @param locatedContainer container location
-   * @return pipeline corresponding to container locations
-   */
-  private static Pipeline newPipelineFromLocatedContainer(
-      LocatedContainer locatedContainer) {
-    Set<DatanodeInfo> locations = locatedContainer.getLocations();
-    String leaderId = locations.iterator().next().getDatanodeUuid();
-    Pipeline pipeline = new Pipeline(leaderId);
-    for (DatanodeInfo location : locations) {
-      pipeline.addMember(location);
-    }
-    pipeline.setContainerName(locatedContainer.getContainerName());
-    return pipeline;
   }
 }
