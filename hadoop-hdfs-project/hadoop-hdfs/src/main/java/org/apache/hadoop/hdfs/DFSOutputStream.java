@@ -674,6 +674,7 @@ public class DFSOutputStream extends FSOutputSummer
           }
         } finally {
           scope.close();
+          scope = NullScope.INSTANCE;
         }
       }
       closeInternal();
@@ -945,6 +946,7 @@ public class DFSOutputStream extends FSOutputSummer
             }
           } finally {
             scope.close();
+            scope = NullScope.INSTANCE;
           }
         }
       }

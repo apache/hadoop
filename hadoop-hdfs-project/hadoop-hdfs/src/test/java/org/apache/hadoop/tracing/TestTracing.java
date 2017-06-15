@@ -68,6 +68,41 @@ public class TestTracing {
     readWithTracing();
   }
 
+  @Test
+  public void testTracingInDataStreamer() throws Exception {
+    DistributedFileSystem fs = cluster.getFileSystem();
+    FSDataOutputStream os = fs.create(new Path("/testTracingInDataStreamer"));
+    byte[] bytes = "foo-bar-baz".getBytes();
+
+    try (TraceScope ts = Trace.startSpan("top level", Sampler.ALWAYS)) {
+      os.write(bytes);
+      os.hflush();
+    }
+    assertSpanNamesFound(new String[]{ "writeTo" });
+    int spans1 = 0;
+    for (Span s : SetSpanReceiver.SetHolder.spans.values()) {
+      if (s.getDescription().equals("writeTo")) {
+        spans1++;
+      }
+    }
+    Assert.assertEquals(1, spans1);
+
+    os.write(bytes);
+    os.hflush();
+    os.close();
+
+    int spans2 = 0;
+    for (Span s : SetSpanReceiver.SetHolder.spans.values()) {
+      if (s.getDescription().equals("writeTo")) {
+        spans2++;
+      }
+    }
+
+    // If there are multiple "writeTo" spans,
+    // spans are started in DataStreamer even after "top level" span is closed.
+    Assert.assertEquals(spans1, spans2);
+  }
+
   public void writeWithTracing() throws Exception {
     long startTime = System.currentTimeMillis();
     TraceScope ts = Trace.startSpan("testWriteTraceHooks", Sampler.ALWAYS);

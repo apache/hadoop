@@ -355,6 +355,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11736. OIV tests should not write outside 'target' directory.
     (Yiqun Lin via aajisaka)
 
+    HDFS-11583. Parent spans are not initialized to NullScope for every
+    DFSPacket. (Masatake Iwasaki via aajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
