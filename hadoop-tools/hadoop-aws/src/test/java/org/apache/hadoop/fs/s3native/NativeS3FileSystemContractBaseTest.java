@@ -44,19 +44,21 @@ public abstract class NativeS3FileSystemContractBaseTest
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    store = getNativeFileSystemStore();
-    fs = new NativeS3FileSystem(store);
     String fsname = conf.get(KEY_TEST_FS);
     if (StringUtils.isEmpty(fsname)) {
       throw new AssumptionViolatedException(
           "No test FS defined in :" + KEY_TEST_FS);
     }
+    store = getNativeFileSystemStore();
+    fs = new NativeS3FileSystem(store);
     fs.initialize(URI.create(fsname), conf);
   }
   
   @After
   public void tearDown() throws Exception {
-    store.purge("test");
+    if (store != null) {
+      store.purge("test");
+    }
   }
 
   @Test
