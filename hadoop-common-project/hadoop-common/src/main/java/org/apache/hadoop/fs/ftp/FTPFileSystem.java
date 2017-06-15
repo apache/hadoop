@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.fs.ftp;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.ConnectException;
-import java.net.URI;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
@@ -34,17 +28,17 @@ import org.apache.commons.net.ftp.FTPReply;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progressable;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.URI;
 
 /**
  * <p>
@@ -73,6 +67,8 @@ public class FTPFileSystem extends FileSystem {
       "only same directory renames are supported";
 
   private URI uri;
+  private String fsFtpHost;
+  private int fsFtpHostPort;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -105,11 +101,13 @@ public class FTPFileSystem extends FileSystem {
       throw new IOException("Invalid host specified");
     }
     conf.set(FS_FTP_HOST, host);
+    fsFtpHost = host;
 
     // get port information from uri, (overrides info in conf)
     int port = uri.getPort();
     port = (port == -1) ? FTP.DEFAULT_PORT : port;
     conf.setInt(FS_FTP_HOST_PORT, port);
+    fsFtpHostPort = port;
 
     // get user/password information from URI (overrides info in conf)
     String userAndPassword = uri.getUserInfo();
@@ -135,8 +133,8 @@ public class FTPFileSystem extends FileSystem {
   private FTPClient connect() throws IOException {
     FTPClient client = null;
     Configuration conf = getConf();
-    String host = conf.get(FS_FTP_HOST);
-    int port = conf.getInt(FS_FTP_HOST_PORT, FTP.DEFAULT_PORT);
+    String host = fsFtpHost;
+    int port = fsFtpHostPort;
     String user = conf.get(FS_FTP_USER_PREFIX + host);
     String password = conf.get(FS_FTP_PASSWORD_PREFIX + host);
     client = new FTPClient();
