@@ -540,15 +540,14 @@ public class TestErasureCodingPolicies {
     fs.setErasureCodingPolicy(dirPath, EC_POLICY.getName());
 
     // null EC policy name value means inheriting parent directory's policy
-    fs.newFSDataOutputStreamBuilder(filePath0).build().close();
+    fs.createFile(filePath0).build().close();
     ErasureCodingPolicy ecPolicyOnFile = fs.getErasureCodingPolicy(filePath0);
     assertEquals(EC_POLICY, ecPolicyOnFile);
 
     // Test illegal EC policy name
     final String illegalPolicyName = "RS-DEFAULT-1-2-64k";
     try {
-      fs.newFSDataOutputStreamBuilder(filePath1)
-          .setEcPolicyName(illegalPolicyName).build().close();
+      fs.createFile(filePath1).ecPolicyName(illegalPolicyName).build().close();
       Assert.fail("illegal erasure coding policy should not be found");
     } catch (Exception e) {
       GenericTestUtils.assertExceptionContains("Policy '" + illegalPolicyName
@@ -563,8 +562,8 @@ public class TestErasureCodingPolicies {
             SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
     ecPolicyOnFile = EC_POLICY;
     fs.setErasureCodingPolicy(dirPath, ecPolicyOnDir.getName());
-    fs.newFSDataOutputStreamBuilder(filePath0)
-        .setEcPolicyName(ecPolicyOnFile.getName()).build().close();
+    fs.createFile(filePath0).ecPolicyName(ecPolicyOnFile.getName())
+        .build().close();
     assertEquals(ecPolicyOnFile, fs.getErasureCodingPolicy(filePath0));
     assertEquals(ecPolicyOnDir, fs.getErasureCodingPolicy(dirPath));
     fs.delete(dirPath, true);
@@ -582,27 +581,27 @@ public class TestErasureCodingPolicies {
     fs.setErasureCodingPolicy(dirPath, EC_POLICY.getName());
 
     final String ecPolicyName = "RS-10-4-64k";
-    fs.newFSDataOutputStreamBuilder(filePath).build().close();
+    fs.createFile(filePath).build().close();
     assertEquals(EC_POLICY, fs.getErasureCodingPolicy(filePath));
     fs.delete(filePath, true);
 
-    fs.newFSDataOutputStreamBuilder(filePath)
-        .setEcPolicyName(ecPolicyName)
+    fs.createFile(filePath)
+        .ecPolicyName(ecPolicyName)
         .build()
         .close();
     assertEquals(ecPolicyName, fs.getErasureCodingPolicy(filePath).getName());
     fs.delete(filePath, true);
 
     try {
-      fs.newFSDataOutputStreamBuilder(filePath)
-          .setEcPolicyName(ecPolicyName)
+      fs.createFile(filePath)
+          .ecPolicyName(ecPolicyName)
           .replicate()
           .build().close();
       Assert.fail("shouldReplicate and ecPolicyName are exclusive " +
           "parameters. Set both is not allowed.");
     }catch (Exception e){
-      GenericTestUtils.assertExceptionContains("shouldReplicate and " +
-          "ecPolicyName are exclusive parameters. Set both is not allowed!", e);
+      GenericTestUtils.assertExceptionContains("SHOULD_REPLICATE flag and " +
+          "ecPolicyName are exclusive parameters.", e);
     }
 
     try {
@@ -618,7 +617,7 @@ public class TestErasureCodingPolicies {
           "ecPolicyName are exclusive parameters. Set both is not allowed!", e);
     }
 
-    fs.newFSDataOutputStreamBuilder(filePath)
+    fs.createFile(filePath)
         .replicate()
         .build()
         .close();

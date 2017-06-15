@@ -667,7 +667,7 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
-  protected FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
-    return fs.newFSDataOutputStreamBuilder(path);
+  public FSDataOutputStreamBuilder createFile(Path path) {
+    return fs.createFile(path);
   }
 }
