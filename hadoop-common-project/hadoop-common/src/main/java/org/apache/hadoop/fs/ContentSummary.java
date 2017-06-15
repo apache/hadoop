@@ -82,8 +82,8 @@ public class ContentSummary extends QuotaUsage implements Writable{
       return this;
     }
 
-    public Builder erasureCodingPolicy(String erasureCodingPolicy) {
-      this.erasureCodingPolicy = erasureCodingPolicy;
+    public Builder erasureCodingPolicy(String ecPolicy) {
+      this.erasureCodingPolicy = ecPolicy;
       return this;
     }
 
