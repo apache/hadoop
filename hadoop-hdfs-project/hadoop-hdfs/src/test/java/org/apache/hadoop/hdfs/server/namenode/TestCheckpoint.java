@@ -44,7 +44,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-import com.google.common.io.Files;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -2434,7 +2433,10 @@ public class TestCheckpoint {
   public void testLegacyOivImage() throws Exception {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
-    File tmpDir = Files.createTempDir();
+    File tmpDir = new File(MiniDFSCluster.getBaseDirectory(),
+        "testLegacyOivImage");
+    tmpDir.mkdirs();
+
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
         tmpDir.getAbsolutePath());

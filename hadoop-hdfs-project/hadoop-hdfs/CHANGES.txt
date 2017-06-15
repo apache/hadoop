@@ -352,6 +352,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11743. Revert the incompatible fsck reporting output in HDFS-7933
     from branch-2.7. (zhz)
 
+    HDFS-11736. OIV tests should not write outside 'target' directory.
+    (Yiqun Lin via aajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
