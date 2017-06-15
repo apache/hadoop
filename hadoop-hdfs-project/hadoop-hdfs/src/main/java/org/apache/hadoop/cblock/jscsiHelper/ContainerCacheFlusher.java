@@ -402,7 +402,7 @@ public class ContainerCacheFlusher implements Runnable {
         // should be flip instead of rewind, because we also need to make sure
         // the end position is correct.
         blockIDBuffer.flip();
-        LOG.info("Remaining blocks count {} and {}", blockIDBuffer.remaining(),
+        LOG.debug("Remaining blocks count {} and {}", blockIDBuffer.remaining(),
             blockCount);
         while (blockIDBuffer.remaining() >= (Long.SIZE / Byte.SIZE)) {
           long blockID = blockIDBuffer.getLong();
