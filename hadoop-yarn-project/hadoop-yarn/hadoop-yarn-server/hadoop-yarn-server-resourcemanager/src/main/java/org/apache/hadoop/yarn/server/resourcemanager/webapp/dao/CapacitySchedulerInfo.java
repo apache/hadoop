@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlType;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration; 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 
 import java.util.ArrayList;
@@ -86,6 +87,20 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
   public CapacitySchedulerQueueInfoList getQueues() {
     return this.queues;
+  }
+  public void CapacitySchedInfo(String queuename,float capacity,
+			int MaximumCapacity,float UserLimitFactor) {
+	CapacitySchedulerConfiguration config= new CapacitySchedulerConfiguration();	
+	this.queueName  = queuename;
+	this.capacity = capacity;
+	final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+	final String st = A + "." + (queuename);
+	
+	    config.setQueues(A, new String[] {queuename});
+	    config.setCapacity(st, capacity);
+	    config.setMaximumCapacity(st, MaximumCapacity);
+	    config.setUserLimitFactor(st, MaximumCapacity);
+	    	
   }
 
   protected CapacitySchedulerQueueInfoList getQueues(CSQueue parent) {

@@ -24,6 +24,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.StringReader;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.lang.*;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
@@ -37,6 +41,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -56,6 +62,8 @@ import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONMarshaller;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -64,8 +72,12 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   protected static MockRM rm;
-  protected static CapacitySchedulerConfiguration csConf;
+   protected static CapacitySchedulerConfiguration csConf;
   protected static YarnConfiguration conf;
+  private static String userName;
+  private static String notUserName;
+
+  private static final int BAD_REQUEST_CODE = 400;
 
   private class QueueInfo {
     float capacity;
@@ -609,4 +621,35 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     // eg. ResourceInfo
     assertEquals("<memory:10, vCores:1>", res.toString());
   }
+  @Test
+  public void testPostCapacitySched() throws Exception{
+	ClientResponse response;	
+	WebResource r = resource();
+	//add 
+	CapacitySchedulerInfo csinfo = new CapacitySchedulerInfo();
+	
+	csinfo.CapacitySchedInfo("a3",0.5f,50,100.0f);
+	response =
+        r.path("ws").path("v1").path("cluster")
+            .path("scheduler")//.queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(csinfo, SchedulerInfo.class), MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+	
+   }
+  //funtion called from testPostCapacitySched()    
+  @SuppressWarnings("rawtypess")
+  private String toJson(Object nsli, Class klass) throws Exception {
+  // try{
+    StringWriter sw = new StringWriter();
+    JSONJAXBContext ctx = new JSONJAXBContext(klass);
+    JSONMarshaller jm = ctx.createJSONMarshaller();
+    jm.marshallToJSON(nsli, sw);
+    return sw.toString();
+   //} catch (Exception e){
+	//throw e;
+   // }
+   }
+
+
 }

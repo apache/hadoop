@@ -141,6 +141,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
@@ -310,6 +311,36 @@ public class RMWebServices extends WebServices {
     }
     return new SchedulerTypeInfo(sinfo);
   }
+   // post for scheduler
+  @POST
+  @Path("/scheduler")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Response postSchedulerInfo(final SchedulerInfo newsinfo,
+      @Context HttpServletRequest hsr) throws Exception {
+    	init();final 
+	//SchedulerTypeInfo sti= new SchedulerTypeInfo();
+	ResourceScheduler rs = rm.getResourceScheduler();
+	//SchedulerInfo sinfo;
+	
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg =
+          "Unable to obtain user name, user not authenticated for"
+              + " post to ... /scheduler";
+      throw new AuthorizationException(msg);
+    }
+    try {
+	CapacitySchedulerConfiguration csconf = new CapacitySchedulerConfiguration();	
+	rm.getRMContext()
+          .reinitializeQueues(csconf);          
+	//new SchedulerTypeInfo(newsinfo);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
+
+    return Response.status(Status.OK).build();
+    }
 
   @POST
   @Path("/scheduler/logs")
