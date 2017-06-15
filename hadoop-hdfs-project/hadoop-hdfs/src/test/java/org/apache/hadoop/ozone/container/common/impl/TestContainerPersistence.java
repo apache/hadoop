@@ -21,7 +21,6 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -86,7 +85,6 @@ public class TestContainerPersistence {
   private static ChunkManagerImpl chunkManager;
   private static KeyManagerImpl keyManager;
   private static OzoneConfiguration conf;
-  private static MiniOzoneCluster cluster;
   private static List<StorageLocation> pathLists = new LinkedList<>();
 
   @BeforeClass
@@ -104,8 +102,6 @@ public class TestContainerPersistence {
     }
     Assert.assertTrue(containerDir.mkdirs());
 
-    cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     containerManager = new ContainerManagerImpl();
     chunkManager = new ChunkManagerImpl(containerManager);
     containerManager.setChunkManager(chunkManager);
@@ -116,9 +112,6 @@ public class TestContainerPersistence {
 
   @AfterClass
   public static void shutdown() throws IOException {
-    if(cluster != null) {
-      cluster.shutdown();
-    }
     FileUtils.deleteDirectory(new File(path));
   }
 
