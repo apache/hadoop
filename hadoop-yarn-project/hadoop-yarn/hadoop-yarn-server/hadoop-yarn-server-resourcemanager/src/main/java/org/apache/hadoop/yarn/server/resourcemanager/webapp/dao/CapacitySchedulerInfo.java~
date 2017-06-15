@@ -64,7 +64,9 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     queues = getQueues(parent);
     health = new CapacitySchedulerHealthInfo(cs);
   }
-
+public ArrayList<CapacitySchedulerQueueInfoList> getCSQueues() {
+    return this.queues;
+  }
 
   public float getCapacity() {
     return this.capacity;

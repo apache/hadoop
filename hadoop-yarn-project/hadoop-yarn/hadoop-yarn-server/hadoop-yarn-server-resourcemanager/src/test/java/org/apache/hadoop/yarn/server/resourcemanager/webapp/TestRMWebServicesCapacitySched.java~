@@ -639,17 +639,18 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
             .post(ClientResponse.class);
 	// Verify
         CapacitySchedulerQueueInfoList CSQinfo= new CapacitySchedulerQueueInfoList();
-        response =
+    response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler").accept(MediaType.APPLICATION_JSON)
             .get(ClientResponse.class);
-        assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
-        csinfo = response.getEntity(CapacitySchedulerInfo.class);
-    
-        for (CapacitySchedulerQueueInfo cs : CSQinfo.getQueueInfoList()) {
-                assertEquals("a3", cs.getQueueName());
-        }
+    csinfo = response.getEntity(CapacitySchedulerInfo.class);
+    //assertEquals(1, csinfo.getQueues());
+    for (CapacitySchedulerQueueInfo cs : CSQinfo.getQueueInfoList()) {
+      assertEquals("a3", cs.getQueueName());
+     // assertTrue(cs.getCapacity());
+    }
    }
 
   //funtion called from testPostCapacitySched()    

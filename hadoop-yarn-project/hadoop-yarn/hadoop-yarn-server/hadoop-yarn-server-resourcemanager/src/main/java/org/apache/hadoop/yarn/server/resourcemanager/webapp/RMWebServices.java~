@@ -330,7 +330,8 @@ public class RMWebServices extends WebServices {
               + " post to ... /scheduler";
       throw new AuthorizationException(msg);
     }
-    try {	       
+    try {
+        //SchedulerInfo info= new SchedulerTypeInfo(newsinfo);	       
        	
         rm.getRMContext()
           .reinitializeQueues(csconf);          
@@ -341,6 +342,35 @@ public class RMWebServices extends WebServices {
     return Response.status(Status.OK).build();
     }
 
+ /* protected CapacitySchedulerConfiguration addCapacityConf(SchedulerInfo 
+      newinfo) {
+
+   CapacitySchedulerConfiguration capacityinfo =
+        ApplicationSubmissionContext.newInstance(appid,
+          newinfo.getApplicationName(), newinfo.getQueue(),
+          //Priority.newInstance(newApp.getPriority()),
+          createContainerLaunchContext(newApp), newApp.getUnmanagedAM(),
+          newApp.getCancelTokensWhenComplete(), newApp.getMaxAppAttempts(),
+          createAppSubmissionContextResource(newApp),
+          newApp.getApplicationType(),
+          newApp.getKeepContainersAcrossApplicationAttempts(),
+          newApp.getAppNodeLabelExpression(),
+          newApp.getAMContainerNodeLabelExpression());
+    appContext.setApplicationTags(newApp.getApplicationTags());
+    appContext.setAttemptFailuresValidityInterval(
+        newApp.getAttemptFailuresValidityInterval());
+    if (newApp.getLogAggregationContextInfo() != null) {
+      appContext.setLogAggregationContext(createLogAggregationContext(
+          newApp.getLogAggregationContextInfo()));
+    }
+    String reservationIdStr = newApp.getReservationId();
+    if (reservationIdStr != null && !reservationIdStr.isEmpty()) {
+      ReservationId reservationId = ReservationId.parseReservationId(
+          reservationIdStr);
+      appContext.setReservationID(reservationId);
+    }
+    return appContext;
+  }*/
 
   @POST
   @Path("/scheduler/logs")
