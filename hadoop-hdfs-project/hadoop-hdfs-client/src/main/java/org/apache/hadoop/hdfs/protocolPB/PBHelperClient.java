@@ -91,6 +91,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -120,6 +121,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEdi
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFilesBatchResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
@@ -1251,6 +1253,21 @@ public class PBHelperClient {
     return new EncryptionZone(proto.getId(), proto.getPath(),
         convert(proto.getSuite()), convert(proto.getCryptoProtocolVersion()),
         proto.getKeyName());
+  }
+
+  public static OpenFilesBatchResponseProto convert(OpenFileEntry
+      openFileEntry) {
+    return OpenFilesBatchResponseProto.newBuilder()
+        .setId(openFileEntry.getId())
+        .setPath(openFileEntry.getFilePath())
+        .setClientName(openFileEntry.getClientName())
+        .setClientMachine(openFileEntry.getClientMachine())
+        .build();
+  }
+
+  public static OpenFileEntry convert(OpenFilesBatchResponseProto proto) {
+    return new OpenFileEntry(proto.getId(), proto.getPath(),
+        proto.getClientName(), proto.getClientMachine());
   }
 
   public static AclStatus convert(GetAclStatusResponseProto e) {

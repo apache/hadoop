@@ -40,6 +40,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -190,6 +191,7 @@ public class TestLeaseManager {
   @Test (timeout = 60000)
   public void testInodeWithLeases() throws Exception {
     FSNamesystem fsNamesystem = makeMockFsNameSystem();
+    when(fsNamesystem.getMaxListOpenFilesResponses()).thenReturn(1024);
     FSDirectory fsDirectory = fsNamesystem.getFSDirectory();
     LeaseManager lm = new LeaseManager(fsNamesystem);
     Set<Long> iNodeIds = new HashSet<>(Arrays.asList(
@@ -208,6 +210,7 @@ public class TestLeaseManager {
 
     for (Long iNodeId : iNodeIds) {
       INodeFile iNodeFile = stubInodeFile(iNodeId);
+      iNodeFile.toUnderConstruction("hbase", "gce-100");
       iNodeFile.setParent(rootInodeDirectory);
       when(fsDirectory.getInode(iNodeId)).thenReturn(iNodeFile);
       lm.addLease("holder_" + iNodeId, iNodeId);
@@ -230,6 +233,7 @@ public class TestLeaseManager {
   @Test (timeout = 240000)
   public void testInodeWithLeasesAtScale() throws Exception {
     FSNamesystem fsNamesystem = makeMockFsNameSystem();
+    when(fsNamesystem.getMaxListOpenFilesResponses()).thenReturn(4096);
     FSDirectory fsDirectory = fsNamesystem.getFSDirectory();
     LeaseManager lm = new LeaseManager(fsNamesystem);
 
@@ -275,7 +279,7 @@ public class TestLeaseManager {
 
   private void testInodeWithLeasesAtScaleImpl(final LeaseManager leaseManager,
       final FSDirectory fsDirectory, INodeDirectory ancestorDirectory,
-      int scale) {
+      int scale) throws IOException {
     verifyINodeLeaseCounts(leaseManager, ancestorDirectory, 0, 0, 0);
 
     Set<Long> iNodeIds = new HashSet<>();
@@ -284,6 +288,7 @@ public class TestLeaseManager {
     }
     for (Long iNodeId : iNodeIds) {
       INodeFile iNodeFile = stubInodeFile(iNodeId);
+      iNodeFile.toUnderConstruction("hbase", "gce-100");
       iNodeFile.setParent(ancestorDirectory);
       when(fsDirectory.getInode(iNodeId)).thenReturn(iNodeFile);
       leaseManager.addLease("holder_" + iNodeId, iNodeId);
@@ -386,13 +391,16 @@ public class TestLeaseManager {
 
   private void verifyINodeLeaseCounts(final LeaseManager leaseManager,
       INodeDirectory ancestorDirectory, int iNodeIdWithLeaseCount,
-      int iNodeWithLeaseCount, int iNodeUnderAncestorLeaseCount) {
+      int iNodeWithLeaseCount, int iNodeUnderAncestorLeaseCount)
+      throws IOException {
     assertEquals(iNodeIdWithLeaseCount,
         leaseManager.getINodeIdWithLeases().size());
     assertEquals(iNodeWithLeaseCount,
         leaseManager.getINodeWithLeases().size());
     assertEquals(iNodeUnderAncestorLeaseCount,
         leaseManager.getINodeWithLeases(ancestorDirectory).size());
+    assertEquals(iNodeIdWithLeaseCount,
+        leaseManager.getUnderConstructionFiles(0).size());
   }
 
   private Map<String, INode> createINodeTree(INodeDirectory parentDir,
