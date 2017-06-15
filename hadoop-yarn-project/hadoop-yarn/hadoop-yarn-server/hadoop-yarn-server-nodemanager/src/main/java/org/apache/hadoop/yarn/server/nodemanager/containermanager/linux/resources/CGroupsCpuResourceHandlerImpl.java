@@ -26,8 +26,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
@@ -72,6 +74,7 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   static final int MIN_PERIOD_US = 1000;
   @VisibleForTesting
   static final int CPU_DEFAULT_WEIGHT = 1024; // set by kernel
+  static final int CPU_DEFAULT_WEIGHT_OPPORTUNISTIC = 2;
 
   CGroupsCpuResourceHandlerImpl(CGroupsHandler cGroupsHandler) {
     this.cGroupsHandler = cGroupsHandler;
@@ -181,16 +184,23 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   @Override
   public List<PrivilegedOperation> preStart(Container container)
       throws ResourceHandlerException {
-
     String cgroupId = container.getContainerId().toString();
     Resource containerResource = container.getResource();
     cGroupsHandler.createCGroup(CPU, cgroupId);
     try {
       int containerVCores = containerResource.getVirtualCores();
-      int cpuShares = CPU_DEFAULT_WEIGHT * containerVCores;
-      cGroupsHandler
-          .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_SHARES,
-              String.valueOf(cpuShares));
+      ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
+      if (id != null && id.getExecutionType() ==
+          ExecutionType.OPPORTUNISTIC) {
+        cGroupsHandler
+            .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_SHARES,
+                String.valueOf(CPU_DEFAULT_WEIGHT_OPPORTUNISTIC));
+      } else {
+        int cpuShares = CPU_DEFAULT_WEIGHT * containerVCores;
+        cGroupsHandler
+            .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_SHARES,
+                String.valueOf(cpuShares));
+      }
       if (strictResourceUsageMode) {
         if (nodeVCores != containerVCores) {
           float containerCPU =
