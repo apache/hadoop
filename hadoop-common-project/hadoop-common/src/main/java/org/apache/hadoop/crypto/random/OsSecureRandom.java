@@ -116,4 +116,9 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
       stream = null;
     }
   }
+
+  @Override
+  protected void finalize() throws Throwable {
+    close();
+  }
 }

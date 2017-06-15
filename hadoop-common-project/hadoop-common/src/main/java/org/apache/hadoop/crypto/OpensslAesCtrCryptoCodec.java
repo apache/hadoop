@@ -19,7 +19,6 @@ package org.apache.hadoop.crypto;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
@@ -69,16 +68,6 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
           "Java SecureRandom.", e);
       this.random = new SecureRandom();
     }
-  }
-
-  @Override
-  protected void finalize() throws Throwable {
-    try {
-      Closeable r = (Closeable) this.random;
-      r.close();
-    } catch (ClassCastException e) {
-    }
-    super.finalize();
   }
 
   @Override
