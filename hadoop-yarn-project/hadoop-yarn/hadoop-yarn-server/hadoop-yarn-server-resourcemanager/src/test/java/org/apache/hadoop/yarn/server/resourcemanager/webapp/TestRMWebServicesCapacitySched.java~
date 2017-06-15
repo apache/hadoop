@@ -631,7 +631,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 	csinfo.CapacitySchedInfo("a3",0.5f,50,100.0f);
 	response =
         r.path("ws").path("v1").path("cluster")
-            .path("scheduler")//.queryParam("user.name", userName)
+            .path("scheduler").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(toJson(csinfo, SchedulerInfo.class), MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);

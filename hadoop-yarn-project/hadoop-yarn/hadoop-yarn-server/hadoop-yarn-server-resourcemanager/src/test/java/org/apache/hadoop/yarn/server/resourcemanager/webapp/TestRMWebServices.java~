@@ -521,9 +521,6 @@ public class TestRMWebServices extends JerseyTestBase {
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterSchedulerFifo(json);
   }
-<<<<<<< HEAD
-   
-=======
    @Test
   public void testpostScheduler() throws JSONException, Exception {
     WebResource r = resource();
@@ -536,7 +533,6 @@ public class TestRMWebServices extends JerseyTestBase {
     verifyClusterSchedulerFifo(json);
     //postscheduler(response);
   }
->>>>>>> 7ad5c9006bd0129103e96886ad49f30a47f3f11f
 
   @Test
   public void testClusterSchedulerFifoSlash() throws JSONException, Exception {
