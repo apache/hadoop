@@ -32,6 +32,7 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.getFileStatusEventually;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 
@@ -272,4 +273,21 @@ public abstract class AbstractContractCreateTest extends
         defaultBlockSize >= minValue);
   }
 
+  @Test
+  public void testCreateMakesParentDirs() throws Throwable {
+    describe("check that after creating a file its parent directories exist");
+    FileSystem fs = getFileSystem();
+    Path grandparent = path("testCreateCreatesAndPopulatesParents");
+    Path parent = new Path(grandparent, "parent");
+    Path child = new Path(parent, "child");
+    touch(fs, child);
+    assertEquals("List status of parent should include the 1 child file",
+        1, fs.listStatus(parent).length);
+    assertTrue("Parent directory does not appear to be a directory",
+        fs.getFileStatus(parent).isDirectory());
+    assertEquals("List status of grandparent should include the 1 parent dir",
+        1, fs.listStatus(grandparent).length);
+    assertTrue("Grandparent directory does not appear to be a directory",
+        fs.getFileStatus(grandparent).isDirectory());
+  }
 }
