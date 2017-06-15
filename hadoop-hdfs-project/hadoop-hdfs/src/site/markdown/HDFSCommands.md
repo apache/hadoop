@@ -442,7 +442,8 @@ Usage:
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
-         [-usage [cmd ...]]
+         [-addPolicies -policyFile <file>]
+         [-listCodecs]
          [-help [cmd ...]]
 
 | COMMAND\_OPTION | Description |
@@ -451,6 +452,8 @@ Usage:
 |-getPolicy| Get ErasureCoding policy information about a specified path|
 |-unsetPolicy| Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory |
 |-listPolicies| Lists all supported ErasureCoding policies|
+|-addPolicies| Add a list of erasure coding policies|
+|-listCodecs| Get the list of supported erasure coding codecs and coders in system|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.
 
