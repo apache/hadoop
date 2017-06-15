@@ -1595,7 +1595,8 @@ public class S3AFileSystem extends FileSystem {
    * @param delimiter any delimiter
    * @return the request
    */
-  private ListObjectsRequest createListObjectsRequest(String key,
+  @VisibleForTesting
+  ListObjectsRequest createListObjectsRequest(String key,
       String delimiter) {
     ListObjectsRequest request = new ListObjectsRequest();
     request.setBucketName(bucket);

@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.AmazonS3;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +38,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
@@ -452,4 +457,83 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     }
   }
 
+  @Test
+  public void testCommitByRenameOperations() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.hasMetadataStore());
+    Path work = path("test-commit-by-rename-" + DEFAULT_DELAY_KEY_SUBSTRING);
+    Path task00 = new Path(work, "task00");
+    fs.mkdirs(task00);
+    String name = "part-00";
+    try (FSDataOutputStream out =
+             fs.create(new Path(task00, name), false)) {
+      out.writeChars("hello");
+    }
+    for (FileStatus stat : fs.listStatus(task00)) {
+      fs.rename(stat.getPath(), work);
+    }
+    List<FileStatus> files = new ArrayList<>(2);
+    for (FileStatus stat : fs.listStatus(work)) {
+      if (stat.isFile()) {
+        files.add(stat);
+      }
+    }
+    assertFalse("renamed file " + name + " not found in " + work,
+        files.isEmpty());
+    assertEquals("more files found than expected in " + work
+        + " " + ls(work), 1, files.size());
+    FileStatus status = files.get(0);
+    assertEquals("Wrong filename in " + status,
+        name, status.getPath().getName());
+  }
+
+  @Test
+  public void testInconsistentS3ClientDeletes() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    Path root = path("testInconsistentClient" + DEFAULT_DELAY_KEY_SUBSTRING);
+    for (int i = 0; i < 3; i++) {
+      fs.mkdirs(new Path(root, "dir" + i));
+      touch(fs, new Path(root, "file" + i));
+      for (int j = 0; j < 3; j++) {
+        touch(fs, new Path(new Path(root, "dir" + i), "file" + i + "-" + j));
+      }
+    }
+    Thread.sleep(2 * DEFAULT_DELAY_KEY_MSEC);
+
+    AmazonS3 client = fs.getAmazonS3Client();
+    String key = fs.pathToKey(root) + "/";
+
+    ObjectListing preDeleteDelimited = client.listObjects(
+        fs.createListObjectsRequest(key, "/"));
+    ObjectListing preDeleteUndelimited = client.listObjects(
+        fs.createListObjectsRequest(key, null));
+
+    fs.delete(root, true);
+
+    ObjectListing postDeleteDelimited = client.listObjects(
+        fs.createListObjectsRequest(key, "/"));
+    ObjectListing postDeleteUndelimited = client.listObjects(
+        fs.createListObjectsRequest(key, null));
+
+    assertEquals("InconsistentAmazonS3Client added back objects incorrectly " +
+            "in a non-recursive listing",
+        preDeleteDelimited.getObjectSummaries().size(),
+        postDeleteDelimited.getObjectSummaries().size()
+    );
+    assertEquals("InconsistentAmazonS3Client added back prefixes incorrectly " +
+            "in a non-recursive listing",
+        preDeleteDelimited.getCommonPrefixes().size(),
+        postDeleteDelimited.getCommonPrefixes().size()
+    );
+    assertEquals("InconsistentAmazonS3Client added back objects incorrectly " +
+            "in a recursive listing",
+        preDeleteUndelimited.getObjectSummaries().size(),
+        postDeleteUndelimited.getObjectSummaries().size()
+    );
+    assertEquals("InconsistentAmazonS3Client added back prefixes incorrectly " +
+            "in a recursive listing",
+        preDeleteUndelimited.getCommonPrefixes().size(),
+        postDeleteUndelimited.getCommonPrefixes().size()
+    );
+  }
 }

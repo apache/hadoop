@@ -24,14 +24,18 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,10 +138,24 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   }
 
   @Override
+  public DeleteObjectsResult deleteObjects(DeleteObjectsRequest
+      deleteObjectsRequest) throws AmazonClientException,
+      AmazonServiceException
+  {
+    for (DeleteObjectsRequest.KeyVersion keyVersion :
+        deleteObjectsRequest.getKeys()) {
+      registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest
+          .getBucketName());
+    }
+    return super.deleteObjects(deleteObjectsRequest);
+  }
+
+  @Override
   public void deleteObject(DeleteObjectRequest deleteObjectRequest)
       throws AmazonClientException, AmazonServiceException {
-    LOG.debug("key {}", deleteObjectRequest.getKey());
-    registerDeleteObject(deleteObjectRequest);
+    String key = deleteObjectRequest.getKey();
+    LOG.debug("key {}", key);
+    registerDeleteObject(key, deleteObjectRequest.getBucketName());
     super.deleteObject(deleteObjectRequest);
   }
 
@@ -161,38 +179,100 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     return listing;
   }
 
-  private boolean addIfNotPresent(List<S3ObjectSummary> list,
+  private void addSummaryIfNotPresent(List<S3ObjectSummary> list,
       S3ObjectSummary item) {
     // Behavior of S3ObjectSummary
     String key = item.getKey();
     for (S3ObjectSummary member : list) {
       if (member.getKey().equals(key)) {
-        return false;
+        return;
       }
     }
-    return list.add(item);
+    list.add(item);
   }
 
+  /**
+   * Add prefix of child to given list.  The added prefix will be equal to
+   * ancestor plus one directory past ancestor.  e.g.:
+   * if ancestor is "/a/b/c" and child is "/a/b/c/d/e/file" then "a/b/c/d" is
+   * added to list.
+   * @param prefixes list to add to
+   * @param ancestor path we are listing in
+   * @param child full path to get prefix from
+   */
+  private void addPrefixIfNotPresent(List<String> prefixes, String ancestor,
+      String child) {
+    Path prefixCandidate = new Path(child).getParent();
+    Path ancestorPath = new Path(ancestor);
+    Preconditions.checkArgument(child.startsWith(ancestor), "%s does not " +
+        "start with %s", child, ancestor);
+    while (!prefixCandidate.isRoot()) {
+      Path nextParent = prefixCandidate.getParent();
+      if (nextParent.equals(ancestorPath)) {
+        String prefix = prefixCandidate.toString();
+        if (!prefixes.contains(prefix)) {
+          prefixes.add(prefix);
+        }
+        return;
+      }
+      prefixCandidate = nextParent;
+    }
+  }
+
+  /**
+   * Checks that the parent key is an ancestor of the child key.
+   * @param parent key that may be the parent.
+   * @param child key that may be the child.
+   * @param recursive if false, only return true for direct children.  If
+   *                  true, any descendant will count.
+   * @return true if parent is an ancestor of child
+   */
+  private boolean isDescendant(String parent, String child, boolean recursive) {
+    if (recursive) {
+      if (!parent.endsWith("/")) {
+        parent = parent + "/";
+      }
+      return child.startsWith(parent);
+    } else {
+      Path actualParentPath = new Path(child).getParent();
+      Path expectedParentPath = new Path(parent);
+      return actualParentPath.equals(expectedParentPath);
+    }
+  }
+
+  /**
+   * Simulate eventual consistency of delete for this list operation:  Any
+   * recently-deleted keys will be added.
+   * @param request List request
+   * @param rawListing listing returned from underlying S3
+   * @return listing with recently-deleted items restored
+   */
   private ObjectListing restoreListObjects(ListObjectsRequest request,
-                                           ObjectListing rawListing) {
+      ObjectListing rawListing) {
     List<S3ObjectSummary> outputList = rawListing.getObjectSummaries();
     List<String> outputPrefixes = rawListing.getCommonPrefixes();
+    // recursive list has no delimiter, returns everything that matches a
+    // prefix.
+    boolean recursiveObjectList = !("/".equals(request.getDelimiter()));
+
+    // Go through all deleted keys
     for (String key : new HashSet<>(delayedDeletes.keySet())) {
       Delete delete = delayedDeletes.get(key);
       if (isKeyDelayed(delete.time(), key)) {
-        // TODO this works fine for flat directories but:
-        // if you have a delayed key /a/b/c/d and you are listing /a/b,
-        // this incorrectly will add /a/b/c/d to the listing for b
-        if (key.startsWith(request.getPrefix())) {
-          if (delete.summary == null) {
-            if (!outputPrefixes.contains(key)) {
-              outputPrefixes.add(key);
-            }
-          } else {
-            addIfNotPresent(outputList, delete.summary());
+        if (isDescendant(request.getPrefix(), key, recursiveObjectList)) {
+          if (delete.summary() != null) {
+            addSummaryIfNotPresent(outputList, delete.summary());
+          }
+        }
+        // Non-recursive list has delimiter: will return rolled-up prefixes for
+        // all keys that are not direct children
+        if (!recursiveObjectList) {
+          if (isDescendant(request.getPrefix(), key, true)) {
+            addPrefixIfNotPresent(outputPrefixes, request.getPrefix(), key);
           }
         }
       } else {
+        // Clean up any expired entries
         delayedDeletes.remove(key);
       }
     }
@@ -240,12 +320,11 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     }
   }
 
-  private void registerDeleteObject(DeleteObjectRequest req) {
-    String key = req.getKey();
+  private void registerDeleteObject(String key, String bucket) {
     if (shouldDelay(key)) {
       // Record summary so we can add it back for some time post-deletion
       S3ObjectSummary summary = null;
-      ObjectListing list = listObjects(req.getBucketName(), key);
+      ObjectListing list = listObjects(bucket, key);
       for (S3ObjectSummary result : list.getObjectSummaries()) {
         if (result.getKey().equals(key)) {
           summary = result;
