@@ -242,7 +242,10 @@ public class NameNodeConnector implements Closeable {
         IOUtils.closeStream(fs.append(idPath));
         fs.delete(idPath, true);
       }
-      final FSDataOutputStream fsout = fs.create(idPath, false);
+
+      final FSDataOutputStream fsout = fs.createFile(idPath)
+          .overwrite(false).recursive().build();
+
       // mark balancer idPath to be deleted during filesystem closure
       fs.deleteOnExit(idPath);
       if (write2IdFile) {

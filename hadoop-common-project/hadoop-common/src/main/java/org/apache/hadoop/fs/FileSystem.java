@@ -4124,8 +4124,34 @@ public abstract class FileSystem extends Configured implements Closeable {
     return GlobalStorageStatistics.INSTANCE;
   }
 
+  private static final class FileSystemDataOutputStreamBuilder extends
+      FSDataOutputStreamBuilder<FSDataOutputStream,
+        FileSystemDataOutputStreamBuilder> {
+
+    /**
+     * Constructor.
+     */
+    protected FileSystemDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+      super(fileSystem, p);
+    }
+
+    @Override
+    public FSDataOutputStream build() throws IOException {
+      return getFS().create(getPath(), getPermission(), getFlags(),
+          getBufferSize(), getReplication(), getBlockSize(), getProgress(),
+          getChecksumOpt());
+    }
+
+    @Override
+    protected FileSystemDataOutputStreamBuilder getThisBuilder() {
+      return this;
+    }
+  }
+
   /**
    * Create a new FSDataOutputStreamBuilder for the file with path.
+   * Files are overwritten by default.
+   *
    * @param path file path
    * @return a FSDataOutputStreamBuilder object to build the file
    *
@@ -4133,7 +4159,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * builder interface becomes stable.
    */
   @InterfaceAudience.Private
-  protected FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
-    return new FSDataOutputStreamBuilder(this, path);
+  protected FSDataOutputStreamBuilder createFile(Path path) {
+    return new FileSystemDataOutputStreamBuilder(this, path)
+        .create().overwrite(true);
   }
 }

@@ -61,6 +61,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FileChecksum;
@@ -78,6 +79,7 @@ import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.DistributedFileSystem.HdfsDataOutputStreamBuilder;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
@@ -1542,36 +1544,84 @@ public class TestDistributedFileSystem {
     }
   }
 
+  private void testBuilderSetters(DistributedFileSystem fs) {
+    Path testFilePath = new Path("/testBuilderSetters");
+    HdfsDataOutputStreamBuilder builder = fs.createFile(testFilePath);
+
+    builder.append().overwrite(false).newBlock().lazyPersist().noLocalWrite();
+    EnumSet<CreateFlag> flags = builder.getFlags();
+    assertTrue(flags.contains(CreateFlag.APPEND));
+    assertTrue(flags.contains(CreateFlag.CREATE));
+    assertTrue(flags.contains(CreateFlag.NEW_BLOCK));
+    assertTrue(flags.contains(CreateFlag.NO_LOCAL_WRITE));
+    assertFalse(flags.contains(CreateFlag.OVERWRITE));
+    assertFalse(flags.contains(CreateFlag.SYNC_BLOCK));
+  }
+
+  @Test
+  public void testHdfsDataOutputStreamBuilderSetParameters()
+      throws IOException {
+    Configuration conf = getTestConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      testBuilderSetters(fs);
+    }
+  }
+
   @Test
   public void testDFSDataOutputStreamBuilder() throws Exception {
     Configuration conf = getTestConfiguration();
-    MiniDFSCluster cluster = null;
     String testFile = "/testDFSDataOutputStreamBuilder";
     Path testFilePath = new Path(testFile);
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
       DistributedFileSystem fs = cluster.getFileSystem();
 
       // Test create an empty file
-      FSDataOutputStream out =
-          fs.newFSDataOutputStreamBuilder(testFilePath).build();
-      out.close();
+      try (FSDataOutputStream out =
+               fs.createFile(testFilePath).build()) {
+        LOG.info("Test create an empty file");
+      }
 
       // Test create a file with content, and verify the content
       String content = "This is a test!";
-      out = fs.newFSDataOutputStreamBuilder(testFilePath)
-          .setBufferSize(4096).setReplication((short) 1)
-          .setBlockSize(4096).build();
-      byte[] contentOrigin = content.getBytes("UTF8");
-      out.write(contentOrigin);
-      out.close();
+      try (FSDataOutputStream out1 = fs.createFile(testFilePath)
+          .bufferSize(4096)
+          .replication((short) 1)
+          .blockSize(4096)
+          .build()) {
+        byte[] contentOrigin = content.getBytes("UTF8");
+        out1.write(contentOrigin);
+      }
 
       ContractTestUtils.verifyFileContents(fs, testFilePath,
           content.getBytes());
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
+
+      try (FSDataOutputStream out = fs.createFile(testFilePath).overwrite(false)
+        .build()) {
+        fail("it should fail to overwrite an existing file");
+      } catch (FileAlreadyExistsException e) {
+        // As expected, ignore.
       }
+
+      Path nonParentFile = new Path("/parent/test");
+      try (FSDataOutputStream out = fs.createFile(nonParentFile).build()) {
+        fail("parent directory not exist");
+      } catch (FileNotFoundException e) {
+        // As expected.
+      }
+      assertFalse("parent directory should not be created",
+          fs.exists(new Path("/parent")));
+
+      try (FSDataOutputStream out = fs.createFile(nonParentFile).recursive()
+        .build()) {
+        out.write(1);
+      }
+      assertTrue("parent directory has not been created",
+          fs.exists(new Path("/parent")));
     }
   }
 }
