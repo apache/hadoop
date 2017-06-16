@@ -156,7 +156,6 @@ Deployment
          [-listPolicies]
          [-addPolicies -policyFile <file>]
          [-listCodecs]
-         [-usage [cmd ...]]
          [-help [cmd ...]]
 
 Below are the details about each command.
