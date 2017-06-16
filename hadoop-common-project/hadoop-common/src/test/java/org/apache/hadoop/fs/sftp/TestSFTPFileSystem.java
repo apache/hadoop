@@ -316,6 +316,7 @@ public class TestSFTPFileSystem {
     java.nio.file.Path path = (local).pathToFile(file).toPath();
     long accessTime1 = Files.readAttributes(path, BasicFileAttributes.class)
         .lastAccessTime().toMillis();
+    accessTime1 = (accessTime1 / 1000) * 1000;
     long accessTime2 = sftpFs.getFileStatus(file).getAccessTime();
     assertEquals(accessTime1, accessTime2);
   }
