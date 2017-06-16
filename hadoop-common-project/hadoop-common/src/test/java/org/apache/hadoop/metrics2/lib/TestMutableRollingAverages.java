@@ -17,23 +17,30 @@
  */
 package org.apache.hadoop.metrics2.lib;
 
+import com.google.common.base.Supplier;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.test.GenericTestUtils;
+
+import org.apache.hadoop.util.Time;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import static org.apache.hadoop.metrics2.lib.Interns.info;
-import static org.apache.hadoop.test.MetricsAsserts.mockMetricsRecordBuilder;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.mockito.Matchers.anyDouble;
 import static org.mockito.Matchers.eq;
-
-import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.apache.hadoop.util.Time;
-import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 /**
  * This class tests various cases of the algorithms implemented in
- * {@link RollingAverages}.
+ * {@link MutableRollingAverages}.
  */
-public class TestRollingAverages {
+public class TestMutableRollingAverages {
+
   /**
    * Tests if the results are correct if no samples are inserted, dry run of
    * empty roll over.
@@ -42,8 +49,9 @@ public class TestRollingAverages {
   public void testRollingAveragesEmptyRollover() throws Exception {
     final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     /* 5s interval and 2 windows */
-    try (final RollingAverages rollingAverages =
-             new RollingAverages(5000, 2)) {
+    try (MutableRollingAverages rollingAverages =
+             new MutableRollingAverages("Time")) {
+      rollingAverages.replaceScheduledTask(2, 5, TimeUnit.SECONDS);
       /* Check it initially */
       rollingAverages.snapshot(rb, true);
       verify(rb, never()).addGauge(
@@ -76,11 +84,10 @@ public class TestRollingAverages {
     final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     final String name = "foo2";
     final int windowSizeMs = 5000; // 5s roll over interval
-    final int numWindows = 2;
     final int numOpsPerIteration = 1000;
-    try (RollingAverages rollingAverages = new RollingAverages(windowSizeMs,
-        numWindows)) {
-
+    try (MutableRollingAverages rollingAverages =
+             new MutableRollingAverages("Time")) {
+      rollingAverages.replaceScheduledTask(2, 5000, TimeUnit.MILLISECONDS);
       /* Push values for three intervals */
       final long start = Time.monotonicNow();
       for (int i = 1; i <= 3; i++) {
@@ -120,5 +127,65 @@ public class TestRollingAverages {
             anyDouble());
       }
     }
+  }
+
+  /**
+   * Test that MutableRollingAverages gives expected results after
+   * initialization.
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testMutableRollingAveragesMetric() throws Exception {
+    final DummyTestMetric testMetric = new DummyTestMetric();
+    testMetric.create();
+
+    testMetric.add("metric1", 100);
+    testMetric.add("metric1", 900);
+    testMetric.add("metric2", 1000);
+    testMetric.add("metric2", 1000);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        testMetric.collectThreadLocalStates();
+        return testMetric.getStats().size() > 0;
+      }
+    }, 500, 5000);
+
+    MetricsRecordBuilder rb = getMetrics(DummyTestMetric.METRIC_NAME);
+
+    double metric1Avg = getDoubleGauge("[Metric1]RollingAvgTesting", rb);
+    double metric2Avg = getDoubleGauge("[Metric2]RollingAvgTesting", rb);
+    Assert.assertTrue("The rolling average of metric1 is not as expected",
+        metric1Avg == 500.0);
+    Assert.assertTrue("The rolling average of metric2 is not as expected",
+        metric2Avg == 1000.0);
+
+  }
+
+  class DummyTestMetric {
+    @Metric (valueName = "testing")
+    private MutableRollingAverages rollingAverages;
+
+    static final String METRIC_NAME = "RollingAveragesTestMetric";
+
+    protected void create() {
+      DefaultMetricsSystem.instance().register(METRIC_NAME,
+          "mutable rolling averages test", this);
+      rollingAverages.replaceScheduledTask(10, 1000, TimeUnit.MILLISECONDS);
+    }
+
+    void add(String name, long latency) {
+      rollingAverages.add(name, latency);
+    }
+
+    void collectThreadLocalStates() {
+      rollingAverages.collectThreadLocalStates();
+    }
+
+    Map<String, Double> getStats() {
+      return rollingAverages.getStats(0);
+    }
+
   }
 }

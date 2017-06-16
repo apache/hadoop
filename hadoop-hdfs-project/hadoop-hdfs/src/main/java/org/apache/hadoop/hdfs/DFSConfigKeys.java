@@ -434,18 +434,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DeprecatedKeys.DFS_METRICS_SESSION_ID_KEY;
   public static final String  DFS_METRICS_PERCENTILES_INTERVALS_KEY = "dfs.metrics.percentiles.intervals";
 
-  // The following setting is not meant to be changed by administrators.
-  public static final String DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_KEY =
-      "dfs.metrics.rolling.averages.window.length";
-  public static final int DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_DEFAULT =
-      300 * 1000;
-
-  // The following setting is not meant to be changed by administrators.
-  public static final String DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_KEY =
-      "dfs.metrics.rolling.average.num.windows";
-  public static final int DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_DEFAULT =
-      36;
-
   public static final String  DFS_DATANODE_PEER_STATS_ENABLED_KEY =
       "dfs.datanode.peer.stats.enabled";
   public static final boolean DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT = false;
