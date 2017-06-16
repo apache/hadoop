@@ -21,15 +21,11 @@ package org.apache.hadoop.mapreduce.v2.app;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.service.Service;
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.jobhistory.EventType;
-import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -104,34 +100,12 @@ public class TestKill {
   @Test
   public void testKillTask() throws Exception {
     final CountDownLatch latch = new CountDownLatch(1);
-    final CountDownLatch jobRunning = new CountDownLatch(1);
-
-    final Dispatcher dispatcher = new AsyncDispatcher() {
-      protected void dispatch(Event event) {
-        // We have to wait until the internal state is RUNNING and not SETUP
-        // because it can cause a transition failure. If the dispatchable
-        // event is TASK_STARTED, we can continue because the job must be in
-        // RUNNING at that point.
-        if (event.getType() == EventType.TASK_STARTED) {
-          jobRunning.countDown();
-        }
-        super.dispatch(event);
-      }
-    };
-
-    MRApp app = new BlockingMRApp(2, 0, latch) {
-      @Override
-      public Dispatcher createDispatcher() {
-        return dispatcher;
-      }
-    };
-
+    MRApp app = new BlockingMRApp(2, 0, latch);
     //this will start the job but job won't complete as Task is blocked
     Job job = app.submit(new Configuration());
-
-    // wait until the job transitions to JobInternalState.RUNNING
-    jobRunning.await(10, TimeUnit.SECONDS);
-
+    
+    //wait and vailidate for Job to become RUNNING
+    app.waitForInternalState((JobImpl) job, JobStateInternal.RUNNING);
     Map<TaskId,Task> tasks = job.getTasks();
     Assert.assertEquals("No of tasks is not correct", 2, 
         tasks.size());
