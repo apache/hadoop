@@ -62,8 +62,10 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -110,10 +112,13 @@ import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.BlocksStats;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -1651,6 +1656,50 @@ public class DFSTestUtil {
   }
 
   /**
+   * Verify the aggregated {@link ClientProtocol#getStats()} block counts equal
+   * the sum of {@link ClientProtocol#getBlocksStats()} and
+   * {@link ClientProtocol#getECBlockGroupsStats()}.
+   * @throws Exception
+   */
+  public static  void verifyClientStats(Configuration conf,
+      MiniDFSCluster cluster) throws Exception {
+    ClientProtocol client = NameNodeProxies.createProxy(conf,
+        cluster.getFileSystem(0).getUri(),
+        ClientProtocol.class).getProxy();
+    long[] aggregatedStats = cluster.getNameNode().getRpcServer().getStats();
+    BlocksStats blocksStats =
+        client.getBlocksStats();
+    ECBlockGroupsStats ecBlockGroupsStats = client.getECBlockGroupsStats();
+
+    assertEquals("Under replicated stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
+        aggregatedStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX]);
+    assertEquals("Low redundancy stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
+        blocksStats.getLowRedundancyBlocksStat() +
+            ecBlockGroupsStats.getLowRedundancyBlockGroupsStat());
+    assertEquals("Corrupt blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX],
+        blocksStats.getCorruptBlocksStat() +
+            ecBlockGroupsStats.getCorruptBlockGroupsStat());
+    assertEquals("Missing blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX],
+        blocksStats.getMissingReplicaBlocksStat() +
+            ecBlockGroupsStats.getMissingBlockGroupsStat());
+    assertEquals("Missing blocks with replication factor one not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX],
+        blocksStats.getMissingReplicationOneBlocksStat());
+    assertEquals("Bytes in future blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX],
+        blocksStats.getBytesInFutureBlocksStat() +
+            ecBlockGroupsStats.getBytesInFutureBlockGroupsStat());
+    assertEquals("Pending deletion blocks stats not matching!",
+        aggregatedStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX],
+        blocksStats.getPendingDeletionBlocksStat() +
+            ecBlockGroupsStats.getPendingDeletionBlockGroupsStat());
+  }
+
+  /**
    * Helper function to create a key in the Key Provider. Defaults
    * to the first indexed NameNode's Key Provider.
    *
@@ -1816,8 +1865,8 @@ public class DFSTestUtil {
     }, 100, waitTime);
   }
 
- /**
-   * Change the length of a block at datanode dnIndex
+  /**
+   * Change the length of a block at datanode dnIndex.
    */
   public static boolean changeReplicaLength(MiniDFSCluster cluster,
       ExtendedBlock blk, int dnIndex, int lenDelta) throws IOException {
@@ -2201,5 +2250,39 @@ public class DFSTestUtil {
     } else {
       assertFalse("File in trash : " + trashPath, fs.exists(trashPath));
     }
+  }
+
+  public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
+      String filePrefix, int numFilesToCreate) throws IOException {
+    final Map<Path, FSDataOutputStream> filesCreated = new HashMap<>();
+    final byte[] buffer = new byte[(int) (1024 * 1.75)];
+    final Random rand = new Random(0xFEED0BACL);
+    for (int i = 0; i < numFilesToCreate; i++) {
+      Path file = new Path("/" + filePrefix + "-" + i);
+      FSDataOutputStream stm = fs.create(file, true, 1024, (short) 1, 1024);
+      rand.nextBytes(buffer);
+      stm.write(buffer);
+      filesCreated.put(file, stm);
+    }
+    return filesCreated;
+  }
+
+  public static HashSet<Path> closeOpenFiles(
+      HashMap<Path, FSDataOutputStream> openFilesMap,
+      int numFilesToClose) throws IOException {
+    HashSet<Path> closedFiles = new HashSet<>();
+    for (Iterator<Entry<Path, FSDataOutputStream>> it =
+         openFilesMap.entrySet().iterator(); it.hasNext();) {
+      Entry<Path, FSDataOutputStream> entry = it.next();
+      LOG.info("Closing file: " + entry.getKey());
+      entry.getValue().close();
+      closedFiles.add(entry.getKey());
+      it.remove();
+      numFilesToClose--;
+      if (numFilesToClose == 0) {
+        break;
+      }
+    }
+    return closedFiles;
   }
 }

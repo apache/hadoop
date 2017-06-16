@@ -314,8 +314,8 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml</groupId>
-      <artifactId>aalto-xml</artifactId>
+      <groupId>com.fasterxml.woodstox</groupId>
+      <artifactId>woodstox-core</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

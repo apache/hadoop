@@ -313,6 +313,15 @@ public class MetricsRegistry {
     return rates;
   }
 
+  public synchronized MutableRollingAverages newMutableRollingAverages(
+      String name, String valueName) {
+    checkMetricName(name);
+    MutableRollingAverages rollingAverages =
+        new MutableRollingAverages(valueName);
+    metricsMap.put(name, rollingAverages);
+    return rollingAverages;
+  }
+
   synchronized void add(String name, MutableMetric metric) {
     checkMetricName(name);
     metricsMap.put(name, metric);
