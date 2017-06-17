@@ -223,7 +223,7 @@ public class TestMRWithDistributedCache extends TestCase {
     return p;
   }
 
-  @Test (timeout = 1000)
+  @Test (timeout = 10000)
   public void testDeprecatedFunctions() throws Exception {
     DistributedCache.addLocalArchives(conf, "Test Local Archives 1");
     Assert.assertEquals("Test Local Archives 1",

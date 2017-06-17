@@ -22,7 +22,14 @@
 #include <stdio.h>
 
 mutex hdfsHashMutex = PTHREAD_MUTEX_INITIALIZER;
-mutex jvmMutex = PTHREAD_MUTEX_INITIALIZER;
+mutex jvmMutex;
+pthread_mutexattr_t jvmMutexAttr;
+
+__attribute__((constructor)) static void init() {
+  pthread_mutexattr_init(&jvmMutexAttr);
+  pthread_mutexattr_settype(&jvmMutexAttr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&jvmMutex, &jvmMutexAttr);
+}
 
 int mutexLock(mutex *m) {
   int ret = pthread_mutex_lock(m);

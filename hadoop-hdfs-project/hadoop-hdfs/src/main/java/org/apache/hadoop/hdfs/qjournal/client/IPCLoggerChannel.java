@@ -276,7 +276,7 @@ public class IPCLoggerChannel implements AsyncLogger {
         
     try {
       String path = GetJournalEditServlet.buildPath(
-          journalId, segmentTxId, nsInfo);
+          journalId, segmentTxId, nsInfo, true);
       return new URL(httpServerURL, path);
     } catch (MalformedURLException e) {
       // should never get here.

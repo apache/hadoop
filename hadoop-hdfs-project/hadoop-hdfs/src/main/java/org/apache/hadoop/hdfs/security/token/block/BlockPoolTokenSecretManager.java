@@ -84,25 +84,27 @@ public class BlockPoolTokenSecretManager extends
   /**
    * See {@link BlockTokenSecretManager#checkAccess(BlockTokenIdentifier,
    *                String, ExtendedBlock, BlockTokenIdentifier.AccessMode,
-   *                StorageType[])}
+   *                StorageType[], String[])}
    */
   public void checkAccess(BlockTokenIdentifier id, String userId,
       ExtendedBlock block, AccessMode mode,
-      StorageType[] storageTypes) throws InvalidToken {
+      StorageType[] storageTypes, String[] storageIds)
+      throws InvalidToken {
     get(block.getBlockPoolId()).checkAccess(id, userId, block, mode,
-        storageTypes);
+        storageTypes, storageIds);
   }
 
   /**
    * See {@link BlockTokenSecretManager#checkAccess(Token, String,
    *                ExtendedBlock, BlockTokenIdentifier.AccessMode,
-   *                StorageType[])}.
+   *                StorageType[], String[])}
    */
   public void checkAccess(Token<BlockTokenIdentifier> token,
       String userId, ExtendedBlock block, AccessMode mode,
-      StorageType[] storageTypes) throws InvalidToken {
+      StorageType[] storageTypes, String[] storageIds)
+      throws InvalidToken {
     get(block.getBlockPoolId()).checkAccess(token, userId, block, mode,
-        storageTypes);
+        storageTypes, storageIds);
   }
 
   /**
@@ -115,11 +117,13 @@ public class BlockPoolTokenSecretManager extends
 
   /**
    * See {@link BlockTokenSecretManager#generateToken(ExtendedBlock, EnumSet,
-   *  StorageType[])}
+   *  StorageType[], String[])}.
    */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock b,
-      EnumSet<AccessMode> of, StorageType[] storageTypes) throws IOException {
-    return get(b.getBlockPoolId()).generateToken(b, of, storageTypes);
+      EnumSet<AccessMode> of, StorageType[] storageTypes, String[] storageIds)
+      throws IOException {
+    return get(b.getBlockPoolId()).generateToken(b, of, storageTypes,
+        storageIds);
   }
   
   @VisibleForTesting

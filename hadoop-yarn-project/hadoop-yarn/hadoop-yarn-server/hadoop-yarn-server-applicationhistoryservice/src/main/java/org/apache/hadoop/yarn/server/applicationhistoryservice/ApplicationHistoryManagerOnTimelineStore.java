@@ -330,20 +330,19 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
 
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_CPU_METRICS)) {
-        long vcoreSeconds=Long.parseLong(entityInfo.get(
-                ApplicationMetricsConstants.APP_CPU_METRICS).toString());
-        long memorySeconds=Long.parseLong(entityInfo.get(
-                ApplicationMetricsConstants.APP_MEM_METRICS).toString());
-        long preemptedMemorySeconds = Long.parseLong(entityInfo.get(
-            ApplicationMetricsConstants
-                .APP_MEM_PREEMPT_METRICS).toString());
-        long preemptedVcoreSeconds = Long.parseLong(entityInfo.get(
-            ApplicationMetricsConstants
-                .APP_CPU_PREEMPT_METRICS).toString());
-        appResources = ApplicationResourceUsageReport
-            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds, 0,
-                0, preemptedMemorySeconds, preemptedVcoreSeconds);
+        long vcoreSeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_CPU_METRICS);
+        long memorySeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_MEM_METRICS);
+        long preemptedMemorySeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS);
+        long preemptedVcoreSeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS);
+        appResources = ApplicationResourceUsageReport.newInstance(0, 0, null,
+            null, null, memorySeconds, vcoreSeconds, 0, 0,
+            preemptedMemorySeconds, preemptedVcoreSeconds);
       }
+
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {
         appTags = new HashSet<String>();
         Object obj = entityInfo.get(ApplicationMetricsConstants.APP_TAGS_INFO);
@@ -443,6 +442,16 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         appResources, null, progress, type, null, appTags, unmanagedApplication,
         Priority.newInstance(applicationPriority), appNodeLabelExpression,
         amNodeLabelExpression), appViewACLs);
+  }
+
+  private static long parseLong(Map<String, Object> entityInfo,
+      String infoKey) {
+    long result = 0;
+    Object infoValue = entityInfo.get(infoKey);
+    if (infoValue != null) {
+      result = Long.parseLong(infoValue.toString());
+    }
+    return result;
   }
 
   private static boolean isFinalState(YarnApplicationState state) {
@@ -731,7 +740,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
      }
    }
 
-  private static enum ApplicationReportField {
+  private enum ApplicationReportField {
     ALL, // retrieve all the fields
     USER_AND_ACLS // retrieve user and ACLs info only
   }

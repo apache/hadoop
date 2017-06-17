@@ -816,7 +816,7 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(USER, user)
         .setExecutionAttribute(PID, signalPid)
         .setExecutionAttribute(SIGNAL, ContainerExecutor.Signal.NULL);
-    runtime.initialize(getConfigurationWithMockContainerExecutor());
+    runtime.initialize(enableMockContainerExecutor(conf));
     runtime.signalContainer(builder.build());
 
     PrivilegedOperation op = capturePrivilegedOperation();
@@ -870,7 +870,7 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(USER, user)
         .setExecutionAttribute(PID, signalPid)
         .setExecutionAttribute(SIGNAL, signal);
-    runtime.initialize(getConfigurationWithMockContainerExecutor());
+    runtime.initialize(enableMockContainerExecutor(conf));
     runtime.signalContainer(builder.build());
 
     PrivilegedOperation op = capturePrivilegedOperation();
@@ -881,7 +881,14 @@ public class TestDockerContainerRuntime {
         Charset.forName("UTF-8"));
   }
 
-  private Configuration getConfigurationWithMockContainerExecutor() {
+  /**
+   * Return a configuration object with the mock container executor binary
+   * preconfigured.
+   *
+   * @param conf The hadoop configuration.
+   * @return The hadoop configuration.
+   */
+  public static Configuration enableMockContainerExecutor(Configuration conf) {
     File f = new File("./src/test/resources/mock-container-executor");
     if(!FileUtil.canExecute(f)) {
       FileUtil.setExecutable(f, true);
@@ -891,4 +898,33 @@ public class TestDockerContainerRuntime {
     return conf;
   }
 
+  @Test
+  public void testDockerImageNamePattern() throws Exception {
+    String[] validNames =
+        { "ubuntu", "fedora/httpd:version1.0",
+            "fedora/httpd:version1.0.test",
+            "fedora/httpd:version1.0.TEST",
+            "myregistryhost:5000/ubuntu",
+            "myregistryhost:5000/fedora/httpd:version1.0",
+            "myregistryhost:5000/fedora/httpd:version1.0.test",
+            "myregistryhost:5000/fedora/httpd:version1.0.TEST"};
+
+    String[] invalidNames = { "Ubuntu", "ubuntu || fedora", "ubuntu#",
+        "myregistryhost:50AB0/ubuntu", "myregistry#host:50AB0/ubuntu",
+        ":8080/ubuntu"
+    };
+
+    for (String name : validNames) {
+      DockerLinuxContainerRuntime.validateImageName(name);
+    }
+
+    for (String name : invalidNames) {
+      try {
+        DockerLinuxContainerRuntime.validateImageName(name);
+        Assert.fail(name + " is an invalid name and should fail the regex");
+      } catch (ContainerExecutionException ce) {
+        continue;
+      }
+    }
+  }
 }

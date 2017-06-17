@@ -1415,7 +1415,7 @@ public class DataNode extends ReconfigurableBase
 
     metrics = DataNodeMetrics.create(getConf(), getDisplayName());
     peerMetrics = dnConf.peerStatsEnabled ?
-        DataNodePeerMetrics.create(getConf(), getDisplayName()) : null;
+        DataNodePeerMetrics.create(getDisplayName()) : null;
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     ecWorker = new ErasureCodingWorker(getConf(), this);
@@ -1943,7 +1943,7 @@ public class DataNode extends ReconfigurableBase
         LOG.debug("Got: " + id.toString());
       }
       blockPoolTokenSecretManager.checkAccess(id, null, block, accessMode,
-          null);
+          null, null);
     }
   }
 
@@ -2224,7 +2224,8 @@ public class DataNode extends ReconfigurableBase
 
   @VisibleForTesting
   void transferBlock(ExtendedBlock block, DatanodeInfo[] xferTargets,
-      StorageType[] xferTargetStorageTypes) throws IOException {
+      StorageType[] xferTargetStorageTypes, String[] xferTargetStorageIDs)
+      throws IOException {
     BPOfferService bpos = getBPOSForBlock(block);
     DatanodeRegistration bpReg = getDNRegistrationForBP(block.getBlockPoolId());
 
@@ -2281,17 +2282,19 @@ public class DataNode extends ReconfigurableBase
       LOG.info(bpReg + " Starting thread to transfer " + 
                block + " to " + xfersBuilder);                       
 
-      new Daemon(new DataTransfer(xferTargets, xferTargetStorageTypes, block,
+      new Daemon(new DataTransfer(xferTargets, xferTargetStorageTypes,
+          xferTargetStorageIDs, block,
           BlockConstructionStage.PIPELINE_SETUP_CREATE, "")).start();
     }
   }
 
   void transferBlocks(String poolId, Block blocks[],
-      DatanodeInfo xferTargets[][], StorageType[][] xferTargetStorageTypes) {
+      DatanodeInfo[][] xferTargets, StorageType[][] xferTargetStorageTypes,
+      String[][] xferTargetStorageIDs) {
     for (int i = 0; i < blocks.length; i++) {
       try {
         transferBlock(new ExtendedBlock(poolId, blocks[i]), xferTargets[i],
-            xferTargetStorageTypes[i]);
+            xferTargetStorageTypes[i], xferTargetStorageIDs[i]);
       } catch (IOException ie) {
         LOG.warn("Failed to transfer block " + blocks[i], ie);
       }
@@ -2395,6 +2398,7 @@ public class DataNode extends ReconfigurableBase
   private class DataTransfer implements Runnable {
     final DatanodeInfo[] targets;
     final StorageType[] targetStorageTypes;
+    final private String[] targetStorageIds;
     final ExtendedBlock b;
     final BlockConstructionStage stage;
     final private DatanodeRegistration bpReg;
@@ -2406,8 +2410,8 @@ public class DataNode extends ReconfigurableBase
      * entire target list, the block, and the data.
      */
     DataTransfer(DatanodeInfo targets[], StorageType[] targetStorageTypes,
-        ExtendedBlock b, BlockConstructionStage stage,
-        final String clientname) {
+        String[] targetStorageIds, ExtendedBlock b,
+        BlockConstructionStage stage, final String clientname) {
       if (DataTransferProtocol.LOG.isDebugEnabled()) {
         DataTransferProtocol.LOG.debug(getClass().getSimpleName() + ": "
             + b + " (numBytes=" + b.getNumBytes() + ")"
@@ -2415,10 +2419,13 @@ public class DataNode extends ReconfigurableBase
             + ", clientname=" + clientname
             + ", targets=" + Arrays.asList(targets)
             + ", target storage types=" + (targetStorageTypes == null ? "[]" :
-            Arrays.asList(targetStorageTypes)));
+            Arrays.asList(targetStorageTypes))
+            + ", target storage IDs=" + (targetStorageIds == null ? "[]" :
+            Arrays.asList(targetStorageIds)));
       }
       this.targets = targets;
       this.targetStorageTypes = targetStorageTypes;
+      this.targetStorageIds = targetStorageIds;
       this.b = b;
       this.stage = stage;
       BPOfferService bpos = blockPoolManager.get(b.getBlockPoolId());
@@ -2456,7 +2463,7 @@ public class DataNode extends ReconfigurableBase
         //
         Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(b,
             EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
-            targetStorageTypes);
+            targetStorageTypes, targetStorageIds);
 
         long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
@@ -2477,10 +2484,13 @@ public class DataNode extends ReconfigurableBase
         DatanodeInfo srcNode = new DatanodeInfoBuilder().setNodeID(bpReg)
             .build();
 
+        String storageId = targetStorageIds.length > 0 ?
+            targetStorageIds[0] : null;
         new Sender(out).writeBlock(b, targetStorageTypes[0], accessToken,
             clientname, targets, targetStorageTypes, srcNode,
             stage, 0, 0, 0, 0, blockSender.getChecksum(), cachingStrategy,
-            false, false, null);
+            false, false, null, storageId,
+            targetStorageIds);
 
         // send data & checksum
         blockSender.sendBlock(out, unbufOut, null);
@@ -2540,12 +2550,12 @@ public class DataNode extends ReconfigurableBase
    */
   public Token<BlockTokenIdentifier> getBlockAccessToken(ExtendedBlock b,
       EnumSet<AccessMode> mode,
-      StorageType[] storageTypes) throws IOException {
+      StorageType[] storageTypes, String[] storageIds) throws IOException {
     Token<BlockTokenIdentifier> accessToken = 
         BlockTokenSecretManager.DUMMY_TOKEN;
     if (isBlockTokenEnabled) {
       accessToken = blockPoolTokenSecretManager.generateToken(b, mode,
-          storageTypes);
+          storageTypes, storageIds);
     }
     return accessToken;
   }
@@ -2918,7 +2928,7 @@ public class DataNode extends ReconfigurableBase
           LOG.debug("Got: " + id.toString());
         }
         blockPoolTokenSecretManager.checkAccess(id, null, block,
-            BlockTokenIdentifier.AccessMode.READ, null);
+            BlockTokenIdentifier.AccessMode.READ, null, null);
       }
     }
   }
@@ -2934,7 +2944,8 @@ public class DataNode extends ReconfigurableBase
    */
   void transferReplicaForPipelineRecovery(final ExtendedBlock b,
       final DatanodeInfo[] targets, final StorageType[] targetStorageTypes,
-      final String client) throws IOException {
+      final String[] targetStorageIds, final String client)
+      throws IOException {
     final long storedGS;
     final long visible;
     final BlockConstructionStage stage;
@@ -2967,7 +2978,8 @@ public class DataNode extends ReconfigurableBase
     b.setNumBytes(visible);
 
     if (targets.length > 0) {
-      new DataTransfer(targets, targetStorageTypes, b, stage, client).run();
+      new DataTransfer(targets, targetStorageTypes, targetStorageIds, b, stage,
+          client).run();
     }
   }
 

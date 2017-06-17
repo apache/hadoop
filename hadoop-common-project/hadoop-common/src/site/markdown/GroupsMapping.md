@@ -76,6 +76,7 @@ This provider supports LDAP with simple password authentication using JNDI API.
 `hadoop.security.group.mapping.ldap.url` must be set. This refers to the URL of the LDAP server for resolving user groups.
 
 `hadoop.security.group.mapping.ldap.base` configures the search base for the LDAP connection. This is a distinguished name, and will typically be the root of the LDAP directory.
+Get groups for a given username first looks up the user and then looks up the groups for the user result. If the directory setup has different user and group search bases, use `hadoop.security.group.mapping.ldap.userbase` and `hadoop.security.group.mapping.ldap.groupbase` configs.
 
 If the LDAP server does not support anonymous binds,
 set the distinguished name of the user to bind in `hadoop.security.group.mapping.ldap.bind.user`.

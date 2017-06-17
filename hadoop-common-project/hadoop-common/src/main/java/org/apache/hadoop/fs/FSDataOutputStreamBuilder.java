@@ -18,32 +18,70 @@
 package org.apache.hadoop.fs;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.EnumSet;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
-/** Base of specific file system FSDataOutputStreamBuilder. */
-public class FSDataOutputStreamBuilder{
-  private Path path = null;
+/**
+ * Builder for {@link FSDataOutputStream} and its subclasses.
+ *
+ * It is used to create {@link FSDataOutputStream} when creating a new file or
+ * appending an existing file on {@link FileSystem}.
+ *
+ * By default, it does not create parent directory that do not exist.
+ * {@link FileSystem#createNonRecursive(Path, boolean, int, short, long,
+ * Progressable)}.
+ *
+ * To create missing parent directory, use {@link #recursive()}.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public abstract class FSDataOutputStreamBuilder
+    <S extends FSDataOutputStream, B extends FSDataOutputStreamBuilder<S, B>> {
+  private final FileSystem fs;
+  private final Path path;
   private FsPermission permission = null;
-  private Integer bufferSize;
-  private Short replication;
-  private Long blockSize;
+  private int bufferSize;
+  private short replication;
+  private long blockSize;
+  /** set to true to create missing directory. */
+  private boolean recursive = false;
+  private final EnumSet<CreateFlag> flags = EnumSet.noneOf(CreateFlag.class);
   private Progressable progress = null;
-  private EnumSet<CreateFlag> flags = null;
   private ChecksumOpt checksumOpt = null;
 
-  private final FileSystem fs;
+  /**
+   * Return the concrete implementation of the builder instance.
+   */
+  protected abstract B getThisBuilder();
 
-  public FSDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+  /**
+   * Constructor.
+   */
+  protected FSDataOutputStreamBuilder(@Nonnull FileSystem fileSystem,
+      @Nonnull Path p) {
+    Preconditions.checkNotNull(fileSystem);
+    Preconditions.checkNotNull(p);
     fs = fileSystem;
     path = p;
+    bufferSize = fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT);
+    replication = fs.getDefaultReplication(path);
+    blockSize = fs.getDefaultBlockSize(p);
+  }
+
+  protected FileSystem getFS() {
+    return fs;
   }
 
   protected Path getPath() {
@@ -52,91 +90,136 @@ public class FSDataOutputStreamBuilder{
 
   protected FsPermission getPermission() {
     if (permission == null) {
-      return FsPermission.getFileDefault();
+      permission = FsPermission.getFileDefault();
     }
     return permission;
   }
 
-  public FSDataOutputStreamBuilder setPermission(final FsPermission perm) {
+  /**
+   * Set permission for the file.
+   */
+  public B permission(@Nonnull final FsPermission perm) {
     Preconditions.checkNotNull(perm);
     permission = perm;
-    return this;
+    return getThisBuilder();
   }
 
   protected int getBufferSize() {
-    if (bufferSize == null) {
-      return fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
-          IO_FILE_BUFFER_SIZE_DEFAULT);
-    }
     return bufferSize;
   }
 
-  public FSDataOutputStreamBuilder setBufferSize(int bufSize) {
+  /**
+   * Set the size of the buffer to be used.
+   */
+  public B bufferSize(int bufSize) {
     bufferSize = bufSize;
-    return this;
+    return getThisBuilder();
   }
 
   protected short getReplication() {
-    if (replication == null) {
-      return fs.getDefaultReplication(getPath());
-    }
     return replication;
   }
 
-  public FSDataOutputStreamBuilder setReplication(short replica) {
+  /**
+   * Set replication factor.
+   */
+  public B replication(short replica) {
     replication = replica;
-    return this;
+    return getThisBuilder();
   }
 
   protected long getBlockSize() {
-    if (blockSize == null) {
-      return fs.getDefaultBlockSize(getPath());
-    }
     return blockSize;
   }
 
-  public FSDataOutputStreamBuilder setBlockSize(long blkSize) {
+  /**
+   * Set block size.
+   */
+  public B blockSize(long blkSize) {
     blockSize = blkSize;
-    return this;
+    return getThisBuilder();
+  }
+
+  /**
+   * Return true to create the parent directories if they do not exist.
+   */
+  protected boolean isRecursive() {
+    return recursive;
+  }
+
+  /**
+   * Create the parent directory if they do not exist.
+   */
+  public B recursive() {
+    recursive = true;
+    return getThisBuilder();
   }
 
   protected Progressable getProgress() {
     return progress;
   }
 
-  public FSDataOutputStreamBuilder setProgress(final Progressable prog) {
+  /**
+   * Set the facility of reporting progress.
+   */
+  public B progress(@Nonnull final Progressable prog) {
     Preconditions.checkNotNull(prog);
     progress = prog;
-    return this;
+    return getThisBuilder();
   }
 
   protected EnumSet<CreateFlag> getFlags() {
-    if (flags == null) {
-      return EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
-    }
     return flags;
   }
 
-  public FSDataOutputStreamBuilder setFlags(
-      final EnumSet<CreateFlag> enumFlags) {
-    Preconditions.checkNotNull(enumFlags);
-    flags = enumFlags;
-    return this;
+  /**
+   * Create an FSDataOutputStream at the specified path.
+   */
+  public B create() {
+    flags.add(CreateFlag.CREATE);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set to true to overwrite the existing file.
+   * Set it to false, an exception will be thrown when calling {@link #build()}
+   * if the file exists.
+   */
+  public B overwrite(boolean overwrite) {
+    if (overwrite) {
+      flags.add(CreateFlag.OVERWRITE);
+    } else {
+      flags.remove(CreateFlag.OVERWRITE);
+    }
+    return getThisBuilder();
+  }
+
+  /**
+   * Append to an existing file (optional operation).
+   */
+  public B append() {
+    flags.add(CreateFlag.APPEND);
+    return getThisBuilder();
   }
 
   protected ChecksumOpt getChecksumOpt() {
     return checksumOpt;
   }
 
-  public FSDataOutputStreamBuilder setChecksumOpt(
-      final ChecksumOpt chksumOpt) {
+  /**
+   * Set checksum opt.
+   */
+  public B checksumOpt(@Nonnull final ChecksumOpt chksumOpt) {
     Preconditions.checkNotNull(chksumOpt);
     checksumOpt = chksumOpt;
-    return this;
+    return getThisBuilder();
   }
 
-  public FSDataOutputStream build() throws IOException {
-    return fs.create(getPath(), getPermission(), getFlags(), getBufferSize(),
-        getReplication(), getBlockSize(), getProgress(), getChecksumOpt());
-  }
+  /**
+   * Create the FSDataOutputStream to write on the file system.
+   *
+   * @throws HadoopIllegalArgumentException if the parameters are not valid.
+   * @throws IOException on errors when file system creates or appends the file.
+   */
+  public abstract S build() throws IOException;
 }

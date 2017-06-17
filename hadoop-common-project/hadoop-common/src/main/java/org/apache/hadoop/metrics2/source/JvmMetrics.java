@@ -27,6 +27,7 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.log.metrics.EventCounter;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -56,6 +57,15 @@ public class JvmMetrics implements MetricsSource {
         impl = create(processName, sessionId, DefaultMetricsSystem.instance());
       }
       return impl;
+    }
+  }
+
+  @VisibleForTesting
+  public synchronized void registerIfNeeded(){
+    // during tests impl might exist, but is not registered
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    if (ms.getSource("JvmMetrics") == null) {
+      ms.register(JvmMetrics.name(), JvmMetrics.description(), this);
     }
   }
 

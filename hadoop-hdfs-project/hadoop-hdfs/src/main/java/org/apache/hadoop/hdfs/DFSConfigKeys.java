@@ -465,18 +465,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DeprecatedKeys.DFS_METRICS_SESSION_ID_KEY;
   public static final String  DFS_METRICS_PERCENTILES_INTERVALS_KEY = "dfs.metrics.percentiles.intervals";
 
-  // The following setting is not meant to be changed by administrators.
-  public static final String DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_KEY =
-      "dfs.metrics.rolling.averages.window.length";
-  public static final String DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_DEFAULT =
-      "5m";
-
-  // The following setting is not meant to be changed by administrators.
-  public static final String DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_KEY =
-      "dfs.metrics.rolling.average.num.windows";
-  public static final int DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_DEFAULT =
-      36;
-
   public static final String  DFS_DATANODE_PEER_STATS_ENABLED_KEY =
       "dfs.datanode.peer.stats.enabled";
   public static final boolean DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT = false;
@@ -570,6 +558,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_NAMENODE_EC_POLICIES_ENABLED_KEY = "dfs.namenode.ec.policies.enabled";
   public static final String  DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT = "";
+  public static final String  DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_KEY = "dfs.namenode.ec.policies.max.cellsize";
+  public static final int     DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_DEFAULT = 4 * 1024 * 1024;
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_KEY = "dfs.datanode.ec.reconstruction.stripedread.threads";
   public static final int     DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_DEFAULT = 20;
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY = "dfs.datanode.ec.reconstruction.stripedread.buffer.size";
@@ -731,10 +721,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_DEFAULT = false;
   public static final String
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY =
-      "dfs.datanode.fileio.profiling.sampling.fraction";
-  public static final double
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT = 0.0;
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY =
+      "dfs.datanode.fileio.profiling.sampling.percentage";
+  public static final int
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT = 0;
 
   //Keys with no defaults
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
@@ -883,6 +873,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY;
   public static final int    DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES_DEFAULT = 100;
   public static final String DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES = "dfs.namenode.list.encryption.zones.num.responses";
+  public static final String DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES =
+      "dfs.namenode.list.openfiles.num.responses";
+  public static final int    DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES_DEFAULT =
+      1000;
   public static final String DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_KEY = "dfs.namenode.edekcacheloader.interval.ms";
   public static final int DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_DEFAULT = 1000;
   public static final String DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_KEY = "dfs.namenode.edekcacheloader.initial.delay.ms";
@@ -1084,6 +1078,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String HTTPFS_BUFFER_SIZE_KEY =
       "httpfs.buffer.size";
   public static final int HTTP_BUFFER_SIZE_DEFAULT = 4096;
+
+  public static final String DFS_USE_DFS_NETWORK_TOPOLOGY_KEY =
+      "dfs.use.dfs.network.topology";
+  public static final boolean DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT = false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated

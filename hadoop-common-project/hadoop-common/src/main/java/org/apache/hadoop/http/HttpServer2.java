@@ -348,18 +348,17 @@ public final class HttpServer2 implements FilterContainer {
 
     /**
      * A wrapper of {@link Configuration#getPassword(String)}. It returns
-     * <code>String</code> instead of <code>char[]</code> and throws
-     * {@link IOException} when the password not found.
+     * <code>String</code> instead of <code>char[]</code>.
      *
      * @param conf the configuration
      * @param name the property name
-     * @return the password string
+     * @return the password string or null
      */
-    private static String getPassword(Configuration conf, String name)
+    private static String getPasswordString(Configuration conf, String name)
         throws IOException {
       char[] passchars = conf.getPassword(name);
       if (passchars == null) {
-        throw new IOException("Password " + name + " not found");
+        return null;
       }
       return new String(passchars);
     }
@@ -371,20 +370,30 @@ public final class HttpServer2 implements FilterContainer {
       if (sslConf == null) {
         return;
       }
-      needsClientAuth(sslConf.getBoolean(
+      needsClientAuth = sslConf.getBoolean(
           SSLFactory.SSL_SERVER_NEED_CLIENT_AUTH,
-          SSLFactory.SSL_SERVER_NEED_CLIENT_AUTH_DEFAULT));
-      keyStore(sslConf.get(SSLFactory.SSL_SERVER_KEYSTORE_LOCATION),
-          getPassword(sslConf, SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD),
-          sslConf.get(SSLFactory.SSL_SERVER_KEYSTORE_TYPE,
-              SSLFactory.SSL_SERVER_KEYSTORE_TYPE_DEFAULT));
-      keyPassword(getPassword(sslConf,
-          SSLFactory.SSL_SERVER_KEYSTORE_KEYPASSWORD));
-      trustStore(sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_LOCATION),
-          getPassword(sslConf, SSLFactory.SSL_SERVER_TRUSTSTORE_PASSWORD),
-          sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE,
-              SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT));
-      excludeCiphers(sslConf.get(SSLFactory.SSL_SERVER_EXCLUDE_CIPHER_LIST));
+          SSLFactory.SSL_SERVER_NEED_CLIENT_AUTH_DEFAULT);
+      keyStore = sslConf.getTrimmed(SSLFactory.SSL_SERVER_KEYSTORE_LOCATION);
+      if (keyStore == null || keyStore.isEmpty()) {
+        throw new IOException(String.format("Property %s not specified",
+            SSLFactory.SSL_SERVER_KEYSTORE_LOCATION));
+      }
+      keyStorePassword = getPasswordString(sslConf,
+          SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD);
+      if (keyStorePassword == null) {
+        throw new IOException(String.format("Property %s not specified",
+            SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD));
+      }
+      keyStoreType = sslConf.get(SSLFactory.SSL_SERVER_KEYSTORE_TYPE,
+          SSLFactory.SSL_SERVER_KEYSTORE_TYPE_DEFAULT);
+      keyPassword = getPasswordString(sslConf,
+          SSLFactory.SSL_SERVER_KEYSTORE_KEYPASSWORD);
+      trustStore = sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_LOCATION);
+      trustStorePassword = getPasswordString(sslConf,
+          SSLFactory.SSL_SERVER_TRUSTSTORE_PASSWORD);
+      trustStoreType = sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE,
+          SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT);
+      excludeCiphers = sslConf.get(SSLFactory.SSL_SERVER_EXCLUDE_CIPHER_LIST);
     }
 
     public HttpServer2 build() throws IOException {

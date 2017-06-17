@@ -347,6 +347,26 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.userbase</name>
+  <value></value>
+  <description>
+    The search base for the LDAP connection for user search query. This is a
+    distinguished name, and its the root of the LDAP directory for users.
+    If not set, hadoop.security.group.mapping.ldap.base is used.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.groupbase</name>
+  <value></value>
+  <description>
+    The search base for the LDAP connection for group search . This is a
+    distinguished name, and its the root of the LDAP directory for groups.
+    If not set, hadoop.security.group.mapping.ldap.base is used.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
   <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
   <description>

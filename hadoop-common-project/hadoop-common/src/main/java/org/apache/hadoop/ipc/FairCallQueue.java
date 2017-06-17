@@ -36,6 +36,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 /**
@@ -134,43 +135,82 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   /* AbstractQueue and BlockingQueue methods */
 
   /**
-   * Put and offer follow the same pattern:
+   * Add, put, and offer follow the same pattern:
    * 1. Get the assigned priorityLevel from the call by scheduler
    * 2. Get the nth sub-queue matching this priorityLevel
    * 3. delegate the call to this sub-queue.
    *
    * But differ in how they handle overflow:
-   * - Put will move on to the next queue until it lands on the last queue
+   * - Add will move on to the next queue, throw on last queue overflow
+   * - Put will move on to the next queue, block on last queue overflow
    * - Offer does not attempt other queues on overflow
    */
+
+  @Override
+  public boolean add(E e) {
+    final int priorityLevel = e.getPriorityLevel();
+    // try offering to all queues.
+    if (!offerQueues(priorityLevel, e, true)) {
+      // only disconnect the lowest priority users that overflow the queue.
+      throw (priorityLevel == queues.size() - 1)
+          ? CallQueueOverflowException.DISCONNECT
+          : CallQueueOverflowException.KEEPALIVE;
+    }
+    return true;
+  }
+
   @Override
   public void put(E e) throws InterruptedException {
-    int priorityLevel = e.getPriorityLevel();
-
-    final int numLevels = this.queues.size();
-    while (true) {
-      BlockingQueue<E> q = this.queues.get(priorityLevel);
-      boolean res = q.offer(e);
-      if (!res) {
-        // Update stats
-        this.overflowedCalls.get(priorityLevel).getAndIncrement();
-
-        // If we failed to insert, try again on the next level
-        priorityLevel++;
-
-        if (priorityLevel == numLevels) {
-          // That was the last one, we will block on put in the last queue
-          // Delete this line to drop the call
-          this.queues.get(priorityLevel-1).put(e);
-          break;
-        }
-      } else {
-        break;
-      }
+    final int priorityLevel = e.getPriorityLevel();
+    // try offering to all but last queue, put on last.
+    if (!offerQueues(priorityLevel, e, false)) {
+      putQueue(queues.size() - 1, e);
     }
+  }
 
-
+  /**
+   * Put the element in a queue of a specific priority.
+   * @param priority - queue priority
+   * @param e - element to add
+   */
+  @VisibleForTesting
+  void putQueue(int priority, E e) throws InterruptedException {
+    queues.get(priority).put(e);
     signalNotEmpty();
+  }
+
+  /**
+   * Offer the element to queue of a specific priority.
+   * @param priority - queue priority
+   * @param e - element to add
+   * @return boolean if added to the given queue
+   */
+  @VisibleForTesting
+  boolean offerQueue(int priority, E e) {
+    boolean ret = queues.get(priority).offer(e);
+    if (ret) {
+      signalNotEmpty();
+    }
+    return ret;
+  }
+
+  /**
+   * Offer the element to queue of the given or lower priority.
+   * @param priority - starting queue priority
+   * @param e - element to add
+   * @param includeLast - whether to attempt last queue
+   * @return boolean if added to a queue
+   */
+  private boolean offerQueues(int priority, E e, boolean includeLast) {
+    int lastPriority = queues.size() - (includeLast ? 1 : 2);
+    for (int i=priority; i <= lastPriority; i++) {
+      if (offerQueue(i, e)) {
+        return true;
+      }
+      // Update stats
+      overflowedCalls.get(i).getAndIncrement();
+    }
+    return false;
   }
 
   @Override

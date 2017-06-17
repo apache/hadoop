@@ -20,7 +20,11 @@ package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.junit.After;
+import static org.junit.Assume.assumeNotNull;
+import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Test;
 
 public class TestNativeAzureFileSystemContractPageBlobLive extends
     FileSystemContractBaseTest {
@@ -39,16 +43,17 @@ public class TestNativeAzureFileSystemContractPageBlobLive extends
     return AzureBlobStorageTestAccount.create(conf);
   }
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     testAccount = createTestAccount();
     if (testAccount != null) {
       fs = testAccount.getFileSystem();
     }
+    assumeNotNull(fs);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (testAccount != null) {
       testAccount.cleanup();
       testAccount = null;
@@ -56,35 +61,33 @@ public class TestNativeAzureFileSystemContractPageBlobLive extends
     }
   }
 
-  @Override
-  protected void runTest() throws Throwable {
-    if (testAccount != null) {
-      super.runTest();
-    }
-  }
-  
   /**
    * The following tests are failing on Azure and the Azure 
    * file system code needs to be modified to make them pass.
    * A separate work item has been opened for this.
    */
   @Ignore
+  @Test
   public void testMoveFileUnderParent() throws Throwable {
   }
 
   @Ignore
+  @Test
   public void testRenameFileToSelf() throws Throwable {
   }
   
   @Ignore
+  @Test
   public void testRenameChildDirForbidden() throws Exception {
   }
   
   @Ignore
+  @Test
   public void testMoveDirUnderParent() throws Throwable {
   }
   
   @Ignore
+  @Test
   public void testRenameDirToSelf() throws Throwable {
   }
 }

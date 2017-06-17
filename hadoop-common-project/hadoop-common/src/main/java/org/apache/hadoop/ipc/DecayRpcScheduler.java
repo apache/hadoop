@@ -618,6 +618,8 @@ public class DecayRpcScheduler implements RpcScheduler,
         } else {
           responseTimeAvgInLastWindow.set(i, averageResponseTime);
         }
+      } else {
+        responseTimeAvgInLastWindow.set(i, 0);
       }
       responseTimeCountInLastWindow.set(i, responseTimeCount);
       if (LOG.isDebugEnabled()) {

@@ -58,7 +58,7 @@ public class JobControl implements Runnable {
   private static final Log LOG = LogFactory.getLog(JobControl.class);
 
   // The thread can be in one of the following state
-  public static enum ThreadState {RUNNING, SUSPENDED,STOPPED, STOPPING, READY};
+  public enum ThreadState {RUNNING, SUSPENDED,STOPPED, STOPPING, READY};
 	
   private ThreadState runnerState;			// the thread state
 	

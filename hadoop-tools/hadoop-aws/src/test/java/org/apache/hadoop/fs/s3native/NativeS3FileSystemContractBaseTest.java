@@ -28,7 +28,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem.NativeS3FsInputStream;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
+import static org.junit.Assert.*;
 
 public abstract class NativeS3FileSystemContractBaseTest
   extends FileSystemContractBaseTest {
@@ -37,30 +41,33 @@ public abstract class NativeS3FileSystemContractBaseTest
   
   abstract NativeFileSystemStore getNativeFileSystemStore() throws IOException;
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    store = getNativeFileSystemStore();
-    fs = new NativeS3FileSystem(store);
     String fsname = conf.get(KEY_TEST_FS);
     if (StringUtils.isEmpty(fsname)) {
       throw new AssumptionViolatedException(
           "No test FS defined in :" + KEY_TEST_FS);
     }
+    store = getNativeFileSystemStore();
+    fs = new NativeS3FileSystem(store);
     fs.initialize(URI.create(fsname), conf);
   }
   
-  @Override
-  protected void tearDown() throws Exception {
-    store.purge("test");
-    super.tearDown();
+  @After
+  public void tearDown() throws Exception {
+    if (store != null) {
+      store.purge("test");
+    }
   }
 
+  @Test
   public void testCanonicalName() throws Exception {
     assertNull("s3n doesn't support security token and shouldn't have canonical name",
                fs.getCanonicalServiceName());
   }
 
+  @Test
   public void testListStatusForRoot() throws Exception {
     FileStatus[] paths = fs.listStatus(path("/"));
     assertEquals("Root directory is not empty; ", 0, paths.length);
@@ -73,6 +80,7 @@ public abstract class NativeS3FileSystemContractBaseTest
     assertEquals(path("/test"), paths[0].getPath());
   }
 
+  @Test
   public void testNoTrailingBackslashOnBucket() throws Exception {
     assertTrue(fs.getFileStatus(new Path(fs.getUri().toString())).isDirectory());
   }
@@ -83,6 +91,7 @@ public abstract class NativeS3FileSystemContractBaseTest
     store.storeEmptyFile(base + "/dir/file3");
   }
 
+  @Test
   public void testDirWithDifferentMarkersWorks() throws Exception {
 
     for (int i = 0; i <= 3; i++) {
@@ -117,6 +126,7 @@ public abstract class NativeS3FileSystemContractBaseTest
     }
   }
 
+  @Test
   public void testDeleteWithNoMarker() throws Exception {
     String base = "test/hadoop";
     Path path = path("/" + base);
@@ -130,6 +140,7 @@ public abstract class NativeS3FileSystemContractBaseTest
     assertEquals(0, fs.listStatus(path).length);
   }
 
+  @Test
   public void testRenameWithNoMarker() throws Exception {
     String base = "test/hadoop";
     Path dest = path("/test/hadoop2");
@@ -145,11 +156,13 @@ public abstract class NativeS3FileSystemContractBaseTest
     assertEquals(2, fs.listStatus(dest).length);
   }
 
+  @Test
   public void testEmptyFile() throws Exception {
     store.storeEmptyFile("test/hadoop/file1");
     fs.open(path("/test/hadoop/file1")).close();
   }
-  
+
+  @Test
   public void testBlockSize() throws Exception {
     Path file = path("/test/hadoop/file");
     createFile(file);
@@ -162,7 +175,8 @@ public abstract class NativeS3FileSystemContractBaseTest
     assertEquals("Double default block size", newBlockSize,
     fs.getFileStatus(file).getBlockSize());
   }
-  
+
+  @Test
   public void testRetryOnIoException() throws Exception {
     class TestInputStream extends InputStream {
       boolean shouldThrow = true;

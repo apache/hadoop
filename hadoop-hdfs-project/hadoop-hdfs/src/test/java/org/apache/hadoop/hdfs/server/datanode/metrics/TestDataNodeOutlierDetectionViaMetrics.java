@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
+import com.google.common.base.Supplier;
+import org.apache.hadoop.metrics2.lib.MetricsTestHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
@@ -29,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -72,14 +75,25 @@ public class TestDataNodeOutlierDetectionViaMetrics {
     final String slowNodeName = "SlowNode";
 
     DataNodePeerMetrics peerMetrics = new DataNodePeerMetrics(
-        "PeerMetrics-For-Test", WINDOW_INTERVAL_SECONDS,
-        ROLLING_AVERAGE_WINDOWS);
+        "PeerMetrics-For-Test");
+
+    MetricsTestHelper.replaceRollingAveragesScheduler(
+        peerMetrics.getSendPacketDownstreamRollingAverages(),
+        ROLLING_AVERAGE_WINDOWS,
+        WINDOW_INTERVAL_SECONDS, TimeUnit.SECONDS);
 
     injectFastNodesSamples(peerMetrics);
     injectSlowNodeSamples(peerMetrics, slowNodeName);
 
     // Trigger a snapshot.
     peerMetrics.dumpSendPacketDownstreamAvgInfoAsJson();
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return peerMetrics.getOutliers().size() > 0;
+      }
+    }, 500, 100_000);
 
     final Map<String, Double> outliers = peerMetrics.getOutliers();
     LOG.info("Got back outlier nodes: {}", outliers);
@@ -93,8 +107,12 @@ public class TestDataNodeOutlierDetectionViaMetrics {
   @Test
   public void testWithNoOutliers() throws Exception {
     DataNodePeerMetrics peerMetrics = new DataNodePeerMetrics(
-        "PeerMetrics-For-Test", WINDOW_INTERVAL_SECONDS,
-        ROLLING_AVERAGE_WINDOWS);
+        "PeerMetrics-For-Test");
+
+    MetricsTestHelper.replaceRollingAveragesScheduler(
+        peerMetrics.getSendPacketDownstreamRollingAverages(),
+        ROLLING_AVERAGE_WINDOWS,
+        WINDOW_INTERVAL_SECONDS, TimeUnit.SECONDS);
 
     injectFastNodesSamples(peerMetrics);
 

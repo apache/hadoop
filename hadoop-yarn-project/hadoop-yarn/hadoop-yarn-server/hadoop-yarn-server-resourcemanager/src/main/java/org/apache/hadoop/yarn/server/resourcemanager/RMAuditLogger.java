@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 public class RMAuditLogger {
   private static final Log LOG = LogFactory.getLog(RMAuditLogger.class);
 
-  static enum Keys {USER, OPERATION, TARGET, RESULT, IP, PERMISSIONS,
+  enum Keys {USER, OPERATION, TARGET, RESULT, IP, PERMISSIONS,
                     DESCRIPTION, APPID, APPATTEMPTID, CONTAINERID, 
                     CALLERCONTEXT, CALLERSIGNATURE, RESOURCE}
 

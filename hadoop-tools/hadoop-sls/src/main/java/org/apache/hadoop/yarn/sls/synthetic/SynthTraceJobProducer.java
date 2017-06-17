@@ -131,7 +131,7 @@ public class SynthTraceJobProducer implements JobStoryProducer {
   }
 
   public int getNodesPerRack() {
-    return trace.nodes_per_rack;
+    return trace.nodes_per_rack < 1 ? 1: trace.nodes_per_rack;
   }
 
   public int getNumNodes() {

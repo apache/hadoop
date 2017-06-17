@@ -60,7 +60,7 @@ import java.util.Map;
 @InterfaceAudience.Private
 public class KMS {
 
-  public static enum KMSOp {
+  public enum KMSOp {
     CREATE_KEY, DELETE_KEY, ROLL_NEW_VERSION, INVALIDATE_CACHE,
     GET_KEYS, GET_KEYS_METADATA,
     GET_KEY_VERSIONS, GET_METADATA, GET_KEY_VERSION, GET_CURRENT_KEY,
@@ -70,7 +70,7 @@ public class KMS {
   private KeyProviderCryptoExtension provider;
   private KMSAudit kmsAudit;
 
-  private static final Logger LOG = LoggerFactory.getLogger(KMS.class);
+  static final Logger LOG = LoggerFactory.getLogger(KMS.class);
 
   public KMS() throws Exception {
     provider = KMSWebApp.getKeyProvider();

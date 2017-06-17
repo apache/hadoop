@@ -69,7 +69,6 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppCollectorUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -651,10 +650,7 @@ public class ResourceTrackerService extends AbstractService implements
             String previousCollectorAddr = rmApp.getCollectorAddr();
             if (previousCollectorAddr == null
                 || !previousCollectorAddr.equals(collectorAddr)) {
-              // sending collector update event.
-              RMAppCollectorUpdateEvent event =
-                  new RMAppCollectorUpdateEvent(appId, collectorAddr);
-              rmContext.getDispatcher().getEventHandler().handle(event);
+              rmApp.setCollectorAddr(collectorAddr);
             }
           }
         }

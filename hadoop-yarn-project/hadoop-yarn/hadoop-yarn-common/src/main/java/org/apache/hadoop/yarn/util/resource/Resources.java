@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.util.resource;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.util.Records;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 @Unstable
@@ -123,10 +122,7 @@ public class Resources {
   }
 
   public static Resource createResource(int memory, int cores) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemorySize(memory);
-    resource.setVirtualCores(cores);
-    return resource;
+    return Resource.newInstance(memory, cores);
   }
 
   public static Resource createResource(long memory) {
@@ -134,10 +130,7 @@ public class Resources {
   }
 
   public static Resource createResource(long memory, int cores) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemorySize(memory);
-    resource.setVirtualCores(cores);
-    return resource;
+    return Resource.newInstance(memory, cores);
   }
 
   public static Resource none() {
@@ -351,5 +344,10 @@ public class Resources {
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
     return createResource(Math.max(lhs.getMemorySize(), rhs.getMemorySize()),
         Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()));
+  }
+
+  public static boolean isAnyMajorResourceZero(ResourceCalculator rc,
+      Resource resource) {
+    return rc.isAnyMajorResourceZero(resource);
   }
 }

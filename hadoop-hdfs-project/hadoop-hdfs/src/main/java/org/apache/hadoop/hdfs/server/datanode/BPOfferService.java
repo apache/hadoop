@@ -183,19 +183,25 @@ class BPOfferService {
     return nameserviceId;
   }
 
-  String getBlockPoolId() {
+  String getBlockPoolId(boolean quiet) {
     readLock();
     try {
       if (bpNSInfo != null) {
         return bpNSInfo.getBlockPoolID();
       } else {
-        LOG.warn("Block pool ID needed, but service not yet registered with NN",
-            new Exception("trace"));
+        if (!quiet) {
+          LOG.warn("Block pool ID needed, but service not yet registered with "
+              + "NN, trace:", new Exception());
+        }
         return null;
       }
     } finally {
       readUnlock();
     }
+  }
+
+  String getBlockPoolId() {
+    return getBlockPoolId(false);
   }
 
   boolean hasBlockPoolId() {
@@ -679,7 +685,8 @@ class BPOfferService {
     case DatanodeProtocol.DNA_TRANSFER:
       // Send a copy of a block to another datanode
       dn.transferBlocks(bcmd.getBlockPoolId(), bcmd.getBlocks(),
-          bcmd.getTargets(), bcmd.getTargetStorageTypes());
+          bcmd.getTargets(), bcmd.getTargetStorageTypes(),
+          bcmd.getTargetStorageIDs());
       break;
     case DatanodeProtocol.DNA_INVALIDATE:
       //

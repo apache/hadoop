@@ -53,16 +53,19 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private long blockId;
   private final EnumSet<AccessMode> modes;
   private StorageType[] storageTypes;
+  private String[] storageIds;
   private boolean useProto;
 
   private byte [] cache;
 
   public BlockTokenIdentifier() {
-    this(null, null, 0, EnumSet.noneOf(AccessMode.class), null, false);
+    this(null, null, 0, EnumSet.noneOf(AccessMode.class), null, null,
+        false);
   }
 
   public BlockTokenIdentifier(String userId, String bpid, long blockId,
-      EnumSet<AccessMode> modes, StorageType[] storageTypes, boolean useProto) {
+      EnumSet<AccessMode> modes, StorageType[] storageTypes,
+      String[] storageIds, boolean useProto) {
     this.cache = null;
     this.userId = userId;
     this.blockPoolId = bpid;
@@ -70,6 +73,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     this.modes = modes == null ? EnumSet.noneOf(AccessMode.class) : modes;
     this.storageTypes = Optional.ofNullable(storageTypes)
                                 .orElse(StorageType.EMPTY_ARRAY);
+    this.storageIds = Optional.ofNullable(storageIds)
+                              .orElse(new String[0]);
     this.useProto = useProto;
   }
 
@@ -125,6 +130,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return storageTypes;
   }
 
+  public String[] getStorageIds(){
+    return storageIds;
+  }
+
   @Override
   public String toString() {
     return "block_token_identifier (expiryDate=" + this.getExpiryDate()
@@ -132,7 +141,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
         + ", blockPoolId=" + this.getBlockPoolId()
         + ", blockId=" + this.getBlockId() + ", access modes="
         + this.getAccessModes() + ", storageTypes= "
-        + Arrays.toString(this.getStorageTypes()) + ")";
+        + Arrays.toString(this.getStorageTypes()) + ", storageIds= "
+        + Arrays.toString(this.getStorageIds()) + ")";
   }
 
   static boolean isEqual(Object a, Object b) {
@@ -151,7 +161,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
           && isEqual(this.blockPoolId, that.blockPoolId)
           && this.blockId == that.blockId
           && isEqual(this.modes, that.modes)
-          && Arrays.equals(this.storageTypes, that.storageTypes);
+          && Arrays.equals(this.storageTypes, that.storageTypes)
+          && Arrays.equals(this.storageIds, that.storageIds);
     }
     return false;
   }
@@ -161,7 +172,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return (int) expiryDate ^ keyId ^ (int) blockId ^ modes.hashCode()
         ^ (userId == null ? 0 : userId.hashCode())
         ^ (blockPoolId == null ? 0 : blockPoolId.hashCode())
-        ^ (storageTypes == null ? 0 : Arrays.hashCode(storageTypes));
+        ^ (storageTypes == null ? 0 : Arrays.hashCode(storageTypes))
+        ^ (storageIds == null ? 0 : Arrays.hashCode(storageIds));
   }
 
   /**
@@ -220,6 +232,14 @@ public class BlockTokenIdentifier extends TokenIdentifier {
       readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
     }
     storageTypes = readStorageTypes;
+
+    length = WritableUtils.readVInt(in);
+    String[] readStorageIds = new String[length];
+    for (int i = 0; i < length; i++) {
+      readStorageIds[i] = WritableUtils.readString(in);
+    }
+    storageIds = readStorageIds;
+
     useProto = false;
   }
 
@@ -248,6 +268,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageTypes = blockTokenSecretProto.getStorageTypesList().stream()
         .map(PBHelperClient::convertStorageType)
         .toArray(StorageType[]::new);
+    storageIds = blockTokenSecretProto.getStorageIdsList().stream()
+        .toArray(String[]::new);
     useProto = true;
   }
 
@@ -274,6 +296,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     WritableUtils.writeVInt(out, storageTypes.length);
     for (StorageType type: storageTypes){
       WritableUtils.writeEnum(out, type);
+    }
+    WritableUtils.writeVInt(out, storageIds.length);
+    for (String id: storageIds) {
+      WritableUtils.writeString(out, id);
     }
   }
 

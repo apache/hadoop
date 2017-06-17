@@ -460,8 +460,6 @@ public class NodeManager extends CompositeService
       @Override
       public void run() {
         try {
-          LOG.info("Notifying ContainerManager to block new container-requests");
-          containerManager.setBlockNewContainerRequests(true);
           if (!rmWorkPreservingRestartEnabled) {
             LOG.info("Cleaning up running containers on resync");
             containerManager.cleanupContainersOnNMResync();

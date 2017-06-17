@@ -199,7 +199,7 @@ public class TestFavoredNodesEndToEnd {
       InetSocketAddress[] dns = getDatanodes(rand);
       Path p = new Path("/filename"+i);
       FSDataOutputStream out =
-          dfs.newFSDataOutputStreamBuilder(p).setFavoredNodes(dns).build();
+          dfs.createFile(p).favoredNodes(dns).build();
       out.write(SOME_BYTES);
       out.close();
       BlockLocation[] locations = getBlockLocations(p);

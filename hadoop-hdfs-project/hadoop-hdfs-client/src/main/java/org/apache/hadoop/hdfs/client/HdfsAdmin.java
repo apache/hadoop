@@ -27,6 +27,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
@@ -265,6 +267,17 @@ public class HdfsAdmin {
    */
   public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
     return dfs.listCachePools();
+  }
+
+  /**
+   * Get KeyProvider if present.
+   *
+   * @return the key provider if encryption is enabled on HDFS.
+   *         Otherwise, it returns null.
+   * @throws IOException on RPC exception to the NN.
+   */
+  public KeyProvider getKeyProvider() throws IOException {
+    return dfs.getClient().getKeyProvider();
   }
 
   /**
@@ -546,6 +559,20 @@ public class HdfsAdmin {
     // Update the permission bits
     dfs.mkdir(trashPath, TRASH_PERMISSION);
     dfs.setPermission(trashPath, TRASH_PERMISSION);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list all open files
+   * currently managed by the NameNode. For large numbers of open files,
+   * iterator will fetch the list in batches of configured size.
+   * <p/>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the all open files.
+   * <p/>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
+    return dfs.listOpenFiles();
   }
 
 }

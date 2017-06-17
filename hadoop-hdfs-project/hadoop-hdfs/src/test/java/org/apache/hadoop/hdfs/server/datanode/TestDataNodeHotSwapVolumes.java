@@ -97,6 +97,7 @@ public class TestDataNodeHotSwapVolumes {
   private static final int BLOCK_SIZE = 512;
   private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
   private MiniDFSCluster cluster;
+  private Configuration conf;
 
   @After
   public void tearDown() {
@@ -111,7 +112,7 @@ public class TestDataNodeHotSwapVolumes {
   private void startDFSCluster(int numNameNodes, int numDataNodes,
       int storagePerDataNode) throws IOException {
     shutdown();
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
 
     /*
@@ -756,7 +757,7 @@ public class TestDataNodeHotSwapVolumes {
     }
   }
 
-  @Test(timeout=180000)
+  @Test(timeout=600000)
   public void testRemoveVolumeBeingWritten()
       throws InterruptedException, TimeoutException, ReconfigurationException,
       IOException, BrokenBarrierException {
@@ -801,10 +802,12 @@ public class TestDataNodeHotSwapVolumes {
             // Bypass the argument to FsDatasetImpl#finalizeBlock to verify that
             // the block is not removed, since the volume reference should not
             // be released at this point.
-            data.finalizeBlock((ExtendedBlock) invocation.getArguments()[0]);
+            data.finalizeBlock((ExtendedBlock) invocation.getArguments()[0],
+              (boolean) invocation.getArguments()[1]);
             return null;
           }
-        }).when(dn.data).finalizeBlock(any(ExtendedBlock.class));
+        }).when(dn.data).finalizeBlock(any(ExtendedBlock.class),
+            Mockito.anyBoolean());
 
     final CyclicBarrier barrier = new CyclicBarrier(2);
 
@@ -848,6 +851,9 @@ public class TestDataNodeHotSwapVolumes {
           1, fsVolumeReferences.size());
     }
 
+    // Add a new DataNode to help with the pipeline recover.
+    cluster.startDataNodes(conf, 1, true, null, null, null);
+
     // Verify the file has sufficient replications.
     DFSTestUtil.waitReplication(fs, testFile, REPLICATION);
     // Read the content back
@@ -856,6 +862,32 @@ public class TestDataNodeHotSwapVolumes {
 
     if (!exceptions.isEmpty()) {
       throw new IOException(exceptions.get(0).getCause());
+    }
+
+    // Write more files to make sure that the DataNode that has removed volume
+    // is still alive to receive data.
+    for (int i = 0; i < 10; i++) {
+      final Path file = new Path("/after-" + i);
+      try (FSDataOutputStream fout = fs.create(file, REPLICATION)) {
+        rb.nextBytes(writeBuf);
+        fout.write(writeBuf);
+      }
+    }
+
+    try (FsDatasetSpi.FsVolumeReferences fsVolumeReferences = fsDatasetSpi
+        .getFsVolumeReferences()) {
+      assertEquals("Volume remove wasn't successful.",
+          1, fsVolumeReferences.size());
+      FsVolumeSpi volume = fsVolumeReferences.get(0);
+      String bpid = cluster.getNamesystem().getBlockPoolId();
+      FsVolumeSpi.BlockIterator blkIter = volume.newBlockIterator(bpid, "test");
+      int blockCount = 0;
+      while (!blkIter.atEnd()) {
+        blkIter.nextBlock();
+        blockCount++;
+      }
+      assertTrue(String.format("DataNode(%d) should have more than 1 blocks",
+          dataNodeIdx), blockCount > 1);
     }
   }
 

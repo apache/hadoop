@@ -198,7 +198,7 @@ public class ValueQueue <E> {
    * "n" values and Queue is empty.
    * This decides how many values to return when client calls "getAtMost"
    */
-  public static enum SyncGenerationPolicy {
+  public enum SyncGenerationPolicy {
     ATLEAST_ONE, // Return atleast 1 value
     LOW_WATERMARK, // Return min(n, lowWatermark * numValues) values
     ALL // Return n values

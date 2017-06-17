@@ -868,7 +868,10 @@ public class NNBench extends Configured implements Tool {
           try {
             // Set up timer for measuring AL
             startTimeAL = System.currentTimeMillis();
-            filesystem.rename(filePath, filePathR);
+            boolean result = filesystem.rename(filePath, filePathR);
+            if (!result) {
+              throw new IOException("rename failed for " + filePath);
+            }
             totalTimeAL1 += (System.currentTimeMillis() - startTimeAL);
             
             successfulOp = true;
@@ -901,7 +904,10 @@ public class NNBench extends Configured implements Tool {
           try {
             // Set up timer for measuring AL
             startTimeAL = System.currentTimeMillis();
-            filesystem.delete(filePath, true);
+            boolean result = filesystem.delete(filePath, true);
+            if (!result) {
+              throw new IOException("delete failed for " + filePath);
+            }
             totalTimeAL1 += (System.currentTimeMillis() - startTimeAL);
             
             successfulOp = true;

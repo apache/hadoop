@@ -798,7 +798,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * The default implementation returns an array containing one element:
    * <pre>
-   * BlockLocation( { "localhost:50010" },  { "localhost" }, 0, file.getLen())
+   * BlockLocation( { "localhost:9866" },  { "localhost" }, 0, file.getLen())
    * </pre>>
    *
    * @param file FilesStatus to get data from
@@ -4140,12 +4140,43 @@ public abstract class FileSystem extends Configured implements Closeable {
     return GlobalStorageStatistics.INSTANCE;
   }
 
+  private static final class FileSystemDataOutputStreamBuilder extends
+      FSDataOutputStreamBuilder<FSDataOutputStream,
+        FileSystemDataOutputStreamBuilder> {
+
+    /**
+     * Constructor.
+     */
+    protected FileSystemDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+      super(fileSystem, p);
+    }
+
+    @Override
+    public FSDataOutputStream build() throws IOException {
+      return getFS().create(getPath(), getPermission(), getFlags(),
+          getBufferSize(), getReplication(), getBlockSize(), getProgress(),
+          getChecksumOpt());
+    }
+
+    @Override
+    protected FileSystemDataOutputStreamBuilder getThisBuilder() {
+      return this;
+    }
+  }
+
   /**
    * Create a new FSDataOutputStreamBuilder for the file with path.
+   * Files are overwritten by default.
+   *
    * @param path file path
    * @return a FSDataOutputStreamBuilder object to build the file
+   *
+   * HADOOP-14384. Temporarily reduce the visibility of method before the
+   * builder interface becomes stable.
    */
-  public FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
-    return new FSDataOutputStreamBuilder(this, path);
+  @InterfaceAudience.Private
+  protected FSDataOutputStreamBuilder createFile(Path path) {
+    return new FileSystemDataOutputStreamBuilder(this, path)
+        .create().overwrite(true);
   }
 }

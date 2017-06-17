@@ -123,7 +123,7 @@ public class TestDFSIO implements Tool {
     Configuration.addDefaultResource("mapred-site.xml");
   }
 
-  private static enum TestType {
+  private enum TestType {
     TEST_TYPE_READ("read"),
     TEST_TYPE_WRITE("write"),
     TEST_TYPE_CLEANUP("cleanup"),
@@ -145,7 +145,7 @@ public class TestDFSIO implements Tool {
     }
   }
 
-  static enum ByteMultiple {
+  enum ByteMultiple {
     B(1L),
     KB(0x400L),
     MB(0x100000L),

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.conf;
 
-import com.fasterxml.aalto.stax.InputFactoryImpl;
+import com.ctc.wstx.stax.WstxInputFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.annotations.VisibleForTesting;
@@ -284,7 +284,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Specify exact input factory to avoid time finding correct one.
    * Factory is reusable across un-synchronized threads once initialized
    */
-  private static final XMLInputFactory2 factory = new InputFactoryImpl();
+  private static final XMLInputFactory2 XML_INPUT_FACTORY = new WstxInputFactory();
 
   /**
    * Class to keep the information about the keys which replace the deprecated
@@ -2646,7 +2646,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (is == null) {
       return null;
     }
-    return factory.createXMLStreamReader(systemId, is);
+    return XML_INPUT_FACTORY.createXMLStreamReader(systemId, is);
   }
 
   private void loadResources(Properties properties,
@@ -2714,6 +2714,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       StringBuilder token = new StringBuilder();
       String confName = null;
       String confValue = null;
+      String confInclude = null;
       boolean confFinal = false;
       boolean fallbackAllowed = false;
       boolean fallbackEntered = false;
@@ -2757,7 +2758,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             break;
           case "include":
             // Determine href for xi:include
-            String confInclude = null;
+            confInclude = null;
             attrCount = reader.getAttributeCount();
             for (int i = 0; i < attrCount; i++) {
               String attrName = reader.getAttributeLocalName(i);
@@ -2776,18 +2777,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               Resource classpathResource = new Resource(include, name);
               loadResource(properties, classpathResource, quiet);
             } else {
-              File href = new File(confInclude);
-              if (!href.isAbsolute()) {
-                // Included resources are relative to the current resource
-                File baseFile = new File(name).getParentFile();
-                href = new File(baseFile, href.getPath());
+              URL url;
+              try {
+                url = new URL(confInclude);
+                url.openConnection().connect();
+              } catch (IOException ioe) {
+                File href = new File(confInclude);
+                if (!href.isAbsolute()) {
+                  // Included resources are relative to the current resource
+                  File baseFile = new File(name).getParentFile();
+                  href = new File(baseFile, href.getPath());
+                }
+                if (!href.exists()) {
+                  // Resource errors are non-fatal iff there is 1 xi:fallback
+                  fallbackAllowed = true;
+                  break;
+                }
+                url = href.toURI().toURL();
               }
-              if (!href.exists()) {
-                // Resource errors are non-fatal iff there is 1 xi:fallback
-                fallbackAllowed = true;
-                break;
-              }
-              Resource uriResource = new Resource(href.toURI().toURL(), name);
+              Resource uriResource = new Resource(url, name);
               loadResource(properties, uriResource, quiet);
             }
             break;
@@ -2828,8 +2836,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             break;
           case "include":
             if (fallbackAllowed && !fallbackEntered) {
-              throw new IOException("Fetch fail on include with no "
-                  + "fallback while loading '" + name + "'");
+              throw new IOException("Fetch fail on include for '"
+                  + confInclude + "' with no fallback while loading '"
+                  + name + "'");
             }
             fallbackAllowed = false;
             fallbackEntered = false;

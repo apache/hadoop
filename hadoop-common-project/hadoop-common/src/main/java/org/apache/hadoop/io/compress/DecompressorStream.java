@@ -221,8 +221,11 @@ public class DecompressorStream extends CompressionInputStream {
   @Override
   public void close() throws IOException {
     if (!closed) {
-      in.close();
-      closed = true;
+      try {
+        super.close();
+      } finally {
+        closed = true;
+      }
     }
   }
 

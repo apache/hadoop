@@ -90,7 +90,7 @@ public class SysInfoWindows extends SysInfo {
     return null;
   }
 
-  void refreshIfNeeded() {
+  synchronized void refreshIfNeeded() {
     long now = now();
     if (now - lastRefreshTime > REFRESH_INTERVAL_MS) {
       long refreshInterval = now - lastRefreshTime;

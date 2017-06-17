@@ -37,8 +37,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import junit.framework.AssertionFailedError;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -328,7 +326,7 @@ public class TestNetUtils {
   private void assertInException(Exception e, String text) throws Throwable {
     String message = extractExceptionMessage(e);
     if (!(message.contains(text))) {
-      throw new AssertionFailedError("Wrong text in message "
+      throw new AssertionError("Wrong text in message "
         + "\"" + message + "\""
         + " expected \"" + text + "\"")
           .initCause(e);
@@ -339,7 +337,7 @@ public class TestNetUtils {
     assertNotNull("Null Exception", e);
     String message = e.getMessage();
     if (message == null) {
-      throw new AssertionFailedError("Empty text in exception " + e)
+      throw new AssertionError("Empty text in exception " + e)
           .initCause(e);
     }
     return message;
@@ -349,7 +347,7 @@ public class TestNetUtils {
       throws Throwable{
     String message = extractExceptionMessage(e);
     if (message.contains(text)) {
-      throw new AssertionFailedError("Wrong text in message "
+      throw new AssertionError("Wrong text in message "
            + "\"" + message + "\""
            + " did not expect \"" + text + "\"")
           .initCause(e);
@@ -364,7 +362,7 @@ public class TestNetUtils {
          "localhost", LOCAL_PORT, e);
     LOG.info(wrapped.toString(), wrapped);
     if(!(wrapped.getClass().equals(expectedClass))) {
-      throw new AssertionFailedError("Wrong exception class; expected "
+      throw new AssertionError("Wrong exception class; expected "
          + expectedClass
          + " got " + wrapped.getClass() + ": " + wrapped).initCause(wrapped);
     }

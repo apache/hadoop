@@ -57,8 +57,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import com.google.common.io.Files;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.logging.Log;
@@ -120,7 +118,10 @@ public class TestOfflineImageViewer {
   // multiple tests.
   @BeforeClass
   public static void createOriginalFSImage() throws IOException {
-    tempDir = Files.createTempDir();
+    File[] nnDirs = MiniDFSCluster.getNameNodeDirectory(
+        MiniDFSCluster.getBaseDirectory(), 0, 0);
+    tempDir = nnDirs[0];
+
     MiniDFSCluster cluster = null;
     try {
       final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies

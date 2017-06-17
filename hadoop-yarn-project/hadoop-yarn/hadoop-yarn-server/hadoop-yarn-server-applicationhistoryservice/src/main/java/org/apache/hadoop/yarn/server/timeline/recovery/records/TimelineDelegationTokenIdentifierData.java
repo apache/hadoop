@@ -1,5 +1,3 @@
-package org.apache.hadoop.yarn.server.timeline.recovery.records;
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,6 +15,8 @@ package org.apache.hadoop.yarn.server.timeline.recovery.records;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package org.apache.hadoop.yarn.server.timeline.recovery.records;
 
 import org.apache.hadoop.yarn.proto.YarnServerTimelineServerRecoveryProtos.TimelineDelegationTokenIdentifierDataProto;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;

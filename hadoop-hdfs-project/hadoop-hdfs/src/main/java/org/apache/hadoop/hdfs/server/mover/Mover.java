@@ -180,6 +180,7 @@ public class Mover {
       return ExitStatus.ILLEGAL_ARGUMENTS;
     } catch (IOException e) {
       System.out.println(e + ".  Exiting ...");
+      LOG.error(e + ".  Exiting ...");
       return ExitStatus.IO_EXCEPTION;
     } finally {
       dispatcher.shutdownNow();

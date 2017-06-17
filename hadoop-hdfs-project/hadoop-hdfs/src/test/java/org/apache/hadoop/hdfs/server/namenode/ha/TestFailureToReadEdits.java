@@ -82,7 +82,7 @@ public class TestFailureToReadEdits {
   private NameNode nn1;
   private FileSystem fs;
   
-  private static enum TestType {
+  private enum TestType {
     SHARED_DIR_HA,
     QJM_HA;
   };

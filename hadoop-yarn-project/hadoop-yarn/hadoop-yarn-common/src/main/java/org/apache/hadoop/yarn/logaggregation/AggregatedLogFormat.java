@@ -310,6 +310,10 @@ public class AggregatedLogFormat {
     }
 
     private Set<File> getPendingLogFilesToUpload(File containerLogDir) {
+      if(containerLogDir == null ||
+          containerLogDir.listFiles() == null) {
+        return new HashSet<>(0);
+      }
       Set<File> candidates =
           new HashSet<File>(Arrays.asList(containerLogDir.listFiles()));
       for (File logFile : candidates) {

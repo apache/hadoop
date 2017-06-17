@@ -133,7 +133,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
       throws IOException {
     String result = "";
     try {
-      // shell command does not expect '@' at the begining of the group name
+      // shell command does not expect '@' at the beginning of the group name
       result = Shell.execCommand(
         Shell.getUsersForNetgroupCommand(netgroup.substring(1)));
     } catch (ExitCodeException e) {

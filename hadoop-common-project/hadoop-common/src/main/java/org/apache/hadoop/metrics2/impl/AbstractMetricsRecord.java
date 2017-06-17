@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
-
 import org.apache.hadoop.metrics2.MetricsRecord;
+
+import java.util.StringJoiner;
 
 abstract class AbstractMetricsRecord implements MetricsRecord {
 
@@ -44,12 +44,12 @@ abstract class AbstractMetricsRecord implements MetricsRecord {
   }
 
   @Override public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("timestamp", timestamp())
-        .add("name", name())
-        .add("description", description())
-        .add("tags", tags())
-        .add("metrics", Iterables.toString(metrics()))
+    return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+        .add("timestamp=" + timestamp())
+        .add("name=" + name())
+        .add("description=" + description())
+        .add("tags=" + tags())
+        .add("metrics=" + Iterables.toString(metrics()))
         .toString();
   }
 }

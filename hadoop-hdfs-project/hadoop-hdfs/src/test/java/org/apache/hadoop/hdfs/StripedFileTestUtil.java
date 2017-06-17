@@ -49,6 +49,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -567,5 +568,16 @@ public class StripedFileTestUtil {
    */
   public static ErasureCodingPolicy getDefaultECPolicy() {
     return SystemErasureCodingPolicies.getPolicies().get(0);
+  }
+
+  /**
+   * Get non-default Erasure Coding Policy randomly.
+   * @return ErasureCodingPolicy
+   */
+  public static ErasureCodingPolicy getRandomNonDefaultECPolicy() {
+    Random rand = new Random();
+    List<ErasureCodingPolicy> policies = SystemErasureCodingPolicies
+            .getPolicies();
+    return policies.get(1 + rand.nextInt(policies.size() - 1));
   }
 }

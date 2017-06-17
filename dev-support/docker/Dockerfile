@@ -93,6 +93,7 @@ RUN mkdir -p /opt/maven && \
          -o /opt/maven.tar.gz && \
     tar xzf /opt/maven.tar.gz --strip-components 1 -C /opt/maven
 ENV MAVEN_HOME /opt/maven
+ENV PATH "$PATH:/opt/maven/bin"
 
 ######
 # Install findbugs

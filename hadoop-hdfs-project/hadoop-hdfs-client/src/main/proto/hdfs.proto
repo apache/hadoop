@@ -371,6 +371,12 @@ message ErasureCodingPolicyProto {
   required uint32 id = 4; // Actually a byte - only 8 bits used
 }
 
+message AddECPolicyResponseProto {
+  required ErasureCodingPolicyProto policy = 1;
+  required bool succeed = 2;
+  optional string errorMsg = 3;
+}
+
 /**
  * Status of a file, directory or symlink
  * Optionally includes a file's block locations if requested by client on the rpc call.
@@ -564,4 +570,5 @@ message BlockTokenSecretProto {
   optional uint64 blockId = 5;
   repeated AccessModeProto modes = 6;
   repeated StorageTypeProto storageTypes = 7;
+  repeated string storageIds = 8;
 }

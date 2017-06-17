@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.metrics2;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
-import static com.google.common.base.Preconditions.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.util.StringJoiner;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Immutable tag for metrics (for grouping on host/queue/username etc.)
@@ -81,9 +82,9 @@ public class MetricsTag implements MetricsInfo {
   }
 
   @Override public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("info", info)
-        .add("value", value())
+    return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+        .add("info=" + info)
+        .add("value=" + value())
         .toString();
   }
 }

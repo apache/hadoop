@@ -64,6 +64,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -82,6 +83,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
@@ -1220,6 +1222,7 @@ public abstract class Server {
           if (channel.isOpen()) {
             IOUtils.cleanup(null, channel);
           }
+          connectionManager.droppedConnections.getAndIncrement();
           continue;
         }
         key.attach(c);  // so closeCurrentConnection can get the object
@@ -1552,7 +1555,7 @@ public abstract class Server {
   }
 
   @InterfaceAudience.Private
-  public static enum AuthProtocol {
+  public enum AuthProtocol {
     NONE(0),
     SASL(-33);
     
@@ -2477,7 +2480,9 @@ public abstract class Server {
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
 
       try {
-        queueCall(call);
+        internalQueueCall(call);
+      } catch (RpcServerException rse) {
+        throw rse;
       } catch (IOException ioe) {
         throw new FatalRpcServerException(
             RpcErrorCodeProto.ERROR_RPC_SERVER, ioe);
@@ -2614,9 +2619,19 @@ public abstract class Server {
   }
 
   public void queueCall(Call call) throws IOException, InterruptedException {
-    if (!callQueue.isClientBackoffEnabled()) {
+    // external non-rpc calls don't need server exception wrapper.
+    try {
+      internalQueueCall(call);
+    } catch (RpcServerException rse) {
+      throw (IOException)rse.getCause();
+    }
+  }
+
+  private void internalQueueCall(Call call)
+      throws IOException, InterruptedException {
+    try {
       callQueue.put(call); // queue the call; maybe blocked here
-    } else if (callQueue.shouldBackOff(call) || !callQueue.offer(call)) {
+    } catch (CallQueueOverflowException cqe) {
       // If rpc scheduler indicates back off based on performance degradation
       // such as response time or rpc queue is full, we will ask the client
       // to back off by throwing RetriableException. Whether the client will
@@ -2624,7 +2639,8 @@ public abstract class Server {
       // For example, IPC clients using FailoverOnNetworkExceptionRetry handle
       // RetriableException.
       rpcMetrics.incrClientBackoff();
-      throw new RetriableException("Server is too busy.");
+      // unwrap retriable exception.
+      throw cqe.getCause();
     }
   }
 
@@ -3161,6 +3177,16 @@ public abstract class Server {
   }
 
   /**
+   * The number of RPC connections dropped due to
+   * too many connections.
+   * @return the number of dropped rpc connections
+   */
+  public long getNumDroppedConnections() {
+    return connectionManager.getDroppedConnections();
+
+  }
+
+  /**
    * The number of rpc calls in the queue.
    * @return The number of rpc calls in the queue.
    */
@@ -3277,7 +3303,8 @@ public abstract class Server {
   }
   
   private class ConnectionManager {
-    final private AtomicInteger count = new AtomicInteger();    
+    final private AtomicInteger count = new AtomicInteger();
+    final private AtomicLong droppedConnections = new AtomicLong();
     final private Set<Connection> connections;
     /* Map to maintain the statistics per User */
     final private Map<String, Integer> userToConnectionsMap;
@@ -3362,6 +3389,11 @@ public abstract class Server {
 
     Map<String, Integer> getUserToConnectionsMap() {
       return userToConnectionsMap;
+    }
+
+
+    long getDroppedConnections() {
+      return droppedConnections.get();
     }
 
     int size() {

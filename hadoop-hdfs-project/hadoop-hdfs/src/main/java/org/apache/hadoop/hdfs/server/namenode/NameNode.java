@@ -86,6 +86,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -209,7 +210,7 @@ public class NameNode extends ReconfigurableBase implements
   /**
    * Categories of operations supported by the namenode.
    */
-  public static enum OperationCategory {
+  public enum OperationCategory {
     /** Operations that are state agnostic */
     UNCHECKED,
     /** Read operation that does not change the namespace state */
@@ -365,8 +366,9 @@ public class NameNode extends ReconfigurableBase implements
   private final boolean haEnabled;
   private final HAContext haContext;
   protected final boolean allowStaleStandbyReads;
-  private AtomicBoolean started = new AtomicBoolean(false); 
+  private AtomicBoolean started = new AtomicBoolean(false);
 
+  private final static int HEALTH_MONITOR_WARN_THRESHOLD_MS = 5000;
   
   /** httpServer */
   protected NameNodeHttpServer httpServer;
@@ -1715,7 +1717,14 @@ public class NameNode extends ReconfigurableBase implements
     if (!haEnabled) {
       return; // no-op, if HA is not enabled
     }
+    long start = Time.monotonicNow();
     getNamesystem().checkAvailableResources();
+    long end = Time.monotonicNow();
+    if (end - start >= HEALTH_MONITOR_WARN_THRESHOLD_MS) {
+      // log a warning if it take >= 5 seconds.
+      LOG.warn("Remote IP {} checking available resources took {}ms",
+          Server.getRemoteIp(), end - start);
+    }
     if (!getNamesystem().nameNodeHasResourcesAvailable()) {
       throw new HealthCheckFailedException(
           "The NameNode has no resources available");

@@ -174,4 +174,13 @@ public interface PlanView extends PlanContext {
   public RLESparseResourceAllocation getConsumptionForUserOverTime(String user,
       long start, long end);
 
+  /**
+   * Get the cumulative load over a time interval.
+   *
+   * @param start Start of the time interval.
+   * @param end End of the time interval.
+   * @return RLE sparse allocation.
+   */
+  RLESparseResourceAllocation getCumulativeLoadOverTime(long start, long end);
+
 }

@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -52,7 +53,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +80,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
  */
 public class ProportionalCapacityPreemptionPolicy
     implements SchedulingEditPolicy, CapacitySchedulerPreemptionContext {
+
+  /**
+   * IntraQueuePreemptionOrder will be used to define various priority orders
+   * which could be configured by admin.
+   */
+  @Unstable
+  public enum IntraQueuePreemptionOrderPolicy {
+    PRIORITY_FIRST, USERLIMIT_FIRST;
+  }
+
   private static final Log LOG =
     LogFactory.getLog(ProportionalCapacityPreemptionPolicy.class);
 
@@ -96,6 +106,7 @@ public class ProportionalCapacityPreemptionPolicy
 
   private float maxAllowableLimitForIntraQueuePreemption;
   private float minimumThresholdForIntraQueuePreemption;
+  private IntraQueuePreemptionOrderPolicy intraQueuePreemptionOrderPolicy;
 
   // Pointer to other RM components
   private RMContext rmContext;
@@ -191,6 +202,13 @@ public class ProportionalCapacityPreemptionPolicy
         CapacitySchedulerConfiguration.
         DEFAULT_INTRAQUEUE_PREEMPTION_MINIMUM_THRESHOLD);
 
+    intraQueuePreemptionOrderPolicy = IntraQueuePreemptionOrderPolicy
+        .valueOf(csConfig
+            .get(
+                CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+                CapacitySchedulerConfiguration.DEFAULT_INTRAQUEUE_PREEMPTION_ORDER_POLICY)
+            .toUpperCase());
+
     rc = scheduler.getResourceCalculator();
     nlm = scheduler.getRMContext().getNodeLabelManager();
 
@@ -243,7 +261,6 @@ public class ProportionalCapacityPreemptionPolicy
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void preemptOrkillSelectedContainerAfterWait(
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       long currentTime) {
@@ -306,16 +323,12 @@ public class ProportionalCapacityPreemptionPolicy
 
   private void cleanupStaledPreemptionCandidates(long currentTime) {
     // Keep the preemptionCandidates list clean
-    for (Iterator<RMContainer> i = preemptionCandidates.keySet().iterator();
-         i.hasNext(); ) {
-      RMContainer id = i.next();
-      // garbage collect containers that are irrelevant for preemption
-      // And avoid preempt selected containers for *this execution*
-      // or within 1 ms
-      if (preemptionCandidates.get(id) + 2 * maxWaitTime < currentTime) {
-        i.remove();
-      }
-    }
+    // garbage collect containers that are irrelevant for preemption
+    // And avoid preempt selected containers for *this execution*
+    // or within 1 ms
+    preemptionCandidates.entrySet()
+        .removeIf(candidate ->
+            candidate.getValue() + 2 * maxWaitTime < currentTime);
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
@@ -656,5 +669,10 @@ public class ProportionalCapacityPreemptionPolicy
       partitionToUnderServedQueues.put(partition, underServedQueues);
     }
     underServedQueues.add(queueName);
+  }
+
+  @Override
+  public IntraQueuePreemptionOrderPolicy getIntraQueuePreemptionOrderPolicy() {
+    return intraQueuePreemptionOrderPolicy;
   }
 }

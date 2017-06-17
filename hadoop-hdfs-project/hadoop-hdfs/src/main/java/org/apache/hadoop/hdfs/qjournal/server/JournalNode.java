@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -297,14 +299,18 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
         return file.isDirectory();
       }
     });
-    for (File journalDir : journalDirs) {
-      String jid = journalDir.getName();
-      if (!status.containsKey(jid)) {
-        Map<String, String> jMap = new HashMap<String, String>();
-        jMap.put("Formatted", "true");
-        status.put(jid, jMap);
+
+    if (journalDirs != null) {
+      for (File journalDir : journalDirs) {
+        String jid = journalDir.getName();
+        if (!status.containsKey(jid)) {
+          Map<String, String> jMap = new HashMap<String, String>();
+          jMap.put("Formatted", "true");
+          status.put(jid, jMap);
+        }
       }
     }
+
     return JSON.toString(status);
   }
   
@@ -326,7 +332,12 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
   public static void main(String[] args) throws Exception {
     StringUtils.startupShutdownMessage(JournalNode.class, args, LOG);
-    System.exit(ToolRunner.run(new JournalNode(), args));
+    try {
+      System.exit(ToolRunner.run(new JournalNode(), args));
+    } catch (Throwable e) {
+      LOG.error("Failed to start journalnode.", e);
+      terminate(-1, e);
+    }
   }
 
   public void doPreUpgrade(String journalId) throws IOException {

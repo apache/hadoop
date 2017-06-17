@@ -157,7 +157,7 @@ public class TimelineServicePerformance extends Configured implements Tool {
   /**
    * TimelineServer Performance counters
    */
-  static enum PerfCounters {
+  enum PerfCounters {
     TIMELINE_SERVICE_WRITE_TIME,
     TIMELINE_SERVICE_WRITE_COUNTER,
     TIMELINE_SERVICE_WRITE_FAILURES,

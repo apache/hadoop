@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.Ap
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.EpochPBImpl;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -72,6 +73,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * {@link RMStateStore} implementation backed by ZooKeeper.
@@ -82,6 +85,31 @@ import java.util.List;
  * |--- EPOCH_NODE
  * |--- RM_ZK_FENCING_LOCK
  * |--- RM_APP_ROOT
+ * |     |----- HIERARCHIES
+ * |     |        |----- 1
+ * |     |        |      |----- (#ApplicationId barring last character)
+ * |     |        |      |       |----- (#Last character of ApplicationId)
+ * |     |        |      |       |       |----- (#ApplicationAttemptIds)
+ * |     |        |      ....
+ * |     |        |
+ * |     |        |----- 2
+ * |     |        |      |----- (#ApplicationId barring last 2 characters)
+ * |     |        |      |       |----- (#Last 2 characters of ApplicationId)
+ * |     |        |      |       |       |----- (#ApplicationAttemptIds)
+ * |     |        |      ....
+ * |     |        |
+ * |     |        |----- 3
+ * |     |        |      |----- (#ApplicationId barring last 3 characters)
+ * |     |        |      |       |----- (#Last 3 characters of ApplicationId)
+ * |     |        |      |       |       |----- (#ApplicationAttemptIds)
+ * |     |        |      ....
+ * |     |        |
+ * |     |        |----- 4
+ * |     |        |      |----- (#ApplicationId barring last 4 characters)
+ * |     |        |      |       |----- (#Last 4 characters of ApplicationId)
+ * |     |        |      |       |       |----- (#ApplicationAttemptIds)
+ * |     |        |      ....
+ * |     |        |
  * |     |----- (#ApplicationId1)
  * |     |        |----- (#ApplicationAttemptIds)
  * |     |
@@ -116,11 +144,17 @@ import java.util.List;
  * Also, AMRMToken has been removed from ApplicationAttemptState.
  *
  * Changes from 1.2 to 1.3, Addition of ReservationSystem state.
+ *
+ * Changes from 1.3 to 1.4 - Change the structure of application znode by
+ * splitting it in 2 parts, depending on a configurable split index. This limits
+ * the number of application znodes returned in a single call while loading
+ * app state.
  */
 @Private
 @Unstable
 public class ZKRMStateStore extends RMStateStore {
   private static final Log LOG = LogFactory.getLog(ZKRMStateStore.class);
+
   private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME =
       "RMDelegationTokensRoot";
   private static final String RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME =
@@ -129,12 +163,15 @@ public class ZKRMStateStore extends RMStateStore {
       "RMDTMasterKeysRoot";
   @VisibleForTesting
   public static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
-  protected static final Version CURRENT_VERSION_INFO =
-      Version.newInstance(1, 3);
+  protected static final Version CURRENT_VERSION_INFO = Version
+      .newInstance(1, 4);
+  @VisibleForTesting
+  public static final String RM_APP_ROOT_HIERARCHIES = "HIERARCHIES";
 
   /* Znode paths */
   private String zkRootNodePath;
   private String rmAppRoot;
+  private Map<Integer, String> rmAppRootHierarchies;
   private String rmDTSecretManagerRoot;
   private String dtMasterKeysRootPath;
   private String delegationTokensRootPath;
@@ -144,6 +181,7 @@ public class ZKRMStateStore extends RMStateStore {
 
   @VisibleForTesting
   protected String znodeWorkingPath;
+  private int appIdNodeSplitIndex = 0;
 
   /* Fencing related variables */
   private static final String FENCING_LOCK = "RM_ZK_FENCING_LOCK";
@@ -164,6 +202,27 @@ public class ZKRMStateStore extends RMStateStore {
 
   @VisibleForTesting
   protected CuratorFramework curatorFramework;
+
+  /*
+   * Indicates different app attempt state store operations.
+   */
+  private enum AppAttemptOp {
+    STORE,
+    UPDATE,
+    REMOVE
+  };
+
+  /**
+   * Encapsulates full app node path and corresponding split index.
+   */
+  private final static class AppNodeSplitInfo {
+    private final String path;
+    private final int splitIndex;
+    AppNodeSplitInfo(String path, int splitIndex) {
+      this.path = path;
+      this.splitIndex = splitIndex;
+    }
+  }
 
   /**
    * Given the {@link Configuration} and {@link ACL}s used (sourceACLs) for
@@ -212,10 +271,29 @@ public class ZKRMStateStore extends RMStateStore {
         conf.get(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH,
             YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH);
     zkRootNodePath = getNodePath(znodeWorkingPath, ROOT_ZNODE_NAME);
-    fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
     rmAppRoot = getNodePath(zkRootNodePath, RM_APP_ROOT);
+    String hierarchiesPath = getNodePath(rmAppRoot, RM_APP_ROOT_HIERARCHIES);
+    rmAppRootHierarchies = new HashMap<>(5);
+    rmAppRootHierarchies.put(0, rmAppRoot);
+    for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+      rmAppRootHierarchies.put(splitIndex,
+          getNodePath(hierarchiesPath, Integer.toString(splitIndex)));
+    }
+
+    fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
     zkSessionTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
+
+    appIdNodeSplitIndex =
+        conf.getInt(YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
+            YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
+    if (appIdNodeSplitIndex < 1 || appIdNodeSplitIndex > 4) {
+      LOG.info("Invalid value " + appIdNodeSplitIndex + " for config " +
+          YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX + " specified. " +
+              "Resetting it to " +
+                  YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
+      appIdNodeSplitIndex = YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX;
+    }
 
     zkAcl = RMZKUtils.getZKAcls(conf);
 
@@ -269,6 +347,10 @@ public class ZKRMStateStore extends RMStateStore {
       verifyActiveStatusThread.start();
     }
     create(rmAppRoot);
+    create(getNodePath(rmAppRoot, RM_APP_ROOT_HIERARCHIES));
+    for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+      create(rmAppRootHierarchies.get(splitIndex));
+    }
     create(rmDTSecretManagerRoot);
     create(dtMasterKeysRootPath);
     create(delegationTokensRootPath);
@@ -524,42 +606,64 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
+  private void loadRMAppStateFromAppNode(RMState rmState, String appNodePath,
+      String appIdStr) throws Exception {
+    byte[] appData = getData(appNodePath);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Loading application from znode: " + appNodePath);
+    }
+    ApplicationId appId = ApplicationId.fromString(appIdStr);
+    ApplicationStateDataPBImpl appState = new ApplicationStateDataPBImpl(
+        ApplicationStateDataProto.parseFrom(appData));
+    if (!appId.equals(
+        appState.getApplicationSubmissionContext().getApplicationId())) {
+      throw new YarnRuntimeException("The node name is different from the " +
+             "application id");
+    }
+    rmState.appState.put(appId, appState);
+    loadApplicationAttemptState(appState, appNodePath);
+  }
+
   private synchronized void loadRMAppState(RMState rmState) throws Exception {
-    List<String> childNodes = getChildren(rmAppRoot);
-
-    for (String childNodeName : childNodes) {
-      String childNodePath = getNodePath(rmAppRoot, childNodeName);
-      byte[] childData = getData(childNodePath);
-
-      if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
-        // application
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loading application from znode: " + childNodeName);
+    for (int splitIndex = 0; splitIndex <= 4; splitIndex++) {
+      String appRoot = rmAppRootHierarchies.get(splitIndex);
+      if (appRoot == null) {
+        continue;
+      }
+      List<String> childNodes = getChildren(appRoot);
+      boolean appNodeFound = false;
+      for (String childNodeName : childNodes) {
+        if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
+          appNodeFound = true;
+          if (splitIndex == 0) {
+            loadRMAppStateFromAppNode(rmState,
+                getNodePath(appRoot, childNodeName), childNodeName);
+          } else {
+            // If AppId Node is partitioned.
+            String parentNodePath = getNodePath(appRoot, childNodeName);
+            List<String> leafNodes = getChildren(parentNodePath);
+            for (String leafNodeName : leafNodes) {
+              String appIdStr = childNodeName + leafNodeName;
+              loadRMAppStateFromAppNode(rmState,
+                  getNodePath(parentNodePath, leafNodeName), appIdStr);
+            }
+          }
+        } else {
+          LOG.info("Unknown child node with name: " + childNodeName);
         }
-
-        ApplicationId appId = ApplicationId.fromString(childNodeName);
-        ApplicationStateDataPBImpl appState =
-            new ApplicationStateDataPBImpl(
-                ApplicationStateDataProto.parseFrom(childData));
-
-        if (!appId.equals(
-            appState.getApplicationSubmissionContext().getApplicationId())) {
-          throw new YarnRuntimeException("The child node name is different "
-              + "from the application id");
-        }
-
-        rmState.appState.put(appId, appState);
-        loadApplicationAttemptState(appState, appId);
-      } else {
-        LOG.info("Unknown child node with name: " + childNodeName);
+      }
+      if (splitIndex != appIdNodeSplitIndex && !appNodeFound) {
+        // If no loaded app exists for a particular split index and the split
+        // index for which apps are being loaded is not the one configured, then
+        // we do not need to keep track of this hierarchy for storing/updating/
+        // removing app/app attempt znodes.
+        rmAppRootHierarchies.remove(splitIndex);
       }
     }
   }
 
   private void loadApplicationAttemptState(ApplicationStateData appState,
-      ApplicationId appId)
-      throws Exception {
-    String appPath = getNodePath(rmAppRoot, appId.toString());
+      String appPath) throws Exception {
     List<String> attempts = getChildren(appPath);
 
     for (String attemptIDStr : attempts) {
@@ -574,14 +678,68 @@ public class ZKRMStateStore extends RMStateStore {
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
     }
-
     LOG.debug("Done loading applications from ZK state store");
+  }
+
+  /**
+   * Get parent app node path based on full path and split index supplied.
+   * @param appIdPath App id path for which parent needs to be returned.
+   * @param splitIndex split index.
+   * @return parent app node path.
+   */
+  private String getSplitAppNodeParent(String appIdPath, int splitIndex) {
+    // Calculated as string upto index (appIdPath Length - split index - 1). We
+    // deduct 1 to exclude path separator.
+    return appIdPath.substring(0, appIdPath.length() - splitIndex - 1);
+  }
+
+  /**
+   * Checks if parent app node has no leaf nodes and if it does not have,
+   * removes it. Called while removing application.
+   * @param appIdPath path of app id to be removed.
+   * @param splitIndex split index.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private void checkRemoveParentAppNode(String appIdPath, int splitIndex)
+      throws Exception {
+    if (splitIndex != 0) {
+      String parentAppNode = getSplitAppNodeParent(appIdPath, splitIndex);
+      List<String> children = null;
+      try {
+        children = getChildren(parentAppNode);
+      } catch (KeeperException.NoNodeException ke) {
+        // It should be fine to swallow this exception as the parent app node we
+        // intend to delete is already deleted.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unable to remove app parent node " + parentAppNode +
+              " as it does not exist.");
+        }
+        return;
+      }
+      // No apps stored under parent path.
+      if (children != null && children.isEmpty()) {
+        try {
+          safeDelete(parentAppNode);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("No leaf app node exists. Removing parent node " +
+                parentAppNode);
+          }
+        } catch (KeeperException.NotEmptyException ke) {
+          // It should be fine to swallow this exception as the parent app node
+          // has to be deleted only if it has no children. And this node has.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Unable to remove app parent node " + parentAppNode +
+                " as it has children.");
+          }
+        }
+      }
+    }
   }
 
   @Override
   public synchronized void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateData appStateDataPB) throws Exception {
-    String nodeCreatePath = getNodePath(rmAppRoot, appId.toString());
+    String nodeCreatePath = getLeafAppIdNodePath(appId.toString(), true);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing info for app: " + appId + " at: " + nodeCreatePath);
@@ -596,7 +754,26 @@ public class ZKRMStateStore extends RMStateStore {
   protected synchronized void updateApplicationStateInternal(
       ApplicationId appId, ApplicationStateData appStateDataPB)
       throws Exception {
-    String nodeUpdatePath = getNodePath(rmAppRoot, appId.toString());
+    String nodeUpdatePath = getLeafAppIdNodePath(appId.toString(), false);
+    boolean pathExists = true;
+    // Look for paths based on other split indices if path as per split index
+    // does not exist.
+    if (!exists(nodeUpdatePath)) {
+      AppNodeSplitInfo alternatePathInfo = getAlternatePath(appId.toString());
+      if (alternatePathInfo != null) {
+        nodeUpdatePath = alternatePathInfo.path;
+      } else {
+        // No alternate path exists. Create path as per configured split index.
+        pathExists = false;
+        if (appIdNodeSplitIndex != 0) {
+          String rootNode =
+              getSplitAppNodeParent(nodeUpdatePath, appIdNodeSplitIndex);
+          if (!exists(rootNode)) {
+            safeCreate(rootNode, null, zkAcl, CreateMode.PERSISTENT);
+          }
+        }
+      }
+    }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing final state info for app: " + appId + " at: "
@@ -605,15 +782,69 @@ public class ZKRMStateStore extends RMStateStore {
 
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
 
-    if (exists(nodeUpdatePath)) {
+    if (pathExists) {
       safeSetData(nodeUpdatePath, appStateData, -1);
     } else {
-      safeCreate(nodeUpdatePath, appStateData, zkAcl,
-          CreateMode.PERSISTENT);
+      safeCreate(nodeUpdatePath, appStateData, zkAcl, CreateMode.PERSISTENT);
       if (LOG.isDebugEnabled()) {
-        LOG.debug(appId + " znode didn't exist. Created a new znode to"
-            + " update the application state.");
+        LOG.debug("Path " + nodeUpdatePath + " for " + appId + " didn't " +
+            "exist. Creating a new znode to update the application state.");
       }
+    }
+  }
+
+  /*
+   * Handles store, update and remove application attempt state store
+   * operations.
+   */
+  private void handleApplicationAttemptStateOp(
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateData attemptStateDataPB, AppAttemptOp operation)
+      throws Exception {
+    String appId = appAttemptId.getApplicationId().toString();
+    String appDirPath = getLeafAppIdNodePath(appId, false);
+    // Look for paths based on other split indices.
+    if (!exists(appDirPath)) {
+      AppNodeSplitInfo alternatePathInfo = getAlternatePath(appId);
+      if (alternatePathInfo == null) {
+        if (operation == AppAttemptOp.REMOVE) {
+          // Unexpected. Assume that app attempt has been deleted.
+          return;
+        } else { // Store or Update operation
+          throw new YarnRuntimeException("Unexpected Exception. App node for " +
+              "app " + appId + " not found");
+        }
+      } else {
+        appDirPath = alternatePathInfo.path;
+      }
+    }
+    String path = getNodePath(appDirPath, appAttemptId.toString());
+    byte[] attemptStateData = (attemptStateDataPB == null) ? null :
+        attemptStateDataPB.getProto().toByteArray();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(operation + " info for attempt: " + appAttemptId + " at: "
+          + path);
+    }
+    switch (operation) {
+    case UPDATE:
+      if (exists(path)) {
+        safeSetData(path, attemptStateData, -1);
+      } else {
+        safeCreate(path, attemptStateData, zkAcl, CreateMode.PERSISTENT);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Path " + path + " for " + appAttemptId + " didn't exist." +
+              " Created a new znode to update the application attempt state.");
+        }
+      }
+      break;
+    case STORE:
+      safeCreate(path, attemptStateData, zkAcl, CreateMode.PERSISTENT);
+      break;
+    case REMOVE:
+      safeDelete(path);
+      break;
+    default:
+      break;
     }
   }
 
@@ -622,17 +853,8 @@ public class ZKRMStateStore extends RMStateStore {
       ApplicationAttemptId appAttemptId,
       ApplicationAttemptStateData attemptStateDataPB)
       throws Exception {
-    String appDirPath = getNodePath(rmAppRoot,
-        appAttemptId.getApplicationId().toString());
-    String nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing info for attempt: " + appAttemptId + " at: "
-          + nodeCreatePath);
-    }
-
-    byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
-    safeCreate(nodeCreatePath, attemptStateData, zkAcl, CreateMode.PERSISTENT);
+    handleApplicationAttemptStateOp(appAttemptId, attemptStateDataPB,
+        AppAttemptOp.STORE);
   }
 
   @Override
@@ -640,65 +862,73 @@ public class ZKRMStateStore extends RMStateStore {
       ApplicationAttemptId appAttemptId,
       ApplicationAttemptStateData attemptStateDataPB)
       throws Exception {
-    String appIdStr = appAttemptId.getApplicationId().toString();
-    String appAttemptIdStr = appAttemptId.toString();
-    String appDirPath = getNodePath(rmAppRoot, appIdStr);
-    String nodeUpdatePath = getNodePath(appDirPath, appAttemptIdStr);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing final state info for attempt: " + appAttemptIdStr
-          + " at: " + nodeUpdatePath);
-    }
-
-    byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
-
-    if (exists(nodeUpdatePath)) {
-      safeSetData(nodeUpdatePath, attemptStateData, -1);
-    } else {
-      safeCreate(nodeUpdatePath, attemptStateData, zkAcl,
-          CreateMode.PERSISTENT);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(appAttemptId + " znode didn't exist. Created a new znode to"
-            + " update the application attempt state.");
-      }
-    }
+    handleApplicationAttemptStateOp(appAttemptId, attemptStateDataPB,
+        AppAttemptOp.UPDATE);
   }
 
   @Override
   protected synchronized void removeApplicationAttemptInternal(
       ApplicationAttemptId appAttemptId) throws Exception {
-    String appId = appAttemptId.getApplicationId().toString();
-    String appIdRemovePath = getNodePath(rmAppRoot, appId);
-    String attemptIdRemovePath =
-        getNodePath(appIdRemovePath, appAttemptId.toString());
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing info for attempt: " + appAttemptId + " at: "
-          + attemptIdRemovePath);
-    }
-
-    safeDelete(attemptIdRemovePath);
+    handleApplicationAttemptStateOp(appAttemptId, null, AppAttemptOp.REMOVE);
   }
 
   @Override
   protected synchronized void removeApplicationStateInternal(
       ApplicationStateData appState) throws Exception {
-    String appId = appState.getApplicationSubmissionContext().getApplicationId()
-        .toString();
-    String appIdRemovePath = getNodePath(rmAppRoot, appId);
+    removeApp(appState.getApplicationSubmissionContext().
+        getApplicationId().toString(), true, appState.attempts.keySet());
+  }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing info for app: " + appId + " at: " + appIdRemovePath
-          + " and its attempts.");
+  private void removeApp(String removeAppId) throws Exception {
+    removeApp(removeAppId, false, null);
+  }
+
+  /**
+   * Remove application node and its attempt nodes.
+   *
+   * @param removeAppId Application Id to be removed.
+   * @param safeRemove Flag indicating if application and attempt nodes have to
+   *     be removed safely under a fencing or not.
+   * @param attempts list of attempts to be removed associated with this app.
+   *     Ignored if safeRemove flag is false as we recursively delete all the
+   *     child nodes directly.
+   * @throws Exception if any exception occurs during ZK operation.
+   */
+  private void removeApp(String removeAppId, boolean safeRemove,
+      Set<ApplicationAttemptId> attempts) throws Exception {
+    String appIdRemovePath = getLeafAppIdNodePath(removeAppId, false);
+    int splitIndex = appIdNodeSplitIndex;
+    // Look for paths based on other split indices if path as per configured
+    // split index does not exist.
+    if (!exists(appIdRemovePath)) {
+      AppNodeSplitInfo alternatePathInfo = getAlternatePath(removeAppId);
+      if (alternatePathInfo != null) {
+        appIdRemovePath = alternatePathInfo.path;
+        splitIndex = alternatePathInfo.splitIndex;
+      } else {
+        // Alternate path not found so return.
+        return;
+      }
     }
-
-    for (ApplicationAttemptId attemptId : appState.attempts.keySet()) {
-      String attemptRemovePath =
-          getNodePath(appIdRemovePath, attemptId.toString());
-      safeDelete(attemptRemovePath);
+    if (safeRemove) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Removing info for app: " + removeAppId + " at: " +
+            appIdRemovePath + " and its attempts.");
+      }
+      if (attempts != null) {
+        for (ApplicationAttemptId attemptId : attempts) {
+          String attemptRemovePath =
+              getNodePath(appIdRemovePath, attemptId.toString());
+          safeDelete(attemptRemovePath);
+        }
+      }
+      safeDelete(appIdRemovePath);
+    } else {
+      curatorFramework.delete().deletingChildrenIfNeeded().
+          forPath(appIdRemovePath);
     }
-
-    safeDelete(appIdRemovePath);
+    // Check if we should remove the parent app node as well.
+    checkRemoveParentAppNode(appIdRemovePath, splitIndex);
   }
 
   @Override
@@ -820,8 +1050,7 @@ public class ZKRMStateStore extends RMStateStore {
   @Override
   public synchronized void removeApplication(ApplicationId removeAppId)
       throws Exception {
-    String appIdRemovePath = getNodePath(rmAppRoot, removeAppId.toString());
-    delete(appIdRemovePath);
+    removeApp(removeAppId.toString());
   }
 
   @VisibleForTesting
@@ -920,6 +1149,79 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
+  /**
+   * Get alternate path for app id if path according to configured split index
+   * does not exist. We look for path based on all possible split indices.
+   * @param appId
+   * @return a {@link AppNodeSplitInfo} object containing the path and split
+   *    index if it exists, null otherwise.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private AppNodeSplitInfo getAlternatePath(String appId) throws Exception {
+    for (Map.Entry<Integer, String> entry : rmAppRootHierarchies.entrySet()) {
+      // Look for other paths
+      int splitIndex = entry.getKey();
+      if (splitIndex != appIdNodeSplitIndex) {
+        String alternatePath =
+            getLeafAppIdNodePath(appId, entry.getValue(), splitIndex, false);
+        if (exists(alternatePath)) {
+          return new AppNodeSplitInfo(alternatePath, splitIndex);
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns leaf app node path based on app id and passed split index. If the
+   * passed flag createParentIfNotExists is true, also creates the parent app
+   * node if it does not exist.
+   * @param appId application id.
+   * @param rootNode app root node based on split index.
+   * @param appIdNodeSplitIdx split index.
+   * @param createParentIfNotExists flag which determines if parent app node
+   *     needs to be created(as per split) if it does not exist.
+   * @return leaf app node path.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private String getLeafAppIdNodePath(String appId, String rootNode,
+      int appIdNodeSplitIdx, boolean createParentIfNotExists) throws Exception {
+    if (appIdNodeSplitIdx == 0) {
+      return getNodePath(rootNode, appId);
+    }
+    String nodeName = appId;
+    int splitIdx = nodeName.length() - appIdNodeSplitIdx;
+    String rootNodePath =
+        getNodePath(rootNode, nodeName.substring(0, splitIdx));
+    if (createParentIfNotExists && !exists(rootNodePath)) {
+      try {
+        safeCreate(rootNodePath, null, zkAcl, CreateMode.PERSISTENT);
+      } catch (KeeperException.NodeExistsException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unable to create app parent node " + rootNodePath +
+              " as it already exists.");
+        }
+      }
+    }
+    return getNodePath(rootNodePath, nodeName.substring(splitIdx));
+  }
+
+  /**
+   * Returns leaf app node path based on app id and configured split index. If
+   * the passed flag createParentIfNotExists is true, also creates the parent
+   * app node if it does not exist.
+   * @param appId application id.
+   * @param createParentIfNotExists flag which determines if parent app node
+   *     needs to be created(as per split) if it does not exist.
+   * @return leaf app node path.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private String getLeafAppIdNodePath(String appId,
+      boolean createParentIfNotExists) throws Exception {
+    return getLeafAppIdNodePath(appId, rmAppRootHierarchies.get(
+        appIdNodeSplitIndex), appIdNodeSplitIndex, createParentIfNotExists);
+  }
+
   @VisibleForTesting
   byte[] getData(final String path) throws Exception {
     return curatorFramework.getData().forPath(path);
@@ -930,11 +1232,13 @@ public class ZKRMStateStore extends RMStateStore {
     return curatorFramework.getACL().forPath(path);
   }
 
-  private List<String> getChildren(final String path) throws Exception {
+  @VisibleForTesting
+  List<String> getChildren(final String path) throws Exception {
     return curatorFramework.getChildren().forPath(path);
   }
 
-  private boolean exists(final String path) throws Exception {
+  @VisibleForTesting
+  boolean exists(final String path) throws Exception {
     return curatorFramework.checkExists().forPath(path) != null;
   }
 
@@ -963,6 +1267,11 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
+  /**
+   * Deletes the path. Checks for existence of path as well.
+   * @param path Path to be deleted.
+   * @throws Exception if any problem occurs while performing deletion.
+   */
   private void safeDelete(final String path) throws Exception {
     if (exists(path)) {
       SafeTransaction transaction = new SafeTransaction();

@@ -109,8 +109,7 @@ Do not inadvertently share these credentials through means such as
 
 If you do any of these: change your credentials immediately!
 
-### Warning #5: The S3 client provided by Amazon EMR are not from the Apache
-Software foundation, and are only supported by Amazon.
+### Warning #5: The S3 client provided by Amazon EMR are not from the Apache Software foundation, and are only supported by Amazon.
 
 Specifically: on Amazon EMR, s3a is not supported, and amazon recommend
 a different filesystem implementation. If you are using Amazon EMR, follow
@@ -1873,6 +1872,31 @@ the data uploaded has been deleted.
 Consult [Cleaning up After Incremental Upload Failures](#s3a_multipart_purge) for
 details on how the multipart purge timeout can be set. If multipart uploads
 are failing with the message above, it may be a sign that this value is too low.
+
+### `MultiObjectDeleteException` during delete or rename of files
+
+```
+Exception in thread "main" com.amazonaws.services.s3.model.MultiObjectDeleteException:
+    Status Code: 0, AWS Service: null, AWS Request ID: null, AWS Error Code: null,
+    AWS Error Message: One or more objects could not be deleted, S3 Extended Request ID: null
+  at com.amazonaws.services.s3.AmazonS3Client.deleteObjects(AmazonS3Client.java:1745)
+```
+This happens when trying to delete multiple objects, and one of the objects
+could not be deleted. It *should not occur* just because the object is missing.
+More specifically: at the time this document was written, we could not create
+such a failure.
+
+It will occur if the caller lacks the permission to delete any of the objects.
+
+Consult the log to see the specifics of which objects could not be deleted.
+Do you have permission to do so?
+
+If this operation is failing for reasons other than the caller lacking
+permissions:
+
+1. Try setting `fs.s3a.multiobjectdelete.enable` to `false`.
+1. Consult [HADOOP-11572](https://issues.apache.org/jira/browse/HADOOP-11572)
+for up to date advice.
 
 ### When writing to S3A, HTTP Exceptions logged at info from `AmazonHttpClient`
 

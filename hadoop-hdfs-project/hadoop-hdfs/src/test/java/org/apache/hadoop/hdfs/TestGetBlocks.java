@@ -307,6 +307,13 @@ public class TestGetBlocks {
           BlockManagerTestUtil.getBlockIterator(s);
       while(storageBlockIt.hasNext()) {
         allBlocks[idx++] = storageBlockIt.next();
+        try {
+          storageBlockIt.remove();
+          assertTrue(
+              "BlockInfo iterator should have been unmodifiable", false);
+        } catch (UnsupportedOperationException e) {
+          //expected exception
+        }
       }
     }
 

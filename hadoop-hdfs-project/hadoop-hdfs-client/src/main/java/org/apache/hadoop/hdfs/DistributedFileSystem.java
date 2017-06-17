@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,6 +71,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -85,6 +87,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -461,17 +464,20 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Same as
    * {@link #create(Path, FsPermission, EnumSet<CreateFlag>, int, short, long,
-   * Progressable, ChecksumOpt)} with the addition of favoredNodes that is a
-   * hint to where the namenode should place the file blocks.
-   * The favored nodes hint is not persisted in HDFS. Hence it may be honored
-   * at the creation time only. And with favored nodes, blocks will be pinned
-   * on the datanodes to prevent balancing move the block. HDFS could move the
-   * blocks during replication, to move the blocks from favored nodes. A value
-   * of null means no favored nodes for this create.
-   * Another addition is ecPolicyName. A non-null ecPolicyName specifies an
+   * Progressable, ChecksumOpt)} with a few additions. First, addition of
+   * favoredNodes that is a hint to where the namenode should place the file
+   * blocks. The favored nodes hint is not persisted in HDFS. Hence it may be
+   * honored at the creation time only. And with favored nodes, blocks will be
+   * pinned on the datanodes to prevent balancing move the block. HDFS could
+   * move the blocks during replication, to move the blocks from favored nodes.
+   * A value of null means no favored nodes for this create.
+   * The second addition is ecPolicyName. A non-null ecPolicyName specifies an
    * explicit erasure coding policy for this file, overriding the inherited
-   * policy. A null ecPolicyName means the file will inherit its EC policy from
-   * an ancestor (the default).
+   * policy. A null ecPolicyName means the file will inherit its EC policy or
+   * replication policy from its ancestor (the default).
+   * ecPolicyName and SHOULD_REPLICATE CreateFlag are mutually exclusive. It's
+   * invalid to set both SHOULD_REPLICATE and a non-null ecPolicyName.
+   *
    */
   private HdfsDataOutputStream create(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
@@ -517,6 +523,49 @@ public class DistributedFileSystem extends FileSystem {
         absolutePermission, flag, true, replication, blockSize,
         progress, bufferSize, checksumOpt);
     return dfs.createWrappedOutputStream(dfsos, statistics);
+  }
+
+  /**
+   * Similar to {@link #create(Path, FsPermission, EnumSet, int, short, long,
+   * Progressable, ChecksumOpt, InetSocketAddress[], String)}, it provides a
+   * HDFS-specific version of {@link #createNonRecursive(Path, FsPermission,
+   * EnumSet, int, short, long, Progressable)} with a few additions.
+   *
+   * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
+   * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
+   * additional parameters, i.e., favoredNodes and ecPolicyName.
+   */
+  private HdfsDataOutputStream createNonRecursive(final Path f,
+      final FsPermission permission, final EnumSet<CreateFlag> flag,
+      final int bufferSize, final short replication, final long blockSize,
+      final Progressable progress, final ChecksumOpt checksumOpt,
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE);
+    Path absF = fixRelativePart(f);
+    return new FileSystemLinkResolver<HdfsDataOutputStream>() {
+      @Override
+      public HdfsDataOutputStream doCall(final Path p) throws IOException {
+        final DFSOutputStream out = dfs.create(getPathName(f), permission,
+            flag, false, replication, blockSize, progress, bufferSize,
+            checksumOpt, favoredNodes, ecPolicyName);
+        return dfs.createWrappedOutputStream(out, statistics);
+      }
+      @Override
+      public HdfsDataOutputStream next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.createNonRecursive(p, permission, flag, bufferSize,
+              replication, blockSize, progress, checksumOpt, favoredNodes,
+              ecPolicyName);
+        }
+        throw new UnsupportedOperationException("Cannot create with" +
+            " favoredNodes through a symlink to a non-DistributedFileSystem: "
+            + f + " -> " + p);
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -1260,12 +1309,12 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Returns count of blocks with one of more replica missing.
+   * Returns aggregated count of blocks with less redundancy.
    *
    * @throws IOException
    */
-  public long getUnderReplicatedBlocksCount() throws IOException {
-    return dfs.getUnderReplicatedBlocksCount();
+  public long getLowRedundancyBlocksCount() throws IOException {
+    return dfs.getLowRedundancyBlocksCount();
   }
 
   /**
@@ -2531,6 +2580,33 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Retrieve all the erasure coding codecs and coders supported by this file
+   * system.
+   *
+   * @return all erasure coding codecs and coders supported by this file system.
+   * @throws IOException
+   */
+  public HashMap<String, String> getAllErasureCodingCodecs()
+      throws IOException {
+    return dfs.getErasureCodingCodecs();
+  }
+
+  /**
+   * Add Erasure coding policies to HDFS. For each policy input, schema and
+   * cellSize are musts, name and id are ignored. They will be automatically
+   * created and assigned by Namenode once the policy is successfully added, and
+   * will be returned in the response.
+   *
+   * @param policies The user defined ec policy list to add.
+   * @return Return the response list of adding operations.
+   * @throws IOException
+   */
+  public AddECPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies)  throws IOException {
+    return dfs.addErasureCodingPolicies(policies);
+  }
+
+  /**
    * Unset the erasure coding policy from the source path.
    *
    * @param path     The directory to unset the policy
@@ -2570,8 +2646,13 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
-      return super.getTrashRoot(path);
+    try {
+      if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+        return super.getTrashRoot(path);
+      }
+    } catch (IOException ioe) {
+      DFSClient.LOG.warn("Exception while checking whether encryption zone is "
+          + "supported", ioe);
     }
 
     String parentSrc = path.isRoot()?
@@ -2648,53 +2729,171 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Extends FSDataOutputStreamBuilder to support special requirements
-   * of DistributedFileSystem.
+   * HdfsDataOutputStreamBuilder provides the HDFS-specific capabilities to
+   * write file on HDFS.
    */
-  public static class HdfsDataOutputStreamBuilder
-      extends FSDataOutputStreamBuilder {
+  public static final class HdfsDataOutputStreamBuilder
+      extends FSDataOutputStreamBuilder<
+      HdfsDataOutputStream, HdfsDataOutputStreamBuilder> {
     private final DistributedFileSystem dfs;
     private InetSocketAddress[] favoredNodes = null;
     private String ecPolicyName = null;
 
-    public HdfsDataOutputStreamBuilder(DistributedFileSystem dfs, Path path) {
+    /**
+     * Construct a HdfsDataOutputStream builder for a file.
+     * @param dfs the {@link DistributedFileSystem} instance.
+     * @param path the path of the file to create / append.
+     */
+    private HdfsDataOutputStreamBuilder(DistributedFileSystem dfs, Path path) {
       super(dfs, path);
       this.dfs = dfs;
     }
 
-    protected InetSocketAddress[] getFavoredNodes() {
+    @Override
+    protected HdfsDataOutputStreamBuilder getThisBuilder() {
+      return this;
+    }
+
+    private InetSocketAddress[] getFavoredNodes() {
       return favoredNodes;
     }
 
-    public HdfsDataOutputStreamBuilder setFavoredNodes(
+    /**
+     * Set favored DataNodes.
+     * @param nodes the addresses of the favored DataNodes.
+     */
+    public HdfsDataOutputStreamBuilder favoredNodes(
         @Nonnull final InetSocketAddress[] nodes) {
       Preconditions.checkNotNull(nodes);
       favoredNodes = nodes.clone();
       return this;
     }
 
-    protected String getEcPolicyName() {
+    /**
+     * Force closed blocks to disk.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder syncBlock() {
+      getFlags().add(CreateFlag.SYNC_BLOCK);
+      return this;
+    }
+
+    /**
+     * Create the block on transient storage if possible.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder lazyPersist() {
+      getFlags().add(CreateFlag.LAZY_PERSIST);
+      return this;
+    }
+
+    /**
+     * Append data to a new block instead of the end of the last partial block.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder newBlock() {
+      getFlags().add(CreateFlag.NEW_BLOCK);
+      return this;
+    }
+
+    /**
+     * Advise that a block replica NOT be written to the local DataNode.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder noLocalWrite() {
+      getFlags().add(CreateFlag.NO_LOCAL_WRITE);
+      return this;
+    }
+
+    @VisibleForTesting
+    String getEcPolicyName() {
       return ecPolicyName;
     }
 
-    public HdfsDataOutputStreamBuilder setEcPolicyName(
+    /**
+     * Enforce the file to be a striped file with erasure coding policy
+     * 'policyName', no matter what its parent directory's replication
+     * or erasure coding policy is. Don't call this function and
+     * enforceReplicate() in the same builder since they have conflict
+     * of interest.
+     */
+    public HdfsDataOutputStreamBuilder ecPolicyName(
         @Nonnull final String policyName) {
       Preconditions.checkNotNull(policyName);
       ecPolicyName = policyName;
       return this;
     }
 
+    @VisibleForTesting
+    boolean shouldReplicate() {
+      return getFlags().contains(CreateFlag.SHOULD_REPLICATE);
+    }
+
+    /**
+     * Enforce the file to be a replicated file, no matter what its parent
+     * directory's replication or erasure coding policy is. Don't call this
+     * function and setEcPolicyName() in the same builder since they have
+     * conflict of interest.
+     */
+    public HdfsDataOutputStreamBuilder replicate() {
+      getFlags().add(CreateFlag.SHOULD_REPLICATE);
+      return this;
+    }
+
+    @VisibleForTesting
+    @Override
+    protected EnumSet<CreateFlag> getFlags() {
+      return super.getFlags();
+    }
+
+    /**
+     * Build HdfsDataOutputStream to write.
+     *
+     * @return a fully-initialized OutputStream.
+     * @throws IOException on I/O errors.
+     */
     @Override
     public HdfsDataOutputStream build() throws IOException {
-      return dfs.create(getPath(), getPermission(), getFlags(),
-          getBufferSize(), getReplication(), getBlockSize(),
-          getProgress(), getChecksumOpt(), getFavoredNodes(),
-          getEcPolicyName());
+      if (isRecursive()) {
+        return dfs.create(getPath(), getPermission(), getFlags(),
+            getBufferSize(), getReplication(), getBlockSize(),
+            getProgress(), getChecksumOpt(), getFavoredNodes(),
+            getEcPolicyName());
+      } else {
+        return dfs.createNonRecursive(getPath(), getPermission(), getFlags(),
+            getBufferSize(), getReplication(), getBlockSize(), getProgress(),
+            getChecksumOpt(), getFavoredNodes(), getEcPolicyName());
+      }
     }
   }
 
+  /**
+   * Create a HdfsDataOutputStreamBuilder to create a file on DFS.
+   * Similar to {@link #create(Path)}, file is overwritten by default.
+   *
+   * @param path the path of the file to create.
+   * @return A HdfsDataOutputStreamBuilder for creating a file.
+   */
   @Override
-  public HdfsDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
-    return new HdfsDataOutputStreamBuilder(this, path);
+  public HdfsDataOutputStreamBuilder createFile(Path path) {
+    return new HdfsDataOutputStreamBuilder(this, path).create().overwrite(true);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list all open files
+   * currently managed by the NameNode. For large numbers of open files,
+   * iterator will fetch the list in batches of configured size.
+   * <p/>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the all open files.
+   * <p/>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
+    return dfs.listOpenFiles();
   }
 }

@@ -46,13 +46,18 @@
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
-          {{#link-to 'yarn-apps.apps' tagName="li" current-when="yarn-apps.apps yarn-apps.services"}}
+          {{#link-to 'yarn-apps.apps' tagName="li" current-when="yarn-apps.apps"}}
             {{#link-to 'yarn-apps.apps' class="navigation-link"}}Applications
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
           {{#link-to 'yarn-services' tagName="li"}}
             {{#link-to 'yarn-services' class="navigation-link"}}Services
+              <span class="sr-only">(current)</span>
+            {{/link-to}}
+          {{/link-to}}
+          {{#link-to 'yarn-flow-activity' tagName="li"}}
+            {{#link-to 'yarn-flow-activity' class="navigation-link"}}Flow Activity
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
@@ -73,7 +78,6 @@
   <br/>
   <br/>
   <br/>
-
 </div>
 
 <div class="footer">

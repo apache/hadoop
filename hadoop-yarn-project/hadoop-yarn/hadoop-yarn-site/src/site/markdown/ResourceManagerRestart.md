@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-ResourceManger Restart
+ResourceManager Restart
 ======================
 
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->

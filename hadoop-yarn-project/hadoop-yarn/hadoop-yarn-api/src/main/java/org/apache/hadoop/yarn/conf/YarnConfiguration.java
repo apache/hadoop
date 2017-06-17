@@ -568,6 +568,10 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_ZK_TIMEOUT_MS = RM_ZK_PREFIX + "timeout-ms";
   public static final int DEFAULT_RM_ZK_TIMEOUT_MS = 10000;
 
+  public static final  String ZK_APPID_NODE_SPLIT_INDEX =
+      RM_ZK_PREFIX + "appid-node.split-index";
+  public static final int DEFAULT_ZK_APPID_NODE_SPLIT_INDEX = 0;
+
   public static final String RM_ZK_ACL = RM_ZK_PREFIX + "acl";
   public static final String DEFAULT_RM_ZK_ACL = "world:anyone:rwcda";
 
@@ -1495,6 +1499,10 @@ public class YarnConfiguration extends Configuration {
   /** Location for non-default java policy file.*/
   public static final String YARN_CONTAINER_SANDBOX_POLICY =
       YARN_CONTAINER_SANDBOX + ".policy";
+
+  /** Prefix for group to policy file mapping.*/
+  public static final String YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX =
+      YARN_CONTAINER_SANDBOX_POLICY + ".group.";
 
   /** The group which will run by default without the java security manager.*/
   public static final String YARN_CONTAINER_SANDBOX_WHITELIST_GROUP =

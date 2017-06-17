@@ -22,7 +22,9 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.util.ECPolicyLoader;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -31,8 +33,10 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * CLI for the erasure code encoding operations.
@@ -127,6 +131,66 @@ public class ECAdmin extends Configured implements Tool {
             }
           }
         }
+      } catch (IOException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
+  /** Command to add a set of erasure coding policies. */
+  private static class AddECPoliciesCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-addPolicies";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -policyFile <file>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      final TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<file>",
+          "The path of the xml file which defines the EC policies to add");
+      return getShortUsage() + "\n" +
+          "Add a list of erasure coding policies.\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String filePath =
+          StringUtils.popOptionWithArgument("-policyFile", args);
+      if (filePath == null) {
+        System.err.println("Please specify the path with -policyFile.\nUsage: "
+            + getLongUsage());
+        return 1;
+      }
+
+      if (args.size() > 0) {
+        System.err.println(getName() + ": Too many arguments");
+        return 1;
+      }
+
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        List<ErasureCodingPolicy> policies =
+            new ECPolicyLoader().loadPolicy(filePath);
+        if (policies.size() > 0) {
+          AddECPolicyResponse[] responses = dfs.addErasureCodingPolicies(
+            policies.toArray(new ErasureCodingPolicy[policies.size()]));
+          for (AddECPolicyResponse response : responses) {
+            System.out.println(response);
+          }
+        } else {
+          System.out.println("No EC policy parsed out from " + filePath);
+        }
+
       } catch (IOException e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;
@@ -299,10 +363,66 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
+  /** Command to list the set of supported erasure coding codecs and coders. */
+  private static class ListECCodecsCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-listCodecs";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + "]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      return getShortUsage() + "\n" +
+          "Get the list of supported erasure coding codecs and coders.\n" +
+          "A coder is an implementation of a codec. A codec can have " +
+          "different implementations, thus different coders.\n" +
+          "The coders for a codec are listed in a fall back order.\n";
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      if (args.size() > 0) {
+        System.err.println(getName() + ": Too many arguments");
+        return 1;
+      }
+
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        HashMap<String, String> codecs =
+            dfs.getAllErasureCodingCodecs();
+        if (codecs.isEmpty()) {
+          System.out.println("No erasure coding codecs are supported on the " +
+              "cluster.");
+        } else {
+          System.out.println("Erasure Coding Codecs: Codec [Coder List]");
+          for (Map.Entry<String, String> codec : codecs.entrySet()) {
+            if (codec != null) {
+              System.out.println("\t" + codec.getKey().toUpperCase() + " ["
+                  + codec.getValue().toUpperCase() +"]");
+            }
+          }
+        }
+      } catch (IOException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
+
   private static final AdminHelper.Command[] COMMANDS = {
       new ListECPoliciesCommand(),
+      new AddECPoliciesCommand(),
       new GetECPolicyCommand(),
       new SetECPolicyCommand(),
-      new UnsetECPolicyCommand()
+      new UnsetECPolicyCommand(),
+      new ListECCodecsCommand()
   };
 }

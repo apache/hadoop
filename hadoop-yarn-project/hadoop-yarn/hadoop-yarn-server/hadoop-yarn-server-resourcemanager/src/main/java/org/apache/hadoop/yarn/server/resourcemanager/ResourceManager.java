@@ -29,17 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -63,6 +59,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
@@ -103,9 +100,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
-import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -118,6 +114,8 @@ import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -241,13 +239,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setConfigurationProvider(configurationProvider);
 
     // load core-site.xml
-    InputStream coreSiteXMLInputStream =
-        this.configurationProvider.getConfigurationInputStream(this.conf,
-            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
-    if (coreSiteXMLInputStream != null) {
-      this.conf.addResource(coreSiteXMLInputStream,
-          YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
-    }
+    loadConfigurationXml(YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
 
     // Do refreshUserToGroupsMappings with loaded core-site.xml
     Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
@@ -260,13 +252,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     ProxyUsers.refreshSuperUserGroupsConfiguration(this.conf);
 
     // load yarn-site.xml
-    InputStream yarnSiteXMLInputStream =
-        this.configurationProvider.getConfigurationInputStream(this.conf,
-            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    if (yarnSiteXMLInputStream != null) {
-      this.conf.addResource(yarnSiteXMLInputStream,
-          YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    }
+    loadConfigurationXml(YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
     validateConfigs(this.conf);
     
@@ -340,6 +326,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
+  }
+
+  private void loadConfigurationXml(String configurationFile)
+      throws YarnException, IOException {
+    InputStream configurationInputStream =
+        this.configurationProvider.getConfigurationInputStream(this.conf,
+            configurationFile);
+    if (configurationInputStream != null) {
+      this.conf.addResource(configurationInputStream, configurationFile);
+    }
   }
 
   protected EmbeddedElector createEmbeddedElector() throws IOException {
@@ -811,15 +807,45 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Private
-  public static class RMFatalEventDispatcher
-      implements EventHandler<RMFatalEvent> {
-
+  private class RMFatalEventDispatcher implements EventHandler<RMFatalEvent> {
     @Override
     public void handle(RMFatalEvent event) {
-      LOG.fatal("Received a " + RMFatalEvent.class.getName() + " of type " +
-          event.getType().name() + ". Cause:\n" + event.getCause());
+      LOG.error("Received " + event);
 
-      ExitUtil.terminate(1, event.getCause());
+      if (HAUtil.isHAEnabled(getConfig())) {
+        // If we're in an HA config, the right answer is always to go into
+        // standby.
+        LOG.warn("Transitioning the resource manager to standby.");
+        handleTransitionToStandByInNewThread();
+      } else {
+        // If we're stand-alone, we probably want to shut down, but the if and
+        // how depends on the event.
+        switch(event.getType()) {
+        case STATE_STORE_FENCED:
+          LOG.fatal("State store fenced even though the resource manager " +
+              "is not configured for high availability. Shutting down this " +
+              "resource manager to protect the integrity of the state store.");
+          ExitUtil.terminate(1, event.getExplanation());
+          break;
+        case STATE_STORE_OP_FAILED:
+          if (YarnConfiguration.shouldRMFailFast(getConfig())) {
+            LOG.fatal("Shutting down the resource manager because a state " +
+                "store operation failed, and the resource manager is " +
+                "configured to fail fast. See the yarn.fail-fast and " +
+                "yarn.resourcemanager.fail-fast properties.");
+            ExitUtil.terminate(1, event.getExplanation());
+          } else {
+            LOG.warn("Ignoring state store operation failure because the " +
+                "resource manager is not configured to fail fast. See the " +
+                "yarn.fail-fast and yarn.resourcemanager.fail-fast " +
+                "properties.");
+          }
+          break;
+        default:
+          LOG.fatal("Shutting down the resource manager.");
+          ExitUtil.terminate(1, event.getExplanation());
+        }
+      }
     }
   }
 
@@ -827,7 +853,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * Transition to standby state in a new thread. The transition operation is
    * asynchronous to avoid deadlock caused by cyclic dependency.
    */
-  public void handleTransitionToStandByInNewThread() {
+  private void handleTransitionToStandByInNewThread() {
     Thread standByTransitionThread =
         new Thread(activeServices.standByTransitionRunnable);
     standByTransitionThread.setName("StandByTransitionThread");
@@ -1008,92 +1034,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected void startWepApp() {
 
-    // Use the customized yarn filter instead of the standard kerberos filter to
-    // allow users to authenticate using delegation tokens
-    // 4 conditions need to be satisfied -
-    // 1. security is enabled
-    // 2. http auth type is set to kerberos
-    // 3. "yarn.resourcemanager.webapp.use-yarn-filter" override is set to true
-    // 4. hadoop.http.filter.initializers container AuthenticationFilterInitializer
-
     Configuration conf = getConfig();
-    boolean enableCorsFilter =
-        conf.getBoolean(YarnConfiguration.RM_WEBAPP_ENABLE_CORS_FILTER,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_ENABLE_CORS_FILTER);
-    boolean useYarnAuthenticationFilter =
-        conf.getBoolean(
-          YarnConfiguration.RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER,
-          YarnConfiguration.DEFAULT_RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER);
-    String authPrefix = "hadoop.http.authentication.";
-    String authTypeKey = authPrefix + "type";
-    String filterInitializerConfKey = "hadoop.http.filter.initializers";
-    String actualInitializers = "";
-    Class<?>[] initializersClasses =
-        conf.getClasses(filterInitializerConfKey);
 
-    // setup CORS
-    if (enableCorsFilter) {
-      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
-          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
-    }
-
-    boolean hasHadoopAuthFilterInitializer = false;
-    boolean hasRMAuthFilterInitializer = false;
-    if (initializersClasses != null) {
-      for (Class<?> initializer : initializersClasses) {
-        if (initializer.getName().equals(
-          AuthenticationFilterInitializer.class.getName())) {
-          hasHadoopAuthFilterInitializer = true;
-        }
-        if (initializer.getName().equals(
-          RMAuthenticationFilterInitializer.class.getName())) {
-          hasRMAuthFilterInitializer = true;
-        }
-      }
-      if (UserGroupInformation.isSecurityEnabled()
-          && useYarnAuthenticationFilter
-          && hasHadoopAuthFilterInitializer
-          && conf.get(authTypeKey, "").equals(
-            KerberosAuthenticationHandler.TYPE)) {
-        ArrayList<String> target = new ArrayList<String>();
-        for (Class<?> filterInitializer : initializersClasses) {
-          if (filterInitializer.getName().equals(
-            AuthenticationFilterInitializer.class.getName())) {
-            if (hasRMAuthFilterInitializer == false) {
-              target.add(RMAuthenticationFilterInitializer.class.getName());
-            }
-            continue;
-          }
-          target.add(filterInitializer.getName());
-        }
-        actualInitializers = StringUtils.join(",", target);
-
-        LOG.info("Using RM authentication filter(kerberos/delegation-token)"
-            + " for RM webapp authentication");
-        RMAuthenticationFilter
-          .setDelegationTokenSecretManager(getClientRMService().rmDTSecretManager);
-        conf.set(filterInitializerConfKey, actualInitializers);
-      }
-    }
-
-    // if security is not enabled and the default filter initializer has not 
-    // been set, set the initializer to include the
-    // RMAuthenticationFilterInitializer which in turn will set up the simple
-    // auth filter.
-
-    String initializers = conf.get(filterInitializerConfKey);
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      if (initializersClasses == null || initializersClasses.length == 0) {
-        conf.set(filterInitializerConfKey,
-          RMAuthenticationFilterInitializer.class.getName());
-        conf.set(authTypeKey, "simple");
-      } else if (initializers.equals(StaticUserWebFilter.class.getName())) {
-        conf.set(filterInitializerConfKey,
-          RMAuthenticationFilterInitializer.class.getName() + ","
-              + initializers);
-        conf.set(authTypeKey, "simple");
-      }
-    }
+    RMWebAppUtil.setupSecurityAndFilters(conf,
+        getClientRMService().rmDTSecretManager);
 
     Builder<ApplicationMasterService> builder = 
         WebApps
@@ -1125,9 +1069,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     WebAppContext uiWebAppContext = null;
     if (getConfig().getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
         YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE)) {
-      String webPath = UI2_WEBAPP_NAME;
       String onDiskPath = getConfig()
           .get(YarnConfiguration.YARN_WEBAPP_UI2_WARFILE_PATH);
+
+      uiWebAppContext = new WebAppContext();
+      uiWebAppContext.setContextPath(UI2_WEBAPP_NAME);
 
       if (null == onDiskPath) {
         String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
@@ -1135,21 +1081,33 @@ public class ResourceManager extends CompositeService implements Recoverable {
         URL url = cl.findResource(war);
 
         if (null == url) {
-          onDiskPath = "";
+          onDiskPath = getWebAppsPath("ui2");
         } else {
           onDiskPath = url.getFile();
         }
-
-        LOG.info(
-            "New web UI war file name:" + war + ", and path:" + onDiskPath);
       }
-
-      uiWebAppContext = new WebAppContext();
-      uiWebAppContext.setContextPath(webPath);
-      uiWebAppContext.setWar(onDiskPath);
+      if (onDiskPath == null || onDiskPath.isEmpty()) {
+          LOG.error("No war file or webapps found for ui2 !");
+      } else {
+        if (onDiskPath.endsWith(".war")) {
+          uiWebAppContext.setWar(onDiskPath);
+          LOG.info("Using war file at: " + onDiskPath);
+        } else {
+          uiWebAppContext.setResourceBase(onDiskPath);
+          LOG.info("Using webapps at: " + onDiskPath);
+        }
+      }
     }
 
     webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+  }
+
+  private String getWebAppsPath(String appName) {
+    URL url = getClass().getClassLoader().getResource("webapps/" + appName);
+    if (url == null) {
+      return "";
+    }
+    return url.toString();
   }
 
   /**

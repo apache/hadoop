@@ -6,9 +6,9 @@
  *   to you under the Apache License, Version 2.0 (the
  *   "License"); you may not use this file except in compliance
  *   with the License.  You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,10 +60,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.eclipse.jetty.util.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 public class TestGreedyReservationAgent {
+
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestGreedyReservationAgent.class);
 
   ReservationAgent agent;
   InMemoryPlan plan;
@@ -89,7 +93,7 @@ public class TestGreedyReservationAgent {
 
     long seed = rand.nextLong();
     rand.setSeed(seed);
-    Log.getLog().info("Running with seed: " + seed);
+    LOG.info("Running with seed: " + seed);
 
     // setting completely loose quotas
     long timeWindow = 1000000L;
@@ -108,7 +112,7 @@ public class TestGreedyReservationAgent {
     policy.init(reservationQ, conf);
 
     // setting conf to
-    conf.setBoolean(GreedyReservationAgent.GREEDY_FAVOR_EARLY_ALLOCATION,
+    conf.setBoolean(GreedyReservationAgent.FAVOR_EARLY_ALLOCATION,
         allocateLeft);
     agent = new GreedyReservationAgent();
     agent.init(conf);

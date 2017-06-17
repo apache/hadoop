@@ -56,11 +56,17 @@ public abstract class CompressionOutputStream extends OutputStream {
 
   @Override
   public void close() throws IOException {
-    finish();
-    out.close();
-    if (trackedCompressor != null) {
-      CodecPool.returnCompressor(trackedCompressor);
-      trackedCompressor = null;
+    try {
+      finish();
+    } finally {
+      try {
+        out.close();
+      } finally {
+        if (trackedCompressor != null) {
+          CodecPool.returnCompressor(trackedCompressor);
+          trackedCompressor = null;
+        }
+      }
     }
   }
   

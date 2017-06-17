@@ -315,6 +315,7 @@ public class CryptoInputStream extends FilterInputStream implements
     
     super.close();
     freeBuffers();
+    codec.close();
     closed = true;
   }
   

@@ -938,19 +938,37 @@ public class TestBalancer {
       throws Exception {
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
 
-    // start rebalancing
-    Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
-    final int r = runBalancer(namenodes, p, conf);
-    if (conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT) ==0) {
-      assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
-      return;
-    } else {
-      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
+    int retry = 5;
+    while (retry > 0) {
+      // start rebalancing
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+      final int run = runBalancer(namenodes, p, conf);
+      if (conf.getInt(
+          DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+          DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT)
+          == 0) {
+        assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), run);
+        return;
+      } else {
+        assertEquals(ExitStatus.SUCCESS.getExitCode(), run);
+      }
+      waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
+      LOG.info("  .");
+      try {
+        waitForBalancer(totalUsedSpace, totalCapacity, client, cluster, p,
+            excludedNodes);
+      } catch (TimeoutException e) {
+        // See HDFS-11682. NN may not get heartbeat to reflect the newest
+        // block changes.
+        retry--;
+        if (retry == 0) {
+          throw e;
+        }
+        LOG.warn("The cluster has not balanced yet, retry...");
+        continue;
+      }
+      break;
     }
-    waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
-    LOG.info("  .");
-    waitForBalancer(totalUsedSpace, totalCapacity, client, cluster, p, excludedNodes);
   }
 
   private static int runBalancer(Collection<URI> namenodes,
@@ -1022,14 +1040,14 @@ public class TestBalancer {
     if (!p.getExcludedNodes().isEmpty()) {
       args.add("-exclude");
       if (useFile) {
-        excludeHostsFile = new File ("exclude-hosts-file");
+        excludeHostsFile = GenericTestUtils.getTestDir("exclude-hosts-file");
         PrintWriter pw = new PrintWriter(excludeHostsFile);
         for (String host : p.getExcludedNodes()) {
           pw.write( host + "\n");
         }
         pw.close();
         args.add("-f");
-        args.add("exclude-hosts-file");
+        args.add(excludeHostsFile.getAbsolutePath());
       } else {
         args.add(StringUtils.join(p.getExcludedNodes(), ','));
       }
@@ -1039,14 +1057,14 @@ public class TestBalancer {
     if (!p.getIncludedNodes().isEmpty()) {
       args.add("-include");
       if (useFile) {
-        includeHostsFile = new File ("include-hosts-file");
+        includeHostsFile = GenericTestUtils.getTestDir("include-hosts-file");
         PrintWriter pw = new PrintWriter(includeHostsFile);
         for (String host : p.getIncludedNodes()) {
           pw.write( host + "\n");
         }
         pw.close();
         args.add("-f");
-        args.add("include-hosts-file");
+        args.add(includeHostsFile.getAbsolutePath());
       } else {
         args.add(StringUtils.join(p.getIncludedNodes(), ','));
       }
@@ -1847,7 +1865,7 @@ public class TestBalancer {
     for(int i = 0; i < lengths.length; i++) {
       final long size = lengths[i];
       final Path p = new Path("/file" + i + "_size" + size);
-      try(final OutputStream out = dfs.create(p)) {
+      try(OutputStream out = dfs.create(p)) {
         for(int j = 0; j < size; j++) {
           out.write(j);
         }
@@ -1942,11 +1960,13 @@ public class TestBalancer {
     doTestBalancerWithStripedFile(conf);
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 200000)
   public void testBalancerWithStripedFile() throws Exception {
     Configuration conf = new Configuration();
     initConfWithStripe(conf);
+    NameNodeConnector.setWrite2IdFile(true);
     doTestBalancerWithStripedFile(conf);
+    NameNodeConnector.setWrite2IdFile(false);
   }
 
   private void doTestBalancerWithStripedFile(Configuration conf) throws Exception {

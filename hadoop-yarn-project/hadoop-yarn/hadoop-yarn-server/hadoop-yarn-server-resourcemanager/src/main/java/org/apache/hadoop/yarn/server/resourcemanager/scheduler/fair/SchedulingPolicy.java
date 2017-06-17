@@ -33,6 +33,21 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * The SchedulingPolicy is used by the fair scheduler mainly to determine
+ * what a queue's fair share and steady fair share should be as well as
+ * calculating available headroom. This determines how resources can be
+ * shared between running applications within a queue.
+ * <p>
+ * Every queue has a policy, including parents and children. If a child
+ * queue doesn't specify one, it inherits the parent's policy.
+ * The policy for a child queue must be compatible with the policy of
+ * the parent queue; there are some combinations that aren't allowed.
+ * See {@link SchedulingPolicy#isChildPolicyAllowed(SchedulingPolicy)}.
+ * The policy for a queue is specified by setting property
+ * <i>schedulingPolicy</i> in the fair scheduler configuration file.
+ * The default policy is {@link FairSharePolicy} if not specified.
+ */
 @Public
 @Evolving
 public abstract class SchedulingPolicy {
@@ -41,11 +56,16 @@ public abstract class SchedulingPolicy {
 
   public static final SchedulingPolicy DEFAULT_POLICY =
       getInstance(FairSharePolicy.class);
-  
+
   /**
-   * Returns a {@link SchedulingPolicy} instance corresponding to the passed clazz
+   * Returns a {@link SchedulingPolicy} instance corresponding
+   * to the passed clazz.
+   *
+   * @param clazz a class that extends {@link SchedulingPolicy}
+   * @return a {@link SchedulingPolicy} instance
    */
-  public static SchedulingPolicy getInstance(Class<? extends SchedulingPolicy> clazz) {
+  public static SchedulingPolicy getInstance(
+      Class<? extends SchedulingPolicy> clazz) {
     SchedulingPolicy policy = ReflectionUtils.newInstance(clazz, null);
     SchedulingPolicy policyRet = instances.putIfAbsent(clazz, policy);
     if(policyRet != null) {
@@ -63,7 +83,9 @@ public abstract class SchedulingPolicy {
    * canonical class name of the {@link SchedulingPolicy}.
    * 
    * @param policy canonical class name or "drf" or "fair" or "fifo"
+   * @return a {@link SchedulingPolicy} instance parsed from given policy
    * @throws AllocationConfigurationException
+   *
    */
   @SuppressWarnings("unchecked")
   public static SchedulingPolicy parse(String policy)
@@ -94,7 +116,7 @@ public abstract class SchedulingPolicy {
 
   /**
    * Initialize the scheduling policy with cluster resources.
-   * @deprecated  Since it doesn't track cluster resource changes, replaced by
+   * @deprecated Since it doesn't track cluster resource changes, replaced by
    * {@link #initialize(FSContext)}.
    *
    * @param clusterCapacity cluster resources
@@ -158,7 +180,7 @@ public abstract class SchedulingPolicy {
       Collection<? extends FSQueue> queues, Resource totalResources);
 
   /**
-   * Check if the resource usage is over the fair share under this policy
+   * Check if the resource usage is over the fair share under this policy.
    *
    * @param usage {@link Resource} the resource usage
    * @param fairShare {@link Resource} the fair share
@@ -168,10 +190,10 @@ public abstract class SchedulingPolicy {
       Resource usage, Resource fairShare);
 
   /**
-   * Get headroom by calculating the min of <code>clusterAvailable</code> and
-   * (<code>queueFairShare</code> - <code>queueUsage</code>) resources that are
+   * Get headroom by calculating the min of {@code clusterAvailable} and
+   * ({@code queueFairShare} - {@code queueUsage}) resources that are
    * applicable to this policy. For eg if only memory then leave other
-   * resources such as CPU to same as clusterAvailable.
+   * resources such as CPU to same as {@code clusterAvailable}.
    *
    * @param queueFairShare fairshare in the queue
    * @param queueUsage resources used in the queue

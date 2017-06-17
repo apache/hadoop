@@ -101,8 +101,9 @@ public final class SlowDiskReports {
     }
 
     boolean areEqual;
-    for (String disk : this.slowDisks.keySet()) {
-      if (!this.slowDisks.get(disk).equals(that.slowDisks.get(disk))) {
+    for (Map.Entry<String, Map<DiskOp, Double>> entry : this.slowDisks
+        .entrySet()) {
+      if (!entry.getValue().equals(that.slowDisks.get(entry.getKey()))) {
         return false;
       }
     }

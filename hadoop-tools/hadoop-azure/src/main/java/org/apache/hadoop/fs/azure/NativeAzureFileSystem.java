@@ -200,7 +200,7 @@ public class NativeAzureFileSystem extends FileSystem {
       JsonNode oldFolderName = json.get("OldFolderName");
       JsonNode newFolderName = json.get("NewFolderName");
       if (oldFolderName == null || newFolderName == null) {
-    	  this.committed = false;
+        this.committed = false;
       } else {
         this.srcKey = oldFolderName.textValue();
         this.dstKey = newFolderName.textValue();
@@ -349,7 +349,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       return contents;
     }
-    
+
     /**
      * This is an exact copy of org.codehaus.jettison.json.JSONObject.quote 
      * method.
@@ -611,10 +611,12 @@ public class NativeAzureFileSystem extends FileSystem {
         // The rename already finished, so do nothing.
         ;
       } else {
-        throw new IOException(
-            "Attempting to complete rename of file " + srcKey + "/" + fileName
-            + " during folder rename redo, and file was not found in source "
-            + "or destination.");
+        // HADOOP-14512
+        LOG.warn(
+          "Attempting to complete rename of file " + srcKey + "/" + fileName
+          + " during folder rename redo, and file was not found in source "
+          + "or destination " + dstKey + "/" + fileName + ". "
+          + "This must mean the rename of this file has already completed");
       }
     }
 
@@ -639,7 +641,7 @@ public class NativeAzureFileSystem extends FileSystem {
     return "wasb";
   }
 
-  
+
   /**
    * <p>
    * A {@link FileSystem} for reading and writing files stored on <a
@@ -816,6 +818,27 @@ public class NativeAzureFileSystem extends FileSystem {
       }
     }
 
+    @Override
+    public synchronized  void readFully(long position, byte[] buffer, int offset, int length)
+        throws IOException {
+      validatePositionedReadArgs(position, buffer, offset, length);
+
+      int nread = 0;
+      while (nread < length) {
+        // In case BlobInputStream is used, mark() can act as a hint to read ahead only this
+        // length instead of 4 MB boundary.
+        in.mark(length - nread);
+        int nbytes = read(position + nread,
+            buffer,
+            offset + nread,
+            length - nread);
+        if (nbytes < 0) {
+          throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
+        }
+        nread += nbytes;
+      }
+    }
+
     /*
      * Reads up to len bytes of data from the input stream into an array of
      * bytes. An attempt is made to read as many as len bytes, but a smaller
@@ -886,9 +909,13 @@ public class NativeAzureFileSystem extends FileSystem {
         if (pos < 0) {
           throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
         }
-        IOUtils.closeStream(in);
-        in = store.retrieve(key);
-        this.pos = in.skip(pos);
+        if (this.pos > pos) {
+          IOUtils.closeStream(in);
+          in = store.retrieve(key);
+          this.pos = in.skip(pos);
+        } else {
+          this.pos += in.skip(pos - this.pos);
+        }
         LOG.debug("Seek to position {}. Bytes skipped {}", pos,
           this.pos);
       } catch(IOException e) {
@@ -1433,14 +1460,22 @@ public class NativeAzureFileSystem extends FileSystem {
    * @param operation - A string describing the operation being performed ("delete", "create" etc.).
    * @param originalPath - The originalPath that was being accessed
    */
-  private void performAuthCheck(String requestingAccessForPath, WasbAuthorizationOperations accessType,
-      String operation, String originalPath) throws WasbAuthorizationException, IOException {
+  private void performAuthCheck(Path requestingAccessForPath, WasbAuthorizationOperations accessType,
+      String operation, Path originalPath) throws WasbAuthorizationException, IOException {
 
-    if (azureAuthorization && this.authorizer != null &&
-        !this.authorizer.authorize(requestingAccessForPath, accessType.toString())) {
-      throw new WasbAuthorizationException(operation
-          + " operation for Path : " + originalPath + " not allowed");
-    }
+    if (azureAuthorization && this.authorizer != null) {
+
+      requestingAccessForPath = requestingAccessForPath.makeQualified(getUri(), getWorkingDirectory());
+      originalPath = originalPath.makeQualified(getUri(), getWorkingDirectory());
+
+      String owner = getOwnerForPath(requestingAccessForPath);
+
+      if (!this.authorizer.authorize(requestingAccessForPath.toString(), accessType.toString(), owner)) {
+        throw new WasbAuthorizationException(operation
+            + " operation for Path : " + originalPath.toString() + " not allowed");
+      }
+
+   }
   }
 
   /**
@@ -1466,7 +1501,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.WRITE, "append", absolutePath.toString());
+    performAuthCheck(absolutePath, WasbAuthorizationOperations.WRITE, "append", absolutePath);
 
     String key = pathToKey(absolutePath);
     FileMetadata meta = null;
@@ -1671,7 +1706,7 @@ public class NativeAzureFileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     Path ancestor = getAncestor(absolutePath);
 
-    performAuthCheck(ancestor.toString(), WasbAuthorizationOperations.WRITE, "create", absolutePath.toString());
+    performAuthCheck(ancestor, WasbAuthorizationOperations.WRITE, "create", absolutePath);
 
     String key = pathToKey(absolutePath);
 
@@ -1685,7 +1720,7 @@ public class NativeAzureFileSystem extends FileSystem {
         throw new FileAlreadyExistsException("File already exists:" + f);
       }
       else {
-        performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.WRITE, "create", absolutePath.toString());
+        performAuthCheck(absolutePath, WasbAuthorizationOperations.WRITE, "create", absolutePath);
       }
     }
 
@@ -1800,7 +1835,7 @@ public class NativeAzureFileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     Path parentPath = absolutePath.getParent();
 
-    performAuthCheck(parentPath.toString(), WasbAuthorizationOperations.WRITE, "delete", absolutePath.toString());
+    performAuthCheck(parentPath, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
 
     String key = pathToKey(absolutePath);
 
@@ -2002,14 +2037,12 @@ public class NativeAzureFileSystem extends FileSystem {
           // NOTE: Ideally the subtree needs read-write-execute access check.
           // But we will simplify it to write-access check.
           if (metaFile.isDir()) { // the absolute-path
-            performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.WRITE, "delete",
-                absolutePath.toString());
+            performAuthCheck(absolutePath, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
           }
           for (FileMetadata meta : contents) {
             if (meta.isDir()) {
               Path subTreeDir = keyToPath(meta.getKey());
-              performAuthCheck(subTreeDir.toString(), WasbAuthorizationOperations.WRITE, "delete",
-                  absolutePath.toString());
+              performAuthCheck(subTreeDir, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
             }
           }
         }
@@ -2090,8 +2123,7 @@ public class NativeAzureFileSystem extends FileSystem {
     // Capture the absolute path and the path to key.
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.READ, "getFileStatus",
-        absolutePath.toString());
+    performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "getFileStatus", absolutePath);
 
     String key = pathToKey(absolutePath);
     if (key.length() == 0) { // root always exists
@@ -2192,7 +2224,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.READ, "liststatus", absolutePath.toString());
+    performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "liststatus", absolutePath);
 
     String key = pathToKey(absolutePath);
     Set<FileStatus> status = new TreeSet<FileStatus>();
@@ -2436,7 +2468,7 @@ public class NativeAzureFileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     Path ancestor = getAncestor(absolutePath);
 
-    performAuthCheck(ancestor.toString(), WasbAuthorizationOperations.WRITE, "mkdirs", absolutePath.toString());
+    performAuthCheck(ancestor, WasbAuthorizationOperations.WRITE, "mkdirs", absolutePath);
 
     PermissionStatus permissionStatus = null;
     if(noUmask) {
@@ -2451,8 +2483,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
 
     ArrayList<String> keysToCreateAsFolder = new ArrayList<String>();
-    ArrayList<String> keysToUpdateAsFolder = new ArrayList<String>();
-    boolean childCreated = false;
     // Check that there is no file in the parent chain of the given path.
     for (Path current = absolutePath, parent = current.getParent();
         parent != null; // Stop when you get to the root
@@ -2464,14 +2494,6 @@ public class NativeAzureFileSystem extends FileSystem {
             + current + " is an existing file.");
       } else if (currentMetadata == null) {
         keysToCreateAsFolder.add(currentKey);
-        childCreated = true;
-      } else {
-        // The directory already exists. Its last modified time need to be
-        // updated if there is a child directory created under it.
-        if (childCreated) {
-          keysToUpdateAsFolder.add(currentKey);
-        }
-        childCreated = false;
       }
     }
 
@@ -2492,7 +2514,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.READ, "read", absolutePath.toString());
+    performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "read", absolutePath);
 
     String key = pathToKey(absolutePath);
     FileMetadata meta = null;
@@ -2558,8 +2580,7 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     }
 
-    performAuthCheck(srcParentFolder.toString(), WasbAuthorizationOperations.WRITE, "rename",
-        absoluteSrcPath.toString());
+    performAuthCheck(srcParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteSrcPath);
 
     String srcKey = pathToKey(absoluteSrcPath);
 
@@ -2572,8 +2593,7 @@ public class NativeAzureFileSystem extends FileSystem {
     Path absoluteDstPath = makeAbsolute(dst);
     Path dstParentFolder = absoluteDstPath.getParent();
 
-    performAuthCheck(dstParentFolder.toString(), WasbAuthorizationOperations.WRITE, "rename",
-        absoluteDstPath.toString());
+    performAuthCheck(dstParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteDstPath);
 
     String dstKey = pathToKey(absoluteDstPath);
     FileMetadata dstMetadata = null;
@@ -2978,7 +2998,7 @@ public class NativeAzureFileSystem extends FileSystem {
    * @throws IOException thrown when getting the current user.
    */
   @Override
-  public Token<?> getDelegationToken(final String renewer) throws IOException {
+  public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
     if (kerberosSupportEnabled) {
       try {
         final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -3181,5 +3201,41 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Return to the caller with the randomized key.
     return randomizedKey;
+  }
+
+  /*
+   * Helper method to retrieve owner information for a given path.
+   * The method returns empty string in case the file is not found or the metadata does not contain owner information
+  */
+  @VisibleForTesting
+  public String getOwnerForPath(Path absolutePath) throws IOException {
+    String owner = "";
+    FileMetadata meta = null;
+    String key = pathToKey(absolutePath);
+    try {
+
+      meta = store.retrieveMetadata(key);
+
+      if (meta != null) {
+        owner = meta.getPermissionStatus().getUserName();
+        LOG.debug("Retrieved '{}' as owner for path - {}", owner, absolutePath);
+      } else {
+        // meta will be null if file/folder doen not exist
+        LOG.debug("Cannot find file/folder - '{}'. Returning owner as empty string", absolutePath);
+      }
+    } catch(IOException ex) {
+
+          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+          boolean isfileNotFoundException = innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException);
+
+          // should not throw when the exception is related to blob/container/file/folder not found
+          if (!isfileNotFoundException) {
+            String errorMsg = "Could not retrieve owner information for path - " + absolutePath;
+            LOG.error(errorMsg);
+            throw new IOException(errorMsg, ex);
+          }
+      }
+    return owner;
   }
 }

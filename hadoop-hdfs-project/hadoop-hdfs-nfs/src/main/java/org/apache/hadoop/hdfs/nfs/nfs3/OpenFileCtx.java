@@ -72,7 +72,7 @@ class OpenFileCtx {
   // Pending writes water mark for dump, 1MB
   private static long DUMP_WRITE_WATER_MARK = 1024 * 1024;
 
-  static enum COMMIT_STATUS {
+  enum COMMIT_STATUS {
     COMMIT_FINISHED,
     COMMIT_WAIT,
     COMMIT_INACTIVE_CTX,

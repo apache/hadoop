@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
@@ -386,7 +387,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       try {
         // New value will overwrite old values for the same key
         batch.put(bytes(keyResChng),
-            ((ResourcePBImpl) capability).getProto().toByteArray());
+            ProtoUtils.convertToProtoFormat(capability).toByteArray());
         batch.put(bytes(keyVersion), bytes(Integer.toString(containerVersion)));
         db.write(batch);
       } finally {

@@ -78,6 +78,10 @@ public class MutableMetricsFactory {
                               annotation.sampleName(), annotation.valueName(),
                               annotation.always());
     }
+    if (cls == MutableRollingAverages.class) {
+      return registry.newMutableRollingAverages(info.name(),
+          annotation.valueName());
+    }
     throw new MetricsException("Unsupported metric field "+ field.getName() +
                                " of type "+ field.getType().getName());
   }

@@ -230,7 +230,7 @@ public class SequenceFile {
    * 
    * @see SequenceFile.Writer
    */
-  public static enum CompressionType {
+  public enum CompressionType {
     /** Do not compress records. */
     NONE, 
     /** Compress values only, each separately. */

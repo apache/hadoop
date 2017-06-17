@@ -53,7 +53,7 @@ public class RandomTextWriterJob extends Configured implements Tool {
   public static final String MIN_KEY = "mapreduce.randomtextwriter.minwordskey";
   public static final String MAX_KEY = "mapreduce.randomtextwriter.maxwordskey";
 
-  static enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
+  enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
 
   public Job createJob(Configuration conf) throws IOException {
     long numBytesToWritePerMap = conf.getLong(BYTES_PER_MAP, 10 * 1024);

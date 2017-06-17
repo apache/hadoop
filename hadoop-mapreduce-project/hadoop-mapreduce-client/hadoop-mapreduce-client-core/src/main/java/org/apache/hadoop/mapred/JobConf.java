@@ -53,7 +53,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
-import org.apache.log4j.Level;
 
 /** 
  * A map/reduce job configuration.
@@ -333,7 +332,7 @@ public class JobConf extends Configuration {
   private Credentials credentials = new Credentials();
   
   /**
-   * Configuration key to set the logging {@link Level} for the map task.
+   * Configuration key to set the logging level for the map task.
    *
    * The allowed logging levels are:
    * OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
@@ -342,7 +341,7 @@ public class JobConf extends Configuration {
     JobContext.MAP_LOG_LEVEL;
   
   /**
-   * Configuration key to set the logging {@link Level} for the reduce task.
+   * Configuration key to set the logging level for the reduce task.
    *
    * The allowed logging levels are:
    * OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
@@ -353,7 +352,7 @@ public class JobConf extends Configuration {
   /**
    * Default logging level for map/reduce tasks.
    */
-  public static final Level DEFAULT_LOG_LEVEL = Level.INFO;
+  public static final String DEFAULT_LOG_LEVEL = JobContext.DEFAULT_LOG_LEVEL;
 
   /**
    * The variable is kept for M/R 1.x applications, M/R 2.x applications should

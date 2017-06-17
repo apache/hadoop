@@ -1270,7 +1270,7 @@ public class HarFileSystem extends FileSystem {
   }
 
   @Override
-  public FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
-    return fs.newFSDataOutputStreamBuilder(path);
+  public FSDataOutputStreamBuilder createFile(Path path) {
+    return fs.createFile(path);
   }
 }

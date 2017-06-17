@@ -225,6 +225,7 @@ public final class Util {
       stream = new DigestInputStream(stream, digester);
     }
     boolean finishedReceiving = false;
+    int num = 1;
 
     List<FileOutputStream> outputStreams = Lists.newArrayList();
 
@@ -256,7 +257,6 @@ public final class Util {
         }
       }
 
-      int num = 1;
       byte[] buf = new byte[IO_FILE_BUFFER_SIZE];
       while (num > 0) {
         num = stream.read(buf);
@@ -305,8 +305,8 @@ public final class Util {
         // exception that makes it look like a server-side problem!
         deleteTmpFiles(localPaths);
         throw new IOException("File " + url + " received length " + received +
-            " is not of the advertised size " +
-            advertisedSize);
+            " is not of the advertised size " + advertisedSize +
+            ". Fsimage name: " + fsImageName + " lastReceived: " + num);
       }
     }
     xferStats.insert(0, String.format("Combined time for file download and" +
@@ -389,17 +389,17 @@ public final class Util {
     return addrsList;
   }
 
-  public static boolean isDiskStatsEnabled(double fileIOSamplingFraction) {
+  public static boolean isDiskStatsEnabled(int fileIOSamplingPercentage) {
     final boolean isEnabled;
-    if (fileIOSamplingFraction < 0.000001) {
+    if (fileIOSamplingPercentage <= 0) {
       LOG.info(DFSConfigKeys
-          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
-          + fileIOSamplingFraction + ". Disabling file IO profiling");
+          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY + " set to "
+          + fileIOSamplingPercentage + ". Disabling file IO profiling");
       isEnabled = false;
     } else {
       LOG.info(DFSConfigKeys
-          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
-          + fileIOSamplingFraction + ". Enabling file IO profiling");
+          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY + " set to "
+          + fileIOSamplingPercentage + ". Enabling file IO profiling");
       isEnabled = true;
     }
 

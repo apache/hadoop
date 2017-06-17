@@ -50,10 +50,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.Path.SEPARATOR;
 import static org.apache.hadoop.util.Shell.SYSPROP_HADOOP_HOME_DIR;
 import static org.apache.hadoop.yarn.api.ApplicationConstants.Environment.JAVA_HOME;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.YARN_CONTAINER_SANDBOX;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_LOCAL_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_RUN_CMDS;
@@ -93,12 +96,20 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     Accepts canonical path to a java policy file on the local filesystem.
  *     This file will be loaded as the base policy, any additional container
  *     grants will be appended to this base file.  If not specified, the default
- *     java.policy   file provided with hadoop resources will be used.
+ *     java.policy file provided with hadoop resources will be used.
  *   </li>
  *   <li>
  *     {@value YarnConfiguration#YARN_CONTAINER_SANDBOX_WHITELIST_GROUP} :
  *     Optional setting to specify a YARN queue which will be exempt from the
  *     sand-boxing process.
+ *   </li>
+ *   <li>
+ *     {@value
+ *     YarnConfiguration#YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX}$groupName :
+ *     Optional setting to map groups to java policy files.  The value is a path
+ *     to the java policy file for $groupName.  A user which is a member of
+ *     multiple groups with different policies will receive the superset of all
+ *     the permissions across their groups.
  *   </li>
  * </ul>
  */
@@ -138,10 +149,8 @@ public class JavaSandboxLinuxContainerRuntime
     this.configuration = conf;
     this.sandboxMode =
         SandboxMode.get(
-            this.configuration.get(YarnConfiguration.YARN_CONTAINER_SANDBOX,
+            this.configuration.get(YARN_CONTAINER_SANDBOX,
                 YarnConfiguration.DEFAULT_YARN_CONTAINER_SANDBOX));
-
-    initializePolicyDir();
 
     super.initialize(conf);
   }
@@ -213,8 +222,10 @@ public class JavaSandboxLinuxContainerRuntime
         ctx.getExecutionAttribute(CONTAINER_RUN_CMDS);
     Map<String, String> env =
         ctx.getContainer().getLaunchContext().getEnvironment();
+    String username =
+        ctx.getExecutionAttribute(USER);
 
-    if(!isSandboxContainerWhitelisted(ctx, commands)) {
+    if(!isSandboxContainerWhitelisted(username, commands)) {
       String tmpDirBase = configuration.get("hadoop.tmp.dir");
       if (tmpDirBase == null) {
         throw new ContainerExecutionException("hadoop.tmp.dir not set!");
@@ -223,7 +234,10 @@ public class JavaSandboxLinuxContainerRuntime
       OutputStream policyOutputStream = null;
       try {
         String containerID = ctx.getExecutionAttribute(CONTAINER_ID_STR);
+        initializePolicyDir();
 
+        List<String> groupPolicyFiles =
+            getGroupPolicyFiles(configuration, ctx.getExecutionAttribute(USER));
         Path policyFilePath = Files.createFile(
             Paths.get(policyFileDir.toString(),
             containerID + "-" + NMContainerPolicyUtils.POLICY_FILE),
@@ -232,12 +246,12 @@ public class JavaSandboxLinuxContainerRuntime
 
         containerPolicies.put(containerID, policyFilePath);
 
-        NMContainerPolicyUtils.generatePolicyFile(
-            policyOutputStream, localDirs, resources, configuration);
+        NMContainerPolicyUtils.generatePolicyFile(policyOutputStream,
+            localDirs, groupPolicyFiles, resources, configuration);
         NMContainerPolicyUtils.appendSecurityFlags(
             commands, env, policyFilePath, sandboxMode);
 
-      } catch (Exception e) {
+      } catch (IOException e) {
         throw new ContainerExecutionException(e);
       } finally {
         IOUtils.cleanup(LOG, policyOutputStream);
@@ -265,15 +279,32 @@ public class JavaSandboxLinuxContainerRuntime
     return sandboxMode != SandboxMode.disabled;
   }
 
+  private static List<String> getGroupPolicyFiles(Configuration conf,
+      String user) throws ContainerExecutionException {
+    Groups groups = Groups.getUserToGroupsMappingService(conf);
+    List<String> userGroups;
+    try {
+      userGroups = groups.getGroups(user);
+    } catch (IOException e) {
+      throw new ContainerExecutionException("Container user does not exist");
+    }
+
+    return userGroups.stream()
+        .map(group -> conf.get(YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX
+            + group))
+        .filter(groupPolicy -> groupPolicy != null)
+        .collect(Collectors.toList());
+  }
+
   /**
    * Determine if the container should be whitelisted (i.e. exempt from the
    * Java Security Manager).
-   * @param ctx The container runtime context for the requested container
+   * @param username The name of the user running the container
    * @param commands The list of run commands for the container
    * @return boolean value denoting whether the container should be whitelisted.
    * @throws ContainerExecutionException If container user can not be resolved
    */
-  private boolean isSandboxContainerWhitelisted(ContainerRuntimeContext ctx,
+  private boolean isSandboxContainerWhitelisted(String username,
       List<String> commands) throws ContainerExecutionException {
     String whitelistGroup = configuration.get(
         YarnConfiguration.YARN_CONTAINER_SANDBOX_WHITELIST_GROUP);
@@ -282,7 +313,7 @@ public class JavaSandboxLinuxContainerRuntime
     boolean isWhitelisted = false;
 
     try {
-      userGroups = groups.getGroups(ctx.getExecutionAttribute(USER));
+      userGroups = groups.getGroups(username);
     } catch (IOException e) {
       throw new ContainerExecutionException("Container user does not exist");
     }
@@ -368,8 +399,12 @@ public class JavaSandboxLinuxContainerRuntime
 
     static final String STRIP_POLICY_FLAG = POLICY_APPEND_FLAG + "[^ ]+";
     static final String CONTAINS_JAVA_CMD = "\\$" + JAVA_HOME + JAVA_CMD + ".*";
-    static final String CHAINED_COMMAND_REGEX =
-        "^.*(&&.+$)|(\\|\\|.+$).*$";  //Matches any occurrences of '||' or '&&'
+    static final String MULTI_COMMAND_REGEX =
+        "(?s).*(" + //command read as single line
+        "(&[^>]|&&)|(\\|{1,2})|(\\|&)|" + //Matches '&','&&','|','||' and '|&'
+        "(`[^`]+`)|(\\$\\([^)]+\\))|" + //Matches occurrences of $() or ``
+        "(;)" + //Matches end of statement ';'
+        ").*";
     static final String CLEAN_CMD_REGEX =
         "(" + SECURITY_FLAG + ")|" +
             "(" + STRIP_POLICY_FLAG + ")";
@@ -396,8 +431,9 @@ public class JavaSandboxLinuxContainerRuntime
      * base policy file or if it is unable to create a new policy file.
      */
     static void generatePolicyFile(OutputStream policyOutStream,
-        List<String> localDirs, Map<org.apache.hadoop.fs.Path,
-        List<String>> resources, Configuration conf)
+        List<String> localDirs, List<String> groupPolicyPaths,
+        Map<org.apache.hadoop.fs.Path, List<String>> resources,
+        Configuration conf)
         throws IOException {
 
       String policyFilePath =
@@ -411,13 +447,16 @@ public class JavaSandboxLinuxContainerRuntime
         cacheDirs.add(path.getParent().toString());
       }
 
-      if(policyFilePath == null) {
+      if (groupPolicyPaths != null) {
+        for(String policyPath : groupPolicyPaths) {
+          Files.copy(Paths.get(policyPath), policyOutStream);
+        }
+      } else if (policyFilePath == null) {
         IOUtils.copyBytes(
             NMContainerPolicyUtils.class.getResourceAsStream("/" + POLICY_FILE),
             policyOutStream, conf, false);
       } else {
         Files.copy(Paths.get(policyFilePath), policyOutStream);
-        policyOutStream.flush();
       }
 
       Formatter filePermissionFormat = new Formatter(policyOutStream,
@@ -459,7 +498,7 @@ public class JavaSandboxLinuxContainerRuntime
         String command = commands.get(i);
         if(validateJavaHome(env.get(JAVA_HOME.name()))
             && command.matches(CONTAINS_JAVA_CMD)
-            && !command.matches(CHAINED_COMMAND_REGEX)){
+            && !command.matches(MULTI_COMMAND_REGEX)){
           command = command.replaceAll(CLEAN_CMD_REGEX, "");
           String securityString = JVM_SECURITY_CMD + policyPath + " ";
           if(LOG.isDebugEnabled()) {
@@ -481,7 +520,7 @@ public class JavaSandboxLinuxContainerRuntime
 
     private static boolean validateJavaHome(String containerJavaHome)
         throws ContainerExecutionException{
-      if (System.getenv(JAVA_HOME.name()) == null){
+      if (System.getenv(JAVA_HOME.name()) == null) {
         throw new ContainerExecutionException(
             "JAVA_HOME is not set for NodeManager");
       }

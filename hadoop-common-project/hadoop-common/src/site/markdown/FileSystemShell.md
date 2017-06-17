@@ -149,7 +149,7 @@ The -u and -q options control what columns the output contains.  -q means show q
 
 The output columns with -count -q are: QUOTA, REMAINING\_QUOTA, SPACE\_QUOTA, REMAINING\_SPACE\_QUOTA, DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
-The output columns with -count -u are: QUOTA, REMAINING\_QUOTA, SPACE\_QUOTA, REMAINING\_SPACE\_QUOTA
+The output columns with -count -u are: QUOTA, REMAINING\_QUOTA, SPACE\_QUOTA, REMAINING\_SPACE\_QUOTA, PATHNAME
 
 The -t option shows the quota and usage for each storage type. The -t option is ignored if -u or -q option is not given. The list of possible parameters that can be used in -t option(case insensitive except the parameter ""): "", "all", "ram_disk", "ssd", "disk" or "archive".
 
@@ -224,7 +224,7 @@ Example:
 du
 ----
 
-Usage: `hadoop fs -du [-s] [-h] [-x] URI [URI ...]`
+Usage: `hadoop fs -du [-s] [-h] [-v] [-x] URI [URI ...]`
 
 Displays sizes of files and directories contained in the given directory or the length of a file in case its just a file.
 
@@ -232,6 +232,7 @@ Options:
 
 * The -s option will result in an aggregate summary of file lengths being displayed, rather than the individual files. Without the -s option, calculation is done by going 1-level deep from the given path.
 * The -h option will format file sizes in a "human-readable" fashion (e.g 64.0m instead of 67108864)
+* The -v option will display the names of columns as a header line.
 * The -x option will exclude snapshots from the result calculation. Without the -x option (default), the result is always calculated from all INodes, including all snapshots under the given path.
 
 The du returns three columns with the following format:

@@ -101,7 +101,7 @@ public class SLSUtils {
    */
   public static Set<String> parseNodesFromSLSTrace(String jobTrace)
           throws IOException {
-    Set<String> nodeSet = new HashSet<String>();
+    Set<String> nodeSet = new HashSet<>();
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
@@ -109,18 +109,35 @@ public class SLSUtils {
     try {
       Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
-        Map jsonE = i.next();
-        List tasks = (List) jsonE.get("job.tasks");
-        for (Object o : tasks) {
-          Map jsonTask = (Map) o;
-          String hostname = jsonTask.get("container.host").toString();
-          nodeSet.add(hostname);
-        }
+        addNodes(nodeSet, i.next());
       }
     } finally {
       input.close();
     }
     return nodeSet;
+  }
+
+  private static void addNodes(Set<String> nodeSet, Map jsonEntry) {
+    if (jsonEntry.containsKey("num.nodes")) {
+      int numNodes = Integer.parseInt(jsonEntry.get("num.nodes").toString());
+      int numRacks = 1;
+      if (jsonEntry.containsKey("num.racks")) {
+        numRacks = Integer.parseInt(
+            jsonEntry.get("num.racks").toString());
+      }
+      nodeSet.addAll(generateNodes(numNodes, numRacks));
+    }
+
+    if (jsonEntry.containsKey("job.tasks")) {
+      List tasks = (List) jsonEntry.get("job.tasks");
+      for (Object o : tasks) {
+        Map jsonTask = (Map) o;
+        String hostname = (String) jsonTask.get("container.host");
+        if (hostname != null) {
+          nodeSet.add(hostname);
+        }
+      }
+    }
   }
 
   /**
@@ -150,11 +167,19 @@ public class SLSUtils {
     return nodeSet;
   }
 
-  public static Set<? extends String> generateNodesFromSynth(
-      int numNodes, int nodesPerRack) {
-    Set<String> nodeSet = new HashSet<String>();
+  public static Set<? extends String> generateNodes(int numNodes,
+      int numRacks){
+    Set<String> nodeSet = new HashSet<>();
+    if (numRacks < 1) {
+      numRacks = 1;
+    }
+
+    if (numRacks > numNodes) {
+      numRacks = numNodes;
+    }
+
     for (int i = 0; i < numNodes; i++) {
-      nodeSet.add("/rack" + i % nodesPerRack + "/node" + i);
+      nodeSet.add("/rack" + i % numRacks + "/node" + i);
     }
     return nodeSet;
   }

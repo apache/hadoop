@@ -150,6 +150,12 @@ public class AmIpFilter implements Filter {
         insertPoint += PROXY_PATH.length();
         redirect.insert(insertPoint, "/redirect");
       }
+      // add the query parameters on the redirect if there were any
+      String queryString = httpReq.getQueryString();
+      if (queryString != null && !queryString.isEmpty()) {
+        redirect.append("?");
+        redirect.append(queryString);
+      }
 
       ProxyUtils.sendRedirect(httpReq, httpResp, redirect.toString());
     } else {
