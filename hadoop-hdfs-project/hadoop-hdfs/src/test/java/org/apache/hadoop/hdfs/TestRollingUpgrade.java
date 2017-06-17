@@ -301,7 +301,7 @@ public class TestRollingUpgrade {
     assertEquals(0l, ruBean.get("finalizeTime"));
   }
 
-  @Test(timeout = 200000L)
+  @Test
   public void testRollback() throws Exception {
     // start a cluster
     final Configuration conf = new HdfsConfiguration();
