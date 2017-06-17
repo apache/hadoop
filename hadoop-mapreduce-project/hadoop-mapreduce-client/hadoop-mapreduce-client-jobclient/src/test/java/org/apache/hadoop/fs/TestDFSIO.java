@@ -337,9 +337,10 @@ public class TestDFSIO implements Tool {
   @Test(timeout = 60000)
   public void testSequentialTruncate() throws Exception {
     FileSystem fs = cluster.getFileSystem();
+    // given DEFAULT_NR_BYTES files to be truncated
     bench.sequentialTest(fs, TestType.TEST_TYPE_WRITE,
-            DEFAULT_NR_BYTES,
-            DEFAULT_NR_FILES); // make sure the length of files to be truncated is DEFAULT_NR_BYTES
+            DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+    // test truncate
     bench.sequentialTest(fs, TestType.TEST_TYPE_TRUNCATE,
             DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
   }
@@ -774,14 +775,16 @@ public class TestDFSIO implements Tool {
     default:
       return;
     }
-    for(int i=0; i < nrFiles; i++) {
+    for (int i = 0; i < nrFiles; i++) {
       ioer.configure(new JobConf(config, TestDFSIO.class));
       String fileName = getFileName(i);
       ioer.stream = ioer.getIOStream(fileName);
       try {
         ioer.doIO(Reporter.NULL, fileName, fileSize);
       } finally {
-        if(ioer.stream != null) ioer.stream.close();
+        if (ioer.stream != null) {
+          ioer.stream.close();
+        }
       }
     }
   }
