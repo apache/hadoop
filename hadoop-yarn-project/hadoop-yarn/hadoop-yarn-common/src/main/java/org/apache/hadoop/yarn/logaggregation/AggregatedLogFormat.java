@@ -308,12 +308,17 @@ public class AggregatedLogFormat {
     }
 
     private Set<File> getPendingLogFilesToUpload(File containerLogDir) {
-      if(containerLogDir == null ||
-          containerLogDir.listFiles() == null) {
+      if(containerLogDir == null) {
         return new HashSet<>(0);
       }
+
+      File[] filesList = containerLogDir.listFiles();
+      if (filesList == null) {
+        return new HashSet<>(0);
+      }
+
       Set<File> candidates =
-          new HashSet<File>(Arrays.asList(containerLogDir.listFiles()));
+          new HashSet<File>(Arrays.asList(filesList));
       for (File logFile : candidates) {
         this.allExistingFileMeta.add(getLogFileMetaData(logFile));
       }
