@@ -296,19 +296,17 @@ public class BlockStorageMovementAttemptedItems {
             .next();
         synchronized (storageMovementAttemptedItems) {
           Status status = storageMovementAttemptedResult.getStatus();
+          long trackId = storageMovementAttemptedResult.getTrackId();
           ItemInfo itemInfo;
           switch (status) {
           case FAILURE:
-            blockStorageMovementNeeded
-                .add(storageMovementAttemptedResult.getTrackId());
+            blockStorageMovementNeeded.add(trackId);
             LOG.warn("Blocks storage movement results for the tracking id: {}"
                 + " is reported from co-ordinating datanode, but result"
-                + " status is FAILURE. So, added for retry",
-                storageMovementAttemptedResult.getTrackId());
+                + " status is FAILURE. So, added for retry", trackId);
             break;
           case SUCCESS:
-            itemInfo = storageMovementAttemptedItems
-                .get(storageMovementAttemptedResult.getTrackId());
+            itemInfo = storageMovementAttemptedItems.get(trackId);
 
             // ItemInfo could be null. One case is, before the blocks movements
             // result arrives the attempted trackID became timed out and then
@@ -318,20 +316,23 @@ public class BlockStorageMovementAttemptedItems {
             // following condition. If all the block locations under the trackID
             // are attempted and failed to find matching target nodes to satisfy
             // storage policy in previous SPS iteration.
-            if (itemInfo != null
-                && !itemInfo.isAllBlockLocsAttemptedToSatisfy()) {
-              blockStorageMovementNeeded
-                  .add(storageMovementAttemptedResult.getTrackId());
-              LOG.warn("Blocks storage movement is SUCCESS for the track id: {}"
-                  + " reported from co-ordinating datanode. But adding trackID"
-                  + " back to retry queue as some of the blocks couldn't find"
-                  + " matching target nodes in previous SPS iteration.",
-                  storageMovementAttemptedResult.getTrackId());
+            String msg = "Blocks storage movement is SUCCESS for the track id: "
+                + trackId + " reported from co-ordinating datanode.";
+            if (itemInfo != null) {
+              if (!itemInfo.isAllBlockLocsAttemptedToSatisfy()) {
+                blockStorageMovementNeeded.add(trackId);
+                LOG.warn("{} But adding trackID back to retry queue as some of"
+                    + " the blocks couldn't find matching target nodes in"
+                    + " previous SPS iteration.", msg);
+              } else {
+                LOG.info(msg);
+                // Remove xattr for the track id.
+                this.sps.postBlkStorageMovementCleanup(
+                    storageMovementAttemptedResult.getTrackId());
+              }
             } else {
-              LOG.info("Blocks storage movement is SUCCESS for the track id: {}"
-                  + " reported from co-ordinating datanode. But the trackID "
-                  + "doesn't exists in storageMovementAttemptedItems list",
-                  storageMovementAttemptedResult.getTrackId());
+              LOG.info("{} But the trackID doesn't exists in "
+                  + "storageMovementAttemptedItems list", msg);
               // Remove xattr for the track id.
               this.sps.postBlkStorageMovementCleanup(
                   storageMovementAttemptedResult.getTrackId());
