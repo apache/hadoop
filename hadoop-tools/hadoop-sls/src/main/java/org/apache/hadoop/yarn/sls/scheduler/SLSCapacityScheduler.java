@@ -26,8 +26,10 @@ import com.codahale.metrics.SlidingWindowReservoir;
 import com.codahale.metrics.Timer;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -462,7 +464,8 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 
     // application running information
     jobRuntimeLogBW = new BufferedWriter(
-            new FileWriter(metricsOutputDir + "/jobruntime.csv"));
+        new OutputStreamWriter(new FileOutputStream(
+            metricsOutputDir + "/jobruntime.csv"), StandardCharsets.UTF_8));
     jobRuntimeLogBW.write("JobID,real_start_time,real_end_time," +
             "simulate_start_time,simulate_end_time" + EOL);
     jobRuntimeLogBW.flush();
@@ -667,7 +670,9 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
     public MetricsLogRunnable() {
       try {
         metricsLogBW = new BufferedWriter(
-                new FileWriter(metricsOutputDir + "/realtimetrack.json"));
+            new OutputStreamWriter(new FileOutputStream(
+                metricsOutputDir + "/realtimetrack.json"),
+                StandardCharsets.UTF_8));
         metricsLogBW.write("[");
       } catch (IOException e) {
         e.printStackTrace();
