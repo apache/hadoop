@@ -121,6 +121,9 @@ Release 2.7.4 - UNRELEASED
     YARN-5121. fix some container-executor portability issues.
     (Allen Wittenauer) Backport YARN-6698 by  Akira Ajisaka.
 
+    YARN-6719. Fix findbugs warnings in SLSCapacityScheduler.java.
+    (Akira Ajisaka via naganarasimha_gr)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
