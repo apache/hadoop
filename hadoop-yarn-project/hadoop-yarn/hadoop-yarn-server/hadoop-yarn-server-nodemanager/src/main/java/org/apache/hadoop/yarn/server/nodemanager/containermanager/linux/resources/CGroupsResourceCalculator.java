@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.SysInfoLinux;
@@ -73,11 +74,34 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
   private final static Object LOCK = new Object();
   private static boolean firstError = true;
 
+  /**
+   * Create resource calculator for all Yarn containers.
+   * @throws YarnException Could not access cgroups
+   */
+  public CGroupsResourceCalculator() throws YarnException {
+    this(null, PROCFS, ResourceHandlerModule.getCGroupsHandler(),
+        SystemClock.getInstance());
+  }
+
+  /**
+   * Create resource calculator for the container that has the specified pid.
+   * @param pid A pid from the cgroup or null for all containers
+   * @throws YarnException Could not access cgroups
+   */
   public CGroupsResourceCalculator(String pid) throws YarnException {
     this(pid, PROCFS, ResourceHandlerModule.getCGroupsHandler(),
         SystemClock.getInstance());
   }
 
+  /**
+   * Create resource calculator for testing.
+   * @param pid A pid from the cgroup or null for all containers
+   * @param procfsDir Path to /proc or a mock /proc directory
+   * @param cGroupsHandler Initialized cgroups handler object
+   * @param clock A clock object
+   * @throws YarnException YarnException Could not access cgroups
+   */
+  @VisibleForTesting
   CGroupsResourceCalculator(String pid, String procfsDir,
                             CGroupsHandler cGroupsHandler, Clock clock)
       throws YarnException {
@@ -212,6 +236,16 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     }
   }
 
+  private String getCGroupRelativePath(
+      CGroupsHandler.CGroupController controller)
+      throws YarnException {
+    if (pid == null) {
+      return cGroupsHandler.getRelativePathForCGroup("");
+    } else {
+      return getCGroupRelativePathForPid(controller);
+    }
+  }
+
   private String getCGroupRelativePathForPid(
       CGroupsHandler.CGroupController controller)
       throws YarnException {
@@ -300,11 +334,11 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     File cpuDir = new File(
         cGroupsHandler.getControllerPath(
             CGroupsHandler.CGroupController.CPUACCT),
-        getCGroupRelativePathForPid(CGroupsHandler.CGroupController.CPUACCT));
+        getCGroupRelativePath(CGroupsHandler.CGroupController.CPUACCT));
     File memDir = new File(
         cGroupsHandler.getControllerPath(
             CGroupsHandler.CGroupController.MEMORY),
-        getCGroupRelativePathForPid(CGroupsHandler.CGroupController.MEMORY));
+        getCGroupRelativePath(CGroupsHandler.CGroupController.MEMORY));
     cpuStat = new File(cpuDir, CPU_STAT);
     memStat = new File(memDir, MEM_STAT);
     memswStat = new File(memDir, MEMSW_STAT);

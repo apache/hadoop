@@ -12,13 +12,18 @@ import java.io.FileNotFoundException;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit test for CGroupsResourceCalculator.
+ */
 public class TestCGroupsResourceCalculator {
 
-  ControlledClock clock = new ControlledClock();
-  CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
+  private ControlledClock clock = new ControlledClock();
+  private CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
 
   public TestCGroupsResourceCalculator() {
-    when(cGroupsHandler.getRelativePathForCGroup(any())).thenReturn("/yarn/container_1");
+    when(cGroupsHandler.getRelativePathForCGroup("container_1"))
+        .thenReturn("/yarn/container_1");
+    when(cGroupsHandler.getRelativePathForCGroup("")).thenReturn("/yarn/");
   }
 
   @Test
@@ -159,6 +164,80 @@ public class TestCGroupsResourceCalculator {
       // Test the case where memsw is available
       FileUtils.writeStringToFile(
           new File(cgMemoryContainerDir, CGroupsResourceCalculator.MEMSW_STAT),
+          "418496513\n");
+      Assert.assertEquals("Incorrect swap usage",
+          418496513,
+          calculator.getVirtualMemorySize());
+    } finally {
+      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+    }
+  }
+
+  @Test
+  public void testCPUParsingRoot() throws Exception {
+    File cgcpuacctDir =
+        new File("/tmp/" + this.getClass().getName() + "/cgcpuacct");
+    File cgcpuacctRootDir =
+        new File(cgcpuacctDir, "/yarn");
+    when(cGroupsHandler.getControllerPath(
+        CGroupsHandler.CGroupController.CPUACCT)).
+        thenReturn(cgcpuacctDir.getAbsolutePath());
+    Assert.assertTrue("Setup error", cgcpuacctRootDir.mkdirs());
+    try {
+      FileUtils.writeStringToFile(
+          new File(cgcpuacctRootDir, CGroupsResourceCalculator.CPU_STAT),
+              "user 5415\n" +
+              "system 3632");
+      CGroupsResourceCalculator calculator =
+          new CGroupsResourceCalculator(
+              null, "/tmp/" + this.getClass().getName(),
+              cGroupsHandler, clock);
+      Assert.assertEquals("Incorrect CPU usage",
+          90470,
+          calculator.getCumulativeCpuTime());
+    } finally {
+      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+    }
+  }
+
+  @Test
+  public void testMemoryParsingRoot() throws Exception {
+    File cgcpuacctDir =
+        new File("/tmp/" + this.getClass().getName() + "/cgcpuacct");
+    File cgcpuacctRootDir =
+        new File(cgcpuacctDir, "/yarn");
+    File cgmemoryDir =
+        new File("/tmp/" + this.getClass().getName() + "/memory");
+    File cgMemoryRootDir =
+        new File(cgmemoryDir, "/yarn");
+    File procfs = new File("/tmp/" + this.getClass().getName() + "/1234");
+    when(cGroupsHandler.getControllerPath(
+        CGroupsHandler.CGroupController.MEMORY)).
+        thenReturn(cgmemoryDir.getAbsolutePath());
+    Assert.assertTrue("Setup error", procfs.mkdirs());
+    Assert.assertTrue("Setup error", cgcpuacctRootDir.mkdirs());
+    Assert.assertTrue("Setup error", cgMemoryRootDir.mkdirs());
+    try {
+      FileUtils.writeStringToFile(
+          new File(cgMemoryRootDir, CGroupsResourceCalculator.MEM_STAT),
+          "418496512\n");
+
+      CGroupsResourceCalculator calculator =
+          new CGroupsResourceCalculator(
+              null, "/tmp/" + this.getClass().getName(),
+              cGroupsHandler, clock);
+
+      // Test the case where memsw is not available (Ubuntu)
+      Assert.assertEquals("Incorrect memory usage",
+          418496512,
+          calculator.getRssMemorySize());
+      Assert.assertEquals("Incorrect swap usage",
+          (long)ResourceCalculatorProcessTree.UNAVAILABLE,
+          calculator.getVirtualMemorySize());
+
+      // Test the case where memsw is available
+      FileUtils.writeStringToFile(
+          new File(cgMemoryRootDir, CGroupsResourceCalculator.MEMSW_STAT),
           "418496513\n");
       Assert.assertEquals("Incorrect swap usage",
           418496513,
