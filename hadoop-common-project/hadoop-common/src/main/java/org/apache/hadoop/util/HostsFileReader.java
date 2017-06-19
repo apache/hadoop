@@ -31,8 +31,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 
-// Keeps track of which datanodes/tasktrackers are allowed to connect to the 
-// namenode/jobtracker.
+// Keeps track of which datanodes/nodemanagers are allowed to connect to the
+// namenode/resourcemanager.
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class HostsFileReader {
