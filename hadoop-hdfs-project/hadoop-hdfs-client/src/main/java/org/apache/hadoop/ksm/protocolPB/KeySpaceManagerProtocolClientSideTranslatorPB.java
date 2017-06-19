@@ -78,6 +78,8 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ListBucketsRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ListBucketsResponse;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysRequest;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto
@@ -547,6 +549,45 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
     }
   }
 
+  /**
+   * List keys in a bucket.
+   */
+  @Override
+  public List<KsmKeyInfo> listKeys(String volumeName, String bucketName,
+      String startKey, String prefix, int maxKeys) throws IOException {
+    List<KsmKeyInfo> keys = new ArrayList<>();
+    ListKeysRequest.Builder reqBuilder = ListKeysRequest.newBuilder();
+    reqBuilder.setVolumeName(volumeName);
+    reqBuilder.setBucketName(bucketName);
+    reqBuilder.setCount(maxKeys);
+
+    if (startKey != null) {
+      reqBuilder.setStartKey(startKey);
+    }
+
+    if (prefix != null) {
+      reqBuilder.setPrefix(prefix);
+    }
+
+    ListKeysRequest request = reqBuilder.build();
+    final ListKeysResponse resp;
+    try {
+      resp = rpcProxy.listKeys(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
+    if (resp.getStatus() == Status.OK) {
+      keys.addAll(
+          resp.getKeyInfoList().stream()
+              .map(KsmKeyInfo::getFromProtobuf)
+              .collect(Collectors.toList()));
+      return keys;
+    } else {
+      throw new IOException("List Keys failed, error: "
+          + resp.getStatus());
+    }
+  }
 
   /**
    * Return the proxy object underlying this protocol translator.

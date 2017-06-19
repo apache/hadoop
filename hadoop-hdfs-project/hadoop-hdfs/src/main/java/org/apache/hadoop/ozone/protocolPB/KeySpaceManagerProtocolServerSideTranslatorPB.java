@@ -76,7 +76,8 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ListBucketsRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ListBucketsResponse;
-
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysRequest;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
 
@@ -374,6 +375,28 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
           request.getCount());
       for(KsmBucketInfo bucket : buckets) {
         resp.addBucketInfo(bucket.getProtobuf());
+      }
+      resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public ListKeysResponse listKeys(RpcController controller,
+      ListKeysRequest request) throws ServiceException {
+    ListKeysResponse.Builder resp =
+        ListKeysResponse.newBuilder();
+    try {
+      List<KsmKeyInfo> keys = impl.listKeys(
+          request.getVolumeName(),
+          request.getBucketName(),
+          request.getStartKey(),
+          request.getPrefix(),
+          request.getCount());
+      for(KsmKeyInfo key : keys) {
+        resp.addKeyInfo(key.getProtobuf());
       }
       resp.setStatus(Status.OK);
     } catch (IOException e) {
