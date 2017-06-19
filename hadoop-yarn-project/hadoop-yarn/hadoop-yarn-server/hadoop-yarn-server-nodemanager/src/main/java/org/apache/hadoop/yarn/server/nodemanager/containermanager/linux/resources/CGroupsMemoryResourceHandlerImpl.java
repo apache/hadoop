@@ -25,7 +25,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 
@@ -46,6 +48,8 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
       CGroupsMemoryResourceHandlerImpl.class);
   private static final CGroupsHandler.CGroupController MEMORY =
       CGroupsHandler.CGroupController.MEMORY;
+  private static final int OPPORTUNISTIC_SWAPPINESS = 100;
+  private static final int OPPORTUNISTIC_SOFT_LIMIT = 0;
 
   private CGroupsHandler cGroupsHandler;
   private int swappiness = 0;
@@ -85,13 +89,15 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
               + ". Value must be between 0 and 100.");
     }
     float softLimitPerc = conf.getFloat(
-      YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE,
-      YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE);
+        YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE,
+        YarnConfiguration.
+            DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE);
     softLimit = softLimitPerc / 100.0f;
     if (softLimitPerc < 0.0f || softLimitPerc > 100.0f) {
       throw new ResourceHandlerException(
           "Illegal value '" + softLimitPerc + "' "
-              + YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE
+              + YarnConfiguration.
+                NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE
               + ". Value must be between 0 and 100.");
     }
     return null;
@@ -122,12 +128,23 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
       cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
           CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES,
           String.valueOf(containerHardLimit) + "M");
-      cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-          CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
-          String.valueOf(containerSoftLimit) + "M");
-      cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-          CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
-          String.valueOf(swappiness));
+      ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
+      if (id != null && id.getExecutionType() ==
+          ExecutionType.OPPORTUNISTIC) {
+        cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+            CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
+            String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
+        cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+            CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
+            String.valueOf(OPPORTUNISTIC_SWAPPINESS));
+      } else {
+        cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+            CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
+            String.valueOf(containerSoftLimit) + "M");
+        cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+            CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
+            String.valueOf(swappiness));
+      }
     } catch (ResourceHandlerException re) {
       cGroupsHandler.deleteCGroup(MEMORY, cgroupId);
       LOG.warn("Could not update cgroup for container", re);
