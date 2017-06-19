@@ -46,6 +46,7 @@ function hadoop_usage
   hadoop_add_subcommand "queue" "prints queue information"
   hadoop_add_subcommand "resourcemanager" "run the ResourceManager"
   hadoop_add_subcommand "rmadmin" "admin tools"
+  hadoop_add_subcommand "router" "run the Router daemon"
   hadoop_add_subcommand "scmadmin" "SharedCacheManager admin tools"
   hadoop_add_subcommand "sharedcachemanager" "run the SharedCacheManager daemon"
   hadoop_add_subcommand "timelinereader" "run the timeline reader server"
@@ -136,6 +137,10 @@ function yarncmd_case
     ;;
     rmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
+    ;;
+    router)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.router.Router'
     ;;
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'
