@@ -34,12 +34,15 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
+import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -718,6 +721,123 @@ public class TestKeySpaceManager {
       Assert.assertTrue(e instanceof IOException);
       Assert.assertTrue(e.getMessage()
           .contains(Status.VOLUME_NOT_FOUND.name()));
+    }
+  }
+
+  /**
+   * Test list keys.
+   * @throws IOException
+   * @throws OzoneException
+   */
+  @Test
+  public void testListKeys() throws IOException, OzoneException {
+    ListKeys result = null;
+    ListArgs listKeyArgs = null;
+
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
+    bucketArgs.setAddAcls(new LinkedList<>());
+    bucketArgs.setRemoveAcls(new LinkedList<>());
+    bucketArgs.setStorageType(StorageType.DISK);
+    storageHandler.createBucket(bucketArgs);
+
+    // Write 20 keys in bucket.
+    int numKeys = 20;
+    String keyName = "Key";
+    KeyArgs keyArgs = null;
+    for (int i = 0; i < numKeys; i++) {
+      if (i % 2 == 0) {
+        // Create /volume/bucket/aKey[0,2,4,...,18] in bucket.
+        keyArgs = new KeyArgs("a" + keyName + i, bucketArgs);
+      } else {
+        // Create /volume/bucket/bKey[1,3,5,...,19] in bucket.
+        keyArgs = new KeyArgs("b" + keyName + i, bucketArgs);
+      }
+      keyArgs.setSize(4096);
+
+      // Just for testing list keys call, so no need to write real data.
+      OutputStream stream = storageHandler.newKeyWriter(keyArgs);
+      stream.close();
+    }
+
+    // List all keys in bucket.
+    bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
+    listKeyArgs = new ListArgs(bucketArgs, null, 100, null);
+    result = storageHandler.listKeys(listKeyArgs);
+    Assert.assertEquals(numKeys, result.getKeyList().size());
+    List<KeyInfo> allKeys = result.getKeyList().stream()
+        .filter(item -> item.getSize() == 4096)
+        .collect(Collectors.toList());
+
+    // List keys with prefix "aKey".
+    listKeyArgs = new ListArgs(bucketArgs, "aKey", 100, null);
+    result = storageHandler.listKeys(listKeyArgs);
+    Assert.assertEquals(numKeys / 2, result.getKeyList().size());
+    Assert.assertTrue(result.getKeyList().stream()
+        .allMatch(entry -> entry.getKeyName().startsWith("aKey")));
+
+    // List a certain number of keys.
+    listKeyArgs = new ListArgs(bucketArgs, null, 3, null);
+    result = storageHandler.listKeys(listKeyArgs);
+    Assert.assertEquals(3, result.getKeyList().size());
+    Assert.assertEquals("aKey0",
+        result.getKeyList().get(0).getKeyName());
+    Assert.assertEquals("aKey10",
+        result.getKeyList().get(1).getKeyName());
+    Assert.assertEquals("aKey12",
+        result.getKeyList().get(2).getKeyName());
+
+    // List a certain number of keys from the startKey.
+    listKeyArgs = new ListArgs(bucketArgs, null, 2, "bKey1");
+    result = storageHandler.listKeys(listKeyArgs);
+    Assert.assertEquals(2, result.getKeyList().size());
+    Assert.assertEquals("bKey1",
+        result.getKeyList().get(0).getKeyName());
+    Assert.assertEquals("bKey11",
+        result.getKeyList().get(1).getKeyName());
+
+    // Provide an invalid key name as start key.
+    listKeyArgs = new ListArgs(bucketArgs, null, 100, "invalid_start_key");
+    try {
+      storageHandler.listKeys(listKeyArgs);
+      Assert.fail("Expecting an error when the given start"
+          + " key name is invalid.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          Status.INTERNAL_ERROR.name(), e);
+    }
+
+    // Provide an invalid maxKeys argument.
+    try {
+      listKeyArgs = new ListArgs(bucketArgs, null, -1, null);
+      storageHandler.listBuckets(listKeyArgs);
+      Assert.fail("Expecting an error when the given"
+          + " maxKeys argument is invalid.");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(
+          String.format("the value must be in range (0, %d]",
+              OzoneConsts.MAX_LISTKEYS_SIZE), e);
+    }
+
+    // Provide an invalid bucket name.
+    bucketArgs = new BucketArgs("invalid_bucket", createVolumeArgs);
+    try {
+      listKeyArgs = new ListArgs(bucketArgs, null, numKeys, null);
+      storageHandler.listKeys(listKeyArgs);
+      Assert.fail(
+          "Expecting an error when the given bucket name is invalid.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          Status.BUCKET_NOT_FOUND.name(), e);
     }
   }
 }

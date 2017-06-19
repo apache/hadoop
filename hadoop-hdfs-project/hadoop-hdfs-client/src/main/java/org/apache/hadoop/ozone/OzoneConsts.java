@@ -111,6 +111,11 @@ public final class OzoneConsts {
    */
   public static final int MAX_LISTBUCKETS_SIZE  = 1024;
 
+  /**
+   * Max number of keys returned per list keys operation.
+   */
+  public static final int MAX_LISTKEYS_SIZE  = 1024;
+
   private OzoneConsts() {
     // Never Constructed
   }

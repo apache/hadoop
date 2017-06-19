@@ -473,6 +473,19 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     }
   }
 
+  @Override
+  public List<KsmKeyInfo> listKeys(String volumeName, String bucketName,
+      String startKey, String keyPrefix, int maxKeys) throws IOException {
+    try {
+      metrics.incNumKeyLists();
+      return keyManager.listKeys(volumeName, bucketName,
+          startKey, keyPrefix, maxKeys);
+    } catch (IOException ex) {
+      metrics.incNumKeyListFails();
+      throw ex;
+    }
+  }
+
   /**
    * Sets bucket property from args.
    * @param args - BucketArgs.

@@ -19,11 +19,13 @@ package org.apache.hadoop.ozone.ksm;
 import com.google.common.base.Strings;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.LevelDBKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.LevelDBKeyFilters.LevelDBKeyFilter;
@@ -123,6 +125,13 @@ public class MetadataManagerImpl implements  MetadataManager {
       sb.append(bucket);
     }
     return sb.toString();
+  }
+
+  private String getKeyKeyPrefix(String volume, String bucket, String key) {
+    String keyStr = getBucketKeyPrefix(volume, bucket);
+    keyStr = Strings.isNullOrEmpty(key) ? keyStr + OzoneConsts.KSM_KEY_PREFIX
+        : keyStr + OzoneConsts.KSM_KEY_PREFIX + key;
+    return keyStr;
   }
 
   @Override
@@ -302,6 +311,42 @@ public class MetadataManagerImpl implements  MetadataManager {
     for (Map.Entry<byte[], byte[]> entry : rangeResult) {
       KsmBucketInfo info = KsmBucketInfo.getFromProtobuf(
           BucketInfo.parseFrom(entry.getValue()));
+      result.add(info);
+    }
+    return result;
+  }
+
+  @Override
+  public List<KsmKeyInfo> listKeys(String volumeName, String bucketName,
+      String startKey, String keyPrefix, int maxKeys) throws IOException {
+    List<KsmKeyInfo> result = new ArrayList<>();
+    if (Strings.isNullOrEmpty(volumeName)) {
+      throw new KSMException("Volume name is required.",
+          ResultCodes.FAILED_VOLUME_NOT_FOUND);
+    }
+
+    if (Strings.isNullOrEmpty(bucketName)) {
+      throw new KSMException("Bucket name is required.",
+          ResultCodes.FAILED_BUCKET_NOT_FOUND);
+    }
+
+    byte[] bucketNameBytes = getBucketKey(volumeName, bucketName);
+    if (store.get(bucketNameBytes) == null) {
+      throw new KSMException("Bucket " + bucketName + " not found.",
+          ResultCodes.FAILED_BUCKET_NOT_FOUND);
+    }
+
+    byte[] startKeyBytes = null;
+    if (!Strings.isNullOrEmpty(startKey)) {
+      startKeyBytes = getDBKeyForKey(volumeName, bucketName, startKey);
+    }
+    LevelDBKeyFilter filter =
+        new KeyPrefixFilter(getKeyKeyPrefix(volumeName, bucketName, keyPrefix));
+    List<Map.Entry<byte[], byte[]>> rangeResult =
+        store.getRangeKVs(startKeyBytes, maxKeys, filter);
+    for (Map.Entry<byte[], byte[]> entry : rangeResult) {
+      KsmKeyInfo info = KsmKeyInfo.getFromProtobuf(
+          KeyInfo.parseFrom(entry.getValue()));
       result.add(info);
     }
     return result;

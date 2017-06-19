@@ -58,6 +58,7 @@ import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.response.VolumeOwner;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.storage.ChunkInputStream;
@@ -433,7 +434,49 @@ public final class DistributedStorageHandler implements StorageHandler {
 
   @Override
   public ListKeys listKeys(ListArgs args) throws IOException, OzoneException {
-    throw new UnsupportedOperationException("listKeys not implemented");
+    ListKeys result = new ListKeys();
+    UserArgs userArgs = args.getArgs();
+    if (userArgs instanceof BucketArgs) {
+      BucketArgs bucketArgs = (BucketArgs) userArgs;
+      if (Strings.isNullOrEmpty(bucketArgs.getVolumeName())) {
+        throw new IllegalArgumentException("Illegal argument,"
+            + " volume name cannot be null or empty.");
+      }
+
+      if (Strings.isNullOrEmpty(bucketArgs.getBucketName())) {
+        throw new IllegalArgumentException("Illegal argument,"
+            + " bucket name cannot be null or empty.");
+      }
+
+      int maxNumOfKeys = args.getMaxKeys();
+      if (maxNumOfKeys <= 0 ||
+          maxNumOfKeys > OzoneConsts.MAX_LISTKEYS_SIZE) {
+        throw new IllegalArgumentException(
+            String.format("Illegal max number of keys specified,"
+                + " the value must be in range (0, %d], actual : %d.",
+                OzoneConsts.MAX_LISTKEYS_SIZE, maxNumOfKeys));
+      }
+
+      List<KsmKeyInfo> keys=
+          keySpaceManagerClient.listKeys(bucketArgs.getVolumeName(),
+              bucketArgs.getBucketName(),
+              args.getPrevKey(), args.getPrefix(), args.getMaxKeys());
+
+      // Convert the result for the web layer.
+      for (KsmKeyInfo info : keys) {
+        KeyInfo tempInfo = new KeyInfo();
+        tempInfo.setVersion(0);
+        tempInfo.setKeyName(info.getKeyName());
+        tempInfo.setSize(info.getDataSize());
+
+        result.addKey(tempInfo);
+      }
+      return result;
+    } else {
+      throw new IllegalArgumentException("Illegal argument provided,"
+          + " expecting BucketArgs type but met "
+          + userArgs.getClass().getSimpleName());
+    }
   }
 
   private XceiverClientSpi getContainer(String containerName)

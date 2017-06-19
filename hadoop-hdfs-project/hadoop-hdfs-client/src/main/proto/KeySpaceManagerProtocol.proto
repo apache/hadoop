@@ -267,6 +267,18 @@ message DeleteBucketResponse {
     required Status status = 1;
 }
 
+message ListKeysRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    optional string startKey = 3;
+    optional string prefix = 4;
+    optional int32 count = 5;
+}
+
+message ListKeysResponse {
+    required Status status = 1;
+    repeated KeyInfo keyInfo = 2;
+}
 
 /**
  The KSM service that takes care of Ozone namespace.
@@ -355,4 +367,10 @@ service KeySpaceManagerService {
     */
     rpc listBuckets(ListBucketsRequest)
     returns(ListBucketsResponse);
+
+    /**
+       List Keys.
+    */
+    rpc listKeys(ListKeysRequest)
+    returns(ListKeysResponse);
 }

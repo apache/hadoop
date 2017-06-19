@@ -180,4 +180,19 @@ public class KeyManagerImpl implements KeyManager {
       metadataManager.writeLock().unlock();
     }
   }
+
+  @Override
+  public List<KsmKeyInfo> listKeys(String volumeName, String bucketName,
+      String startKey, String keyPrefix, int maxKeys) throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+
+    metadataManager.readLock().lock();
+    try {
+      return metadataManager.listKeys(volumeName, bucketName,
+          startKey, keyPrefix, maxKeys);
+    } finally {
+      metadataManager.readLock().unlock();
+    }
+  }
 }

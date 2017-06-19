@@ -191,6 +191,14 @@ public class ListKeys {
   }
 
   /**
+   * Add a new key to the list of keys.
+   * @param keyInfo - key Info
+   */
+  public void addKey(KeyInfo keyInfo){
+    this.keyList.add(keyInfo);
+  }
+
+  /**
    * This class allows us to create custom filters for the Json serialization.
    */
   @JsonFilter(OBJECT_LIST)
