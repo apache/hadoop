@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
 import org.apache.hadoop.yarn.util.Records;
 
 public abstract class RegisterNodeManagerRequest {
@@ -42,14 +43,14 @@ public abstract class RegisterNodeManagerRequest {
       List<NMContainerStatus> containerStatuses,
       List<ApplicationId> runningApplications, Set<NodeLabel> nodeLabels) {
     return newInstance(nodeId, httpPort, resource, nodeManagerVersionId,
-        containerStatuses, runningApplications, nodeLabels, null);
+        containerStatuses, runningApplications, nodeLabels, null, null);
   }
 
   public static RegisterNodeManagerRequest newInstance(NodeId nodeId,
       int httpPort, Resource resource, String nodeManagerVersionId,
       List<NMContainerStatus> containerStatuses,
       List<ApplicationId> runningApplications, Set<NodeLabel> nodeLabels,
-      Resource physicalResource) {
+      Resource physicalResource, OverAllocationInfo overAllocationInfo) {
     RegisterNodeManagerRequest request =
         Records.newRecord(RegisterNodeManagerRequest.class);
     request.setHttpPort(httpPort);
@@ -60,9 +61,10 @@ public abstract class RegisterNodeManagerRequest {
     request.setRunningApplications(runningApplications);
     request.setNodeLabels(nodeLabels);
     request.setPhysicalResource(physicalResource);
+    request.setOverAllocationInfo(overAllocationInfo);
     return request;
   }
-  
+
   public abstract NodeId getNodeId();
   public abstract int getHttpPort();
   public abstract Resource getResource();
@@ -70,7 +72,11 @@ public abstract class RegisterNodeManagerRequest {
   public abstract List<NMContainerStatus> getNMContainerStatuses();
   public abstract Set<NodeLabel> getNodeLabels();
   public abstract void setNodeLabels(Set<NodeLabel> nodeLabels);
-  
+
+  public abstract OverAllocationInfo getOverAllocationInfo();
+  public abstract void setOverAllocationInfo(
+      OverAllocationInfo overAllocationInfo);
+
   /**
    * We introduce this here because currently YARN RM doesn't persist nodes info
    * for application running. When RM restart happened, we cannot determinate if

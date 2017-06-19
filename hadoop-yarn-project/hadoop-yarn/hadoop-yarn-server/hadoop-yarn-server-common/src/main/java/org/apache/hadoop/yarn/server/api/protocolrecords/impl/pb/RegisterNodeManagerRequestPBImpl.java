@@ -41,11 +41,14 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeLabelsProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeLabelsProto.Builder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.OverAllocationInfoProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
-    
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.OverAllocationInfoPBImpl;
+
 public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest {
   RegisterNodeManagerRequestProto proto = RegisterNodeManagerRequestProto.getDefaultInstance();
   RegisterNodeManagerRequestProto.Builder builder = null;
@@ -56,6 +59,7 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   private List<NMContainerStatus> containerStatuses = null;
   private List<ApplicationId> runningApplications = null;
   private Set<NodeLabel> labels = null;
+  private OverAllocationInfo overAllocationInfo = null;
 
   /** Physical resources in the node. */
   private Resource physicalResource = null;
@@ -99,6 +103,10 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     }
     if (this.physicalResource != null) {
       builder.setPhysicalResource(convertToProtoFormat(this.physicalResource));
+    }
+    if (this.overAllocationInfo != null) {
+      builder.setOverAllocationInfo(
+          convertToProtoFormat(this.overAllocationInfo));
     }
   }
 
@@ -341,7 +349,30 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     builder.clearNodeLabels();
     this.labels = nodeLabels;
   }
-  
+
+  @Override
+  public synchronized OverAllocationInfo getOverAllocationInfo() {
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.overAllocationInfo != null) {
+      return this.overAllocationInfo;
+    }
+    if (!p.hasOverAllocationInfo()) {
+      return null;
+    }
+    this.overAllocationInfo = convertFromProtoFormat(p.getOverAllocationInfo());
+    return this.overAllocationInfo;
+  }
+
+  @Override
+  public synchronized void setOverAllocationInfo(
+      OverAllocationInfo overAllocationInfo) {
+    maybeInitBuilder();
+    if (this.overAllocationInfo == null) {
+      builder.clearOverAllocationInfo();
+    }
+    this.overAllocationInfo = overAllocationInfo;
+  }
+
   private synchronized void initNodeLabels() {
     if (this.labels != null) {
       return;
@@ -399,5 +430,15 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   private static NMContainerStatusProto convertToProtoFormat(
       NMContainerStatus c) {
     return ((NMContainerStatusPBImpl)c).getProto();
+  }
+
+  private static OverAllocationInfoProto convertToProtoFormat(
+      OverAllocationInfo overAllocationInfo) {
+    return ((OverAllocationInfoPBImpl)overAllocationInfo).getProto();
+  }
+
+  private static OverAllocationInfo convertFromProtoFormat(
+      OverAllocationInfoProto proto) {
+    return new OverAllocationInfoPBImpl(proto);
   }
 }
