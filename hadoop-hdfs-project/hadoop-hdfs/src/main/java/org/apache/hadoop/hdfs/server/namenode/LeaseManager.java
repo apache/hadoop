@@ -24,17 +24,19 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.util.Daemon;
@@ -90,7 +92,7 @@ public class LeaseManager {
         }
   });
   // INodeID -> Lease
-  private final HashMap<Long, Lease> leasesById = new HashMap<>();
+  private final TreeMap<Long, Lease> leasesById = new TreeMap<>();
 
   private Daemon lmthread;
   private volatile boolean shouldRunMonitor;
@@ -150,6 +152,52 @@ public class LeaseManager {
   }
 
   Collection<Long> getINodeIdWithLeases() {return leasesById.keySet();}
+
+  /**
+   * Get a batch of under construction files from the currently active leases.
+   * File INodeID is the cursor used to fetch new batch of results and the
+   * batch size is configurable using below config param. Since the list is
+   * fetched in batches, it does not represent a consistent view of all
+   * open files.
+   *
+   * @see org.apache.hadoop.hdfs.DFSConfigKeys#DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES
+   * @param prevId the INodeID cursor
+   * @throws IOException
+   */
+  public BatchedListEntries<OpenFileEntry> getUnderConstructionFiles(
+      final long prevId) throws IOException {
+    assert fsnamesystem.hasReadLock();
+    SortedMap<Long, Lease> remainingLeases;
+    synchronized (this) {
+      remainingLeases = leasesById.tailMap(prevId, false);
+    }
+    Collection<Long> inodeIds = remainingLeases.keySet();
+    final int numResponses = Math.min(
+        this.fsnamesystem.getMaxListOpenFilesResponses(), inodeIds.size());
+    final List<OpenFileEntry> openFileEntries =
+        Lists.newArrayListWithExpectedSize(numResponses);
+
+    int count = 0;
+    for (Long inodeId: inodeIds) {
+      final INodeFile inodeFile =
+          fsnamesystem.getFSDirectory().getInode(inodeId).asFile();
+      if (!inodeFile.isUnderConstruction()) {
+        LOG.warn("The file " + inodeFile.getFullPathName()
+            + " is not under construction but has lease.");
+        continue;
+      }
+      openFileEntries.add(new OpenFileEntry(
+          inodeFile.getId(), inodeFile.getFullPathName(),
+          inodeFile.getFileUnderConstructionFeature().getClientName(),
+          inodeFile.getFileUnderConstructionFeature().getClientMachine()));
+      count++;
+      if (count >= numResponses) {
+        break;
+      }
+    }
+    boolean hasMore = (numResponses < remainingLeases.size());
+    return new BatchedListEntries<>(openFileEntries, hasMore);
+  }
 
   /** @return the lease containing src */
   public synchronized Lease getLease(INodeFile src) {return leasesById.get(src.getId());}
