@@ -42,8 +42,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-// Keeps track of which datanodes/tasktrackers are allowed to connect to the 
-// namenode/jobtracker.
+// Keeps track of which datanodes/nodemanagers are allowed to connect to the
+// namenode/resourcemanager.
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class HostsFileReader {
