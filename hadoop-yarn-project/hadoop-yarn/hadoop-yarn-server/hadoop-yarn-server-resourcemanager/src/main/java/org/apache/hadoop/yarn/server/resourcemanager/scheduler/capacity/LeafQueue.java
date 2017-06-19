@@ -696,7 +696,7 @@ public class LeafQueue extends AbstractCSQueue {
           resourceCalculator, queuePartitionUsableResource, amResourcePercent,
           minimumAllocation);
 
-      metrics.setAMResouceLimit(amResouceLimit);
+      metrics.setAMResouceLimit(nodePartition, amResouceLimit);
       queueUsage.setAMLimit(nodePartition, amResouceLimit);
       return amResouceLimit;
     } finally {
@@ -811,9 +811,10 @@ public class LeafQueue extends AbstractCSQueue {
         user.getResourceUsage().incAMUsed(partitionName,
             application.getAMResource(partitionName));
         user.getResourceUsage().setAMLimit(partitionName, userAMLimit);
-        metrics.incAMUsed(application.getUser(),
+        metrics.incAMUsed(partitionName, application.getUser(),
             application.getAMResource(partitionName));
-        metrics.setAMResouceLimitForUser(application.getUser(), userAMLimit);
+        metrics.setAMResouceLimitForUser(partitionName,
+            application.getUser(), userAMLimit);
         fsApp.remove();
         LOG.info("Application " + applicationId + " from user: " + application
             .getUser() + " activated in queue: " + getQueueName());
@@ -894,7 +895,7 @@ public class LeafQueue extends AbstractCSQueue {
             application.getAMResource(partitionName));
         user.getResourceUsage().decAMUsed(partitionName,
             application.getAMResource(partitionName));
-        metrics.decAMUsed(application.getUser(),
+        metrics.decAMUsed(partitionName, application.getUser(),
             application.getAMResource(partitionName));
       }
       applicationAttemptMap.remove(application.getApplicationAttemptId());
@@ -1338,7 +1339,7 @@ public class LeafQueue extends AbstractCSQueue {
     
     application.setHeadroomProvider(headroomProvider);
 
-    metrics.setAvailableResourcesToUser(user, headroom);
+    metrics.setAvailableResourcesToUser(nodePartition, user, headroom);
     
     return userLimit;
   }
@@ -1583,7 +1584,8 @@ public class LeafQueue extends AbstractCSQueue {
       // Note this is a bit unconventional since it gets the object and modifies
       // it here, rather then using set routine
       Resources.subtractFrom(application.getHeadroom(), resource); // headroom
-      metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
+      metrics.setAvailableResourcesToUser(nodePartition,
+          userName, application.getHeadroom());
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(getQueueName() + " user=" + userName + " used="
@@ -1622,7 +1624,8 @@ public class LeafQueue extends AbstractCSQueue {
       User user = usersManager.updateUserResourceUsage(userName, resource,
           nodePartition, false);
 
-      metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
+      metrics.setAvailableResourcesToUser(nodePartition,
+          userName, application.getHeadroom());
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(
