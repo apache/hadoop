@@ -160,12 +160,13 @@ class BlockPoolManager {
       newLifelineAddressMap =
           DFSUtil.getNNLifelineRpcAddressesForCluster(conf);
     } catch (IOException ioe) {
-      LOG.warn("Unable to get NameNode addresses. " +
-          "This may be an Ozone-only cluster.");
+      LOG.warn("Unable to get NameNode addresses. (Note: Namenode is required "
+          +  "even for Ozone cluster.)");
     }
 
     if (newAddressMap.isEmpty()) {
-      throw new IOException("No services to connect (NameNodes or SCM).");
+      throw new IOException("No services to connect, missing NameNode " +
+          "address.");
     }
 
     synchronized (refreshNamenodesLock) {
