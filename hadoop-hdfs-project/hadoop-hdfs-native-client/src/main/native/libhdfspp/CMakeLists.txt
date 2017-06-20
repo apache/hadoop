@@ -16,6 +16,14 @@
 # limitations under the License.
 #
 
+# If cmake variable HDFSPP_LIBRARY_ONLY is set, then tests, examples, and
+# tools will not be built. This allows for faster builds of the libhdfspp
+# library alone, avoids looking for a JDK, valgrind, and gmock, and
+# prevents the generation of multiple binaries that might not be relevant
+# to other projects during normal use.
+# Example of cmake invocation with HDFSPP_LIBRARY_ONLY enabled:
+# cmake -DHDFSPP_LIBRARY_ONLY=1
+
 project (libhdfspp)
 
 cmake_minimum_required(VERSION 2.8)
@@ -174,9 +182,11 @@ include_directories( SYSTEM
 add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(third_party/uriparser2)
 add_subdirectory(lib)
-add_subdirectory(tests)
-add_subdirectory(examples)
-add_subdirectory(tools)
+if(NOT HDFSPP_LIBRARY_ONLY)
+    add_subdirectory(tests)
+    add_subdirectory(examples)
+    add_subdirectory(tools)
+endif()
 
 # create an empty file; hadoop_add_dual_library wraps add_library which
 # requires at least one file as an argument
