@@ -23,13 +23,5 @@ set(LIBHDFSPP_DIR CACHE STRING ${CMAKE_INSTALL_PREFIX})
 include_directories( ${LIBHDFSPP_DIR}/include )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
-add_executable(cat_cc cat.cc)
-target_link_libraries(cat_cc hdfspp)
-
-# Several examples in different languages need to produce executables with
-# same names. To allow executables with same names we keep their CMake
-# names different, but specify their executable names as follows:
-set_target_properties( cat_cc
-    PROPERTIES
-    OUTPUT_NAME "cat"
-)
+add_executable(cat cat.cc)
+target_link_libraries(cat hdfspp_static)

@@ -98,7 +98,7 @@ protected:
 
   static std::string fixCase(const std::string &in) {
     std::string result(in);
-    for (auto & c: result) c = toupper(c);
+    for (auto & c: result) c = (char) toupper(c);
     return result;
   }
 };

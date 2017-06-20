@@ -24,4 +24,4 @@ include_directories( ${LIBHDFSPP_DIR}/include )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
 add_executable(connect_cancel connect_cancel.cc)
-target_link_libraries(connect_cancel hdfspp)
+target_link_libraries(connect_cancel hdfspp_static)
