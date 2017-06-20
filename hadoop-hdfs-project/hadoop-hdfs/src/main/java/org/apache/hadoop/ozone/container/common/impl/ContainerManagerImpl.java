@@ -515,7 +515,8 @@ public class ContainerManagerImpl implements ContainerManager {
 
   @Override
   public void updateContainer(Pipeline pipeline, String containerName,
-      ContainerData data) throws StorageContainerException{
+      ContainerData data, boolean forceUpdate)
+      throws StorageContainerException {
     Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
     Preconditions.checkNotNull(containerName, "Container name cannot be null");
     Preconditions.checkNotNull(data, "Container data cannot be null");
@@ -541,31 +542,35 @@ public class ContainerManagerImpl implements ContainerManager {
     try {
       Path location = locationManager.getContainerPath();
       ContainerData orgData = containerMap.get(containerName).getContainer();
-      if (!orgData.isOpen()) {
+      if (!forceUpdate && !orgData.isOpen()) {
         throw new StorageContainerException(
             "Update a closed container is not allowed. Name: " + containerName,
             UNSUPPORTED_REQUEST);
       }
 
       containerFile = ContainerUtils.getContainerFile(orgData, location);
-      if (!containerFile.exists() || !containerFile.canWrite()) {
-        throw new StorageContainerException(
-            "Container file not exists or corrupted. Name: " + containerName,
-            CONTAINER_INTERNAL_ERROR);
+      // If forceUpdate is true, there is no need to check
+      // whether the container file exists.
+      if (!forceUpdate) {
+        if (!containerFile.exists() || !containerFile.canWrite()) {
+          throw new StorageContainerException(
+              "Container file not exists or corrupted. Name: " + containerName,
+              CONTAINER_INTERNAL_ERROR);
+        }
+
+        // Backup the container file
+        containerFileBK = File.createTempFile(
+            "tmp_" + System.currentTimeMillis() + "_",
+            containerFile.getName(), containerFile.getParentFile());
+        FileUtils.copyFile(containerFile, containerFileBK);
+
+        deleted = containerFile.delete();
+        containerStream = new FileOutputStream(containerFile);
+        dos = new DigestOutputStream(containerStream, sha);
+
+        ContainerProtos.ContainerData protoData = data.getProtoBufMessage();
+        protoData.writeDelimitedTo(dos);
       }
-
-      // Backup the container file
-      containerFileBK = File.createTempFile(
-          "tmp_" + System.currentTimeMillis() + "_",
-          containerFile.getName(), containerFile.getParentFile());
-      FileUtils.copyFile(containerFile, containerFileBK);
-
-      deleted = containerFile.delete();
-      containerStream = new FileOutputStream(containerFile);
-      dos = new DigestOutputStream(containerStream, sha);
-
-      ContainerProtos.ContainerData protoData = data.getProtoBufMessage();
-      protoData.writeDelimitedTo(dos);
 
       // Update the in-memory map
       ContainerStatus newStatus = new ContainerStatus(data, true);
@@ -583,6 +588,9 @@ public class ContainerManagerImpl implements ContainerManager {
               "Failed to restore container data from the backup. Name: "
                   + containerName, CONTAINER_INTERNAL_ERROR);
         }
+      } else {
+        throw new StorageContainerException(
+            e.getMessage(), CONTAINER_INTERNAL_ERROR);
       }
     } finally {
       if (containerFileBK != null && containerFileBK.exists()) {

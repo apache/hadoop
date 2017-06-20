@@ -319,7 +319,9 @@ public class Dispatcher implements ContainerDispatcher {
 
     ContainerData data = ContainerData.getFromProtBuf(
         msg.getUpdateContainer().getContainerData());
-    this.containerManager.updateContainer(pipeline, containerName, data);
+    boolean forceUpdate = msg.getUpdateContainer().getForceUpdate();
+    this.containerManager.updateContainer(
+        pipeline, containerName, data, forceUpdate);
     return ContainerUtils.getContainerResponse(msg);
   }
 
