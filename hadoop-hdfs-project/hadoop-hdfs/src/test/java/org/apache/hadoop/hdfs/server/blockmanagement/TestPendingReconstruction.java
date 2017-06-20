@@ -209,6 +209,8 @@ public class TestPendingReconstruction {
       // Place into blocksmap with GenerationStamp = 1
       blockInfo.setGenerationStamp(1);
       blocksMap.addBlockCollection(blockInfo, bc);
+      //Save it for later.
+      BlockInfo storedBlock = blockInfo;
 
       assertEquals("Size of pendingReconstructions ", 1,
           pendingReconstruction.size());
@@ -255,6 +257,48 @@ public class TestPendingReconstruction {
       // Verify size of neededReconstruction is exactly 1.
       assertEquals("size of neededReconstruction is 1 ", 1,
           neededReconstruction.size());
+
+      // Verify HDFS-11960
+      // Stop the replication/redundancy monitor
+      BlockManagerTestUtil.stopRedundancyThread(blkManager);
+      pendingReconstruction.clear();
+      // Pick a real node
+      DatanodeDescriptor desc[] = { blkManager.getDatanodeManager().
+          getDatanodes().iterator().next() };
+
+      // Add a stored block to the pendingReconstruction.
+      pendingReconstruction.increment(storedBlock, desc);
+      assertEquals("Size of pendingReconstructions ", 1,
+          pendingReconstruction.size());
+
+      // A received IBR processing calls addBlock(). If the gen stamp in the
+      // report is not the same, it should stay in pending.
+      fsn.writeLock();
+      try {
+        // Use a wrong gen stamp.
+        blkManager.addBlock(desc[0].getStorageInfos()[0],
+            new Block(1, 1, 0), null);
+      } finally {
+        fsn.writeUnlock();
+      }
+
+      // The block should still be pending
+      assertEquals("Size of pendingReconstructions ", 1,
+          pendingReconstruction.size());
+
+      // A block report with the correct gen stamp should remove the record
+      // from the pending queue.
+      fsn.writeLock();
+      try {
+        blkManager.addBlock(desc[0].getStorageInfos()[0],
+            new Block(1, 1, 1), null);
+      } finally {
+        fsn.writeUnlock();
+      }
+
+      // The pending queue should be empty.
+      assertEquals("Size of pendingReconstructions ", 0,
+          pendingReconstruction.size());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

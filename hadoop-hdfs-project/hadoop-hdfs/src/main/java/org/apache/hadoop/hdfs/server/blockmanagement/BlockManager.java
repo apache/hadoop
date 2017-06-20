@@ -3749,7 +3749,8 @@ public class BlockManager implements BlockStatsMXBean {
     // Modify the blocks->datanode map and node's map.
     //
     BlockInfo storedBlock = getStoredBlock(block);
-    if (storedBlock != null) {
+    if (storedBlock != null &&
+        block.getGenerationStamp() == storedBlock.getGenerationStamp()) {
       pendingReconstruction.decrement(storedBlock, node);
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
