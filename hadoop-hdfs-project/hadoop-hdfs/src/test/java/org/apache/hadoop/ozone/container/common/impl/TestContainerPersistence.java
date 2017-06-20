@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -654,7 +655,7 @@ public class TestContainerPersistence {
     String containerName = OzoneUtils.getRequestID();
     ContainerData data = new ContainerData(containerName);
     data.addMetadata("VOLUME", "shire");
-    data.addMetadata("owner)", "bilbo");
+    data.addMetadata("owner", "bilbo");
 
     containerManager.createContainer(
         createSingleNodePipeline(containerName),
@@ -665,12 +666,12 @@ public class TestContainerPersistence {
 
     ContainerData newData = new ContainerData(containerName);
     newData.addMetadata("VOLUME", "shire_new");
-    newData.addMetadata("owner)", "bilbo_new");
+    newData.addMetadata("owner", "bilbo_new");
 
     containerManager.updateContainer(
         createSingleNodePipeline(containerName),
         containerName,
-        newData);
+        newData, false);
 
     Assert.assertEquals(1, containerManager.getContainerMap().size());
     Assert.assertTrue(containerManager.getContainerMap()
@@ -681,7 +682,7 @@ public class TestContainerPersistence {
         .get(containerName).getContainer();
     Assert.assertEquals(actualNewData.getAllMetadata().get("VOLUME"),
         "shire_new");
-    Assert.assertEquals(actualNewData.getAllMetadata().get("owner)"),
+    Assert.assertEquals(actualNewData.getAllMetadata().get("owner"),
         "bilbo_new");
 
     // Verify container data on disk
@@ -699,16 +700,42 @@ public class TestContainerPersistence {
           .getFromProtBuf(actualContainerDataProto);
       Assert.assertEquals(actualContainerData.getAllMetadata().get("VOLUME"),
           "shire_new");
-      Assert.assertEquals(actualContainerData.getAllMetadata().get("owner)"),
+      Assert.assertEquals(actualContainerData.getAllMetadata().get("owner"),
           "bilbo_new");
     }
+
+    // Test force update flag.
+    // Delete container file then try to update without force update flag.
+    FileUtil.fullyDelete(newContainerFile);
+    try {
+      containerManager.updateContainer(createSingleNodePipeline(containerName),
+          containerName, newData, false);
+    } catch (StorageContainerException ex) {
+      Assert.assertEquals("Container file not exists or "
+          + "corrupted. Name: " + containerName, ex.getMessage());
+    }
+
+    // Update with force flag, it should be success.
+    newData = new ContainerData(containerName);
+    newData.addMetadata("VOLUME", "shire_new_1");
+    newData.addMetadata("owner", "bilbo_new_1");
+    containerManager.updateContainer(createSingleNodePipeline(containerName),
+        containerName, newData, true);
+
+    // Verify in-memory map
+    actualNewData = containerManager.getContainerMap()
+        .get(containerName).getContainer();
+    Assert.assertEquals(actualNewData.getAllMetadata().get("VOLUME"),
+        "shire_new_1");
+    Assert.assertEquals(actualNewData.getAllMetadata().get("owner"),
+        "bilbo_new_1");
 
     // Update a non-existing container
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Container doesn't exist.");
     containerManager.updateContainer(
         createSingleNodePipeline("non_exist_container"),
-        "non_exist_container", newData);
+        "non_exist_container", newData, false);
   }
 
   private KeyData writeKeyHelper(Pipeline pipeline,

@@ -76,10 +76,11 @@ public interface ContainerManager extends RwLock {
    * @param pipeline container nodes
    * @param containerName name of the container
    * @param data container data
+   * @param forceUpdate if true, update container forcibly.
    * @throws StorageContainerException
    */
   void updateContainer(Pipeline pipeline, String containerName,
-      ContainerData data) throws StorageContainerException;
+      ContainerData data, boolean forceUpdate) throws StorageContainerException;
 
   /**
    * As simple interface for container Iterations.

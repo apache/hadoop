@@ -232,6 +232,7 @@ message  ReadContainerResponseProto {
 message  UpdateContainerRequestProto {
   required Pipeline pipeline = 1;
   required ContainerData containerData = 2;
+  optional bool forceUpdate = 3 [default = false];
 }
 
 message  UpdateContainerResponseProto {
