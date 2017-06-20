@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.sls.appmaster;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -66,13 +65,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.log4j.Logger;
 
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -108,8 +108,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   protected int totalContainers;
   protected int finishedContainers;
   
-  protected final Logger LOG = Logger.getLogger(AMSimulator.class);
-  
+  protected final Logger LOG = LoggerFactory.getLogger(AMSimulator.class);
+
   public AMSimulator() {
     this.responseQueue = new LinkedBlockingQueue<AllocateResponse>();
   }
@@ -163,7 +163,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   @Override
   public void lastStep() throws Exception {
-    LOG.info(MessageFormat.format("Application {0} is shutting down.", appId));
+    LOG.info("Application {} is shutting down.", appId);
     // unregister tracking
     if (isTracked) {
       untrackApp();
@@ -266,7 +266,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
         return null;
       }
     });
-    LOG.info(MessageFormat.format("Submit a new application {0}", appId));
+    LOG.info("Submit a new application {}", appId);
     
     // waiting until application ACCEPTED
     RMApp app = rm.getRMContext().getRMApps().get(appId);
@@ -309,8 +309,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
       }
     });
 
-    LOG.info(MessageFormat.format(
-            "Register the application master for application {0}", appId));
+    LOG.info("Register the application master for application {}", appId);
   }
 
   private void trackApp() {

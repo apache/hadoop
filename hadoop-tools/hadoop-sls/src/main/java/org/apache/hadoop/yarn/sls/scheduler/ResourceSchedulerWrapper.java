@@ -70,7 +70,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -90,7 +89,6 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.web.SLSWebApp;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Logger;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.CsvReporter;
@@ -99,6 +97,8 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingWindowReservoir;
 import com.codahale.metrics.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -157,7 +157,8 @@ public class ResourceSchedulerWrapper
   private Set<String> queueSet;
   private Set<String> trackedAppSet;
 
-  public final Logger LOG = Logger.getLogger(ResourceSchedulerWrapper.class);
+  public final Logger LOG =
+      LoggerFactory.getLogger(ResourceSchedulerWrapper.class);
 
   public ResourceSchedulerWrapper() {
     super(ResourceSchedulerWrapper.class.getName());
@@ -668,7 +669,7 @@ public class ResourceSchedulerWrapper
     File dir = new File(metricsOutputDir + "/metrics");
     if(! dir.exists()
             && ! dir.mkdirs()) {
-      LOG.error("Cannot create directory " + dir.getAbsoluteFile());
+      LOG.error("Cannot create directory {}", dir.getAbsoluteFile());
     }
     final CsvReporter reporter = CsvReporter.forRegistry(metrics)
             .formatFor(Locale.US)

@@ -74,7 +74,8 @@ import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.web.SLSWebApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SLSCapacityScheduler extends CapacityScheduler implements
         SchedulerWrapper,Configurable {
@@ -130,7 +131,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   private Set<String> queueSet;
   private Set<String> trackedAppSet;
 
-  public final Logger LOG = Logger.getLogger(SLSCapacityScheduler.class);
+  public final Logger LOG = LoggerFactory.getLogger(SLSCapacityScheduler.class);
 
   public SLSCapacityScheduler() {
     samplerLock = new ReentrantLock();
@@ -640,7 +641,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
     File dir = new File(metricsOutputDir + "/metrics");
     if(! dir.exists()
             && ! dir.mkdirs()) {
-      LOG.error("Cannot create directory " + dir.getAbsoluteFile());
+      LOG.error("Cannot create directory {}", dir.getAbsoluteFile());
     }
     final CsvReporter reporter = CsvReporter.forRegistry(metrics)
             .formatFor(Locale.US)
