@@ -159,6 +159,7 @@ message ContentSummaryProto {
   optional uint64 snapshotFileCount = 9;
   optional uint64 snapshotDirectoryCount = 10;
   optional uint64 snapshotSpaceConsumed = 11;
+  optional string erasureCodingPolicy = 12;
 }
 
 /**
