@@ -414,16 +414,17 @@ public class FTPFileSystem extends FileSystem {
     return client.removeDirectory(pathName);
   }
 
-  private FsAction getFsAction(int accessGroup, FTPFile ftpFile) {
+  @VisibleForTesting
+  FsAction getFsAction(int accessGroup, FTPFile ftpFile) {
     FsAction action = FsAction.NONE;
     if (ftpFile.hasPermission(accessGroup, FTPFile.READ_PERMISSION)) {
-      action.or(FsAction.READ);
+      action = action.or(FsAction.READ);
     }
     if (ftpFile.hasPermission(accessGroup, FTPFile.WRITE_PERMISSION)) {
-      action.or(FsAction.WRITE);
+      action = action.or(FsAction.WRITE);
     }
     if (ftpFile.hasPermission(accessGroup, FTPFile.EXECUTE_PERMISSION)) {
-      action.or(FsAction.EXECUTE);
+      action = action.or(FsAction.EXECUTE);
     }
     return action;
   }
