@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -32,6 +33,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.FileNotFoundException;
+import com.google.common.base.Joiner;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -245,6 +248,92 @@ public class StoragePolicyAdmin extends Configured implements Tool {
     }
   }
 
+  /** Command to schedule blocks to move based on specified policy. */
+  private static class SatisfyStoragePolicyCommand implements
+      AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-satisfyStoragePolicy";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -path <path>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<path>", "The path of the file/directory to satisfy"
+          + " storage policy");
+      return getShortUsage() + "\n" +
+          "Schedule blocks to move based on file/directory policy.\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String path = StringUtils.popOptionWithArgument("-path", args);
+      if (path == null) {
+        System.err.println("Please specify the path for setting the storage " +
+            "policy.\nUsage: " + getLongUsage());
+        return 1;
+      }
+
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        dfs.satisfyStoragePolicy(new Path(path));
+        System.out.println("Scheduled blocks to move based on the current"
+            + " storage policy on " + path);
+      } catch (Exception e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
+  /** Command to check storage policy satisfier status. */
+  private static class IsSPSRunningCommand implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-isSPSRunning";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + "]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      return getShortUsage() + "\n" +
+          "Check the status of Storage Policy Statisfier.\n\n";
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      if (!args.isEmpty()) {
+        System.err.print("Can't understand arguments: "
+            + Joiner.on(" ").join(args) + "\n");
+        System.err.println("Usage is " + getLongUsage());
+        return 1;
+      }
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        if(dfs.getClient().isStoragePolicySatisfierRunning()){
+          System.out.println("yes");
+        }else{
+          System.out.println("no");
+        }
+      } catch (Exception e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
   /* Command to unset the storage policy set for a file/directory */
   private static class UnsetStoragePolicyCommand
       implements AdminHelper.Command {
@@ -295,6 +384,8 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       new ListStoragePoliciesCommand(),
       new SetStoragePolicyCommand(),
       new GetStoragePolicyCommand(),
-      new UnsetStoragePolicyCommand()
+      new UnsetStoragePolicyCommand(),
+      new SatisfyStoragePolicyCommand(),
+      new IsSPSRunningCommand()
   };
 }

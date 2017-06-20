@@ -171,5 +171,26 @@ Get the storage policy of a file or a directory.
 |:---- |:---- |
 | `-path <path>` | The path referring to either a directory or a file. |
 
+### Satisfy Storage Policy
+
+Schedule blocks to move based on file/directory policy. This command applicable only to the given path and its immediate children. Sub-directories won't be considered for satisfying the policy.
+
+* Command:
+
+        hdfs storagepolicies -satisfyStoragePolicy -path <path>
+
+* Arguments:
+
+| | |
+|:---- |:---- |
+| `-path <path>` | The path referring to either a directory or a file. |
+
+### SPS Running Status
+
+Check the running status of Storage Policy Satisfier in namenode. If it is running, return 'yes'. Otherwise return 'no'.
+
+* Command:
+
+        hdfs storagepolicies -isSPSRunning
 
 

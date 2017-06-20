@@ -23,6 +23,8 @@ import java.net.URISyntaxException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -46,7 +48,10 @@ public class TestStoragePolicyCommands {
   @Before
   public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
+    StorageType[][] newtypes = new StorageType[][] {
+        {StorageType.ARCHIVE, StorageType.DISK}};
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL)
+        .storageTypes(newtypes).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
   }
@@ -157,5 +162,41 @@ public class TestStoragePolicyCommands {
         "The storage policy of " + bar.toString() + ":\n" + cold);
     DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /fooz", 2,
         "File/Directory does not exist: /fooz");
+  }
+
+  @Test
+  public void testStoragePolicySatisfierCommand() throws Exception {
+    final String file = "/testStoragePolicySatisfierCommand";
+    DFSTestUtil.createFile(fs, new Path(file), SIZE, REPL, 0);
+
+    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path " + file, 0,
+        "The storage policy of " + file + " is unspecified");
+
+    DFSTestUtil.toolRun(admin,
+        "-setStoragePolicy -path " + file + " -policy COLD", 0,
+        "Set storage policy COLD on " + file.toString());
+
+    DFSTestUtil.toolRun(admin, "-satisfyStoragePolicy -path " + file, 0,
+        "Scheduled blocks to move based on the current storage policy on "
+            + file.toString());
+
+    DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000,
+        fs);
+  }
+
+  @Test
+  public void testIsSPSRunningCommand() throws Exception {
+    final String file = "/testIsSPSRunningCommand";
+    DFSTestUtil.createFile(fs, new Path(file), SIZE, REPL, 0);
+    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
+    DFSTestUtil.toolRun(admin, "-isSPSRunning", 0, "yes");
+    cluster.getNameNode().reconfigureProperty(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, "false");
+    cluster.waitActive();
+    DFSTestUtil.toolRun(admin, "-isSPSRunning", 0, "no");
+    // Test with unnecessary args
+    DFSTestUtil.toolRun(admin, "-isSPSRunning status", 1,
+        "Can't understand arguments: ");
   }
 }
