@@ -176,6 +176,7 @@ include_directories( SYSTEM
   third_party/uriparser2
   ${OPENSSL_INCLUDE_DIR}
   ${SASL_INCLUDE_DIR}
+  ${PROTOBUF_INCLUDE_DIRS}
 )
 
 
@@ -206,6 +207,7 @@ if (HADOOP_BUILD)
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
   )
 else (HADOOP_BUILD)
   add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
@@ -214,6 +216,7 @@ else (HADOOP_BUILD)
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
     )
   add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   target_link_libraries(hdfspp_static
@@ -221,6 +224,7 @@ else (HADOOP_BUILD)
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
     )
 endif (HADOOP_BUILD)
 set(LIBHDFSPP_VERSION "0.1.0")
@@ -231,11 +235,11 @@ set_target_properties(hdfspp PROPERTIES
 # Can be installed to a particular location via "make DESTDIR=... install"
 file(GLOB_RECURSE LIBHDFSPP_HEADER_FILES "${CMAKE_CURRENT_LIST_DIR}/include/*.h*")
 file(GLOB_RECURSE LIBHDFS_HEADER_FILES "${HADOOP_IMPORT_DIR}/include/*.h*")
-install(FILES ${LIBHDFSPP_HEADER_FILES} DESTINATION /include/hdfspp)
-install(FILES ${LIBHDFS_HEADER_FILES} DESTINATION /include/hdfs)
+install(FILES ${LIBHDFSPP_HEADER_FILES} DESTINATION include/hdfspp)
+install(FILES ${LIBHDFS_HEADER_FILES} DESTINATION include/hdfs)
 
-install(TARGETS hdfspp_static ARCHIVE DESTINATION /lib)
-install(TARGETS hdfspp LIBRARY DESTINATION /lib)
+install(TARGETS hdfspp_static ARCHIVE DESTINATION lib)
+install(TARGETS hdfspp LIBRARY DESTINATION lib)
 
 add_custom_target(
     InstallToBuildDirectory

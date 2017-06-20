@@ -24,12 +24,4 @@ include_directories( ${LIBHDFSPP_DIR}/include )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
 add_executable(connect_cancel_c connect_cancel.c)
-target_link_libraries(connect_cancel_c hdfspp uriparser2)
-
-# Several examples in different languages need to produce executables with
-# same names. To allow executables with same names we keep their CMake
-# names different, but specify their executable names as follows:
-set_target_properties( connect_cancel_c
-    PROPERTIES
-    OUTPUT_NAME "connect_cancel_c"
-)
+target_link_libraries(connect_cancel_c hdfspp_static uriparser2)

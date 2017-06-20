@@ -23,13 +23,5 @@ set(LIBHDFSPP_DIR CACHE STRING ${CMAKE_INSTALL_PREFIX})
 include_directories( ${LIBHDFSPP_DIR}/include )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
-add_executable(gendirs_cc gendirs.cc)
-target_link_libraries(gendirs_cc hdfspp)
-
-# Several examples in different languages need to produce executables with
-# same names. To allow executables with same names we keep their CMake
-# names different, but specify their executable names as follows:
-set_target_properties( gendirs_cc
-    PROPERTIES
-    OUTPUT_NAME "gendirs"
-)
+add_executable(gendirs gendirs.cc)
+target_link_libraries(gendirs hdfspp_static)
