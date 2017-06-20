@@ -98,6 +98,7 @@ public class TestNameNodeMetadataConsistency {
     BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager
         ().getStoredBlock(block.getLocalBlock());
     cluster.getNameNode().getNamesystem().writeLock();
+    bInfo.delete();
     cluster.getNameNode().getNamesystem().getBlockManager()
         .removeBlock(bInfo);
     cluster.getNameNode().getNamesystem().writeUnlock();
@@ -162,6 +163,7 @@ public class TestNameNodeMetadataConsistency {
     BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager
         ().getStoredBlock(block.getLocalBlock());
     cluster.getNameNode().getNamesystem().writeLock();
+    bInfo.delete();
     cluster.getNameNode().getNamesystem().getBlockManager()
         .removeBlock(bInfo);
     cluster.getNameNode().getNamesystem().writeUnlock();
