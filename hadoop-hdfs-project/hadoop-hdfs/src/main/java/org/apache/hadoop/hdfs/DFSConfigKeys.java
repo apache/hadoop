@@ -383,6 +383,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long
       DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_DEFAULT = 25;
 
+  public static final String DFS_NAMENODE_FSLOCK_FAIR_KEY =
+      "dfs.namenode.fslock.fair";
+  public static final boolean DFS_NAMENODE_FSLOCK_FAIR_DEFAULT = true;
+
   public static final String  DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY =
       "dfs.namenode.lock.detailed-metrics.enabled";
   public static final boolean DFS_NAMENODE_LOCK_DETAILED_METRICS_DEFAULT =
