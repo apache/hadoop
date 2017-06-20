@@ -139,6 +139,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-8674. Improve performance of postponed block scans. (Daryn Sharp)
 
+    HDFS-11345. Document the configuration key for FSNamesystem lock
+    fairness. (Erik Krogen via aajisaka)
+
   BUG FIXES
    
     HDFS-8307. Spurious DNS Queries from hdfs shell. (Andres Perez via aengineer)
