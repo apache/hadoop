@@ -48,8 +48,8 @@ import org.apache.log4j.spi.LoggingEvent;
  * JobTracker's main log.
  *
  * Constructing this class creates a disabled log. It must be initialized
- * using {@link FairSchedulerEventLog#init(Configuration, String)} to begin
- * writing to the file.
+ * using {@link FairSchedulerEventLog#init(FairSchedulerConfiguration)} to
+ * begin writing to the file.
  */
 @Private
 @Unstable
