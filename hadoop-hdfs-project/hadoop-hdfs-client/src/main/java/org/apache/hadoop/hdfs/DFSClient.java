@@ -2777,6 +2777,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return namenode.addErasureCodingPolicies(policies);
   }
 
+  public void removeErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkOpen();
+    namenode.removeErasureCodingPolicy(ecPolicyName);
+  }
+
   public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
     checkOpen();
     return new DFSInotifyEventInputStream(namenode, tracer);

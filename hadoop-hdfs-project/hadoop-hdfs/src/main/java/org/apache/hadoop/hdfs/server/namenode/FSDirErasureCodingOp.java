@@ -218,6 +218,19 @@ final class FSDirErasureCodingOp {
     return fsn.getErasureCodingPolicyManager().addPolicy(policy);
   }
 
+  /**
+   * Remove an erasure coding policy.
+   *
+   * @param fsn namespace
+   * @param ecPolicyName the name of the policy to be removed
+   * @throws IOException
+   */
+  static void removeErasureCodePolicy(final FSNamesystem fsn,
+      String ecPolicyName) throws IOException {
+    Preconditions.checkNotNull(ecPolicyName);
+    fsn.getErasureCodingPolicyManager().removePolicy(ecPolicyName);
+  }
+
   private static List<XAttr> removeErasureCodingPolicyXAttr(
       final FSNamesystem fsn, final INodesInPath srcIIP) throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
