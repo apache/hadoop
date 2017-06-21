@@ -781,7 +781,7 @@ public class TestNameNodeMetrics {
     // We have one sync when the cluster starts up, just opening the journal
     assertCounter("SyncsNumOps", 3L, rb);
     // Each datanode reports in when the cluster comes up
-    assertCounter("BlockReportNumOps",
+    assertCounter("StorageBlockReportNumOps",
                   (long) DATANODE_COUNT * cluster.getStoragesPerDatanode(), rb);
     
     // Sleep for an interval+slop to let the percentiles rollover
@@ -789,7 +789,7 @@ public class TestNameNodeMetrics {
     
     // Check that the percentiles were updated
     assertQuantileGauges("Syncs1s", rb);
-    assertQuantileGauges("BlockReport1s", rb);
+    assertQuantileGauges("StorageBlockReport1s", rb);
   }
 
   /**

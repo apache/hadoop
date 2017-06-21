@@ -1486,7 +1486,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
               blocks, context);
         }
       });
-      metrics.incrStorageBlockReportOps();
     }
     bm.removeBRLeaseIfNeeded(nodeReg, context);
 
