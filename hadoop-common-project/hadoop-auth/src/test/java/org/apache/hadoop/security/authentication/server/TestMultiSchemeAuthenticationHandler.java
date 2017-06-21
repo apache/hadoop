@@ -182,7 +182,7 @@ public class TestMultiSchemeAuthenticationHandler
     } catch (AuthenticationException ex) {
       // Expected
     } catch (Exception ex) {
-      Assert.fail();
+      Assert.fail("Wrong exception :"+ex);
     }
   }
 
