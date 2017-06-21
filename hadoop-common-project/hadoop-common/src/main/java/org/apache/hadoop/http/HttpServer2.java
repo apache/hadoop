@@ -128,6 +128,9 @@ public final class HttpServer2 implements FilterContainer {
   public static final String HTTP_MAX_RESPONSE_HEADER_SIZE_KEY =
       "hadoop.http.max.response.header.size";
   public static final int HTTP_MAX_RESPONSE_HEADER_SIZE_DEFAULT = 65536;
+
+  public static final String HTTP_SOCKET_BACKLOG_SIZE_KEY = "hadoop.http.listen.queue.size";
+  public static final int HTTP_SOCKET_BACKLOG_SIZE_DEFAULT = 128;
   public static final String HTTP_MAX_THREADS_KEY = "hadoop.http.max.threads";
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
@@ -458,7 +461,7 @@ public final class HttpServer2 implements FilterContainer {
       ServerConnector conn = new ServerConnector(server);
       ConnectionFactory connFactory = new HttpConnectionFactory(httpConfig);
       conn.addConnectionFactory(connFactory);
-      configureChannelConnector(conn);
+      configureChannelConnector(conn, conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY, HTTP_SOCKET_BACKLOG_SIZE_DEFAULT));
       return conn;
     }
 
@@ -637,9 +640,9 @@ public final class HttpServer2 implements FilterContainer {
                  Collections.<String, String> emptyMap(), new String[] { "/*" });
   }
 
-  private static void configureChannelConnector(ServerConnector c) {
+  private static void configureChannelConnector(ServerConnector c, int backlog) {
     c.setIdleTimeout(10000);
-    c.setAcceptQueueSize(128);
+    c.setAcceptQueueSize(backlog);
     if(Shell.WINDOWS) {
       // result of setting the SO_REUSEADDR flag is different on Windows
       // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
