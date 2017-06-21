@@ -87,3 +87,42 @@ RPC operations.
 | `GetSmallFile` | Get small file operations |
 | `CloseContainer` | Close container operations |
 
+### Key Space Metrics
+
+The metrics for various key space manager operations in HDFS Ozone.
+
+key space manager (KSM) is a service that similar to the Namenode in HDFS.
+In the current design of KSM, it maintains metadata of all volumes, buckets and keys.
+These metrics are only available when ozone is enabled.
+
+Following is the set of counters maintained for each key space operation.
+
+*Total number of operation* - We maintain an array which counts how
+many times a specific operation has been performed.
+Eg.`NumVolumeCreate` tells us how many times create volume has been
+invoked in KSM.
+
+*Total number of failed operation* - This type operation is opposite to the above
+operation.
+Eg.`NumVolumeCreateFails` tells us how many times create volume has been invoked
+failed in KSM.
+
+Following are the counters for each of key space operations.
+
+| Name | Description |
+|:---- |:---- |
+| `VolumeCreate` | Create volume operation |
+| `VolumeUpdates` | Update volume property operation |
+| `VolumeInfos` | Get volume information operation |
+| `VolumeCheckAccesses` | Check volume access operation |
+| `VolumeDeletes` | Delete volume operation |
+| `VolumeLists` | List volume operation |
+| `BucketCreates` | Create bucket operation |
+| `BucketInfos` | Get bucket information operation |
+| `BucketUpdates` | Update bucket property operation |
+| `BucketDeletes` | Delete bucket operation |
+| `BucketLists` | List bucket operation |
+| `KeyAllocate` | Allocate key operation |
+| `KeyLookup` | Look up key operation |
+| `KeyDeletes` | Delete key operation |
+| `KeyLists` | List key operation |
