@@ -20,11 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -50,6 +49,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   private RecoveredNMTokensState nmTokenState;
   private RecoveredContainerTokensState containerTokenState;
   private Map<ApplicationId, LogDeleterProto> logDeleterState;
+  private RecoveredAMRMProxyState amrmProxyState;
 
   public NMMemoryStateStoreService() {
     super(NMMemoryStateStoreService.class.getName());
@@ -67,6 +67,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
     trackerStates = new HashMap<TrackerKey, TrackerState>();
     deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
     logDeleterState = new HashMap<ApplicationId, LogDeleterProto>();
+    amrmProxyState = new RecoveredAMRMProxyState();
   }
 
   @Override
@@ -409,6 +410,66 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   public synchronized void removeLogDeleter(ApplicationId appId)
       throws IOException {
     logDeleterState.remove(appId);
+  }
+
+  @Override
+  public synchronized RecoveredAMRMProxyState loadAMRMProxyState()
+      throws IOException {
+    // return a copy so caller can't modify our state
+    RecoveredAMRMProxyState result = new RecoveredAMRMProxyState();
+    result.setCurrentMasterKey(amrmProxyState.getCurrentMasterKey());
+    result.setNextMasterKey(amrmProxyState.getNextMasterKey());
+    for (Map.Entry<ApplicationAttemptId, Map<String, byte[]>> entry :
+        amrmProxyState.getAppContexts().entrySet()) {
+      result.getAppContexts().put(entry.getKey(),
+          new HashMap<String, byte[]>(entry.getValue()));
+    }
+    return result;
+  }
+
+  @Override
+  public synchronized void storeAMRMProxyCurrentMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    amrmProxyState.setCurrentMasterKey(new MasterKeyPBImpl(keypb.getProto()));
+  }
+
+  @Override
+  public synchronized void storeAMRMProxyNextMasterKey(MasterKey key)
+      throws IOException {
+    if (key == null) {
+      amrmProxyState.setNextMasterKey(null);
+      return;
+    }
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    amrmProxyState.setNextMasterKey(new MasterKeyPBImpl(keypb.getProto()));
+  }
+
+  @Override
+  public synchronized void storeAMRMProxyAppContextEntry(
+      ApplicationAttemptId attempt, String key, byte[] data)
+      throws IOException {
+    Map<String, byte[]> entryMap = amrmProxyState.getAppContexts().get(attempt);
+    if (entryMap == null) {
+      entryMap = new HashMap<>();
+      amrmProxyState.getAppContexts().put(attempt, entryMap);
+    }
+    entryMap.put(key, Arrays.copyOf(data, data.length));
+  }
+
+  @Override
+  public synchronized void removeAMRMProxyAppContextEntry(
+      ApplicationAttemptId attempt, String key) throws IOException {
+    Map<String, byte[]> entryMap = amrmProxyState.getAppContexts().get(attempt);
+    if (entryMap != null) {
+      entryMap.remove(key);
+    }
+  }
+
+  @Override
+  public synchronized void removeAMRMProxyAppContext(
+      ApplicationAttemptId attempt) throws IOException {
+    amrmProxyState.getAppContexts().remove(attempt);
   }
 
   private static class TrackerState {

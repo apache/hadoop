@@ -24,12 +24,15 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -81,9 +84,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
-  
-  private static final Version CURRENT_VERSION_INFO = Version
-      .newInstance(1, 0);
+
+  private static final Version CURRENT_VERSION_INFO = Version.newInstance(3, 0);
 
   private static final String DELETION_TASK_KEY_PREFIX =
       "DeletionService/deltask_";
@@ -121,6 +123,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private static final String CURRENT_MASTER_KEY_SUFFIX = "CurrentMasterKey";
   private static final String PREV_MASTER_KEY_SUFFIX = "PreviousMasterKey";
+  private static final String NEXT_MASTER_KEY_SUFFIX = "NextMasterKey";
   private static final String NM_TOKENS_KEY_PREFIX = "NMTokens/";
   private static final String NM_TOKENS_CURRENT_MASTER_KEY =
       NM_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
@@ -134,6 +137,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
+
+  private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
 
   private static final byte[] EMPTY_VALUE = new byte[0];
 
@@ -1101,6 +1106,177 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private String getLogDeleterKey(ApplicationId appId) {
     return LOG_DELETER_KEY_PREFIX + appId;
+  }
+
+  @Override
+  public RecoveredAMRMProxyState loadAMRMProxyState() throws IOException {
+    RecoveredAMRMProxyState result = new RecoveredAMRMProxyState();
+    Set<String> unknownKeys = new HashSet<>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(AMRMPROXY_KEY_PREFIX));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.peekNext();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(AMRMPROXY_KEY_PREFIX)) {
+          break;
+        }
+
+        String suffix = key.substring(AMRMPROXY_KEY_PREFIX.length());
+        if (suffix.equals(CURRENT_MASTER_KEY_SUFFIX)) {
+          iter.next();
+          result.setCurrentMasterKey(parseMasterKey(entry.getValue()));
+          LOG.info("Recovered for AMRMProxy: current master key id "
+              + result.getCurrentMasterKey().getKeyId());
+
+        } else if (suffix.equals(NEXT_MASTER_KEY_SUFFIX)) {
+          iter.next();
+          result.setNextMasterKey(parseMasterKey(entry.getValue()));
+          LOG.info("Recovered for AMRMProxy: next master key id "
+              + result.getNextMasterKey().getKeyId());
+
+        } else { // Load AMRMProxy application context map for an app attempt
+          // Parse appAttemptId, also handle the unknown keys
+          int idEndPos;
+          ApplicationAttemptId attemptId;
+          try {
+            idEndPos = key.indexOf('/', AMRMPROXY_KEY_PREFIX.length());
+            if (idEndPos < 0) {
+              throw new IOException(
+                  "Unable to determine attemptId in key: " + key);
+            }
+            attemptId = ApplicationAttemptId.fromString(
+                key.substring(AMRMPROXY_KEY_PREFIX.length(), idEndPos));
+          } catch (Exception e) {
+            // Try to move on for back-forward compatibility
+            LOG.warn("Unknown key " + key + ", remove and move on", e);
+            // Do this because iter.remove() is not supported here
+            unknownKeys.add(key);
+            continue;
+          }
+          // Parse the context map for the appAttemptId
+          Map<String, byte[]> appContext =
+              loadAMRMProxyAppContextMap(iter, key.substring(0, idEndPos + 1));
+          result.getAppContexts().put(attemptId, appContext);
+
+          LOG.info("Recovered for AMRMProxy: " + attemptId + ", map size "
+              + appContext.size());
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    // Delete all unknown keys
+    try {
+      for (String key : unknownKeys) {
+        db.delete(bytes(key));
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+
+    return result;
+  }
+
+  private Map<String, byte[]> loadAMRMProxyAppContextMap(LeveldbIterator iter,
+      String keyPrefix) throws IOException {
+    Map<String, byte[]> appContextMap = new HashMap<>();
+    while (iter.hasNext()) {
+      Entry<byte[], byte[]> entry = iter.peekNext();
+      String key = asString(entry.getKey());
+      if (!key.startsWith(keyPrefix)) {
+        break;
+      }
+      iter.next();
+      String suffix = key.substring(keyPrefix.length());
+      byte[] data = entry.getValue();
+      appContextMap.put(suffix, Arrays.copyOf(data, data.length));
+    }
+    return appContextMap;
+  }
+
+  @Override
+  public void storeAMRMProxyCurrentMasterKey(MasterKey key) throws IOException {
+    storeMasterKey(AMRMPROXY_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX, key);
+  }
+
+  @Override
+  public void storeAMRMProxyNextMasterKey(MasterKey key) throws IOException {
+    String dbkey = AMRMPROXY_KEY_PREFIX + NEXT_MASTER_KEY_SUFFIX;
+    if (key == null) {
+      // When key is null, delete the entry instead
+      try {
+        db.delete(bytes(dbkey));
+      } catch (DBException e) {
+        throw new IOException(e);
+      }
+      return;
+    }
+    storeMasterKey(dbkey, key);
+  }
+
+  @Override
+  public void storeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
+      String key, byte[] data) throws IOException {
+    String fullkey = AMRMPROXY_KEY_PREFIX + attempt + "/" + key;
+    try {
+      db.put(bytes(fullkey), data);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
+      String key) throws IOException {
+    String fullkey = AMRMPROXY_KEY_PREFIX + attempt + "/" + key;
+    try {
+      db.delete(bytes(fullkey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
+      throws IOException {
+    Set<String> candidates = new HashSet<>();
+    String keyPrefix = AMRMPROXY_KEY_PREFIX + attempt + "/";
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(keyPrefix));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(keyPrefix)) {
+          break;
+        }
+        // Do this because iter.remove() is not supported here
+        candidates.add(key);
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    // Delete all candidate keys
+    try {
+      for (String key : candidates) {
+        db.delete(bytes(key));
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override

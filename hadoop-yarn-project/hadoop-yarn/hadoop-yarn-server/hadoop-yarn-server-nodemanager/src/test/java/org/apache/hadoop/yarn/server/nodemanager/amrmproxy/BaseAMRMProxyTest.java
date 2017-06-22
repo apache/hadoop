@@ -39,6 +39,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -62,12 +63,13 @@ import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeResourceMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
@@ -86,17 +88,15 @@ import org.junit.Before;
 public abstract class BaseAMRMProxyTest {
   private static final Log LOG = LogFactory
       .getLog(BaseAMRMProxyTest.class);
-  /**
-   * The AMRMProxyService instance that will be used by all the test cases
-   */
+  // The AMRMProxyService instance that will be used by all the test cases
   private MockAMRMProxyService amrmProxyService;
-  /**
-   * Thread pool used for asynchronous operations
-   */
+
+  // Thread pool used for asynchronous operations
   private static ExecutorService threadpool = Executors
       .newCachedThreadPool();
   private Configuration conf;
   private AsyncDispatcher dispatcher;
+  private Context nmContext;
 
   protected MockAMRMProxyService getAMRMProxyService() {
     Assert.assertNotNull(this.amrmProxyService);
@@ -104,32 +104,40 @@ public abstract class BaseAMRMProxyTest {
   }
 
   @Before
-  public void setUp() {
-    this.conf = new YarnConfiguration();
-    this.conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
-    String mockPassThroughInterceptorClass =
-        PassThroughRequestInterceptor.class.getName();
-
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain will call the mock resource manager. The others in the chain will
-    // simply forward it to the next one in the chain
-    this.conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
-        mockPassThroughInterceptorClass + ","
-            + mockPassThroughInterceptorClass + ","
-            + mockPassThroughInterceptorClass + ","
-            + MockRequestInterceptor.class.getName());
-
+  public void setUp() throws IOException {
+    this.conf = createConfiguration();
     this.dispatcher = new AsyncDispatcher();
     this.dispatcher.init(this.conf);
     this.dispatcher.start();
     createAndStartAMRMProxyService(this.conf);
   }
 
+  protected YarnConfiguration createConfiguration() {
+    YarnConfiguration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
+    String mockPassThroughInterceptorClass =
+        PassThroughRequestInterceptor.class.getName();
+
+    // Create a request intercepter pipeline for testing. The last one in the
+    // chain will call the mock resource manager. The others in the chain will
+    // simply forward it to the next one in the chain
+    config.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
+        mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
+            + "," + mockPassThroughInterceptorClass + ","
+            + MockRequestInterceptor.class.getName());
+
+    config.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    return config;
+  }
+
   @After
   public void tearDown() {
-    amrmProxyService.stop();
-    amrmProxyService = null;
+    this.amrmProxyService.stop();
+    this.amrmProxyService = null;
     this.dispatcher.stop();
+    if (this.nmContext.getNMStateStore() != null) {
+      this.nmContext.getNMStateStore().stop();
+    }
   }
 
   protected ExecutorService getThreadPool() {
@@ -140,15 +148,31 @@ public abstract class BaseAMRMProxyTest {
     return this.conf;
   }
 
-  protected void createAndStartAMRMProxyService(Configuration config) {
+  protected AsyncDispatcher getDispatcher() {
+    return this.dispatcher;
+  }
+
+  protected void createAndStartAMRMProxyService(Configuration config)
+      throws IOException {
     // Stop the existing instance first if not null
     if (this.amrmProxyService != null) {
       this.amrmProxyService.stop();
     }
+    if (this.nmContext == null) {
+      this.nmContext = createContext();
+    }
     this.amrmProxyService =
-        new MockAMRMProxyService(new NullContext(), dispatcher);
+        new MockAMRMProxyService(this.nmContext, this.dispatcher);
     this.amrmProxyService.init(config);
+    this.amrmProxyService.recover();
     this.amrmProxyService.start();
+  }
+
+  protected Context createContext() {
+    NMMemoryStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(this.conf);
+    stateStore.start();
+    return new NMContext(null, null, null, null, stateStore, false, this.conf);
   }
 
   /**
@@ -578,6 +602,13 @@ public abstract class BaseAMRMProxyTest {
       super(nmContext, dispatcher);
     }
 
+    @Override
+    protected void serviceStart() throws Exception {
+      // Override this method and do nothing to avoid the base class from
+      // listening to server end point
+      getSecretManager().start();
+    }
+
     /**
      * This method is used by the test code to initialize the pipeline. In the
      * actual service, the initialization is called by the
@@ -587,7 +618,8 @@ public abstract class BaseAMRMProxyTest {
      * @param user
      */
     public void initApp(ApplicationAttemptId applicationId, String user) {
-      super.initializePipeline(applicationId, user, null, null);
+      super.initializePipeline(applicationId, user,
+          new Token<AMRMTokenIdentifier>(), null, null, false);
     }
 
     public void stopApp(ApplicationId applicationId) {

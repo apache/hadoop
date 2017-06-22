@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -935,9 +936,10 @@ public class MiniYARNCluster extends CompositeService {
     @Override
     protected void initializePipeline(ApplicationAttemptId applicationAttemptId,
         String user, Token<AMRMTokenIdentifier> amrmToken,
-        Token<AMRMTokenIdentifier> localToken) {
+        Token<AMRMTokenIdentifier> localToken,
+        Map<String, byte[]> recoveredDataMap, boolean isRecovery) {
       super.initializePipeline(applicationAttemptId, user, amrmToken,
-          localToken);
+          localToken, recoveredDataMap, isRecovery);
       RequestInterceptor rt = getPipelines()
           .get(applicationAttemptId.getApplicationId()).getRootInterceptor();
       // The DefaultRequestInterceptor will generally be the last

@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,11 +41,19 @@ public class TestAMRMProxyTokenSecretManager {
 
   private YarnConfiguration conf;
   private AMRMProxyTokenSecretManager secretManager;
+  private NMMemoryStateStoreService stateStore;
 
   @Before
   public void setup() {
     conf = new YarnConfiguration();
-    secretManager = new AMRMProxyTokenSecretManager(conf);
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+
+    stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+
+    secretManager = new AMRMProxyTokenSecretManager(stateStore);
+    secretManager.init(conf);
     secretManager.start();
   }
 
@@ -52,6 +61,9 @@ public class TestAMRMProxyTokenSecretManager {
   public void breakdown() {
     if (secretManager != null) {
       secretManager.stop();
+    }
+    if (stateStore != null) {
+      stateStore.stop();
     }
   }
 
@@ -78,4 +90,52 @@ public class TestAMRMProxyTokenSecretManager {
     }
   }
 
+  @Test
+  public void testRecovery() throws IOException {
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+
+    Token<AMRMTokenIdentifier> localToken =
+        secretManager.createAndGetAMRMToken(attemptId);
+
+    AMRMTokenIdentifier identifier = secretManager.createIdentifier();
+    identifier.readFields(new DataInputStream(
+        new ByteArrayInputStream(localToken.getIdentifier())));
+
+    secretManager.retrievePassword(identifier);
+
+    // Generate next master key
+    secretManager.rollMasterKey();
+
+    // Restart and recover
+    secretManager.stop();
+    secretManager = new AMRMProxyTokenSecretManager(stateStore);
+    secretManager.init(conf);
+    secretManager.recover(stateStore.loadAMRMProxyState());
+    secretManager.start();
+    // Recover the app
+    secretManager.createAndGetAMRMToken(attemptId);
+
+    // Current master key should be recovered, and thus pass here
+    secretManager.retrievePassword(identifier);
+
+    // Roll key, current master key will be replaced
+    secretManager.activateNextMasterKey();
+
+    // Restart and recover
+    secretManager.stop();
+    secretManager = new AMRMProxyTokenSecretManager(stateStore);
+    secretManager.init(conf);
+    secretManager.recover(stateStore.loadAMRMProxyState());
+    secretManager.start();
+    // Recover the app
+    secretManager.createAndGetAMRMToken(attemptId);
+
+    try {
+      secretManager.retrievePassword(identifier);
+      Assert.fail("Expect InvalidToken exception because the "
+          + "old master key should have expired");
+    } catch (InvalidToken e) {
+    }
+  }
 }

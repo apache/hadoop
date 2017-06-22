@@ -265,6 +265,41 @@ public abstract class NMStateStoreService extends AbstractService {
     }
   }
 
+  /**
+   * Recovered states for AMRMProxy.
+   */
+  public static class RecoveredAMRMProxyState {
+    private MasterKey currentMasterKey;
+    private MasterKey nextMasterKey;
+    // For each app, stores amrmToken, user name, as well as various AMRMProxy
+    // intercepter states
+    private Map<ApplicationAttemptId, Map<String, byte[]>> appContexts;
+
+    public RecoveredAMRMProxyState() {
+      appContexts = new HashMap<>();
+    }
+
+    public MasterKey getCurrentMasterKey() {
+      return currentMasterKey;
+    }
+
+    public MasterKey getNextMasterKey() {
+      return nextMasterKey;
+    }
+
+    public Map<ApplicationAttemptId, Map<String, byte[]>> getAppContexts() {
+      return appContexts;
+    }
+
+    public void setCurrentMasterKey(MasterKey currentKey) {
+      currentMasterKey = currentKey;
+    }
+
+    public void setNextMasterKey(MasterKey nextKey) {
+      nextMasterKey = nextKey;
+    }
+  }
+
   /** Initialize the state storage */
   @Override
   public void serviceInit(Configuration conf) throws IOException {
@@ -592,6 +627,57 @@ public abstract class NMStateStoreService extends AbstractService {
   public abstract void removeLogDeleter(ApplicationId appId)
       throws IOException;
 
+  /**
+   * Load the state of AMRMProxy.
+   * @return recovered state of AMRMProxy
+   * @throws IOException if fails
+   */
+  public abstract RecoveredAMRMProxyState loadAMRMProxyState()
+      throws IOException;
+
+  /**
+   * Record the current AMRMProxyTokenSecretManager master key.
+   * @param key the current master key
+   * @throws IOException if fails
+   */
+  public abstract void storeAMRMProxyCurrentMasterKey(MasterKey key)
+      throws IOException;
+
+  /**
+   * Record the next AMRMProxyTokenSecretManager master key.
+   * @param key the next master key
+   * @throws IOException if fails
+   */
+  public abstract void storeAMRMProxyNextMasterKey(MasterKey key)
+      throws IOException;
+
+  /**
+   * Add a context entry for an application attempt in AMRMProxyService.
+   * @param attempt app attempt ID
+   * @param key key string
+   * @param data state data to store
+   * @throws IOException if fails
+   */
+  public abstract void storeAMRMProxyAppContextEntry(
+      ApplicationAttemptId attempt, String key, byte[] data) throws IOException;
+
+  /**
+   * Remove a context entry for an application attempt in AMRMProxyService.
+   * @param attempt attempt ID
+   * @param key key string
+   * @throws IOException if fails
+   */
+  public abstract void removeAMRMProxyAppContextEntry(
+      ApplicationAttemptId attempt, String key) throws IOException;
+
+  /**
+   * Remove the entire context map for an application attempt in
+   * AMRMProxyService.
+   * @param attempt attempt ID
+   * @throws IOException if fails
+   */
+  public abstract void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
+      throws IOException;
 
   protected abstract void initStorage(Configuration conf) throws IOException;
 
