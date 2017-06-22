@@ -20,10 +20,11 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -33,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +67,9 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Localize
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
@@ -1014,6 +1018,105 @@ public class TestNMLeveldbStateStoreService {
     assertNotNull(stateStore.getDB().get(invalidKey));
     stateStore.removeContainer(containerId);
     assertNull(stateStore.getDB().get(invalidKey));
+  }
+
+  @Test
+  public void testAMRMProxyStorage() throws IOException {
+    RecoveredAMRMProxyState state = stateStore.loadAMRMProxyState();
+    assertEquals(state.getCurrentMasterKey(), null);
+    assertEquals(state.getNextMasterKey(), null);
+    assertEquals(state.getAppContexts().size(), 0);
+
+    ApplicationId appId1 = ApplicationId.newInstance(1, 1);
+    ApplicationId appId2 = ApplicationId.newInstance(1, 2);
+    ApplicationAttemptId attemptId1 =
+        ApplicationAttemptId.newInstance(appId1, 1);
+    ApplicationAttemptId attemptId2 =
+        ApplicationAttemptId.newInstance(appId2, 2);
+    String key1 = "key1";
+    String key2 = "key2";
+    byte[] data1 = "data1".getBytes();
+    byte[] data2 = "data2".getBytes();
+
+    AMRMProxyTokenSecretManager secretManager =
+        new AMRMProxyTokenSecretManager(stateStore);
+    secretManager.init(conf);
+    // Generate currentMasterKey
+    secretManager.start();
+
+    try {
+      // Add two applications, each with two data entries
+      stateStore.storeAMRMProxyAppContextEntry(attemptId1, key1, data1);
+      stateStore.storeAMRMProxyAppContextEntry(attemptId2, key1, data1);
+      stateStore.storeAMRMProxyAppContextEntry(attemptId1, key2, data2);
+      stateStore.storeAMRMProxyAppContextEntry(attemptId2, key2, data2);
+
+      // restart state store and verify recovered
+      restartStateStore();
+      secretManager.setNMStateStoreService(stateStore);
+      state = stateStore.loadAMRMProxyState();
+      assertEquals(state.getCurrentMasterKey(),
+          secretManager.getCurrentMasterKeyData().getMasterKey());
+      assertEquals(state.getNextMasterKey(), null);
+      assertEquals(state.getAppContexts().size(), 2);
+      // app1
+      Map<String, byte[]> map = state.getAppContexts().get(attemptId1);
+      assertNotEquals(map, null);
+      assertEquals(map.size(), 2);
+      assertTrue(Arrays.equals(map.get(key1), data1));
+      assertTrue(Arrays.equals(map.get(key2), data2));
+      // app2
+      map = state.getAppContexts().get(attemptId2);
+      assertNotEquals(map, null);
+      assertEquals(map.size(), 2);
+      assertTrue(Arrays.equals(map.get(key1), data1));
+      assertTrue(Arrays.equals(map.get(key2), data2));
+
+      // Generate next master key and remove one entry of app2
+      secretManager.rollMasterKey();
+      stateStore.removeAMRMProxyAppContextEntry(attemptId2, key1);
+
+      // restart state store and verify recovered
+      restartStateStore();
+      secretManager.setNMStateStoreService(stateStore);
+      state = stateStore.loadAMRMProxyState();
+      assertEquals(state.getCurrentMasterKey(),
+          secretManager.getCurrentMasterKeyData().getMasterKey());
+      assertEquals(state.getNextMasterKey(),
+          secretManager.getNextMasterKeyData().getMasterKey());
+      assertEquals(state.getAppContexts().size(), 2);
+      // app1
+      map = state.getAppContexts().get(attemptId1);
+      assertNotEquals(map, null);
+      assertEquals(map.size(), 2);
+      assertTrue(Arrays.equals(map.get(key1), data1));
+      assertTrue(Arrays.equals(map.get(key2), data2));
+      // app2
+      map = state.getAppContexts().get(attemptId2);
+      assertNotEquals(map, null);
+      assertEquals(map.size(), 1);
+      assertTrue(Arrays.equals(map.get(key2), data2));
+
+      // Activate next master key and remove all entries of app1
+      secretManager.activateNextMasterKey();
+      stateStore.removeAMRMProxyAppContext(attemptId1);
+
+      // restart state store and verify recovered
+      restartStateStore();
+      secretManager.setNMStateStoreService(stateStore);
+      state = stateStore.loadAMRMProxyState();
+      assertEquals(state.getCurrentMasterKey(),
+          secretManager.getCurrentMasterKeyData().getMasterKey());
+      assertEquals(state.getNextMasterKey(), null);
+      assertEquals(state.getAppContexts().size(), 1);
+      // app2 only
+      map = state.getAppContexts().get(attemptId2);
+      assertNotEquals(map, null);
+      assertEquals(map.size(), 1);
+      assertTrue(Arrays.equals(map.get(key2), data2));
+    } finally {
+      secretManager.stop();
+    }
   }
 
   private static class NMTokenSecretManagerForTest extends

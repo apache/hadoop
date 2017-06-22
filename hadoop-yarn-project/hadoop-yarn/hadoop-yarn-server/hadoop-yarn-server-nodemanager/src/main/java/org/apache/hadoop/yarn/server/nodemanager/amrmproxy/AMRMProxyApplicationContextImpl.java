@@ -45,12 +45,13 @@ public class AMRMProxyApplicationContextImpl implements
 
   /**
    * Create an instance of the AMRMProxyApplicationContext.
-   * 
-   * @param nmContext
-   * @param conf
-   * @param applicationAttemptId
-   * @param user
-   * @param amrmToken
+   *
+   * @param nmContext NM context
+   * @param conf configuration
+   * @param applicationAttemptId attempt id
+   * @param user user name of the application
+   * @param amrmToken amrmToken issued by RM
+   * @param localToken amrmToken issued by AMRMProxy
    */
   public AMRMProxyApplicationContextImpl(Context nmContext,
       Configuration conf, ApplicationAttemptId applicationAttemptId,
@@ -86,6 +87,8 @@ public class AMRMProxyApplicationContextImpl implements
 
   /**
    * Sets the application's AMRMToken.
+   *
+   * @param amrmToken amrmToken issued by RM
    */
   public synchronized void setAMRMToken(
       Token<AMRMTokenIdentifier> amrmToken) {
@@ -99,6 +102,8 @@ public class AMRMProxyApplicationContextImpl implements
 
   /**
    * Sets the application's AMRMToken.
+   *
+   * @param localToken amrmToken issued by AMRMProxy
    */
   public synchronized void setLocalAMRMToken(
       Token<AMRMTokenIdentifier> localToken) {
