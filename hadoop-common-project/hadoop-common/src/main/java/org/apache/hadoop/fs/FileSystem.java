@@ -4179,4 +4179,14 @@ public abstract class FileSystem extends Configured implements Closeable {
     return new FileSystemDataOutputStreamBuilder(this, path)
         .create().overwrite(true);
   }
+
+  /**
+   * Create a Builder to append a file.
+   * @param path file path.
+   * @return a {@link FSDataOutputStreamBuilder} to build file append request.
+   */
+  @InterfaceAudience.Private
+  protected FSDataOutputStreamBuilder appendFile(Path path) {
+    return new FileSystemDataOutputStreamBuilder(this, path).append();
+  }
 }

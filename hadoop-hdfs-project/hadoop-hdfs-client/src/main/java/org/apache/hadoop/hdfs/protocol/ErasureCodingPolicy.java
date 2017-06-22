@@ -58,6 +58,8 @@ public final class ErasureCodingPolicy {
   }
 
   public static String composePolicyName(ECSchema schema, int cellSize) {
+    Preconditions.checkNotNull(schema);
+    Preconditions.checkArgument(cellSize > 0, "cellSize must be positive");
     Preconditions.checkArgument(cellSize % 1024 == 0,
         "cellSize must be 1024 aligned");
     return schema.getCodecName().toUpperCase() + "-" +

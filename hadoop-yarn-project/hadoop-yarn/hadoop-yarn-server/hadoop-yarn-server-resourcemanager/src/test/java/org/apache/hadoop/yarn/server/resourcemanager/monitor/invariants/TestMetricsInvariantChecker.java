@@ -22,6 +22,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.log4j.Logger;
 import org.junit.Before;
@@ -59,7 +60,8 @@ public class TestMetricsInvariantChecker {
 
     QueueMetrics qm =
         QueueMetrics.forQueue(metricsSystem, "root", null, false, conf);
-    qm.setAvailableResourcesToQueue(Resource.newInstance(1, 1));
+    qm.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+        Resource.newInstance(1, 1));
 
     int numIterations = 1000;
     long start = System.currentTimeMillis();
@@ -79,7 +81,8 @@ public class TestMetricsInvariantChecker {
     // create a "wrong" condition in which the invariants are not respected
     QueueMetrics qm =
         QueueMetrics.forQueue(metricsSystem, "root", null, false, conf);
-    qm.setAvailableResourcesToQueue(Resource.newInstance(-1, -1));
+    qm.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+        Resource.newInstance(-1, -1));
 
     // test with throwing exception turned on
     try {

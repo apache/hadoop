@@ -60,14 +60,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.web.SLSWebApp;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
 public abstract class SchedulerMetrics {
   private static final String EOL = System.getProperty("line.separator");
   private static final int SAMPLING_SIZE = 60;
-  private static final Logger LOG = Logger.getLogger(SchedulerMetrics.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SchedulerMetrics.class);
 
   protected ResourceScheduler scheduler;
   protected Set<String> trackedQueues;
@@ -420,7 +422,7 @@ public abstract class SchedulerMetrics {
         SLSConfiguration.METRICS_RECORD_INTERVAL_MS_DEFAULT);
     File dir = new File(metricsOutputDir + "/metrics");
     if(!dir.exists() && !dir.mkdirs()) {
-      LOG.error("Cannot create directory " + dir.getAbsoluteFile());
+      LOG.error("Cannot create directory {}", dir.getAbsoluteFile());
     }
     final CsvReporter reporter = CsvReporter.forRegistry(metrics)
         .formatFor(Locale.US)

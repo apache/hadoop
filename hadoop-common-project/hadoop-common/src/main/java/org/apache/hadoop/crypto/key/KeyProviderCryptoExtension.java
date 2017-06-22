@@ -274,12 +274,16 @@ public class KeyProviderCryptoExtension extends
       // Generate random bytes for new key and IV
 
       CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
-      final byte[] newKey = new byte[encryptionKey.getMaterial().length];
-      cc.generateSecureRandom(newKey);
-      final byte[] iv = new byte[cc.getCipherSuite().getAlgorithmBlockSize()];
-      cc.generateSecureRandom(iv);
-      Encryptor encryptor = cc.createEncryptor();
-      return generateEncryptedKey(encryptor, encryptionKey, newKey, iv);
+      try {
+        final byte[] newKey = new byte[encryptionKey.getMaterial().length];
+        cc.generateSecureRandom(newKey);
+        final byte[] iv = new byte[cc.getCipherSuite().getAlgorithmBlockSize()];
+        cc.generateSecureRandom(iv);
+        Encryptor encryptor = cc.createEncryptor();
+        return generateEncryptedKey(encryptor, encryptionKey, newKey, iv);
+      } finally {
+        cc.close();
+      }
     }
 
     private EncryptedKeyVersion generateEncryptedKey(final Encryptor encryptor,
@@ -322,9 +326,13 @@ public class KeyProviderCryptoExtension extends
 
       final KeyVersion dek = decryptEncryptedKey(ekv);
       final CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
-      final Encryptor encryptor = cc.createEncryptor();
-      return generateEncryptedKey(encryptor, ekNow, dek.getMaterial(),
-          ekv.getEncryptedKeyIv());
+      try {
+        final Encryptor encryptor = cc.createEncryptor();
+        return generateEncryptedKey(encryptor, ekNow, dek.getMaterial(),
+            ekv.getEncryptedKeyIv());
+      } finally {
+        cc.close();
+      }
     }
 
     @Override
@@ -364,6 +372,7 @@ public class KeyProviderCryptoExtension extends
       bbOut.flip();
       byte[] decryptedKey = new byte[keyLen];
       bbOut.get(decryptedKey);
+      cc.close();
       return new KeyVersion(encryptionKey.getName(), EK, decryptedKey);
     }
 

@@ -216,8 +216,8 @@ public class TestSafeMode {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        return getLongCounter("StorageBlockReportOps", getMetrics(NN_METRICS)) ==
-            cluster.getStoragesPerDatanode();
+        return getLongCounter("StorageBlockReportNumOps",
+            getMetrics(NN_METRICS)) == cluster.getStoragesPerDatanode();
       }
     }, 10, 10000);
 

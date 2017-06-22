@@ -1486,7 +1486,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
               blocks, context);
         }
       });
-      metrics.incrStorageBlockReportOps();
     }
     bm.removeBRLeaseIfNeeded(nodeReg, context);
 
@@ -2299,6 +2298,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
     return namesystem.addECPolicies(policies);
+  }
+
+  @Override
+  public void removeErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkNNStartup();
+    namesystem.removeErasureCodingPolicy(ecPolicyName);
   }
 
   @Override // ReconfigurationProtocol

@@ -740,7 +740,8 @@ class BlockPoolSlice {
         }
       }
     } catch (IOException e) {
-      FsDatasetImpl.LOG.warn(e);
+      FsDatasetImpl.LOG.warn("Getting exception while validating integrity " +
+              "and setting length for blockFile", e);
       return 0;
     }
   }

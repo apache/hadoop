@@ -1563,6 +1563,14 @@ public interface ClientProtocol {
       ErasureCodingPolicy[] policies) throws IOException;
 
   /**
+   * Remove erasure coding policy.
+   * @param ecPolicyName The name of the policy to be removed.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void removeErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+  /**
    * Get the erasure coding policies loaded in Namenode.
    *
    * @throws IOException

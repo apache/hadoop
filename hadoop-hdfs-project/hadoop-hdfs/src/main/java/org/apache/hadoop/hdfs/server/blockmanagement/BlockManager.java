@@ -2436,7 +2436,7 @@ public class BlockManager implements BlockStatsMXBean {
     // Log the block report processing stats from Namenode perspective
     final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
     if (metrics != null) {
-      metrics.addBlockReport((int) (endTime - startTime));
+      metrics.addStorageBlockReport((int) (endTime - startTime));
     }
     blockLog.info("BLOCK* processReport 0x{}: from storage {} node {}, " +
         "blocks: {}, hasStaleStorage: {}, processing time: {} msecs, " +
@@ -3749,7 +3749,8 @@ public class BlockManager implements BlockStatsMXBean {
     // Modify the blocks->datanode map and node's map.
     //
     BlockInfo storedBlock = getStoredBlock(block);
-    if (storedBlock != null) {
+    if (storedBlock != null &&
+        block.getGenerationStamp() == storedBlock.getGenerationStamp()) {
       pendingReconstruction.decrement(storedBlock, node);
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,

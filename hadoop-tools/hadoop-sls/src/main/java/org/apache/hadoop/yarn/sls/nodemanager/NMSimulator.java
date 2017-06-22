@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.sls.nodemanager;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -51,11 +50,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.log4j.Logger;
-
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -74,7 +73,7 @@ public class NMSimulator extends TaskRunner.Task {
   private ResourceManager rm;
   // heart beat response id
   private int RESPONSE_ID = 1;
-  private final static Logger LOG = Logger.getLogger(NMSimulator.class);
+  private final static Logger LOG = LoggerFactory.getLogger(NMSimulator.class);
   
   public void init(String nodeIdStr, int memory, int cores,
           int dispatchTime, int heartBeatInterval, ResourceManager rm)
@@ -120,8 +119,7 @@ public class NMSimulator extends TaskRunner.Task {
       while ((cs = containerQueue.poll()) != null) {
         runningContainers.remove(cs.getId());
         completedContainerList.add(cs.getId());
-        LOG.debug(MessageFormat.format("Container {0} has completed",
-                cs.getId()));
+        LOG.debug("Container {} has completed", cs.getId());
       }
     }
     
@@ -148,14 +146,14 @@ public class NMSimulator extends TaskRunner.Task {
             synchronized(amContainerList) {
               amContainerList.remove(containerId);
             }
-            LOG.debug(MessageFormat.format("NodeManager {0} releases " +
-                "an AM ({1}).", node.getNodeID(), containerId));
+            LOG.debug("NodeManager {} releases an AM ({}).",
+                node.getNodeID(), containerId);
           } else {
             cs = runningContainers.remove(containerId);
             containerQueue.remove(cs);
             releasedContainerList.add(containerId);
-            LOG.debug(MessageFormat.format("NodeManager {0} releases a " +
-                "container ({1}).", node.getNodeID(), containerId));
+            LOG.debug("NodeManager {} releases a container ({}).",
+                node.getNodeID(), containerId);
           }
         }
       }
@@ -189,8 +187,8 @@ public class NMSimulator extends TaskRunner.Task {
     // add complete containers
     synchronized(completedContainerList) {
       for (ContainerId cId : completedContainerList) {
-        LOG.debug(MessageFormat.format("NodeManager {0} completed" +
-                " container ({1}).", node.getNodeID(), cId));
+        LOG.debug("NodeManager {} completed container ({}).",
+            node.getNodeID(), cId);
         csList.add(newContainerStatus(
                 cId, ContainerState.COMPLETE, ContainerExitStatus.SUCCESS));
       }
@@ -199,8 +197,8 @@ public class NMSimulator extends TaskRunner.Task {
     // released containers
     synchronized(releasedContainerList) {
       for (ContainerId cId : releasedContainerList) {
-        LOG.debug(MessageFormat.format("NodeManager {0} released container" +
-                " ({1}).", node.getNodeID(), cId));
+        LOG.debug("NodeManager {} released container ({}).",
+            node.getNodeID(), cId);
         csList.add(newContainerStatus(
                 cId, ContainerState.COMPLETE, ContainerExitStatus.ABORTED));
       }
@@ -227,8 +225,8 @@ public class NMSimulator extends TaskRunner.Task {
    * launch a new container with the given life time
    */
   public void addNewContainer(Container container, long lifeTimeMS) {
-    LOG.debug(MessageFormat.format("NodeManager {0} launches a new " +
-            "container ({1}).", node.getNodeID(), container.getId()));
+    LOG.debug("NodeManager {} launches a new container ({}).",
+        node.getNodeID(), container.getId());
     if (lifeTimeMS != -1) {
       // normal container
       ContainerSimulator cs = new ContainerSimulator(container.getId(),
