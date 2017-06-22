@@ -100,15 +100,15 @@ public class XceiverClientManager {
   }
 
   /**
-   * Acquires a SharedXceiverClient connected to a container capable of
+   * Acquires a XceiverClientSpi connected to a container capable of
    * storing the specified key.
    *
-   * If there is already a cached SharedXceiverClient, simply return
+   * If there is already a cached XceiverClientSpi, simply return
    * the cached otherwise create a new one.
    *
    * @param pipeline the container pipeline for the client connection
-   * @return SharedXceiverClient connected to a container
-   * @throws IOException if an SharedXceiverClient cannot be acquired
+   * @return XceiverClientSpi connected to a container
+   * @throws IOException if a XceiverClientSpi cannot be acquired
    */
   public XceiverClientSpi acquireClient(Pipeline pipeline)
       throws IOException {
@@ -124,7 +124,7 @@ public class XceiverClientManager {
   }
 
   /**
-   * Releases an SharedXceiverClient after use.
+   * Releases a XceiverClientSpi after use.
    *
    * @param client client to release
    */
