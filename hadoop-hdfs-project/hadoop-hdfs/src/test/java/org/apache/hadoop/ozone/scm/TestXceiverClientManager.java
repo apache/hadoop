@@ -96,7 +96,7 @@ public class TestXceiverClientManager {
   @Test
   public void testFreeByReference() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 2);
+    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
@@ -117,14 +117,6 @@ public class TestXceiverClientManager {
     Assert.assertEquals(containerName2,
         client2.getPipeline().getContainerName());
     Assert.assertNotEquals(client1, client2);
-
-    String containerName3 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline3 =
-        storageContainerLocationClient.allocateContainer(containerName3);
-    XceiverClientSpi client3 = clientManager.acquireClient(pipeline3);
-    Assert.assertEquals(client3.getRefcount(), 1);
-    Assert.assertEquals(containerName3,
-        client3.getPipeline().getContainerName());
 
     // least recent container (i.e containerName1) is evicted
     XceiverClientSpi nonExistent1 = cache.getIfPresent(containerName1);
@@ -140,13 +132,12 @@ public class TestXceiverClientManager {
     exception.expectMessage("This channel is not connected.");
     ContainerProtocolCalls.createContainer(client1,  traceID1);
     clientManager.releaseClient(client2);
-    clientManager.releaseClient(client3);
   }
 
   @Test
   public void testFreeByEviction() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 2);
+    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
@@ -159,6 +150,9 @@ public class TestXceiverClientManager {
     Assert.assertEquals(containerName1,
         client1.getPipeline().getContainerName());
 
+    clientManager.releaseClient(client1);
+    Assert.assertEquals(client1.getRefcount(), 0);
+
     String containerName2 = "container" + RandomStringUtils.randomNumeric(10);
     Pipeline pipeline2 =
         storageContainerLocationClient.allocateContainer(containerName2);
@@ -168,16 +162,6 @@ public class TestXceiverClientManager {
         client2.getPipeline().getContainerName());
     Assert.assertNotEquals(client1, client2);
 
-    clientManager.releaseClient(client1);
-    Assert.assertEquals(client1.getRefcount(), 0);
-
-    String containerName3 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline3 =
-        storageContainerLocationClient.allocateContainer(containerName3);
-    XceiverClientSpi client3 = clientManager.acquireClient(pipeline3);
-    Assert.assertEquals(client3.getRefcount(), 1);
-    Assert.assertEquals(containerName3,
-        client3.getPipeline().getContainerName());
 
     // now client 1 should be evicted
     XceiverClientSpi nonExistent = cache.getIfPresent(containerName1);
@@ -189,6 +173,5 @@ public class TestXceiverClientManager {
     exception.expectMessage("This channel is not connected.");
     ContainerProtocolCalls.createContainer(client1, traceID2);
     clientManager.releaseClient(client2);
-    clientManager.releaseClient(client3);
   }
 }
