@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -110,16 +111,22 @@ public class RouterPolicyFacade {
    * This method provides a wrapper of all policy functionalities for routing .
    * Internally it manages configuration changes, and policy init/reinit.
    *
-   * @param appSubmissionContext the application to route.
+   * @param appSubmissionContext the {@link ApplicationSubmissionContext} that
+   *          has to be routed to an appropriate subCluster for execution.
    *
-   * @return the id of the subcluster that will be the "home" for this
+   * @param blackListSubClusters the list of subClusters as identified by
+   *          {@link SubClusterId} to blackList from the selection of the home
+   *          subCluster.
+   *
+   * @return the {@link SubClusterId} that will be the "home" for this
    *         application.
    *
    * @throws YarnException if there are issues initializing policies, or no
    *           valid sub-cluster id could be found for this app.
    */
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blackListSubClusters) throws YarnException {
 
     // the maps are concurrent, but we need to protect from reset()
     // reinitialization mid-execution by creating a new reference local to this
@@ -186,7 +193,7 @@ public class RouterPolicyFacade {
           + "and no default specified.");
     }
 
-    return policy.getHomeSubcluster(appSubmissionContext);
+    return policy.getHomeSubcluster(appSubmissionContext, blackListSubClusters);
   }
 
   /**

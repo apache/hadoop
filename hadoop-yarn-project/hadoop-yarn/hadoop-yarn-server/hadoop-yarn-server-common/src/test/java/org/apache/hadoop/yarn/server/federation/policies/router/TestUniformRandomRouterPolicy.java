@@ -57,7 +57,7 @@ public class TestUniformRandomRouterPolicy extends BaseRouterPoliciesTest {
   @Test
   public void testOneSubclusterIsChosen() throws YarnException {
     SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
-        .getHomeSubcluster(getApplicationSubmissionContext());
+        .getHomeSubcluster(getApplicationSubmissionContext(), null);
     Assert.assertTrue(getActiveSubclusters().keySet().contains(chosen));
   }
 
