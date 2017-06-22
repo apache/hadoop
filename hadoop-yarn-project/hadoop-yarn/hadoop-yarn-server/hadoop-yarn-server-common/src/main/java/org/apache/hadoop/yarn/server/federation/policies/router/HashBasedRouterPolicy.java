@@ -55,18 +55,34 @@ public class HashBasedRouterPolicy extends AbstractRouterPolicy {
    * sub-cluster, as far as the number of active sub-cluster and their names
    * remain the same.
    *
-   * @param appSubmissionContext the context for the app being submitted.
+   * @param appSubmissionContext the {@link ApplicationSubmissionContext} that
+   *          has to be routed to an appropriate subCluster for execution.
    *
-   * @return a hash-based chosen subcluster.
+   * @param blackListSubClusters the list of subClusters as identified by
+   *          {@link SubClusterId} to blackList from the selection of the home
+   *          subCluster.
+   *
+   * @return a hash-based chosen {@link SubClusterId} that will be the "home"
+   *         for this application.
    *
    * @throws YarnException if there are no active subclusters.
    */
+  @Override
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blackListSubClusters) throws YarnException {
 
     // throws if no active subclusters available
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();
+
+    if (blackListSubClusters != null) {
+
+      // Remove from the active SubClusters from StateStore the blacklisted ones
+      for (SubClusterId scId : blackListSubClusters) {
+        activeSubclusters.remove(scId);
+      }
+    }
 
     validate(appSubmissionContext);
 

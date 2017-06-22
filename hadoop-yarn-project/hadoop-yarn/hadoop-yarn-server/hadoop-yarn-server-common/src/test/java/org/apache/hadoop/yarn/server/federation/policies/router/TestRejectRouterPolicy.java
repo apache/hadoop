@@ -47,7 +47,7 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
   @Test(expected = FederationPolicyException.class)
   public void testNoClusterIsChosen() throws YarnException {
     ((FederationRouterPolicy) getPolicy())
-        .getHomeSubcluster(getApplicationSubmissionContext());
+        .getHomeSubcluster(getApplicationSubmissionContext(), null);
   }
 
   @Override
@@ -57,7 +57,7 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
     ApplicationSubmissionContext applicationSubmissionContext =
         ApplicationSubmissionContext.newInstance(null, null, null, null, null,
             false, false, 0, Resources.none(), null, false, null, null);
-    localPolicy.getHomeSubcluster(applicationSubmissionContext);
+    localPolicy.getHomeSubcluster(applicationSubmissionContext, null);
   }
 
 }

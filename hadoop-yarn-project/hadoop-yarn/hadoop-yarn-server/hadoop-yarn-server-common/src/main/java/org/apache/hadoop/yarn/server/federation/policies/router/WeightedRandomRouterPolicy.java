@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -41,7 +42,8 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blacklist) throws YarnException {
 
     // null checks and default-queue behavior
     validate(appSubmissionContext);
@@ -58,6 +60,9 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
 
     float totActiveWeight = 0;
     for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
+      if (blacklist != null && blacklist.contains(entry.getKey().toId())) {
+        continue;
+      }
       if (entry.getKey() != null
           && activeSubclusters.containsKey(entry.getKey().toId())) {
         totActiveWeight += entry.getValue();
@@ -66,6 +71,9 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
     float lookupValue = rand.nextFloat() * totActiveWeight;
 
     for (SubClusterId id : activeSubclusters.keySet()) {
+      if (blacklist != null && blacklist.contains(id)) {
+        continue;
+      }
       SubClusterIdInfo idInfo = new SubClusterIdInfo(id);
       if (weights.containsKey(idInfo)) {
         lookupValue -= weights.get(idInfo);
@@ -77,4 +85,5 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
     // should never happen
     return null;
   }
+
 }

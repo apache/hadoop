@@ -59,18 +59,24 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
   }
 
   /**
-   * Simply picks a random active subcluster to start the AM (this does NOT
+   * Simply picks a random active subCluster to start the AM (this does NOT
    * depend on the weights in the policy).
    *
-   * @param appSubmissionContext the context for the app being submitted
-   *          (ignored).
+   * @param appSubmissionContext the {@link ApplicationSubmissionContext} that
+   *          has to be routed to an appropriate subCluster for execution.
+   *
+   * @param blackListSubClusters the list of subClusters as identified by
+   *          {@link SubClusterId} to blackList from the selection of the home
+   *          subCluster.
    *
    * @return a randomly chosen subcluster.
    *
    * @throws YarnException if there are no active subclusters.
    */
+  @Override
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blackListSubClusters) throws YarnException {
 
     // null checks and default-queue behavior
     validate(appSubmissionContext);
@@ -79,6 +85,15 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
         getActiveSubclusters();
 
     List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
+
+    if (blackListSubClusters != null) {
+
+      // Remove from the active SubClusters from StateStore the blacklisted ones
+      for (SubClusterId scId : blackListSubClusters) {
+        list.remove(scId);
+      }
+    }
+
     return list.get(rand.nextInt(list.size()));
   }
 
