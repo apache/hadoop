@@ -317,8 +317,31 @@ public class TestFileStatus {
     assertEquals(file3.toString(), itor.next().getPath().toString());
 
     assertFalse(itor.hasNext());
-      
 
-    fs.delete(dir, true);
+    itor = fs.listStatusIterator(dir);
+    assertEquals(dir3.toString(), itor.next().getPath().toString());
+    assertEquals(dir4.toString(), itor.next().getPath().toString());
+    fs.delete(dir.getParent(), true);
+    try {
+      itor.hasNext();
+      fail("FileNotFoundException expected");
+    } catch (FileNotFoundException fnfe) {
+    }
+
+    fs.mkdirs(file2);
+    fs.mkdirs(dir3);
+    fs.mkdirs(dir4);
+    fs.mkdirs(dir5);
+    itor = fs.listStatusIterator(dir);
+    int count = 0;
+    try {
+      fs.delete(dir.getParent(), true);
+      while (itor.next() != null) {
+        count++;
+      }
+      fail("FileNotFoundException expected");
+    } catch (FileNotFoundException fnfe) {
+    }
+    assertEquals(2, count);
   }
 }

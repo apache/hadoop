@@ -1168,7 +1168,7 @@ public class DistributedFileSystem extends FileSystem {
             needLocation);
         statistics.incrementReadOps(1);
         if (thisListing == null) {
-          return false;
+          throw new FileNotFoundException("File " + p + " does not exist.");
         }
         i = 0;
       }
