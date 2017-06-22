@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -34,7 +35,8 @@ public class PriorityRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blacklist) throws YarnException {
 
     // null checks and default-queue behavior
     validate(appSubmissionContext);
@@ -50,6 +52,9 @@ public class PriorityRouterPolicy extends AbstractRouterPolicy {
     Float currentBest = Float.MIN_VALUE;
     for (SubClusterId id : activeSubclusters.keySet()) {
       SubClusterIdInfo idInfo = new SubClusterIdInfo(id);
+      if (blacklist != null && blacklist.contains(id)) {
+        continue;
+      }
       if (weights.containsKey(idInfo) && weights.get(idInfo) > currentBest) {
         currentBest = weights.get(idInfo);
         chosen = id;

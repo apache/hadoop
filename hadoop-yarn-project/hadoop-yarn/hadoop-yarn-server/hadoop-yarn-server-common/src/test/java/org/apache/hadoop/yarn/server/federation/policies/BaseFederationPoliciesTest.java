@@ -104,7 +104,7 @@ public abstract class BaseFederationPoliciesTest {
     ConfigurableFederationPolicy localPolicy = getPolicy();
     if (localPolicy instanceof FederationRouterPolicy) {
       ((FederationRouterPolicy) localPolicy)
-          .getHomeSubcluster(getApplicationSubmissionContext());
+          .getHomeSubcluster(getApplicationSubmissionContext(), null);
     } else {
       String[] hosts = new String[] {"host1", "host2"};
       List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil

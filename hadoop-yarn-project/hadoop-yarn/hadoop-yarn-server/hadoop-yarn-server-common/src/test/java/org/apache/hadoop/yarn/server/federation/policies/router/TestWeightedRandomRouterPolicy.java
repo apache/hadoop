@@ -98,7 +98,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
     for (float i = 0; i < numberOfDraws; i++) {
       SubClusterId chosenId = ((FederationRouterPolicy) getPolicy())
-          .getHomeSubcluster(getApplicationSubmissionContext());
+          .getHomeSubcluster(getApplicationSubmissionContext(), null);
       counter.get(chosenId).incrementAndGet();
     }
 

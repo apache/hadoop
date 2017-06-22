@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.util.List;
+
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -27,8 +29,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
 /**
  * This {@link FederationRouterPolicy} simply rejects all incoming requests.
- * This is useful to prevent applications running in a queue to be run
- * anywhere in the federated cluster.
+ * This is useful to prevent applications running in a queue to be run anywhere
+ * in the federated cluster.
  */
 public class RejectRouterPolicy extends AbstractRouterPolicy {
 
@@ -44,23 +46,31 @@ public class RejectRouterPolicy extends AbstractRouterPolicy {
   /**
    * The policy always reject requests.
    *
-   * @param appSubmissionContext the context for the app being submitted.
+   * @param appSubmissionContext the {@link ApplicationSubmissionContext} that
+   *          has to be routed to an appropriate subCluster for execution.
+   *
+   * @param blackListSubClusters the list of subClusters as identified by
+   *          {@link SubClusterId} to blackList from the selection of the home
+   *          subCluster.
    *
    * @return (never).
    *
-   * @throws YarnException (always) to prevent applications in this queue to
-   * be run anywhere in the federated cluster.
+   * @throws YarnException (always) to prevent applications in this queue to be
+   *           run anywhere in the federated cluster.
    */
+  @Override
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blackListSubClusters) throws YarnException {
 
     // run standard validation, as error might differ
     validate(appSubmissionContext);
 
     throw new FederationPolicyException("The policy configured for this queue"
         + " (" + appSubmissionContext.getQueue() + ") reject all routing "
-        + "requests by construction. Application " + appSubmissionContext
-        .getApplicationId() + " cannot be routed to any RM.");
+        + "requests by construction. Application "
+        + appSubmissionContext.getApplicationId()
+        + " cannot be routed to any RM.");
   }
 
 }

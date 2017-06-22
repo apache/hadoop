@@ -70,7 +70,7 @@ public class TestHashBasedRouterPolicy extends BaseRouterPoliciesTest {
     for (int i = 0; i < jobPerSub * numSubclusters; i++) {
       when(applicationSubmissionContext.getQueue()).thenReturn("queue" + i);
       chosen = ((FederationRouterPolicy) getPolicy())
-          .getHomeSubcluster(applicationSubmissionContext);
+          .getHomeSubcluster(applicationSubmissionContext, null);
       counter.get(chosen).addAndGet(1);
     }
 
