@@ -22,6 +22,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -135,6 +136,34 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
         DEFAULT_DELAY_KEY_MSEC);
     LOG.info("Enabled with {} msec delay, substring {}, probability {}",
         delayKeyMsec, delayKeySubstring, delayKeyProbability);
+  }
+
+  /**
+   * Clear all oustanding inconsistent keys.  After calling this function,
+   * listings should behave normally (no failure injection), until additional
+   * keys are matched for delay, e.g. via putObject(), deleteObject().
+   */
+  public void clearInconsistency() {
+    LOG.info("clearing all delayed puts / deletes");
+    delayedDeletes.clear();
+    delayedPutKeys.clear();
+  }
+
+  /**
+   * Convenience function for test code to cast from supertype.
+   * @param c supertype to cast from
+   * @return subtype, not null
+   * @throws Exception on error
+   */
+  public static InconsistentAmazonS3Client castFrom(AmazonS3 c) throws
+      Exception {
+    InconsistentAmazonS3Client ic = null;
+    if (c instanceof InconsistentAmazonS3Client) {
+      ic = (InconsistentAmazonS3Client) c;
+    }
+    Preconditions.checkNotNull(ic, "Not an instance of " +
+        "InconsistentAmazonS3Client");
+    return ic;
   }
 
   @Override

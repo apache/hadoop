@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.AmazonS3;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -83,7 +82,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
       for (Path mkdir : mkdirs) {
         assertTrue(fs.mkdirs(mkdir));
       }
-      Thread.sleep(DEFAULT_DELAY_KEY_MSEC);
+      clearInconsistency(fs);
     }
 
     assertTrue("srcdirs and dstdirs must have equal length",
@@ -176,7 +175,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     for (Path path : testDirs) {
       assertTrue(fs.mkdirs(path));
     }
-    Thread.sleep(2 * DEFAULT_DELAY_KEY_MSEC);
+    clearInconsistency(fs);
     for (Path path : testDirs) {
       assertTrue(fs.delete(path, false));
     }
@@ -216,7 +215,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     for (Path path : testDirs) {
       assertTrue(fs.mkdirs(path));
     }
-    Thread.sleep(2 * DEFAULT_DELAY_KEY_MSEC);
+    clearInconsistency(fs);
     assertTrue(fs.delete(testDirs[1], false));
     assertTrue(fs.delete(testDirs[2], false));
 
@@ -229,8 +228,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     assertTrue(list.contains(path("a3/b/dir1")));
     assertFalse(list.contains(path("a3/b/dir2")));
     // This should fail without S3Guard, and succeed with it.
-    assertFalse(list.contains(
-        path("a3/b/dir3-" + DEFAULT_DELAY_KEY_SUBSTRING)));
+    assertFalse(list.contains(path("a3/b/dir3-" +
+        DEFAULT_DELAY_KEY_SUBSTRING)));
 
     try {
       RemoteIterator<LocatedFileStatus> old = fs.listFilesAndEmptyDirectories(
@@ -287,9 +286,9 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     String rootDir = "doTestConsistentListLocatedStatusAfterPut";
     fs.mkdirs(path(rootDir));
 
-    final int[] numOfPaths = {0, 1, 10};
+    final int[] numOfPaths = {0, 1, 5};
     for (int normalPathNum : numOfPaths) {
-      for (int delayedPathNum : numOfPaths) {
+      for (int delayedPathNum : new int[] {0, 2}) {
         LOG.info("Testing with normalPathNum={}, delayedPathNum={}",
             normalPathNum, delayedPathNum);
         doTestConsistentListLocatedStatusAfterPut(fs, rootDir, normalPathNum,
@@ -352,10 +351,10 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     // skip it.
     Assume.assumeTrue(fs.hasMetadataStore());
 
-    final int[] numOfPaths = {0, 1, 2};
+    final int[] numOfPaths = {0, 2};
     for (int dirNum : numOfPaths) {
       for (int normalFile : numOfPaths) {
-        for (int delayedFile : numOfPaths) {
+        for (int delayedFile : new int[] {0, 1}) {
           for (boolean recursive : new boolean[] {true, false}) {
             doTestListFiles(fs, dirNum, normalFile, delayedFile, recursive);
           }
@@ -498,7 +497,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         touch(fs, new Path(new Path(root, "dir" + i), "file" + i + "-" + j));
       }
     }
-    Thread.sleep(2 * DEFAULT_DELAY_KEY_MSEC);
+    clearInconsistency(fs);
 
     AmazonS3 client = fs.getAmazonS3Client();
     String key = fs.pathToKey(root) + "/";
@@ -535,5 +534,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         preDeleteUndelimited.getCommonPrefixes().size(),
         postDeleteUndelimited.getCommonPrefixes().size()
     );
+  }
+
+  private static void clearInconsistency(S3AFileSystem fs) throws Exception {
+    AmazonS3 s3 = fs.getAmazonS3Client();
+    InconsistentAmazonS3Client ic = InconsistentAmazonS3Client.castFrom(s3);
+    ic.clearInconsistency();
   }
 }
