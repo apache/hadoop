@@ -23,11 +23,11 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.directory.server.kerberos.shared.keytab.Keytab;
 import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
 import org.apache.directory.shared.kerberos.KerberosTime;
@@ -247,6 +247,6 @@ public class TestKerberosUtil {
 
   private static String getPrincipal(String token) {
     return KerberosUtil.getTokenServerName(
-        Base64.getDecoder().decode(token));
+        Base64.decodeBase64(token));
   }
 }
