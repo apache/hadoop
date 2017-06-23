@@ -67,6 +67,12 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
+  public Resource divideAndCeil(Resource numerator, float denominator) {
+    return Resources.createResource(
+        divideAndCeil(numerator.getMemorySize(), denominator));
+  }
+
+  @Override
   public Resource normalize(Resource r, Resource minimumResource,
       Resource maximumResource, Resource stepFactor) {
     if (stepFactor.getMemorySize() == 0) {
