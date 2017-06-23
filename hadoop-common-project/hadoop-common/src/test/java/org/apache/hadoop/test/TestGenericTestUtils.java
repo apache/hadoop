@@ -26,7 +26,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Supplier;
+
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestGenericTestUtils extends GenericTestUtils {
 
@@ -119,4 +122,33 @@ public class TestGenericTestUtils extends GenericTestUtils {
     assertTrue(logCapturer.getOutput().isEmpty());
   }
 
+  @Test
+  public void testWaitingForConditionWithInvalidParams() throws Throwable {
+    // test waitFor method with null supplier interface
+    try {
+      waitFor(null, 0, 0);
+    } catch (NullPointerException e) {
+      assertExceptionContains(GenericTestUtils.ERROR_MISSING_ARGUMENT, e);
+    }
+
+    Supplier<Boolean> simpleSupplier = new Supplier<Boolean>() {
+
+      @Override
+      public Boolean get() {
+        return true;
+      }
+    };
+
+    // test waitFor method with waitForMillis greater than checkEveryMillis
+    waitFor(simpleSupplier, 5, 10);
+    try {
+      // test waitFor method with waitForMillis smaller than checkEveryMillis
+      waitFor(simpleSupplier, 10, 5);
+      fail(
+          "Excepted a failure when the param value of"
+          + " waitForMillis is smaller than checkEveryMillis.");
+    } catch (IllegalArgumentException e) {
+      assertExceptionContains(GenericTestUtils.ERROR_INVALID_ARGUMENT, e);
+    }
+  }
 }
