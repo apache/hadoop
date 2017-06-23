@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.yarn.server;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
+import org.junit.AfterClass;
 import org.junit.Assert;
-
+import org.junit.BeforeClass;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -32,9 +35,38 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.kerby.util.IOUtil;
 import org.junit.Test;
 
 public class TestRMNMSecretKeys {
+  private static final String KRB5_CONF = "java.security.krb5.conf";
+  private static final File KRB5_CONF_ROOT_DIR = new File(
+      System.getProperty("test.build.dir", "target/test-dir"),
+          UUID.randomUUID().toString());
+
+  @BeforeClass
+  public static void setup() throws IOException {
+    KRB5_CONF_ROOT_DIR.mkdir();
+    File krb5ConfFile = new File(KRB5_CONF_ROOT_DIR, "krb5.conf");
+    krb5ConfFile.createNewFile();
+    String content = "[libdefaults]\n" +
+        "    default_realm = APACHE.ORG\n" +
+        "    udp_preference_limit = 1\n"+
+        "    extra_addresses = 127.0.0.1\n" +
+        "[realms]\n" +
+        "    APACHE.ORG = {\n" +
+        "        admin_server = localhost:88\n" +
+        "        kdc = localhost:88\n}\n" +
+        "[domain_realm]\n" +
+        "    localhost = APACHE.ORG";
+    IOUtil.writeFile(content, krb5ConfFile);
+    System.setProperty(KRB5_CONF, krb5ConfFile.getAbsolutePath());
+  }
+
+  @AfterClass
+  public static void tearDown() throws IOException {
+    KRB5_CONF_ROOT_DIR.delete();
+  }
 
   @Test(timeout = 1000000)
   public void testNMUpdation() throws Exception {
