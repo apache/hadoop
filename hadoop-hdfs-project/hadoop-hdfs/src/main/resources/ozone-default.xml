@@ -45,6 +45,63 @@
   </property>
 
   <property>
+    <name>ozone.localstorage.root</name>
+    <value>/tmp/ozone</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.trace.enabled</name>
+    <value>false</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.container.metadata.dirs</name>
+    <value></value>
+    <description>
+      Ozone metadata dir path.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.key.cache.size</name>
+    <value>1024</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.administrators</name>
+    <value></value>
+    <description>
+      Ozone administrator users delimited by comma.
+      If not set, only the user who launches an ozone service will be the
+      admin user. This property must be set if ozone services are started by
+      different users. Otherwise the RPC layer will reject calls from
+      other servers which are started by users not in the list.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.socket.timeout.ms</name>
+    <value>5000</value>
+    <description>
+      Socket timeout for Ozone client in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.connection.timeout.ms</name>
+    <value>5000</value>
+    <description>
+      Connection timeout for Ozone client in milliseconds.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.scm.client.address</name>
     <value></value>
     <description>
@@ -53,6 +110,14 @@
 
       It is a string in the host:port format. The port number is optional
       and defaults to 9860.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.client.port</name>
+    <value>9860</value>
+    <description>
+      The port number of the Ozone SCM client service.
     </description>
   </property>
 
@@ -69,6 +134,22 @@
       This setting is optional. If unspecified then the hostname portion
       is picked from the ozone.scm.client.address setting and the
       default service port of 9861 is chosen.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.bind.host</name>
+    <value></value>
+    <description>
+      The hostname or IP address used by the SCM service endpoint to bind.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.port</name>
+    <value>9861</value>
+    <description>
+      The port number of the Ozone SCM service.
     </description>
   </property>
 
@@ -102,6 +183,31 @@
   </property>
 
   <property>
+    <name>ozone.scm.block.client.address</name>
+    <value></value>
+    <description>
+      The address of the Ozone SCM block client service.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.block.client.bind.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The hostname or IP address used by the SCM block client
+      endpoint to bind.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.block.client.port</name>
+    <value>9863</value>
+    <description>
+      The port number of the Ozone SCM block client service.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.scm.handler.count.key</name>
     <value>20</value>
     <description>
@@ -122,4 +228,227 @@
       size.
     </description>
   </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.interval.seconds</name>
+    <value>30</value>
+    <description>
+      The heartbeat interval from a datanode to SCM in seconds.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.stale.node.interval.ms</name>
+    <value>90000</value>
+    <description>
+      The interval in milliseconds for stale node flagging.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.dead.node.interval.ms</name>
+    <value>600000</value>
+    <description>
+      The interval in milliseconds for dead node flagging.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.max.hb.count.to.process</name>
+    <value>5000</value>
+    <description>
+      The maximum number of heartbeat to process per loop of the process
+      thread.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.thread.interval.ms</name>
+    <value>3000</value>
+    <description>
+      The interval in milliseconds that the heartbeat processor thread runs.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.rpc-timeout</name>
+    <value>1000</value>
+    <description>
+      Timeout value for the RPC from Datanode to SCM in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.log.warn.interval.count</name>
+    <value>10</value>
+    <description>
+      Defines how frequently we will log the missing of heartbeat to SCM.
+      For example in the default case, we will write a warning message for each 10
+      sequential heartbeats that we miss to SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.names</name>
+    <value></value>
+    <description>
+      The value of this property is a set of DNS | DNS:PORT | IP Address | IP:PORT.
+      Written as a comma separated string. e.g. scm1, scm2:8020, 7.7.7.7:7777.
+      This property allows datanodes to discover where SCM is, so that
+      datanodes can send heartbeat to SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.id</name>
+    <value></value>
+    <description>
+      The path that datanodes will created to store the datanode ID.
+      If this value is not set, datanodes will fail to come up.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.db.cache.size.mb</name>
+    <value>128</value>
+    <description>
+      The cache size for SCM level db store in MB.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.size.gb</name>
+    <value>5</value>
+    <description>
+      Storage container size in GB for block allocations.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.placement.impl</name>
+    <value>org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom</value>
+    <description>
+      Placement policy class for containers.
+      Defaults to SCMContainerPlacementRandom.class
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.provision_batch_size</name>
+    <value>1</value>
+    <description>
+      Pre-provision specified number of containers to creare for
+      block creation.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ipc</name>
+    <value>50011</value>
+    <description>
+      The ipc port number of container.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ipc.random.port</name>
+    <value>false</value>
+    <description>
+      Whether allocates a random free port for ozone container.
+    </description>
+  </property>
+
+  <property>
+    <name>scm.container.client.idle.threshold</name>
+    <value>10000</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>scm.container.client.max.size</name>
+    <value>256</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.enabled</name>
+    <value>false</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.rpc.type</name>
+    <value>GRPC</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.server.id</name>
+    <value></value>
+    <description>
+      The unique ID to identify a Ratis server.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.datanode.storage.dir</name>
+    <value></value>
+    <description>
+    </description>
+  </property>
+
+  <!--KSM properties-->
+
+  <property>
+    <name>ozone.ksm.handler.count.key</name>
+    <value>200</value>
+    <description>
+      The number of RPC handler threads for each KSM service endpoint.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.address</name>
+    <value>0.0.0.0</value>
+    <description>
+      The address of the Ozone KSM service.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.leveldb.cache.size.mb</name>
+    <value>128</value>
+    <description>
+      The size of KSM LevelDB cache in MB that used for caching files.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.user.max.volume</name>
+    <value>1024</value>
+    <description>
+      The maximum number of volumes that each user can create.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.user.rights</name>
+    <value>READ_WRITE</value>
+    <description>
+      Default user permissions in Ozone KSM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.group.rights</name>
+    <value>READ_WRITE</value>
+    <description>
+      Default group permissions in Ozone KSM.
+    </description>
+  </property>
+
 </configuration>
