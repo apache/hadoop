@@ -43,6 +43,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -60,6 +62,8 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper
     .createSingleNodePipeline;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
@@ -81,6 +85,8 @@ public class TestContainerPersistence {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
+  private static Logger LOG =
+      LoggerFactory.getLogger(TestContainerPersistence.class);
   private static String path;
   private static ContainerManagerImpl containerManager;
   private static ChunkManagerImpl chunkManager;
@@ -121,15 +127,31 @@ public class TestContainerPersistence {
     if (!new File(path).exists() && !new File(path).mkdirs()) {
       throw new IOException("Unable to create paths. " + path);
     }
+    StorageLocation loc = StorageLocation.parse(
+        Paths.get(path).resolve(CONTAINER_ROOT_PREFIX).toString());
+
     pathLists.clear();
     containerManager.getContainerMap().clear();
-    pathLists.add(StorageLocation.parse(path.toString()));
+
+    if (!new File(loc.getNormalizedUri()).mkdirs()) {
+      throw new IOException("unable to create paths. " +
+          loc.getNormalizedUri());
+    }
+    pathLists.add(loc);
     containerManager.init(conf, pathLists);
   }
 
   @After
   public void cleanupDir() throws IOException {
+    // Clean up SCM metadata
+    LOG.info("Deletting {}", path);
     FileUtils.deleteDirectory(new File(path));
+
+    // Clean up SCM datanode container metadata/data
+    for (String dir : conf.getStrings(DFS_DATANODE_DATA_DIR_KEY)) {
+      StorageLocation location = StorageLocation.parse(dir);
+      FileUtils.deleteDirectory(new File(location.getNormalizedUri()));
+    }
   }
 
   @Test

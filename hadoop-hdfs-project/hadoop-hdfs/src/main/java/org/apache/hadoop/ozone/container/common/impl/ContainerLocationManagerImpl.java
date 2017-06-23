@@ -81,8 +81,7 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
       throws IOException {
     Preconditions.checkState(metadataLocations.size() > 0);
     int index = currentIndex % metadataLocations.size();
-    Path path = Paths.get(metadataLocations.get(index).getNormalizedUri());
-    return path.resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
+    return Paths.get(metadataLocations.get(index).getNormalizedUri());
   }
 
   /**

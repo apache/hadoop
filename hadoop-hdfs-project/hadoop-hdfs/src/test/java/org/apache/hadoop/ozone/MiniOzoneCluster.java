@@ -413,6 +413,8 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       // and create SCM under that directory.
       Path scmPath = Paths.get(path, runID.toString(), "cont-meta");
       Files.createDirectories(scmPath);
+      Path containerPath = scmPath.resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
+      Files.createDirectories(containerPath);
       conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS, scmPath
           .toString());
 

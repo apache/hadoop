@@ -128,6 +128,7 @@ public class ContainerManagerImpl implements ContainerManager {
     readLock();
     try {
       for (StorageLocation path : containerDirs) {
+        LOG.info("Loading containers under {}", path);
         File directory = Paths.get(path.getNormalizedUri()).toFile();
         // TODO: This will fail if any directory is invalid.
         // We should fix this to handle invalid directories and continue.
@@ -141,6 +142,7 @@ public class ContainerManagerImpl implements ContainerManager {
         File[] files = directory.listFiles(new ContainerFilter());
         if (files != null) {
           for (File containerFile : files) {
+            LOG.debug("Loading container {}", containerFile);
             String containerPath =
                 ContainerUtils.getContainerNameFromFile(containerFile);
             Preconditions.checkNotNull(containerPath, "Container path cannot" +
