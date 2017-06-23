@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -171,6 +172,44 @@ public class TestKeys {
     assertNotNull(helper.getFile());
   }
 
+  private void restartDatanode(int datanodeIdx)
+      throws IOException, OzoneException, URISyntaxException {
+    cluster.restartDataNode(datanodeIdx);
+    // refresh the datanode endpoint uri after datanode restart
+    DataNode dataNode = cluster.getDataNodes().get(datanodeIdx);
+    final int port = dataNode.getInfoPort();
+    client.setEndPoint(String.format("http://localhost:%d", port));
+  }
+
+  @Test
+  public void testPutAndGetKeyWithDnRestart()
+      throws OzoneException, IOException, URISyntaxException {
+
+    PutHelper helper  = new PutHelper();
+    String keyName = helper.putKey();
+    assertNotNull(helper.getBucket());
+    assertNotNull(helper.getFile());
+
+    // restart the datanode
+    restartDatanode(0);
+
+    // verify getKey after the datanode restart
+    String newFileName =  path + "/" +OzoneUtils.getRequestID().toLowerCase();
+    Path newPath = Paths.get(newFileName);
+
+    helper.getBucket().getKey(keyName, newPath);
+
+    FileInputStream original = new FileInputStream(helper.getFile());
+    FileInputStream downloaded = new FileInputStream(newPath.toFile());
+
+
+    String originalHash = DigestUtils.sha256Hex(original);
+    String downloadedHash = DigestUtils.sha256Hex(downloaded);
+
+    assertEquals(
+        "Sha256 does not match between original file and downloaded file.",
+        originalHash, downloadedHash);
+  }
 
   @Test
   public void testPutAndGetKey() throws OzoneException, IOException {

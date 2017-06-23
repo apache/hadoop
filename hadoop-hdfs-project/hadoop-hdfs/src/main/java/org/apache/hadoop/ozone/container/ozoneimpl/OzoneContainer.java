@@ -39,10 +39,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
 
 /**
  * Ozone main class sets up the network server and initializes the container
@@ -73,7 +75,8 @@ public class OzoneContainer {
         OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
     if (paths != null && paths.length > 0) {
       for (String p : paths) {
-        locations.add(StorageLocation.parse(p));
+        locations.add(StorageLocation.parse(
+            Paths.get(p).resolve(CONTAINER_ROOT_PREFIX).toString()));
       }
     } else {
       getDataDir(locations);
