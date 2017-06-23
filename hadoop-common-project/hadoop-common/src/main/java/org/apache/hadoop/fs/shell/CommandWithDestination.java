@@ -501,7 +501,7 @@ abstract class CommandWithDestination extends FsCommand {
                         createFlags,
                         getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
                             IO_FILE_BUFFER_SIZE_DEFAULT),
-                        lazyPersist ? 1 : getDefaultReplication(item.path),
+                        (short) 1,
                         getDefaultBlockSize(),
                         null,
                         null);

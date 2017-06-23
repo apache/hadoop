@@ -881,11 +881,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     String nodeCreatePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
             + ident.getSequenceNumber());
-    ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
-    DataOutputStream tokenOut = new DataOutputStream(tokenOs);
-    ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
 
-    try {
+    try (ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
+         DataOutputStream tokenOut = new DataOutputStream(tokenOs)) {
       ident.write(tokenOut);
       tokenOut.writeLong(info.getRenewDate());
       tokenOut.writeInt(info.getPassword().length);
@@ -902,8 +900,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         zkClient.create().withMode(CreateMode.PERSISTENT)
             .forPath(nodeCreatePath, tokenOs.toByteArray());
       }
-    } finally {
-      seqOs.close();
     }
   }
 
