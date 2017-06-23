@@ -195,7 +195,8 @@ public class DFSAdmin extends FsShell {
       super(conf);
       CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
-      this.quota = Long.parseLong(parameters.remove(0));
+      this.quota =
+          StringUtils.TraditionalBinaryPrefix.string2long(parameters.remove(0));
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
@@ -938,7 +939,7 @@ public class DFSAdmin extends FsShell {
     int exitCode = -1;
 
     try {
-      bandwidth = Long.parseLong(argv[idx]);
+      bandwidth = StringUtils.TraditionalBinaryPrefix.string2long(argv[idx]);
     } catch (NumberFormatException nfe) {
       System.err.println("NumberFormatException: " + nfe.getMessage());
       System.err.println("Usage: hdfs dfsadmin"
