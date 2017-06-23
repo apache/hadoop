@@ -384,13 +384,16 @@ public class RawLocalFileSystem extends FileSystem {
     // again.
     try {
       FileStatus sdst = this.getFileStatus(dst);
-      if (sdst.isDirectory() && dstFile.list().length == 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Deleting empty destination and renaming " + src + " to " +
-              dst);
-        }
-        if (this.delete(dst, false) && srcFile.renameTo(dstFile)) {
-          return true;
+      String[] dstFileList = dstFile.list();
+      if (dstFileList != null) {
+        if (sdst.isDirectory() && dstFileList.length == 0) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Deleting empty destination and renaming " + src +
+                " to " + dst);
+          }
+          if (this.delete(dst, false) && srcFile.renameTo(dstFile)) {
+            return true;
+          }
         }
       }
     } catch (FileNotFoundException ignored) {

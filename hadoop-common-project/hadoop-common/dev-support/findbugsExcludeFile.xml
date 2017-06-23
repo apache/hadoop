@@ -416,4 +416,30 @@
     <Method name="toString"/>
     <Bug pattern="DM_DEFAULT_ENCODING"/>
   </Match>
+
+  <!-- We need to make the methods public because PBHelperClient calls them. -->
+  <Match>
+    <Class name="org.apache.hadoop.crypto.CipherSuite"/>
+    <Method name="setUnknownValue"/>
+    <Bug pattern="ME_ENUM_FIELD_SETTER"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.crypto.CryptoProtocolVersion"/>
+    <Method name="setUnknownValue"/>
+    <Bug pattern="ME_ENUM_FIELD_SETTER"/>
+  </Match>
+
+  <!-- We need to make the method public for testing. -->
+  <Match>
+    <Class name="org.apache.hadoop.metrics2.lib.DefaultMetricsSystem"/>
+    <Method name="setMiniClusterMode"/>
+    <Bug pattern="ME_ENUM_FIELD_SETTER"/>
+  </Match>
+
+  <!-- Experimental interface. Ignore. -->
+  <Match>
+    <Class name="org.apache.hadoop.metrics2.lib.DefaultMetricsFactory"/>
+    <Method name="setInstance"/>
+    <Bug pattern="ME_ENUM_FIELD_SETTER"/>
+  </Match>
 </FindBugsFilter>

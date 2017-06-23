@@ -371,9 +371,12 @@ public class IOUtils {
     try (DirectoryStream<Path> stream =
              Files.newDirectoryStream(dir.toPath())) {
       for (Path entry: stream) {
-        String fileName = entry.getFileName().toString();
-        if ((filter == null) || filter.accept(dir, fileName)) {
-          list.add(fileName);
+        Path fileName = entry.getFileName();
+        if (fileName != null) {
+          String fileNameStr = fileName.toString();
+          if ((filter == null) || filter.accept(dir, fileNameStr)) {
+            list.add(fileNameStr);
+          }
         }
       }
     } catch (DirectoryIteratorException e) {
