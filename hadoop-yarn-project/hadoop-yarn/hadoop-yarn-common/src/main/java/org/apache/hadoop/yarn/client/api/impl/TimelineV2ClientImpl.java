@@ -19,7 +19,10 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -69,6 +72,8 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
 
   private ApplicationId contextAppId;
 
+  private UserGroupInformation authUgi;
+
   public TimelineV2ClientImpl(ApplicationId appId) {
     super(TimelineV2ClientImpl.class.getName());
     this.contextAppId = appId;
@@ -88,7 +93,6 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation realUgi = ugi.getRealUser();
     String doAsUser = null;
-    UserGroupInformation authUgi = null;
     if (realUgi != null) {
       authUgi = realUgi;
       doAsUser = ugi.getShortUserName();
@@ -192,19 +196,33 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     }
   }
 
+  private ClientResponse doPutObjects(URI base, String path,
+      MultivaluedMap<String, String> params, Object obj) {
+    return connector.getClient().resource(base).path(path).queryParams(params)
+        .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class, obj);
+  }
+
   protected void putObjects(URI base, String path,
       MultivaluedMap<String, String> params, Object obj)
       throws IOException, YarnException {
-    ClientResponse resp;
+    ClientResponse resp = null;
     try {
-      resp = connector.getClient().resource(base).path(path).queryParams(params)
-          .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
-          .put(ClientResponse.class, obj);
-    } catch (RuntimeException re) {
-      // runtime exception is expected if the client cannot connect the server
-      String msg = "Failed to get the response from the timeline server.";
-      LOG.error(msg, re);
-      throw new IOException(re);
+      resp = authUgi.doAs(new PrivilegedExceptionAction<ClientResponse>() {
+        @Override
+        public ClientResponse run() throws Exception {
+          return doPutObjects(base, path, params, obj);
+        }
+      });
+    } catch (UndeclaredThrowableException ue) {
+      Throwable cause = ue.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException)cause;
+      } else {
+        throw new IOException(cause);
+      }
+    } catch (InterruptedException ie) {
+      throw (IOException) new InterruptedIOException().initCause(ie);
     }
     if (resp == null ||
         resp.getClientResponseStatus() != ClientResponse.Status.OK) {
