@@ -74,10 +74,6 @@ public final class OzoneConfigKeys {
   public static final String OZONE_ADMINISTRATORS =
       "ozone.administrators";
 
-  public static final String OZONE_CONTAINER_TASK_WAIT =
-      "ozone.container.task.wait.seconds";
-  public static final long OZONE_CONTAINER_TASK_WAIT_DEFAULT = 5;
-
   public static final String OZONE_CLIENT_SOCKET_TIMEOUT_MS =
       "ozone.client.socket.timeout.ms";
   public static final int OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT = 5000;
