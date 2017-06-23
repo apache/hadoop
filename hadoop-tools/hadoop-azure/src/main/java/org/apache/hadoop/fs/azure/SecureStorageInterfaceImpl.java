@@ -69,6 +69,8 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
   public static final String SAS_ERROR_CODE = "SAS Error";
   private SASKeyGeneratorInterface sasKeyGenerator;
   private String storageAccount;
+  private RetryPolicyFactory retryPolicy;
+  private int timeoutIntervalInMs;
 
   public SecureStorageInterfaceImpl(boolean useLocalSASKeyMode,
       Configuration conf) throws SecureModeException {
@@ -90,10 +92,12 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
 
   @Override
   public void setTimeoutInMs(int timeoutInMs) {
+    timeoutIntervalInMs = timeoutInMs;
   }
 
   @Override
   public void setRetryPolicyFactory(RetryPolicyFactory retryPolicyFactory) {
+    retryPolicy = retryPolicyFactory;
   }
 
   @Override
@@ -133,9 +137,15 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
       throws URISyntaxException, StorageException {
 
     try {
-      return new SASCloudBlobContainerWrapperImpl(storageAccount,
-          new CloudBlobContainer(sasKeyGenerator.getContainerSASUri(
-              storageAccount, name)), sasKeyGenerator);
+      CloudBlobContainer container = new CloudBlobContainer(sasKeyGenerator.getContainerSASUri(
+          storageAccount, name));
+      if (retryPolicy != null) {
+        container.getServiceClient().getDefaultRequestOptions().setRetryPolicyFactory(retryPolicy);
+      }
+      if (timeoutIntervalInMs > 0) {
+        container.getServiceClient().getDefaultRequestOptions().setTimeoutIntervalInMs(timeoutIntervalInMs);
+      }
+      return new SASCloudBlobContainerWrapperImpl(storageAccount, container, sasKeyGenerator);
     } catch (SASKeyGenerationException sasEx) {
       String errorMsg = "Encountered SASKeyGeneration exception while "
           + "generating SAS Key for container : " + name
@@ -216,9 +226,12 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
     public CloudBlobWrapper getBlockBlobReference(String relativePath)
         throws URISyntaxException, StorageException {
       try {
+        CloudBlockBlob blob = new CloudBlockBlob(sasKeyGenerator.getRelativeBlobSASUri(
+                storageAccount, getName(), relativePath));
+        blob.getServiceClient().setDefaultRequestOptions(
+                container.getServiceClient().getDefaultRequestOptions());
         return new SASCloudBlockBlobWrapperImpl(
-            new CloudBlockBlob(sasKeyGenerator.getRelativeBlobSASUri(
-                storageAccount, getName(), relativePath)));
+                blob);
       } catch (SASKeyGenerationException sasEx) {
         String errorMsg = "Encountered SASKeyGeneration exception while "
             + "generating SAS Key for relativePath : " + relativePath
@@ -232,9 +245,12 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
     public CloudBlobWrapper getPageBlobReference(String relativePath)
         throws URISyntaxException, StorageException {
       try {
+        CloudPageBlob blob = new CloudPageBlob(sasKeyGenerator.getRelativeBlobSASUri(
+                storageAccount, getName(), relativePath));
+        blob.getServiceClient().setDefaultRequestOptions(
+                container.getServiceClient().getDefaultRequestOptions());
         return new SASCloudPageBlobWrapperImpl(
-            new CloudPageBlob(sasKeyGenerator.getRelativeBlobSASUri(
-                storageAccount, getName(), relativePath)));
+                blob);
       } catch (SASKeyGenerationException sasEx) {
         String errorMsg = "Encountered SASKeyGeneration exception while "
             + "generating SAS Key for relativePath : " + relativePath
