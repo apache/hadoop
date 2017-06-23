@@ -85,6 +85,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -249,6 +250,20 @@ public class LeafQueue extends AbstractCSQueue {
 
       defaultAppPriorityPerQueue = Priority.newInstance(
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
+
+      // Validate leaf queue's user's weights.
+      int queueUL = Math.min(100, conf.getUserLimit(getQueuePath()));
+      for (Entry<String, Float> e : getUserWeights().entrySet()) {
+        float val = e.getValue().floatValue();
+        if (val < 0.0f || val > (100.0f / queueUL)) {
+          throw new IOException("Weight (" + val + ") for user \"" + e.getKey()
+              + "\" must be between 0 and" + " 100 / " + queueUL + " (= " +
+              100.0f/queueUL + ", the number of concurrent active users in "
+              + getQueuePath() + ")");
+        }
+      }
+
+      usersManager.updateUserWeights();
 
       LOG.info(
           "Initializing " + queueName + "\n" + "capacity = " + queueCapacities
@@ -632,11 +647,16 @@ public class LeafQueue extends AbstractCSQueue {
 
   @VisibleForTesting
   public Resource getUserAMResourceLimit() {
-     return getUserAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL);
+    return getUserAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL,
+         null);
   }
 
   public Resource getUserAMResourceLimitPerPartition(
-      String nodePartition) {
+      String nodePartition, String userName) {
+    float userWeight = 1.0f;
+    if (userName != null && getUser(userName) != null) {
+      userWeight = getUser(userName).getWeight();
+    }
     try {
       readLock.lock();
       /*
@@ -647,6 +667,7 @@ public class LeafQueue extends AbstractCSQueue {
        */
       float effectiveUserLimit = Math.max(usersManager.getUserLimit() / 100.0f,
           1.0f / Math.max(getAbstractUsersManager().getNumActiveUsers(), 1));
+      effectiveUserLimit = Math.min(effectiveUserLimit * userWeight, 1.0f);
 
       Resource queuePartitionResource = Resources
           .multiplyAndNormalizeUp(resourceCalculator,
@@ -787,7 +808,8 @@ public class LeafQueue extends AbstractCSQueue {
 
         // Verify whether we already calculated user-am-limit for this label.
         if (userAMLimit == null) {
-          userAMLimit = getUserAMResourceLimitPerPartition(partitionName);
+          userAMLimit = getUserAMResourceLimitPerPartition(partitionName,
+              application.getUser());
           userAmPartitionLimit.put(partitionName, userAMLimit);
         }
 

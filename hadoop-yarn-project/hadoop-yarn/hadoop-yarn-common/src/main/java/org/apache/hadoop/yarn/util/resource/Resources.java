@@ -279,6 +279,11 @@ public class Resources {
       ResourceCalculator resourceCalculator, Resource lhs, int rhs) {
     return resourceCalculator.divideAndCeil(lhs, rhs);
   }
+
+  public static Resource divideAndCeil(
+      ResourceCalculator resourceCalculator, Resource lhs, float rhs) {
+    return resourceCalculator.divideAndCeil(lhs, rhs);
+  }
   
   public static boolean equals(Resource lhs, Resource rhs) {
     return lhs.equals(rhs);
