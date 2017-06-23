@@ -450,5 +450,10 @@ public class KerberosUtil {
     public String toString() {
       return "[tag=0x"+Integer.toHexString(tag)+" bb="+bb+"]";
     }
+
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
   }
 }
