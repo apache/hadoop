@@ -121,7 +121,9 @@ endmacro()
 # set the shared compiler flags
 # support for GNU C/C++, add other compilers as necessary
 
-if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
+    CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
+    CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
   if(NOT DEFINED GCC_SHARED_FLAGS)
     find_package(Threads REQUIRED)
     if(CMAKE_USE_PTHREADS_INIT)
@@ -130,9 +132,6 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
       set(GCC_SHARED_FLAGS "-g -O2 -Wall -D_FILE_OFFSET_BITS=64")
     endif()
   endif()
-elseif (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
-        CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
-  set(GCC_SHARED_FLAGS "-g -O2 -Wall -D_FILE_OFFSET_BITS=64")
 endif()
 
 # Set the shared linker flags.

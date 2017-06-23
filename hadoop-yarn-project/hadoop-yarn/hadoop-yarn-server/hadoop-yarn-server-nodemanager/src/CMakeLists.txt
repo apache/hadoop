@@ -53,6 +53,51 @@ if(APPLE)
   set(EXTRA_LIBS ${COCOA_LIBRARY})
 endif(APPLE)
 
+include(CheckCCompilerFlag)
+
+# Building setuid = attempt to enable stack protection.
+# assumption here is that the C compiler and the C++
+# compiler match.  need both so that gtest gets same
+# stack treatment that the real c-e does
+IF(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    CHECK_C_COMPILER_FLAG("-fstack-check" STACKRESULT)
+    IF(STACKRESULT)
+      SET (CMAKE_C_FLAGS "-fstack-check ${CMAKE_C_FLAGS}")
+      SET (CMAKE_CXX_FLAGS "-fstack-check ${CMAKE_CXX_FLAGS}")
+    ENDIF()
+ELSEIF(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
+       CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+
+  # clang is a bit difficult here:
+  # - some versions don't support the flag
+  # - some versions support the flag, despite not having
+  #   the library that is actually required (!)
+  # Notably, Xcode is a problem here.
+  # In the end, this is needlessly complex. :(
+
+  SET(PRE_SANITIZE ${CMAKE_REQUIRED_FLAGS})
+  SET(CMAKE_REQUIRED_FLAGS "-fsanitize=safe-stack ${CMAKE_REQUIRED_FLAGS}")
+  CHECK_C_COMPILER_FLAG("" STACKRESULT)
+  SET(CMAKE_REQUIRED_FLAGS ${PRE_SANITIZE})
+  IF(STACKRESULT)
+     SET(CMAKE_C_FLAGS "-fsanitize=safe-stack ${CMAKE_C_FLAGS}")
+     SET(CMAKE_CXX_FLAGS "-fsanitize=safe-stack ${CMAKE_CXX_FLAGS}")
+  ENDIF()
+ELSEIF(CMAKE_C_COMPILER_ID STREQUAL "SunPro")
+
+  # this appears to only be supported on SPARC, for some reason
+
+  CHECK_C_COMPILER_FLAG("-xcheck=stkovf" STACKRESULT)
+  IF(STACKRESULT)
+    SET (CMAKE_C_FLAGS "-xcheck=stkovf ${CMAKE_C_FLAGS}")
+    SET (CMAKE_CXX_FLAGS "-xcheck=stkovf ${CMAKE_CXX_FLAGS}")
+  ENDIF()
+ENDIF()
+
+IF(NOT STACKRESULT)
+   MESSAGE(WARNING "Stack Clash security protection is not suported.")
+ENDIF()
+
 function(output_directory TGT DIR)
     set_target_properties(${TGT} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DIR}")
