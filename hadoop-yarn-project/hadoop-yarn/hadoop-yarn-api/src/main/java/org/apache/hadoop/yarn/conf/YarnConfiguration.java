@@ -561,6 +561,11 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
   public static final int DEFAULT_ZK_RM_NUM_RETRIES = 1000;
 
+  /** Zookeeper znode limit */
+  public static final String RM_ZK_ZNODE_SIZE_LIMIT_BYTES =
+      RM_ZK_PREFIX + "max-znode-size.bytes";
+  public static final int DEFAULT_RM_ZK_ZNODE_SIZE_LIMIT_BYTES = 1024 * 1024;
+
   public static final String RM_ZK_RETRY_INTERVAL_MS =
       RM_ZK_PREFIX + "retry-interval-ms";
   public static final int DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 1000;
