@@ -39,6 +39,22 @@ public final class KSMConfigKeys {
       "0.0.0.0";
   public static final int OZONE_KSM_PORT_DEFAULT = 9862;
 
+  public static final String OZONE_KSM_HTTP_ENABLED_KEY =
+      "ozone.ksm.http.enabled";
+  public static final String OZONE_KSM_HTTP_BIND_HOST_KEY =
+      "ozone.ksm.http-bind-host";
+  public static final String OZONE_KSM_HTTPS_BIND_HOST_KEY =
+      "ozone.ksm.https-bind-host";
+  public static final String OZONE_KSM_HTTP_ADDRESS_KEY =
+      "ozone.ksm.http-address";
+  public static final String OZONE_KSM_HTTPS_ADDRESS_KEY =
+      "ozone.ksm.https-address";
+  public static final String OZONE_KSM_KEYTAB_FILE =
+      "ozone.ksm.keytab.file";
+  public static final String OZONE_KSM_HTTP_BIND_HOST_DEFAULT = "0.0.0.0";
+  public static final int OZONE_KSM_HTTP_BIND_PORT_DEFAULT = 9874;
+  public static final int OZONE_KSM_HTTPS_BIND_PORT_DEFAULT = 9875;
+
   // LevelDB cache file uses an off-heap cache in LevelDB of 128 MB.
   public static final String OZONE_KSM_DB_CACHE_SIZE_MB =
       "ozone.ksm.leveldb.cache.size.mb";

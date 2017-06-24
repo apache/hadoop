@@ -365,7 +365,9 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
 
       // Use random ports for ozone containers in mini cluster,
       // in order to launch multiple container servers per node.
@@ -431,7 +433,8 @@ public final class MiniOzoneCluster extends MiniDFSCluster
         throw new IllegalArgumentException(
             "The Ozone handler type must be specified.");
       } else {
-        conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, ozoneHandlerType.get());
+        conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
+            ozoneHandlerType.get());
       }
     }
 
