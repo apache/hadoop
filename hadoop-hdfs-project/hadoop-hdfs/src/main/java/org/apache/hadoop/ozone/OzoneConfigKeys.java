@@ -95,6 +95,9 @@ public final class OzoneConfigKeys {
   public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =
       "dfs.container.ratis.datanode.storage.dir";
 
+  public static final String OZONE_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL =
+      "ozone.web.authentication.kerberos.principal";
+  
   /**
    * There is no need to instantiate this class.
    */

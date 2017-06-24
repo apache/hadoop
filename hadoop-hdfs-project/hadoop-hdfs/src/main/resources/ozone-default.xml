@@ -451,4 +451,133 @@
     </description>
   </property>
 
+
+  <property>
+    <name>ozone.scm.http.enabled</name>
+    <value>true</value>
+    <description>
+      Property to enable or disable SCM web ui.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.http-address</name>
+    <value>0.0.0.0:9876</value>
+    <description>
+      The address and the base port where the SCM web ui will listen on.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the SCM web server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      ozone.scm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.https-address</name>
+    <value>0.0.0.0:9877</value>
+    <description>
+      The address and the base port where the SCM web ui will listen on
+      using HTTPS.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the SCM web server will bind to using HTTPS. If this
+      optional address is set, it overrides only the hostname portion of
+      ozone.scm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.http.enabled</name>
+    <value>true</value>
+    <description>
+      Property to enable or disable KSM web ui.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.http-address</name>
+    <value>0.0.0.0:9874</value>
+    <description>
+      The address and the base port where the KSM web ui will listen on.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the KSM web server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      ozone.ksm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.https-address</name>
+    <value>0.0.0.0:9875</value>
+    <description>
+      The address and the base port where the KSM web ui will listen on
+      using HTTPS.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the KSM web server will bind to using HTTPS. If this
+      optional address is set, it overrides only the hostname portion of
+      ozone.ksm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.web.authentication.kerberos.principal</name>
+    <value></value>
+    <description>
+      The server principal used by the SCM and KSM for web UI SPNEGO
+      authentication when Kerberos security is enabled. This is
+      typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+      begins with the prefix HTTP/ by convention.
+
+      If the value is '*', the web server will attempt to login with
+      every principal specified in the keytab file.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file for Kerberos authentication in SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file for Kerberos authentication in KSM.
+    </description>
+  </property>
+  
 </configuration>

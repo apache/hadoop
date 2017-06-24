@@ -91,6 +91,23 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_DATANODE_BIND_HOST_DEFAULT =
       "0.0.0.0";
 
+  public static final String OZONE_SCM_HTTP_ENABLED_KEY =
+      "ozone.scm.http.enabled";
+  public static final String OZONE_SCM_HTTP_BIND_HOST_KEY =
+      "ozone.scm.http-bind-host";
+  public static final String OZONE_SCM_HTTPS_BIND_HOST_KEY =
+      "ozone.scm.https-bind-host";
+  public static final String OZONE_SCM_HTTP_ADDRESS_KEY =
+      "ozone.scm.http-address";
+  public static final String OZONE_SCM_HTTPS_ADDRESS_KEY =
+      "ozone.scm.https-address";
+  public static final String OZONE_SCM_KEYTAB_FILE =
+      "ozone.scm.keytab.file";
+  public static final String OZONE_SCM_HTTP_BIND_HOST_DEFAULT = "0.0.0.0";
+  public static final int OZONE_SCM_HTTP_BIND_PORT_DEFAULT = 9876;
+  public static final int OZONE_SCM_HTTPS_BIND_PORT_DEFAULT = 9877;
+
+
   public static final String OZONE_SCM_HANDLER_COUNT_KEY =
       "ozone.scm.handler.count.key";
   public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;

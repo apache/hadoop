@@ -149,7 +149,7 @@ public class CBlockManager implements CBlockServiceProtocol,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT);
     InetSocketAddress cblockServiceRpcAddress =
-        OzoneClientUtils.updateListenAddress(conf,
+        OzoneClientUtils.updateRPCListenAddress(conf,
             DFS_CBLOCK_SERVICERPC_ADDRESS_KEY, serviceRpcAddr, cblockService);
     LOG.info("CBlock manager listening for client commands on: {}",
         cblockServiceRpcAddress);
@@ -170,7 +170,7 @@ public class CBlockManager implements CBlockServiceProtocol,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY,
         DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT);
     InetSocketAddress cblockServerRpcAddress =
-        OzoneClientUtils.updateListenAddress(conf,
+        OzoneClientUtils.updateRPCListenAddress(conf,
             DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY, serverRpcAddr, cblockServer);
     LOG.info("CBlock server listening for client commands on: {}",
         cblockServerRpcAddress);

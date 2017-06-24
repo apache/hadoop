@@ -158,6 +158,8 @@ public class StorageContainerManager
   private final RPC.Server blockRpcServer;
   private final InetSocketAddress blockRpcAddress;
 
+  private final StorageContainerManagerHttpServer httpServer;
+
   /** SCM mxbean. */
   private ObjectName scmInfoBeanName;
 
@@ -208,7 +210,7 @@ public class StorageContainerManager
     datanodeRpcServer = startRpcServer(conf, datanodeRpcAddr,
         StorageContainerDatanodeProtocolPB.class, dnProtoPbService,
         handlerCount);
-    datanodeRpcAddress = OzoneClientUtils.updateListenAddress(conf,
+    datanodeRpcAddress = OzoneClientUtils.updateRPCListenAddress(conf,
         OZONE_SCM_DATANODE_ADDRESS_KEY, datanodeRpcAddr, datanodeRpcServer);
 
     // SCM Container Service RPC
@@ -223,9 +225,8 @@ public class StorageContainerManager
     clientRpcServer = startRpcServer(conf, scmAddress,
         StorageContainerLocationProtocolPB.class, storageProtoPbService,
         handlerCount);
-    clientRpcAddress = OzoneClientUtils.updateListenAddress(conf,
+    clientRpcAddress = OzoneClientUtils.updateRPCListenAddress(conf,
         OZONE_SCM_CLIENT_ADDRESS_KEY, scmAddress, clientRpcServer);
-
 
     // SCM Block Service RPC
     BlockingService blockProtoPbService =
@@ -239,8 +240,10 @@ public class StorageContainerManager
     blockRpcServer = startRpcServer(conf, scmBlockAddress,
         ScmBlockLocationProtocolPB.class, blockProtoPbService,
         handlerCount);
-    blockRpcAddress = OzoneClientUtils.updateListenAddress(conf,
+    blockRpcAddress = OzoneClientUtils.updateRPCListenAddress(conf,
         OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, scmBlockAddress, blockRpcServer);
+
+    httpServer = new StorageContainerManagerHttpServer(conf);
 
     registerMXBean();
   }
@@ -459,7 +462,7 @@ public class StorageContainerManager
   /**
    * Start service.
    */
-  public void start() {
+  public void start() throws IOException {
     LOG.info(buildRpcServerStartMessage(
         "StorageContainerLocationProtocol RPC server", clientRpcAddress));
     clientRpcServer.start();
@@ -469,18 +472,36 @@ public class StorageContainerManager
     LOG.info(buildRpcServerStartMessage("RPC server for DataNodes",
         datanodeRpcAddress));
     datanodeRpcServer.start();
+
+    httpServer.start();
+
+
   }
 
   /**
    * Stop service.
    */
   public void stop() {
-    LOG.info("Stopping block service RPC server");
-    blockRpcServer.stop();
-    LOG.info("Stopping the StorageContainerLocationProtocol RPC server");
-    clientRpcServer.stop();
-    LOG.info("Stopping the RPC server for DataNodes");
-    datanodeRpcServer.stop();
+    try {
+      LOG.info("Stopping block service RPC server");
+      blockRpcServer.stop();
+    } catch (Exception ex) {
+      LOG.error("Storage Container Manager blockRpcServer stop failed.", ex);
+    }
+
+    try {
+      LOG.info("Stopping the StorageContainerLocationProtocol RPC server");
+      clientRpcServer.stop();
+    } catch (Exception ex) {
+      LOG.error("Storage Container Manager clientRpcServer stop failed.", ex);
+    }
+
+    try {
+      LOG.info("Stopping the RPC server for DataNodes");
+      datanodeRpcServer.stop();
+    } catch (Exception ex) {
+      LOG.error("Storage Container Manager httpServer stop failed.", ex);
+    }
     unregisterMXBean();
     IOUtils.closeQuietly(scmContainerManager);
     IOUtils.closeQuietly(scmBlockManager);
@@ -676,4 +697,5 @@ public class StorageContainerManager
       }
     }
   }
+
 }

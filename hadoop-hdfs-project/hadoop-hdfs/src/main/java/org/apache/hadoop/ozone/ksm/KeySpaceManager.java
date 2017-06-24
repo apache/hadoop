@@ -76,6 +76,7 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   private final BucketManager bucketManager;
   private final KeyManager keyManager;
   private final KSMMetrics metrics;
+  private final KeySpaceManagerHttpServer httpServer;
 
   public KeySpaceManager(OzoneConfiguration conf) throws IOException {
     final int handlerCount = conf.getInt(OZONE_KSM_HANDLER_COUNT_KEY,
@@ -91,13 +92,14 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     ksmRpcServer = startRpcServer(conf, ksmNodeRpcAddr,
         KeySpaceManagerProtocolPB.class, ksmService,
         handlerCount);
-    ksmRpcAddress = OzoneClientUtils.updateListenAddress(conf,
+    ksmRpcAddress = OzoneClientUtils.updateRPCListenAddress(conf,
         OZONE_KSM_ADDRESS_KEY, ksmNodeRpcAddr, ksmRpcServer);
     metadataManager = new MetadataManagerImpl(conf);
     volumeManager = new VolumeManagerImpl(metadataManager, conf);
     bucketManager = new BucketManagerImpl(metadataManager);
     metrics = KSMMetrics.create();
     keyManager = new KeyManagerImpl(getScmBlockClient(conf), metadataManager);
+    httpServer = new KeySpaceManagerHttpServer(conf);
   }
 
   /**
@@ -193,11 +195,12 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   /**
    * Start service.
    */
-  public void start() {
+  public void start() throws IOException {
     LOG.info(buildRpcServerStartMessage("KeyspaceManager RPC server",
         ksmRpcAddress));
     metadataManager.start();
     ksmRpcServer.start();
+    httpServer.start();
   }
 
   /**
@@ -207,8 +210,9 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     try {
       ksmRpcServer.stop();
       metadataManager.stop();
-    } catch (IOException e) {
-      LOG.info("Key Space Manager stop failed.", e);
+      httpServer.stop();
+    } catch (Exception e) {
+      LOG.error("Key Space Manager stop failed.", e);
     }
   }
 
