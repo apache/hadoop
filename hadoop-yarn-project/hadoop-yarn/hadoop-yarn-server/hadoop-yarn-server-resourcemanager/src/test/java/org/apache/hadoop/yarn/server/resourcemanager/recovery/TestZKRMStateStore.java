@@ -32,6 +32,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
@@ -53,6 +55,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMSta
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -70,6 +74,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
@@ -246,6 +251,38 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testReservationStateStore(zkTester);
     ((TestZKRMStateStoreTester.TestZKRMStateStoreInternal)
         zkTester.getRMStateStore()).testRetryingCreateRootDir();
+  }
+
+  @Test
+  public void testZKNodeLimit() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    long submitTime = System.currentTimeMillis();
+    long startTime = System.currentTimeMillis() + 1234;
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_ZK_ZNODE_SIZE_LIMIT_BYTES, 1);
+    RMStateStore store = zkTester.getRMStateStore(conf);
+    final TestAppRejDispatcher dispatcher = new TestAppRejDispatcher();
+    store.setRMDispatcher(dispatcher);
+    ApplicationId appId1 =
+        ApplicationId.fromString("application_1352994193343_0001");
+    storeApp(store, appId1, submitTime, startTime);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return dispatcher.apprejectedEvnt;
+      }
+    }, 100, 5000);
+  }
+
+  static class TestAppRejDispatcher extends TestDispatcher {
+    private boolean apprejectedEvnt;
+
+    public void handle(Event event) {
+      if (event instanceof RMAppEvent
+          && event.getType().equals(RMAppEventType.APP_REJECTED)) {
+        apprejectedEvnt = true;
+      }
+    };
   }
 
   @Test (timeout = 60000)
