@@ -21,11 +21,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
@@ -34,7 +34,8 @@ import static org.junit.Assert.*;
  */
 public class TestInstrumentedLock {
 
-  static final Log LOG = LogFactory.getLog(TestInstrumentedLock.class);
+  static final Logger LOG = LoggerFactory.getLogger(
+      TestInstrumentedLock.class);
 
   @Rule public TestName name = new TestName();
 

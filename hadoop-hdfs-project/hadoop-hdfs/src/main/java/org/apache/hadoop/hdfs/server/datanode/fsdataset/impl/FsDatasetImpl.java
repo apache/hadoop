@@ -21,8 +21,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -95,6 +93,8 @@ import org.apache.hadoop.util.InstrumentedLock;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -132,7 +132,7 @@ import java.util.concurrent.locks.Condition;
  ***************************************************/
 @InterfaceAudience.Private
 class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
-  static final Log LOG = LogFactory.getLog(FsDatasetImpl.class);
+  static final Logger LOG = LoggerFactory.getLogger(FsDatasetImpl.class);
   private final static boolean isNativeIOAvailable;
   private Timer timer;
   static {
@@ -1116,7 +1116,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       checksum.calculateChunkedSums(data, 0, offset, crcs, 0);
       metaOut.write(crcs, 0, 4);
     } finally {
-      IOUtils.cleanup(LOG, metaOut);
+      IOUtils.cleanupWithLogger(LOG, metaOut);
     }
   }
 
