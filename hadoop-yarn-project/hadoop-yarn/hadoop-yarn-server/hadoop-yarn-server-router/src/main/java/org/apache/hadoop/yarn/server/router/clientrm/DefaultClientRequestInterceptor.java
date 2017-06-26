@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -85,8 +84,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRespo
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -98,27 +95,14 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class DefaultClientRequestInterceptor
     extends AbstractClientRequestInterceptor {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DefaultClientRequestInterceptor.class);
   private ApplicationClientProtocol clientRMProxy;
-  private UserGroupInformation user = null;
 
   @Override
   public void init(String userName) {
     super.init(userName);
+
+    final Configuration conf = this.getConf();
     try {
-      // Do not create a proxy user if user name matches the user name on
-      // current UGI
-      if (userName.equalsIgnoreCase(
-          UserGroupInformation.getCurrentUser().getUserName())) {
-        user = UserGroupInformation.getCurrentUser();
-      } else {
-        user = UserGroupInformation.createProxyUser(userName,
-            UserGroupInformation.getCurrentUser());
-      }
-
-      final Configuration conf = this.getConf();
-
       clientRMProxy =
           user.doAs(new PrivilegedExceptionAction<ApplicationClientProtocol>() {
             @Override
@@ -127,16 +111,9 @@ public class DefaultClientRequestInterceptor
                   ApplicationClientProtocol.class);
             }
           });
-    } catch (IOException e) {
-      String message = "Error while creating Router ClientRM Service for user:";
-      if (user != null) {
-        message += ", user: " + user;
-      }
-
-      LOG.info(message);
-      throw new YarnRuntimeException(message, e);
     } catch (Exception e) {
-      throw new YarnRuntimeException(e);
+      throw new YarnRuntimeException(
+          "Unable to create the interface to reach the YarnRM", e);
     }
   }
 

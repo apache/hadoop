@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -154,6 +155,7 @@ import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Strings;
 
 /**
@@ -175,6 +177,13 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       new HashMap<ContainerId, Container>();
   private AtomicInteger containerIndex = new AtomicInteger(0);
   private Configuration conf;
+  private int subClusterId;
+  final private AtomicInteger applicationCounter = new AtomicInteger(0);
+
+  // True if the Mock RM is running, false otherwise.
+  // This property allows us to write tests for specific scenario as Yarn RM
+  // down e.g. network issue, failover.
+  private boolean isRunning;
 
   private boolean shouldReRegisterNext = false;
 
@@ -187,12 +196,23 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
   public MockResourceManagerFacade(Configuration conf,
       int startContainerIndex) {
+    this(conf, startContainerIndex, 0, true);
+  }
+
+  public MockResourceManagerFacade(Configuration conf, int startContainerIndex,
+      int subClusterId, boolean isRunning) {
     this.conf = conf;
     this.containerIndex.set(startContainerIndex);
+    this.subClusterId = subClusterId;
+    this.isRunning = isRunning;
   }
 
   public void setShouldReRegisterNext() {
     shouldReRegisterNext = true;
+  }
+
+  public void setRunningMode(boolean mode) {
+    this.isRunning = mode;
   }
 
   private static String getAppIdentifier() throws IOException {
@@ -208,10 +228,19 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     return result != null ? result.getApplicationAttemptId().toString() : "";
   }
 
+  private void validateRunning() throws ConnectException {
+    if (!isRunning) {
+      throw new ConnectException("RM is stopped");
+    }
+  }
+
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     String amrmToken = getAppIdentifier();
     LOG.info("Registering application attempt: " + amrmToken);
 
@@ -248,6 +277,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     String amrmToken = getAppIdentifier();
     LOG.info("Finishing application attempt: " + amrmToken);
 
@@ -284,6 +316,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     if (request.getAskList() != null && request.getAskList().size() > 0
         && request.getReleaseList() != null
         && request.getReleaseList().size() > 0) {
@@ -391,6 +426,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnException, IOException {
 
+    validateRunning();
+
     GetApplicationReportResponse response =
         Records.newRecord(GetApplicationReportResponse.class);
     ApplicationReport report = Records.newRecord(ApplicationReport.class);
@@ -407,6 +444,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       GetApplicationAttemptReportRequest request)
       throws YarnException, IOException {
 
+    validateRunning();
+
     GetApplicationAttemptReportResponse response =
         Records.newRecord(GetApplicationAttemptReportResponse.class);
     ApplicationAttemptReport report =
@@ -420,12 +459,19 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request) throws YarnException, IOException {
-    return GetNewApplicationResponse.newInstance(null, null, null);
+
+    validateRunning();
+
+    return GetNewApplicationResponse.newInstance(ApplicationId.newInstance(
+        subClusterId, applicationCounter.incrementAndGet()), null, null);
   }
 
   @Override
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     ApplicationId appId = null;
     if (request.getApplicationSubmissionContext() != null) {
       appId = request.getApplicationSubmissionContext().getApplicationId();
@@ -438,6 +484,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     ApplicationId appId = null;
     if (request.getApplicationId() != null) {
       appId = request.getApplicationId();
@@ -453,48 +502,72 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetClusterMetricsResponse.newInstance(null);
   }
 
   @Override
   public GetApplicationsResponse getApplications(GetApplicationsRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return GetApplicationsResponse.newInstance(null);
   }
 
   @Override
   public GetClusterNodesResponse getClusterNodes(GetClusterNodesRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return GetClusterNodesResponse.newInstance(null);
   }
 
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return GetQueueInfoResponse.newInstance(null);
   }
 
   @Override
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetQueueUserAclsInfoResponse.newInstance(null);
   }
 
   @Override
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetDelegationTokenResponse.newInstance(null);
   }
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return RenewDelegationTokenResponse.newInstance(0);
   }
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
       CancelDelegationTokenRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return CancelDelegationTokenResponse.newInstance();
   }
 
@@ -502,36 +575,54 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
       MoveApplicationAcrossQueuesRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return MoveApplicationAcrossQueuesResponse.newInstance();
   }
 
   @Override
   public GetApplicationAttemptsResponse getApplicationAttempts(
       GetApplicationAttemptsRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetApplicationAttemptsResponse.newInstance(null);
   }
 
   @Override
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetContainerReportResponse.newInstance(null);
   }
 
   @Override
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return GetContainersResponse.newInstance(null);
   }
 
   @Override
   public ReservationSubmissionResponse submitReservation(
       ReservationSubmissionRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return ReservationSubmissionResponse.newInstance();
   }
 
   @Override
   public ReservationListResponse listReservations(
       ReservationListRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return ReservationListResponse
         .newInstance(new ArrayList<ReservationAllocationState>());
   }
@@ -539,18 +630,27 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public ReservationUpdateResponse updateReservation(
       ReservationUpdateRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return ReservationUpdateResponse.newInstance();
   }
 
   @Override
   public ReservationDeleteResponse deleteReservation(
       ReservationDeleteRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return ReservationDeleteResponse.newInstance();
   }
 
   @Override
   public GetNodesToLabelsResponse getNodeToLabels(
       GetNodesToLabelsRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetNodesToLabelsResponse
         .newInstance(new HashMap<NodeId, Set<String>>());
   }
@@ -558,18 +658,27 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public GetClusterNodeLabelsResponse getClusterNodeLabels(
       GetClusterNodeLabelsRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetClusterNodeLabelsResponse.newInstance(new ArrayList<NodeLabel>());
   }
 
   @Override
   public GetLabelsToNodesResponse getLabelsToNodes(
       GetLabelsToNodesRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetLabelsToNodesResponse.newInstance(null);
   }
 
   @Override
   public GetNewReservationResponse getNewReservation(
       GetNewReservationRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return GetNewReservationResponse
         .newInstance(ReservationId.newInstance(0, 0));
   }
@@ -577,6 +686,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public FailApplicationAttemptResponse failApplicationAttempt(
       FailApplicationAttemptRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return FailApplicationAttemptResponse.newInstance();
   }
 
@@ -584,12 +696,18 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public UpdateApplicationPriorityResponse updateApplicationPriority(
       UpdateApplicationPriorityRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return UpdateApplicationPriorityResponse.newInstance(null);
   }
 
   @Override
   public SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return new SignalContainerResponsePBImpl();
   }
 
@@ -597,18 +715,27 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return UpdateApplicationTimeoutsResponse.newInstance();
   }
 
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws StandbyException, YarnException, IOException {
+
+    validateRunning();
+
     return RefreshQueuesResponse.newInstance();
   }
 
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
       throws StandbyException, YarnException, IOException {
+
+    validateRunning();
+
     return RefreshNodesResponse.newInstance();
   }
 
@@ -616,6 +743,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
       throws StandbyException, YarnException, IOException {
+
+    validateRunning();
+
     return RefreshSuperUserGroupsConfigurationResponse.newInstance();
   }
 
@@ -623,36 +753,54 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
       throws StandbyException, YarnException, IOException {
+
+    validateRunning();
+
     return RefreshUserToGroupsMappingsResponse.newInstance();
   }
 
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return RefreshAdminAclsResponse.newInstance();
   }
 
   @Override
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return RefreshServiceAclsResponse.newInstance();
   }
 
   @Override
   public UpdateNodeResourceResponse updateNodeResource(
       UpdateNodeResourceRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return UpdateNodeResourceResponse.newInstance();
   }
 
   @Override
   public RefreshNodesResourcesResponse refreshNodesResources(
       RefreshNodesResourcesRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return RefreshNodesResourcesResponse.newInstance();
   }
 
   @Override
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(
       AddToClusterNodeLabelsRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return AddToClusterNodeLabelsResponse.newInstance();
   }
 
@@ -660,12 +808,18 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       RemoveFromClusterNodeLabelsRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return RemoveFromClusterNodeLabelsResponse.newInstance();
   }
 
   @Override
   public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(
       ReplaceLabelsOnNodeRequest request) throws YarnException, IOException {
+
+    validateRunning();
+
     return ReplaceLabelsOnNodeResponse.newInstance();
   }
 
@@ -673,6 +827,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public CheckForDecommissioningNodesResponse checkForDecommissioningNodes(
       CheckForDecommissioningNodesRequest checkForDecommissioningNodesRequest)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return CheckForDecommissioningNodesResponse.newInstance(null);
   }
 
@@ -680,11 +837,17 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public RefreshClusterMaxPriorityResponse refreshClusterMaxPriority(
       RefreshClusterMaxPriorityRequest request)
       throws YarnException, IOException {
+
+    validateRunning();
+
     return RefreshClusterMaxPriorityResponse.newInstance();
   }
 
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
+
+    validateRunning();
+
     return new String[0];
   }
 }
