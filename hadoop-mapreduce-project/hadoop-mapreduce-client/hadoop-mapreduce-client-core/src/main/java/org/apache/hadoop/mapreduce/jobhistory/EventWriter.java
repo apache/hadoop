@@ -29,11 +29,15 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.Utf8;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Event Writer is an utility class used to write events to the underlying
@@ -41,7 +45,9 @@ import org.apache.hadoop.mapreduce.Counters;
  * is created per job 
  * 
  */
-class EventWriter {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class EventWriter {
   static final String VERSION = "Avro-Json";
 
   private FSDataOutputStream out;
@@ -49,8 +55,9 @@ class EventWriter {
     new SpecificDatumWriter<Event>(Event.class);
   private Encoder encoder;
   private static final Log LOG = LogFactory.getLog(EventWriter.class);
-  
-  EventWriter(FSDataOutputStream out) throws IOException {
+
+  @VisibleForTesting
+  public EventWriter(FSDataOutputStream out) throws IOException {
     this.out = out;
     out.writeBytes(VERSION);
     out.writeBytes("\n");
@@ -74,7 +81,8 @@ class EventWriter {
     out.hflush();
   }
 
-  void close() throws IOException {
+  @VisibleForTesting
+  public void close() throws IOException {
     try {
       encoder.flush();
       out.close();

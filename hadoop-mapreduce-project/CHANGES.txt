@@ -38,6 +38,9 @@ Release 2.7.4 - UNRELEASED
     MAPREDUCE-6873. MR Job Submission Fails if MR framework application path
     not on defaultFS. (xkrogen via zhz)
 
+    MAPREDUCE-6433. launchTime may be negative.
+    (zxu) backported by Chris Douglas.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
