@@ -134,6 +134,11 @@ public abstract class GenericTestUtils {
     setLogLevel(toLog4j(logger), level);
   }
 
+  public static void setLogLevel(org.slf4j.Logger logger,
+                                 org.slf4j.event.Level level) {
+    setLogLevel(toLog4j(logger), Level.toLevel(level.toString()));
+  }
+
   /**
    * Extracts the name of the method where the invocation has happened
    * @return String name of the invoking method
