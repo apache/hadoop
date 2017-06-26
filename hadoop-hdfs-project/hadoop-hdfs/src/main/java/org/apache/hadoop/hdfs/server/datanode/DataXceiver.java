@@ -695,11 +695,18 @@ class DataXceiver extends Receiver implements Runnable {
     if (targetStorageTypes.length > 0) {
       System.arraycopy(targetStorageTypes, 0, storageTypes, 1, nst);
     }
-    int nsi = targetStorageIds.length;
-    String[] storageIds = new String[nsi + 1];
-    storageIds[0] = storageId;
-    if (targetStorageTypes.length > 0) {
-      System.arraycopy(targetStorageIds, 0, storageIds, 1, nsi);
+
+    // To support older clients, we don't pass in empty storageIds
+    final int nsi = targetStorageIds.length;
+    final String[] storageIds;
+    if (nsi > 0) {
+      storageIds = new String[nsi + 1];
+      storageIds[0] = storageId;
+      if (targetStorageTypes.length > 0) {
+        System.arraycopy(targetStorageIds, 0, storageIds, 1, nsi);
+      }
+    } else {
+      storageIds = new String[0];
     }
     checkAccess(replyOut, isClient, block, blockToken, Op.WRITE_BLOCK,
         BlockTokenIdentifier.AccessMode.WRITE,
