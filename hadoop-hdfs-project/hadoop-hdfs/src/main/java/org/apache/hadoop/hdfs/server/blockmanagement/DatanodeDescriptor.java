@@ -644,14 +644,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * The number of work items that are pending to be replicated
+   * The number of work items that are pending to be replicated.
    */
   int getNumberOfBlocksToBeReplicated() {
     return pendingReplicationWithoutTargets + replicateBlocks.size();
   }
 
   /**
-   * The number of work items that are pending to be replicated
+   * The number of work items that are pending to be reconstructed.
    */
   @VisibleForTesting
   public int getNumberOfBlocksToBeErasureCoded() {
