@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -85,6 +86,9 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
         getActiveSubclusters();
 
     List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
+
+    FederationPolicyUtils.validateSubClusterAvailability(list,
+        blackListSubClusters);
 
     if (blackListSubClusters != null) {
 

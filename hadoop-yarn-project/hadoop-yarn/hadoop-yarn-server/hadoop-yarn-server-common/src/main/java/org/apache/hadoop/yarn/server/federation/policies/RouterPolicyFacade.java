@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -56,7 +57,7 @@ public class RouterPolicyFacade {
   @VisibleForTesting
   Map<String, FederationRouterPolicy> globalPolicyMap;
 
-  public RouterPolicyFacade(YarnConfiguration conf,
+  public RouterPolicyFacade(Configuration conf,
       FederationStateStoreFacade facade, SubClusterResolver resolver,
       SubClusterId homeSubcluster)
       throws FederationPolicyInitializationException {
