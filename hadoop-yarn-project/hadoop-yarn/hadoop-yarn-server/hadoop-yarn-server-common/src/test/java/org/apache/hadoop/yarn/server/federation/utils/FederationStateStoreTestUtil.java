@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolic
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
@@ -69,7 +70,7 @@ public class FederationStateStoreTestUtil {
         SubClusterState.SC_RUNNING, CLOCK.getTime(), "capability");
   }
 
-  private void registerSubCluster(SubClusterId subClusterId)
+  public void registerSubCluster(SubClusterId subClusterId)
       throws YarnException {
 
     SubClusterInfo subClusterInfo = createSubClusterInfo(subClusterId);
@@ -162,6 +163,18 @@ public class FederationStateStoreTestUtil {
     GetSubClusterPolicyConfigurationResponse result =
         stateStore.getPolicyConfiguration(request);
     return result.getPolicyConfiguration();
+  }
+
+  public void deregisterAllSubClusters() throws YarnException {
+    for (SubClusterId sc : getAllSubClusterIds(true)) {
+      deRegisterSubCluster(sc);
+    }
+  }
+
+  private void deRegisterSubCluster(SubClusterId subClusterId)
+      throws YarnException {
+    stateStore.deregisterSubCluster(SubClusterDeregisterRequest
+        .newInstance(subClusterId, SubClusterState.SC_UNREGISTERED));
   }
 
 }

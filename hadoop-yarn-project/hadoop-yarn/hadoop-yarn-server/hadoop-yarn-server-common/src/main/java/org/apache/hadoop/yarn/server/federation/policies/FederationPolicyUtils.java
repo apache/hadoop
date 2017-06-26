@@ -19,12 +19,14 @@ package org.apache.hadoop.yarn.server.federation.policies;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -40,6 +42,9 @@ import org.slf4j.LoggerFactory;
 public final class FederationPolicyUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationPolicyUtils.class);
+
+  public static final String NO_ACTIVE_SUBCLUSTER_AVAILABLE =
+      "No active SubCluster available to submit the request.";
 
   /** Disable constructor. */
   private FederationPolicyUtils() {
@@ -163,6 +168,36 @@ public final class FederationPolicyUtils {
     // content of conf), and cache it
     federationPolicyManager.setQueue(configuration.getQueue());
     return federationPolicyManager.getAMRMPolicy(context, oldPolicy);
+  }
+
+  /**
+   * Validate if there is any active subcluster that is not blacklisted, it will
+   * throw an exception if there are no usable subclusters.
+   *
+   * @param activeSubClusters the list of subClusters as identified by
+   *          {@link SubClusterId} currently active.
+   * @param blackListSubClusters the list of subClusters as identified by
+   *          {@link SubClusterId} to blackList from the selection of the home
+   *          subCluster.
+   * @throws FederationPolicyException if there are no usable subclusters.
+   */
+  public static void validateSubClusterAvailability(
+      List<SubClusterId> activeSubClusters,
+      List<SubClusterId> blackListSubClusters)
+      throws FederationPolicyException {
+    if (activeSubClusters != null && !activeSubClusters.isEmpty()) {
+      if (blackListSubClusters == null) {
+        return;
+      }
+      for (SubClusterId scId : activeSubClusters) {
+        if (!blackListSubClusters.contains(scId)) {
+          // There is at least one active subcluster
+          return;
+        }
+      }
+    }
+    throw new FederationPolicyException(
+        FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
   }
 
 }

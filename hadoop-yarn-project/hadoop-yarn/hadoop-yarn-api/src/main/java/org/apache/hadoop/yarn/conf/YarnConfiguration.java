@@ -2674,6 +2674,14 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.router.rmadmin."
           + "DefaultRMAdminRequestInterceptor";
 
+  /**
+   * The number of retries for GetNewApplication and SubmitApplication in
+   * {@code FederationClientInterceptor}.
+   */
+  public static final String ROUTER_CLIENTRM_SUBMIT_RETRY =
+      ROUTER_PREFIX + "submit.retry";
+  public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////

@@ -26,6 +26,7 @@ import java.util.Random;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -85,6 +86,33 @@ public abstract class BaseRouterPoliciesTest
       // check that the selected sub-cluster is only one not blacklisted
       Assert.assertNotNull(chosen);
       Assert.assertEquals(removed, chosen);
+    }
+  }
+
+  /**
+   * This test validates the correctness of blacklist logic in case the cluster
+   * has no active subclusters.
+   */
+  @Test
+  public void testAllBlacklistSubcluster() throws YarnException {
+    FederationRouterPolicy localPolicy = (FederationRouterPolicy) getPolicy();
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(null, null, null, null, null,
+            false, false, 0, Resources.none(), null, false, null, null);
+    Map<SubClusterId, SubClusterInfo> activeSubClusters =
+        getActiveSubclusters();
+    if (activeSubClusters != null && activeSubClusters.size() > 1
+        && !(localPolicy instanceof RejectRouterPolicy)) {
+      List<SubClusterId> blacklistSubclusters =
+          new ArrayList<SubClusterId>(activeSubClusters.keySet());
+      try {
+        localPolicy.getHomeSubcluster(applicationSubmissionContext,
+            blacklistSubclusters);
+        Assert.fail();
+      } catch (YarnException e) {
+        Assert.assertTrue(e.getMessage()
+            .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
+      }
     }
   }
 }
