@@ -674,8 +674,9 @@ public class DFSInputStream extends FSInputStream
           fetchBlockAt(target);
         } else {
           connectFailedOnce = true;
-          DFSClient.LOG.warn("Failed to connect to " + targetAddr + " for block"
-              + ", add to deadNodes and continue. " + ex, ex);
+          DFSClient.LOG.warn("Failed to connect to {} for block {}, " +
+              "add to deadNodes and continue. ", targetAddr,
+              targetBlock.getBlock(), ex);
           // Put chosen node into dead list, continue
           addToDeadNodes(chosenNode);
         }
