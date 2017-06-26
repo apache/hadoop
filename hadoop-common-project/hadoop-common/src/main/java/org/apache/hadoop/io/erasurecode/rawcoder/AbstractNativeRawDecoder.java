@@ -19,6 +19,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +67,7 @@ abstract class AbstractNativeRawDecoder extends RawErasureDecoder {
 
   @Override
   protected void doDecode(ByteArrayDecodingState decodingState) {
-    LOG.warn("convertToByteBufferState is invoked, " +
+    PerformanceAdvisory.LOG.debug("convertToByteBufferState is invoked, " +
         "not efficiently. Please use direct ByteBuffer inputs/outputs");
 
     ByteBufferDecodingState bbdState = decodingState.convertToByteBufferState();
@@ -76,6 +77,11 @@ abstract class AbstractNativeRawDecoder extends RawErasureDecoder {
       bbdState.outputs[i].get(decodingState.outputs[i],
           decodingState.outputOffsets[i], decodingState.decodeLength);
     }
+  }
+
+  @Override
+  public boolean preferDirectBuffer() {
+    return true;
   }
 
   // To link with the underlying data structure in the native layer.
