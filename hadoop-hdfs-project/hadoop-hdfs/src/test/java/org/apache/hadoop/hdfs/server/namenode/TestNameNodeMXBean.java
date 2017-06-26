@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
@@ -774,17 +775,24 @@ public class TestNameNodeMXBean {
       }
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-      ObjectName mxbeanName = new ObjectName(
+      ObjectName replStateMBeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=ReplicatedBlocksState");
+      ObjectName ecBlkGrpStateMBeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=ECBlockGroupsState");
+      ObjectName namenodeMXBeanName = new ObjectName(
           "Hadoop:service=NameNode,name=NameNodeInfo");
 
       // Wait for the metrics to discover the unrecoverable block group
+      long expectedMissingBlockCount = 1L;
+      long expectedCorruptBlockCount = 1L;
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
         public Boolean get() {
           try {
             Long numMissingBlocks =
-                (Long) mbs.getAttribute(mxbeanName, "NumberOfMissingBlocks");
-            if (numMissingBlocks == 1L) {
+                (Long) mbs.getAttribute(namenodeMXBeanName,
+                    "NumberOfMissingBlocks");
+            if (numMissingBlocks == expectedMissingBlockCount) {
               return true;
             }
           } catch (Exception e) {
@@ -794,7 +802,43 @@ public class TestNameNodeMXBean {
         }
       }, 1000, 60000);
 
-      String corruptFiles = (String) (mbs.getAttribute(mxbeanName,
+      BlockManagerTestUtil.updateState(
+          cluster.getNamesystem().getBlockManager());
+
+      // Verification of missing blocks
+      long totalMissingBlocks = cluster.getNamesystem().getMissingBlocksCount();
+      Long replicaMissingBlocks =
+          (Long) mbs.getAttribute(replStateMBeanName,
+              "MissingBlocksStat");
+      Long ecMissingBlocks =
+          (Long) mbs.getAttribute(ecBlkGrpStateMBeanName,
+              "MissingECBlockGroupsStat");
+      assertEquals("Unexpected total missing blocks!",
+          expectedMissingBlockCount, totalMissingBlocks);
+      assertEquals("Unexpected total missing blocks!",
+          totalMissingBlocks,
+          (replicaMissingBlocks + ecMissingBlocks));
+      assertEquals("Unexpected total ec missing blocks!",
+          expectedMissingBlockCount, ecMissingBlocks.longValue());
+
+      // Verification of corrupt blocks
+      long totalCorruptBlocks =
+          cluster.getNamesystem().getCorruptReplicaBlocks();
+      Long replicaCorruptBlocks =
+          (Long) mbs.getAttribute(replStateMBeanName,
+              "CorruptBlocksStat");
+      Long ecCorruptBlocks =
+          (Long) mbs.getAttribute(ecBlkGrpStateMBeanName,
+              "CorruptECBlockGroupsStat");
+      assertEquals("Unexpected total corrupt blocks!",
+          expectedCorruptBlockCount, totalCorruptBlocks);
+      assertEquals("Unexpected total corrupt blocks!",
+          totalCorruptBlocks,
+          (replicaCorruptBlocks + ecCorruptBlocks));
+      assertEquals("Unexpected total ec corrupt blocks!",
+          expectedCorruptBlockCount, ecCorruptBlocks.longValue());
+
+      String corruptFiles = (String) (mbs.getAttribute(namenodeMXBeanName,
           "CorruptFiles"));
       int numCorruptFiles = ((Object[]) JSON.parse(corruptFiles)).length;
       assertEquals(1, numCorruptFiles);

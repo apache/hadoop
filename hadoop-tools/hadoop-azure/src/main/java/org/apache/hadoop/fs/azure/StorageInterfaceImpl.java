@@ -60,32 +60,50 @@ import com.microsoft.azure.storage.blob.PageRange;
 @InterfaceAudience.Private
 class StorageInterfaceImpl extends StorageInterface {
   private CloudBlobClient serviceClient;
+  private RetryPolicyFactory retryPolicyFactory;
+  private int timeoutIntervalInMs;
+
+  private void updateRetryPolicy() {
+    if (serviceClient != null && retryPolicyFactory != null) {
+      serviceClient.getDefaultRequestOptions().setRetryPolicyFactory(retryPolicyFactory);
+    }
+  }
+
+  private void updateTimeoutInMs() {
+    if (serviceClient != null && timeoutIntervalInMs > 0) {
+      serviceClient.getDefaultRequestOptions().setTimeoutIntervalInMs(timeoutIntervalInMs);
+    }
+  }
 
   @Override
   public void setRetryPolicyFactory(final RetryPolicyFactory retryPolicyFactory) {
-    serviceClient.getDefaultRequestOptions().setRetryPolicyFactory(
-            retryPolicyFactory);
+    this.retryPolicyFactory = retryPolicyFactory;
+    updateRetryPolicy();
   }
 
   @Override
   public void setTimeoutInMs(int timeoutInMs) {
-    serviceClient.getDefaultRequestOptions().setTimeoutIntervalInMs(
-            timeoutInMs);
+    timeoutIntervalInMs = timeoutInMs;
+    updateTimeoutInMs();
   }
 
   @Override
   public void createBlobClient(CloudStorageAccount account) {
     serviceClient = account.createCloudBlobClient();
+    updateRetryPolicy();
+    updateTimeoutInMs();
   }
 
   @Override
   public void createBlobClient(URI baseUri) {
-    serviceClient = new CloudBlobClient(baseUri);
+    createBlobClient(baseUri, (StorageCredentials)null);
   }
 
   @Override
   public void createBlobClient(URI baseUri, StorageCredentials credentials) {
     serviceClient = new CloudBlobClient(baseUri, credentials);
+    updateRetryPolicy();
+    updateTimeoutInMs();
   }
 
   @Override

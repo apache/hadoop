@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azure;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.PATH_DELIMITER;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -304,6 +303,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private boolean useLocalSasKeyMode = false;
 
   private String delegationToken;
+
+  /** The error message template when container is not accessible. */
+  static final String NO_ACCESS_TO_CONTAINER_MSG = "No credentials found for "
+      + "account %s in the configuration, and its container %s is not "
+      + "accessible using anonymous credentials. Please check if the container "
+      + "exists first. If it is not publicly available, you have to provide "
+      + "account credentials.";
+
   /**
    * A test hook interface that can modify the operation context we use for
    * Azure Storage operations, e.g. to inject errors.
@@ -481,6 +488,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
             useLocalSasKeyMode, conf);
       }
     }
+
+    // Configure Azure storage session.
+    configureAzureStorageSession();
 
     // Start an Azure storage session.
     //
@@ -776,26 +786,22 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     rootDirectory = container.getDirectoryReference("");
 
     // Check for container existence, and our ability to access it.
+    boolean canAccess;
     try {
-      if (!container.exists(getInstrumentedContext())) {
-        throw new AzureException("Container " + containerName + " in account "
-            + accountName + " not found, and we can't create"
-            + " it using anoynomous credentials, and no credentials found for them"
-            + " in the configuration.");
-      }
+      canAccess = container.exists(getInstrumentedContext());
     } catch (StorageException ex) {
-      throw new AzureException("Unable to access container " + containerName
-          + " in account " + accountName
-          + " using anonymous credentials, and no credentials found for them "
-          + " in the configuration.", ex);
+      LOG.error("Service returned StorageException when checking existence "
+          + "of container {} in account {}", containerName, accountName, ex);
+      canAccess = false;
+    }
+    if (!canAccess) {
+      throw new AzureException(String.format(NO_ACCESS_TO_CONTAINER_MSG,
+          accountName, containerName));
     }
 
     // Accessing the storage server unauthenticated using
     // anonymous credentials.
     isAnonymousCredentials = true;
-
-    // Configure Azure storage session.
-    configureAzureStorageSession();
   }
 
   private void connectUsingCredentials(String accountName,
@@ -821,9 +827,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
     // Can only create container if using account key credentials
     canCreateOrModifyContainer = credentials instanceof StorageCredentialsAccountAndKey;
-
-    // Configure Azure storage session.
-    configureAzureStorageSession();
   }
 
   /**
@@ -849,8 +852,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     rootDirectory = container.getDirectoryReference("");
 
     canCreateOrModifyContainer = true;
-
-    configureAzureStorageSession();
     tolerateOobAppends = false;
   }
 
@@ -1005,22 +1006,17 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // Check whether the account is configured with an account key.
       propertyValue = getAccountKeyFromConfiguration(accountName,
           sessionConfiguration);
-      if (propertyValue != null) {
-
+      if (StringUtils.isNotEmpty(propertyValue)) {
         // Account key was found.
         // Create the Azure storage session using the account key and container.
         connectUsingConnectionStringCredentials(
             getAccountFromAuthority(sessionUri),
             getContainerFromAuthority(sessionUri), propertyValue);
-
-        // Return to caller
-        return;
+      } else {
+        LOG.debug("The account access key is not configured for {}. "
+            + "Now try anonymous access.", sessionUri);
+        connectUsingAnonymousCredentials(sessionUri);
       }
-
-      // The account access is not configured for this cluster. Try anonymous
-      // access.
-      connectUsingAnonymousCredentials(sessionUri);
-
     } catch (Exception e) {
       // Caught exception while attempting to initialize the Azure File
       // System store, re-throw the exception.
@@ -2043,11 +2039,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
         // Get blob reference and open the input buffer stream.
         CloudBlobWrapper blob = getBlobReference(key);
-      BufferedInputStream inBufStream = new BufferedInputStream(
-          openInputStream(blob));
 
         // Return a data input stream.
-        DataInputStream inDataStream = new DataInputStream(inBufStream);
+        DataInputStream inDataStream = new DataInputStream(openInputStream(blob));
         return inDataStream;
     } catch (Exception e) {
       // Re-throw as an Azure storage exception.

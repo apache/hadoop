@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,13 +67,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Logger;
-
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -115,7 +114,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   volatile boolean isAMContainerRunning = false;
   volatile Container amContainer;
   
-  protected final Logger LOG = Logger.getLogger(AMSimulator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AMSimulator.class);
 
   // resource for AM container
   private final static int MR_AM_CONTAINER_RESOURCE_MEMORY_MB = 1024;
@@ -216,7 +215,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   @Override
   public void lastStep() throws Exception {
-    LOG.info(MessageFormat.format("Application {0} is shutting down.", appId));
+    LOG.info("Application {} is shutting down.", appId);
     // unregister tracking
     if (isTracked) {
       untrackApp();
@@ -224,7 +223,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
     // Finish AM container
     if (amContainer != null) {
-      LOG.info("AM container = " + amContainer.getId() + " reported to finish");
+      LOG.info("AM container = {} reported to finish", amContainer.getId());
       se.getNmMap().get(amContainer.getNodeId()).cleanupContainer(
           amContainer.getId());
     } else {
@@ -343,7 +342,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
         return null;
       }
     });
-    LOG.info(MessageFormat.format("Submit a new application {0}", appId));
+    LOG.info("Submit a new application {}", appId);
   }
 
   private void registerAM()
@@ -370,8 +369,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
       }
     });
 
-    LOG.info(MessageFormat.format(
-            "Register the application master for application {0}", appId));
+    LOG.info("Register the application master for application {}", appId);
   }
 
   private void trackApp() {

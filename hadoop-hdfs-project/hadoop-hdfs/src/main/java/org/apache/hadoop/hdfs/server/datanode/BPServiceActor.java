@@ -541,7 +541,7 @@ class BPServiceActor implements Runnable {
       //Thread is started already
       return;
     }
-    bpThread = new Thread(this, formatThreadName("heartbeating", nnAddr));
+    bpThread = new Thread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
     bpThread.start();
 
@@ -553,8 +553,8 @@ class BPServiceActor implements Runnable {
   private String formatThreadName(
       final String action,
       final InetSocketAddress addr) {
-    final String prefix = bpos.getBlockPoolId() != null ? bpos.getBlockPoolId()
-        : bpos.getNameserviceId();
+    String bpId = bpos.getBlockPoolId(true);
+    final String prefix = bpId != null ? bpId : bpos.getNameserviceId();
     return prefix + " " + action + " to " + addr;
   }
 

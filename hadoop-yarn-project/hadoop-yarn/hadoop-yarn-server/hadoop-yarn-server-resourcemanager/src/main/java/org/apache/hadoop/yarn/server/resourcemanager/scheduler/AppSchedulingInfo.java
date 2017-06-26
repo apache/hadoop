@@ -18,6 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -31,27 +44,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.LocalitySchedulingPlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceRequestUpdateResult;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
-
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * This class keeps track of all the consumption of an application. This also
  * keeps track of current running/completed containers for the application.
@@ -260,10 +258,13 @@ public class AppSchedulingInfo {
 
     Resource lastRequestCapability =
         lastRequest != null ? lastRequest.getCapability() : Resources.none();
-    metrics.incrPendingResources(user,
+    metrics.incrPendingResources(request.getNodeLabelExpression(), user,
         request.getNumContainers(), request.getCapability());
-    metrics.decrPendingResources(user,
-        lastRequestContainers, lastRequestCapability);
+
+    if(lastRequest != null) {
+      metrics.decrPendingResources(lastRequest.getNodeLabelExpression(), user,
+          lastRequestContainers, lastRequestCapability);
+    }
 
     // update queue:
     Resource increasedResource =
@@ -419,7 +420,7 @@ public class AppSchedulingInfo {
       writeLock.lock();
 
       if (null != containerAllocated) {
-        updateMetricsForAllocatedContainer(type, containerAllocated);
+        updateMetricsForAllocatedContainer(type, node, containerAllocated);
       }
 
       return schedulerKeyToPlacementSets.get(schedulerKey).allocate(
@@ -443,10 +444,12 @@ public class AppSchedulingInfo {
       for (SchedulingPlacementSet ps : schedulerKeyToPlacementSets.values()) {
         PendingAsk ask = ps.getPendingAsk(ResourceRequest.ANY);
         if (ask.getCount() > 0) {
-          oldMetrics.decrPendingResources(user, ask.getCount(),
-              ask.getPerAllocationResource());
-          newMetrics.incrPendingResources(user, ask.getCount(),
-              ask.getPerAllocationResource());
+          oldMetrics.decrPendingResources(
+              ps.getPrimaryRequestedNodePartition(),
+              user, ask.getCount(), ask.getPerAllocationResource());
+          newMetrics.incrPendingResources(
+              ps.getPrimaryRequestedNodePartition(),
+              user, ask.getCount(), ask.getPerAllocationResource());
 
           Resource delta = Resources.multiply(ask.getPerAllocationResource(),
               ask.getCount());
@@ -476,8 +479,8 @@ public class AppSchedulingInfo {
       for (SchedulingPlacementSet ps : schedulerKeyToPlacementSets.values()) {
         PendingAsk ask = ps.getPendingAsk(ResourceRequest.ANY);
         if (ask.getCount() > 0) {
-          metrics.decrPendingResources(user, ask.getCount(),
-              ask.getPerAllocationResource());
+          metrics.decrPendingResources(ps.getPrimaryRequestedNodePartition(),
+              user, ask.getCount(), ask.getPerAllocationResource());
 
           // Update Queue
           queue.decPendingResource(
@@ -537,8 +540,8 @@ public class AppSchedulingInfo {
         return;
       }
 
-      metrics.allocateResources(user, 1, rmContainer.getAllocatedResource(),
-          false);
+      metrics.allocateResources(rmContainer.getNodeLabelExpression(),
+          user, 1, rmContainer.getAllocatedResource(), false);
     } finally {
       this.writeLock.unlock();
     }
@@ -562,8 +565,8 @@ public class AppSchedulingInfo {
     }
   }
 
-  private void updateMetricsForAllocatedContainer(
-    NodeType type, Container containerAllocated) {
+  private void updateMetricsForAllocatedContainer(NodeType type,
+      SchedulerNode node, Container containerAllocated) {
     QueueMetrics metrics = queue.getMetrics();
     if (pending) {
       // once an allocation is done we assume the application is
@@ -579,8 +582,10 @@ public class AppSchedulingInfo {
           + containerAllocated.getResource() + " type="
           + type);
     }
-    metrics.allocateResources(user, 1, containerAllocated.getResource(),
-        true);
+    if(node != null) {
+      metrics.allocateResources(node.getPartition(), user, 1,
+          containerAllocated.getResource(), true);
+    }
     metrics.incrNodeTypeAggregations(user, type);
   }
 

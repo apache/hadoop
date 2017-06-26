@@ -21,8 +21,10 @@ import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.MetricsInvariantChecker;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -39,7 +41,7 @@ import java.util.UUID;
 @RunWith(value = Parameterized.class)
 @NotThreadSafe
 @SuppressWarnings("VisibilityModifier")
-public class BaseSLSRunnerTest {
+public abstract class BaseSLSRunnerTest {
 
   @Parameter(value = 0)
   public String schedulerType;
@@ -54,6 +56,11 @@ public class BaseSLSRunnerTest {
   public String nodeFile;
 
   protected SLSRunner sls;
+  protected String ongoingInvariantFile;
+  protected String exitInvariantFile;
+
+  @Before
+  public abstract void setup();
 
   @After
   public void tearDown() throws InterruptedException {
@@ -82,22 +89,30 @@ public class BaseSLSRunnerTest {
     switch (traceType) {
     case "OLD_SLS":
       args = new String[] {"-inputsls", traceLocation, "-output",
-          slsOutputDir.getAbsolutePath()};
+          slsOutputDir.getAbsolutePath() };
       break;
     case "OLD_RUMEN":
       args = new String[] {"-inputrumen", traceLocation, "-output",
-          slsOutputDir.getAbsolutePath()};
+          slsOutputDir.getAbsolutePath() };
       break;
     default:
       args = new String[] {"-tracetype", traceType, "-tracelocation",
-          traceLocation, "-output", slsOutputDir.getAbsolutePath()};
+          traceLocation, "-output", slsOutputDir.getAbsolutePath() };
     }
 
     if (nodeFile != null) {
-      args = ArrayUtils.addAll(args, new String[] {"-nodes", nodeFile});
+      args = ArrayUtils.addAll(args, new String[] {"-nodes", nodeFile });
     }
 
+    // enable continuous invariant checks
     conf.set(YarnConfiguration.RM_SCHEDULER, schedulerType);
+    if (ongoingInvariantFile != null) {
+      conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+          MetricsInvariantChecker.class.getCanonicalName());
+      conf.set(MetricsInvariantChecker.INVARIANTS_FILE, ongoingInvariantFile);
+      conf.setBoolean(MetricsInvariantChecker.THROW_ON_VIOLATION, true);
+    }
+
     sls = new SLSRunner(conf);
     sls.run(args);
 
@@ -114,6 +129,22 @@ public class BaseSLSRunnerTest {
         break;
       }
       timeout--;
+    }
+    shutdownHookInvariantCheck();
+  }
+
+  /**
+   * Checks exit invariants (e.g., number of apps submitted, completed, etc.).
+   */
+  private void shutdownHookInvariantCheck() {
+
+    if(exitInvariantFile!=null) {
+      MetricsInvariantChecker ic = new MetricsInvariantChecker();
+      Configuration conf = new Configuration();
+      conf.set(MetricsInvariantChecker.INVARIANTS_FILE, exitInvariantFile);
+      conf.setBoolean(MetricsInvariantChecker.THROW_ON_VIOLATION, true);
+      ic.init(conf, null, null);
+      ic.editSchedule();
     }
   }
 

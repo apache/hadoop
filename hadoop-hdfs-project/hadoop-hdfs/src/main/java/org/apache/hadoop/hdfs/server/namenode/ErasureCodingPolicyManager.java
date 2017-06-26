@@ -29,6 +29,7 @@ import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -68,6 +69,11 @@ public final class ErasureCodingPolicyManager {
   private Map<Byte, ErasureCodingPolicy> userPoliciesByID;
 
   /**
+   * All removed policies sorted by name.
+   */
+  private Map<String, ErasureCodingPolicy> removedPoliciesByName;
+
+  /**
    * All enabled policies maintained in NN memory for fast querying,
    * identified and sorted by its name.
    */
@@ -91,6 +97,7 @@ public final class ErasureCodingPolicyManager {
         DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
     this.userPoliciesByID = new TreeMap<>();
     this.userPoliciesByName = new TreeMap<>();
+    this.removedPoliciesByName = new TreeMap<>();
     this.enabledPoliciesByName = new TreeMap<>();
     for (String policyName : policyNames) {
       if (policyName.trim().isEmpty()) {
@@ -242,5 +249,23 @@ public final class ErasureCodingPolicyManager {
     byte currentId = this.userPoliciesByID.keySet().stream()
         .max(Byte::compareTo).orElse(USER_DEFINED_POLICY_START_ID);
     return (byte) (currentId + 1);
+  }
+
+  public synchronized void removePolicy(String name) {
+    if (SystemErasureCodingPolicies.getByName(name) != null) {
+      throw new IllegalArgumentException("System erasure coding policy " +
+          name + " cannot be removed");
+    }
+    ErasureCodingPolicy policy = userPoliciesByName.get(name);
+    if (policy == null) {
+      throw new IllegalArgumentException("The policy name " +
+          name + " does not exists");
+    }
+    enabledPoliciesByName.remove(name);
+    removedPoliciesByName.put(name, policy);
+  }
+
+  public List<ErasureCodingPolicy> getRemovedPolicies() {
+    return removedPoliciesByName.values().stream().collect(Collectors.toList());
   }
 }

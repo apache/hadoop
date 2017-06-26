@@ -233,7 +233,7 @@ Usage: `hdfs oiv_legacy [OPTIONS] -i INPUT_FILE -o OUTPUT_FILE`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Valid options are Ls (default), XML, Delimited, Indented, and FileDistribution. |
+| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Valid options are Ls (default), XML, Delimited, Indented, FileDistribution and NameDistribution. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
 | `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
@@ -370,6 +370,7 @@ Usage:
         hdfs dfsadmin [-getDatanodeInfo <datanode_host:ipc_port>]
         hdfs dfsadmin [-metasave filename]
         hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
+        hdfs dfsadmin [-listOpenFiles]
         hdfs dfsadmin [-help [cmd]]
 
 | COMMAND\_OPTION | Description |
@@ -406,6 +407,7 @@ Usage:
 | `-getDatanodeInfo` \<datanode\_host:ipc\_port\> | Get the information about the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo) for the detail. |
 | `-metasave` filename | Save Namenode's primary data structures to *filename* in the directory specified by hadoop.log.dir property. *filename* is overwritten if it exists. *filename* will contain one line for each of the following<br/>1. Datanodes heart beating with Namenode<br/>2. Blocks waiting to be replicated<br/>3. Blocks currently being replicated<br/>4. Blocks waiting to be deleted |
 | `-triggerBlockReport` `[-incremental]` \<datanode\_host:ipc\_port\> | Trigger a block report for the given datanode. If 'incremental' is specified, it will be otherwise, it will be a full block report. |
+| `-listOpenFiles` | List all open files currently managed by the NameNode along with client name and client machine accessing them. |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 Runs a HDFS dfsadmin client.
@@ -442,7 +444,8 @@ Usage:
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
-         [-usage [cmd ...]]
+         [-addPolicies -policyFile <file>]
+         [-listCodecs]
          [-help [cmd ...]]
 
 | COMMAND\_OPTION | Description |
@@ -451,6 +454,8 @@ Usage:
 |-getPolicy| Get ErasureCoding policy information about a specified path|
 |-unsetPolicy| Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory |
 |-listPolicies| Lists all supported ErasureCoding policies|
+|-addPolicies| Add a list of erasure coding policies|
+|-listCodecs| Get the list of supported erasure coding codecs and coders in system|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.
 

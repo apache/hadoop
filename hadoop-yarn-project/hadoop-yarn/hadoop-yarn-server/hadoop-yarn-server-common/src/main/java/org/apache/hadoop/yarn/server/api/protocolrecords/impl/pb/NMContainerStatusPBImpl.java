@@ -256,9 +256,7 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
       builder.setContainerId(convertToProtoFormat(this.containerId));
     }
 
-    if (this.resource != null
-        && !((ResourcePBImpl) this.resource).getProto().equals(
-          builder.getResource())) {
+    if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
 
@@ -295,7 +293,7 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl) t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   private ContainerStateProto

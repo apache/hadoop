@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -89,6 +90,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -115,7 +118,10 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Create
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEditsFromTxidResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFilesBatchResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
@@ -1249,6 +1255,21 @@ public class PBHelperClient {
         proto.getKeyName());
   }
 
+  public static OpenFilesBatchResponseProto convert(OpenFileEntry
+      openFileEntry) {
+    return OpenFilesBatchResponseProto.newBuilder()
+        .setId(openFileEntry.getId())
+        .setPath(openFileEntry.getFilePath())
+        .setClientName(openFileEntry.getClientName())
+        .setClientMachine(openFileEntry.getClientMachine())
+        .build();
+  }
+
+  public static OpenFileEntry convert(OpenFilesBatchResponseProto proto) {
+    return new OpenFileEntry(proto.getId(), proto.getPath(),
+        proto.getClientName(), proto.getClientMachine());
+  }
+
   public static AclStatus convert(GetAclStatusResponseProto e) {
     AclStatusProto r = e.getResult();
     AclStatus.Builder builder = new AclStatus.Builder();
@@ -1567,7 +1588,8 @@ public class PBHelperClient {
         snapshotSpaceConsumed(cs.getSnapshotSpaceConsumed()).
         quota(cs.getQuota()).
         spaceConsumed(cs.getSpaceConsumed()).
-        spaceQuota(cs.getSpaceQuota());
+        spaceQuota(cs.getSpaceQuota()).
+        erasureCodingPolicy(cs.getErasureCodingPolicy());
     if (cs.hasTypeQuotaInfos()) {
       addStorageTypes(cs.getTypeQuotaInfos(), builder);
     }
@@ -1715,6 +1737,21 @@ public class PBHelperClient {
     result[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX] =
         res.getPendingDeletionBlocks();
     return result;
+  }
+
+  public static BlocksStats convert(
+      GetFsBlocksStatsResponseProto res) {
+    return new BlocksStats(res.getLowRedundancy(),
+        res.getCorruptBlocks(), res.getMissingBlocks(),
+        res.getMissingReplOneBlocks(), res.getBlocksInFuture(),
+        res.getPendingDeletionBlocks());
+  }
+
+  public static ECBlockGroupsStats convert(
+      GetFsECBlockGroupsStatsResponseProto res) {
+    return new ECBlockGroupsStats(res.getLowRedundancy(),
+        res.getCorruptBlocks(), res.getMissingBlocks(),
+        res.getBlocksInFuture(), res.getPendingDeletionBlocks());
   }
 
   public static DatanodeReportTypeProto convert(DatanodeReportType t) {
@@ -2124,6 +2161,40 @@ public class PBHelperClient {
     return result.build();
   }
 
+  public static GetFsBlocksStatsResponseProto convert(
+      BlocksStats blocksStats) {
+    GetFsBlocksStatsResponseProto.Builder result =
+        GetFsBlocksStatsResponseProto.newBuilder();
+    result.setLowRedundancy(
+        blocksStats.getLowRedundancyBlocksStat());
+    result.setCorruptBlocks(
+        blocksStats.getCorruptBlocksStat());
+    result.setMissingBlocks(
+        blocksStats.getMissingReplicaBlocksStat());
+    result.setMissingReplOneBlocks(
+        blocksStats.getMissingReplicationOneBlocksStat());
+    result.setBlocksInFuture(
+        blocksStats.getBytesInFutureBlocksStat());
+    result.setPendingDeletionBlocks(
+        blocksStats.getPendingDeletionBlocksStat());
+    return result.build();
+  }
+
+  public static GetFsECBlockGroupsStatsResponseProto convert(
+      ECBlockGroupsStats ecBlockGroupsStats) {
+    GetFsECBlockGroupsStatsResponseProto.Builder result =
+        GetFsECBlockGroupsStatsResponseProto.newBuilder();
+    result.setLowRedundancy(
+        ecBlockGroupsStats.getLowRedundancyBlockGroupsStat());
+    result.setCorruptBlocks(ecBlockGroupsStats.getCorruptBlockGroupsStat());
+    result.setMissingBlocks(ecBlockGroupsStats.getMissingBlockGroupsStat());
+    result.setBlocksInFuture(
+        ecBlockGroupsStats.getBytesInFutureBlockGroupsStat());
+    result.setPendingDeletionBlocks(
+        ecBlockGroupsStats.getPendingDeletionBlockGroupsStat());
+    return result.build();
+  }
+
   public static DatanodeReportType convert(DatanodeReportTypeProto t) {
     switch (t) {
     case ALL: return DatanodeReportType.ALL;
@@ -2211,7 +2282,8 @@ public class PBHelperClient {
         setSnapshotSpaceConsumed(cs.getSnapshotSpaceConsumed()).
         setQuota(cs.getQuota()).
         setSpaceConsumed(cs.getSpaceConsumed()).
-        setSpaceQuota(cs.getSpaceQuota());
+        setSpaceQuota(cs.getSpaceQuota()).
+        setErasureCodingPolicy(cs.getErasureCodingPolicy());
 
     if (cs.isTypeQuotaSet() || cs.isTypeConsumedAvailable()) {
       builder.setTypeQuotaInfos(getBuilder(cs));

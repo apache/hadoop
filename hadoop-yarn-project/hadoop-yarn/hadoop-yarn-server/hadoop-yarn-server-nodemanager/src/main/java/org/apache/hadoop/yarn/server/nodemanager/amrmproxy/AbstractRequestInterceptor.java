@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
-import org.apache.hadoop.conf.Configuration;
+import java.io.IOException;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
-
-import java.io.IOException;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 
 /**
  * Implements the RequestInterceptor interface and provides common functionality
@@ -83,6 +84,16 @@ public abstract class AbstractRequestInterceptor implements
   }
 
   /**
+   * Recover {@link RequestInterceptor} state from store.
+   */
+  @Override
+  public void recover(Map<String, byte[]> recoveredDataMap) {
+    if (this.nextInterceptor != null) {
+      this.nextInterceptor.recover(recoveredDataMap);
+    }
+  }
+
+  /**
    * Disposes the {@link RequestInterceptor}.
    */
   @Override
@@ -113,8 +124,8 @@ public abstract class AbstractRequestInterceptor implements
    *
    * @param request ApplicationMaster allocate request
    * @return Distribtued Scheduler Allocate Response
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException if fails
+   * @throws IOException if fails
    */
   @Override
   public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
@@ -130,8 +141,8 @@ public abstract class AbstractRequestInterceptor implements
    *
    * @param request ApplicationMaster registration request
    * @return Distributed Scheduler Register Response
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException if fails
+   * @throws IOException if fails
    */
   @Override
   public RegisterDistributedSchedulingAMResponse
@@ -140,5 +151,17 @@ public abstract class AbstractRequestInterceptor implements
       throws YarnException, IOException {
     return (this.nextInterceptor != null) ? this.nextInterceptor
         .registerApplicationMasterForDistributedScheduling(request) : null;
+  }
+
+  /**
+   * A helper method for getting NM state store.
+   *
+   * @return the NMSS instance
+   */
+  public NMStateStoreService getNMStateStore() {
+    if (this.appContext == null || this.appContext.getNMCotext() == null) {
+      return null;
+    }
+    return this.appContext.getNMCotext().getNMStateStore();
   }
 }

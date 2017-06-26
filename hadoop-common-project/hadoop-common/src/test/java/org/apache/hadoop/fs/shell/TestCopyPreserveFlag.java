@@ -76,10 +76,10 @@ public class TestCopyPreserveFlag {
         output.writeChar('\n');
     }
     output.close();
-    fs.setTimes(FROM, MODIFICATION_TIME, ACCESS_TIME);
     fs.setPermission(FROM, PERMISSIONS);
-    fs.setTimes(DIR_FROM, MODIFICATION_TIME, ACCESS_TIME);
+    fs.setTimes(FROM, MODIFICATION_TIME, ACCESS_TIME);
     fs.setPermission(DIR_FROM, PERMISSIONS);
+    fs.setTimes(DIR_FROM, MODIFICATION_TIME, ACCESS_TIME);
   }
 
   @After

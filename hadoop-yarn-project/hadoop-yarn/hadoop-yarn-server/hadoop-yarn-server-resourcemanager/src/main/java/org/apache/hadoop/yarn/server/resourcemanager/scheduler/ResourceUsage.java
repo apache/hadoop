@@ -28,7 +28,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -46,6 +45,7 @@ public class ResourceUsage {
   private Map<String, UsageByLabel> usages;
   // short for no-label :)
   private static final String NL = CommonNodeLabelsManager.NO_LABEL;
+  private final UsageByLabel usageNoLabel;
 
   public ResourceUsage() {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -53,7 +53,8 @@ public class ResourceUsage {
     writeLock = lock.writeLock();
 
     usages = new HashMap<String, UsageByLabel>();
-    usages.put(NL, new UsageByLabel(NL));
+    usageNoLabel = new UsageByLabel(NL);
+    usages.put(NL, usageNoLabel);
   }
 
   // Usage enum here to make implement cleaner
@@ -323,10 +324,9 @@ public class ResourceUsage {
   }
 
   private Resource _get(String label, ResourceType type) {
-    if (label == null) {
-      label = RMNodeLabelsManager.NO_LABEL;
+    if (label == null || label.equals(NL)) {
+      return normalize(usageNoLabel.resArr[type.idx]);
     }
-    
     try {
       readLock.lock();
       UsageByLabel usage = usages.get(label);
@@ -362,8 +362,8 @@ public class ResourceUsage {
   }
 
   private UsageByLabel getAndAddIfMissing(String label) {
-    if (label == null) {
-      label = RMNodeLabelsManager.NO_LABEL;
+    if (label == null || label.equals(NL)) {
+      return usageNoLabel;
     }
     if (!usages.containsKey(label)) {
       UsageByLabel u = new UsageByLabel(label);

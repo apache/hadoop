@@ -108,6 +108,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String USER_LIMIT_FACTOR = "user-limit-factor";
 
   @Private
+  public static final String USER_WEIGHT = "weight";
+
+  @Private
+  public static final String USER_SETTINGS = "user-settings";
+
+  @Private
+  public static final float DEFAULT_USER_WEIGHT = 1.0f;
+
+  @Private
   public static final String STATE = "state";
   
   @Private
@@ -1411,5 +1420,30 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(getOrderingPolicyGlobalConfigKey(
         QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
         UNDER_UTILIZED_PREEMPTION_MOVE_RESERVATION), allowMoveReservation);
+  }
+
+  /**
+   * Get the weights of all users at this queue level from the configuration.
+   * Used in computing user-specific user limit, relative to other users.
+   * @param queuePath full queue path
+   * @return map of user weights, if they exists. Otherwise, return empty map.
+   */
+  public Map<String, Float> getAllUserWeightsForQueue(String queuePath) {
+    Map <String, Float> userWeights = new HashMap <String, Float>();
+    String qPathPlusPrefix =
+        getQueuePrefix(queuePath).replaceAll("\\.", "\\\\.")
+        + USER_SETTINGS + "\\.";
+    String weightKeyRegex =
+        qPathPlusPrefix + "\\w+\\." + USER_WEIGHT;
+    Map<String, String> props = getValByRegex(weightKeyRegex);
+    for (Entry<String, String> e : props.entrySet()) {
+      String userName =
+          e.getKey().replaceFirst(qPathPlusPrefix, "")
+          .replaceFirst("\\." + USER_WEIGHT, "");
+      if (userName != null && !userName.isEmpty()) {
+        userWeights.put(userName, new Float(e.getValue()));
+      }
+    }
+    return userWeights;
   }
 }

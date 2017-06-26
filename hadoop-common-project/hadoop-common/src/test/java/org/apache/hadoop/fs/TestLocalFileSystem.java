@@ -659,9 +659,9 @@ public class TestLocalFileSystem {
 
     try {
       FSDataOutputStreamBuilder builder =
-          fileSys.newFSDataOutputStreamBuilder(path);
+          fileSys.createFile(path);
       FSDataOutputStream out = builder.build();
-      String content = "Create with a generic type of createBuilder!";
+      String content = "Create with a generic type of createFile!";
       byte[] contentOrigin = content.getBytes("UTF8");
       out.write(contentOrigin);
       out.close();
@@ -680,7 +680,7 @@ public class TestLocalFileSystem {
     // Test value not being set for replication, block size, buffer size
     // and permission
     FSDataOutputStreamBuilder builder =
-        fileSys.newFSDataOutputStreamBuilder(path);
+        fileSys.createFile(path);
     builder.build();
     Assert.assertEquals("Should be default block size",
         builder.getBlockSize(), fileSys.getDefaultBlockSize());
@@ -694,8 +694,8 @@ public class TestLocalFileSystem {
         builder.getPermission(), FsPermission.getFileDefault());
 
     // Test set 0 to replication, block size and buffer size
-    builder = fileSys.newFSDataOutputStreamBuilder(path);
-    builder.setBufferSize(0).setBlockSize(0).setReplication((short) 0);
+    builder = fileSys.createFile(path);
+    builder.bufferSize(0).blockSize(0).replication((short) 0);
     Assert.assertEquals("Block size should be 0",
         builder.getBlockSize(), 0);
     Assert.assertEquals("Replication factor should be 0",

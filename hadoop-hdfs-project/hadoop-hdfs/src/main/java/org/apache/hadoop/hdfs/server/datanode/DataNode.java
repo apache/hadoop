@@ -1415,7 +1415,7 @@ public class DataNode extends ReconfigurableBase
 
     metrics = DataNodeMetrics.create(getConf(), getDisplayName());
     peerMetrics = dnConf.peerStatsEnabled ?
-        DataNodePeerMetrics.create(getConf(), getDisplayName()) : null;
+        DataNodePeerMetrics.create(getDisplayName()) : null;
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     ecWorker = new ErasureCodingWorker(getConf(), this);

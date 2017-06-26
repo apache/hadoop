@@ -423,6 +423,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long
       DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_DEFAULT = 25;
 
+  public static final String DFS_NAMENODE_FSLOCK_FAIR_KEY =
+      "dfs.namenode.fslock.fair";
+  public static final boolean DFS_NAMENODE_FSLOCK_FAIR_DEFAULT = true;
+
   public static final String  DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY =
       "dfs.namenode.lock.detailed-metrics.enabled";
   public static final boolean DFS_NAMENODE_LOCK_DETAILED_METRICS_DEFAULT =
@@ -464,18 +468,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_METRICS_SESSION_ID_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_METRICS_SESSION_ID_KEY;
   public static final String  DFS_METRICS_PERCENTILES_INTERVALS_KEY = "dfs.metrics.percentiles.intervals";
-
-  // The following setting is not meant to be changed by administrators.
-  public static final String DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_KEY =
-      "dfs.metrics.rolling.averages.window.length";
-  public static final String DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_DEFAULT =
-      "5m";
-
-  // The following setting is not meant to be changed by administrators.
-  public static final String DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_KEY =
-      "dfs.metrics.rolling.average.num.windows";
-  public static final int DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_DEFAULT =
-      36;
 
   public static final String  DFS_DATANODE_PEER_STATS_ENABLED_KEY =
       "dfs.datanode.peer.stats.enabled";
@@ -885,6 +877,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY;
   public static final int    DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES_DEFAULT = 100;
   public static final String DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES = "dfs.namenode.list.encryption.zones.num.responses";
+  public static final String DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES =
+      "dfs.namenode.list.openfiles.num.responses";
+  public static final int    DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES_DEFAULT =
+      1000;
   public static final String DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_KEY = "dfs.namenode.edekcacheloader.interval.ms";
   public static final int DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_DEFAULT = 1000;
   public static final String DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_KEY = "dfs.namenode.edekcacheloader.initial.delay.ms";
@@ -1089,7 +1085,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_USE_DFS_NETWORK_TOPOLOGY_KEY =
       "dfs.use.dfs.network.topology";
-  public static final boolean DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT = false;
+  public static final boolean DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT = true;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated

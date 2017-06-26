@@ -49,7 +49,7 @@
     <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
 
     <kafka.version>0.8.2.1</kafka.version>
-    <hbase.version>1.2.4</hbase.version>
+    <hbase.version>1.2.6</hbase.version>
     <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
     <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
 
@@ -130,7 +130,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.11.86</aws-java-sdk.version>
+    <aws-java-sdk.version>1.11.134</aws-java-sdk.version>
     <hsqldb.version>2.3.4</hsqldb.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
@@ -892,9 +892,9 @@
         <version>3.1.4</version>
       </dependency>
       <dependency>
-        <groupId>com.fasterxml</groupId>
-        <artifactId>aalto-xml</artifactId>
-        <version>1.0.0</version>
+        <groupId>com.fasterxml.woodstox</groupId>
+        <artifactId>woodstox-core</artifactId>
+        <version>5.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>

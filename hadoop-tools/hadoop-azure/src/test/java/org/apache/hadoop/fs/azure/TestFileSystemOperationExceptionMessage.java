@@ -21,8 +21,12 @@ import java.net.URI;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.NO_ACCESS_TO_CONTAINER_MSG;
 
 
 public class TestFileSystemOperationExceptionMessage extends
@@ -41,11 +45,6 @@ public class TestFileSystemOperationExceptionMessage extends
     String wasbUri = String.format("wasb://%s@%s",
         testContainer, testStorageAccount);
 
-    String expectedErrorMessage =
-        String.format("Container %s in account %s not found, and we can't create it "
-            + "using anoynomous credentials, and no credentials found for "
-            + "them in the configuration.", testContainer, testStorageAccount);
-
     fs = new NativeAzureFileSystem();
     try {
       fs.initialize(new URI(wasbUri), conf);
@@ -63,7 +62,9 @@ public class TestFileSystemOperationExceptionMessage extends
             || exceptionMessage.length() == 0) {
           Assert.fail();}
         else {
-          Assert.assertTrue(exceptionMessage.equals(expectedErrorMessage));
+          GenericTestUtils.assertExceptionContains(String.format(
+              NO_ACCESS_TO_CONTAINER_MSG, testStorageAccount, testContainer),
+              ex);
         }
       } else {
         Assert.fail();

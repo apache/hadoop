@@ -30,6 +30,7 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -99,6 +100,18 @@ public class TestConfiguration extends TestCase {
     out.write("<configuration>\n");
   }
 
+  private void writeHeader() throws IOException{
+    out.write("<?xml version=\"1.0\"?>\n");
+  }
+
+  private void writeHeader(String encoding) throws IOException{
+    out.write("<?xml version=\"1.0\" encoding=\"" + encoding + "\"?>\n");
+  }
+
+  private void writeConfiguration() throws IOException{
+    out.write("<configuration>\n");
+  }
+
   private void endConfig() throws IOException{
     out.write("</configuration>\n");
     out.close();
@@ -118,6 +131,18 @@ public class TestConfiguration extends TestCase {
 
   private void endFallback() throws IOException {
     out.write("</xi:fallback>\n ");
+  }
+
+  private void declareEntity(String root, String entity, String value)
+      throws IOException {
+    out.write("<!DOCTYPE " + root
+        + " [\n<!ENTITY " + entity + " \"" + value + "\">\n]>");
+  }
+
+  private void declareSystemEntity(String root, String entity, String value)
+      throws IOException {
+    out.write("<!DOCTYPE " + root
+        + " [\n<!ENTITY " + entity + " SYSTEM \"" + value + "\">\n]>");
   }
 
   public void testInputStreamResource() throws Exception {
@@ -547,6 +572,63 @@ public class TestConfiguration extends TestCase {
     assertEquals(conf.get("g"), "h");
     assertEquals(conf.get("i"), "j");
     assertEquals(conf.get("k"), "l");
+    tearDown();
+  }
+
+  public void testCharsetInDocumentEncoding() throws Exception {
+    tearDown();
+    out=new BufferedWriter(new OutputStreamWriter(new FileOutputStream(CONFIG),
+        StandardCharsets.ISO_8859_1));
+    writeHeader(StandardCharsets.ISO_8859_1.displayName());
+    writeConfiguration();
+    appendProperty("a", "b");
+    appendProperty("c", "Müller");
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(conf.get("a"), "b");
+    assertEquals(conf.get("c"), "Müller");
+    tearDown();
+  }
+
+  public void testEntityReference() throws Exception {
+    tearDown();
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    writeHeader();
+    declareEntity("configuration", "d", "d");
+    writeConfiguration();
+    appendProperty("a", "b");
+    appendProperty("c", "&d;");
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(conf.get("a"), "b");
+    assertEquals(conf.get("c"), "d");
+    tearDown();
+  }
+
+  public void testSystemEntityReference() throws Exception {
+    tearDown();
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    out.write("d");
+    out.close();
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    writeHeader();
+    declareSystemEntity("configuration", "d", CONFIG2);
+    writeConfiguration();
+    appendProperty("a", "b");
+    appendProperty("c", "&d;");
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(conf.get("a"), "b");
+    assertEquals(conf.get("c"), "d");
     tearDown();
   }
 

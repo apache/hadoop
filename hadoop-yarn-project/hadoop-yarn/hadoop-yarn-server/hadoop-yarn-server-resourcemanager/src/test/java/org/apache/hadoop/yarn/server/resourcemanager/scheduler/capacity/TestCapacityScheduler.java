@@ -2384,8 +2384,10 @@ public class TestCapacityScheduler {
     sch.getApplicationAttempt(appAttemptId).getLiveContainersMap()
         .put(newContainerId, rmContainer);
     QueueMetrics queueA1M = queueA1.getMetrics();
-    queueA1M.incrPendingResources("user1", 1, resource);
-    queueA1M.allocateResources("user1", resource);
+    queueA1M.incrPendingResources(rmContainer.getNodeLabelExpression(),
+        "user1", 1, resource);
+    queueA1M.allocateResources(rmContainer.getNodeLabelExpression(),
+        "user1", resource);
     // remove attempt
     sch.handle(new AppAttemptRemovedSchedulerEvent(appAttemptId,
         RMAppAttemptState.KILLED, true));

@@ -570,5 +570,46 @@
         </comparator>
       </comparators>
     </test>
+
+    <test> <!-- TESTED -->
+      <description>count: file using absolute path with option -e to show erasurecoding policy of a directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir1</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /dir1 -policy RS-6-3-64k</ec-admin-command>
+        <command>-fs NAMENODE -touchz /dir1/file1</command>
+        <command>-fs NAMENODE -touchz /dir1/file2</command>
+        <command>-fs NAMENODE -count -e -v /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*1( |\t)*2( |\t)*0 EC:[A-Za-z0-9-]{1,}( )*/dir1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>count: file using absolute path with option -e to show erasurecoding policy of a file and option -v to show head information</description>
+      <test-commands>
+        <command>-fs NAMENODE -touchz /file1</command>
+        <command>-fs NAMENODE -count -e -v /file1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /file1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*DIR_COUNT   FILE_COUNT       CONTENT_SIZE( )*ERASURECODING_POLICY( )*PATHNAME</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*0( |\t)*1( |\t)*0 [A-Za-z0-9-]{1,}( )*/file1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

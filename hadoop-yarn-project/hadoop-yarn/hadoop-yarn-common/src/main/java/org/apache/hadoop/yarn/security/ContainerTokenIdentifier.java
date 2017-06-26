@@ -132,7 +132,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     builder.setNmHostAddr(hostName);
     builder.setAppSubmitter(appSubmitter);
     if (r != null) {
-      builder.setResource(((ResourcePBImpl)r).getProto());
+      builder.setResource(ProtoUtils.convertToProtoFormat(r));
     }
     builder.setExpiryTimeStamp(expiryTimeStamp);
     builder.setMasterKeyId(masterKeyId);

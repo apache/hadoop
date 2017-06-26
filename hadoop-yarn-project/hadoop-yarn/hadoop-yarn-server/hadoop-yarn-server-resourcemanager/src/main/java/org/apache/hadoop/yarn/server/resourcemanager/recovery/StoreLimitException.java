@@ -15,26 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
-
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * Event used for updating collector address in RMApp on node heartbeat.
+ * This exception is thrown when Application Data size exceeds limit RM state
+ * store.
+ *
  */
-public class RMAppCollectorUpdateEvent extends RMAppEvent {
+public class StoreLimitException extends YarnException {
+  private static final long serialVersionUID = 1L;
 
-  private final String appCollectorAddr;
-
-  public RMAppCollectorUpdateEvent(ApplicationId appId,
-      String appCollectorAddr) {
-    super(appId, RMAppEventType.COLLECTOR_UPDATE);
-    this.appCollectorAddr = appCollectorAddr;
+  public StoreLimitException(String message) {
+    super(message);
   }
-
-  public String getAppCollectorAddr(){
-    return this.appCollectorAddr;
-  }
-
 }

@@ -74,8 +74,6 @@ public class NameNodeMetrics {
   MutableCounterLong snapshotDiffReportOps;
   @Metric("Number of blockReceivedAndDeleted calls")
   MutableCounterLong blockReceivedAndDeletedOps;
-  @Metric("Number of blockReports from individual storages")
-  MutableCounterLong storageBlockReportOps;
   @Metric("Number of blockReports and blockReceivedAndDeleted queued")
   MutableGaugeInt blockOpsQueued;
   @Metric("Number of blockReports and blockReceivedAndDeleted batch processed")
@@ -111,14 +109,17 @@ public class NameNodeMetrics {
   final MutableQuantiles[] syncsQuantiles;
   @Metric("Journal transactions batched in sync")
   MutableCounterLong transactionsBatchedInSync;
-  @Metric("Block report") MutableRate blockReport;
-  final MutableQuantiles[] blockReportQuantiles;
+  @Metric("Number of blockReports from individual storages")
+  MutableRate storageBlockReport;
+  final MutableQuantiles[] storageBlockReportQuantiles;
   @Metric("Cache report") MutableRate cacheReport;
   final MutableQuantiles[] cacheReportQuantiles;
   @Metric("Generate EDEK time") private MutableRate generateEDEKTime;
   private final MutableQuantiles[] generateEDEKTimeQuantiles;
   @Metric("Warm-up EDEK time") private MutableRate warmUpEDEKTime;
   private final MutableQuantiles[] warmUpEDEKTimeQuantiles;
+  @Metric("Resource check time") private MutableRate resourceCheckTime;
+  private final MutableQuantiles[] resourceCheckTimeQuantiles;
 
   @Metric("Duration in SafeMode at startup in msec")
   MutableGaugeInt safeModeTime;
@@ -141,19 +142,20 @@ public class NameNodeMetrics {
     
     final int len = intervals.length;
     syncsQuantiles = new MutableQuantiles[len];
-    blockReportQuantiles = new MutableQuantiles[len];
+    storageBlockReportQuantiles = new MutableQuantiles[len];
     cacheReportQuantiles = new MutableQuantiles[len];
     generateEDEKTimeQuantiles = new MutableQuantiles[len];
     warmUpEDEKTimeQuantiles = new MutableQuantiles[len];
+    resourceCheckTimeQuantiles = new MutableQuantiles[len];
     
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
       syncsQuantiles[i] = registry.newQuantiles(
           "syncs" + interval + "s",
           "Journal syncs", "ops", "latency", interval);
-      blockReportQuantiles[i] = registry.newQuantiles(
-          "blockReport" + interval + "s", 
-          "Block report", "ops", "latency", interval);
+      storageBlockReportQuantiles[i] = registry.newQuantiles(
+          "storageBlockReport" + interval + "s",
+          "Storage block report", "ops", "latency", interval);
       cacheReportQuantiles[i] = registry.newQuantiles(
           "cacheReport" + interval + "s",
           "Cache report", "ops", "latency", interval);
@@ -163,6 +165,9 @@ public class NameNodeMetrics {
       warmUpEDEKTimeQuantiles[i] = registry.newQuantiles(
           "warmupEDEKTime" + interval + "s",
           "Warm up EDEK time", "ops", "latency", interval);
+      resourceCheckTimeQuantiles[i] = registry.newQuantiles(
+          "resourceCheckTime" + interval + "s",
+          "resource check time", "ops", "latency", interval);
     }
   }
 
@@ -278,10 +283,6 @@ public class NameNodeMetrics {
   public void incrBlockReceivedAndDeletedOps() {
     blockReceivedAndDeletedOps.incr();
   }
-  
-  public void incrStorageBlockReportOps() {
-    storageBlockReportOps.incr();
-  }
 
   public void setBlockOpsQueued(int size) {
     blockOpsQueued.set(size);
@@ -310,9 +311,9 @@ public class NameNodeMetrics {
     fsImageLoadTime.set((int) elapsed);
   }
 
-  public void addBlockReport(long latency) {
-    blockReport.add(latency);
-    for (MutableQuantiles q : blockReportQuantiles) {
+  public void addStorageBlockReport(long latency) {
+    storageBlockReport.add(latency);
+    for (MutableQuantiles q : storageBlockReportQuantiles) {
       q.add(latency);
     }
   }
@@ -350,6 +351,13 @@ public class NameNodeMetrics {
   public void addWarmUpEDEKTime(long latency) {
     warmUpEDEKTime.add(latency);
     for (MutableQuantiles q : warmUpEDEKTimeQuantiles) {
+      q.add(latency);
+    }
+  }
+
+  public void addResourceCheckTime(long latency) {
+    resourceCheckTime.add(latency);
+    for (MutableQuantiles q : resourceCheckTimeQuantiles) {
       q.add(latency);
     }
   }

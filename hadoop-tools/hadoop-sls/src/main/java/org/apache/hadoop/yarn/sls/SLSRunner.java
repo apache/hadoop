@@ -22,7 +22,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,6 +48,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
@@ -84,7 +84,8 @@ import org.apache.hadoop.yarn.sls.synthetic.SynthTraceJobProducer;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -119,7 +120,7 @@ public class SLSRunner extends Configured implements Tool {
           new HashMap<String, Object>();
 
   // logger
-  public final static Logger LOG = Logger.getLogger(SLSRunner.class);
+  public final static Logger LOG = LoggerFactory.getLogger(SLSRunner.class);
 
   private final static int DEFAULT_MAPPER_PRIORITY = 20;
   private final static int DEFAULT_REDUCER_PRIORITY = 10;
@@ -243,6 +244,13 @@ public class SLSRunner extends Configured implements Tool {
         return new MockAMLauncher(se, this.rmContext, amMap);
       }
     };
+
+    // Across runs of parametrized tests, the JvmMetrics objects is retained,
+    // but is not registered correctly
+    JvmMetrics jvmMetrics = JvmMetrics.initSingleton("ResourceManager", null);
+    jvmMetrics.registerIfNeeded();
+
+    // Init and start the actual ResourceManager
     rm.init(rmConf);
     rm.start();
   }
@@ -314,14 +322,12 @@ public class SLSRunner extends Configured implements Tool {
       if (numRunningNodes == numNMs) {
         break;
       }
-      LOG.info(MessageFormat.format(
-          "SLSRunner is waiting for all "
-              + "nodes RUNNING. {0} of {1} NMs initialized.",
-          numRunningNodes, numNMs));
+      LOG.info("SLSRunner is waiting for all nodes RUNNING."
+          + " {} of {} NMs initialized.", numRunningNodes, numNMs);
       Thread.sleep(1000);
     }
-    LOG.info(MessageFormat.format("SLSRunner takes {0} ms to launch all nodes.",
-        (System.currentTimeMillis() - startTimeMS)));
+    LOG.info("SLSRunner takes {} ms to launch all nodes.",
+        System.currentTimeMillis() - startTimeMS);
   }
 
   @SuppressWarnings("unchecked")
@@ -367,7 +373,7 @@ public class SLSRunner extends Configured implements Tool {
         try {
           createAMForJob(jobIter.next());
         } catch (Exception e) {
-          LOG.error("Failed to create an AM: " + e.getMessage());
+          LOG.error("Failed to create an AM: {}", e.getMessage());
         }
       }
     }
@@ -489,7 +495,7 @@ public class SLSRunner extends Configured implements Tool {
         try {
           createAMForJob(job, baselineTimeMS);
         } catch (Exception e) {
-          LOG.error("Failed to create an AM: " + e.getMessage());
+          LOG.error("Failed to create an AM: {}", e.getMessage());
         }
 
         job = reader.getNext();
@@ -511,7 +517,7 @@ public class SLSRunner extends Configured implements Tool {
     jobStartTimeMS -= baselineTimeMs;
     jobFinishTimeMS -= baselineTimeMs;
     if (jobStartTimeMS < 0) {
-      LOG.warn("Warning: reset job " + oldJobId + " start time to 0.");
+      LOG.warn("Warning: reset job {} start time to 0.", oldJobId);
       jobFinishTimeMS = jobFinishTimeMS - jobStartTimeMS;
       jobStartTimeMS = 0;
     }
@@ -602,7 +608,7 @@ public class SLSRunner extends Configured implements Tool {
         jobStartTimeMS -= baselineTimeMS;
         jobFinishTimeMS -= baselineTimeMS;
         if (jobStartTimeMS < 0) {
-          LOG.warn("Warning: reset job " + oldJobId + " start time to 0.");
+          LOG.warn("Warning: reset job {} start time to 0.", oldJobId);
           jobFinishTimeMS = jobFinishTimeMS - jobStartTimeMS;
           jobStartTimeMS = 0;
         }
@@ -718,16 +724,14 @@ public class SLSRunner extends Configured implements Tool {
     if (printSimulation) {
       // node
       LOG.info("------------------------------------");
-      LOG.info(MessageFormat.format(
-          "# nodes = {0}, # racks = {1}, capacity "
-              + "of each node {2} MB memory and {3} vcores.",
-          numNMs, numRacks, nmMemoryMB, nmVCores));
+      LOG.info("# nodes = {}, # racks = {}, capacity " +
+              "of each node {} MB memory and {} vcores.",
+              numNMs, numRacks, nmMemoryMB, nmVCores);
       LOG.info("------------------------------------");
       // job
-      LOG.info(MessageFormat.format(
-          "# applications = {0}, # total "
-              + "tasks = {1}, average # tasks per application = {2}",
-          numAMs, numTasks, (int) (Math.ceil((numTasks + 0.0) / numAMs))));
+      LOG.info("# applications = {}, # total " +
+              "tasks = {}, average # tasks per application = {}",
+              numAMs, numTasks, (int)(Math.ceil((numTasks + 0.0) / numAMs)));
       LOG.info("JobId\tQueue\tAMType\tDuration\t#Tasks");
       for (Map.Entry<String, AMSimulator> entry : amMap.entrySet()) {
         AMSimulator am = entry.getValue();
@@ -736,15 +740,13 @@ public class SLSRunner extends Configured implements Tool {
       }
       LOG.info("------------------------------------");
       // queue
-      LOG.info(MessageFormat.format(
-          "number of queues = {0}  average " + "number of apps = {1}",
+      LOG.info("number of queues = {}  average number of apps = {}",
           queueAppNumMap.size(),
-          (int) (Math.ceil((numAMs + 0.0) / queueAppNumMap.size()))));
+          (int)(Math.ceil((numAMs + 0.0) / queueAppNumMap.size())));
       LOG.info("------------------------------------");
       // runtime
-      LOG.info(
-          MessageFormat.format("estimated simulation time is {0}" + " seconds",
-              (long) (Math.ceil(maxRuntime / 1000.0))));
+      LOG.info("estimated simulation time is {} seconds",
+          (long)(Math.ceil(maxRuntime / 1000.0)));
       LOG.info("------------------------------------");
     }
     // package these information in the simulateInfoMap used by other places

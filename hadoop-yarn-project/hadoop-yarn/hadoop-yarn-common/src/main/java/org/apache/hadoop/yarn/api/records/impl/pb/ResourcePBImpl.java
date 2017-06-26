@@ -31,7 +31,20 @@ public class ResourcePBImpl extends Resource {
   ResourceProto proto = ResourceProto.getDefaultInstance();
   ResourceProto.Builder builder = null;
   boolean viaProto = false;
-  
+
+  // call via ProtoUtils.convertToProtoFormat(Resource)
+  static ResourceProto getProto(Resource r) {
+    final ResourcePBImpl pb;
+    if (r instanceof ResourcePBImpl) {
+      pb = (ResourcePBImpl)r;
+    } else {
+      pb = new ResourcePBImpl();
+      pb.setMemorySize(r.getMemorySize());
+      pb.setVirtualCores(r.getVirtualCores());
+    }
+    return pb.getProto();
+  }
+
   public ResourcePBImpl() {
     builder = ResourceProto.newBuilder();
   }
@@ -89,15 +102,4 @@ public class ResourcePBImpl extends Resource {
     maybeInitBuilder();
     builder.setVirtualCores(vCores);
   }
-
-  @Override
-  public int compareTo(Resource other) {
-    long diff = this.getMemorySize() - other.getMemorySize();
-    if (diff == 0) {
-      diff = this.getVirtualCores() - other.getVirtualCores();
-    }
-    return diff == 0 ? 0 : (diff > 0 ? 1 : -1);
-  }
-  
-  
 }  

@@ -184,11 +184,20 @@ public class TestQuota {
     final short replication = 5;
     final long spaceQuota = fileLen * replication * 15 / 8;
 
-    // 1: create a directory test and set its quota to be 3
+    // 1: create a test directory
     final Path parent = new Path(dir, "test");
     assertTrue(dfs.mkdirs(parent));
-    String[] args = new String[]{"-setQuota", "3", parent.toString()};
+
+    // Try setting name quota with suffixes
+    String[] args;
+    args = new String[]{"-setQuota", "3K", parent.toString()};
     runCommand(admin, args, false);
+    args = new String[]{"-setQuota", "3m", parent.toString()};
+    runCommand(admin, args, false);
+    // Set the final name quota to 3
+    args = new String[]{"-setQuota", "3", parent.toString()};
+    runCommand(admin, args, false);
+
 
     //try setting space quota with a 'binary prefix'
     runCommand(admin, false, "-setSpaceQuota", "2t", parent.toString());
