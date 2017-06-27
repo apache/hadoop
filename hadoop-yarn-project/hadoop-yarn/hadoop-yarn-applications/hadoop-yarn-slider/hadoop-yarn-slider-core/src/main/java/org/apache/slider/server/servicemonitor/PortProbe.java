@@ -17,91 +17,77 @@
 
 package org.apache.slider.server.servicemonitor;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Map;
 
 /**
- * Probe for a port being open
+ * Probe for a port being open.
  */
 public class PortProbe extends Probe {
   protected static final Logger log = LoggerFactory.getLogger(PortProbe.class);
-  private final String host;
   private final int port;
   private final int timeout;
 
-  public PortProbe(String host, int port, int timeout, String name, Configuration conf)
-      throws IOException {
-    super("Port probe " + name + " " + host + ":" + port + " for " + timeout + "ms",
-          conf);
-    this.host = host;
+  public PortProbe(int port, int timeout) {
+    super("Port probe of " + port + " for " + timeout + "ms", null);
     this.port = port;
     this.timeout = timeout;
   }
 
-  public static PortProbe createPortProbe(Configuration conf,
-                                          String hostname,
-                                          int port) throws IOException {
-    PortProbe portProbe = new PortProbe(hostname,
-                                        port,
-                                        conf.getInt(
-                                          PORT_PROBE_CONNECT_TIMEOUT,
-                                          PORT_PROBE_CONNECT_TIMEOUT_DEFAULT),
-                                        "",
-                                        conf);
+  public static PortProbe create(Map<String, String> props)
+      throws IOException {
+    int port = getPropertyInt(props, PORT_PROBE_PORT, null);
 
-    return portProbe;
-  }
-
-  @Override
-  public void init() throws IOException {
     if (port >= 65536) {
-      throw new IOException("Port is out of range: " + port);
+      throw new IOException(PORT_PROBE_PORT + " " + port + " is out of " +
+          "range");
     }
-    InetAddress target;
-    if (host != null) {
-      log.debug("looking up host " + host);
-      target = InetAddress.getByName(host);
-    } else {
-      log.debug("Host is null, retrieving localhost address");
-      target = InetAddress.getLocalHost();
-    }
-    log.info("Checking " + target + ":" + port);
+
+    int timeout = getPropertyInt(props, PORT_PROBE_CONNECT_TIMEOUT,
+        PORT_PROBE_CONNECT_TIMEOUT_DEFAULT);
+
+    return new PortProbe(port, timeout);
   }
 
   /**
    * Try to connect to the (host,port); a failure to connect within
-   * the specified timeout is a failure
-   * @param livePing is the ping live: true for live; false for boot time
+   * the specified timeout is a failure.
+   * @param roleInstance role instance
    * @return the outcome
    */
   @Override
-  public ProbeStatus ping(boolean livePing) {
+  public ProbeStatus ping(RoleInstance roleInstance) {
     ProbeStatus status = new ProbeStatus();
-    InetSocketAddress sockAddr = new InetSocketAddress(host, port);
+
+    String ip = roleInstance.ip;
+    if (ip == null) {
+      status.fail(this, new IOException("IP is not available yet"));
+      return status;
+    }
+
+    InetSocketAddress sockAddr = new InetSocketAddress(ip, port);
     Socket socket = new Socket();
     try {
       if (log.isDebugEnabled()) {
-        log.debug("Connecting to " + sockAddr.toString() + " connection-timeout=" +
-                  MonitorUtils.millisToHumanTime(timeout));
+        log.debug("Connecting to " + sockAddr.toString() + "timeout=" +
+            MonitorUtils.millisToHumanTime(timeout));
       }
       socket.connect(sockAddr, timeout);
       status.succeed(this);
-    } catch (IOException e) {
+    } catch (Throwable e) {
       String error = "Probe " + sockAddr + " failed: " + e;
       log.debug(error, e);
-      status.fail(this,
-                  new IOException(error, e));
+      status.fail(this, new IOException(error, e));
     } finally {
       IOUtils.closeSocket(socket);
     }
     return status;
-
   }
 }

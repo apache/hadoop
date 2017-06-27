@@ -117,6 +117,7 @@ import org.apache.slider.server.appmaster.actions.ActionStopSlider;
 import org.apache.slider.server.appmaster.actions.ActionUpgradeContainers;
 import org.apache.slider.server.appmaster.actions.AsyncAction;
 import org.apache.slider.server.appmaster.actions.EscalateOutstandingRequests;
+import org.apache.slider.server.appmaster.actions.MonitorComponentInstances;
 import org.apache.slider.server.appmaster.actions.QueueExecutor;
 import org.apache.slider.server.appmaster.actions.QueueService;
 import org.apache.slider.server.appmaster.actions.RegisterComponentInstance;
@@ -340,7 +341,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * ProviderService of this cluster
    */
   @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
-  private List<ProviderService> providers = new ArrayList<>();
+  private Set<ProviderService> providers = new HashSet<>();
 
   /**
    * The YARN registry service
@@ -868,6 +869,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     scheduleFailureWindowResets(application.getConfiguration());
     scheduleEscalation(application.getConfiguration());
+    scheduleMonitoring(application.getConfiguration());
 
     try {
       // schedule YARN Registry registration
@@ -1644,9 +1646,22 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         new RenewingAction<>(escalate, seconds, seconds, TimeUnit.SECONDS, 0);
     actionQueues.renewing("escalation", renew);
   }
-  
+
   /**
-   * Look at where the current node state is -and whether it should be changed
+   * Schedule monitor action
+   */
+  private void scheduleMonitoring(
+      org.apache.slider.api.resource.Configuration conf) {
+    MonitorComponentInstances monitor = new MonitorComponentInstances();
+    long seconds = conf.getPropertyLong(InternalKeys.MONITOR_INTERVAL,
+        InternalKeys.DEFAULT_MONITOR_INTERVAL);
+    RenewingAction<MonitorComponentInstances> renew =
+        new RenewingAction<>(monitor, seconds, seconds, TimeUnit.SECONDS, 0);
+    actionQueues.renewing("monitoring", renew);
+  }
+
+  /**
+   * Look at where the current node state is and whether it should be changed.
    * @param reason reason for operation
    */
   private synchronized void reviewRequestAndReleaseNodes(String reason) {
@@ -1709,6 +1724,15 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   public void escalateOutstandingRequests() {
     List<AbstractRMOperation> operations = appState.escalateOutstandingRequests();
     execute(operations);
+  }
+
+  public void monitorComponentInstances() {
+    // TODO use health checks?
+    // TODO publish timeline events for monitoring changes?
+    if (appState.monitorComponentInstances()) {
+      // monitoring change
+      reviewRequestAndReleaseNodes("monitoring change");
+    }
   }
 
 

@@ -34,6 +34,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 import static org.apache.slider.util.RestApiConstants.DEFAULT_COMPONENT_NAME;
 import static org.apache.slider.util.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
@@ -389,5 +392,53 @@ public class TestServiceApiUtil {
     assertEquals(1, app.getComponents().size());
     // original component replaced by external component
     assertNotNull(app.getComponent("comp1"));
+  }
+
+  public static void verifyDependencySorting(List<Component> components,
+      Component... expectedSorting) {
+    Collection<Component> actualSorting = ServiceApiUtil.sortByDependencies(
+        components);
+    assertEquals(expectedSorting.length, actualSorting.size());
+    int i = 0;
+    for (Component component : actualSorting) {
+      assertEquals(expectedSorting[i++], component);
+    }
+  }
+
+  @Test
+  public void testDependencySorting() throws IOException {
+    Component a = new Component().name("a");
+    Component b = new Component().name("b");
+    Component c = new Component().name("c");
+    Component d = new Component().name("d").dependencies(Arrays.asList("c"));
+    Component e = new Component().name("e").dependencies(Arrays.asList("b",
+        "d"));
+
+    verifyDependencySorting(Arrays.asList(a, b, c), a, b, c);
+    verifyDependencySorting(Arrays.asList(c, a, b), c, a, b);
+    verifyDependencySorting(Arrays.asList(a, b, c, d, e), a, b, c, d, e);
+    verifyDependencySorting(Arrays.asList(e, d, c, b, a), c, b, a, d, e);
+
+    c.setDependencies(Arrays.asList("e"));
+    try {
+      verifyDependencySorting(Arrays.asList(a, b, c, d, e));
+      Assert.fail(EXCEPTION_PREFIX + "components with dependency cycle");
+    } catch (IllegalArgumentException ex) {
+      assertEquals(String.format(
+          RestApiErrorMessages.ERROR_DEPENDENCY_CYCLE, Arrays.asList(c, d,
+              e)), ex.getMessage());
+    }
+
+    SliderFileSystem sfs = initMock(null);
+    Application application = createValidApplication(null);
+    application.setComponents(Arrays.asList(c, d, e));
+    try {
+      ServiceApiUtil.validateAndResolveApplication(application, sfs);
+      Assert.fail(EXCEPTION_PREFIX + "components with bad dependencies");
+    } catch (IllegalArgumentException ex) {
+      assertEquals(String.format(
+          RestApiErrorMessages.ERROR_DEPENDENCY_INVALID, "b", "e"), ex
+          .getMessage());
+    }
   }
 }

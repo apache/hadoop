@@ -17,20 +17,25 @@
 
 package org.apache.slider.server.servicemonitor;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.slider.server.appmaster.model.mock.MockFactory;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestPortProbe extends Assert {
+  private final MockFactory factory = MockFactory.INSTANCE;
+
   /**
    * Assert that a port probe failed if the port is closed
    * @throws Throwable
    */
   @Test
   public void testPortProbeFailsClosedPort() throws Throwable {
-    PortProbe probe = new PortProbe("127.0.0.1", 65500, 100, "", new Configuration());
+    PortProbe probe = new PortProbe(65500, 100);
     probe.init();
-    ProbeStatus status = probe.ping(true);
+    RoleInstance roleInstance = new RoleInstance(factory.newContainer());
+    roleInstance.ip = "127.0.0.1";
+    ProbeStatus status = probe.ping(roleInstance);
     assertFalse("Expected a failure but got successful result: " + status,
       status.isSuccess());
   }

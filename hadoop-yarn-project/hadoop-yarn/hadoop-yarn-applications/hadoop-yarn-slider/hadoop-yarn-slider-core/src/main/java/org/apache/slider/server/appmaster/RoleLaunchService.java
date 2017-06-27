@@ -133,7 +133,6 @@ public class RoleLaunchService
       return "RoleLauncher{" +
              "container=" + container.getId() +
              ", containerRole='" + role.name + '\'' +
-             ", containerGroup='" + role.group + '\'' +
              '}';
     }
 

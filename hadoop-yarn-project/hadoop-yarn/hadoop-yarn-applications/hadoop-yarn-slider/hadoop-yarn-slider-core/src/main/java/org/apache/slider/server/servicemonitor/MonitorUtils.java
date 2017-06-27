@@ -17,50 +17,25 @@
 
 package org.apache.slider.server.servicemonitor;
 
+import org.apache.slider.api.resource.ReadinessCheck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Formatter;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.TreeSet;
 
 /**
  * Various utils to work with the monitor
  */
 public final class MonitorUtils {
-  protected static final Logger log = LoggerFactory.getLogger(MonitorUtils.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(MonitorUtils
+      .class);
 
   private MonitorUtils() {
   }
 
   public static String toPlural(int val) {
     return val != 1 ? "s" : "";
-  }
-
-  /**
-   * Convert the arguments -including dropping any empty strings that creep in
-   * @param args arguments
-   * @return a list view with no empty strings
-   */
-  public static List<String> prepareArgs(String[] args) {
-    List<String> argsList = new ArrayList<String>(args.length);
-    StringBuilder argsStr = new StringBuilder("Arguments: [");
-    for (String arg : args) {
-      argsStr.append('"').append(arg).append("\" ");
-      if (!arg.isEmpty()) {
-        argsList.add(arg);
-      }
-    }
-    argsStr.append(']');
-    log.debug(argsStr.toString());
-    return argsList;
   }
 
   /**
@@ -85,25 +60,25 @@ public final class MonitorUtils {
     return sb.toString();
   }
 
-  public static InetSocketAddress getURIAddress(URI uri) {
-    String host = uri.getHost();
-    int port = uri.getPort();
-    return new InetSocketAddress(host, port);
-  }
-
-
-  /**
-   * Get the localhost -may be null
-   * @return the localhost if known
-   */
-  public static InetAddress getLocalHost() {
-    InetAddress localHost;
-    try {
-      localHost = InetAddress.getLocalHost();
-    } catch (UnknownHostException e) {
-      localHost = null;
+  public static Probe getProbe(ReadinessCheck readinessCheck) {
+    if (readinessCheck == null) {
+      return null;
     }
-    return localHost;
+    if (readinessCheck.getType() == null) {
+      return null;
+    }
+    try {
+      switch (readinessCheck.getType()) {
+      case HTTP:
+        return HttpProbe.create(readinessCheck.getProps());
+      case PORT:
+        return PortProbe.create(readinessCheck.getProps());
+      default:
+        return null;
+      }
+    } catch (Throwable t) {
+      throw new IllegalArgumentException("Error creating readiness check " +
+          t);
+    }
   }
-
 }

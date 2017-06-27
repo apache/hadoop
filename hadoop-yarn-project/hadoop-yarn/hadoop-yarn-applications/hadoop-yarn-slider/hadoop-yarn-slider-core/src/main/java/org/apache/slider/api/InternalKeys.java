@@ -196,4 +196,15 @@ public interface InternalKeys {
    * default value: {@value}
    */
   int DEFAULT_ESCALATION_CHECK_INTERVAL = 30;
+
+
+  /**
+   * interval between readiness checks: {@value}
+   */
+  String MONITOR_INTERVAL = "monitor.interval.seconds";
+
+  /**
+   * default value: {@value}
+   */
+  int DEFAULT_MONITOR_INTERVAL = 30;
 }

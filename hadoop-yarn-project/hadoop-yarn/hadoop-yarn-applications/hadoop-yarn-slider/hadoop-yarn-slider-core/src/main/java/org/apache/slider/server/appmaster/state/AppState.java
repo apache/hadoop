@@ -73,6 +73,7 @@ import org.apache.slider.server.appmaster.operations.ContainerReleaseOperation;
 import org.apache.slider.server.appmaster.operations.ContainerRequestOperation;
 import org.apache.slider.server.appmaster.operations.UpdateBlacklistOperation;
 import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
+import org.apache.slider.util.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -344,16 +345,18 @@ public class AppState {
         DEFAULT_NODE_FAILURE_THRESHOLD);
     initGlobalTokensForSubstitute(binding);
 
-    //build the initial component list
+    // build the initial component list
+    Collection<Component> sortedComponents = ServiceApiUtil
+        .sortByDependencies(app.getComponents());
     int priority = 1;
-    for (Component component : app.getComponents()) {
+    for (Component component : sortedComponents) {
       priority = getNewPriority(priority);
       String name = component.getName();
       if (roles.containsKey(name)) {
         continue;
       }
       log.info("Adding component: " + name);
-      createComponent(name, name, component, priority++);
+      createComponent(name, component, priority++);
     }
 
     //then pick up the requirements
@@ -433,8 +436,8 @@ public class AppState {
             });
   }
 
-  public ProviderRole createComponent(String name, String group,
-      Component component, int priority) throws BadConfigException {
+  public ProviderRole createComponent(String name, Component component,
+      int priority) throws BadConfigException {
     org.apache.slider.api.resource.Configuration conf =
         component.getConfiguration();
     long placementTimeout = conf.getPropertyLong(PLACEMENT_ESCALATE_DELAY,
@@ -446,7 +449,7 @@ public class AppState {
     String label = conf.getProperty(YARN_LABEL_EXPRESSION,
         DEF_YARN_LABEL_EXPRESSION);
     ProviderRole newRole =
-        new ProviderRole(name, group, priority, (int)placementPolicy, threshold,
+        new ProviderRole(name, priority, (int)placementPolicy, threshold,
             placementTimeout, label, component);
     buildRole(newRole, component);
     log.info("Created a new role " + newRole);
@@ -1535,12 +1538,54 @@ public class AppState {
       allOperations.add(blacklistOperation);
     }
     for (RoleStatus roleStatus : getRoleStatusMap().values()) {
-      if (!roleStatus.isExcludeFromFlexing()) {
+      if (!roleStatus.isExcludeFromFlexing() &&
+          areDependenciesReady(roleStatus)) {
         List<AbstractRMOperation> operations = reviewOneRole(roleStatus);
         allOperations.addAll(operations);
       }
     }
     return allOperations;
+  }
+
+  @VisibleForTesting
+  public boolean areDependenciesReady(RoleStatus roleStatus) {
+    List<String> dependencies = roleStatus.getProviderRole().component
+        .getDependencies();
+    if (SliderUtils.isEmpty(dependencies)) {
+      return true;
+    }
+    for (String dependency : dependencies) {
+      ProviderRole providerRole = roles.get(dependency);
+      if (providerRole == null) {
+        log.error("Couldn't find dependency {} for {} (should never happen)",
+            dependency, roleStatus.getName());
+        continue;
+      }
+      RoleStatus other = getRoleStatusMap().get(providerRole.id);
+      if (other.getRunning() < other.getDesired()) {
+        log.info("Dependency {} not satisfied for {}, only {} of {} instances" +
+            " running", dependency, roleStatus.getName(), other.getRunning(),
+            other.getDesired());
+        return false;
+      }
+      if (providerRole.probe == null) {
+        continue;
+      }
+      List<RoleInstance> dependencyInstances = enumLiveNodesInRole(
+          providerRole.name);
+      if (dependencyInstances.size() < other.getDesired()) {
+        log.info("Dependency {} not satisfied for {}, only {} of {} instances" +
+                " live", dependency, roleStatus.getName(),
+            dependencyInstances.size(), other.getDesired());
+        return false;
+      }
+      for (RoleInstance instance : dependencyInstances) {
+        if (instance.state != STATE_READY) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   /**
@@ -1618,6 +1663,31 @@ public class AppState {
       }
     }
     return operations;
+  }
+
+  public synchronized boolean monitorComponentInstances() {
+    boolean hasChanged = false;
+    for (RoleInstance instance : getLiveContainers().values()) {
+      if (instance.providerRole.probe == null) {
+        continue;
+      }
+      boolean ready = instance.providerRole.probe.ping(instance).isSuccess();
+      if (ready) {
+        if (instance.state != STATE_READY) {
+          instance.state = STATE_READY;
+          hasChanged = true;
+          log.info("State of {} changed to ready", instance.role);
+        }
+      } else {
+        if (instance.state == STATE_READY) {
+          instance.state = STATE_NOT_READY;
+          hasChanged = true;
+          log.info("State of {} changed from ready to not ready", instance
+              .role);
+        }
+      }
+    }
+    return hasChanged;
   }
 
   /**

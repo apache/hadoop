@@ -21,6 +21,8 @@ package org.apache.slider.providers;
 import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.resource.Component;
 import org.apache.slider.server.appmaster.state.RoleInstance;
+import org.apache.slider.server.servicemonitor.MonitorUtils;
+import org.apache.slider.server.servicemonitor.Probe;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -34,7 +36,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class ProviderRole {
   public final String name;
-  public final String group;
   public final int id;
   public int placementPolicy;
   public int nodeFailureThreshold;
@@ -43,6 +44,8 @@ public final class ProviderRole {
   public final Component component;
   public AtomicLong componentIdCounter = null;
   public Queue<RoleInstance> failedInstances = new ConcurrentLinkedQueue<>();
+  public Probe probe;
+
   public ProviderRole(String name, int id) {
     this(name,
         id,
@@ -69,7 +72,6 @@ public final class ProviderRole {
       long placementTimeoutSeconds,
       String labelExpression) {
     this(name,
-        name,
         id,
         policy,
         nodeFailureThreshold,
@@ -81,7 +83,6 @@ public final class ProviderRole {
   /**
    * Create a provider role with a role group
    * @param name role/component name
-   * @param group role/component group
    * @param id ID. This becomes the YARN priority
    * @param policy placement policy
    * @param nodeFailureThreshold threshold for node failures (within a reset interval)
@@ -89,15 +90,10 @@ public final class ProviderRole {
    * @param placementTimeoutSeconds for lax placement, timeout in seconds before
    * @param labelExpression label expression for requests; may be null
    */
-  public ProviderRole(String name, String group, int id, int policy,
+  public ProviderRole(String name, int id, int policy,
       int nodeFailureThreshold, long placementTimeoutSeconds,
       String labelExpression, Component component) {
     this.name = name;
-    if (group == null) {
-      this.group = name;
-    } else {
-      this.group = group;
-    }
     this.id = id;
     this.placementPolicy = policy;
     this.nodeFailureThreshold = nodeFailureThreshold;
@@ -107,6 +103,7 @@ public final class ProviderRole {
     if(component.getUniqueComponentSupport()) {
       componentIdCounter = new AtomicLong(0);
     }
+    this.probe = MonitorUtils.getProbe(component.getReadinessCheck());
   }
 
 
@@ -132,7 +129,6 @@ public final class ProviderRole {
   public String toString() {
     final StringBuilder sb = new StringBuilder("ProviderRole{");
     sb.append("name='").append(name).append('\'');
-    sb.append(", group=").append(group);
     sb.append(", id=").append(id);
     sb.append(", placementPolicy=").append(placementPolicy);
     sb.append(", nodeFailureThreshold=").append(nodeFailureThreshold);

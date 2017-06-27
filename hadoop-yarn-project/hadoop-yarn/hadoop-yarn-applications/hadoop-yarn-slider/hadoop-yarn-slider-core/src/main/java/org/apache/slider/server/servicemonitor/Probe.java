@@ -17,9 +17,12 @@
 
 package org.apache.slider.server.servicemonitor;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Base class of all probes.
@@ -28,19 +31,6 @@ public abstract class Probe implements MonitorKeys {
 
   protected final Configuration conf;
   private String name;
-
-  // =======================================================
-  /*
-   * These fields are all used by the probe loops
-   * to maintain state. Please Leave them alone.
-   */
-  public int successCount;
-  public int failureCount;
-  public long bootstrapStarted;
-  public long bootstrapFinished;
-  private boolean booted = false;
-
-  // =======================================================
 
   /**
    * Create a probe of a specific name
@@ -65,11 +55,31 @@ public abstract class Probe implements MonitorKeys {
 
   @Override
   public String toString() {
-    return getName() +
-           " {" +
-           "successCount=" + successCount +
-           ", failureCount=" + failureCount +
-           '}';
+    return getName();
+  }
+
+  public static String getProperty(Map<String, String> props, String name,
+      String defaultValue) throws IOException {
+    String value = props.get(name);
+    if (StringUtils.isEmpty(value)) {
+      if (defaultValue == null) {
+        throw new IOException(name + " not specified");
+      }
+      return defaultValue;
+    }
+    return value;
+  }
+
+  public static int getPropertyInt(Map<String, String> props, String name,
+      Integer defaultValue) throws IOException {
+    String value = props.get(name);
+    if (StringUtils.isEmpty(value)) {
+      if (defaultValue == null) {
+        throw new IOException(name + " not specified");
+      }
+      return defaultValue;
+    }
+    return Integer.parseInt(value);
   }
 
   /**
@@ -83,25 +93,9 @@ public abstract class Probe implements MonitorKeys {
    * Ping the endpoint. All exceptions must be caught and included in the
    * (failure) status.
    *
-   * @param livePing is the ping live: true for live; false for boot time
+   * @param roleInstance instance to ping
    * @return the status
    */
-  public abstract ProbeStatus ping(boolean livePing);
+  public abstract ProbeStatus ping(RoleInstance roleInstance);
 
-  public void beginBootstrap() {
-    bootstrapStarted = System.currentTimeMillis();
-  }
-
-  public void endBootstrap() {
-    setBooted(true);
-    bootstrapFinished = System.currentTimeMillis();
-  }
-
-  public boolean isBooted() {
-    return booted;
-  }
-
-  public void setBooted(boolean booted) {
-    this.booted = booted;
-  }
 }

@@ -62,6 +62,10 @@ public interface RestApiErrorMessages {
       "Invalid no of containers specified";
   String ERROR_CONTAINERS_COUNT_FOR_COMP_INVALID =
       ERROR_CONTAINERS_COUNT_INVALID + ERROR_SUFFIX_FOR_COMPONENT;
+  String ERROR_DEPENDENCY_INVALID = "Dependency %s for component %s is " +
+      "invalid, does not exist as a component";
+  String ERROR_DEPENDENCY_CYCLE = "Invalid dependencies, a cycle may " +
+      "exist: %s";
 
   String ERROR_RESOURCE_PROFILE_MULTIPLE_VALUES_NOT_SUPPORTED =
       "Cannot specify" + " cpus/memory along with profile";

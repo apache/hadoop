@@ -254,17 +254,6 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     }
   }
 
-  public static void addEnvForSubstitution(Map<String, String> env,
-      Map<String, String> tokensForSubstitution) {
-    if (env == null || env.isEmpty() || tokensForSubstitution == null
-        || tokensForSubstitution.isEmpty()) {
-      return;
-    }
-    for (Map.Entry<String, String> entry : env.entrySet()) {
-      tokensForSubstitution.put($(entry.getKey()), entry.getValue());
-    }
-  }
-
   // 1. Create all config files for a component on hdfs for localization
   // 2. Add the config file to localResource
   public synchronized void createConfigFileAndAddLocalResource(
@@ -283,10 +272,6 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     } else {
       log.info("Component instance conf dir already exists: " + compInstanceDir);
     }
-
-    // add Configuration#env into tokens substitution
-    addEnvForSubstitution(component.getConfiguration().getEnv(),
-        tokensForSubstitution);
 
     log.info("Tokens substitution for component: " + roleInstance
         .getCompInstanceName() + System.lineSeparator()
