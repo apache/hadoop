@@ -24,12 +24,12 @@ import static org.junit.Assert.assertTrue;
 import java.net.URI;
 import java.util.StringTokenizer;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.log4j.Logger;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test to validate Azure storage client side logging. Tests works only when
@@ -97,29 +97,39 @@ public class TestNativeAzureFileSystemClientLogging
   @Test
   public void testLoggingEnabled() throws Exception {
 
-    LogCapturer logs = LogCapturer.captureLogs(
-        LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME));
+    LogCapturer logs = LogCapturer.captureLogs(new Log4JLogger(Logger
+        .getRootLogger()));
 
     // Update configuration based on the Test.
     updateFileSystemConfiguration(true);
 
     performWASBOperations();
 
-    assertTrue(verifyStorageClientLogs(logs.getOutput(), TEMP_DIR));
+    String output = getLogOutput(logs);
+    assertTrue("Log entry " + TEMP_DIR + " not found  in " + output,
+        verifyStorageClientLogs(output, TEMP_DIR));
+  }
+
+  protected String getLogOutput(LogCapturer logs) {
+    String output = logs.getOutput();
+    assertTrue("No log created/captured", !output.isEmpty());
+    return output;
   }
 
   @Test
   public void testLoggingDisabled() throws Exception {
 
-    LogCapturer logs = LogCapturer.captureLogs(
-        LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME));
+    LogCapturer logs = LogCapturer.captureLogs(new Log4JLogger(Logger
+        .getRootLogger()));
 
     // Update configuration based on the Test.
     updateFileSystemConfiguration(false);
 
     performWASBOperations();
+    String output = getLogOutput(logs);
 
-    assertFalse(verifyStorageClientLogs(logs.getOutput(), TEMP_DIR));
+    assertFalse("Log entry " + TEMP_DIR + " found  in " + output,
+        verifyStorageClientLogs(output, TEMP_DIR));
   }
 
   @Override
