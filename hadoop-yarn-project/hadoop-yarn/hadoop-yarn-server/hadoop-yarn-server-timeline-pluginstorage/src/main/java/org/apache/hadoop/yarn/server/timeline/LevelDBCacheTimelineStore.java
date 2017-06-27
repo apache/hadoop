@@ -286,6 +286,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
         }
       };
     }
+    static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @SuppressWarnings("unchecked")
     private V getEntityForKey(byte[] key) throws IOException {
@@ -293,8 +294,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
       if (resultRaw == null) {
         return null;
       }
-      ObjectMapper entityMapper = new ObjectMapper();
-      return (V) entityMapper.readValue(resultRaw, TimelineEntity.class);
+      return (V) OBJECT_MAPPER.readValue(resultRaw, TimelineEntity.class);
     }
 
     private byte[] getStartTimeKey(K entityId) {
