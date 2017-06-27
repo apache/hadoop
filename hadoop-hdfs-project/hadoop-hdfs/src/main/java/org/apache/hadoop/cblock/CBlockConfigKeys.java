@@ -25,28 +25,19 @@ import static java.lang.Thread.NORM_PRIORITY;
 public final class CBlockConfigKeys {
   public static final String DFS_CBLOCK_SERVICERPC_ADDRESS_KEY =
       "dfs.cblock.servicerpc-address";
-  public static final String DFS_CBLOCK_SERVICERPC_PORT_KEY =
-      "dfs.cblock.servicerpc.port";
   public static final int DFS_CBLOCK_SERVICERPC_PORT_DEFAULT =
       9810;
-  public static final String DFS_CBLOCK_SERVICERPC_HOSTNAME_KEY =
-      "dfs.cblock.servicerpc.hostname";
   public static final String DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT =
       "0.0.0.0";
-  public static final String DFS_CBLOCK_SERVICERPC_ADDRESS_DEFAULT =
-      DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT
-          + ":" + DFS_CBLOCK_SERVICERPC_PORT_DEFAULT;
 
   public static final String DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY =
       "dfs.cblock.jscsi-address";
 
   //The port on CBlockManager node for jSCSI to ask
+  public static final String DFS_CBLOCK_JSCSI_PORT_KEY =
+      "dfs.cblock.jscsi.port";
   public static final int DFS_CBLOCK_JSCSI_PORT_DEFAULT =
       9811;
-  public static final String DFS_CBLOCK_JSCSIRPC_ADDRESS_DEFAULT =
-      DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT
-          + ":" + DFS_CBLOCK_JSCSI_PORT_DEFAULT;
-
 
   public static final String DFS_CBLOCK_SERVICERPC_BIND_HOST_KEY =
       "dfs.cblock.service.rpc-bind-host";
@@ -97,9 +88,9 @@ public final class CBlockConfigKeys {
   /**
    *  Minimum Number of threads that cache pool will use for background I/O.
    */
-  public static final String DFS_CBLOCK_CACHE_CORE_POOL_SIZE =
-      "dfs.cblock.cache.core.pool.size";
-  public static final int DFS_CBLOCK_CACHE_CORE_POOL_SIZE_DEFAULT = 16;
+  public static final String DFS_CBLOCK_CACHE_CORE_MIN_POOL_SIZE =
+      "dfs.cblock.cache.core.min.pool.size";
+  public static final int DFS_CBLOCK_CACHE_CORE_MIN_POOL_SIZE_DEFAULT = 16;
 
   /**
    *  Maximum Number of threads that cache pool will use for background I/O.

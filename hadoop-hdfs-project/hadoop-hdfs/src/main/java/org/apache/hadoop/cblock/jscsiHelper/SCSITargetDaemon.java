@@ -36,6 +36,7 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CONTAINER_SIZ
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSI_PORT_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSI_PORT_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSI_SERVER_ADDRESS_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSI_SERVER_ADDRESS_KEY;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
@@ -67,6 +68,10 @@ public final class SCSITargetDaemon {
         DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_KEY,
         DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_DEFAULT
     );
+    int cbmPort = ozoneConf.getInt(
+        DFS_CBLOCK_JSCSI_PORT_KEY,
+        DFS_CBLOCK_JSCSI_PORT_DEFAULT
+    );
 
     String scmAddress = ozoneConf.get(OZONE_SCM_CLIENT_BIND_HOST_KEY,
         OZONE_SCM_CLIENT_BIND_HOST_DEFAULT);
@@ -82,7 +87,7 @@ public final class SCSITargetDaemon {
     ozoneConf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, scmDataodeAddress);
 
     InetSocketAddress cbmAddress = new InetSocketAddress(
-        cbmIPAddress, DFS_CBLOCK_JSCSI_PORT_DEFAULT);
+        cbmIPAddress, cbmPort);
     long version = RPC.getProtocolVersion(
         CBlockServiceProtocolPB.class);
     CBlockClientProtocolClientSideTranslatorPB cbmClient =
