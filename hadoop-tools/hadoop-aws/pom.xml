@@ -36,6 +36,7 @@
     <downloadSources>true</downloadSources>
     <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>
 
+    <dynamodb.local.version>1.11.86</dynamodb.local.version>
     <!-- are scale tests enabled ? -->
     <fs.s3a.scale.test.enabled>unset</fs.s3a.scale.test.enabled>
     <!-- Size in MB of huge files. -->
@@ -465,7 +466,7 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>DynamoDBLocal</artifactId>
-      <version>${aws-java-sdk.version}</version>
+      <version>${dynamodb.local.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
