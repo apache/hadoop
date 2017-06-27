@@ -246,7 +246,10 @@ public class IOUtils {
    *
    * @param log the log to record problems to at debug level. Can be null.
    * @param closeables the objects to close
+   * @deprecated use {@link #cleanupWithLogger(Logger, java.io.Closeable...)}
+   * instead
    */
+  @Deprecated
   public static void cleanup(Log log, java.io.Closeable... closeables) {
     for (java.io.Closeable c : closeables) {
       if (c != null) {
