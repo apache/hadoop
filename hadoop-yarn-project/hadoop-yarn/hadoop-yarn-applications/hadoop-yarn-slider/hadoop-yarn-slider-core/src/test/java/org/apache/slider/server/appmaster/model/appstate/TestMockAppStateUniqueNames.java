@@ -103,8 +103,6 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
       assertEquals(i, instance.componentId);
       assertEquals(group, instance.role);
       assertEquals(group, instance.providerRole.name);
-      assertEquals(group, instance.providerRole.group);
-      // TODO remove group from provider role if it continues to be unused
       i++;
     }
   }
@@ -124,7 +122,6 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
     assertEquals(0, roleStatus.getDesired());
     assertEquals(1024L, roleStatus.getResourceRequirements().getMemorySize());
     assertEquals(2, roleStatus.getResourceRequirements().getVirtualCores());
-    assertEquals("group1", roleStatus.getGroup());
 
     // now flex back up
     appState.updateComponents(Collections.singletonMap("group1", 3L));
@@ -147,7 +144,6 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
     RoleStatus group1 = appState.lookupRoleStatus("group1");
     assertEquals(3, group1.getDesired());
     assertEquals(1024L, group1.getResourceRequirements().getMemorySize());
-    assertEquals("group1", group1.getGroup());
   }
 
 }

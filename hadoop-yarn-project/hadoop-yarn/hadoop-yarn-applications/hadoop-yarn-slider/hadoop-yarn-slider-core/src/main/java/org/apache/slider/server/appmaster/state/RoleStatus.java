@@ -45,7 +45,6 @@ import java.util.Map;
 public final class RoleStatus implements MetricSet {
 
   private final String name;
-  private final String group;
 
   /**
    * Role priority
@@ -66,7 +65,6 @@ public final class RoleStatus implements MetricSet {
   public RoleStatus(ProviderRole providerRole) {
     this.providerRole = providerRole;
     this.name = providerRole.name;
-    this.group = providerRole.group;
     this.key = providerRole.id;
     componentMetrics =
         SliderMetrics.register(this.name, "Metrics for component " + this.name);
@@ -93,10 +91,6 @@ public final class RoleStatus implements MetricSet {
 
   public String getName() {
     return name;
-  }
-
-  public String getGroup() {
-    return group;
   }
 
   public int getKey() {

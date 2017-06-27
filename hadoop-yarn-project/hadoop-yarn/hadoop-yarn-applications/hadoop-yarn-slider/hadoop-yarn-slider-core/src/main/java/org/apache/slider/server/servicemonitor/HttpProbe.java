@@ -18,30 +18,50 @@
 package org.apache.slider.server.servicemonitor;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Map;
 
 public class HttpProbe extends Probe {
   protected static final Logger log = LoggerFactory.getLogger(HttpProbe.class);
 
-  private final URL url;
+  private static final String HOST_TOKEN = "${THIS_HOST}";
+
+  private final String urlString;
   private final int timeout;
   private final int min, max;
 
 
-  public HttpProbe(URL url, int timeout, int min, int max, Configuration conf) throws IOException {
+  public HttpProbe(String url, int timeout, int min, int max, Configuration
+      conf) {
     super("Http probe of " + url + " [" + min + "-" + max + "]", conf);
-    this.url = url;
+    this.urlString = url;
     this.timeout = timeout;
     this.min = min;
     this.max = max;
   }
 
-  public static HttpURLConnection getConnection(URL url, int timeout) throws IOException {
+  public static HttpProbe create(Map<String, String> props)
+      throws IOException {
+    String urlString = getProperty(props, WEB_PROBE_URL, null);
+    new URL(urlString);
+    int timeout = getPropertyInt(props, WEB_PROBE_CONNECT_TIMEOUT,
+        WEB_PROBE_CONNECT_TIMEOUT_DEFAULT);
+    int minSuccess = getPropertyInt(props, WEB_PROBE_MIN_SUCCESS,
+        WEB_PROBE_MIN_SUCCESS_DEFAULT);
+    int maxSuccess = getPropertyInt(props, WEB_PROBE_MAX_SUCCESS,
+        WEB_PROBE_MAX_SUCCESS_DEFAULT);
+    return new HttpProbe(urlString, timeout, minSuccess, maxSuccess, null);
+  }
+
+
+  private static HttpURLConnection getConnection(URL url, int timeout) throws
+      IOException {
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     connection.setInstanceFollowRedirects(true);
     connection.setConnectTimeout(timeout);
@@ -49,13 +69,17 @@ public class HttpProbe extends Probe {
   }
   
   @Override
-  public ProbeStatus ping(boolean livePing) {
+  public ProbeStatus ping(RoleInstance roleInstance) {
     ProbeStatus status = new ProbeStatus();
+    String ip = roleInstance.ip;
+    if (ip == null) {
+      status.fail(this, new IOException("IP is not available yet"));
+      return status;
+    }
+
     HttpURLConnection connection = null;
     try {
-      if (log.isDebugEnabled()) {
-        // LOG.debug("Fetching " + url + " with timeout " + timeout);
-      }
+      URL url = new URL(urlString.replace(HOST_TOKEN, ip));
       connection = getConnection(url, this.timeout);
       int rc = connection.getResponseCode();
       if (rc < min || rc > max) {
@@ -66,8 +90,8 @@ public class HttpProbe extends Probe {
       } else {
         status.succeed(this);
       }
-    } catch (IOException e) {
-      String error = "Probe " + url + " failed: " + e;
+    } catch (Throwable e) {
+      String error = "Probe " + urlString + " failed for IP " + ip + ": " + e;
       log.info(error, e);
       status.fail(this,
                   new IOException(error, e));

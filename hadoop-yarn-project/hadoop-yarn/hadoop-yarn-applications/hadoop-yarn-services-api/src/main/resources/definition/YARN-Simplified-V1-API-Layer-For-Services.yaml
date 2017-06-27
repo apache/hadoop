@@ -297,18 +297,21 @@ definitions:
   ReadinessCheck:
     description: A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every application is different. Hence the need for a simple interface, with scope to support advanced usecases.
     required:
-    - uri
+    - type
     properties:
       type:
         type: string
         description: E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).
         enum:
           - HTTP
-      uri:
-        type: string
-        description: Fully qualified REST uri endpoint.
+          - PORT
+      props:
+        type: object
+        description: A blob of key value pairs that will be used to configure the check.
+        additionalProperties:
+          type: string
       artifact:
-        description: Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits application owners who can run applications without any packaging modifications. Note, artifacts of type docker only is supported for now.
+        description: Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits application owners who can run applications without any packaging modifications. Note, artifacts of type docker only is supported for now. NOT IMPLEMENTED YET
         $ref: '#/definitions/Artifact'
   Configuration:
     description: Set of configuration properties that can be injected into the application components via envs, files and custom pluggable helper docker containers. Files of several standard formats like xml, properties, json, yaml and templates will be supported.

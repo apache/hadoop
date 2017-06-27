@@ -21,6 +21,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -39,7 +41,8 @@ public class ReadinessCheck implements Serializable {
   private static final long serialVersionUID = -3836839816887186801L;
 
   public enum TypeEnum {
-    HTTP("HTTP");
+    HTTP("HTTP"),
+    PORT("PORT");
 
     private String value;
 
@@ -55,7 +58,7 @@ public class ReadinessCheck implements Serializable {
   }
 
   private TypeEnum type = null;
-  private String uri = null;
+  private Map<String, String> props = new HashMap<String, String>();
   private Artifact artifact = null;
 
   /**
@@ -77,22 +80,27 @@ public class ReadinessCheck implements Serializable {
     this.type = type;
   }
 
-  /**
-   * Fully qualified REST uri endpoint.
-   **/
-  public ReadinessCheck uri(String uri) {
-    this.uri = uri;
+  public ReadinessCheck props(Map<String, String> props) {
+    this.props = props;
     return this;
   }
 
-  @ApiModelProperty(example = "null", required = true, value = "Fully qualified REST uri endpoint.")
-  @JsonProperty("uri")
-  public String getUri() {
-    return uri;
+  public ReadinessCheck putPropsItem(String key, String propsItem) {
+    this.props.put(key, propsItem);
+    return this;
   }
 
-  public void setUri(String uri) {
-    this.uri = uri;
+  /**
+   * A blob of key value pairs that will be used to configure the check.
+   * @return props
+   **/
+  @ApiModelProperty(example = "null", value = "A blob of key value pairs that will be used to configure the check.")
+  public Map<String, String> getProps() {
+    return props;
+  }
+
+  public void setProps(Map<String, String> props) {
+    this.props = props;
   }
 
   /**
@@ -128,15 +136,16 @@ public class ReadinessCheck implements Serializable {
       return false;
     }
     ReadinessCheck readinessCheck = (ReadinessCheck) o;
-    return Objects.equals(this.type, readinessCheck.type)
-        && Objects.equals(this.uri, readinessCheck.uri)
-        && Objects.equals(this.artifact, readinessCheck.artifact);
+    return Objects.equals(this.type, readinessCheck.type) &&
+        Objects.equals(this.props, readinessCheck.props) &&
+        Objects.equals(this.artifact, readinessCheck.artifact);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, uri, artifact);
+    return Objects.hash(type, props, artifact);
   }
+
 
   @Override
   public String toString() {
@@ -144,7 +153,7 @@ public class ReadinessCheck implements Serializable {
     sb.append("class ReadinessCheck {\n");
 
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("    uri: ").append(toIndentedString(uri)).append("\n");
+    sb.append("    props: ").append(toIndentedString(props)).append("\n");
     sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
     sb.append("}");
     return sb.toString();

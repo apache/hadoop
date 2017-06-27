@@ -32,14 +32,18 @@ import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.persist.JsonSerDeser;
 import org.apache.slider.providers.AbstractClientProvider;
 import org.apache.slider.providers.SliderProviderFactory;
+import org.apache.slider.server.servicemonitor.MonitorUtils;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class ServiceApiUtil {
@@ -176,8 +180,21 @@ public class ServiceApiUtil {
       if (comp.getLaunchCommand() == null) {
         comp.setLaunchCommand(globalLaunchCommand);
       }
+      // validate dependency existence
+      if (comp.getDependencies() != null) {
+        for (String dependency : comp.getDependencies()) {
+          if (!componentNames.contains(dependency)) {
+            throw new IllegalArgumentException(String.format(
+                RestApiErrorMessages.ERROR_DEPENDENCY_INVALID, dependency,
+                comp.getName()));
+          }
+        }
+      }
       validateComponent(comp, fs.getFileSystem());
     }
+
+    // validate dependency tree
+    sortByDependencies(application.getComponents());
 
     // Application lifetime if not specified, is set to unlimited lifetime
     if (application.getLifetime() == null) {
@@ -207,6 +224,8 @@ public class ServiceApiUtil {
     }
     compClientProvider.validateConfigFiles(comp.getConfiguration()
         .getFiles(), fs);
+
+    MonitorUtils.getProbe(comp.getReadinessCheck());
   }
 
   @VisibleForTesting
@@ -299,6 +318,67 @@ public class ServiceApiUtil {
     comp.setLaunchCommand(app.getLaunchCommand());
     comp.setConfiguration(app.getConfiguration());
     return comp;
+  }
+
+  public static Collection<Component> sortByDependencies(List<Component>
+      components) {
+    Map<String, Component> sortedComponents =
+        sortByDependencies(components, null);
+    return sortedComponents.values();
+  }
+
+  /**
+   * Each internal call of sortByDependencies will identify all of the
+   * components with the same dependency depth (the lowest depth that has not
+   * been processed yet) and add them to the sortedComponents list, preserving
+   * their original ordering in the components list.
+   *
+   * So the first time it is called, all components with no dependencies
+   * (depth 0) will be identified. The next time it is called, all components
+   * that have dependencies only on the the depth 0 components will be
+   * identified (depth 1). This will be repeated until all components have
+   * been added to the sortedComponents list. If no new components are
+   * identified but the sortedComponents list is not complete, an error is
+   * thrown.
+   */
+  private static Map<String, Component> sortByDependencies(List<Component>
+      components, Map<String, Component> sortedComponents) {
+    if (sortedComponents == null) {
+      sortedComponents = new LinkedHashMap<>();
+    }
+
+    Map<String, Component> componentsToAdd = new LinkedHashMap<>();
+    List<Component> componentsSkipped = new ArrayList<>();
+    for (Component component : components) {
+      String name = component.getName();
+      if (sortedComponents.containsKey(name)) {
+        continue;
+      }
+      boolean dependenciesAlreadySorted = true;
+      if (!SliderUtils.isEmpty(component.getDependencies())) {
+        for (String dependency : component.getDependencies()) {
+          if (!sortedComponents.containsKey(dependency)) {
+            dependenciesAlreadySorted = false;
+            break;
+          }
+        }
+      }
+      if (dependenciesAlreadySorted) {
+        componentsToAdd.put(name, component);
+      } else {
+        componentsSkipped.add(component);
+      }
+    }
+
+    if (componentsToAdd.size() == 0) {
+      throw new IllegalArgumentException(String.format(RestApiErrorMessages
+          .ERROR_DEPENDENCY_CYCLE, componentsSkipped));
+    }
+    sortedComponents.putAll(componentsToAdd);
+    if (sortedComponents.size() == components.size()) {
+      return sortedComponents;
+    }
+    return sortByDependencies(components, sortedComponents);
   }
 
   public static String $(String s) {

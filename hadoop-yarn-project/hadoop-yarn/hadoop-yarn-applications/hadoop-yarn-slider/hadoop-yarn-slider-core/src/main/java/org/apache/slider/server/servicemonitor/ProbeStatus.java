@@ -34,7 +34,6 @@ public final class ProbeStatus implements Serializable {
   private String message;
   private Throwable thrown;
   private transient Probe originator;
-  private ProbePhase probePhase;
 
   public ProbeStatus() {
   }
@@ -99,14 +98,6 @@ public final class ProbeStatus implements Serializable {
     this.thrown = thrown;
   }
 
-  public ProbePhase getProbePhase() {
-    return probePhase;
-  }
-
-  public void setProbePhase(ProbePhase probePhase) {
-    this.probePhase = probePhase;
-  }
-
   /**
    * Get the probe that generated this result. May be null
    * @return a possibly null reference to a probe
@@ -147,7 +138,6 @@ public final class ProbeStatus implements Serializable {
   public String toString() {
     LogEntryBuilder builder = new LogEntryBuilder("Probe Status");
     builder.elt("time", timestampText)
-           .elt("phase", probePhase)
            .elt("outcome", (success ? "success" : "failure"));
 
     if (success != realOutcome) {
@@ -159,10 +149,6 @@ public final class ProbeStatus implements Serializable {
     }
 
     return builder.toString();
-  }
-
-  public boolean inPhase(ProbePhase phase) {
-    return getProbePhase().equals(phase);
   }
 
   /**

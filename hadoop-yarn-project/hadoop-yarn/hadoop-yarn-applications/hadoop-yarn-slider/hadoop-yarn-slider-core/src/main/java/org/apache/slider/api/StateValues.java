@@ -19,13 +19,15 @@
 package org.apache.slider.api;
 
 /**
- * Enumeration of state values
+ * Enumeration of state values.
  */
 public class StateValues {
 
+  private StateValues() {}
+
   /**
    * Specification is incomplete & cannot
-   * be used: {@value}
+   * be used: {@value}.
    */
   public static final int STATE_INCOMPLETE = 0;
 
@@ -42,12 +44,20 @@ public class StateValues {
    */
   public static final int STATE_LIVE = 3;
   /**
-   * Stopped
+   * Not ready.
    */
-  public static final int STATE_STOPPED = 4;
+  public static final int STATE_NOT_READY = 4;
   /**
-   * destroyed
+   * Ready.
    */
-  public static final int STATE_DESTROYED = 5;
+  public static final int STATE_READY = 5;
+  /**
+   * Stopped.
+   */
+  public static final int STATE_STOPPED = 99;
+  /**
+   * Destroyed.
+   */
+  public static final int STATE_DESTROYED = 100;
 
 }

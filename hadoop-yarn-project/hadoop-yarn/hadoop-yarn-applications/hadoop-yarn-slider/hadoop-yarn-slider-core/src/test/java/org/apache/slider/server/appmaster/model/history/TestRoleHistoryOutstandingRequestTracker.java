@@ -343,7 +343,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
   public void testBuildResourceRequirements() throws Throwable {
     // Store original values
     Application application = appState.getClusterStatus();
-    Component role0 = application.getComponent(getRole0Status().getGroup());
+    Component role0 = application.getComponent(getRole0Status().getName());
     String origMem = role0.getResource().getMemory();
     Integer origVcores = role0.getResource().getCpus();
 
