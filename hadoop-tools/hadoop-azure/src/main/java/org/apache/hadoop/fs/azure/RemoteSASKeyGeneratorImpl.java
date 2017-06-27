@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.hadoop.conf.Configuration;
@@ -55,6 +56,9 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(AzureNativeFileSystemStore.class);
+
+  private static final ObjectReader RESPONSE_READER = new ObjectMapper()
+      .readerFor(RemoteSASKeyGenerationResponse.class);
 
   /**
    * Container SAS Key generation OP name. {@value}
@@ -276,11 +280,7 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
         httpGet.setHeader("Cookie", AuthenticatedURL.AUTH_COOKIE + "=" + token);
       }
       String responseBody = remoteCallHelper.makeRemoteGetRequest(httpGet);
-
-      ObjectMapper objectMapper = new ObjectMapper();
-      return objectMapper.readValue(responseBody,
-          RemoteSASKeyGenerationResponse.class);
-
+      return RESPONSE_READER.readValue(responseBody);
     } catch (WasbRemoteCallException remoteCallEx) {
       throw new SASKeyGenerationException("Encountered RemoteCallException"
           + " while retrieving SAS key from remote service", remoteCallEx);
