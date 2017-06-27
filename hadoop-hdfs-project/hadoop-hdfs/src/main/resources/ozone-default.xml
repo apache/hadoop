@@ -579,5 +579,162 @@
       The keytab file for Kerberos authentication in KSM.
     </description>
   </property>
-  
+
+  <property>
+    <name>dfs.cblock.servicerpc-address</name>
+    <value></value>
+    <description>
+      The address that cblock will be bind to, should be a host:port format,
+      this setting is required for cblock server to start.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi.port</name>
+    <value>9811</value>
+    <description>
+      The port on CBlockManager node for jSCSI to talk to.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.storage.service.handler.count</name>
+    <value>10</value>
+    <description>
+      Default number of handlers for CBlock service rpc.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.service.leveldb.path</name>
+    <value>/tmp/cblock_levelDB.dat</value>
+    <description>
+      Default path for the cblock meta data disk store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.disk.cache.path</name>
+    <value>/tmp/cblockCacheDB</value>
+    <description>
+      Default path for the cblock local cache.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.trace.io</name>
+    <value>false</value>
+    <description>
+      Default flag for enabling trace io.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.short.circuit.io</name>
+    <value>false</value>
+    <description>
+      Default flag to enable cblock local cache.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.cache.size.in.kb</name>
+    <value>256</value>
+    <description>
+      Default cblock cache queue size, in number of kb.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.core.min.pool.size</name>
+    <value>16</value>
+    <description>
+      Minimum number of thread pool thread that cBlock cache will use for background I/O.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.max.pool.size</name>
+    <value>256</value>
+    <description>
+      Maximum number of thread pool thread that cBlcok cache will use for background I/O.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.keep.alive.seconds</name>
+    <value>60</value>
+    <description>
+      Number of seconds to keep the Thread alive when it is idle.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.thread.priority</name>
+    <value>5</value>
+    <description>
+      Priority of cache flusher thread, affecting the relative
+      performance of write and read.upported values are 1, 5, 10.
+      Use 10 for high priority and 1 for low priority.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.block.buffer.size</name>
+    <value>512</value>
+    <description>
+      Block Buffer size in terms of blockID entries, in number of blockIDs.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.block.buffer.flush.interval.seconds</name>
+    <value>60</value>
+    <description>
+      The interval to flush cblock buffer in seconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi.server.address</name>
+    <value>127.0.0.1</value>
+    <description>
+      The address that jscsi server will be running, should have one
+      local jscsi server for each client that tries to mount cblock.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi.cblock.server.address</name>
+    <value>127.0.0.1</value>
+    <description>
+      The address local jscsi server will use to talk to cblock manager.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.container.size</name>
+    <value>5</value>
+    <description>
+      The size of ozone container in number of GBs. Note that this is
+      not setting container size for ozone, but rather, this is setting
+      that assumption that cblock manager will make about ozone.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.leveldb.cache.size.mb</name>
+    <value>256</value>
+    <description>
+      The size of LevelDB cache file which uses an off-heap cache in LevelDB.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.max.retry</name>
+    <value>65536</value>
+    <description>
+      The maximum number of retries when writing a block to container.
+    </description>
+  </property>
 </configuration>
