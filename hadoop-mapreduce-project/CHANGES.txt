@@ -41,6 +41,9 @@ Release 2.7.4 - UNRELEASED
     MAPREDUCE-6433. launchTime may be negative.
     (zxu) backported by Chris Douglas.
 
+    MAPREDUCE-6697. Concurrent task limits should only be applied when
+    necessary. (Nathan Roberts via shv).
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
