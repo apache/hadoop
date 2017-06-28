@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSchedulerKey;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -41,13 +42,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.After;
 import org.junit.Test;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSchedulerKey;
 
 public class TestSchedulerApplicationAttempt {
 
@@ -103,7 +101,8 @@ public class TestSchedulerApplicationAttempt {
     Map<NodeId, RMContainer> reservations = new HashMap<NodeId, RMContainer>();
     reservations.put(node.getNodeID(), container2);
     app.reservedContainers.put(toSchedulerKey(prio1), reservations);
-    oldMetrics.reserveResource(user, reservedResource);
+    oldMetrics.reserveResource(container2.getNodeLabelExpression(),
+        user, reservedResource);
     
     checkQueueMetrics(oldMetrics, 1, 1, 1536, 2, 2048, 3, 3072, 4);
     checkQueueMetrics(newMetrics, 0, 0, 0, 0, 0, 0, 0, 0);
