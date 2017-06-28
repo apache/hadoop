@@ -919,7 +919,8 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   private void applyConcurrentTaskLimits() {
     int numScheduledMaps = scheduledRequests.maps.size();
-    if (maxRunningMaps > 0 && numScheduledMaps > 0) {
+    if (maxRunningMaps > 0 && numScheduledMaps > 0 &&
+        getJob().getTotalMaps() > maxRunningMaps) {
       int maxRequestedMaps = Math.max(0,
           maxRunningMaps - assignedRequests.maps.size());
       int numScheduledFailMaps = scheduledRequests.earlierFailedMaps.size();
@@ -936,7 +937,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
 
     int numScheduledReduces = scheduledRequests.reduces.size();
-    if (maxRunningReduces > 0 && numScheduledReduces > 0) {
+    if (maxRunningReduces > 0 && numScheduledReduces > 0 &&
+        getJob().getTotalReduces() > maxRunningReduces) {
       int maxRequestedReduces = Math.max(0,
           maxRunningReduces - assignedRequests.reduces.size());
       int reduceRequestLimit = Math.min(maxRequestedReduces,
