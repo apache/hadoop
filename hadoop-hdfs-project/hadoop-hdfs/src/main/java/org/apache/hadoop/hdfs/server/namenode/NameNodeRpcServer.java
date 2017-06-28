@@ -2307,6 +2307,22 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.removeErasureCodingPolicy(ecPolicyName);
   }
 
+  @Override // ClientProtocol
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    namesystem.enableErasureCodingPolicy(ecPolicyName);
+  }
+
+  @Override // ClientProtocol
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    namesystem.disableErasureCodingPolicy(ecPolicyName);
+  }
+
   @Override // ReconfigurationProtocol
   public void startReconfiguration() throws IOException {
     checkNNStartup();

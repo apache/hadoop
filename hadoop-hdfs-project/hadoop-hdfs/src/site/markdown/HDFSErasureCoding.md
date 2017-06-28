@@ -156,6 +156,8 @@ Deployment
          [-listPolicies]
          [-addPolicies -policyFile <file>]
          [-listCodecs]
+         [-enablePolicy -policy <policyName>]
+         [-disablePolicy -policy <policyName>]
          [-help [cmd ...]]
 
 Below are the details about each command.
@@ -191,3 +193,11 @@ Below are the details about each command.
 *  `[-removePolicy -policy <policyName>]`
 
      Remove an erasure coding policy.
+
+*  `[-enablePolicy -policy <policyName>]`
+
+     Enable an erasure coding policy.
+
+*  `[-disablePolicy -policy <policyName>]`
+
+     Disable an erasure coding policy.

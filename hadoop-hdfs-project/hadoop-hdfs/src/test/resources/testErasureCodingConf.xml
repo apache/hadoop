@@ -163,6 +163,44 @@
       </comparators>
     </test>
 
+    <test>
+      <description>help: enablePolicy command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help enablePolicy</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Enable the erasure coding policy</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>[-enablePolicy -policy &lt;policy&gt;]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: disablePolicy command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help disablePolicy</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Disable the erasure coding policy</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>[-disablePolicy -policy &lt;policy&gt;]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   <!-- Test erasure code commands -->
     <test>
       <description>setPolicy : set erasure coding policy on a directory to encode files</description>
@@ -345,6 +383,70 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>Add ErasureCodingPolicy RS-6-3-64k failed</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>enablePolicy : enable the erasure coding policy</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Erasure coding policy RS-6-3-64k is enabled</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>enablePolicy : enable the erasure coding policy twice</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Erasure coding policy RS-6-3-64k is enabled</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>disablePolicy : disable the erasure coding policy</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Erasure coding policy RS-6-3-64k is disabled</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>disablePolicy : disable the erasure coding policy twice</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Erasure coding policy RS-6-3-64k is disabled</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -537,6 +639,66 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>-addPolicies: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>enablePolicy : illegal parameters - policy is missing</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -enablePolicy RS-6-3-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Please specify the policy name</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>enablePolicy : illegal parameters - too many parameters</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k RS-3-2-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-enablePolicy: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>disablePolicy : illegal parameters - policy is missing</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -disablePolicy RS-6-3-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Please specify the policy name</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>disablePolicy : illegal parameters - too many parameters</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k RS-3-2-64k</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-disablePolicy: Too many arguments</expected-output>
         </comparator>
       </comparators>
     </test>

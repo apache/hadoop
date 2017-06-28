@@ -212,6 +212,10 @@ public final class ErasureCodingPolicyManager {
     // This is a placeholder for HDFS-7337.
   }
 
+  /**
+   * Add an erasure coding policy.
+   * @return the added policy
+   */
   public synchronized ErasureCodingPolicy addPolicy(ErasureCodingPolicy policy)
       throws IllegalECPolicyException {
     if (!CodecUtil.hasCodec(policy.getCodecName())) {
@@ -251,6 +255,9 @@ public final class ErasureCodingPolicyManager {
     return (byte) (currentId + 1);
   }
 
+  /**
+   * Remove an User erasure coding policy by policyName.
+   */
   public synchronized void removePolicy(String name) {
     if (SystemErasureCodingPolicies.getByName(name) != null) {
       throw new IllegalArgumentException("System erasure coding policy " +
@@ -268,4 +275,53 @@ public final class ErasureCodingPolicyManager {
   public List<ErasureCodingPolicy> getRemovedPolicies() {
     return removedPoliciesByName.values().stream().collect(Collectors.toList());
   }
+
+  /**
+   * Disable an erasure coding policy by policyName.
+   */
+  public synchronized void disablePolicy(String name) {
+    ErasureCodingPolicy sysEcPolicy = SystemErasureCodingPolicies
+        .getByName(name);
+    ErasureCodingPolicy userEcPolicy = userPoliciesByName.get(name);
+    LOG.info("Disable the erasure coding policy " + name);
+    if (sysEcPolicy == null &&
+        userEcPolicy == null) {
+      throw new IllegalArgumentException("The policy name " +
+          name + " does not exists");
+    }
+
+    if(sysEcPolicy != null){
+      enabledPoliciesByName.remove(name);
+      removedPoliciesByName.put(name, sysEcPolicy);
+    }
+    if(userEcPolicy != null){
+      enabledPoliciesByName.remove(name);
+      removedPoliciesByName.put(name, userEcPolicy);
+    }
+  }
+
+  /**
+   * Enable an erasure coding policy by policyName.
+   */
+  public synchronized void enablePolicy(String name) {
+    ErasureCodingPolicy sysEcPolicy = SystemErasureCodingPolicies
+        .getByName(name);
+    ErasureCodingPolicy userEcPolicy = userPoliciesByName.get(name);
+    LOG.info("Enable the erasure coding policy " + name);
+    if (sysEcPolicy == null &&
+        userEcPolicy == null) {
+      throw new IllegalArgumentException("The policy name " +
+          name + " does not exists");
+    }
+
+    if(sysEcPolicy != null){
+      enabledPoliciesByName.put(name, sysEcPolicy);
+      removedPoliciesByName.remove(name);
+    }
+    if(userEcPolicy != null) {
+      enabledPoliciesByName.put(name, userEcPolicy);
+      removedPoliciesByName.remove(name);
+    }
+  }
+
 }
