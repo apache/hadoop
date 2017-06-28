@@ -773,5 +773,39 @@
         </comparator>
       </comparators>
     </test>
+
+    <test> <!-- TESTED -->
+      <description>ls: file using absolute path and option -e to show erasure coding policy of a directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy RS-6-3-64k</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <command>-fs NAMENODE -touchz /ecdir/file2</command>
+        <command>-fs NAMENODE -touchz /ecdir/file3</command>
+        <command>-fs NAMENODE -ls -e /ecdir</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>Found [0-9] items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir/file1</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir/file2</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir/file3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   </tests>
 </configuration>

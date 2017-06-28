@@ -410,7 +410,7 @@ Return usage output.
 ls
 ----
 
-Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] <args> `
+Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] [-e] <args> `
 
 Options:
 
@@ -423,6 +423,7 @@ Options:
 * -S: Sort output by file size.
 * -r: Reverse the sort order.
 * -u: Use access time rather than modification time for display and sorting.  
+* -e: Display the erasure coding policy of files and directories only.
 
 For a file ls returns stat on the file with the following format:
 
@@ -437,6 +438,7 @@ Files within a directory are order by filename by default.
 Example:
 
 * `hadoop fs -ls /user/hadoop/file1`
+* `hadoop fs -ls -e /ecdir`
 
 Exit Code:
 
