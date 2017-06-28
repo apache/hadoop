@@ -852,7 +852,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     rootDirectory = container.getDirectoryReference("");
 
     canCreateOrModifyContainer = true;
-    tolerateOobAppends = false;
   }
 
   /**
@@ -1911,8 +1910,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     // If reads concurrent to OOB writes are allowed, the interception will reset
     // the conditional header on all Azure blob storage read requests.
     if (bindConcurrentOOBIo) {
-      SendRequestIntercept.bind(storageInteractionLayer.getCredentials(),
-          operationContext, true);
+      SendRequestIntercept.bind(operationContext);
     }
 
     if (testHookOperationContext != null) {
