@@ -19,8 +19,8 @@
 package org.apache.hadoop.ozone.web.ozShell;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneClient;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClient;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.http.client.utils.URIBuilder;
 
@@ -32,13 +32,13 @@ import java.net.URISyntaxException;
  * Common interface for command handling.
  */
 public abstract class Handler {
-  protected OzoneClient client;
+  protected OzoneRestClient client;
 
   /**
    * Constructs a client object.
    */
   public Handler() {
-    client = new OzoneClient();
+    client = new OzoneRestClient();
   }
 
   /**
@@ -63,7 +63,7 @@ public abstract class Handler {
   protected URI verifyURI(String uri) throws URISyntaxException,
       OzoneException {
     if ((uri == null) || uri.isEmpty()) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "Ozone URI is needed to execute this command.");
     }
     URIBuilder ozoneURI = new URIBuilder(uri);

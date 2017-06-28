@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -56,11 +56,11 @@ public class PutKeyHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.PUT_KEY)) {
-      throw new OzoneClientException("Incorrect call : putKey is missing");
+      throw new OzoneRestClientException("Incorrect call : putKey is missing");
     }
 
     if (!cmd.hasOption(Shell.FILE)) {
-      throw new OzoneClientException("put key needs a file to put");
+      throw new OzoneRestClientException("put key needs a file to put");
     }
 
     if (cmd.hasOption(Shell.USER)) {
@@ -73,7 +73,7 @@ public class PutKeyHandler extends Handler {
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 3) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "volume/bucket/key name required in putKey");
     }
 

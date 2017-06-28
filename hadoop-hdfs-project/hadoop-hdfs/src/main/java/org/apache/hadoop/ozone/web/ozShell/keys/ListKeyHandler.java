@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneKey;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -56,14 +56,16 @@ public class ListKeyHandler extends Handler {
       throws IOException, OzoneException, URISyntaxException {
 
     if (!cmd.hasOption(Shell.LIST_KEY)) {
-      throw new OzoneClientException("Incorrect call : listKey is missing");
+      throw new OzoneRestClientException(
+          "Incorrect call : listKey is missing");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.LIST_KEY);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 2) {
-      throw new OzoneClientException("volume/bucket is required in listKey");
+      throw new OzoneRestClientException(
+          "volume/bucket is required in listKey");
     }
 
     volumeName = path.getName(0).toString();

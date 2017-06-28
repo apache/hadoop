@@ -60,7 +60,7 @@ public class TestKeys {
 
   private static MiniOzoneCluster cluster = null;
   static private String path;
-  private static OzoneClient client = null;
+  private static OzoneRestClient client = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -85,7 +85,7 @@ public class TestKeys {
         .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
-    client = new OzoneClient(String.format("http://localhost:%d", port));
+    client = new OzoneRestClient(String.format("http://localhost:%d", port));
   }
 
   /**

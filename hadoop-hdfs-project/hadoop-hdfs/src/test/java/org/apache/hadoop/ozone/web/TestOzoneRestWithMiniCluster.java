@@ -25,6 +25,7 @@ import static org.junit.Assert.*;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -35,7 +36,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneClient;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.junit.rules.Timeout;
@@ -52,7 +52,7 @@ public class TestOzoneRestWithMiniCluster {
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
-  private static OzoneClient ozoneClient;
+  private static OzoneRestClient ozoneClient;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -63,7 +63,7 @@ public class TestOzoneRestWithMiniCluster {
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     cluster.waitOzoneReady();
-    ozoneClient = cluster.createOzoneClient();
+    ozoneClient = cluster.createOzoneRestClient();
   }
 
   @AfterClass

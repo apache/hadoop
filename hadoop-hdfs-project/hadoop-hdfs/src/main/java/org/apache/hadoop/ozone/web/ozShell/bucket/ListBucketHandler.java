@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.web.ozShell.bucket;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -54,14 +54,15 @@ public class ListBucketHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.LIST_BUCKET)) {
-      throw new OzoneClientException("Incorrect call : listBucket is missing");
+      throw new OzoneRestClientException(
+          "Incorrect call : listBucket is missing");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.LIST_BUCKET);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 1) {
-      throw new OzoneClientException("volume is required in listBucket");
+      throw new OzoneRestClientException("volume is required in listBucket");
     }
 
     volumeName = path.getName(0).toString();

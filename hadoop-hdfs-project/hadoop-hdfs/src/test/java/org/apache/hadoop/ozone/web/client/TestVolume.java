@@ -55,7 +55,7 @@ import static org.mockito.Mockito.verify;
 
 public class TestVolume {
   private static MiniOzoneCluster cluster = null;
-  private static OzoneClient client = null;
+  private static OzoneRestClient client = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -84,7 +84,7 @@ public class TestVolume {
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
 
-    client = new OzoneClient(String.format("http://localhost:%d", port));
+    client = new OzoneRestClient(String.format("http://localhost:%d", port));
   }
 
   /**
@@ -102,7 +102,7 @@ public class TestVolume {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
 
-    OzoneClient mockClient = Mockito.spy(client);
+    OzoneRestClient mockClient = Mockito.spy(client);
     List<CloseableHttpClient> mockedClients = mockHttpClients(mockClient);
     OzoneVolume vol = mockClient.createVolume(volumeName, "bilbo", "100TB");
     // Verify http clients are properly closed.
@@ -227,16 +227,17 @@ public class TestVolume {
   /**
    * Returns a list of mocked {@link CloseableHttpClient} used for testing.
    * The mocked client replaces the actual calls in
-   * {@link OzoneClient#newHttpClient()}, it is used to verify
+   * {@link OzoneRestClient#newHttpClient()}, it is used to verify
    * if the invocation of this client is expected. <b>Note</b>, the output
    * of this method is always used as the input of
    * {@link TestVolume#verifyHttpConnectionClosed(List)}.
    *
-   * @param ozoneClient mocked ozone client.
+   * @param ozoneRestClient mocked ozone client.
    * @return a list of mocked {@link CloseableHttpClient}.
    * @throws IOException
    */
-  private List<CloseableHttpClient> mockHttpClients(OzoneClient ozoneClient)
+  private List<CloseableHttpClient> mockHttpClients(
+      OzoneRestClient ozoneRestClient)
       throws IOException {
     List<CloseableHttpClient> spyHttpClients = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
@@ -247,7 +248,7 @@ public class TestVolume {
 
     List<CloseableHttpClient> nextReturns =
         new ArrayList<>(spyHttpClients.subList(1, spyHttpClients.size()));
-    Mockito.when(ozoneClient.newHttpClient()).thenReturn(
+    Mockito.when(ozoneRestClient.newHttpClient()).thenReturn(
         spyHttpClients.get(0),
         nextReturns.toArray(new CloseableHttpClient[nextReturns.size()]));
     return spyHttpClients;
@@ -255,7 +256,7 @@ public class TestVolume {
 
   /**
    * This method is used together with
-   * {@link TestVolume#mockHttpClients(OzoneClient)} to verify
+   * {@link TestVolume#mockHttpClients(OzoneRestClient)} to verify
    * if the http client is properly closed. It verifies that as long as
    * a client calls {@link CloseableHttpClient#execute(HttpUriRequest)} to
    * send request, then it must calls {@link CloseableHttpClient#close()}
