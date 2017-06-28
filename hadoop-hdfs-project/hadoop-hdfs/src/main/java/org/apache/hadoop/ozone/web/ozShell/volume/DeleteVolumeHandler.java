@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -49,14 +49,14 @@ public class DeleteVolumeHandler extends Handler {
       throws IOException, OzoneException, URISyntaxException {
 
     if (!cmd.hasOption(Shell.DELETE_VOLUME)) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "Incorrect call : deleteVolume call is missing");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.DELETE_VOLUME);
     URI ozoneURI = verifyURI(ozoneURIString);
     if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "Volume name is required to delete a volume");
     }
 

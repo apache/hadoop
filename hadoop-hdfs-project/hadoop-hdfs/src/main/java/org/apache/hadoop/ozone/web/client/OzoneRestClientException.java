@@ -22,13 +22,13 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 /**
  * This exception is thrown by the Ozone Clients.
  */
-public class OzoneClientException extends OzoneException {
+public class OzoneRestClientException extends OzoneException {
   /**
    * Constructor that allows the shortMessage.
    *
    * @param shortMessage Short Message
    */
-  public OzoneClientException(String shortMessage) {
+  public OzoneRestClientException(String shortMessage) {
     super(0, shortMessage, shortMessage);
   }
 
@@ -38,7 +38,7 @@ public class OzoneClientException extends OzoneException {
    * @param shortMessage Short Message
    * @param message long error message
    */
-  public OzoneClientException(String shortMessage, String message) {
+  public OzoneRestClientException(String shortMessage, String message) {
     super(0, shortMessage, message);
   }
 }

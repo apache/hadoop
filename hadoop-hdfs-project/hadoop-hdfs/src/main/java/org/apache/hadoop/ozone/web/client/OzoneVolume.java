@@ -55,12 +55,12 @@ import static java.net.HttpURLConnection.HTTP_OK;
 public class OzoneVolume {
   private VolumeInfo volumeInfo;
   private Map<String, String> headerMap;
-  private final OzoneClient client;
+  private final OzoneRestClient client;
 
   /**
    * Constructor for OzoneVolume.
    */
-  public OzoneVolume(OzoneClient client) {
+  public OzoneVolume(OzoneRestClient client) {
     this.client = client;
     this.headerMap = new HashMap<>();
   }
@@ -71,7 +71,7 @@ public class OzoneVolume {
    * @param volInfo - volume Info.
    * @param client  Client
    */
-  public OzoneVolume(VolumeInfo volInfo, OzoneClient client) {
+  public OzoneVolume(VolumeInfo volInfo, OzoneRestClient client) {
     this.volumeInfo = volInfo;
     this.client = client;
   }
@@ -145,7 +145,7 @@ public class OzoneVolume {
    *
    * @return - Ozone Client
    */
-  OzoneClient getClient() {
+  OzoneRestClient getClient() {
     return client;
   }
 
@@ -184,7 +184,7 @@ public class OzoneVolume {
       executeCreateBucket(httpPost, httpClient);
       return getBucket(bucketName);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(httpPost);
     }
@@ -257,7 +257,7 @@ public class OzoneVolume {
       if (entity != null) {
         throw OzoneException.parse(EntityUtils.toString(entity));
       } else {
-        throw new OzoneClientException("Unexpected null in http payload");
+        throw new OzoneRestClientException("Unexpected null in http payload");
       }
     } finally {
       if (entity != null) {
@@ -288,7 +288,7 @@ public class OzoneVolume {
       }
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -317,7 +317,7 @@ public class OzoneVolume {
       }
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -342,7 +342,7 @@ public class OzoneVolume {
       return executeInfoBucket(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }
@@ -369,7 +369,7 @@ public class OzoneVolume {
       int errorCode = response.getStatusLine().getStatusCode();
       entity = response.getEntity();
       if (entity == null) {
-        throw new OzoneClientException("Unexpected null in http payload");
+        throw new OzoneRestClientException("Unexpected null in http payload");
       }
       if ((errorCode == HTTP_OK) || (errorCode == HTTP_CREATED)) {
         OzoneBucket bucket =
@@ -413,7 +413,7 @@ public class OzoneVolume {
         throw OzoneException.parse(EntityUtils.toString(entity));
       }
 
-      throw new OzoneClientException("Unexpected null in http result");
+      throw new OzoneRestClientException("Unexpected null in http result");
     } finally {
       if (entity != null) {
         EntityUtils.consumeQuietly(entity);
@@ -438,7 +438,7 @@ public class OzoneVolume {
       return executeListBuckets(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneClientException(e.getMessage());
+      throw new OzoneRestClientException(e.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }
@@ -467,7 +467,7 @@ public class OzoneVolume {
       entity = response.getEntity();
 
       if (entity == null) {
-        throw new OzoneClientException("Unexpected null in http payload");
+        throw new OzoneRestClientException("Unexpected null in http payload");
       }
       if (errorCode == HTTP_OK) {
         ListBuckets bucketList =
@@ -506,7 +506,7 @@ public class OzoneVolume {
       executeDeleteBucket(delRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(delRequest);
     }
@@ -535,7 +535,7 @@ public class OzoneVolume {
       }
 
       if (entity == null) {
-        throw new OzoneClientException("Unexpected null in http payload.");
+        throw new OzoneRestClientException("Unexpected null in http payload.");
       }
 
       throw OzoneException.parse(EntityUtils.toString(entity));

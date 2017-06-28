@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -51,7 +51,7 @@ public class ListVolumeHandler extends Handler {
       throws IOException, OzoneException, URISyntaxException {
 
     if (!cmd.hasOption(Shell.LIST_VOLUME)) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "Incorrect call : listVolume is missing");
     }
 
@@ -63,7 +63,7 @@ public class ListVolumeHandler extends Handler {
     }
 
     if (!cmd.hasOption(Shell.USER)) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "User name is needed in listVolume call.");
     }
 

@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -53,7 +53,8 @@ public class DeleteKeyHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.DELETE_KEY)) {
-      throw new OzoneClientException("Incorrect call : deleteKey is missing");
+      throw new OzoneRestClientException(
+          "Incorrect call : deleteKey is missing");
     }
 
 
@@ -68,7 +69,7 @@ public class DeleteKeyHandler extends Handler {
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 3) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "volume/bucket/key name required in deleteKey");
     }
 

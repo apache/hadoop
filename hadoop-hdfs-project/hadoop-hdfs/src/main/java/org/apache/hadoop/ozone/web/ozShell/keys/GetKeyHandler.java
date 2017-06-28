@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -58,11 +58,11 @@ public class GetKeyHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.GET_KEY)) {
-      throw new OzoneClientException("Incorrect call : getKey is missing");
+      throw new OzoneRestClientException("Incorrect call : getKey is missing");
     }
 
     if (!cmd.hasOption(Shell.FILE)) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "get key needs a file path to download to");
     }
 
@@ -77,7 +77,7 @@ public class GetKeyHandler extends Handler {
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 3) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "volume/bucket/key name required in putKey");
     }
 
@@ -99,7 +99,7 @@ public class GetKeyHandler extends Handler {
 
 
     if (dataFile.exists()) {
-      throw new OzoneClientException(fileName +
+      throw new OzoneRestClientException(fileName +
                                          "exists. Download will overwrite an " +
                                          "existing file. Aborting.");
     }

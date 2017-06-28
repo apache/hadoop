@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -52,7 +52,7 @@ public class DeleteBucketHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.DELETE_BUCKET)) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "Incorrect call : deleteBucket is missing");
     }
 
@@ -60,7 +60,7 @@ public class DeleteBucketHandler extends Handler {
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 2) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "volume and bucket name required in delete Bucket");
     }
 

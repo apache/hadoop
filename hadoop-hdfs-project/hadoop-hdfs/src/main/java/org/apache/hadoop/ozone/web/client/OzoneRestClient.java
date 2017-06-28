@@ -54,28 +54,28 @@ import static java.net.HttpURLConnection.HTTP_OK;
  * Ozone client that connects to an Ozone server. Please note that this class is
  * not  thread safe.
  */
-public class OzoneClient implements Closeable {
+public class OzoneRestClient implements Closeable {
   private URI endPointURI;
   private String userAuth;
 
   /**
-   * Constructor for OzoneClient.
+   * Constructor for OzoneRestClient.
    */
-  public OzoneClient() {
+  public OzoneRestClient() {
   }
 
   /**
-   * Constructor for OzoneClient.
+   * Constructor for OzoneRestClient.
    */
-  public OzoneClient(String ozoneURI)
+  public OzoneRestClient(String ozoneURI)
       throws OzoneException, URISyntaxException {
     setEndPoint(ozoneURI);
   }
 
   /**
-   * Constructor for OzoneClient.
+   * Constructor for OzoneRestClient.
    */
-  public OzoneClient(String ozoneURI, String userAuth)
+  public OzoneRestClient(String ozoneURI, String userAuth)
       throws OzoneException, URISyntaxException {
     setEndPoint(ozoneURI);
     setUserAuth(userAuth);
@@ -98,7 +98,7 @@ public class OzoneClient implements Closeable {
    */
   public void setEndPointURI(URI endPointURI) throws OzoneException {
     if ((endPointURI == null) || (endPointURI.toString().isEmpty())) {
-      throw new OzoneClientException("Invalid ozone URI");
+      throw new OzoneRestClientException("Invalid ozone URI");
     }
     this.endPointURI = endPointURI;
   }
@@ -138,7 +138,7 @@ public class OzoneClient implements Closeable {
    * @param onBehalfOf - The user on behalf we are making the call for
    * @param quota      - Quota's are specified in a specific format. it is
    *                   integer(MB|GB|TB), for example 100TB.
-   * @throws OzoneClientException
+   * @throws OzoneRestClientException
    */
   public OzoneVolume createVolume(String volumeName, String onBehalfOf,
                                   String quota) throws OzoneException {
@@ -156,7 +156,7 @@ public class OzoneClient implements Closeable {
       executeCreateVolume(httpPost, httpClient);
       return getVolume(volumeName);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(httpPost);
     }
@@ -183,7 +183,7 @@ public class OzoneClient implements Closeable {
       httpGet = getHttpGet(builder.toString());
       return executeInfoVolume(httpGet, httpClient);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(httpGet);
     }
@@ -232,7 +232,7 @@ public class OzoneClient implements Closeable {
       }
       return executeListVolume(httpGet, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(httpGet);
     }
@@ -286,7 +286,7 @@ public class OzoneClient implements Closeable {
       return executeListVolume(httpGet, httpClient);
 
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(httpGet);
     }
@@ -308,7 +308,7 @@ public class OzoneClient implements Closeable {
       httpDelete = getHttpDelete(builder.toString());
       executeDeleteVolume(httpDelete, httpClient);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(httpDelete);
     }
@@ -325,7 +325,7 @@ public class OzoneClient implements Closeable {
       throws OzoneException {
     HttpPut putRequest = null;
     if (newOwner == null || newOwner.isEmpty()) {
-      throw new OzoneClientException("Invalid new owner name");
+      throw new OzoneRestClientException("Invalid new owner name");
     }
     try (CloseableHttpClient httpClient = newHttpClient()) {
       OzoneUtils.verifyBucketName(volumeName);
@@ -337,7 +337,7 @@ public class OzoneClient implements Closeable {
       executePutVolume(putRequest, httpClient);
 
     } catch (URISyntaxException | IllegalArgumentException | IOException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -356,7 +356,7 @@ public class OzoneClient implements Closeable {
   public void setVolumeQuota(String volumeName, String quota)
       throws OzoneException {
     if (quota == null || quota.isEmpty()) {
-      throw new OzoneClientException("Invalid quota");
+      throw new OzoneRestClientException("Invalid quota");
     }
     HttpPut putRequest = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
@@ -370,7 +370,7 @@ public class OzoneClient implements Closeable {
       executePutVolume(putRequest, httpClient);
 
     } catch (URISyntaxException | IllegalArgumentException | IOException ex) {
-      throw new OzoneClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -400,7 +400,7 @@ public class OzoneClient implements Closeable {
       if (entity != null) {
         throw OzoneException.parse(EntityUtils.toString(entity));
       } else {
-        throw new OzoneClientException("Unexpected null in http payload");
+        throw new OzoneRestClientException("Unexpected null in http payload");
       }
     } finally {
       if (entity != null) {
@@ -427,7 +427,7 @@ public class OzoneClient implements Closeable {
 
       entity = response.getEntity();
       if (entity == null) {
-        throw new OzoneClientException("Unexpected null in http payload");
+        throw new OzoneRestClientException("Unexpected null in http payload");
       }
 
       if (errorCode == HTTP_OK) {
@@ -488,7 +488,7 @@ public class OzoneClient implements Closeable {
       entity = response.getEntity();
 
       if (entity == null) {
-        throw new OzoneClientException("Unexpected null in http payload");
+        throw new OzoneRestClientException("Unexpected null in http payload");
       }
 
       String temp = EntityUtils.toString(entity);

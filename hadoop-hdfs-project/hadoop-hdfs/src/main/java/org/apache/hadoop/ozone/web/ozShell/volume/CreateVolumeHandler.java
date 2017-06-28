@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -52,14 +52,14 @@ public class CreateVolumeHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.CREATE_VOLUME)) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "Incorrect call : createVolume is missing");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.CREATE_VOLUME);
     URI ozoneURI = verifyURI(ozoneURIString);
     if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "Volume name is required to create a volume");
     }
 
@@ -77,7 +77,7 @@ public class CreateVolumeHandler extends Handler {
     }
 
     if (!cmd.hasOption(Shell.USER)) {
-      throw new OzoneClientException(
+      throw new OzoneRestClientException(
           "User name is needed in createVolume call.");
     }
 

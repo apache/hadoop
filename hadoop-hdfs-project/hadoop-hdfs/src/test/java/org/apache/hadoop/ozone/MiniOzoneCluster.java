@@ -30,13 +30,13 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
+import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
-import org.apache.hadoop.ozone.web.client.OzoneClient;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -170,15 +170,15 @@ public final class MiniOzoneCluster extends MiniDFSCluster
   }
 
   /**
-   * Creates an {@link OzoneClient} connected to this cluster's REST service.
-   * Callers take ownership of the client and must close it when done.
+   * Creates an {@link OzoneRestClient} connected to this cluster's REST
+   * service. Callers take ownership of the client and must close it when done.
    *
-   * @return OzoneClient connected to this cluster's REST service
+   * @return OzoneRestClient connected to this cluster's REST service
    * @throws OzoneException if Ozone encounters an error creating the client
    */
-  public OzoneClient createOzoneClient() throws OzoneException {
+  public OzoneRestClient createOzoneRestClient() throws OzoneException {
     Preconditions.checkState(!getDataNodes().isEmpty(),
-        "Cannot create OzoneClient if the cluster has no DataNodes.");
+        "Cannot create OzoneRestClient if the cluster has no DataNodes.");
     // An Ozone request may originate at any DataNode, so pick one at random.
     int dnIndex = new Random().nextInt(getDataNodes().size());
     String uri = String.format("http://127.0.0.1:%d",
@@ -186,7 +186,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     LOG.info("Creating Ozone client to DataNode {} with URI {} and user {}",
         dnIndex, uri, USER_AUTH);
     try {
-      return new OzoneClient(uri, USER_AUTH);
+      return new OzoneRestClient(uri, USER_AUTH);
     } catch (URISyntaxException e) {
       // We control the REST service URI, so it should never be invalid.
       throw new IllegalStateException("Unexpected URISyntaxException", e);
