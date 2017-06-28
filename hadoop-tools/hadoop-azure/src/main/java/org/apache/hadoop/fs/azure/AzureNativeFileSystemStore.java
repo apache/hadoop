@@ -1194,8 +1194,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         container.downloadAttributes(getInstrumentedContext());
         currentKnownContainerState = ContainerState.Unknown;
       } catch (StorageException ex) {
-        if (ex.getErrorCode().equals(
-            StorageErrorCode.RESOURCE_NOT_FOUND.toString())) {
+        if (StorageErrorCode.RESOURCE_NOT_FOUND.toString()
+            .equals(ex.getErrorCode())) {
           currentKnownContainerState = ContainerState.DoesntExist;
         } else {
           throw ex;
@@ -1596,7 +1596,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       if (t != null && t instanceof StorageException) {
         StorageException se = (StorageException) t;
         // If we got this exception, the blob should have already been created
-        if (!se.getErrorCode().equals("LeaseIdMissing")) {
+        if (!"LeaseIdMissing".equals(se.getErrorCode())) {
           throw new AzureException(e);
         }
       } else {
@@ -2427,7 +2427,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // 2. It got there after one-or-more retries THEN
       // we swallow the exception.
       if (e.getErrorCode() != null &&
-          e.getErrorCode().equals("BlobNotFound") &&
+          "BlobNotFound".equals(e.getErrorCode()) &&
           operationContext.getRequestResults().size() > 1 &&
           operationContext.getRequestResults().get(0).getException() != null) {
         LOG.debug("Swallowing delete exception on retry: {}", e.getMessage());
@@ -2478,7 +2478,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       Throwable t = e.getCause();
       if(t != null && t instanceof StorageException) {
         StorageException se = (StorageException) t;
-        if(se.getErrorCode().equals(("LeaseIdMissing"))){
+        if ("LeaseIdMissing".equals(se.getErrorCode())){
           SelfRenewingLease lease = null;
           try {
             lease = acquireLease(key);
