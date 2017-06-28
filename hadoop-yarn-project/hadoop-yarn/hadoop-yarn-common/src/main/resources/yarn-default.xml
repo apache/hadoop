@@ -629,11 +629,11 @@
   </property>
 
   <property>
-	<description>Specifies the maximum size of the data that can be stored
-		in a znode.Value should be same or less than jute.maxbuffer configured
-		in zookeeper.Default value configured is 1MB.</description>
-	<name>yarn.resourcemanager.zk-max-znode-size.bytes</name>
-	<value>1048576</value>
+    <description>Specifies the maximum size of the data that can be stored
+      in a znode. Value should be same or less than jute.maxbuffer configured
+      in zookeeper. Default value configured is 1MB.</description>
+    <name>yarn.resourcemanager.zk-max-znode-size.bytes</name>
+    <value>1048576</value>
   </property>
 
   <property>
