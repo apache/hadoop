@@ -123,7 +123,7 @@ Deployment
   `io.erasurecode.codec.xor.rawcoders` for the XOR codec.
   User can also configure self-defined codec with configuration key like:
   `io.erasurecode.codec.self-defined-codec.rawcoders`.
-  The values for these key are lists of coder names with a fall-back mechanism.
+  The values for these key are lists of coder names with a fall-back mechanism. These codec factories are loaded in the order specified by the configuration values, until a codec is loaded successfully. The default RS and XOR codec configuration prefers native implementation over the pure Java one. There is no RS-LEGACY native codec implementation so the default is pure Java implementation only.
   All these codecs have implementations in pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
   The default implementation for RS Legacy is pure Java, and the default implementations for default RS and XOR are native implementations using Intel ISA-L library.
 
@@ -138,12 +138,10 @@ Deployment
 
   HDFS native implementation of default RS codec leverages Intel ISA-L library to improve the encoding and decoding calculation. To enable and use Intel ISA-L, there are three steps.
   1. Build ISA-L library. Please refer to the official site "https://github.com/01org/isa-l/" for detail information.
-  2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop" in (BUILDING.txt) in the source code. Use `-Dbundle.isal` to copy the contents of the `isal.lib` directory into the final tar file. Deploy Hadoop with the tar file. Make sure ISA-L is available on HDFS clients and DataNodes.
-  3. Configure the `io.erasurecode.codec.rs.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS clients and DataNodes.
+  2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop" in (BUILDING.txt) in the source code.
+  3. Use `-Dbundle.isal` to copy the contents of the `isal.lib` directory into the final tar file. Deploy Hadoop with the tar file. Make sure ISA-L is available on HDFS clients and DataNodes.
 
   To verify that ISA-L is correctly detected by Hadoop, run the `hadoop checknative` command.
-
-  To enable the native implementation of the XOR codec, perform the same first two steps as above to build and deploy Hadoop with ISA-L support. Afterwards, configure the `io.erasurecode.codec.xor.rawcoder` key with `org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory` on both HDFS client and DataNodes.
 
 ### Administrative commands
 
