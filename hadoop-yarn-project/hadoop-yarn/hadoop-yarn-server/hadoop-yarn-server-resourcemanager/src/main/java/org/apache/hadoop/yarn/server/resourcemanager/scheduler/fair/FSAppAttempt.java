@@ -154,7 +154,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     
     // Update usage metrics 
     Resource containerResource = rmContainer.getContainer().getResource();
-    queue.getMetrics().releaseResources(getUser(), 1, containerResource);
+    queue.getMetrics().releaseResources(rmContainer.getNodeLabelExpression(),
+        getUser(), 1, containerResource);
     this.attemptResourceUsage.decUsed(containerResource);
 
     // remove from preemption map if it is completed
@@ -491,7 +492,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       LOG.info("Making reservation: node=" + node.getNodeName() +
               " app_id=" + getApplicationId());
       if (!alreadyReserved) {
-        getMetrics().reserveResource(getUser(), container.getResource());
+        getMetrics().reserveResource(node.getPartition(),
+            getUser(), container.getResource());
         RMContainer rmContainer =
                 super.reserve(node, priority, null, container);
         node.reserveResource(this, priority, rmContainer);
@@ -545,7 +547,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     unreserveInternal(priority, node);
     node.unreserveResource(this);
     clearReservation(node);
-    getMetrics().unreserveResource(
+    getMetrics().unreserveResource(node.getPartition(),
         getUser(), rmContainer.getContainer().getResource());
   }
 

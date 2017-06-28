@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -403,10 +402,13 @@ public class AppSchedulingInfo {
 
     Resource lastRequestCapability =
         lastRequest != null ? lastRequest.getCapability() : Resources.none();
-    metrics.incrPendingResources(user,
+    metrics.incrPendingResources(request.getNodeLabelExpression(), user,
         request.getNumContainers(), request.getCapability());
-    metrics.decrPendingResources(user,
-        lastRequestContainers, lastRequestCapability);
+
+    if(lastRequest != null) {
+      metrics.decrPendingResources(lastRequest.getNodeLabelExpression(), user,
+          lastRequestContainers, lastRequestCapability);
+    }
 
     // update queue:
     Resource increasedResource =
@@ -587,7 +589,8 @@ public class AppSchedulingInfo {
           + deltaCapacity);
     }
     // Set queue metrics
-    queue.getMetrics().allocateResources(user, deltaCapacity);
+    queue.getMetrics().allocateResources(increaseRequest.getNodePartition(),
+        user, deltaCapacity);
     // remove the increase request from pending increase request map
     removeIncreaseRequest(nodeId, priority, containerId);
     // update usage
@@ -607,7 +610,8 @@ public class AppSchedulingInfo {
     }
     
     // Set queue metrics
-    queue.getMetrics().releaseResources(user, absDelta);
+    queue.getMetrics().releaseResources(decreaseRequest.getNodePartition(),
+        user, absDelta);
 
     // update usage
     appResourceUsage.decUsed(decreaseRequest.getNodePartition(), absDelta);
@@ -644,7 +648,8 @@ public class AppSchedulingInfo {
           + " resource=" + request.getCapability()
           + " type=" + type);
     }
-    metrics.allocateResources(user, 1, request.getCapability(), true);
+    metrics.allocateResources(node.getPartition(),
+        user, 1, request.getCapability(), true);
     metrics.incrNodeTypeAggregations(user, type);
     return resourceRequests;
   }
@@ -744,9 +749,11 @@ public class AppSchedulingInfo {
     for (Map<String, ResourceRequest> asks : resourceRequestMap.values()) {
       ResourceRequest request = asks.get(ResourceRequest.ANY);
       if (request != null) {
-        oldMetrics.decrPendingResources(user, request.getNumContainers(),
+        oldMetrics.decrPendingResources(request.getNodeLabelExpression(),
+            user, request.getNumContainers(),
             request.getCapability());
-        newMetrics.incrPendingResources(user, request.getNumContainers(),
+        newMetrics.incrPendingResources(request.getNodeLabelExpression(),
+            user, request.getNumContainers(),
             request.getCapability());
         
         Resource delta = Resources.multiply(request.getCapability(),
@@ -770,7 +777,8 @@ public class AppSchedulingInfo {
     for (Map<String, ResourceRequest> asks : resourceRequestMap.values()) {
       ResourceRequest request = asks.get(ResourceRequest.ANY);
       if (request != null) {
-        metrics.decrPendingResources(user, request.getNumContainers(),
+        metrics.decrPendingResources(request.getNodeLabelExpression(),
+            user, request.getNumContainers(),
             request.getCapability());
         
         // Update Queue
@@ -820,8 +828,8 @@ public class AppSchedulingInfo {
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
       return;
     }
-
-    metrics.allocateResources(user, 1, rmContainer.getAllocatedResource(),
+    metrics.allocateResources(rmContainer.getNodeLabelExpression(),
+        user, 1, rmContainer.getAllocatedResource(),
       false);
   }
   

@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -153,7 +152,6 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       ContainerStatus containerStatus, RMContainerEventType event,
       String partition) {
     ContainerId containerId = rmContainer.getContainerId();
-
     // Remove from the list of containers
     if (null == liveContainers.remove(containerId)) {
       return false;
@@ -174,7 +172,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     
     // Update usage metrics 
     Resource containerResource = rmContainer.getContainer().getResource();
-    queue.getMetrics().releaseResources(getUser(), 1, containerResource);
+    queue.getMetrics().releaseResources(partition,
+        getUser(), 1, containerResource);
     attemptResourceUsage.decUsed(partition, containerResource);
 
     // Clear resource utilization metrics cache.
@@ -240,6 +239,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   public synchronized boolean unreserve(Priority priority,
       FiCaSchedulerNode node, RMContainer rmContainer) {
+
     // Cancel increase request (if it has reserved increase request 
     rmContainer.cancelIncreaseReservation();
     
@@ -248,8 +248,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       node.unreserveResource(this);
 
       // Update reserved metrics
-      queue.getMetrics().unreserveResource(getUser(),
-          rmContainer.getReservedResource());
+      queue.getMetrics().unreserveResource(node.getPartition(),
+          getUser(), rmContainer.getReservedResource());
       queue.decReservedResource(node.getPartition(),
           rmContainer.getReservedResource());
       return true;
@@ -444,7 +444,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     if (super.reserveIncreasedContainer(node, priority, rmContainer,
         reservedResource)) {
 
-      queue.getMetrics().reserveResource(getUser(), reservedResource);
+      queue.getMetrics().reserveResource(node.getPartition(),
+          getUser(), reservedResource);
 
       // Update the node
       node.reserveResource(this, priority, rmContainer);
@@ -460,7 +461,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       FiCaSchedulerNode node, RMContainer rmContainer, Container container) {
     // Update reserved metrics if this is the first reservation
     if (rmContainer == null) {
-      queue.getMetrics().reserveResource(
+      queue.getMetrics().reserveResource(node.getPartition(),
           getUser(), container.getResource());
     }
 

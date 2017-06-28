@@ -290,7 +290,7 @@ class CSQueueUtils {
 
     // Update queue metrics w.r.t node labels. In a generic way, we can
     // calculate available resource from all labels in cluster.
-    childQueue.getMetrics().setAvailableResourcesToQueue(
+    childQueue.getMetrics().setAvailableResourcesToQueue(nodePartition,
         getMaxAvailableResourceToQueue(rc, nlm, childQueue, cluster));
    }
 }

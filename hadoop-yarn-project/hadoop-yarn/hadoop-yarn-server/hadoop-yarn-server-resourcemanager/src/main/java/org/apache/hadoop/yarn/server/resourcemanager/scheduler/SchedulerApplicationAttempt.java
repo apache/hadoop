@@ -756,15 +756,19 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     for (RMContainer liveContainer : liveContainers.values()) {
       Resource resource = liveContainer.getContainer().getResource();
       ((RMContainerImpl)liveContainer).setQueueName(newQueueName);
-      oldMetrics.releaseResources(user, 1, resource);
-      newMetrics.allocateResources(user, 1, resource, false);
+      oldMetrics.releaseResources(liveContainer.getNodeLabelExpression(),
+          user, 1, resource);
+      newMetrics.allocateResources(liveContainer.getNodeLabelExpression(),
+          user, 1, resource, false);
     }
     for (Map<NodeId, RMContainer> map : reservedContainers.values()) {
       for (RMContainer reservedContainer : map.values()) {
         ((RMContainerImpl)reservedContainer).setQueueName(newQueueName);
         Resource resource = reservedContainer.getReservedResource();
-        oldMetrics.unreserveResource(user, resource);
-        newMetrics.reserveResource(user, resource);
+        oldMetrics.unreserveResource(reservedContainer.getNodeLabelExpression(),
+            user, resource);
+        newMetrics.reserveResource(reservedContainer.getNodeLabelExpression(),
+            user, resource);
       }
     }
 
