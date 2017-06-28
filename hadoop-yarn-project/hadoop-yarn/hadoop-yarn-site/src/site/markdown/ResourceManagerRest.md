@@ -2112,7 +2112,7 @@ Use the following URI to obtain a Node Object, from a node identified by the nod
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | rack | string | The rack location of this node |
-| state | string | State of the node - valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED |
+| state | string | State of the node - valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONING, DECOMMISSIONED, LOST, REBOOTED |
 | id | string | The node id |
 | nodeHostName | string | The host name of the node |
 | nodeHTTPAddress | string | The nodes HTTP address |

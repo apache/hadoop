@@ -787,6 +787,10 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanager-graceful-decommission-timeout-secs";
   public static final int DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT = 3600;
 
+  /**
+   * Period in seconds of the poll timer task inside DecommissioningNodesWatcher
+   * to identify and take care of DECOMMISSIONING nodes missing regular heart beat.
+   */
   public static final String RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL =
       RM_PREFIX + "decommissioning-nodes-watcher.poll-interval-secs";
   public static final int
