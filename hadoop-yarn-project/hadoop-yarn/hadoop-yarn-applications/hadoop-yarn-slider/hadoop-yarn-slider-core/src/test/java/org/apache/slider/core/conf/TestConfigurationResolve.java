@@ -20,6 +20,7 @@ package org.apache.slider.core.conf;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.api.resource.ConfigFile.TypeEnum;
@@ -95,7 +96,8 @@ public class TestConfigurationResolve extends Assert {
     expect(sfs.buildClusterDirPath(anyObject())).andReturn(
         new Path("cluster_dir_path")).anyTimes();
     replay(sfs, mockFs);
-    ServiceApiUtil.validateAndResolveApplication(orig, sfs);
+    ServiceApiUtil.validateAndResolveApplication(orig, sfs, new
+        YarnConfiguration());
 
     global = orig.getConfiguration();
     LOG.info("global = {}", global);
@@ -179,7 +181,8 @@ public class TestConfigurationResolve extends Assert {
         new Path("cluster_dir_path")).anyTimes();
     replay(sfs, mockFs);
     Application ext = ExampleAppJson.loadResource(APP_JSON);
-    ServiceApiUtil.validateAndResolveApplication(ext, sfs);
+    ServiceApiUtil.validateAndResolveApplication(ext, sfs, new
+        YarnConfiguration());
     reset(sfs, mockFs);
 
     // perform the resolution on original application
@@ -192,7 +195,8 @@ public class TestConfigurationResolve extends Assert {
         .anyTimes();
     replay(sfs, mockFs, jsonSerDeser);
     ServiceApiUtil.setJsonSerDeser(jsonSerDeser);
-    ServiceApiUtil.validateAndResolveApplication(orig, sfs);
+    ServiceApiUtil.validateAndResolveApplication(orig, sfs, new
+        YarnConfiguration());
 
     global = orig.getConfiguration();
     assertEquals(0, global.getProperties().size());

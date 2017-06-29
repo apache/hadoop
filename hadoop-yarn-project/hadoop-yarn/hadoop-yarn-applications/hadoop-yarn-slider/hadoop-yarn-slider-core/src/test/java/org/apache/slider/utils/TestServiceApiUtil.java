@@ -19,6 +19,8 @@ package org.apache.slider.utils;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.api.RegistryConstants;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.api.resource.Component;
@@ -29,6 +31,7 @@ import org.apache.slider.util.RestApiConstants;
 import org.apache.slider.util.RestApiErrorMessages;
 import org.apache.slider.util.ServiceApiUtil;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,26 +64,42 @@ public class TestServiceApiUtil {
   private static final String NO_EXCEPTION_PREFIX = "Should not have thrown " +
       "exception: ";
 
+  private static final String LEN_64_STR =
+      "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz01";
+
+  private static final YarnConfiguration CONF_DEFAULT_DNS = new
+      YarnConfiguration();
+  private static final YarnConfiguration CONF_DNS_ENABLED = new
+      YarnConfiguration();
+
+  @BeforeClass
+  public static void init() {
+    CONF_DNS_ENABLED.setBoolean(RegistryConstants.KEY_DNS_ENABLED, true);
+  }
+
   @Test(timeout = 90000)
   public void testResourceValidation() throws Exception {
+    assertEquals(RegistryConstants.MAX_FQDN_LABEL_LENGTH + 1, LEN_64_STR
+        .length());
+
     SliderFileSystem sfs = initMock(null);
 
     Application app = new Application();
 
     // no name
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no name");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_APPLICATION_NAME_INVALID, e.getMessage());
     }
 
     // bad format name
-    String[] badNames = {"4finance", "Finance", "finance@home"};
+    String[] badNames = {"4finance", "Finance", "finance@home", LEN_64_STR};
     for (String badName : badNames) {
       app.setName(badName);
       try {
-        ServiceApiUtil.validateAndResolveApplication(app, sfs);
+        ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
         Assert.fail(EXCEPTION_PREFIX + "application with bad name " + badName);
       } catch (IllegalArgumentException e) {
         assertEquals(String.format(
@@ -89,9 +108,20 @@ public class TestServiceApiUtil {
     }
 
     // launch command not specified
-    app.setName("finance_home");
+    app.setName(LEN_64_STR);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DEFAULT_DNS);
+      Assert.fail(EXCEPTION_PREFIX + "application with no launch command");
+    } catch (IllegalArgumentException e) {
+      assertEquals(RestApiErrorMessages.ERROR_ABSENT_LAUNCH_COMMAND,
+          e.getMessage());
+    }
+
+    // launch command not specified
+    app.setName(LEN_64_STR.substring(0, RegistryConstants
+        .MAX_FQDN_LABEL_LENGTH));
+    try {
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no launch command");
     } catch (IllegalArgumentException e) {
       assertEquals(RestApiErrorMessages.ERROR_ABSENT_LAUNCH_COMMAND,
@@ -101,7 +131,7 @@ public class TestServiceApiUtil {
     // resource not specified
     app.setLaunchCommand("sleep 3600");
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no resource");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
@@ -113,7 +143,7 @@ public class TestServiceApiUtil {
     Resource res = new Resource();
     app.setResource(res);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no memory");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
@@ -125,7 +155,7 @@ public class TestServiceApiUtil {
     res.setMemory("100mb");
     res.setCpus(-2);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(
           EXCEPTION_PREFIX + "application with invalid no of cpus");
     } catch (IllegalArgumentException e) {
@@ -137,7 +167,7 @@ public class TestServiceApiUtil {
     // number of containers not specified
     res.setCpus(2);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no container count");
     } catch (IllegalArgumentException e) {
       Assert.assertTrue(e.getMessage()
@@ -147,7 +177,7 @@ public class TestServiceApiUtil {
     // specifying profile along with cpus/memory raises exception
     res.setProfile("hbase_finance_large");
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX
           + "application with resource profile along with cpus/memory");
     } catch (IllegalArgumentException e) {
@@ -162,7 +192,7 @@ public class TestServiceApiUtil {
     res.setCpus(null);
     res.setMemory(null);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with resource profile only");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_RESOURCE_PROFILE_NOT_SUPPORTED_YET,
@@ -176,7 +206,7 @@ public class TestServiceApiUtil {
 
     // null number of containers
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "null number of containers");
     } catch (IllegalArgumentException e) {
       Assert.assertTrue(e.getMessage()
@@ -186,7 +216,7 @@ public class TestServiceApiUtil {
     // negative number of containers
     app.setNumberOfContainers(-1L);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "negative number of containers");
     } catch (IllegalArgumentException e) {
       Assert.assertTrue(e.getMessage()
@@ -196,7 +226,7 @@ public class TestServiceApiUtil {
     // everything valid here
     app.setNumberOfContainers(5L);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
       LOG.error("application attributes specified should be valid here", e);
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
@@ -218,7 +248,7 @@ public class TestServiceApiUtil {
     Artifact artifact = new Artifact();
     app.setArtifact(artifact);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no artifact id");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_ARTIFACT_ID_INVALID, e.getMessage());
@@ -227,7 +257,7 @@ public class TestServiceApiUtil {
     // no artifact id fails with APPLICATION type
     artifact.setType(Artifact.TypeEnum.APPLICATION);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no artifact id");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_ARTIFACT_ID_INVALID, e.getMessage());
@@ -236,7 +266,7 @@ public class TestServiceApiUtil {
     // no artifact id fails with TARBALL type
     artifact.setType(Artifact.TypeEnum.TARBALL);
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with no artifact id");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_ARTIFACT_ID_INVALID, e.getMessage());
@@ -246,7 +276,7 @@ public class TestServiceApiUtil {
     artifact.setType(Artifact.TypeEnum.DOCKER);
     artifact.setId("docker.io/centos:centos7");
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
       LOG.error("application attributes specified should be valid here", e);
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
@@ -314,7 +344,7 @@ public class TestServiceApiUtil {
     app.setArtifact(artifact);
 
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
@@ -333,7 +363,7 @@ public class TestServiceApiUtil {
 
     // duplicate component name fails
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "application with component collision");
     } catch (IllegalArgumentException e) {
       assertEquals("Component name collision: " + compName, e.getMessage());
@@ -353,7 +383,7 @@ public class TestServiceApiUtil {
 
     // duplicate component name okay in the case of APPLICATION component
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
@@ -371,7 +401,7 @@ public class TestServiceApiUtil {
     app.setArtifact(artifact);
 
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
@@ -384,7 +414,7 @@ public class TestServiceApiUtil {
     app.getComponent("comp2").setArtifact(artifact);
 
     try {
-      ServiceApiUtil.validateAndResolveApplication(app, sfs);
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
@@ -439,6 +469,54 @@ public class TestServiceApiUtil {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_DEPENDENCY_INVALID, "b", "e"), ex
           .getMessage());
+    }
+  }
+
+  @Test
+  public void testInvalidComponent() throws IOException {
+    SliderFileSystem sfs = initMock(null);
+    testComponent(sfs, false);
+    testComponent(sfs, true);
+  }
+
+  private static void testComponent(SliderFileSystem sfs, boolean unique)
+      throws IOException {
+    int maxLen = RegistryConstants.MAX_FQDN_LABEL_LENGTH;
+    if (unique) {
+      assertEquals(19, Long.toString(Long.MAX_VALUE).length());
+      maxLen = maxLen - Long.toString(Long.MAX_VALUE).length();
+    }
+    String compName = LEN_64_STR.substring(0, maxLen + 1);
+    Application app = createValidApplication(null);
+    app.addComponent(createValidComponent(compName).uniqueComponentSupport(
+        unique));
+
+    // invalid component name fails if dns is enabled
+    try {
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + "application with invalid component name");
+    } catch (IllegalArgumentException e) {
+      assertEquals(String.format(RestApiErrorMessages
+          .ERROR_COMPONENT_NAME_INVALID, maxLen, compName), e.getMessage());
+    }
+
+    // does not fail if dns is disabled
+    try {
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DEFAULT_DNS);
+    } catch (IllegalArgumentException e) {
+      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+    }
+
+    compName = LEN_64_STR.substring(0, maxLen);
+    app = createValidApplication(null);
+    app.addComponent(createValidComponent(compName).uniqueComponentSupport(
+        unique));
+
+    // does not fail
+    try {
+      ServiceApiUtil.validateAndResolveApplication(app, sfs, CONF_DNS_ENABLED);
+    } catch (IllegalArgumentException e) {
+      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 }

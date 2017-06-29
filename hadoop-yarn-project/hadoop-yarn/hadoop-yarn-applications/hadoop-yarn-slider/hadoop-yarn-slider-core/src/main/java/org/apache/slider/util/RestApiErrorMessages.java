@@ -21,8 +21,13 @@ public interface RestApiErrorMessages {
   String ERROR_APPLICATION_NAME_INVALID =
       "Application name is either empty or not provided";
   String ERROR_APPLICATION_NAME_INVALID_FORMAT =
-      "Application name %s is not valid - only lower case letters, digits,"
-          + " underscore and hyphen are allowed";
+      "Application name %s is not valid - only lower case letters, digits, " +
+          "underscore and hyphen are allowed, and the name must be no more " +
+          "than 63 characters";
+  String ERROR_COMPONENT_NAME_INVALID =
+      "Component name must be no more than %s characters: %s";
+  String ERROR_USER_NAME_INVALID =
+      "User name must be no more than 63 characters";
 
   String ERROR_APPLICATION_NOT_RUNNING = "Application not running";
   String ERROR_APPLICATION_DOES_NOT_EXIST = "Application not found";

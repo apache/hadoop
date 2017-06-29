@@ -78,6 +78,11 @@ public interface RegistryConstants {
   String KEY_DNS_DOMAIN = DNS_PREFIX + "domain-name";
 
   /**
+   * Max length of a label (node delimited by a dot in the FQDN).
+   */
+  int MAX_FQDN_LABEL_LENGTH = 63;
+
+  /**
    * DNS bind address.
    */
   String KEY_DNS_BIND_ADDRESS = DNS_PREFIX + "bind-address";

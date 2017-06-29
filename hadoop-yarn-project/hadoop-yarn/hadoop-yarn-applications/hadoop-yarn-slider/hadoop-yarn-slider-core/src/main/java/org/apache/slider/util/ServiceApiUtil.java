@@ -22,6 +22,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.api.RegistryConstants;
+import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Artifact;
 import org.apache.slider.api.resource.Component;
@@ -60,12 +62,22 @@ public class ServiceApiUtil {
 
   @VisibleForTesting
   public static void validateAndResolveApplication(Application application,
-      SliderFileSystem fs) throws IOException {
+      SliderFileSystem fs, org.apache.hadoop.conf.Configuration conf) throws
+      IOException {
+    boolean dnsEnabled = conf.getBoolean(RegistryConstants.KEY_DNS_ENABLED,
+        RegistryConstants.DEFAULT_DNS_ENABLED);
+    if (dnsEnabled && RegistryUtils.currentUser().length() > RegistryConstants
+        .MAX_FQDN_LABEL_LENGTH) {
+      throw new IllegalArgumentException(RestApiErrorMessages
+          .ERROR_USER_NAME_INVALID);
+    }
     if (StringUtils.isEmpty(application.getName())) {
       throw new IllegalArgumentException(
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID);
     }
-    if (!SliderUtils.isClusternameValid(application.getName())) {
+    if (!SliderUtils.isClusternameValid(application.getName()) || (dnsEnabled
+        && application.getName().length() > RegistryConstants
+        .MAX_FQDN_LABEL_LENGTH)) {
       throw new IllegalArgumentException(String.format(
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID_FORMAT,
           application.getName()));
@@ -108,6 +120,14 @@ public class ServiceApiUtil {
     List<Component> componentsToRemove = new ArrayList<>();
     List<Component> componentsToAdd = new ArrayList<>();
     for (Component comp : application.getComponents()) {
+      int maxCompLength = RegistryConstants.MAX_FQDN_LABEL_LENGTH;
+      if (comp.getUniqueComponentSupport()) {
+        maxCompLength = maxCompLength - Long.toString(Long.MAX_VALUE).length();
+      }
+      if (dnsEnabled && comp.getName().length() > maxCompLength) {
+        throw new IllegalArgumentException(String.format(RestApiErrorMessages
+            .ERROR_COMPONENT_NAME_INVALID, maxCompLength, comp.getName()));
+      }
       if (componentNames.contains(comp.getName())) {
         throw new IllegalArgumentException("Component name collision: " +
             comp.getName());
