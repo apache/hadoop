@@ -166,6 +166,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.LimitInputStream;
 
@@ -1248,7 +1249,7 @@ public class PBHelperClient {
     String toSnapshot = reportProto.getToSnapshot();
     List<SnapshotDiffReportEntryProto> list = reportProto
         .getDiffReportEntriesList();
-    List<DiffReportEntry> entries = new ArrayList<>();
+    List<DiffReportEntry> entries = new ChunkedArrayList<>();
     for (SnapshotDiffReportEntryProto entryProto : list) {
       DiffReportEntry entry = convert(entryProto);
       if (entry != null)
@@ -2091,7 +2092,7 @@ public class PBHelperClient {
       return null;
     }
     List<DiffReportEntry> entries = report.getDiffList();
-    List<SnapshotDiffReportEntryProto> entryProtos = new ArrayList<>();
+    List<SnapshotDiffReportEntryProto> entryProtos = new ChunkedArrayList<>();
     for (DiffReportEntry entry : entries) {
       SnapshotDiffReportEntryProto entryProto = convert(entry);
       if (entryProto != null)
