@@ -353,4 +353,9 @@ public class LocalStorageHandler implements StorageHandler {
 
   }
 
+  @Override
+  public void close() {
+    //No resource to close, do nothing.
+  }
+
 }

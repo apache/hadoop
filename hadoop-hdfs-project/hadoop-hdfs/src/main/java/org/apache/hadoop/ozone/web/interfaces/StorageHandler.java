@@ -273,4 +273,9 @@ public interface StorageHandler {
    * @throws IOException
    */
   ListKeys listKeys(ListArgs args) throws IOException, OzoneException;
+
+  /**
+   * Closes all the opened resources.
+   */
+  void close();
 }

@@ -154,4 +154,13 @@ public class XceiverClientManager {
       throw new IOException("Exception getting XceiverClient.", e);
     }
   }
+
+  /**
+   * Close and remove all the cached clients.
+   */
+  public void close() {
+    //closing is done through RemovalListener
+    clientCache.invalidateAll();
+    clientCache.cleanUp();
+  }
 }

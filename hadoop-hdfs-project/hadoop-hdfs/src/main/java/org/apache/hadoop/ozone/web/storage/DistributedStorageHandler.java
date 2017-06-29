@@ -509,4 +509,14 @@ public final class DistributedStorageHandler implements StorageHandler {
     sdf.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
     return sdf.format(date);
   }
+
+  /**
+   * Closes DistributedStorageHandler.
+   */
+  @Override
+  public void close() {
+    if(xceiverClientManager != null) {
+      xceiverClientManager.close();
+    }
+  }
 }
