@@ -177,6 +177,7 @@ public final class ObjectStoreHandler implements Closeable {
   @Override
   public void close() {
     LOG.info("Closing ObjectStoreHandler.");
+    storageHandler.close();
     if (this.storageContainerLocationClient != null) {
       this.storageContainerLocationClient.close();
     }
