@@ -637,7 +637,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   public int actionBuild(Application application) throws YarnException,
       IOException {
     Path appDir = checkAppNotExistOnHdfs(application);
-    ServiceApiUtil.validateAndResolveApplication(application, sliderFileSystem);
+    ServiceApiUtil.validateAndResolveApplication(application,
+        sliderFileSystem, getConfig());
     persistApp(appDir, application);
     deployedClusterName = application.getName();
     return EXIT_SUCCESS;
@@ -647,7 +648,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       throws IOException, YarnException {
     String appName = application.getName();
     validateClusterName(appName);
-    ServiceApiUtil.validateAndResolveApplication(application, sliderFileSystem);
+    ServiceApiUtil.validateAndResolveApplication(application,
+        sliderFileSystem, getConfig());
     verifyNoLiveApp(appName, "Create");
     Path appDir = checkAppNotExistOnHdfs(application);
 
@@ -1778,7 +1780,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     Path appDir = checkAppExistOnHdfs(appName);
     Application application = ServiceApiUtil.loadApplication(sliderFileSystem,
         appName);
-    ServiceApiUtil.validateAndResolveApplication(application, sliderFileSystem);
+    ServiceApiUtil.validateAndResolveApplication(application,
+        sliderFileSystem, getConfig());
     // see if it is actually running and bail out;
     verifyNoLiveApp(appName, "Thaw");
     ApplicationId appId = submitApp(application);

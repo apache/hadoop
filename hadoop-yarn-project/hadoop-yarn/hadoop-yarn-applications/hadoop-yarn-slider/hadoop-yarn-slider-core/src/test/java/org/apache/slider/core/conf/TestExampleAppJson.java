@@ -20,6 +20,7 @@ package org.apache.slider.core.conf;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.util.ServiceApiUtil;
@@ -71,7 +72,8 @@ public class TestExampleAppJson extends Assert {
           new Path("cluster_dir_path")).anyTimes();
       replay(sfs, mockFs);
 
-      ServiceApiUtil.validateAndResolveApplication(application, sfs);
+      ServiceApiUtil.validateAndResolveApplication(application, sfs,
+          new YarnConfiguration());
     } catch (Exception e) {
       throw new Exception("exception loading " + resource + ":" + e.toString());
     }

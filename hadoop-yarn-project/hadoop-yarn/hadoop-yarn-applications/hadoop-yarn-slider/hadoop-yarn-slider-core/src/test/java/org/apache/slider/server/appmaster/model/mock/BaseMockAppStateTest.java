@@ -133,7 +133,7 @@ public abstract class BaseMockAppStateTest extends SliderTestBase implements
     AppStateBindingInfo binding = new AppStateBindingInfo();
     binding.application = buildApplication();
     ServiceApiUtil.validateAndResolveApplication(binding.application,
-        sliderFileSystem);
+        sliderFileSystem, SliderUtils.createConfiguration());
     //binding.roles = new ArrayList<>(factory.ROLES);
     binding.fs = fs;
     binding.historyPath = historyPath;
