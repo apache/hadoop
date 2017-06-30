@@ -58,12 +58,6 @@ public class NameNodeMetrics {
   @Metric MutableCounterLong createSymlinkOps;
   @Metric MutableCounterLong getLinkTargetOps;
   @Metric MutableCounterLong filesInGetListingOps;
-  @Metric ("Number of successful re-replications")
-  MutableCounterLong successfulReReplications;
-  @Metric ("Number of times we failed to schedule a block re-replication.")
-  MutableCounterLong numTimesReReplicationNotScheduled;
-  @Metric("Number of timed out block re-replications")
-  MutableCounterLong timeoutReReplications;
   @Metric("Number of allowSnapshot operations")
   MutableCounterLong allowSnapshotOps;
   @Metric("Number of disallowSnapshot operations")
@@ -304,18 +298,6 @@ public class NameNodeMetrics {
 
   public void incrTransactionsBatchedInSync(long count) {
     transactionsBatchedInSync.incr(count);
-  }
-
-  public void incSuccessfulReReplications() {
-    successfulReReplications.incr();
-  }
-
-  public void incNumTimesReReplicationNotScheduled() {
-    numTimesReReplicationNotScheduled.incr();
-  }
-
-  public void incTimeoutReReplications() {
-    timeoutReReplications.incr();
   }
 
   public void addSync(long elapsed) {
