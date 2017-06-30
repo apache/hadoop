@@ -1851,7 +1851,7 @@ public class BlockManager implements BlockStatsMXBean {
         (pendingReplicaNum > 0 || isPlacementPolicySatisfied(block));
   }
 
-  private BlockReconstructionWork scheduleReconstruction(BlockInfo block,
+  BlockReconstructionWork scheduleReconstruction(BlockInfo block,
       int priority) {
     // skip abandoned block or block reopened for append
     if (block.isDeleted() || !block.isCompleteOrCommitted()) {
@@ -1873,6 +1873,7 @@ public class BlockManager implements BlockStatsMXBean {
     if(srcNodes == null || srcNodes.length == 0) {
       // block can not be reconstructed from any node
       LOG.debug("Block {} cannot be reconstructed from any node", block);
+      NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
       return null;
     }
 
@@ -1885,6 +1886,7 @@ public class BlockManager implements BlockStatsMXBean {
       neededReconstruction.remove(block, priority);
       blockLog.debug("BLOCK* Removing {} from neededReconstruction as" +
           " it has enough replicas", block);
+      NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
       return null;
     }
 
@@ -1900,6 +1902,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (block.isStriped()) {
       if (pendingNum > 0) {
         // Wait the previous reconstruction to finish.
+        NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
         return null;
       }
 
@@ -3727,8 +3730,8 @@ public class BlockManager implements BlockStatsMXBean {
    * The given node is reporting that it received a certain block.
    */
   @VisibleForTesting
-  void addBlock(DatanodeStorageInfo storageInfo, Block block, String delHint)
-      throws IOException {
+  public void addBlock(DatanodeStorageInfo storageInfo, Block block,
+      String delHint) throws IOException {
     DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
     // Decrement number of blocks scheduled to this datanode.
     // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
@@ -3751,7 +3754,9 @@ public class BlockManager implements BlockStatsMXBean {
     BlockInfo storedBlock = getStoredBlock(block);
     if (storedBlock != null &&
         block.getGenerationStamp() == storedBlock.getGenerationStamp()) {
-      pendingReconstruction.decrement(storedBlock, node);
+      if (pendingReconstruction.decrement(storedBlock, node)) {
+        NameNode.getNameNodeMetrics().incSuccessfulReReplications();
+      }
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);
