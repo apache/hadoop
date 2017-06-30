@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -106,7 +106,7 @@ public class TestAppSchedulingInfo {
 
     // iterate to verify no ConcurrentModificationException
     for (Priority priority: info.getPriorities()) {
-      info.allocate(NodeType.OFF_SWITCH, null, priority, req1, null);
+      info.allocate(NodeType.OFF_SWITCH, mock(SchedulerNode.class), priority, req1, null);
     }
     Assert.assertEquals(1, info.getPriorities().size());
     Assert.assertEquals(req2.getPriority(),
@@ -117,7 +117,7 @@ public class TestAppSchedulingInfo {
     reqs.clear();
     reqs.add(req2);
     info.updateResourceRequests(reqs, false);
-    info.allocate(NodeType.OFF_SWITCH, null, req2.getPriority(), req2, null);
+    info.allocate(NodeType.OFF_SWITCH, mock(SchedulerNode.class), req2.getPriority(), req2, null);
     Assert.assertEquals(0, info.getPriorities().size());
 
     req1 = ResourceRequest.newInstance(pri1,
