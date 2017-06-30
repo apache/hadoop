@@ -67,6 +67,10 @@ public final class ErrorTable {
       new OzoneException(HTTP_BAD_REQUEST, "invalidQueryParam",
                          "Invalid query parameter.");
 
+  public static final OzoneException INVALID_RESOURCE_NAME =
+      new OzoneException(HTTP_BAD_REQUEST, "invalidResourceName",
+                         "Invalid volume, bucket or key name.");
+
   public static final OzoneException INVALID_BUCKET_NAME =
       new OzoneException(HTTP_BAD_REQUEST, "invalidBucketName",
                          "Invalid bucket name.");

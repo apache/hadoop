@@ -79,7 +79,7 @@ public abstract class KeyProcessTemplate {
     try {
       userArgs = new UserArgs(reqID, hostName, request, info, headers);
       OzoneUtils.validate(request, headers, reqID, bucket, hostName);
-      OzoneUtils.verifyBucketName(bucket);
+      OzoneUtils.verifyResourceName(bucket);
 
       UserAuth auth = UserHandlerBuilder.getAuthHandler();
       userArgs.setUserName(auth.getUser(userArgs));

@@ -85,7 +85,7 @@ public abstract class BucketProcessTemplate {
       userArgs = new UserArgs(reqID, hostName, request, uriInfo, headers);
 
       OzoneUtils.validate(request, headers, reqID, bucket, hostName);
-      OzoneUtils.verifyBucketName(bucket);
+      OzoneUtils.verifyResourceName(bucket);
 
       UserAuth auth = UserHandlerBuilder.getAuthHandler();
       userArgs.setUserName(auth.getUser(userArgs));

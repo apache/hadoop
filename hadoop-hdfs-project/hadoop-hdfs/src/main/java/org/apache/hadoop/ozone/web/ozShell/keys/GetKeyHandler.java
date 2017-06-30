@@ -107,11 +107,7 @@ public class GetKeyHandler extends Handler {
     client.setEndPointURI(ozoneURI);
     client.setUserAuth(userName);
 
-
-    OzoneVolume vol = client.getVolume(volumeName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
-    bucket.getKey(keyName, dataFilePath);
-
+    client.getKey(volumeName, bucketName, keyName, dataFilePath);
     if(cmd.hasOption(Shell.VERBOSE)) {
       FileInputStream stream = new FileInputStream(dataFile);
       String hash = DigestUtils.md5Hex(stream);

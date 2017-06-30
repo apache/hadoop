@@ -18,6 +18,10 @@
 package org.apache.hadoop.ozone.web.client;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
@@ -33,14 +37,20 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 
 import javax.ws.rs.core.HttpHeaders;
 import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
@@ -144,7 +154,7 @@ public class OzoneRestClient implements Closeable {
                                   String quota) throws OzoneException {
     HttpPost httpPost = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
-      OzoneUtils.verifyBucketName(volumeName);
+      OzoneUtils.verifyResourceName(volumeName);
 
       URIBuilder builder = new URIBuilder(endPointURI);
       builder.setPath("/" + volumeName);
@@ -173,7 +183,7 @@ public class OzoneRestClient implements Closeable {
   public OzoneVolume getVolume(String volumeName) throws OzoneException {
     HttpGet httpGet = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
-      OzoneUtils.verifyBucketName(volumeName);
+      OzoneUtils.verifyResourceName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
       builder.setPath("/" + volumeName)
           .setParameter(Header.OZONE_LIST_QUERY_TAG,
@@ -301,7 +311,7 @@ public class OzoneRestClient implements Closeable {
   public void deleteVolume(String volumeName) throws OzoneException {
     HttpDelete httpDelete = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
-      OzoneUtils.verifyBucketName(volumeName);
+      OzoneUtils.verifyResourceName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
       builder.setPath("/" + volumeName).build();
 
@@ -328,7 +338,7 @@ public class OzoneRestClient implements Closeable {
       throw new OzoneRestClientException("Invalid new owner name");
     }
     try (CloseableHttpClient httpClient = newHttpClient()) {
-      OzoneUtils.verifyBucketName(volumeName);
+      OzoneUtils.verifyResourceName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
       builder.setPath("/" + volumeName).build();
 
@@ -360,7 +370,7 @@ public class OzoneRestClient implements Closeable {
     }
     HttpPut putRequest = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
-      OzoneUtils.verifyBucketName(volumeName);
+      OzoneUtils.verifyResourceName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
       builder.setPath("/" + volumeName)
           .setParameter(Header.OZONE_QUOTA_QUERY_TAG, quota)
@@ -534,6 +544,121 @@ public class OzoneRestClient implements Closeable {
       if (entity != null) {
         EntityUtils.consumeQuietly(entity);
       }
+    }
+  }
+
+  /**
+   * Puts a Key in Ozone Bucket.
+   *
+   * @param volumeName - Name of the Volume
+   * @param bucketName - Name of the Bucket
+   * @param keyName - Name of the Key
+   * @param file    - Stream that gets read to be put into Ozone.
+   * @throws OzoneException
+   */
+  public void putKey(String volumeName, String bucketName, String keyName,
+      File file) throws OzoneException {
+    OzoneUtils.verifyResourceName(volumeName);
+    OzoneUtils.verifyResourceName(bucketName);
+
+    if (StringUtils.isEmpty(keyName)) {
+      throw new OzoneRestClientException("Invalid key Name");
+    }
+
+    if (file == null) {
+      throw new OzoneRestClientException("Invalid data stream");
+    }
+
+    HttpPut putRequest = null;
+    FileInputStream fis = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+      URIBuilder builder = new URIBuilder(getEndPointURI());
+      builder.setPath("/" + volumeName + "/" + bucketName + "/" + keyName)
+          .build();
+
+      putRequest = getHttpPut(builder.toString());
+
+      FileEntity fileEntity = new FileEntity(file, ContentType
+          .APPLICATION_OCTET_STREAM);
+      putRequest.setEntity(fileEntity);
+
+      fis = new FileInputStream(file);
+      putRequest.setHeader(Header.CONTENT_MD5, DigestUtils.md5Hex(fis));
+      OzoneBucket.executePutKey(putRequest, httpClient);
+    } catch (IOException | URISyntaxException ex) {
+      throw new OzoneRestClientException(ex.getMessage());
+    } finally {
+      IOUtils.closeStream(fis);
+      OzoneClientUtils.releaseConnection(putRequest);
+    }
+  }
+
+  /**
+   * Gets a key from the Ozone server and writes to the file pointed by the
+   * downloadTo Path.
+   *
+   * @param volumeName - Volume Name in Ozone.
+   * @param bucketName - Bucket Name in Ozone.
+   * @param keyName - Key Name in Ozone.
+   * @param downloadTo File Name to download the Key's Data to
+   */
+  public void getKey(String volumeName, String bucketName, String keyName,
+      Path downloadTo) throws OzoneException {
+    OzoneUtils.verifyResourceName(volumeName);
+    OzoneUtils.verifyResourceName(bucketName);
+
+    if (StringUtils.isEmpty(keyName)) {
+      throw new OzoneRestClientException("Invalid key Name");
+    }
+
+    if (downloadTo == null) {
+      throw new OzoneRestClientException("Invalid download path");
+    }
+
+    FileOutputStream outPutFile = null;
+    HttpGet getRequest = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+      outPutFile = new FileOutputStream(downloadTo.toFile());
+
+      URIBuilder builder = new URIBuilder(getEndPointURI());
+      builder.setPath("/" + volumeName + "/" + bucketName + "/" + keyName)
+          .build();
+
+      getRequest = getHttpGet(builder.toString());
+      OzoneBucket.executeGetKey(getRequest, httpClient, outPutFile);
+      outPutFile.flush();
+    } catch (IOException | URISyntaxException ex) {
+      throw new OzoneRestClientException(ex.getMessage());
+    } finally {
+      IOUtils.closeStream(outPutFile);
+      OzoneClientUtils.releaseConnection(getRequest);
+    }
+  }
+
+  /**
+   * List all keys in the given bucket.
+   *
+   * @param volumeName - Volume name
+   * @param bucketName - Bucket name
+   *
+   * @return List of OzoneKeys
+   */
+  public List<OzoneKey> listKeys(String volumeName, String bucketName)
+      throws OzoneException {
+    OzoneUtils.verifyResourceName(volumeName);
+    OzoneUtils.verifyResourceName(bucketName);
+
+    HttpGet getRequest = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+      URIBuilder builder = new URIBuilder(getEndPointURI());
+      builder.setPath("/" + volumeName + "/" + bucketName).build();
+
+      getRequest = getHttpGet(builder.toString());
+      return OzoneBucket.executeListKeys(getRequest, httpClient);
+    } catch (IOException | URISyntaxException e) {
+      throw new OzoneRestClientException(e.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(getRequest);
     }
   }
 
