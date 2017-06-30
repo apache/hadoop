@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 
@@ -97,8 +98,10 @@ class PendingReconstructionBlocks {
    * for this block.
    *
    * @param dn The DataNode that finishes the reconstruction
+   * @return true if the block is decremented to 0 and got removed.
    */
-  void decrement(BlockInfo block, DatanodeDescriptor dn) {
+  boolean decrement(BlockInfo block, DatanodeDescriptor dn) {
+    boolean removed = false;
     synchronized (pendingReconstructions) {
       PendingBlockInfo found = pendingReconstructions.get(block);
       if (found != null) {
@@ -106,9 +109,11 @@ class PendingReconstructionBlocks {
         found.decrementReplicas(dn);
         if (found.getNumReplicas() <= 0) {
           pendingReconstructions.remove(block);
+          removed = true;
         }
       }
     }
+    return removed;
   }
 
   /**
@@ -263,6 +268,7 @@ class PendingReconstructionBlocks {
               timedOutItems.add(block);
             }
             LOG.warn("PendingReconstructionMonitor timed out " + block);
+            NameNode.getNameNodeMetrics().incTimeoutReReplications();
             iter.remove();
           }
         }
