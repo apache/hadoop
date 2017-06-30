@@ -231,6 +231,18 @@ final class FSDirErasureCodingOp {
     fsn.getErasureCodingPolicyManager().removePolicy(ecPolicyName);
   }
 
+  static void enableErasureCodePolicy(final FSNamesystem fsn,
+      String ecPolicyName) throws IOException {
+    Preconditions.checkNotNull(ecPolicyName);
+    fsn.getErasureCodingPolicyManager().enablePolicy(ecPolicyName);
+  }
+
+  static void disableErasureCodePolicy(final FSNamesystem fsn,
+      String ecPolicyName) throws IOException {
+    Preconditions.checkNotNull(ecPolicyName);
+    fsn.getErasureCodingPolicyManager().disablePolicy(ecPolicyName);
+  }
+
   private static List<XAttr> removeErasureCodingPolicyXAttr(
       final FSNamesystem fsn, final INodesInPath srcIIP) throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();

@@ -1330,6 +1330,7 @@ Multiple parameters can be specified for GET operations. The started and finishe
       * finishedTimeEnd - applications with finish time ending with this time, specified in ms since epoch
       * applicationTypes - applications matching the given application types, specified as a comma-separated list.
       * applicationTags - applications matching any of the given application tags, specified as a comma-separated list.
+      * deSelects - a generic fields which will be skipped in the result.
 
 ### Elements of the *apps* (Applications) object
 
@@ -1338,6 +1339,21 @@ When you make a request for the list of applications, the information will be re
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | app | array of app objects(JSON)/zero or more application objects(XML) | The collection of application objects |
+
+###Elements of the *deSelects* parameter
+
+Help requesters who don't need certain information to reduce the overhead.
+
+Current supported items:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| resouceRequests | comma separated string | Skip resource requests of application in return |
+
+e.g:
+
+      * http://<rm http address:port>/ws/v1/cluster/apps?deSelects=resouceRequests
+
 
 ### Response Examples
 
@@ -1396,7 +1412,47 @@ Response Body:
         "logAggregationStatus": "DISABLED",
         "unmanagedApplication": false,
         "appNodeLabelExpression": "",
-        "amNodeLabelExpression": ""
+        "amNodeLabelExpression": "",
+        "resourceRequests": [
+        {
+            "capability": {
+                "memory": 4096,
+                "virtualCores": 1
+            },
+            "nodeLabelExpression": "",
+            "numContainers": 0,
+            "priority": {
+                "priority": 0
+            },
+            "relaxLocality": true,
+            "resourceName": "*"
+        },
+        {
+            "capability": {
+                "memory": 4096,
+                "virtualCores": 1
+            },
+            "nodeLabelExpression": "",
+            "numContainers": 0,
+            "priority": {
+                "priority": 20
+            },
+            "relaxLocality": true,
+            "resourceName": "host1.domain.com"
+        },
+        {
+            "capability": {
+                "memory": 4096,
+                "virtualCores": 1
+            },
+            "nodeLabelExpression": "",
+            "numContainers": 0,
+            "priority": {
+                "priority": 20
+            },
+            "relaxLocality": true,
+            "resourceName": "host2.domain.com"
+        }]
       },
       {
         "id": "application_1476912658570_0001",
@@ -1432,7 +1488,47 @@ Response Body:
         "logAggregationStatus": "DISABLED",
         "unmanagedApplication": false,
         "appNodeLabelExpression": "",
-        "amNodeLabelExpression": ""
+        "amNodeLabelExpression": "",
+        "resourceRequests": [
+        {
+            "capability": {
+                "memory": 4096,
+                "virtualCores": 1
+            },
+            "nodeLabelExpression": "",
+            "numContainers": 0,
+            "priority": {
+                "priority": 0
+            },
+            "relaxLocality": true,
+            "resourceName": "*"
+        },
+        {
+            "capability": {
+                "memory": 4096,
+                "virtualCores": 1
+            },
+            "nodeLabelExpression": "",
+            "numContainers": 0,
+            "priority": {
+                "priority": 20
+            },
+            "relaxLocality": true,
+            "resourceName": "host3.domain.com"
+        },
+        {
+            "capability": {
+                "memory": 4096,
+                "virtualCores": 1
+            },
+            "nodeLabelExpression": "",
+            "numContainers": 0,
+            "priority": {
+                "priority": 20
+            },
+            "relaxLocality": true,
+            "resourceName": "host4.domain.com"
+        }]
       }
     ]
   }
@@ -1493,6 +1589,45 @@ Response Body:
         <unmanagedApplication>false</unmanagedApplication>
         <appNodeLabelExpression></appNodeLabelExpression>
         <amNodeLabelExpression></amNodeLabelExpression>
+        <resourceRequests>
+          <capability>
+            <memory>4096</memory>
+            <virtualCores>1</virtualCores>
+          </capability>
+          <nodeLabelExpression/>
+          <numContainers>0</numContainers>
+          <priority>
+            <priority>0</priority>
+          </priority>
+          <relaxLocality>true</relaxLocality>
+          <resourceName>*</resourceName>
+        </resourceRequests>
+        <resourceRequests>
+          <capability>
+            <memory>4096</memory>
+            <virtualCores>1</virtualCores>
+          </capability>
+          <nodeLabelExpression/>
+          <numContainers>0</numContainers>
+          <priority>
+            <priority>20</priority>
+          </priority>
+          <relaxLocality>true</relaxLocality>
+          <resourceName>host1.domain.com</resourceName>
+        </resourceRequests>
+        <resourceRequests>
+          <capability>
+            <memory>4096</memory>
+            <virtualCores>1</virtualCores>
+          </capability>
+          <nodeLabelExpression/>
+          <numContainers>0</numContainers>
+          <priority>
+            <priority>20</priority>
+          </priority>
+          <relaxLocality>true</relaxLocality>
+          <resourceName>host2.domain.com</resourceName>
+        </resourceRequests>
     </app>
     <app>
         <id>application_1476912658570_0001</id>
@@ -1529,6 +1664,45 @@ Response Body:
         <unmanagedApplication>false</unmanagedApplication>
         <appNodeLabelExpression></appNodeLabelExpression>
         <amNodeLabelExpression></amNodeLabelExpression>
+        <resourceRequests>
+          <capability>
+            <memory>4096</memory>
+            <virtualCores>1</virtualCores>
+          </capability>
+          <nodeLabelExpression/>
+          <numContainers>0</numContainers>
+          <priority>
+            <priority>0</priority>
+          </priority>
+          <relaxLocality>true</relaxLocality>
+          <resourceName>*</resourceName>
+        </resourceRequests>
+        <resourceRequests>
+          <capability>
+            <memory>4096</memory>
+            <virtualCores>1</virtualCores>
+          </capability>
+          <nodeLabelExpression/>
+          <numContainers>0</numContainers>
+          <priority>
+            <priority>20</priority>
+          </priority>
+          <relaxLocality>true</relaxLocality>
+          <resourceName>host1.domain.com</resourceName>
+        </resourceRequests>
+        <resourceRequests>
+          <capability>
+            <memory>4096</memory>
+            <virtualCores>1</virtualCores>
+          </capability>
+          <nodeLabelExpression/>
+          <numContainers>0</numContainers>
+          <priority>
+            <priority>20</priority>
+          </priority>
+          <relaxLocality>true</relaxLocality>
+          <resourceName>host2.domain.com</resourceName>
+        </resourceRequests>
     </app>
 </apps>
 ```
@@ -2112,7 +2286,7 @@ Use the following URI to obtain a Node Object, from a node identified by the nod
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | rack | string | The rack location of this node |
-| state | string | State of the node - valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED |
+| state | string | State of the node - valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONING, DECOMMISSIONED, LOST, REBOOTED |
 | id | string | The node id |
 | nodeHostName | string | The host name of the node |
 | nodeHTTPAddress | string | The nodes HTTP address |

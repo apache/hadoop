@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -78,7 +79,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private final String key;
   private final long contentLength;
   private final String uri;
-  public static final Logger LOG = S3AFileSystem.LOG;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(S3AInputStream.class);
   private final S3AInstrumentation.InputStreamStatistics streamStatistics;
   private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private String serverSideEncryptionKey;
@@ -451,13 +453,27 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       // if the amount of data remaining in the current request is greater
       // than the readahead value: abort.
       long remaining = remainingInCurrentRequest();
+      LOG.debug("Closing stream {}: {}", reason,
+          forceAbort ? "abort" : "soft");
       boolean shouldAbort = forceAbort || remaining > readahead;
       if (!shouldAbort) {
         try {
           // clean close. This will read to the end of the stream,
           // so, while cleaner, can be pathological on a multi-GB object
+
+          // explicitly drain the stream
+          long drained = 0;
+          while (wrappedStream.read() >= 0) {
+            drained++;
+          }
+          LOG.debug("Drained stream of {} bytes", drained);
+
+          // now close it
           wrappedStream.close();
-          streamStatistics.streamClose(false, remaining);
+          // this MUST come after the close, so that if the IO operations fail
+          // and an abort is triggered, the initial attempt's statistics
+          // aren't collected.
+          streamStatistics.streamClose(false, drained);
         } catch (IOException e) {
           // exception escalates to an abort
           LOG.debug("When closing {} stream for {}", uri, reason, e);
@@ -467,13 +483,15 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       if (shouldAbort) {
         // Abort, rather than just close, the underlying stream.  Otherwise, the
         // remaining object payload is read from S3 while closing the stream.
+        LOG.debug("Aborting stream");
         wrappedStream.abort();
         streamStatistics.streamClose(true, remaining);
       }
-      LOG.debug("Stream {} {}: {}; streamPos={}, nextReadPos={}," +
+      LOG.debug("Stream {} {}: {}; remaining={} streamPos={},"
+              + " nextReadPos={}," +
           " request range {}-{} length={}",
           uri, (shouldAbort ? "aborted" : "closed"), reason,
-          pos, nextReadPos,
+          remaining, pos, nextReadPos,
           contentRangeStart, contentRangeFinish,
           length);
       wrappedStream = null;

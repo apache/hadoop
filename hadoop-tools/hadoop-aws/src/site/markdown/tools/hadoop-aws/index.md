@@ -29,7 +29,9 @@ HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-aws' in the list.
 
 ### Features
 
-**NOTE: `s3:` has been phased out. Use `s3n:` or `s3a:` instead.**
+**NOTE: `s3:` has been phased out; `s3n:`, while
+distributed should now be considered deprecated.
+Please use `s3a:` as the connector to data hosted in S3.**
 
 1. The second-generation, `s3n:` filesystem, making it easy to share
 data between hadoop and other applications via the S3 object store.
@@ -893,7 +895,7 @@ from placing its declaration on the command line.
       any call to setReadahead() is made to an open stream.</description>
     </property>
 
-### Configurations different S3 buckets
+### Configuring different S3 buckets
 
 Different S3 buckets can be accessed with different S3A client configurations.
 This allows for different endpoints, data read and write strategies, as well
@@ -965,10 +967,11 @@ then declare the path to the appropriate credential file in
 a bucket-specific version of the property `fs.s3a.security.credential.provider.path`.
 
 
-### Working with buckets in different regions
+### Using Per-Bucket Configuration to access data round the world
 
-S3 Buckets are hosted in different regions, the default being US-East.
-The client talks to it by default, under the URL `s3.amazonaws.com`
+S3 Buckets are hosted in different "regions", the default being "US-East".
+The S3A client talks to this region by default, issing HTTP requests
+to the server `s3.amazonaws.com`.
 
 S3A can work with buckets from any region. Each region has its own
 S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region).
@@ -988,49 +991,111 @@ While it is generally simpler to use the default endpoint, working with
 V4-signing-only regions (Frankfurt, Seoul) requires the endpoint to be identified.
 Expect better performance from direct connections —traceroute will give you some insight.
 
-Examples:
+If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
+or as a 400 Bad Request: take these as cues to check the endpoint setting of
+a bucket.
 
-The default endpoint:
+Here is a list of properties defining all AWS S3 regions, current as of June 2017:
 
 ```xml
+<!--
+ This is the default endpoint, which can be used to interact
+ with any v2 region.
+ -->
 <property>
-  <name>fs.s3a.endpoint</name>
+  <name>central.endpoint</name>
   <value>s3.amazonaws.com</value>
 </property>
-```
 
-Frankfurt
-
-```xml
 <property>
-  <name>fs.s3a.endpoint</name>
+  <name>canada.endpoint</name>
+  <value>s3.ca-central-1.amazonaws.com</value>
+</property>
+
+<property>
+  <name>frankfurt.endpoint</name>
   <value>s3.eu-central-1.amazonaws.com</value>
 </property>
-```
 
-Seoul
-
-```xml
 <property>
-  <name>fs.s3a.endpoint</name>
+  <name>ireland.endpoint</name>
+  <value>s3-eu-west-1.amazonaws.com</value>
+</property>
+
+<property>
+  <name>london.endpoint</name>
+  <value>s3.eu-west-2.amazonaws.com</value>
+</property>
+
+<property>
+  <name>mumbai.endpoint</name>
+  <value>s3.ap-south-1.amazonaws.com</value>
+</property>
+
+<property>
+  <name>ohio.endpoint</name>
+  <value>s3.us-east-2.amazonaws.com</value>
+</property>
+
+<property>
+  <name>oregon.endpoint</name>
+  <value>s3-us-west-2.amazonaws.com</value>
+</property>
+
+<property>
+  <name>sao-paolo.endpoint</name>
+  <value>s3-sa-east-1.amazonaws.com</value>
+</property>
+
+<property>
+  <name>seoul.endpoint</name>
   <value>s3.ap-northeast-2.amazonaws.com</value>
+</property>
+
+<property>
+  <name>singapore.endpoint</name>
+  <value>s3-ap-southeast-1.amazonaws.com</value>
+</property>
+
+<property>
+  <name>sydney.endpoint</name>
+  <value>s3-ap-southeast-2.amazonaws.com</value>
+</property>
+
+<property>
+  <name>tokyo.endpoint</name>
+  <value>s3-ap-northeast-1.amazonaws.com</value>
+</property>
+
+<property>
+  <name>virginia.endpoint</name>
+  <value>${central.endpoint}</value>
 </property>
 ```
 
-If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
-or as a 400 Bad Request.
 
-
-If you are trying to mix endpoints for different buckets, use a per-bucket endpoint
-declaration. For example:
+This list can be used to specify the endpoint of individual buckets, for example
+for buckets in the central and EU/Ireland endpoints.
 
 ```xml
 <property>
   <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-  <value>s3.amazonaws.com</value>
+  <value>${central.endpoint}</value>
   <description>The endpoint for s3a://landsat-pds URLs</description>
 </property>
+
+<property>
+  <name>fs.s3a.bucket.eu-dataset.endpoint</name>
+  <value>${ireland.endpoint}</value>
+  <description>The endpoint for s3a://eu-dataset URLs</description>
+</property>
+
 ```
+
+Why explicitly declare a bucket bound to the central endpoint? It ensures
+that if the default endpoint is changed to a new region, data store in
+US-east is still reachable.
+
 
 ### <a name="s3a_fast_upload"></a>Stabilizing: S3A Fast Upload
 

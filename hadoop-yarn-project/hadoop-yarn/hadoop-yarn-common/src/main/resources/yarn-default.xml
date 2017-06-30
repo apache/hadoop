@@ -629,11 +629,11 @@
   </property>
 
   <property>
-	<description>Specifies the maximum size of the data that can be stored
-		in a znode.Value should be same or less than jute.maxbuffer configured
-		in zookeeper.Default value configured is 1MB.</description>
-	<name>yarn.resourcemanager.zk-max-znode-size.bytes</name>
-	<value>1048576</value>
+    <description>Specifies the maximum size of the data that can be stored
+      in a znode. Value should be same or less than jute.maxbuffer configured
+      in zookeeper. Default value configured is 1MB.</description>
+    <name>yarn.resourcemanager.zk-max-znode-size.bytes</name>
+    <value>1048576</value>
   </property>
 
   <property>
@@ -1013,7 +1013,7 @@
   <property>
     <description>Environment variables that containers may override rather than use NodeManager's default.</description>
     <name>yarn.nodemanager.env-whitelist</name>
-    <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME</value>
+    <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ</value>
   </property>
 
   <property>

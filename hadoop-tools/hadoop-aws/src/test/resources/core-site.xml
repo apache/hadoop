@@ -55,6 +55,20 @@
     <value>org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore</value>
   </property>
 
+  <!--
+   This is the default endpoint, which can be used to interact
+   with any v2 region.
+   -->
+  <property>
+    <name>central.endpoint</name>
+    <value>s3.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>canada.endpoint</name>
+    <value>s3.ca-central-1.amazonaws.com</value>
+  </property>
+
   <property>
     <name>frankfurt.endpoint</name>
     <value>s3.eu-central-1.amazonaws.com</value>
@@ -66,8 +80,53 @@
   </property>
 
   <property>
-    <name>central.endpoint</name>
-    <value>s3.amazonaws.com</value>
+    <name>london.endpoint</name>
+    <value>s3.eu-west-2.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>mumbai.endpoint</name>
+    <value>s3.ap-south-1.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>ohio.endpoint</name>
+    <value>s3.us-east-2.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>oregon.endpoint</name>
+    <value>s3-us-west-2.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>sao-paolo.endpoint</name>
+    <value>s3-sa-east-1.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>seoul.endpoint</name>
+    <value>s3.ap-northeast-2.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>singapore.endpoint</name>
+    <value>s3-ap-southeast-1.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>sydney.endpoint</name>
+    <value>s3-ap-southeast-2.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>tokyo.endpoint</name>
+    <value>s3-ap-northeast-1.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>virginia.endpoint</name>
+    <value>${central.endpoint}</value>
   </property>
 
   <!-- Scale integration tests may time out on slower connections

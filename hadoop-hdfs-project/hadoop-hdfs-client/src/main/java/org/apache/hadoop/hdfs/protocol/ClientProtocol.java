@@ -1571,6 +1571,23 @@ public interface ClientProtocol {
   void removeErasureCodingPolicy(String ecPolicyName) throws IOException;
 
   /**
+   * Enable erasure coding policy.
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void enableErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+  /**
+   * Disable erasure coding policy.
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void disableErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+
+  /**
    * Get the erasure coding policies loaded in Namenode.
    *
    * @throws IOException

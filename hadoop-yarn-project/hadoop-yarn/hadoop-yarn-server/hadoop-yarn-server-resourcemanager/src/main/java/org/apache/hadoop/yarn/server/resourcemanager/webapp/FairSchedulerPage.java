@@ -75,7 +75,8 @@ public class FairSchedulerPage extends RmView {
           _("Num Active Applications:", qinfo.getNumActiveApplications()).
           _("Num Pending Applications:", qinfo.getNumPendingApplications()).
           _("Min Resources:", qinfo.getMinResources().toString()).
-          _("Max Resources:", qinfo.getMaxResources().toString());
+          _("Max Resources:", qinfo.getMaxResources().toString()).
+          _("Reserved Resources:", qinfo.getReservedResources().toString());
       int maxApps = qinfo.getMaxApplications();
       if (maxApps < Integer.MAX_VALUE) {
           ri._("Max Running Applications:", qinfo.getMaxApplications());
@@ -103,7 +104,8 @@ public class FairSchedulerPage extends RmView {
       ResponseInfo ri = info("\'" + qinfo.getQueueName() + "\' Queue Status").
           _("Used Resources:", qinfo.getUsedResources().toString()).
           _("Min Resources:", qinfo.getMinResources().toString()).
-          _("Max Resources:", qinfo.getMaxResources().toString());
+          _("Max Resources:", qinfo.getMaxResources().toString()).
+          _("Reserved Resources:", qinfo.getReservedResources().toString());
       int maxApps = qinfo.getMaxApplications();
       if (maxApps < Integer.MAX_VALUE) {
           ri._("Max Running Applications:", qinfo.getMaxApplications());
