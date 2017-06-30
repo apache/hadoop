@@ -170,6 +170,36 @@ public class TestKeys {
     helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
+    List<OzoneKey> keyList = helper.getBucket().listKeys();
+    Assert.assertEquals(keyList.size(), 1);
+
+    // test list key using a more efficient call
+    String newkeyName = OzoneUtils.getRequestID().toLowerCase();
+    client.putKey(helper.getVol().getVolumeName(),
+        helper.getBucket().getBucketName(), newkeyName, helper.getFile());
+    keyList = helper.getBucket().listKeys();
+    Assert.assertEquals(keyList.size(), 2);
+
+    // test new put key with invalid volume/bucket name
+    try{
+      client.putKey("invalid-volume",
+          helper.getBucket().getBucketName(), newkeyName, helper.getFile());
+      fail("Put key should have thrown"
+          + " when using invalid volume name.");
+    } catch(OzoneException e) {
+      GenericTestUtils.assertExceptionContains(
+          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+    }
+
+    try {
+      client.putKey(helper.getVol().getVolumeName(), "invalid-bucket",
+          newkeyName, helper.getFile());
+      fail("Put key should have thrown "
+          + "when using invalid bucket name.");
+    } catch (OzoneException e) {
+      GenericTestUtils.assertExceptionContains(
+          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+    }
   }
 
   private void restartDatanode(int datanodeIdx)
@@ -219,21 +249,52 @@ public class TestKeys {
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
-    String newFileName =  path + "/" +OzoneUtils.getRequestID().toLowerCase();
-    Path newPath = Paths.get(newFileName);
-    helper.getBucket().getKey(keyName, newPath);
+    String newFileName1 =  path + "/" +OzoneUtils.getRequestID().toLowerCase();
+    String newFileName2 =  path + "/" +OzoneUtils.getRequestID().toLowerCase();
+
+    Path newPath1 = Paths.get(newFileName1);
+    Path newPath2 = Paths.get(newFileName2);
+
+    helper.getBucket().getKey(keyName, newPath1);
+    // test get key using a more efficient call
+    client.getKey(helper.getVol().getVolumeName(),
+        helper.getBucket().getBucketName(), keyName, newPath2);
 
     FileInputStream original = new FileInputStream(helper.getFile());
-    FileInputStream downloaded = new FileInputStream(newPath.toFile());
-
+    FileInputStream downloaded1 = new FileInputStream(newPath1.toFile());
+    FileInputStream downloaded2 = new FileInputStream(newPath1.toFile());
 
     String originalHash = DigestUtils.sha256Hex(original);
-    String downloadedHash = DigestUtils.sha256Hex(downloaded);
+    String downloadedHash1 = DigestUtils.sha256Hex(downloaded1);
+    String downloadedHash2 = DigestUtils.sha256Hex(downloaded2);
 
     assertEquals(
         "Sha256 does not match between original file and downloaded file.",
-        originalHash, downloadedHash);
+        originalHash, downloadedHash1);
+    assertEquals(
+        "Sha256 does not match between original file and downloaded file.",
+        originalHash, downloadedHash2);
 
+    // test new get key with invalid volume/bucket name
+    try {
+      client.getKey("invalid-volume",
+          helper.getBucket().getBucketName(), keyName, newPath1);
+      fail("Get key should have thrown "
+          + "when using invalid volume name.");
+    } catch (OzoneException e) {
+      GenericTestUtils.assertExceptionContains(
+          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+    }
+
+    try {
+      client.getKey(helper.getVol().getVolumeName(),
+          "invalid-bucket", keyName, newPath1);
+      fail("Get key should have thrown "
+          + "when using invalid bucket name.");
+    } catch (OzoneException e) {
+      GenericTestUtils.assertExceptionContains(
+          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+    }
   }
 
   @Test
@@ -250,7 +311,7 @@ public class TestKeys {
       fail("Get Key on a deleted key should have thrown");
     } catch (OzoneException ex) {
       assertEquals(ex.getShortMessage(),
-          ErrorTable.INVALID_KEY.getShortMessage());
+          ErrorTable.INVALID_RESOURCE_NAME.getShortMessage());
     }
   }
 
@@ -267,7 +328,29 @@ public class TestKeys {
       helper.getBucket().putKey(newkeyName, helper.getFile());
     }
 
-    List<OzoneKey> keyList = helper.getBucket().listKeys();
-    Assert.assertEquals(keyList.size(), 11);
+    List<OzoneKey> keyList1 = helper.getBucket().listKeys();
+    // test list key using a more efficient call
+    List<OzoneKey> keyList2 = client.listKeys(helper.getVol().getVolumeName(),
+        helper.getBucket().getBucketName());
+
+    Assert.assertEquals(keyList1.size(), 11);
+    Assert.assertEquals(keyList2.size(), 11);
+
+    // test new list keys with invalid volume/bucket name
+    try {
+      client.listKeys("invalid-volume", helper.getBucket().getBucketName());
+      fail("List keys should have thrown when using invalid volume name.");
+    } catch (OzoneException e) {
+      GenericTestUtils.assertExceptionContains(
+          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+    }
+
+    try {
+      client.listKeys(helper.getVol().getVolumeName(), "invalid-bucket");
+      fail("List keys should have thrown when using invalid bucket name.");
+    } catch (OzoneException e) {
+      GenericTestUtils.assertExceptionContains(
+          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+    }
   }
 }

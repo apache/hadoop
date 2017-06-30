@@ -87,11 +87,7 @@ public class ListKeyHandler extends Handler {
     client.setEndPointURI(ozoneURI);
     client.setUserAuth(userName);
 
-
-    OzoneVolume vol = client.getVolume(volumeName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
-    List<OzoneKey> keys = bucket.listKeys();
-
+    List<OzoneKey> keys = client.listKeys(volumeName, bucketName);
     for (OzoneKey key : keys) {
       System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
           key.getObjectInfo().toJsonString()));

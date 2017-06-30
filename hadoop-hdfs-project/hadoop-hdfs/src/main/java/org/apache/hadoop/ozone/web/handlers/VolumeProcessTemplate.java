@@ -82,7 +82,7 @@ public abstract class VolumeProcessTemplate {
       OzoneUtils.validate(request, headers, reqID, volume, hostName);
 
       // we use the same logic for both bucket and volume names
-      OzoneUtils.verifyBucketName(volume);
+      OzoneUtils.verifyResourceName(volume);
       UserAuth auth = UserHandlerBuilder.getAuthHandler();
 
       userArgs.setUserName(auth.getUser(userArgs));

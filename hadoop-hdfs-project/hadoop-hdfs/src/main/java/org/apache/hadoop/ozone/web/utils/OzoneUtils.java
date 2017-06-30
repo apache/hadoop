@@ -61,31 +61,31 @@ public final class OzoneUtils {
   /**
    * verifies that bucket name / volume name is a valid DNS name.
    *
-   * @param bucketName Bucket Name to be validated
+   * @param resName Bucket or volume Name to be validated
    *
    * @throws IllegalArgumentException
    */
-  public static void verifyBucketName(String bucketName)
+  public static void verifyResourceName(String resName)
       throws IllegalArgumentException {
 
-    if (bucketName == null) {
+    if (resName == null) {
       throw new IllegalArgumentException("Bucket or Volume name is null");
     }
 
-    if ((bucketName.length() < OzoneConsts.OZONE_MIN_BUCKET_NAME_LENGTH) ||
-        (bucketName.length() > OzoneConsts.OZONE_MAX_BUCKET_NAME_LENGTH)) {
+    if ((resName.length() < OzoneConsts.OZONE_MIN_BUCKET_NAME_LENGTH) ||
+        (resName.length() > OzoneConsts.OZONE_MAX_BUCKET_NAME_LENGTH)) {
       throw new IllegalArgumentException(
           "Bucket or Volume length is illegal, " +
               "valid length is 3-63 characters");
     }
 
-    if ((bucketName.charAt(0) == '.') || (bucketName.charAt(0) == '-')) {
+    if ((resName.charAt(0) == '.') || (resName.charAt(0) == '-')) {
       throw new IllegalArgumentException(
           "Bucket or Volume name cannot start with a period or dash");
     }
 
-    if ((bucketName.charAt(bucketName.length() - 1) == '.') ||
-        (bucketName.charAt(bucketName.length() - 1) == '-')) {
+    if ((resName.charAt(resName.length() - 1) == '.') ||
+        (resName.charAt(resName.length() - 1) == '-')) {
       throw new IllegalArgumentException(
           "Bucket or Volume name cannot end with a period or dash");
     }
@@ -93,8 +93,8 @@ public final class OzoneUtils {
     boolean isIPv4 = true;
     char prev = (char) 0;
 
-    for (int index = 0; index < bucketName.length(); index++) {
-      char currChar = bucketName.charAt(index);
+    for (int index = 0; index < resName.length(); index++) {
+      char currChar = resName.charAt(index);
 
       if (currChar != '.') {
         isIPv4 = ((currChar >= '0') && (currChar <= '9')) && isIPv4;

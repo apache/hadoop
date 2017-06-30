@@ -102,9 +102,7 @@ public class PutKeyHandler extends Handler {
     client.setEndPointURI(ozoneURI);
     client.setUserAuth(userName);
 
-    OzoneVolume vol = client.getVolume(volumeName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
-    bucket.putKey(keyName, dataFile);
+    client.putKey(volumeName, bucketName, keyName, dataFile);
   }
 
 }

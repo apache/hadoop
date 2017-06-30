@@ -25,7 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.ozone.web.utils.OzoneUtils.getRequestID;
-import static org.apache.hadoop.ozone.web.utils.OzoneUtils.verifyBucketName;
+import static org.apache.hadoop.ozone.web.utils.OzoneUtils.verifyResourceName;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -69,10 +69,10 @@ public class TestUtils {
       if(testMatrix.get(key)) {
 
         // For valid names there should be no exceptions at all
-        verifyBucketName(key);
+        verifyResourceName(key);
       } else {
         try {
-          verifyBucketName(key);
+          verifyResourceName(key);
           // should never get here since the isValid call will throw
          fail("An exception was expected but did not happen.");
         } catch(IllegalArgumentException e){

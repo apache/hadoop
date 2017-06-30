@@ -923,7 +923,7 @@ public final class OzoneMetadataManager {
       byte[] bucketInfo = metadataDB.get(args.getParentName()
           .getBytes(encoding));
       if (bucketInfo == null) {
-        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, args);
+        throw ErrorTable.newError(ErrorTable.INVALID_RESOURCE_NAME, args);
       }
       BucketInfo bInfo = BucketInfo.parse(new String(bucketInfo, encoding));
       bInfo.setKeyCount(bInfo.getKeyCount() + 1);
@@ -1066,7 +1066,7 @@ public final class OzoneMetadataManager {
       String fullPath = storageRoot + OBJECT_DIR + fileNameHash;
       File f = new File(fullPath);
       if (!f.exists()) {
-        throw ErrorTable.newError(ErrorTable.INVALID_KEY, args);
+        throw ErrorTable.newError(ErrorTable.INVALID_RESOURCE_NAME, args);
       }
       long size = f.length();
 
@@ -1094,13 +1094,13 @@ public final class OzoneMetadataManager {
       byte[] bucketInfo = metadataDB.get(bArgs.getResourceName()
           .getBytes(encoding));
       if (bucketInfo == null) {
-        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, bArgs);
+        throw ErrorTable.newError(ErrorTable.INVALID_RESOURCE_NAME, bArgs);
       }
 
       byte[] bucketListBytes = userDB.get(bArgs.getResourceName()
           .getBytes(encoding));
       if (bucketListBytes == null) {
-        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, bArgs);
+        throw ErrorTable.newError(ErrorTable.INVALID_RESOURCE_NAME, bArgs);
       }
       return ListKeys.parse(new String(bucketListBytes, encoding));
     } finally {

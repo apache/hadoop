@@ -249,8 +249,8 @@ public class OzoneBucket {
    * @throws OzoneException
    * @throws IOException
    */
-  private void executePutKey(HttpPut putRequest, CloseableHttpClient httpClient)
-      throws OzoneException, IOException {
+  public static void executePutKey(HttpPut putRequest,
+      CloseableHttpClient httpClient) throws OzoneException, IOException {
     HttpEntity entity = null;
     try {
       HttpResponse response = httpClient.execute(putRequest);
@@ -354,8 +354,8 @@ public class OzoneBucket {
    * @throws IOException
    * @throws OzoneException
    */
-  private void executeGetKey(HttpGet getRequest, CloseableHttpClient httpClient,
-                             OutputStream stream)
+  public static void executeGetKey(HttpGet getRequest,
+      CloseableHttpClient httpClient, OutputStream stream)
       throws IOException, OzoneException {
 
     HttpEntity entity = null;
@@ -477,9 +477,8 @@ public class OzoneBucket {
    * @throws IOException
    * @throws OzoneException
    */
-  private List<OzoneKey> executeListKeys(HttpGet getRequest,
-      CloseableHttpClient httpClient)
-      throws IOException, OzoneException {
+  public static List<OzoneKey> executeListKeys(HttpGet getRequest,
+      CloseableHttpClient httpClient) throws IOException, OzoneException {
     HttpEntity entity = null;
     List<OzoneKey> ozoneKeyList = new LinkedList<OzoneKey>();
     try {
