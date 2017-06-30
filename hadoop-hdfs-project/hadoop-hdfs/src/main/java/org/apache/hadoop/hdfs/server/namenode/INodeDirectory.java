@@ -65,8 +65,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
     return inode.asDirectory(); 
   }
 
-  protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
-  final static byte[] ROOT_NAME = DFSUtil.string2Bytes("");
+  // Profiling shows that most of the file lists are between 1 and 4 elements.
+  // Thus allocate the corresponding ArrayLists with a small initial capacity.
+  public static final int DEFAULT_FILES_PER_DIRECTORY = 2;
+
+  static final byte[] ROOT_NAME = DFSUtil.string2Bytes("");
 
   private List<INode> children = null;
   
