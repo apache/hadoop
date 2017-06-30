@@ -463,7 +463,8 @@ public class TestServiceApiUtil {
     Application application = createValidApplication(null);
     application.setComponents(Arrays.asList(c, d, e));
     try {
-      ServiceApiUtil.validateAndResolveApplication(application, sfs);
+      ServiceApiUtil.validateAndResolveApplication(application, sfs,
+          CONF_DEFAULT_DNS);
       Assert.fail(EXCEPTION_PREFIX + "components with bad dependencies");
     } catch (IllegalArgumentException ex) {
       assertEquals(String.format(
