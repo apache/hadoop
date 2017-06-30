@@ -20,9 +20,9 @@ package org.apache.hadoop.fs.azure;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_CHECK_BLOCK_MD5;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_STORE_BLOB_MD5;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 
@@ -130,8 +130,8 @@ public class TestBlobDataValidation {
       }
       StorageException cause = (StorageException)ex.getCause();
       assertNotNull(cause);
-      assertTrue("Unexpected cause: " + cause,
-          cause.getErrorCode().equals(StorageErrorCodeStrings.INVALID_MD5));
+      assertEquals("Unexpected cause: " + cause,
+          StorageErrorCodeStrings.INVALID_MD5, cause.getErrorCode());
     }
   }
 

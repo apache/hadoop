@@ -2783,6 +2783,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     namenode.removeErasureCodingPolicy(ecPolicyName);
   }
 
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkOpen();
+    namenode.enableErasureCodingPolicy(ecPolicyName);
+  }
+
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkOpen();
+    namenode.disableErasureCodingPolicy(ecPolicyName);
+  }
+
   public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
     checkOpen();
     return new DFSInotifyEventInputStream(namenode, tracer);
@@ -2871,12 +2883,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     synchronized (DFSClient.class) {
       if (STRIPED_READ_THREAD_POOL == null) {
-        // Only after thread pool is fully constructed then save it to
-        // volatile field.
-        ThreadPoolExecutor threadPool = DFSUtilClient.getThreadPoolExecutor(1,
+        STRIPED_READ_THREAD_POOL = DFSUtilClient.getThreadPoolExecutor(1,
             numThreads, 60, "StripedRead-", true);
-        threadPool.allowCoreThreadTimeOut(true);
-        STRIPED_READ_THREAD_POOL = threadPool;
+        STRIPED_READ_THREAD_POOL.allowCoreThreadTimeOut(true);
       }
     }
   }

@@ -229,6 +229,35 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public RecoveredAMRMProxyState loadAMRMProxyState() throws IOException {
+    throw new UnsupportedOperationException(
+        "Recovery not supported by this state store");
+  }
+
+  @Override
+  public void storeAMRMProxyCurrentMasterKey(MasterKey key) throws IOException {
+  }
+
+  @Override
+  public void storeAMRMProxyNextMasterKey(MasterKey key) throws IOException {
+  }
+
+  @Override
+  public void storeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
+      String key, byte[] data) throws IOException {
+  }
+
+  @Override
+  public void removeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
+      String key) throws IOException {
+  }
+
+  @Override
+  public void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
+      throws IOException {
+  }
+
+  @Override
   protected void initStorage(Configuration conf) throws IOException {
   }
 

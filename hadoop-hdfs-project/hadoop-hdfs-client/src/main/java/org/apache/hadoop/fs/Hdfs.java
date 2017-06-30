@@ -232,7 +232,7 @@ public class Hdfs extends AbstractFileSystem {
         thisListing = dfs.listPaths(src, thisListing.getLastName(),
             needLocation);
         if (thisListing == null) {
-          return false; // the directory is deleted
+          throw new FileNotFoundException("File " + src + " does not exist.");
         }
         i = 0;
       }

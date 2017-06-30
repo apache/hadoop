@@ -696,4 +696,40 @@ public class TestDFSAdmin {
         client.getDatanodeStorageReport(DatanodeReportType.DEAD).length);
     assertEquals(numCorruptBlocks, client.getCorruptBlocksCount());
   }
+
+  @Test
+  public void testSetBalancerBandwidth() throws Exception {
+    redirectStream();
+
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    String outStr;
+
+    // Test basic case: 10000
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-setBalancerBandwidth", "10000"}));
+    outStr = scanIntoString(out);
+    assertTrue("Did not set bandwidth!", outStr.contains("Balancer " +
+        "bandwidth is set to 10000"));
+
+    // Test parsing with units
+    resetStream();
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-setBalancerBandwidth", "10m"}));
+    outStr = scanIntoString(out);
+    assertTrue("Did not set bandwidth!", outStr.contains("Balancer " +
+        "bandwidth is set to 10485760"));
+
+    resetStream();
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-setBalancerBandwidth", "10k"}));
+    outStr = scanIntoString(out);
+    assertTrue("Did not set bandwidth!", outStr.contains("Balancer " +
+        "bandwidth is set to 10240"));
+
+    // Test negative numbers
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-setBalancerBandwidth", "-10000"}));
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-setBalancerBandwidth", "-10m"}));
+  }
 }

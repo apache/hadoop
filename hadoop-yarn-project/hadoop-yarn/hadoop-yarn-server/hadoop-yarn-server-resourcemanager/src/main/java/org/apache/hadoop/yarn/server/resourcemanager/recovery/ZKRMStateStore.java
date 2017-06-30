@@ -188,6 +188,7 @@ public class ZKRMStateStore extends RMStateStore {
   private String fencingNodePath;
   private Thread verifyActiveStatusThread;
   private int zkSessionTimeout;
+  private int zknodeLimit;
 
   /* ACL and auth info */
   private List<ACL> zkAcl;
@@ -283,6 +284,8 @@ public class ZKRMStateStore extends RMStateStore {
     fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
     zkSessionTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
+    zknodeLimit = conf.getInt(YarnConfiguration.RM_ZK_ZNODE_SIZE_LIMIT_BYTES,
+        YarnConfiguration.DEFAULT_RM_ZK_ZNODE_SIZE_LIMIT_BYTES);
 
     appIdNodeSplitIndex =
         conf.getInt(YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
@@ -746,8 +749,17 @@ public class ZKRMStateStore extends RMStateStore {
     }
 
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
-    safeCreate(nodeCreatePath, appStateData, zkAcl,
-        CreateMode.PERSISTENT);
+    if (appStateData.length <= zknodeLimit) {
+      safeCreate(nodeCreatePath, appStateData, zkAcl, CreateMode.PERSISTENT);
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Application state data size for " + appId + " is "
+            + appStateData.length);
+      }
+      throw new StoreLimitException("Application " + appId
+          + " exceeds the maximum allowed size for application data. "
+          + "See yarn.resourcemanager.zk-max-znode-size.bytes.");
+    }
   }
 
   @Override

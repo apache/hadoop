@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azure;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
@@ -53,6 +54,8 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   public static final Logger LOG = LoggerFactory
       .getLogger(RemoteWasbAuthorizerImpl.class);
+  private static final ObjectReader RESPONSE_READER = new ObjectMapper()
+      .readerFor(RemoteAuthorizerResponse.class);
 
   private String remoteAuthorizerServiceUrl = null;
 
@@ -193,10 +196,8 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
           throw new WasbAuthorizationException("Error in check authorize", e);
         }
 
-        ObjectMapper objectMapper = new ObjectMapper();
         RemoteAuthorizerResponse authorizerResponse =
-            objectMapper
-            .readValue(responseBody, RemoteAuthorizerResponse.class);
+            RESPONSE_READER.readValue(responseBody);
 
         if (authorizerResponse == null) {
           throw new WasbAuthorizationException(

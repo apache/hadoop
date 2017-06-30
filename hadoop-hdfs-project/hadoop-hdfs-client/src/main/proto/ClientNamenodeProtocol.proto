@@ -957,6 +957,10 @@ service ClientNamenodeProtocol {
       returns(AddErasureCodingPoliciesResponseProto);
   rpc removeErasureCodingPolicy(RemoveErasureCodingPolicyRequestProto)
       returns(RemoveErasureCodingPolicyResponseProto);
+  rpc enableErasureCodingPolicy(EnableErasureCodingPolicyRequestProto)
+      returns(EnableErasureCodingPolicyResponseProto);
+  rpc disableErasureCodingPolicy(DisableErasureCodingPolicyRequestProto)
+      returns(DisableErasureCodingPolicyResponseProto);
   rpc getErasureCodingPolicy(GetErasureCodingPolicyRequestProto)
       returns(GetErasureCodingPolicyResponseProto);
   rpc getErasureCodingCodecs(GetErasureCodingCodecsRequestProto)

@@ -444,7 +444,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.FINISHED_TIME_BEGIN) String finishBegin,
       @QueryParam(RMWSConsts.FINISHED_TIME_END) String finishEnd,
       @QueryParam(RMWSConsts.APPLICATION_TYPES) Set<String> applicationTypes,
-      @QueryParam(RMWSConsts.APPLICATION_TAGS) Set<String> applicationTags) {
+      @QueryParam(RMWSConsts.APPLICATION_TAGS) Set<String> applicationTags,
+      @QueryParam("deSelects") Set<String> unselectedFields) {
     boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
@@ -601,8 +602,11 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         }
       }
 
+      DeSelectFields deSelectFields = new DeSelectFields();
+      deSelectFields.initFields(unselectedFields);
+
       AppInfo app = new AppInfo(rm, rmapp, hasAccess(rmapp, hsr),
-          WebAppUtils.getHttpSchemePrefix(conf));
+          WebAppUtils.getHttpSchemePrefix(conf), deSelectFields);
       allApps.add(app);
     }
     return allApps;
@@ -827,14 +831,20 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppInfo getApp(@Context HttpServletRequest hsr,
-      @PathParam(RMWSConsts.APPID) String appId) {
+      @PathParam(RMWSConsts.APPID) String appId,
+      @QueryParam("deSelects") Set<String> unselectedFields) {
     init();
     ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
-    return new AppInfo(rm, app, hasAccess(app, hsr), hsr.getScheme() + "://");
+
+    DeSelectFields deSelectFields = new DeSelectFields();
+    deSelectFields.initFields(unselectedFields);
+
+    return new AppInfo(rm, app, hasAccess(app, hsr), hsr.getScheme() + "://",
+        deSelectFields);
   }
 
   @GET

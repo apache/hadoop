@@ -548,6 +548,28 @@ public class HdfsAdmin {
     dfs.removeErasureCodingPolicy(ecPolicyName);
   }
 
+  /**
+   * Enable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
+   * Disable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.disableErasureCodingPolicy(ecPolicyName);
+  }
+
   private void provisionEZTrash(Path path) throws IOException {
     // make sure the path is an EZ
     EncryptionZone ez = dfs.getEZForPath(path);

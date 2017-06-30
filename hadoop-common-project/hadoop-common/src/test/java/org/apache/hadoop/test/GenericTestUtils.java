@@ -59,6 +59,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 
@@ -84,6 +85,14 @@ public abstract class GenericTestUtils {
    * The default path for using in Hadoop path references: {@value}
    */
   public static final String DEFAULT_TEST_DATA_PATH = "target/test/data/";
+
+  /**
+   * Error string used in {@link GenericTestUtils#waitFor(Supplier, int, int)}.
+   */
+  public static final String ERROR_MISSING_ARGUMENT =
+      "Input supplier interface should be initailized";
+  public static final String ERROR_INVALID_ARGUMENT =
+      "Total wait time should be greater than check interval time";
 
   @SuppressWarnings("unchecked")
   public static void disableLog(Log log) {
@@ -123,6 +132,11 @@ public abstract class GenericTestUtils {
 
   public static void setLogLevel(org.slf4j.Logger logger, Level level) {
     setLogLevel(toLog4j(logger), level);
+  }
+
+  public static void setLogLevel(org.slf4j.Logger logger,
+                                 org.slf4j.event.Level level) {
+    setLogLevel(toLog4j(logger), Level.toLevel(level.toString()));
   }
 
   /**
@@ -258,10 +272,12 @@ public abstract class GenericTestUtils {
     }
   }  
 
-  public static void waitFor(Supplier<Boolean> check,
-      int checkEveryMillis, int waitForMillis)
-      throws TimeoutException, InterruptedException
-  {
+  public static void waitFor(Supplier<Boolean> check, int checkEveryMillis,
+      int waitForMillis) throws TimeoutException, InterruptedException {
+    Preconditions.checkNotNull(check, ERROR_MISSING_ARGUMENT);
+    Preconditions.checkArgument(waitForMillis > checkEveryMillis,
+        ERROR_INVALID_ARGUMENT);
+
     long st = Time.now();
     do {
       boolean result = check.get();

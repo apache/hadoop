@@ -154,6 +154,7 @@ public interface RMWebServiceProtocol {
    * @param finishEnd filter the result by finish end time
    * @param applicationTypes filter the result by types
    * @param applicationTags filter the result by tags
+   * @param unselectedFields De-selected params to avoid from report
    * @return all apps in the cluster
    */
   @SuppressWarnings("checkstyle:parameternumber")
@@ -161,7 +162,7 @@ public interface RMWebServiceProtocol {
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags);
+      Set<String> applicationTags, Set<String> unselectedFields);
 
   /**
    * This method retrieve all the activities in a specific node, and it is
@@ -205,9 +206,11 @@ public interface RMWebServiceProtocol {
    * @see ApplicationClientProtocol#getApplicationReport
    * @param hsr the servlet request
    * @param appId the Id of the application we want the report
+   * @param unselectedFields De-selected param list to avoid from report
    * @return the app report for a specific application
    */
-  AppInfo getApp(HttpServletRequest hsr, String appId);
+  AppInfo getApp(HttpServletRequest hsr, String appId,
+      Set<String> unselectedFields);
 
   /**
    * This method retrieves the state for a specific app, and it is reachable by

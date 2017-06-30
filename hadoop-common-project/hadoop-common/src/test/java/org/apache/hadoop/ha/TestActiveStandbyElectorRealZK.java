@@ -30,7 +30,9 @@ import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.State;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.log4j.Level;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.junit.Test;
 import org.mockito.AdditionalMatchers;
@@ -255,5 +257,31 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     Mockito.verify(cbs[0], Mockito.never()).becomeActive();
     Mockito.verify(cbs[1], Mockito.never()).becomeActive();
     checkFatalsAndReset();
+  }
+
+  /**
+   * Test to verify that proper ZooKeeper ACLs can be updated on
+   * ActiveStandbyElector's parent znode.
+   */
+  @Test(timeout = 15000)
+  public void testSetZooKeeperACLsOnParentZnodeName()
+      throws Exception {
+    ActiveStandbyElectorCallback cb =
+        Mockito.mock(ActiveStandbyElectorCallback.class);
+    ActiveStandbyElector elector =
+        new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
+            Ids.READ_ACL_UNSAFE, Collections.<ZKAuthInfo>emptyList(), cb,
+            CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+
+    // Simulate the case by pre-creating znode 'parentZnodeName'. Then updates
+    // znode's data so that data version will be increased to 1. Here znode's
+    // aversion is 0.
+    ZooKeeper otherClient = createClient();
+    otherClient.create(PARENT_DIR, "sample1".getBytes(), Ids.OPEN_ACL_UNSAFE,
+        CreateMode.PERSISTENT);
+    otherClient.setData(PARENT_DIR, "sample2".getBytes(), -1);
+    otherClient.close();
+
+    elector.ensureParentZNode();
   }
 }

@@ -40,9 +40,9 @@ public class TestAzureConcurrentOutOfBandIo {
   static final int BLOB_SIZE = 32 * 1024 * 1024;
 
   // Number of blocks to be written before flush.
-  private static final int NUMBER_OF_BLOCKS = 2;
+  static final int NUMBER_OF_BLOCKS = 2;
 
-  private AzureBlobStorageTestAccount testAccount;
+  protected AzureBlobStorageTestAccount testAccount;
 
   // Overridden TestCase methods.
   @Before

@@ -1168,7 +1168,7 @@ public class DistributedFileSystem extends FileSystem {
             needLocation);
         statistics.incrementReadOps(1);
         if (thisListing == null) {
-          return false;
+          throw new FileNotFoundException("File " + p + " does not exist.");
         }
         i = 0;
       }
@@ -2616,6 +2616,28 @@ public class DistributedFileSystem extends FileSystem {
   public void removeErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     dfs.removeErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
+   * Enable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
+   * Disable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.disableErasureCodingPolicy(ecPolicyName);
   }
 
   /**

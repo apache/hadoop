@@ -303,6 +303,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private boolean useLocalSasKeyMode = false;
 
   private String delegationToken;
+
+  /** The error message template when container is not accessible. */
+  static final String NO_ACCESS_TO_CONTAINER_MSG = "No credentials found for "
+      + "account %s in the configuration, and its container %s is not "
+      + "accessible using anonymous credentials. Please check if the container "
+      + "exists first. If it is not publicly available, you have to provide "
+      + "account credentials.";
+
   /**
    * A test hook interface that can modify the operation context we use for
    * Azure Storage operations, e.g. to inject errors.
@@ -480,6 +488,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
             useLocalSasKeyMode, conf);
       }
     }
+
+    // Configure Azure storage session.
+    configureAzureStorageSession();
 
     // Start an Azure storage session.
     //
@@ -775,26 +786,22 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     rootDirectory = container.getDirectoryReference("");
 
     // Check for container existence, and our ability to access it.
+    boolean canAccess;
     try {
-      if (!container.exists(getInstrumentedContext())) {
-        throw new AzureException("Container " + containerName + " in account "
-            + accountName + " not found, and we can't create"
-            + " it using anoynomous credentials, and no credentials found for them"
-            + " in the configuration.");
-      }
+      canAccess = container.exists(getInstrumentedContext());
     } catch (StorageException ex) {
-      throw new AzureException("Unable to access container " + containerName
-          + " in account " + accountName
-          + " using anonymous credentials, and no credentials found for them "
-          + " in the configuration.", ex);
+      LOG.error("Service returned StorageException when checking existence "
+          + "of container {} in account {}", containerName, accountName, ex);
+      canAccess = false;
+    }
+    if (!canAccess) {
+      throw new AzureException(String.format(NO_ACCESS_TO_CONTAINER_MSG,
+          accountName, containerName));
     }
 
     // Accessing the storage server unauthenticated using
     // anonymous credentials.
     isAnonymousCredentials = true;
-
-    // Configure Azure storage session.
-    configureAzureStorageSession();
   }
 
   private void connectUsingCredentials(String accountName,
@@ -820,9 +827,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
     // Can only create container if using account key credentials
     canCreateOrModifyContainer = credentials instanceof StorageCredentialsAccountAndKey;
-
-    // Configure Azure storage session.
-    configureAzureStorageSession();
   }
 
   /**
@@ -848,9 +852,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     rootDirectory = container.getDirectoryReference("");
 
     canCreateOrModifyContainer = true;
-
-    configureAzureStorageSession();
-    tolerateOobAppends = false;
   }
 
   /**
@@ -1004,22 +1005,17 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // Check whether the account is configured with an account key.
       propertyValue = getAccountKeyFromConfiguration(accountName,
           sessionConfiguration);
-      if (propertyValue != null) {
-
+      if (StringUtils.isNotEmpty(propertyValue)) {
         // Account key was found.
         // Create the Azure storage session using the account key and container.
         connectUsingConnectionStringCredentials(
             getAccountFromAuthority(sessionUri),
             getContainerFromAuthority(sessionUri), propertyValue);
-
-        // Return to caller
-        return;
+      } else {
+        LOG.debug("The account access key is not configured for {}. "
+            + "Now try anonymous access.", sessionUri);
+        connectUsingAnonymousCredentials(sessionUri);
       }
-
-      // The account access is not configured for this cluster. Try anonymous
-      // access.
-      connectUsingAnonymousCredentials(sessionUri);
-
     } catch (Exception e) {
       // Caught exception while attempting to initialize the Azure File
       // System store, re-throw the exception.
@@ -1198,8 +1194,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         container.downloadAttributes(getInstrumentedContext());
         currentKnownContainerState = ContainerState.Unknown;
       } catch (StorageException ex) {
-        if (ex.getErrorCode().equals(
-            StorageErrorCode.RESOURCE_NOT_FOUND.toString())) {
+        if (StorageErrorCode.RESOURCE_NOT_FOUND.toString()
+            .equals(ex.getErrorCode())) {
           currentKnownContainerState = ContainerState.DoesntExist;
         } else {
           throw ex;
@@ -1600,7 +1596,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       if (t != null && t instanceof StorageException) {
         StorageException se = (StorageException) t;
         // If we got this exception, the blob should have already been created
-        if (!se.getErrorCode().equals("LeaseIdMissing")) {
+        if (!"LeaseIdMissing".equals(se.getErrorCode())) {
           throw new AzureException(e);
         }
       } else {
@@ -1914,8 +1910,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     // If reads concurrent to OOB writes are allowed, the interception will reset
     // the conditional header on all Azure blob storage read requests.
     if (bindConcurrentOOBIo) {
-      SendRequestIntercept.bind(storageInteractionLayer.getCredentials(),
-          operationContext, true);
+      SendRequestIntercept.bind(operationContext);
     }
 
     if (testHookOperationContext != null) {
@@ -2432,7 +2427,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // 2. It got there after one-or-more retries THEN
       // we swallow the exception.
       if (e.getErrorCode() != null &&
-          e.getErrorCode().equals("BlobNotFound") &&
+          "BlobNotFound".equals(e.getErrorCode()) &&
           operationContext.getRequestResults().size() > 1 &&
           operationContext.getRequestResults().get(0).getException() != null) {
         LOG.debug("Swallowing delete exception on retry: {}", e.getMessage());
@@ -2483,7 +2478,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       Throwable t = e.getCause();
       if(t != null && t instanceof StorageException) {
         StorageException se = (StorageException) t;
-        if(se.getErrorCode().equals(("LeaseIdMissing"))){
+        if ("LeaseIdMissing".equals(se.getErrorCode())){
           SelfRenewingLease lease = null;
           try {
             lease = acquireLease(key);

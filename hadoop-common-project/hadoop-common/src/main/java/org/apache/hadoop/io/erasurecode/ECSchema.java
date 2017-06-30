@@ -189,8 +189,8 @@ public final class ECSchema {
     sb.append((extraOptions.isEmpty() ? "" : ", "));
 
     int i = 0;
-    for (String opt : extraOptions.keySet()) {
-      sb.append(opt + "=" + extraOptions.get(opt) +
+    for (Map.Entry<String, String> entry : extraOptions.entrySet()) {
+      sb.append(entry.getKey() + "=" + entry.getValue() +
           (++i < extraOptions.size() ? ", " : ""));
     }
 

@@ -1307,8 +1307,10 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.rememberTargetTransitionsAndStoreState(event, transitionToDo,
-        targetedFinalState, stateToBeStored);
+      if (event.doStoreAppInfo()) {
+        app.rememberTargetTransitionsAndStoreState(event, transitionToDo,
+            targetedFinalState, stateToBeStored);
+      }
     }
   }
 

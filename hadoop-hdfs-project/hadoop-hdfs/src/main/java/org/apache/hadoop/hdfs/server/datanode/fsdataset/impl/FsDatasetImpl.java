@@ -498,7 +498,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   /**
    * Removes a set of volumes from FsDataset.
-   * @param storageLocationsToRemove a set of
+   * @param storageLocsToRemove a set of
    * {@link StorageLocation}s for each volume.
    * @param clearFailure set true to clear failure information.
    */
@@ -2392,7 +2392,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         datanode.reportBadBlocks(new ExtendedBlock(bpid, corruptBlock),
             memBlockInfo.getVolume());
       } catch (IOException e) {
-        LOG.warn("Failed to repot bad block " + corruptBlock, e);
+        LOG.warn("Failed to report bad block " + corruptBlock, e);
       }
     }
   }

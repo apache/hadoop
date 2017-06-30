@@ -199,21 +199,20 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         new MetricDiff(fs, Statistic.DIRECTORIES_CREATED);
 
     Path srcDir = new Path(srcBaseDir, "1/2/3/4/5/6");
-    Path srcFilePath = new Path(srcDir, "source.txt");
     int srcDirDepth = directoriesInPath(srcDir);
     // one dir created, one removed
     mkdirs(srcDir);
     String state = "after mkdir(srcDir)";
     directoriesCreated.assertDiffEquals(state, 1);
-/*  TODO: uncomment once HADOOP-13222 is in
     deleteRequests.assertDiffEquals(state, 1);
     directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth);
-*/
+    // HADOOP-14255 deletes unnecessary fake directory objects in mkdirs()
+    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth - 1);
     reset(deleteRequests, directoriesCreated, directoriesDeleted,
         fakeDirectoriesDeleted);
 
     // creating a file should trigger demise of the src dir
+    final Path srcFilePath = new Path(srcDir, "source.txt");
     touch(fs, srcFilePath);
     state = "after touch(fs, srcFilePath)";
     deleteRequests.assertDiffEquals(state, 1);
@@ -232,12 +231,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
     int destDirDepth = directoriesInPath(destDir);
     directoriesCreated.assertDiffEquals(state, 1);
-/*  TODO: uncomment once HADOOP-13222 "s3a.mkdirs() to delete empty fake parent directories"
-    is in
-    deleteRequests.assertDiffEquals(state,1);
-    directoriesDeleted.assertDiffEquals(state,0);
-    fakeDirectoriesDeleted.assertDiffEquals(state,destDirDepth);
-*/
+    deleteRequests.assertDiffEquals(state, 1);
+    directoriesDeleted.assertDiffEquals(state, 0);
+    fakeDirectoriesDeleted.assertDiffEquals(state, destDirDepth - 1);
     reset(deleteRequests, directoriesCreated, directoriesDeleted,
         fakeDirectoriesDeleted);
 
