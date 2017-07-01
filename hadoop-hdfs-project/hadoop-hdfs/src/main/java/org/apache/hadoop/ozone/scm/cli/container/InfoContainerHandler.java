@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm.cli.container;
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
@@ -31,12 +32,16 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import java.io.IOException;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.scm.cli.SCMCLI.CMD_WIDTH;
+import static org.apache.hadoop.ozone.scm.cli.SCMCLI.HELP_OP;
+
 /**
  * This is the handler that process container info command.
  */
 public class InfoContainerHandler extends OzoneCommandHandler {
 
   public static final String CONTAINER_INFO = "info";
+  protected static final String OPT_CONTAINER_NAME = "c";
 
   /**
    * Constructs a handler object.
@@ -52,7 +57,15 @@ public class InfoContainerHandler extends OzoneCommandHandler {
     if (!cmd.hasOption(CONTAINER_INFO)) {
       throw new IOException("Expecting container info");
     }
-    String containerName = cmd.getOptionValue(CONTAINER_INFO);
+    if (!cmd.hasOption(OPT_CONTAINER_NAME)) {
+      displayHelp();
+      if (!cmd.hasOption(HELP_OP)) {
+        throw new IOException("Expecting container name");
+      } else {
+        return;
+      }
+    }
+    String containerName = cmd.getOptionValue(OPT_CONTAINER_NAME);
     Pipeline pipeline = getScmClient().getContainer(containerName);
     Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
 
@@ -84,8 +97,16 @@ public class InfoContainerHandler extends OzoneCommandHandler {
 
   @Override
   public void displayHelp() {
+    Options options = new Options();
+    addOptions(options);
     HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.printHelp("hdfs scm -container -info <container name>",
-        new Options());
+    helpFormatter.printHelp(CMD_WIDTH, "hdfs scm -container -info <option>",
+        "where <option> is", options, "");
+  }
+
+  public static void addOptions(Options options) {
+    Option containerNameOpt = new Option(OPT_CONTAINER_NAME,
+        true, "Specify container name");
+    options.addOption(containerNameOpt);
   }
 }

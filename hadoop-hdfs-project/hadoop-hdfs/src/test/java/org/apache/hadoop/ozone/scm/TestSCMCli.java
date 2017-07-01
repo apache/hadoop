@@ -164,7 +164,7 @@ public class TestSCMCli {
     Assert.assertTrue(containerExist(containerName));
 
     // Gracefully delete a container should fail because it is open.
-    delCmd = new String[] {"-container", "-del", containerName};
+    delCmd = new String[] {"-container", "-delete", "-c", containerName};
     testErr = new ByteArrayOutputStream();
     exitCode = runCommandAndGetOutput(delCmd, null, testErr);
     assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
@@ -184,7 +184,7 @@ public class TestSCMCli {
     Assert.assertTrue(containerExist(containerName));
 
     // Try force delete again.
-    delCmd = new String[] {"-container", "-del", containerName, "-f"};
+    delCmd = new String[] {"-container", "-delete", "-c", containerName, "-f"};
     exitCode = runCommandAndGetOutput(delCmd, null, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
     Assert.assertFalse(containerExist(containerName));
@@ -201,7 +201,7 @@ public class TestSCMCli {
     Assert.assertTrue(containerExist(containerName));
 
     // Successfully delete an empty container.
-    delCmd = new String[] {"-container", "-del", containerName};
+    delCmd = new String[] {"-container", "-delete", "-c", containerName};
     exitCode = runCommandAndGetOutput(delCmd, null, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
     Assert.assertFalse(containerExist(containerName));
@@ -216,7 +216,7 @@ public class TestSCMCli {
     // 3. Test to delete a non-exist container.
     // ****************************************
     containerName = "non-exist-container";
-    delCmd = new String[] {"-container", "-del", containerName};
+    delCmd = new String[] {"-container", "-delete", "-c", containerName};
     testErr = new ByteArrayOutputStream();
     exitCode = runCommandAndGetOutput(delCmd, null, testErr);
     assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
@@ -259,7 +259,7 @@ public class TestSCMCli {
     ContainerData data = new ContainerData(cname);
     containerManager.createContainer(pipeline, data);
 
-    info = new String[]{"-container", "-info", cname};
+    info = new String[]{"-container", "-info", "-c", cname};
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
@@ -280,7 +280,7 @@ public class TestSCMCli {
     KeyUtils.getDB(data, conf).put(cname.getBytes(),
         "someKey".getBytes());
 
-    info = new String[]{"-container", "-info", cname};
+    info = new String[]{"-container", "-info", "-c", cname};
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
 
@@ -307,7 +307,7 @@ public class TestSCMCli {
         .collect(Collectors.toList());
     String metadataStr = StringUtils.join(", ", metaList);
 
-    info = new String[]{"-container", "-info", cname};
+    info = new String[]{"-container", "-info", "-c", cname};
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
 
@@ -322,7 +322,7 @@ public class TestSCMCli {
     // Close last container and test info again.
     containerManager.closeContainer(cname);
 
-    info = new String[]{"-container", "-info", cname};
+    info = new String[]{"-container", "-info", "-c", cname};
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
     data = containerManager.readContainer(cname);
@@ -375,9 +375,9 @@ public class TestSCMCli {
     String expected1 =
         "usage: hdfs scm -container <commands> <options>\n" +
         "where <commands> can be one of the following\n" +
-        " -create       Create container\n" +
-        " -del <arg>    Delete container\n" +
-        " -info <arg>   Info container\n";
+        " -create   Create container\n" +
+        " -delete   Delete container\n" +
+        " -info     Info container\n";
 
     assertEquals(expected1, testContent.toString());
     testContent.reset();
@@ -389,6 +389,27 @@ public class TestSCMCli {
         "where <option> is\n" +
         " -c <arg>   Specify container name\n";
     assertEquals(expected2, testContent.toString());
+    testContent.reset();
+
+    String[] args3 = {"-container", "-delete", "-help"};
+    assertEquals(ResultCode.SUCCESS, cli.run(args3));
+    String expected3 =
+        "usage: hdfs scm -container -delete <option>\n" +
+        "where <option> is\n" +
+        " -c <arg>   Specify container name\n" +
+        " -f         forcibly delete a container\n";
+    assertEquals(expected3, testContent.toString());
+    testContent.reset();
+
+    String[] args4 = {"-container", "-info", "-help"};
+    assertEquals(ResultCode.SUCCESS, cli.run(args4));
+    String expected4 =
+        "usage: hdfs scm -container -info <option>\n" +
+        "where <option> is\n" +
+        " -c <arg>   Specify container name\n";
+    assertEquals(expected4, testContent.toString());
+    testContent.reset();
+
     System.setOut(init);
   }
 }
