@@ -90,6 +90,11 @@ public class Shell extends Configured implements Tool {
   public static final String LIST_KEY = "listKey";
   public static final String FILE = "file";
 
+  // Listing related command line arguments
+  public static final String LIST_LENGTH = "length";
+  public static final String START = "start";
+  public static final String PREFIX = "prefix";
+
   /**
    * Main for the ozShell Command handling.
    *
@@ -136,6 +141,7 @@ public class Shell extends Configured implements Tool {
     addVolumeCommands(opts);
     addBucketCommands(opts);
     addKeyCommands(opts);
+    addListingCommands(opts);
     return opts;
   }
 
@@ -249,7 +255,6 @@ public class Shell extends Configured implements Tool {
         new Option(REMOVE_ACLS, true, "allows user to remove acls from a " +
             "bucket.");
     opts.addOption(removeAcl);
-
   }
 
   /**
@@ -282,6 +287,24 @@ public class Shell extends Configured implements Tool {
         new Option(FILE, true, "Data file path");
     opts.addOption(fileArgument);
 
+  }
+
+  /**
+   * Sub commands for list command.
+   * @param opts
+   */
+  private void addListingCommands(Options opts) {
+    Option maxKeys = new Option(LIST_LENGTH, true,
+        "Specify the max length of listing result.");
+    opts.addOption(maxKeys);
+
+    Option prevKey = new Option(START, true,
+        "Specify the start key where to start listing from.");
+    opts.addOption(prevKey);
+
+    Option prefix = new Option(PREFIX, true,
+        "Specify the prefix to filter the listing result.");
+    opts.addOption(prefix);
   }
 
   /**

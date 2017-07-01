@@ -82,9 +82,23 @@ public class ListBucketHandler extends Handler {
     client.setEndPointURI(ozoneURI);
     client.setUserAuth(rootName);
 
+    String length = null;
+    if (cmd.hasOption(Shell.LIST_LENGTH)) {
+      length = cmd.getOptionValue(Shell.LIST_LENGTH);
+    }
+
+    String startBucket = null;
+    if (cmd.hasOption(Shell.START)) {
+      startBucket = cmd.getOptionValue(Shell.START);
+    }
+
+    String prefix = null;
+    if (cmd.hasOption(Shell.PREFIX)) {
+      prefix = cmd.getOptionValue(Shell.PREFIX);
+    }
 
     OzoneVolume vol = client.getVolume(volumeName);
-    List<OzoneBucket> bucketList = vol.listBuckets();
+    List<OzoneBucket> bucketList = vol.listBuckets(length, startBucket, prefix);
 
     for (OzoneBucket bucket : bucketList) {
       System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
