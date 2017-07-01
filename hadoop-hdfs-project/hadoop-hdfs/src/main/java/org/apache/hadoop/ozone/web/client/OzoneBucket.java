@@ -508,4 +508,66 @@ public class OzoneBucket {
       }
     }
   }
+
+  /**
+   * Get info of the specified key.
+   */
+  public OzoneKey getKeyInfo(String keyName) throws OzoneException {
+    if ((keyName == null) || keyName.isEmpty()) {
+      throw new OzoneRestClientException(
+          "Unable to get key info, key name is null or empty");
+    }
+
+    HttpGet getRequest = null;
+    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+      OzoneRestClient client = getVolume().getClient();
+      URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
+      builder
+          .setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
+              + "/" + keyName)
+          .setParameter(Header.OZONE_LIST_QUERY_TAG,
+              Header.OZONE_LIST_QUERY_KEY)
+          .build();
+
+      getRequest = client.getHttpGet(builder.toString());
+      return executeGetKeyInfo(getRequest, httpClient);
+    } catch (IOException | URISyntaxException e) {
+      throw new OzoneRestClientException(e.getMessage());
+    } finally {
+      OzoneClientUtils.releaseConnection(getRequest);
+    }
+  }
+
+  /**
+   * Execute get Key info.
+   *
+   * @param getRequest - HttpGet
+   * @param httpClient - HttpClient
+   * @return List<OzoneKey>
+   * @throws IOException
+   * @throws OzoneException
+   */
+  private OzoneKey executeGetKeyInfo(HttpGet getRequest,
+      CloseableHttpClient httpClient) throws IOException, OzoneException {
+    HttpEntity entity = null;
+    try {
+      HttpResponse response = httpClient.execute(getRequest);
+      int errorCode = response.getStatusLine().getStatusCode();
+      entity = response.getEntity();
+      if (entity == null) {
+        throw new OzoneRestClientException("Unexpected null in http payload");
+      }
+
+      if (errorCode == HTTP_OK) {
+        OzoneKey key = new OzoneKey(
+            KeyInfo.parse(EntityUtils.toString(entity)));
+        return key;
+      }
+      throw OzoneException.parse(EntityUtils.toString(entity));
+    } finally {
+      if (entity != null) {
+        EntityUtils.consumeQuietly(entity);
+      }
+    }
+  }
 }

@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
@@ -273,6 +274,18 @@ public interface StorageHandler {
    * @throws IOException
    */
   ListKeys listKeys(ListArgs args) throws IOException, OzoneException;
+
+  /**
+   * Get information of the specified Key.
+   *
+   * @param args Key Args
+   *
+   * @return KeyInfo
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
+  KeyInfo getKeyInfo(KeyArgs args) throws IOException, OzoneException;
 
   /**
    * Closes all the opened resources.

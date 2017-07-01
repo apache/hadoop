@@ -470,6 +470,23 @@ public final class DistributedStorageHandler implements StorageHandler {
   }
 
   @Override
+  public KeyInfo getKeyInfo(KeyArgs args) throws IOException, OzoneException {
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+
+    KsmKeyInfo ksmKeyInfo = keySpaceManagerClient.lookupKey(keyArgs);
+    KeyInfo keyInfo = new KeyInfo();
+    keyInfo.setVersion(0);
+    keyInfo.setKeyName(ksmKeyInfo.getKeyName());
+    keyInfo.setSize(ksmKeyInfo.getDataSize());
+
+    return keyInfo;
+  }
+
+  @Override
   public ListKeys listKeys(ListArgs args) throws IOException, OzoneException {
     ListKeys result = new ListKeys();
     UserArgs userArgs = args.getArgs();

@@ -18,17 +18,21 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
-import org.apache.hadoop.ozone.web.ozShell.Handler;
-import org.apache.hadoop.ozone.web.ozShell.Shell;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.hadoop.ozone.web.client.OzoneBucket;
+import org.apache.hadoop.ozone.web.client.OzoneKey;
+import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
+import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.Shell;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 /**
  * Executes Info Object.
@@ -84,10 +88,11 @@ public class InfoKeyHandler extends Handler {
     client.setEndPointURI(ozoneURI);
     client.setUserAuth(userName);
 
+    OzoneVolume vol = client.getVolume(volumeName);
+    OzoneBucket bucket = vol.getBucket(bucketName);
+    OzoneKey key = bucket.getKeyInfo(keyName);
 
-//    OzoneVolume vol = client.getVolume(volumeName);
-//    OzoneBucket bucket = vol.createBucket(bucketName);
-
-    throw new OzoneRestClientException("Not supported yet");
+    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+        key.getObjectInfo().toJsonString()));
   }
 }

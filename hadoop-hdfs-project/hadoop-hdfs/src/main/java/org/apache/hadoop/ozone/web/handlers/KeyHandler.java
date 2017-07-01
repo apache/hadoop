@@ -20,9 +20,12 @@ package org.apache.hadoop.ozone.web.handlers;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.web.interfaces.Keys;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
+import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -44,19 +47,21 @@ import static java.net.HttpURLConnection.HTTP_OK;
 public class KeyHandler implements Keys {
 
   /**
-   * Gets the Key if it exists.
+   * Gets the Key/key information if it exists.
    *
    * @param volume  Storage Volume
    * @param bucket  Name of the bucket
-   * @param req     Request
-   * @param info    - UriInfo
+   * @param key Name of the key
+   * @param info Tag info
+   * @param req Request
+   * @param uriInfo Uri Info
    * @param headers Http Header
    * @return Response
    * @throws OzoneException
    */
   @Override
-  public Response getKey(String volume, String bucket, String key,
-                         Request req, UriInfo info, HttpHeaders headers)
+  public Response getKey(String volume, String bucket, String key, String info,
+      Request req, UriInfo uriInfo, HttpHeaders headers)
       throws OzoneException {
     return new KeyProcessTemplate() {
       /**
@@ -77,13 +82,40 @@ public class KeyHandler implements Keys {
       @Override
       public Response doProcess(KeyArgs args, InputStream input,
                                 Request request, HttpHeaders headers,
-                                UriInfo info)
+                                UriInfo uriInfo)
           throws IOException, OzoneException, NoSuchAlgorithmException {
-        StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
-        LengthInputStream stream = fs.newKeyReader(args);
-        return OzoneUtils.getResponse(args, HTTP_OK, stream);
+        if (info == null) {
+          return getKey(args);
+        } else if (info.equals(Header.OZONE_LIST_QUERY_KEY)) {
+          return getKeyInfo(args);
+        }
+
+        OzoneException ozException = ErrorTable
+            .newError(ErrorTable.INVALID_QUERY_PARAM, args);
+        ozException.setMessage("Unrecognized query param : " + info);
+        throw ozException;
       }
-    }.handleCall(volume, bucket, key, req, headers, info, null);
+    }.handleCall(volume, bucket, key, req, headers, uriInfo, null);
+  }
+
+  /**
+   * Gets the Key if it exists.
+   */
+  private Response getKey(KeyArgs args)
+      throws IOException, OzoneException {
+    StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
+    LengthInputStream stream = fs.newKeyReader(args);
+    return OzoneUtils.getResponse(args, HTTP_OK, stream);
+  }
+
+  /**
+   * Gets the Key information if it exists.
+   */
+  private Response getKeyInfo(KeyArgs args)
+      throws IOException, OzoneException {
+    StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
+    KeyInfo keyInfo = fs.getKeyInfo(args);
+    return OzoneUtils.getResponse(args, HTTP_OK, keyInfo.toJsonString());
   }
 
   /**

@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
@@ -351,6 +352,23 @@ public class LocalStorageHandler implements StorageHandler {
         OzoneMetadataManager.getOzoneMetadataManager(conf);
     return oz.listKeys(args);
 
+  }
+
+  /**
+   * Get information of the specified Key.
+   *
+   * @param args Key Args
+   *
+   * @return KeyInfo
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
+  @Override
+  public KeyInfo getKeyInfo(KeyArgs args) throws IOException, OzoneException {
+    OzoneMetadataManager oz = OzoneMetadataManager
+        .getOzoneMetadataManager(conf);
+    return oz.getKeyInfo(args);
   }
 
   @Override
