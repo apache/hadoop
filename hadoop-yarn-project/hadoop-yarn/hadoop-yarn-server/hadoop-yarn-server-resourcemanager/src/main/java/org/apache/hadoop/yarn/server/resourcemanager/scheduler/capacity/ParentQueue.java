@@ -843,7 +843,12 @@ public class ParentQueue extends AbstractCSQueue {
       writeLock.unlock();
     }
   }
-  
+
+  @Override
+  public boolean hasChildQueues() {
+    return true;
+  }
+
   @Override
   public List<CSQueue> getChildQueues() {
     try {
