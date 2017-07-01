@@ -81,7 +81,8 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.List
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -93,6 +94,8 @@ import java.util.List;
  */
 public class KeySpaceManagerProtocolServerSideTranslatorPB implements
     KeySpaceManagerProtocolPB {
+  private static final Logger LOG = LoggerFactory
+      .getLogger(KeySpaceManagerProtocolServerSideTranslatorPB.class);
   private final KeySpaceManagerProtocol impl;
 
   /**
@@ -134,6 +137,9 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         return Status.INTERNAL_ERROR;
       }
     } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Unknown error occurs", ex);
+      }
       return Status.INTERNAL_ERROR;
     }
   }

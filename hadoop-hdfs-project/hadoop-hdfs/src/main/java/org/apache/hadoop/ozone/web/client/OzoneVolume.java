@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.client;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -428,11 +429,21 @@ public class OzoneVolume {
    *
    * @throws OzoneException
    */
-  public List<OzoneBucket> listBuckets() throws OzoneException {
+  public List<OzoneBucket> listBuckets(String resultLength,
+      String startBucket, String prefix) throws OzoneException {
     HttpGet getRequest = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName()).build();
+      if (!Strings.isNullOrEmpty(resultLength)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, resultLength);
+      }
+      if (!Strings.isNullOrEmpty(startBucket)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, startBucket);
+      }
+      if (!Strings.isNullOrEmpty(prefix)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix);
+      }
 
       getRequest = client.getHttpGet(builder.toString());
       return executeListBuckets(getRequest, httpClient);

@@ -72,7 +72,7 @@ public class TestBuckets {
 
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
     client = new OzoneRestClient(String.format("http://localhost:%d", port));
@@ -168,11 +168,21 @@ public class TestBuckets {
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
     for (int x = 0; x < 10; x++) {
-      String bucketName = OzoneUtils.getRequestID().toLowerCase();
+      String bucketName = "listbucket-test-" + x;
       vol.createBucket(bucketName, acls);
     }
-    List<OzoneBucket> bucketList = vol.listBuckets();
+    List<OzoneBucket> bucketList = vol.listBuckets("100", null, null);
     assertEquals(bucketList.size(), 10);
+
+    bucketList = vol.listBuckets("3", null, null);
+    assertEquals(bucketList.size(), 3);
+
+    bucketList = vol.listBuckets("100", "listbucket-test-5", null);
+    assertEquals(bucketList.size(), 5);
+
+    bucketList = vol.listBuckets("100", null, "listbucket-test-3");
+    assertEquals(bucketList.size(), 1);
+
     client.close();
   }
 }
