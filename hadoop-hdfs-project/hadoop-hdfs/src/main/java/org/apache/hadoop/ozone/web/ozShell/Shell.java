@@ -110,6 +110,7 @@ public class Shell extends Configured implements Tool {
     try {
       res = ToolRunner.run(shell, argv);
     } catch (Exception ex) {
+      System.err.println("ERROR: " + ex.getMessage());
       System.exit(1);
     }
     System.exit(res);

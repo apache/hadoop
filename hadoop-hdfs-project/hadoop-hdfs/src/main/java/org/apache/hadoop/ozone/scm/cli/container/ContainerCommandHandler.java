@@ -92,9 +92,9 @@ public class ContainerCommandHandler extends OzoneCommandHandler {
     Option createContainer =
         new Option(CONTAINER_CREATE, false, "Create container");
     Option infoContainer =
-        new Option(CONTAINER_INFO, true, "Info container");
+        new Option(CONTAINER_INFO, false, "Info container");
     Option deleteContainer =
-        new Option(CONTAINER_DELETE, true, "Delete container");
+        new Option(CONTAINER_DELETE, false, "Delete container");
 
     options.addOption(createContainer);
     options.addOption(deleteContainer);
@@ -107,6 +107,7 @@ public class ContainerCommandHandler extends OzoneCommandHandler {
     // for create container options.
     CreateContainerHandler.addOptions(options);
     DeleteContainerHandler.addOptions(options);
+    InfoContainerHandler.addOptions(options);
     // TODO : add other options such as delete, close etc.
   }
 }
