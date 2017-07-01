@@ -41,18 +41,18 @@ import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsPlugin;
 import org.apache.hadoop.metrics2.filter.GlobFilter;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Metrics configuration for MetricsSystemImpl
  */
 class MetricsConfig extends SubsetConfiguration {
-  static final Log LOG = LogFactory.getLog(MetricsConfig.class);
+  static final Logger LOG = LoggerFactory.getLogger(MetricsConfig.class);
 
   static final String DEFAULT_FILE_NAME = "hadoop-metrics2.properties";
   static final String PREFIX_DEFAULT = "*.";
@@ -121,7 +121,7 @@ class MetricsConfig extends SubsetConfiguration {
         LOG.info("loaded properties from "+ fname);
         LOG.debug(toString(cf));
         MetricsConfig mc = new MetricsConfig(cf, prefix);
-        LOG.debug(mc);
+        LOG.debug(mc.toString());
         return mc;
       } catch (ConfigurationException e) {
         // Commons Configuration defines the message text when file not found

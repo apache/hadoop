@@ -58,8 +58,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -96,12 +94,13 @@ import org.mockito.stubbing.Answer;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 /** Unit tests for IPC. */
 public class TestIPC {
-  public static final Log LOG =
-    LogFactory.getLog(TestIPC.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestIPC.class);
   
   private static Configuration conf;
   final static int PING_INTERVAL = 1000;
@@ -230,12 +229,12 @@ public class TestIPC {
           final long param = RANDOM.nextLong();
           LongWritable value = call(client, param, server, conf);
           if (value.get() != param) {
-            LOG.fatal("Call failed!");
+            LOG.error("Call failed!");
             failed = true;
             break;
           }
         } catch (Exception e) {
-          LOG.fatal("Caught: " + StringUtils.stringifyException(e));
+          LOG.error("Caught: " + StringUtils.stringifyException(e));
           failed = true;
         }
       }
@@ -784,7 +783,7 @@ public class TestIPC {
             call(client, new LongWritable(Thread.currentThread().getId()),
                 addr, 60000, conf);
           } catch (Throwable e) {
-            LOG.error(e);
+            LOG.error(e.toString());
             failures.incrementAndGet();
             return;
           } finally {
@@ -895,7 +894,7 @@ public class TestIPC {
               callBarrier.await();
             }
           } catch (Throwable t) {
-            LOG.error(t);
+            LOG.error(t.toString());
             error.set(true); 
           } 
         }
@@ -917,7 +916,7 @@ public class TestIPC {
               callReturned.countDown();
               Thread.sleep(10000);
             } catch (IOException e) {
-              LOG.error(e);
+              LOG.error(e.toString());
             } catch (InterruptedException e) {
             } finally {
               client.stop();
