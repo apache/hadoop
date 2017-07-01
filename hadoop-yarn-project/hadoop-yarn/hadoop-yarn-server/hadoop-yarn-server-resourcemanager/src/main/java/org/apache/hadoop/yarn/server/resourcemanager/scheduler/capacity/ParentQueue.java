@@ -774,7 +774,12 @@ public class ParentQueue extends AbstractCSQueue {
     CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
         minimumAllocation, this, labelManager, null);
   }
-  
+
+  @Override
+  public boolean hasChildQueues() {
+    return true;
+  }
+
   @Override
   public synchronized List<CSQueue> getChildQueues() {
     return new ArrayList<CSQueue>(childQueues);
