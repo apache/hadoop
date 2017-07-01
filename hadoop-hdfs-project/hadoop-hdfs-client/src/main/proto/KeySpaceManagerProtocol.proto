@@ -144,19 +144,13 @@ message ListVolumeRequest {
         VOLUMES_BY_CLUSTER = 3; // All volumes in the cluster
     }
     required Scope scope = 1;
-    required string volumeName = 2;
-    optional string userName = 3;
-    optional string prefix = 4;
-    optional string prevKey = 5;
-    optional uint64 maxKeys = 6;
+    optional string userName = 2;
+    optional string prefix = 3;
+    optional string prevKey = 4;
+    optional uint32 maxKeys = 5;
 }
 
 message ListVolumeResponse {
-    enum Status {
-        OK = 1;
-        ACCESS_DENIED = 2;
-        REQUIRED_ARG_MISSING = 3;
-    }
     required Status status = 1;
     repeated VolumeInfo volumeInfo = 2;
 }

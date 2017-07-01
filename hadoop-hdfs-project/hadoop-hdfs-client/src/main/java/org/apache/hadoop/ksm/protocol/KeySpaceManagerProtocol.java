@@ -91,7 +91,7 @@ public interface KeySpaceManagerProtocol {
    * @throws IOException
    */
   List<KsmVolumeArgs> listVolumeByUser(String userName, String prefix, String
-      prevKey, long maxKeys) throws IOException;
+      prevKey, int maxKeys) throws IOException;
 
   /**
    * Lists volume all volumes in the cluster.
@@ -102,7 +102,7 @@ public interface KeySpaceManagerProtocol {
    * @throws IOException
    */
   List<KsmVolumeArgs> listAllVolumes(String prefix, String
-      prevKey, long maxKeys) throws IOException;
+      prevKey, int maxKeys) throws IOException;
 
   /**
    * Creates a bucket.

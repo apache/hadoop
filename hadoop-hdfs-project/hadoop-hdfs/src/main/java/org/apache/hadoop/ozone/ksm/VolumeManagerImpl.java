@@ -345,4 +345,19 @@ public class VolumeManagerImpl implements VolumeManager {
       metadataManager.readLock().unlock();
     }
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public List<KsmVolumeArgs> listVolumes(String userName,
+      String prefix, String startKey, int maxKeys) throws IOException {
+    metadataManager.readLock().lock();
+    try {
+      return metadataManager.listVolumes(
+          userName, prefix, startKey, maxKeys);
+    } finally {
+      metadataManager.readLock().unlock();
+    }
+  }
 }

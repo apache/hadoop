@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ksm.protocolPB;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -86,6 +88,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos
+    .ListVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos
+    .ListVolumeResponse;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -301,9 +307,19 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
    */
   @Override
   public List<KsmVolumeArgs> listVolumeByUser(String userName, String prefix,
-                                              String prevKey, long maxKeys)
+                                              String prevKey, int maxKeys)
       throws IOException {
-    return null;
+    ListVolumeRequest.Builder builder = ListVolumeRequest.newBuilder();
+    if (!Strings.isNullOrEmpty(prefix)) {
+      builder.setPrefix(prefix);
+    }
+    if (!Strings.isNullOrEmpty(prevKey)) {
+      builder.setPrevKey(prevKey);
+    }
+    builder.setMaxKeys(maxKeys);
+    builder.setUserName(userName);
+    builder.setScope(ListVolumeRequest.Scope.VOLUMES_BY_USER);
+    return listVolume(builder.build());
   }
 
   /**
@@ -317,9 +333,43 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
    * @throws IOException
    */
   @Override
-  public List<KsmVolumeArgs> listAllVolumes(String prefix, String prevKey, long
-      maxKeys) throws IOException {
-    return null;
+  public List<KsmVolumeArgs> listAllVolumes(String prefix, String prevKey,
+      int maxKeys) throws IOException {
+    ListVolumeRequest.Builder builder = ListVolumeRequest.newBuilder();
+    if (!Strings.isNullOrEmpty(prefix)) {
+      builder.setPrefix(prefix);
+    }
+    if (!Strings.isNullOrEmpty(prevKey)) {
+      builder.setPrevKey(prevKey);
+    }
+    builder.setMaxKeys(maxKeys);
+    builder.setScope(ListVolumeRequest.Scope.VOLUMES_BY_CLUSTER);
+    return listVolume(builder.build());
+  }
+
+  private List<KsmVolumeArgs> listVolume(ListVolumeRequest request)
+      throws IOException {
+    final ListVolumeResponse resp;
+    try {
+      resp = rpcProxy.listVolumes(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
+    if (resp.getStatus() != Status.OK) {
+      throw new IOException("List volume failed, error: "
+          + resp.getStatus());
+    }
+
+    List<KsmVolumeArgs> result = Lists.newArrayList();
+    for (VolumeInfo volInfo : resp.getVolumeInfoList()) {
+      KsmVolumeArgs volArgs = KsmVolumeArgs.getFromProtobuf(volInfo);
+      result.add(volArgs);
+    }
+
+    return resp.getVolumeInfoList().stream()
+        .map(item -> KsmVolumeArgs.getFromProtobuf(item))
+        .collect(Collectors.toList());
   }
 
   /**

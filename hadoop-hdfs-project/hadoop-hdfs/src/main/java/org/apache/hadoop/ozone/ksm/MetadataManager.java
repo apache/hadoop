@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 
 import java.io.IOException;
 import java.util.List;
@@ -182,4 +183,22 @@ public interface MetadataManager {
   List<KsmKeyInfo> listKeys(String volumeName,
       String bucketName, String startKey, String keyPrefix, int maxKeys)
       throws IOException;
+
+  /**
+   * Returns a list of volumes owned by a given user; if user is null,
+   * returns all volumes.
+   *
+   * @param userName
+   *   volume owner
+   * @param prefix
+   *   the volume prefix used to filter the listing result.
+   * @param startKey
+   *   the start volume name determines where to start listing from.
+   * @param maxKeys
+   *   the maximum number of volumes to return.
+   * @return a list of {@link KsmVolumeArgs}
+   * @throws IOException
+   */
+  List<KsmVolumeArgs> listVolumes(String userName, String prefix,
+      String startKey, int maxKeys) throws IOException;
 }

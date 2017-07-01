@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
+import com.google.common.collect.Lists;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
@@ -229,7 +230,30 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
   public ListVolumeResponse listVolumes(
       RpcController controller, ListVolumeRequest request)
       throws ServiceException {
-    return null;
+    ListVolumeResponse.Builder resp = ListVolumeResponse.newBuilder();
+    List<KsmVolumeArgs> result = Lists.newArrayList();
+    try {
+      if (request.getScope()
+          == ListVolumeRequest.Scope.VOLUMES_BY_USER) {
+        result = impl.listVolumeByUser(request.getUserName(),
+            request.getPrefix(), request.getPrevKey(), request.getMaxKeys());
+      } else if (request.getScope()
+          == ListVolumeRequest.Scope.VOLUMES_BY_CLUSTER) {
+        result = impl.listAllVolumes(request.getPrefix(), request.getPrevKey(),
+            request.getMaxKeys());
+      }
+
+      if (result == null) {
+        throw new ServiceException("Failed to get volumes for given scope "
+            + request.getScope());
+      }
+
+      result.forEach(item -> resp.addVolumeInfo(item.getProtobuf()));
+      resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
   }
 
   @Override
