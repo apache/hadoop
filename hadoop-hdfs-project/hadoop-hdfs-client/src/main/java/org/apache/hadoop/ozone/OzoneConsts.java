@@ -116,6 +116,11 @@ public final class OzoneConsts {
    */
   public static final int MAX_LISTKEYS_SIZE  = 1024;
 
+  /**
+   * Max number of volumes returned per list volumes operation.
+   */
+  public static final int MAX_LISTVOLUMES_SIZE = 1024;
+
   private OzoneConsts() {
     // Never Constructed
   }

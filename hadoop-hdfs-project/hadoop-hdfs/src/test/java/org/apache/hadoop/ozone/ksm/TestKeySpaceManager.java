@@ -43,6 +43,7 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
+import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -839,5 +840,94 @@ public class TestKeySpaceManager {
       GenericTestUtils.assertExceptionContains(
           Status.BUCKET_NOT_FOUND.name(), e);
     }
+  }
+
+  @Test
+  public void testListVolumes() throws IOException, OzoneException {
+
+    String user0 = "testListVolumes-user-0";
+    String user1 = "testListVolumes-user-1";
+    String adminUser = "testListVolumes-admin";
+    ListArgs listVolumeArgs;
+    ListVolumes volumes;
+
+    // Create 10 volumes by user0 and user1
+    String[] user0vols = new String[10];
+    String[] user1vols = new String[10];
+    for (int i =0; i<10; i++) {
+      VolumeArgs createVolumeArgs;
+      String user0VolName = "Vol-" + user0 + "-" + i;
+      user0vols[i] = user0VolName;
+      createVolumeArgs = new VolumeArgs(user0VolName, userArgs);
+      createVolumeArgs.setUserName(user0);
+      createVolumeArgs.setAdminName(adminUser);
+      createVolumeArgs.setQuota(new OzoneQuota(i, OzoneQuota.Units.GB));
+      storageHandler.createVolume(createVolumeArgs);
+
+      String user1VolName = "Vol-" + user1 + "-" + i;
+      user1vols[i] = user1VolName;
+      createVolumeArgs = new VolumeArgs(user1VolName, userArgs);
+      createVolumeArgs.setUserName(user1);
+      createVolumeArgs.setAdminName(adminUser);
+      createVolumeArgs.setQuota(new OzoneQuota(i, OzoneQuota.Units.GB));
+      storageHandler.createVolume(createVolumeArgs);
+    }
+
+    // Test list all volumes
+    UserArgs userArgs0 = new UserArgs(user0, OzoneUtils.getRequestID(),
+        null, null, null, null);
+    listVolumeArgs = new ListArgs(userArgs0, "Vol-testListVolumes", 100, null);
+    listVolumeArgs.setRootScan(true);
+    volumes = storageHandler.listVolumes(listVolumeArgs);
+    Assert.assertEquals(20, volumes.getVolumes().size());
+
+    // Test list all volumes belongs to an user
+    listVolumeArgs = new ListArgs(userArgs0, null, 100, null);
+    listVolumeArgs.setRootScan(false);
+    volumes = storageHandler.listVolumes(listVolumeArgs);
+    Assert.assertEquals(10, volumes.getVolumes().size());
+
+    // Test prefix
+    listVolumeArgs = new ListArgs(userArgs0,
+        "Vol-" + user0 + "-3", 100, null);
+    volumes = storageHandler.listVolumes(listVolumeArgs);
+    Assert.assertEquals(1, volumes.getVolumes().size());
+    Assert.assertEquals(user0vols[3],
+        volumes.getVolumes().get(0).getVolumeName());
+    Assert.assertEquals(user0,
+        volumes.getVolumes().get(0).getOwner().getName());
+
+    // Test list volumes by user
+    UserArgs userArgs1 = new UserArgs(user1, OzoneUtils.getRequestID(),
+        null, null, null, null);
+    listVolumeArgs = new ListArgs(userArgs1, null, 100, null);
+    listVolumeArgs.setRootScan(false);
+    volumes = storageHandler.listVolumes(listVolumeArgs);
+    Assert.assertEquals(10, volumes.getVolumes().size());
+    Assert.assertEquals(user1,
+        volumes.getVolumes().get(3).getOwner().getName());
+
+    // Make sure all available fields are returned
+    final String user0vol5 = "Vol-" + user0 + "-5";
+    listVolumeArgs = new ListArgs(userArgs0, null, 1, user0vol5);
+    listVolumeArgs.setRootScan(false);
+    volumes = storageHandler.listVolumes(listVolumeArgs);
+    Assert.assertEquals(1, volumes.getVolumes().size());
+    Assert.assertEquals(user0,
+        volumes.getVolumes().get(0).getOwner().getName());
+    Assert.assertEquals(user0vol5,
+        volumes.getVolumes().get(0).getVolumeName());
+    Assert.assertEquals(5,
+        volumes.getVolumes().get(0).getQuota().getSize());
+    Assert.assertEquals(OzoneQuota.Units.GB,
+        volumes.getVolumes().get(0).getQuota().getUnit());
+
+    // User doesn't have volumes
+    UserArgs userArgsX = new UserArgs("unknwonUser", OzoneUtils.getRequestID(),
+        null, null, null, null);
+    listVolumeArgs = new ListArgs(userArgsX, null, 100, null);
+    listVolumeArgs.setRootScan(false);
+    volumes = storageHandler.listVolumes(listVolumeArgs);
+    Assert.assertEquals(0, volumes.getVolumes().size());
   }
 }

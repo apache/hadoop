@@ -37,6 +37,7 @@ import org.apache.hadoop.ksm.protocolPB
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -171,7 +172,43 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public ListVolumes listVolumes(ListArgs args)
       throws IOException, OzoneException {
-    throw new UnsupportedOperationException("listVolumes not implemented");
+    int maxNumOfKeys = args.getMaxKeys();
+    if (maxNumOfKeys <= 0 ||
+        maxNumOfKeys > OzoneConsts.MAX_LISTVOLUMES_SIZE) {
+      throw new IllegalArgumentException(
+          String.format("Illegal max number of keys specified,"
+                  + " the value must be in range (0, %d], actual : %d.",
+              OzoneConsts.MAX_LISTVOLUMES_SIZE, maxNumOfKeys));
+    }
+
+    List<KsmVolumeArgs> listResult;
+    if (args.isRootScan()) {
+      listResult = keySpaceManagerClient.listAllVolumes(args.getPrefix(),
+          args.getPrevKey(), args.getMaxKeys());
+    } else {
+      UserArgs userArgs = args.getArgs();
+      if (userArgs == null || userArgs.getUserName() == null) {
+        throw new IllegalArgumentException("Illegal argument,"
+            + " missing user argument.");
+      }
+      listResult = keySpaceManagerClient.listVolumeByUser(
+          args.getArgs().getUserName(), args.getPrefix(), args.getPrevKey(),
+          args.getMaxKeys());
+    }
+
+    // TODO Add missing fields createdOn, createdBy, bucketCount and bytesUsed
+    ListVolumes result = new ListVolumes();
+    for (KsmVolumeArgs volumeArgs : listResult) {
+      VolumeInfo info = new VolumeInfo();
+      KeySpaceManagerProtocolProtos.VolumeInfo
+          infoProto = volumeArgs.getProtobuf();
+      info.setOwner(new VolumeOwner(infoProto.getOwnerName()));
+      info.setQuota(OzoneQuota.getOzoneQuota(infoProto.getQuotaInBytes()));
+      info.setVolumeName(infoProto.getVolume());
+      result.addVolume(info);
+    }
+
+    return result;
   }
 
   @Override

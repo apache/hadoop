@@ -350,8 +350,14 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
    */
   @Override
   public List<KsmVolumeArgs> listVolumeByUser(String userName, String prefix,
-      String prevKey, long maxKeys) throws IOException {
-    return null;
+      String prevKey, int maxKeys) throws IOException {
+    try {
+      metrics.incNumVolumeLists();
+      return volumeManager.listVolumes(userName, prefix, prevKey, maxKeys);
+    } catch (Exception ex) {
+      metrics.incNumVolumeListFails();
+      throw ex;
+    }
   }
 
   /**
@@ -365,9 +371,15 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
    * @throws IOException
    */
   @Override
-  public List<KsmVolumeArgs> listAllVolumes(String prefix, String prevKey, long
+  public List<KsmVolumeArgs> listAllVolumes(String prefix, String prevKey, int
       maxKeys) throws IOException {
-    return null;
+    try {
+      metrics.incNumVolumeLists();
+      return volumeManager.listVolumes(null, prefix, prevKey, maxKeys);
+    } catch (Exception ex) {
+      metrics.incNumVolumeListFails();
+      throw ex;
+    }
   }
 
   /**
@@ -523,5 +535,4 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
       throw ex;
     }
   }
-
 }

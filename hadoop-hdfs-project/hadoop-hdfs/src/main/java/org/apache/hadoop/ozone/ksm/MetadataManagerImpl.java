@@ -17,15 +17,20 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.LevelDBKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.LevelDBKeyFilters.LevelDBKeyFilter;
@@ -350,5 +355,92 @@ public class MetadataManagerImpl implements  MetadataManager {
       result.add(info);
     }
     return result;
+  }
+
+  @Override
+  public List<KsmVolumeArgs> listVolumes(String userName,
+      String prefix, String startKey, int maxKeys) throws IOException {
+    List<KsmVolumeArgs> result = Lists.newArrayList();
+    VolumeList volumes;
+    if (Strings.isNullOrEmpty(userName)) {
+      volumes = getAllVolumes();
+    } else {
+      volumes = getVolumesByUser(userName);
+    }
+
+    if (volumes == null || volumes.getVolumeNamesCount() == 0) {
+      return result;
+    }
+
+    boolean startKeyFound = Strings.isNullOrEmpty(startKey);
+    for (String volumeName : volumes.getVolumeNamesList()) {
+      if (!Strings.isNullOrEmpty(prefix)) {
+        if (!volumeName.startsWith(prefix)) {
+          continue;
+        }
+      }
+
+      if (!startKeyFound && volumeName.equals(startKey)) {
+        startKeyFound = true;
+      }
+      if (startKeyFound && result.size() < maxKeys) {
+        byte[] volumeInfo = store.get(this.getVolumeKey(volumeName));
+        if (volumeInfo == null) {
+          // Could not get volume info by given volume name,
+          // since the volume name is loaded from db,
+          // this probably means ksm db is corrupted or some entries are
+          // accidentally removed.
+          throw new KSMException("Volume info not found for " + volumeName,
+              ResultCodes.FAILED_INTERNAL_ERROR);
+        }
+        VolumeInfo info = VolumeInfo.parseFrom(volumeInfo);
+        KsmVolumeArgs volumeArgs = KsmVolumeArgs.getFromProtobuf(info);
+        result.add(volumeArgs);
+      }
+    }
+
+    return result;
+  }
+
+  private VolumeList getVolumesByUser(String userName)
+      throws KSMException {
+    return getVolumesByUser(getUserKey(userName));
+  }
+
+  private VolumeList getVolumesByUser(byte[] userNameKey)
+      throws KSMException {
+    VolumeList volumes = null;
+    byte[] volumesInBytes = store.get(userNameKey);
+    if (volumesInBytes == null) {
+      // No volume found for this user, return an empty list
+      return VolumeList.newBuilder().build();
+    }
+
+    try {
+      volumes = VolumeList.parseFrom(volumesInBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new KSMException("Unable to get volumes info by the given user, "
+          + "metadata might be corrupted",
+          e, ResultCodes.FAILED_INTERNAL_ERROR);
+    }
+    return volumes;
+  }
+
+  private VolumeList getAllVolumes() throws IOException {
+    // Scan all users in database
+    KeyPrefixFilter filter = new KeyPrefixFilter(OzoneConsts.KSM_USER_PREFIX);
+    // We are not expecting a huge number of users per cluster,
+    // it should be fine to scan all users in db and return us a
+    // list of volume names in string per user.
+    List<Map.Entry<byte[], byte[]>> rangeKVs = store
+        .getRangeKVs(null, Integer.MAX_VALUE, filter);
+
+    VolumeList.Builder builder = VolumeList.newBuilder();
+    for (Map.Entry<byte[], byte[]> entry : rangeKVs) {
+      VolumeList volumes = this.getVolumesByUser(entry.getKey());
+      builder.addAllVolumeNames(volumes.getVolumeNamesList());
+    }
+
+    return builder.build();
   }
 }
