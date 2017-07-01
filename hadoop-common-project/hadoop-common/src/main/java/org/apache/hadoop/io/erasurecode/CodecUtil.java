@@ -18,8 +18,6 @@
 package org.apache.hadoop.io.erasurecode;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.codec.ErasureCodec;
@@ -31,6 +29,8 @@ import org.apache.hadoop.io.erasurecode.coder.ErasureEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -48,7 +48,7 @@ import java.lang.reflect.InvocationTargetException;
 @InterfaceAudience.Private
 public final class CodecUtil {
 
-  private static final Log LOG = LogFactory.getLog(CodecUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CodecUtil.class);
 
   public static final String IO_ERASURECODE_CODEC = "io.erasurecode.codec.";
 

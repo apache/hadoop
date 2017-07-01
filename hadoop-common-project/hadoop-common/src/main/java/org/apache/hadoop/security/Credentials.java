@@ -36,8 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +50,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.proto.SecurityProtos.CredentialsKVProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CredentialsProto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that provides the facilities of reading and writing
@@ -60,7 +60,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.CredentialsProto;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Credentials implements Writable {
-  private static final Log LOG = LogFactory.getLog(Credentials.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Credentials.class);
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();
   private  Map<Text, Token<? extends TokenIdentifier>> tokenMap =
@@ -188,7 +188,7 @@ public class Credentials implements Writable {
     } catch(IOException ioe) {
       throw new IOException("Exception reading " + filename, ioe);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
   }
 
@@ -211,7 +211,7 @@ public class Credentials implements Writable {
     } catch(IOException ioe) {
       throw new IOException("Exception reading " + filename, ioe);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
   }
 

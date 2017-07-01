@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.security.alias;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -27,6 +25,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
 
 import com.google.common.base.Charsets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
@@ -60,7 +60,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 @InterfaceAudience.Private
 public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
-  public static final Log LOG = LogFactory.getLog(
+  public static final Logger LOG = LoggerFactory.getLogger(
       AbstractJavaKeyStoreProvider.class);
   public static final String CREDENTIAL_PASSWORD_ENV_VAR =
       "HADOOP_CREDSTORE_PASSWORD";

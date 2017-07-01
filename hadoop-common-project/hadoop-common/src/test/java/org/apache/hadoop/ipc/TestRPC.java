@@ -20,8 +20,6 @@ package org.apache.hadoop.ipc;
 
 import com.google.common.base.Supplier;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -54,6 +52,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import javax.net.SocketFactory;
@@ -104,7 +104,7 @@ import static org.mockito.Mockito.verify;
 @SuppressWarnings("deprecation")
 public class TestRPC extends TestRpcBase {
 
-  public static final Log LOG = LogFactory.getLog(TestRPC.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestRPC.class);
 
   @Before
   public void setup() {

@@ -26,8 +26,6 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Vector;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,11 +39,13 @@ import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** SFTP FileSystem. */
 public class SFTPFileSystem extends FileSystem {
 
-  public static final Log LOG = LogFactory.getLog(SFTPFileSystem.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SFTPFileSystem.class);
 
   private SFTPConnectionPool connectionPool;
   private URI uri;

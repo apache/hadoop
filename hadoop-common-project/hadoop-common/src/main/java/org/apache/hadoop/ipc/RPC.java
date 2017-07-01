@@ -38,8 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -60,6 +58,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.protobuf.BlockingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** A simple RPC mechanism.
  *
@@ -110,7 +110,7 @@ public class RPC {
         Writable rpcRequest, long receiveTime) throws Exception ;
   }
   
-  static final Log LOG = LogFactory.getLog(RPC.class);
+  static final Logger LOG = LoggerFactory.getLogger(RPC.class);
   
   /**
    * Get all superInterfaces that extend VersionedProtocol

@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.test;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.junit.Test;
 
 import org.slf4j.Logger;
@@ -90,7 +87,7 @@ public class TestGenericTestUtils extends GenericTestUtils {
 
   @Test(timeout = 10000)
   public void testLogCapturer() {
-    final Log log = LogFactory.getLog(TestGenericTestUtils.class);
+    final Logger log = LoggerFactory.getLogger(TestGenericTestUtils.class);
     LogCapturer logCapturer = LogCapturer.captureLogs(log);
     final String infoMessage = "info message";
     // test get output message

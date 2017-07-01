@@ -21,17 +21,17 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFsShellTouch {
-  static final Log LOG = LogFactory.getLog(TestFsShellTouch.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestFsShellTouch.class);
 
   static FsShell shell;
   static LocalFileSystem lfs;
