@@ -315,7 +315,6 @@ public class TestKeys {
     }
   }
 
-
   @Test
   public void testPutAndListKey() throws OzoneException, IOException {
     PutHelper helper  = new PutHelper();
@@ -352,5 +351,17 @@ public class TestKeys {
       GenericTestUtils.assertExceptionContains(
           ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
     }
+  }
+
+  @Test
+  public void testGetKeyInfo() throws OzoneException, IOException {
+    PutHelper helper = new PutHelper();
+    String keyName = helper.putKey();
+    assertNotNull(helper.getBucket());
+    assertNotNull(helper.getFile());
+
+    OzoneKey keyInfo = helper.getBucket().getKeyInfo(keyName);
+    assertNotNull(keyInfo.getObjectInfo());
+    assertEquals(keyName, keyInfo.getObjectInfo().getKeyName());
   }
 }

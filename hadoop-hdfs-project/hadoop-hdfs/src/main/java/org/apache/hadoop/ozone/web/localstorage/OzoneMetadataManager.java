@@ -1109,6 +1109,42 @@ public final class OzoneMetadataManager {
   }
 
   /**
+   * Get the Key information for a given key.
+   *
+   * @param args - Key Args
+   * @return KeyInfo - Key Information
+   * @throws OzoneException
+   */
+  public KeyInfo getKeyInfo(KeyArgs args) throws IOException, OzoneException {
+    lock.readLock().lock();
+    try {
+      byte[] bucketInfo = metadataDB
+          .get(args.getParentName().getBytes(encoding));
+      if (bucketInfo == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, args);
+      }
+
+      byte[] bucketListBytes = userDB
+          .get(args.getParentName().getBytes(encoding));
+      if (bucketListBytes == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, args);
+      }
+
+      byte[] objectBytes = metadataDB
+          .get(args.getResourceName().getBytes(encoding));
+      if (objectBytes == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_KEY, args);
+      }
+
+      return KeyInfo.parse(new String(objectBytes, encoding));
+    } catch (IOException e) {
+      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, e);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /**
    * This is used in updates to volume metadata.
    */
   public enum VolumeProperty {

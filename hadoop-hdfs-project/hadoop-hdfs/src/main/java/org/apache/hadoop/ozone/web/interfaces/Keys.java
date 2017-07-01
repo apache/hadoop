@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.interfaces;
 
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.web.headers.Header;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -26,7 +27,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -76,7 +77,9 @@ public interface Keys {
    * @param volume Storage Volume
    * @param bucket Name of the bucket
    * @param keys Object Name
+   * @param info Tag info
    * @param req Request
+   * @param uriInfo Uri info
    * @param headers Http Header
    *
    * @return Response
@@ -84,12 +87,13 @@ public interface Keys {
    * @throws OzoneException
    */
   @GET
-  @Produces(MediaType.APPLICATION_OCTET_STREAM)
   Response getKey(@PathParam("volume") String volume,
                   @PathParam("bucket") String bucket,
                   @PathParam("keys") String keys,
+                  @QueryParam(Header.OZONE_LIST_QUERY_TAG)
+                  String info,
                   @Context Request req,
-                  @Context UriInfo info,
+                  @Context UriInfo uriInfo,
                   @Context HttpHeaders headers)
     throws OzoneException;
 

@@ -930,4 +930,40 @@ public class TestKeySpaceManager {
     volumes = storageHandler.listVolumes(listVolumeArgs);
     Assert.assertEquals(0, volumes.getVolumes().size());
   }
+
+  /**
+   * Test get key information.
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
+  @Test
+  public void testGetKeyInfo() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
+    bucketArgs.setAddAcls(new LinkedList<>());
+    bucketArgs.setRemoveAcls(new LinkedList<>());
+    bucketArgs.setStorageType(StorageType.DISK);
+    storageHandler.createBucket(bucketArgs);
+
+    String keyName = "testKey";
+    KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
+    keyArgs.setSize(4096);
+
+    OutputStream stream = storageHandler.newKeyWriter(keyArgs);
+    stream.close();
+
+    KeyInfo keyInfo = storageHandler.getKeyInfo(keyArgs);
+    Assert.assertEquals(keyName, keyInfo.getKeyName());
+    Assert.assertEquals(4096, keyInfo.getSize());
+  }
 }
