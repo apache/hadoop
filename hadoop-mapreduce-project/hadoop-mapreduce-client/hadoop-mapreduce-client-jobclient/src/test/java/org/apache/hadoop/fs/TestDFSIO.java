@@ -286,8 +286,17 @@ public class TestDFSIO implements Tool {
                                   int nrFiles
                                 ) throws IOException {
     LOG.info("creating control file: "+nrBytes+" bytes, "+nrFiles+" files");
-
+    final int maxDirItems = config.getInt(
+        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
     Path controlDir = getControlDir(config);
+
+    if (nrFiles > maxDirItems) {
+      final String message = "The directory item limit of " + controlDir +
+          " is exceeded: limit=" + maxDirItems + " items=" + nrFiles;
+      throw new IOException(message);
+    }
+
     fs.delete(controlDir, true);
 
     for(int i=0; i < nrFiles; i++) {
@@ -302,8 +311,9 @@ public class TestDFSIO implements Tool {
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
       } finally {
-        if (writer != null)
+        if (writer != null) {
           writer.close();
+        }
         writer = null;
       }
     }
