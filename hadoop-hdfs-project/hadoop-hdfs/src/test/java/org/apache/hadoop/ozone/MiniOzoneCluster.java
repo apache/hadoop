@@ -113,9 +113,12 @@ public final class MiniOzoneCluster extends MiniDFSCluster
         getInstanceStorageDir(i, -1).getCanonicalPath());
     String containerMetaDirs = dnConf.get(
         OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS) + "-dn-" + i;
-    Files.createDirectories(Paths.get(containerMetaDirs));
+    Path containerMetaDirPath = Paths.get(containerMetaDirs);
     setConf(i, dnConf, OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
         containerMetaDirs);
+    Path containerRootPath =
+        containerMetaDirPath.resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
+    Files.createDirectories(containerRootPath);
   }
 
   static void setConf(int i, Configuration conf, String key, String value) {
