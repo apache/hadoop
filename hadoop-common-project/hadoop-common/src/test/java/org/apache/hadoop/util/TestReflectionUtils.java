@@ -25,9 +25,14 @@ import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.List;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
+
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestReflectionUtils {
 
@@ -150,7 +155,19 @@ public class TestReflectionUtils {
     assertTrue("Missing parent method", containsParentMethod);
     assertTrue("Missing child method", containsChildMethod);
   }
-  
+
+  @Test
+  public void testLogThreadInfo() throws Exception {
+    Logger logger = LoggerFactory.getLogger(TestReflectionUtils.class);
+    LogCapturer logCapturer = LogCapturer.captureLogs(logger);
+
+    final String title = "title";
+    ReflectionUtils.logThreadInfo(logger, title, 0L);
+
+    assertThat(logCapturer.getOutput(),
+        containsString("Process Thread Dump: " + title));
+  }
+
   // Used for testGetDeclaredFieldsIncludingInherited
   private class Parent {
     private int parentField;
