@@ -3219,7 +3219,10 @@
   <name>dfs.block.invalidate.limit</name>
   <value>1000</value>
   <description>
-    Limit on the list of invalidated block list kept by the Namenode.
+    The maximum number of invalidate blocks sent by namenode to a datanode
+    per heartbeat deletion command. This property works with
+    "dfs.namenode.invalidate.work.pct.per.iteration" to throttle block
+    deletions.
   </description>
 </property>
 
