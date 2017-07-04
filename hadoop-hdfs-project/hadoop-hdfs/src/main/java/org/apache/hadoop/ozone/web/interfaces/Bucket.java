@@ -126,6 +126,7 @@ public interface Bucket {
                       String info,
                       @QueryParam(Header.OZONE_LIST_QUERY_PREFIX)
                       String prefix,
+                      @DefaultValue(Header.OZONE_DEFAULT_LIST_SIZE)
                       @QueryParam(Header.OZONE_LIST_QUERY_MAXKEYS)
                       int maxKeys,
                       @QueryParam(Header.OZONE_LIST_QUERY_PREVKEY)

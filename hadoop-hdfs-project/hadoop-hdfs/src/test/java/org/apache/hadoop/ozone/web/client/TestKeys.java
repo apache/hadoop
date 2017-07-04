@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -82,7 +83,7 @@ public class TestKeys {
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
     client = new OzoneRestClient(String.format("http://localhost:%d", port));
@@ -170,14 +171,14 @@ public class TestKeys {
     helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
-    List<OzoneKey> keyList = helper.getBucket().listKeys();
+    List<OzoneKey> keyList = helper.getBucket().listKeys("100", null, null);
     Assert.assertEquals(keyList.size(), 1);
 
     // test list key using a more efficient call
     String newkeyName = OzoneUtils.getRequestID().toLowerCase();
     client.putKey(helper.getVol().getVolumeName(),
         helper.getBucket().getBucketName(), newkeyName, helper.getFile());
-    keyList = helper.getBucket().listKeys();
+    keyList = helper.getBucket().listKeys("100", null, null);
     Assert.assertEquals(keyList.size(), 2);
 
     // test new put key with invalid volume/bucket name
@@ -188,7 +189,7 @@ public class TestKeys {
           + " when using invalid volume name.");
     } catch(OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+          Status.INTERNAL_ERROR.toString(), e);
     }
 
     try {
@@ -198,7 +199,7 @@ public class TestKeys {
           + "when using invalid bucket name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+          Status.INTERNAL_ERROR.toString(), e);
     }
   }
 
@@ -283,7 +284,7 @@ public class TestKeys {
           + "when using invalid volume name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+          Status.KEY_NOT_FOUND.toString(), e);
     }
 
     try {
@@ -293,7 +294,7 @@ public class TestKeys {
           + "when using invalid bucket name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+          Status.KEY_NOT_FOUND.toString(), e);
     }
   }
 
@@ -310,8 +311,8 @@ public class TestKeys {
       helper.getBucket().getKey(keyName);
       fail("Get Key on a deleted key should have thrown");
     } catch (OzoneException ex) {
-      assertEquals(ex.getShortMessage(),
-          ErrorTable.INVALID_RESOURCE_NAME.getShortMessage());
+      GenericTestUtils.assertExceptionContains(
+          Status.KEY_NOT_FOUND.toString(), ex);
     }
   }
 
@@ -322,34 +323,60 @@ public class TestKeys {
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
+    // add keys [list-key0, list-key1, ..., list-key9]
     for (int x = 0; x < 10; x++) {
-      String newkeyName =   OzoneUtils.getRequestID().toLowerCase();
+      String newkeyName = "list-key" + x;
       helper.getBucket().putKey(newkeyName, helper.getFile());
     }
 
-    List<OzoneKey> keyList1 = helper.getBucket().listKeys();
+    List<OzoneKey> keyList1 = helper.getBucket().listKeys("100", null, null);
     // test list key using a more efficient call
     List<OzoneKey> keyList2 = client.listKeys(helper.getVol().getVolumeName(),
-        helper.getBucket().getBucketName());
+        helper.getBucket().getBucketName(), "100", null, null);
 
     Assert.assertEquals(keyList1.size(), 11);
     Assert.assertEquals(keyList2.size(), 11);
 
+    // test maxLength parameter of list keys
+    keyList1 = helper.getBucket().listKeys("1", null, null);
+    keyList2 = client.listKeys(helper.getVol().getVolumeName(),
+        helper.getBucket().getBucketName(), "1", null, null);
+    Assert.assertEquals(keyList1.size(), 1);
+    Assert.assertEquals(keyList2.size(), 1);
+
+    // test startKey parameter of list keys
+    keyList1 = helper.getBucket().listKeys("100", "list-key5", null);
+    keyList2 = client.listKeys(helper.getVol().getVolumeName(),
+        helper.getBucket().getBucketName(), "100", "list-key5", null);
+    Assert.assertEquals(keyList1.size(), 5);
+    Assert.assertEquals(keyList2.size(), 5);
+
+    // test prefix parameter of list keys
+    keyList1 = helper.getBucket().listKeys("100", null, "list-key2");
+    keyList2 = client.listKeys(helper.getVol().getVolumeName(),
+        helper.getBucket().getBucketName(), "100", null, "list-key2");
+    Assert.assertTrue(keyList1.size() == 1
+        && keyList1.get(0).getObjectInfo().getKeyName().equals("list-key2"));
+    Assert.assertTrue(keyList2.size() == 1
+        && keyList2.get(0).getObjectInfo().getKeyName().equals("list-key2"));
+
     // test new list keys with invalid volume/bucket name
     try {
-      client.listKeys("invalid-volume", helper.getBucket().getBucketName());
+      client.listKeys("invalid-volume", helper.getBucket().getBucketName(),
+          "100", null, null);
       fail("List keys should have thrown when using invalid volume name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+          ErrorTable.SERVER_ERROR.getMessage(), e);
     }
 
     try {
-      client.listKeys(helper.getVol().getVolumeName(), "invalid-bucket");
+      client.listKeys(helper.getVol().getVolumeName(), "invalid-bucket", "100",
+          null, null);
       fail("List keys should have thrown when using invalid bucket name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.INVALID_RESOURCE_NAME.getMessage(), e);
+          ErrorTable.SERVER_ERROR.getMessage(), e);
     }
   }
 

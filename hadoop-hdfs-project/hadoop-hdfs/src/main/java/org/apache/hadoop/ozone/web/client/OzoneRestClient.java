@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.web.client;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
@@ -640,10 +641,14 @@ public class OzoneRestClient implements Closeable {
    *
    * @param volumeName - Volume name
    * @param bucketName - Bucket name
+   * @param resultLength The max length of listing result.
+   * @param startKey The start key where to start listing from.
+   * @param prefix The prefix that return list keys start with.
    *
    * @return List of OzoneKeys
    */
-  public List<OzoneKey> listKeys(String volumeName, String bucketName)
+  public List<OzoneKey> listKeys(String volumeName, String bucketName,
+      String resultLength, String startKey, String prefix)
       throws OzoneException {
     OzoneUtils.verifyResourceName(volumeName);
     OzoneUtils.verifyResourceName(bucketName);
@@ -652,6 +657,18 @@ public class OzoneRestClient implements Closeable {
     try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(getEndPointURI());
       builder.setPath("/" + volumeName + "/" + bucketName).build();
+
+      if (!Strings.isNullOrEmpty(resultLength)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, resultLength);
+      }
+
+      if (!Strings.isNullOrEmpty(startKey)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, startKey);
+      }
+
+      if (!Strings.isNullOrEmpty(prefix)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix);
+      }
 
       getRequest = getHttpGet(builder.toString());
       return OzoneBucket.executeListKeys(getRequest, httpClient);

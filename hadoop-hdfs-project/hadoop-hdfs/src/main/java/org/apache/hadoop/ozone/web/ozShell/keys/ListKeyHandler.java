@@ -60,6 +60,21 @@ public class ListKeyHandler extends Handler {
           "Incorrect call : listKey is missing");
     }
 
+    String length = null;
+    if (cmd.hasOption(Shell.LIST_LENGTH)) {
+      length = cmd.getOptionValue(Shell.LIST_LENGTH);
+    }
+
+    String startKey = null;
+    if (cmd.hasOption(Shell.START)) {
+      startKey = cmd.getOptionValue(Shell.START);
+    }
+
+    String prefix = null;
+    if (cmd.hasOption(Shell.PREFIX)) {
+      prefix = cmd.getOptionValue(Shell.PREFIX);
+    }
+
     String ozoneURIString = cmd.getOptionValue(Shell.LIST_KEY);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
@@ -87,7 +102,8 @@ public class ListKeyHandler extends Handler {
     client.setEndPointURI(ozoneURI);
     client.setUserAuth(userName);
 
-    List<OzoneKey> keys = client.listKeys(volumeName, bucketName);
+    List<OzoneKey> keys = client.listKeys(volumeName, bucketName, length,
+        startKey, prefix);
     for (OzoneKey key : keys) {
       System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
           key.getObjectInfo().toJsonString()));

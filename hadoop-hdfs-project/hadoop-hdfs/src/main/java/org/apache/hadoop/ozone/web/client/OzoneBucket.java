@@ -41,6 +41,8 @@ import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 
+import com.google.common.base.Strings;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -448,15 +450,32 @@ public class OzoneBucket {
   /**
    * List all keys in a bucket.
    *
+   * @param resultLength The max length of listing result.
+   * @param startKey The start key where to start listing from.
+   * @param prefix The prefix that return list keys start with.
    * @return List of OzoneKeys
+   * @throws OzoneException
    */
-  public List<OzoneKey> listKeys() throws OzoneException {
+  public List<OzoneKey> listKeys(String resultLength, String startKey,
+      String prefix) throws OzoneException {
     HttpGet getRequest = null;
     try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
       OzoneRestClient client = getVolume().getClient();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName())
           .build();
+
+      if (!Strings.isNullOrEmpty(resultLength)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, resultLength);
+      }
+
+      if (!Strings.isNullOrEmpty(startKey)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, startKey);
+      }
+
+      if (!Strings.isNullOrEmpty(prefix)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix);
+      }
 
       getRequest = client.getHttpGet(builder.toString());
       return executeListKeys(getRequest, httpClient);
