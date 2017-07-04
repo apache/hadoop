@@ -58,10 +58,42 @@
 </property>
 
 <property>
+  <name>mapreduce.jobtracker.address</name>
+  <value>local</value>
+  <description>The host and port that the MapReduce job tracker runs
+  at.  If "local", then jobs are run in-process as a single map
+  and reduce task.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.local.clientfactory.class.name</name>
   <value>org.apache.hadoop.mapred.LocalClientFactory</value>
   <description>This the client factory that is responsible for 
   creating local job runner client</description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.system.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/system</value>
+  <description>The directory where MapReduce stores control files.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.staging.root.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/staging</value>
+  <description>The root of the staging area for users' job files
+  In practice, this should be the directory where users' home
+  directories are located (usually /user)
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.cluster.temp.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/temp</value>
+  <description>A shared directory for temporary files.
+  </description>
 </property>
 
 <property>
