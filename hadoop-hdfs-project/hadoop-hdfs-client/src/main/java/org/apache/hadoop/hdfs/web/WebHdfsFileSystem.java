@@ -800,7 +800,7 @@ public class WebHdfsFileSystem extends FileSystem
               a.action == RetryPolicy.RetryAction.RetryDecision.FAILOVER_AND_RETRY;
 
           if (isRetry || isFailoverAndRetry) {
-            LOG.info("Retrying connect to namenode: {}. Already tried {}"
+            LOG.info("Retrying connect to namenode: {}. Already retried {}"
                     + " time(s); retry policy is {}, delay {}ms.",
                 nnAddr, retry, retryPolicy, a.delayMillis);
 
