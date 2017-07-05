@@ -23,13 +23,17 @@ import org.apache.commons.logging.LogFactory;
 
 import org.junit.Test;
 
+import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 public class TestGenericTestUtils extends GenericTestUtils {
 
@@ -151,4 +155,31 @@ public class TestGenericTestUtils extends GenericTestUtils {
       assertExceptionContains(GenericTestUtils.ERROR_INVALID_ARGUMENT, e);
     }
   }
+
+  @Test
+  public void testDelayAnswerForLogIsOK() throws Throwable {
+    Log log = LogFactory.getLog(TestGenericTestUtils.class);
+    LogCapturer logCapturer = LogCapturer.captureLogs(log);
+
+    DelayAnswer delayAnswer = new DelayAnswer(log);
+    delayAnswer.proceed();
+    delayAnswer.answer(mock(InvocationOnMock.class));
+
+    assertThat(logCapturer.getOutput(),
+        containsString("DelayAnswer firing fireLatch"));
+  }
+
+  @Test
+  public void testDelayAnswerForLoggerIsOK() throws Throwable {
+    Logger logger = LoggerFactory.getLogger(TestGenericTestUtils.class);
+    LogCapturer logCapturer = LogCapturer.captureLogs(logger);
+
+    DelayAnswer delayAnswer = new DelayAnswer(logger);
+    delayAnswer.proceed();
+    delayAnswer.answer(mock(InvocationOnMock.class));
+
+    assertThat(logCapturer.getOutput(),
+        containsString("DelayAnswer firing fireLatch"));
+  }
+
 }

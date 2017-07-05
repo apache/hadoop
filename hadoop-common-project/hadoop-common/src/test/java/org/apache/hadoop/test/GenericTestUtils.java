@@ -437,7 +437,7 @@ public abstract class GenericTestUtils {
    * method is called, then waits on another before continuing.
    */
   public static class DelayAnswer implements Answer<Object> {
-    private final Log LOG;
+    private final Logger LOG;
     
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
@@ -449,9 +449,17 @@ public abstract class GenericTestUtils {
     // Result fields set after proceed() is called.
     private volatile Throwable thrown;
     private volatile Object returnValue;
-    
+
+    /**
+     * @deprecated use {@link #DelayAnswer(org.slf4j.Logger)} instead
+     */
+    @Deprecated
     public DelayAnswer(Log log) {
-      this.LOG = log;
+      this.LOG = ((Log4JLogger) log).getLogger();
+    }
+
+    public DelayAnswer(org.slf4j.Logger logger) {
+      this.LOG = toLog4j(logger);
     }
 
     /**
