@@ -255,10 +255,10 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   @Override
   public void setOwner(String volume, String owner) throws IOException {
     try {
-      metrics.incNumVolumeModifies();
+      metrics.incNumVolumeUpdates();
       volumeManager.setOwner(volume, owner);
     } catch (Exception ex) {
-      metrics.incNumVolumeModifyFails();
+      metrics.incNumVolumeUpdateFails();
       throw ex;
     }
   }
@@ -273,10 +273,10 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   @Override
   public void setQuota(String volume, long quota) throws IOException {
     try {
-      metrics.incNumVolumeModifies();
+      metrics.incNumVolumeUpdates();
       volumeManager.setQuota(volume, quota);
     } catch (Exception ex) {
-      metrics.incNumVolumeModifyFails();
+      metrics.incNumVolumeUpdateFails();
       throw ex;
     }
   }
@@ -511,10 +511,10 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   public void setBucketProperty(KsmBucketArgs args)
       throws IOException {
     try {
-      metrics.incNumBucketModifies();
+      metrics.incNumBucketUpdates();
       bucketManager.setBucketProperty(args);
     } catch (Exception ex) {
-      metrics.incNumBucketModifyFails();
+      metrics.incNumBucketUpdateFails();
       throw ex;
     }
   }

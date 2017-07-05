@@ -18,24 +18,34 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 /**
  * This class is for maintaining KeySpaceManager statistics.
  */
+@InterfaceAudience.Private
+@Metrics(about="Key Space Manager Metrics", context="dfs")
 public class KSMMetrics {
+  // KSM request type op metrics
+  private @Metric MutableCounterLong numVolumeOps;
+  private @Metric MutableCounterLong numBucketOps;
+  private @Metric MutableCounterLong numKeyOps;
+
   // KSM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
-  private @Metric MutableCounterLong numVolumeModifies;
+  private @Metric MutableCounterLong numVolumeUpdates;
   private @Metric MutableCounterLong numVolumeInfos;
   private @Metric MutableCounterLong numVolumeCheckAccesses;
   private @Metric MutableCounterLong numBucketCreates;
   private @Metric MutableCounterLong numVolumeDeletes;
   private @Metric MutableCounterLong numBucketInfos;
-  private @Metric MutableCounterLong numBucketModifies;
+  private @Metric MutableCounterLong numBucketUpdates;
   private @Metric MutableCounterLong numBucketDeletes;
   private @Metric MutableCounterLong numKeyAllocate;
   private @Metric MutableCounterLong numKeyLookup;
@@ -46,13 +56,13 @@ public class KSMMetrics {
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
-  private @Metric MutableCounterLong numVolumeModifyFails;
+  private @Metric MutableCounterLong numVolumeUpdateFails;
   private @Metric MutableCounterLong numVolumeInfoFails;
   private @Metric MutableCounterLong numVolumeDeleteFails;
   private @Metric MutableCounterLong numBucketCreateFails;
   private @Metric MutableCounterLong numVolumeCheckAccessFails;
   private @Metric MutableCounterLong numBucketInfoFails;
-  private @Metric MutableCounterLong numBucketModifyFails;
+  private @Metric MutableCounterLong numBucketUpdateFails;
   private @Metric MutableCounterLong numBucketDeleteFails;
   private @Metric MutableCounterLong numKeyAllocateFails;
   private @Metric MutableCounterLong numKeyLookupFails;
@@ -72,50 +82,62 @@ public class KSMMetrics {
   }
 
   public void incNumVolumeCreates() {
+    numVolumeOps.incr();
     numVolumeCreates.incr();
   }
 
-  public void incNumVolumeModifies() {
-    numVolumeModifies.incr();
+  public void incNumVolumeUpdates() {
+    numVolumeOps.incr();
+    numVolumeUpdates.incr();
   }
 
   public void incNumVolumeInfos() {
+    numVolumeOps.incr();
     numVolumeInfos.incr();
   }
 
   public void incNumVolumeDeletes() {
+    numVolumeOps.incr();
     numVolumeDeletes.incr();
   }
 
   public void incNumVolumeCheckAccesses() {
+    numVolumeOps.incr();
     numVolumeCheckAccesses.incr();
   }
 
   public void incNumBucketCreates() {
+    numBucketOps.incr();
     numBucketCreates.incr();
   }
 
   public void incNumBucketInfos() {
+    numBucketOps.incr();
     numBucketInfos.incr();
   }
 
-  public void incNumBucketModifies() {
-    numBucketModifies.incr();
+  public void incNumBucketUpdates() {
+    numBucketOps.incr();
+    numBucketUpdates.incr();
   }
 
   public void incNumBucketDeletes() {
+    numBucketOps.incr();
     numBucketDeletes.incr();
   }
 
   public void incNumBucketLists() {
+    numBucketOps.incr();
     numBucketLists.incr();
   }
 
   public void incNumKeyLists() {
+    numKeyOps.incr();
     numKeyLists.incr();
   }
 
   public void incNumVolumeLists() {
+    numVolumeOps.incr();
     numVolumeLists.incr();
   }
 
@@ -123,8 +145,8 @@ public class KSMMetrics {
     numVolumeCreateFails.incr();
   }
 
-  public void incNumVolumeModifyFails() {
-    numVolumeModifyFails.incr();
+  public void incNumVolumeUpdateFails() {
+    numVolumeUpdateFails.incr();
   }
 
   public void incNumVolumeInfoFails() {
@@ -147,8 +169,8 @@ public class KSMMetrics {
     numBucketInfoFails.incr();
   }
 
-  public void incNumBucketModifyFails() {
-    numBucketModifyFails.incr();
+  public void incNumBucketUpdateFails() {
+    numBucketUpdateFails.incr();
   }
 
   public void incNumBucketDeleteFails() {
@@ -156,6 +178,7 @@ public class KSMMetrics {
   }
 
   public void incNumKeyAllocates() {
+    numKeyOps.incr();
     numKeyAllocate.incr();
   }
 
@@ -164,6 +187,7 @@ public class KSMMetrics {
   }
 
   public void incNumKeyLookups() {
+    numKeyOps.incr();
     numKeyLookup.incr();
   }
 
@@ -176,6 +200,7 @@ public class KSMMetrics {
   }
 
   public void incNumKeyDeletes() {
+    numKeyOps.incr();
     numKeyDeletes.incr();
   }
 
@@ -197,8 +222,8 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumVolumeModifies() {
-    return numVolumeModifies.value();
+  public long getNumVolumeUpdates() {
+    return numVolumeUpdates.value();
   }
 
   @VisibleForTesting
@@ -227,8 +252,8 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumBucketModifies() {
-    return numBucketModifies.value();
+  public long getNumBucketUpdates() {
+    return numBucketUpdates.value();
   }
 
   @VisibleForTesting
@@ -257,8 +282,8 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumVolumeModifyFails() {
-    return numVolumeModifyFails.value();
+  public long getNumVolumeUpdateFails() {
+    return numVolumeUpdateFails.value();
   }
 
   @VisibleForTesting
@@ -287,8 +312,8 @@ public class KSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumBucketModifyFails() {
-    return numBucketModifyFails.value();
+  public long getNumBucketUpdateFails() {
+    return numBucketUpdateFails.value();
   }
 
   @VisibleForTesting
