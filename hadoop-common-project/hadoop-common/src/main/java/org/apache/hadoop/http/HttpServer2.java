@@ -424,6 +424,7 @@ public final class HttpServer2 implements FilterContainer {
         : new QueuedThreadPool(maxThreads);
     threadPool.setDaemon(true);
     webServer.setThreadPool(threadPool);
+    webServer.setSendServerVersion(false);
 
     SessionManager sm = webAppContext.getSessionHandler().getSessionManager();
     if (sm instanceof AbstractSessionManager) {
