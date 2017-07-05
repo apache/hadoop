@@ -128,8 +128,15 @@ public class ContainerManagerImpl implements ContainerManager {
     readLock();
     try {
       for (StorageLocation path : containerDirs) {
-        LOG.info("Loading containers under {}", path);
         File directory = Paths.get(path.getNormalizedUri()).toFile();
+        if (!directory.exists() && !directory.mkdirs()) {
+          LOG.error("Container metadata directory doesn't exist "
+              + "and cannot be created. Path: {}", path.toString());
+          throw new StorageContainerException("Container metadata "
+              + "directory doesn't exist and cannot be created " + path
+              .toString(), INVALID_CONFIG);
+        }
+
         // TODO: This will fail if any directory is invalid.
         // We should fix this to handle invalid directories and continue.
         // Leaving it this way to fail fast for time being.
@@ -139,6 +146,7 @@ public class ContainerManagerImpl implements ContainerManager {
           throw new StorageContainerException("Invalid path to container " +
               "metadata directory." + path, INVALID_CONFIG);
         }
+        LOG.info("Loading containers under {}", path);
         File[] files = directory.listFiles(new ContainerFilter());
         if (files != null) {
           for (File containerFile : files) {
