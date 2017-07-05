@@ -462,6 +462,42 @@ this request deletes key */volume-of-bilbo/bucket-0/file-0*. The client receives
     Content-Length: 0
     Connection: keep-alive
 
+### Info Key
+
+This API returns information about a given key.
+
+Schema:
+
+- `GET /{volume}/{bucket}/{key}?info=key`
+
+Query Parameter:
+
+| Query Parameter | Value | Description |
+|:---- |:---- |:----
+| info | String, "key" | Required and enforced with this value. |
+
+Sample HTTP DELETE request:
+
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/volume-of-bilbo/buket-0/file-0?info=key"
+
+this request returns information of the key */volume-of-bilbo/bucket-0/file-0*. The client receives a JSON object listed attributes of the key.
+
+    HTTP/1.1 200 OK
+    x-ozone-server-name: localhost
+    x-ozone-request-id: c674343c-a0f2-49e4-bbd6-daa73e7dc131
+    Date: Mon, 03 Jul 2017 14:28:45 GMT
+    Content-Type: application/octet-stream
+    Content-Length: 73
+    Connection: keep-alive
+
+    {
+      "version" : 0,
+      "md5hash" : null,
+      "createdOn" : null,
+      "size" : 0,
+      "keyName" : "file-0"
+    }
+
 ### List Keys
 
 This API allows user to list keys in a bucket.
