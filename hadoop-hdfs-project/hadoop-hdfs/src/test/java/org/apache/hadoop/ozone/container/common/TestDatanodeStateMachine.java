@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
@@ -70,6 +71,7 @@ public class TestDatanodeStateMachine {
   private List<ScmTestMock> mockServers;
   private ExecutorService executorService;
   private Configuration conf;
+  private File testRoot;
 
   @Before
   public void setUp() throws Exception {
@@ -95,11 +97,14 @@ public class TestDatanodeStateMachine {
     URL p = this.getClass().getResource("");
     String path = p.getPath().concat(
         TestDatanodeStateMachine.class.getSimpleName());
-    File f = new File(path);
-    if (!f.mkdirs()) {
+    testRoot = new File(path);
+    if (!testRoot.mkdirs()) {
       LOG.info("Required directories already exist.");
     }
-    conf.set(DFS_DATANODE_DATA_DIR_KEY, path);
+    conf.set(DFS_DATANODE_DATA_DIR_KEY,
+        new File(testRoot, "data").getAbsolutePath());
+    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+        new File(testRoot, "scm").getAbsolutePath());
     path = Paths.get(path.toString(),
         TestDatanodeStateMachine.class.getSimpleName() + ".id").toString();
     conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ID, path);
@@ -131,6 +136,8 @@ public class TestDatanodeStateMachine {
       }
     } catch (Exception e) {
       //ignore all execption from the shutdown
+    } finally {
+      testRoot.delete();
     }
   }
 
