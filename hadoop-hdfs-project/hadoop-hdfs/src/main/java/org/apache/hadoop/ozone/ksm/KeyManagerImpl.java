@@ -108,11 +108,11 @@ public class KeyManagerImpl implements KeyManager {
       LOG.debug("Key {} allocated in volume {} bucket {}",
           keyName, volumeName, bucketName);
       return keyBlock;
-    } catch (Exception ex) {
+    } catch (IOException ex) {
       LOG.error("Key allocation failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new KSMException(ex.getMessage(),
-          KSMException.ResultCodes.FAILED_INTERNAL_ERROR);
+          KSMException.ResultCodes.FAILED_KEY_ALLOCATION);
     } finally {
       metadataManager.writeLock().unlock();
     }
@@ -160,7 +160,7 @@ public class KeyManagerImpl implements KeyManager {
               Collections.singleton(keyInfo.getBlockID()));
       if (resultList.size() != 1) {
         throw new KSMException("Delete result size from SCM is wrong",
-            ResultCodes.FAILED_INTERNAL_ERROR);
+            ResultCodes.FAILED_KEY_DELETION);
       }
 
       if (resultList.get(0).getResult() == Result.success) {
@@ -169,13 +169,13 @@ public class KeyManagerImpl implements KeyManager {
         metadataManager.deleteKey(objectKey);
       } else {
         throw new KSMException("Cannot delete key from SCM",
-                ResultCodes.FAILED_INTERNAL_ERROR);
+                ResultCodes.FAILED_KEY_DELETION);
       }
     } catch (DBException ex) {
       LOG.error(String.format("Delete key failed for volume:%s "
           + "bucket:%s key:%s", volumeName, bucketName, keyName), ex);
       throw new KSMException(ex.getMessage(), ex,
-          ResultCodes.FAILED_INTERNAL_ERROR);
+          ResultCodes.FAILED_KEY_DELETION);
     } finally {
       metadataManager.writeLock().unlock();
     }
