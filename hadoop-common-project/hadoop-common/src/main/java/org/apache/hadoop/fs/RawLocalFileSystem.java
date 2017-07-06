@@ -240,7 +240,7 @@ public class RawLocalFileSystem extends FileSystem {
             success = true;
           } finally {
             if (!success) {
-              IOUtils.cleanupWithLogger(LOG, this.fos);
+              IOUtils.cleanup(LOG, this.fos);
             }
           }
         }
