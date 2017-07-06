@@ -335,4 +335,9 @@ public class Resources {
     return createResource(Math.max(lhs.getMemorySize(), rhs.getMemorySize()),
         Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()));
   }
+
+  public static boolean isAnyMajorResourceZero(ResourceCalculator rc,
+      Resource resource) {
+    return rc.isAnyMajorResourceZero(resource);
+  }
 }

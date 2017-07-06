@@ -421,7 +421,7 @@ public class LeafQueue extends AbstractCSQueue {
   public synchronized User getUser(String userName) {
     User user = users.get(userName);
     if (user == null) {
-      user = new User();
+      user = new User(userName);
       users.put(userName, user);
     }
     return user;
@@ -1048,7 +1048,7 @@ public class LeafQueue extends AbstractCSQueue {
       String partition) {
     return getHeadroom(user, queueCurrentLimit, clusterResource,
         computeUserLimit(application.getUser(), clusterResource, user,
-            partition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
+            partition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, true),
         partition);
   }
 
@@ -1121,7 +1121,7 @@ public class LeafQueue extends AbstractCSQueue {
     // TODO, need consider headroom respect labels also
     Resource userLimit =
         computeUserLimit(application.getUser(), clusterResource, queueUser,
-            nodePartition, schedulingMode);
+            nodePartition, schedulingMode, true);
 
     setQueueResourceLimitsInfo(clusterResource);
 
@@ -1160,7 +1160,7 @@ public class LeafQueue extends AbstractCSQueue {
   @Lock(NoLock.class)
   private Resource computeUserLimit(String userName,
       Resource clusterResource, User user,
-      String nodePartition, SchedulingMode schedulingMode) {
+      String nodePartition, SchedulingMode schedulingMode, boolean forActive) {
     Resource partitionResource = labelManager.getResourceByLabel(nodePartition,
         clusterResource);
 
@@ -1212,8 +1212,13 @@ public class LeafQueue extends AbstractCSQueue {
     // queue's configured capacity * user-limit-factor.
     // Also, the queue's configured capacity should be higher than 
     // queue-hard-limit * ulMin
-    
-    final int activeUsers = activeUsersManager.getNumActiveUsers();
+
+    final int usersCount;
+    if (forActive) {
+      usersCount = activeUsersManager.getNumActiveUsers();
+    } else {
+      usersCount = users.size();
+    }
     
     // User limit resource is determined by:
     // max{currentCapacity / #activeUsers, currentCapacity *
@@ -1221,7 +1226,7 @@ public class LeafQueue extends AbstractCSQueue {
     Resource userLimitResource = Resources.max(
         resourceCalculator, partitionResource,
         Resources.divideAndCeil(
-            resourceCalculator, currentCapacity, activeUsers),
+            resourceCalculator, currentCapacity, usersCount),
         Resources.divideAndCeil(
             resourceCalculator, 
             Resources.multiplyAndRoundDown(
@@ -1269,14 +1274,16 @@ public class LeafQueue extends AbstractCSQueue {
           " qconsumed: " + queueUsage.getUsed() +
           " consumedRatio: " + totalUserConsumedRatio +
           " currentCapacity: " + currentCapacity +
-          " activeUsers: " + activeUsers +
+          " activeUsers: " + usersCount +
           " clusterCapacity: " + clusterResource +
           " resourceByLabel: " + partitionResource +
           " usageratio: " + qUsageRatios.getUsageRatio(nodePartition) +
           " Partition: " + nodePartition
       );
     }
-    user.setUserResourceLimit(userLimitResource);
+    if (forActive) {
+      user.setUserResourceLimit(userLimitResource);
+    }
     return userLimitResource;
   }
   
@@ -1717,6 +1724,11 @@ public class LeafQueue extends AbstractCSQueue {
     int pendingApplications = 0;
     int activeApplications = 0;
     private UsageRatios userUsageRatios = new UsageRatios();
+    String userName;
+
+    public User(String name) {
+      this.userName = name;
+    }
 
     public ResourceUsage getResourceUsage() {
       return userResourceUsage;
@@ -1805,6 +1817,15 @@ public class LeafQueue extends AbstractCSQueue {
     public void setUserResourceLimit(Resource userResourceLimit) {
       this.userResourceLimit = userResourceLimit;
     }
+
+    public String getUserName() {
+      return this.userName;
+    }
+
+    @VisibleForTesting
+    public void setResourceUsage(ResourceUsage resourceUsage) {
+      this.userResourceUsage = resourceUsage;
+    }
   }
 
   @Override
@@ -1864,7 +1885,7 @@ public class LeafQueue extends AbstractCSQueue {
         User user = getUser(userName);
         Resource headroom = Resources.subtract(
             computeUserLimit(app.getUser(), resources, user, partition,
-                SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
+                SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, true),
                 user.getUsed(partition));
         // Make sure headroom is not negative.
         headroom = Resources.componentwiseMax(headroom, Resources.none());
@@ -1888,7 +1909,7 @@ public class LeafQueue extends AbstractCSQueue {
     User user = getUser(userName);
 
     return computeUserLimit(userName, resources, user, partition,
-        SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+        SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, true);
   }
 
   @Override
@@ -2086,5 +2107,20 @@ public class LeafQueue extends AbstractCSQueue {
     public Resource getClusterResource() {
       return clusterResource;
     }
+  }
+
+  /**
+   * Get all valid users in this queue.
+   * @return user list
+   */
+  public Set<String> getAllUsers() {
+    return this.users.keySet();
+  }
+
+  public synchronized Resource getResourceLimitForAllUsers(String userName,
+      Resource clusterResource, String partition, SchedulingMode schedulingMode)
+  {
+    return computeUserLimit(userName, clusterResource, getUser(userName),
+        partition, schedulingMode, false);
   }
 }

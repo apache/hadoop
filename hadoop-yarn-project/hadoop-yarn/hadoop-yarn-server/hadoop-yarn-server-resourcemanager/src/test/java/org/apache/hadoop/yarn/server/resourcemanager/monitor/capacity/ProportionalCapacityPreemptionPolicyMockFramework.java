@@ -40,8 +40,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.User;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -66,7 +68,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
 
 import static org.mockito.Matchers.any;
@@ -92,6 +93,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   Clock mClock = null;
   CapacitySchedulerConfiguration conf = null;
   CapacityScheduler cs = null;
+  @SuppressWarnings("rawtypes")
   EventHandler<SchedulerEvent> mDisp = null;
   ProportionalCapacityPreemptionPolicy policy = null;
   Resource clusterResource = null;
@@ -239,6 +241,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
         if (containerId == 1) {
           when(rmc.isAMContainer()).thenReturn(true);
           when(app.getAMResource(label)).thenReturn(res);
+          when(app.getAppAMNodePartitionName()).thenReturn(label);
         }
 
         if (reserved) {
@@ -270,6 +273,12 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
             + partition);
 
         containerId++;
+      }
+
+      // If app has 0 container, and it has only pending, still make sure to
+      // update label.
+      if (repeat == 0) {
+        when(app.getAppAMNodePartitionName()).thenReturn(label);
       }
 
       // Some more app specific aggregated data can be better filled here.
@@ -307,10 +316,15 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   private void mockApplications(String appsConfig) {
     int id = 1;
     HashMap<String, HashSet<String>> userMap = new HashMap<String, HashSet<String>>();
+    HashMap<String, HashMap<String, HashMap<String, ResourceUsage>>> userResourceUsagePerLabel = new HashMap<>();
     LeafQueue queue = null;
+    int mulp = -1;
     for (String a : appsConfig.split(";")) {
       String[] strs = a.split("\t");
       String queueName = strs[0];
+      if (mulp <= 0 && strs.length > 2 && strs[2] != null) {
+        mulp = 100 / (new Integer(strs[2]).intValue());
+      }
 
       // get containers
       List<RMContainer> liveContainers = new ArrayList<RMContainer>();
@@ -330,6 +344,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       when(app.getReservedContainers()).thenReturn(reservedContainers);
       when(app.getApplicationAttemptId()).thenReturn(appAttemptId);
       when(app.getApplicationId()).thenReturn(appId);
+      when(app.getQueueName()).thenReturn(queueName);
 
       // add to LeafQueue
       queue = (LeafQueue) nameToCSQueues.get(queueName);
@@ -343,20 +358,70 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       }
 
       users.add(app.getUser());
+
+      String label = app.getAppAMNodePartitionName();
+
+      // Get label to queue
+      HashMap<String, HashMap<String, ResourceUsage>> userResourceUsagePerQueue = userResourceUsagePerLabel
+          .get(label);
+      if (null == userResourceUsagePerQueue) {
+        userResourceUsagePerQueue = new HashMap<>();
+        userResourceUsagePerLabel.put(label, userResourceUsagePerQueue);
+      }
+
+      // Get queue to user based resource map
+      HashMap<String, ResourceUsage> userResourceUsage = userResourceUsagePerQueue
+          .get(queueName);
+      if (null == userResourceUsage) {
+        userResourceUsage = new HashMap<>();
+        userResourceUsagePerQueue.put(queueName, userResourceUsage);
+      }
+
+      // Get user to its resource usage.
+      ResourceUsage usage = userResourceUsage.get(app.getUser());
+      if (null == usage) {
+        usage = new ResourceUsage();
+        userResourceUsage.put(app.getUser(), usage);
+      }
+
+      usage.incAMUsed(app.getAMResource(label));
+      usage.incUsed(app.getAppAttemptResourceUsage().getUsed(label));
       id++;
     }
 
-    for (String queueName : userMap.keySet()) {
-      queue = (LeafQueue) nameToCSQueues.get(queueName);
-      // Currently we have user-limit test support only for default label.
-      Resource totResoucePerPartition = partitionToResource.get("");
-      Resource capacity = Resources.multiply(totResoucePerPartition,
-          queue.getQueueCapacities().getAbsoluteCapacity());
-      HashSet<String> users = userMap.get(queue.getQueueName());
-      Resource userLimit = Resources.divideAndCeil(rc, capacity, users.size());
-      for (String user : users) {
-        when(queue.getUserLimitPerUser(eq(user), any(Resource.class),
-            anyString())).thenReturn(userLimit);
+    for (String label : userResourceUsagePerLabel.keySet()) {
+      for (String queueName : userMap.keySet()) {
+        queue = (LeafQueue) nameToCSQueues.get(queueName);
+        // Currently we have user-limit test support only for default label.
+        Resource totResoucePerPartition = partitionToResource.get("");
+        Resource capacity = Resources.multiply(totResoucePerPartition,
+            queue.getQueueCapacities().getAbsoluteCapacity());
+        HashSet<String> users = userMap.get(queue.getQueueName());
+        when(queue.getAllUsers()).thenReturn(users);
+        Resource userLimit;
+        if (mulp > 0) {
+          userLimit = Resources.divideAndCeil(rc, capacity, mulp);
+        } else {
+          userLimit = Resources.divideAndCeil(rc, capacity,
+              users.size());
+        }
+        LOG.debug("Updating user-limit from mock: totResoucePerPartition="
+            + totResoucePerPartition + ", capacity=" + capacity
+            + ", users.size()=" + users.size() + ", userlimit= " + userLimit
+            + ",label= " + label + ",queueName= " + queueName);
+
+        HashMap<String, ResourceUsage> userResourceUsage = userResourceUsagePerLabel
+            .get(label).get(queueName);
+        for (String userName : users) {
+          User user = new User(userName);
+          if (userResourceUsage != null) {
+            user.setResourceUsage(userResourceUsage.get(userName));
+          }
+          when(queue.getUser(eq(userName))).thenReturn(user);
+          when(queue.getResourceLimitForAllUsers(eq(userName),
+              any(Resource.class), anyString(), any(SchedulingMode.class)))
+                  .thenReturn(userLimit);
+        }
       }
     }
   }

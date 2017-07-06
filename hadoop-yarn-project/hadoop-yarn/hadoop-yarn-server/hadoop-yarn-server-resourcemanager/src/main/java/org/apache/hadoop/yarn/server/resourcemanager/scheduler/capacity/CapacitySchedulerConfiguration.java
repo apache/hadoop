@@ -1129,4 +1129,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX + "max-allowable-limit";
   public static final float DEFAULT_INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT =
       0.2f;
+
+   /**
+   * For intra-queue preemption, enforce a preemption order such as
+   * "userlimit_first" or "priority_first".
+   */
+  public static final String INTRAQUEUE_PREEMPTION_ORDER_POLICY = PREEMPTION_CONFIG_PREFIX
+      + INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX + "preemption-order-policy";
+  public static final String DEFAULT_INTRAQUEUE_PREEMPTION_ORDER_POLICY = "userlimit_first";
 }
