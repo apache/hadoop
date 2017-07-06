@@ -406,7 +406,7 @@ public class SLSRunner extends Configured implements Tool {
     }
 
     runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
-        getTaskContainers(jsonJob), null);
+        getTaskContainers(jsonJob), null, getAMContainerResource(jsonJob));
   }
 
   private List<ContainerSimulator> getTaskContainers(Map jsonJob)
@@ -558,7 +558,8 @@ public class SLSRunner extends Configured implements Tool {
 
     // Only supports the default job type currently
     runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-        jobStartTimeMS, jobFinishTimeMS, containerList, null);
+        jobStartTimeMS, jobFinishTimeMS, containerList, null,
+        getAMContainerResource(null));
   }
 
   private Resource getDefaultContainerResource() {
@@ -676,12 +677,33 @@ public class SLSRunner extends Configured implements Tool {
         }
 
         runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-            jobStartTimeMS, jobFinishTimeMS, containerList, rr);
+            jobStartTimeMS, jobFinishTimeMS, containerList, rr,
+            getAMContainerResource(null));
       }
     } finally {
       stjp.close();
     }
 
+  }
+
+  private Resource getAMContainerResource(Map jsonJob) {
+    Resource amContainerResource =
+        SLSConfiguration.getAMContainerResource(getConf());
+
+    if (jsonJob == null) {
+      return amContainerResource;
+    }
+
+    if (jsonJob.containsKey("am.memory")) {
+      amContainerResource.setMemorySize(
+          Long.parseLong(jsonJob.get("am.memory").toString()));
+    }
+
+    if (jsonJob.containsKey("am.vcores")) {
+      amContainerResource.setVirtualCores(
+          Integer.parseInt(jsonJob.get("am.vcores").toString()));
+    }
+    return amContainerResource;
   }
 
   private void increaseQueueAppNum(String queue) throws YarnException {
@@ -700,7 +722,7 @@ public class SLSRunner extends Configured implements Tool {
   private void runNewAM(String jobType, String user,
       String jobQueue, String oldJobId, long jobStartTimeMS,
       long jobFinishTimeMS, List<ContainerSimulator> containerList,
-      ReservationSubmissionRequest rr) {
+      ReservationSubmissionRequest rr, Resource amContainerResource) {
 
     AMSimulator amSim = (AMSimulator) ReflectionUtils.newInstance(
         amClassMap.get(jobType), new Configuration());
@@ -710,9 +732,11 @@ public class SLSRunner extends Configured implements Tool {
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS,
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS_DEFAULT);
       boolean isTracked = trackedApps.contains(oldJobId);
-      amSim.init(AM_ID++, heartbeatInterval, containerList,
-          rm, this, jobStartTimeMS, jobFinishTimeMS, user, jobQueue,
-          isTracked, oldJobId, rr, runner.getStartTimeMS());
+      AM_ID++;
+
+      amSim.init(heartbeatInterval, containerList, rm, this, jobStartTimeMS,
+          jobFinishTimeMS, user, jobQueue, isTracked, oldJobId, rr,
+          runner.getStartTimeMS(), amContainerResource);
       runner.schedule(amSim);
       maxRuntime = Math.max(maxRuntime, jobFinishTimeMS);
       numTasks += containerList.size();

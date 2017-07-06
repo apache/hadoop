@@ -1811,8 +1811,8 @@
   <name>dfs.namenode.stale.datanode.interval</name>
   <value>30000</value>
   <description>
-    Default time interval for marking a datanode as "stale", i.e., if 
-    the namenode has not received heartbeat msg from a datanode for 
+    Default time interval in milliseconds for marking a datanode as "stale",
+    i.e., if the namenode has not received heartbeat msg from a datanode for
     more than this time interval, the datanode will be marked and treated 
     as "stale" by default. The stale interval cannot be too small since 
     otherwise this may cause too frequent change of stale states. 
@@ -3375,7 +3375,10 @@
   <name>dfs.block.invalidate.limit</name>
   <value>1000</value>
   <description>
-    Limit on the list of invalidated block list kept by the Namenode.
+    The maximum number of invalidate blocks sent by namenode to a datanode
+    per heartbeat deletion command. This property works with
+    "dfs.namenode.invalidate.work.pct.per.iteration" to throttle block
+    deletions.
   </description>
 </property>
 

@@ -156,6 +156,7 @@ public class TestTruncateQuotaUpdate {
     FileDiff diff = mock(FileDiff.class);
     when(diff.getBlocks()).thenReturn(blocks);
     FileDiffList diffList = new FileDiffList();
+    Whitebox.setInternalState(diffList, "diffs", new ArrayList<FileDiff>());
     @SuppressWarnings("unchecked")
     ArrayList<FileDiff> diffs = ((ArrayList<FileDiff>)Whitebox.getInternalState
         (diffList, "diffs"));

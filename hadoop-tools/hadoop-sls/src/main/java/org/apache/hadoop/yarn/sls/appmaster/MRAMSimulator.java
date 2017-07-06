@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -114,14 +115,14 @@ public class MRAMSimulator extends AMSimulator {
       LoggerFactory.getLogger(MRAMSimulator.class);
 
   @SuppressWarnings("checkstyle:parameternumber")
-  public void init(int id, int heartbeatInterval,
+  public void init(int heartbeatInterval,
       List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
       long traceStartTime, long traceFinishTime, String user, String queue, 
       boolean isTracked, String oldAppId, ReservationSubmissionRequest rr,
-      long baselineStartTimeMS) {
-    super.init(id, heartbeatInterval, containerList, rm, se, 
-              traceStartTime, traceFinishTime, user, queue,
-              isTracked, oldAppId, rr, baselineStartTimeMS);
+      long baselineStartTimeMS, Resource amContainerResource) {
+    super.init(heartbeatInterval, containerList, rm, se,
+        traceStartTime, traceFinishTime, user, queue, isTracked, oldAppId,
+        rr, baselineStartTimeMS, amContainerResource);
     amtype = "mapreduce";
     
     // get map/reduce tasks

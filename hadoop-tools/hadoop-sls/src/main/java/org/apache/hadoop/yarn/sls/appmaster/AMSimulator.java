@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.sls.appmaster;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,18 +34,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords
-        .FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
-
-import org.apache.hadoop.yarn.api.protocolrecords
-        .RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords
-        .RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -54,7 +48,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -66,7 +59,6 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 import org.apache.hadoop.yarn.sls.SLSRunner;
@@ -116,9 +108,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   
   private static final Logger LOG = LoggerFactory.getLogger(AMSimulator.class);
 
-  // resource for AM container
-  private final static int MR_AM_CONTAINER_RESOURCE_MEMORY_MB = 1024;
-  private final static int MR_AM_CONTAINER_RESOURCE_VCORES = 1;
+  private Resource amContainerResource;
 
   private ReservationSubmissionRequest reservationRequest;
 
@@ -127,11 +117,12 @@ public abstract class AMSimulator extends TaskRunner.Task {
   }
 
   @SuppressWarnings("checkstyle:parameternumber")
-  public void init(int id, int heartbeatInterval,
+  public void init(int heartbeatInterval,
       List<ContainerSimulator> containerList, ResourceManager resourceManager,
       SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
       String simQueue, boolean tracked, String oldApp,
-      ReservationSubmissionRequest rr, long baseTimeMS) {
+      ReservationSubmissionRequest rr, long baseTimeMS,
+      Resource amContainerResource) {
     super.init(startTime, startTime + 1000000L * heartbeatInterval,
         heartbeatInterval);
     this.user = simUser;
@@ -144,6 +135,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.traceStartTimeMS = startTime;
     this.traceFinishTimeMS = finishTime;
     this.reservationRequest = rr;
+    this.amContainerResource = amContainerResource;
   }
 
   /**
@@ -318,16 +310,13 @@ public abstract class AMSimulator extends TaskRunner.Task {
     appSubContext.setPriority(Priority.newInstance(0));
     ContainerLaunchContext conLauContext = 
         Records.newRecord(ContainerLaunchContext.class);
-    conLauContext.setApplicationACLs(
-        new HashMap<ApplicationAccessType, String>());
-    conLauContext.setCommands(new ArrayList<String>());
-    conLauContext.setEnvironment(new HashMap<String, String>());
-    conLauContext.setLocalResources(new HashMap<String, LocalResource>());
-    conLauContext.setServiceData(new HashMap<String, ByteBuffer>());
+    conLauContext.setApplicationACLs(new HashMap<>());
+    conLauContext.setCommands(new ArrayList<>());
+    conLauContext.setEnvironment(new HashMap<>());
+    conLauContext.setLocalResources(new HashMap<>());
+    conLauContext.setServiceData(new HashMap<>());
     appSubContext.setAMContainerSpec(conLauContext);
-    appSubContext.setResource(Resources
-        .createResource(MR_AM_CONTAINER_RESOURCE_MEMORY_MB,
-            MR_AM_CONTAINER_RESOURCE_VCORES));
+    appSubContext.setResource(amContainerResource);
 
     if(reservationId != null) {
       appSubContext.setReservationID(reservationId);

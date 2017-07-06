@@ -20,14 +20,18 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.TimeoutException;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -49,6 +53,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -477,11 +482,18 @@ public class TestPendingReconstruction {
     }
   }
 
-  @Test
-  public void testReplicationCounter() throws Exception {
+  /**
+   * Test the metric counters of the re-replication process.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  @Test (timeout = 300000)
+  public void testReplicationCounter() throws IOException,
+      InterruptedException, TimeoutException {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setInt(DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setInt(DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 2);
+    conf.setInt(DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
     MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         DATANODE_COUNT).build();
     tmpCluster.waitActive();
@@ -503,7 +515,6 @@ public class TestPendingReconstruction {
       blockInfo1.setBlockId(1);
 
       BlockCollection bc2 = Mockito.mock(BlockCollection.class);
-      Mockito.when(bc2.getId()).thenReturn((2L));
       BlockInfo blockInfo2 = new BlockInfoContiguous((short) 3);
       blockInfo2.setBlockId(2);
 
@@ -522,15 +533,8 @@ public class TestPendingReconstruction {
       pending.increment(blockInfo0);
       pending.increment(blockInfo1);
 
-      Thread.sleep(2000);
-
-      rb = getMetrics("NameNodeActivity");
-      assertCounter("SuccessfulReReplications", 0L, rb);
-      assertCounter("NumTimesReReplicationNotScheduled", 0L, rb);
-      assertCounter("TimeoutReReplications", 0L, rb);
-
       // call addBlock on block0 will make it successfully replicated.
-      // not callign addBlock on block1 will make it timeout later.
+      // not calling addBlock on block1 will make it timeout later.
       DatanodeStorageInfo[] storageInfos =
           DFSTestUtil.createDatanodeStorageInfos(1);
       bm.addBlock(storageInfos[0], blockInfo0, null);
@@ -539,18 +543,18 @@ public class TestPendingReconstruction {
       // because there is no source data to replicate from.
       bm.scheduleReconstruction(blockInfo2, 0);
 
-      Thread.sleep(2000);
-
-      rb = getMetrics("NameNodeActivity");
-      assertCounter("SuccessfulReReplications", 1L, rb);
-      assertCounter("NumTimesReReplicationNotScheduled", 1L, rb);
-      assertCounter("TimeoutReReplications", 1L, rb);
-
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          MetricsRecordBuilder rb = getMetrics("NameNodeActivity");
+          return getLongCounter("SuccessfulReReplications", rb) == 1 &&
+              getLongCounter("NumTimesReReplicationNotScheduled", rb) == 1 &&
+              getLongCounter("TimeoutReReplications", rb) == 1;
+        }
+      }, 100, 60000);
     } finally {
       tmpCluster.shutdown();
       fsn.writeUnlock();
     }
   }
-
-
 }

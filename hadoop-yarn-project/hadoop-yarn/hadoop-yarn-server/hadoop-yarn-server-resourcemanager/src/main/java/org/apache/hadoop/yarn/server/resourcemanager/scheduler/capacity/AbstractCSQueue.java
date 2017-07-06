@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -615,6 +616,11 @@ public abstract class AbstractCSQueue implements CSQueue {
         minimumAllocation);
   }
 
+  public boolean hasChildQueues() {
+    List<CSQueue> childQueues = getChildQueues();
+    return childQueues != null && !childQueues.isEmpty();
+  }
+
   boolean canAssignToThisQueue(Resource clusterResource,
       String nodePartition, ResourceLimits currentResourceLimits,
       Resource resourceCouldBeUnreserved, SchedulingMode schedulingMode) {
@@ -640,7 +646,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       // When queue is a parent queue: Headroom = limit - used + killable
       // When queue is a leaf queue: Headroom = limit - used (leaf queue cannot preempt itself)
       Resource usedExceptKillable = nowTotalUsed;
-      if (null != getChildQueues() && !getChildQueues().isEmpty()) {
+      if (hasChildQueues()) {
         usedExceptKillable = Resources.subtract(nowTotalUsed,
             getTotalKillableResource(nodePartition));
       }
