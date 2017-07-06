@@ -391,7 +391,7 @@ public class MetadataManagerImpl implements  MetadataManager {
           // this probably means ksm db is corrupted or some entries are
           // accidentally removed.
           throw new KSMException("Volume info not found for " + volumeName,
-              ResultCodes.FAILED_INTERNAL_ERROR);
+              ResultCodes.FAILED_VOLUME_NOT_FOUND);
         }
         VolumeInfo info = VolumeInfo.parseFrom(volumeInfo);
         KsmVolumeArgs volumeArgs = KsmVolumeArgs.getFromProtobuf(info);
@@ -421,7 +421,7 @@ public class MetadataManagerImpl implements  MetadataManager {
     } catch (InvalidProtocolBufferException e) {
       throw new KSMException("Unable to get volumes info by the given user, "
           + "metadata might be corrupted",
-          e, ResultCodes.FAILED_INTERNAL_ERROR);
+          e, ResultCodes.FAILED_METADATA_ERROR);
     }
     return volumes;
   }
