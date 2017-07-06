@@ -76,6 +76,8 @@ public class TestMapreduceConfigFields extends TestConfigurationFieldsBase {
     // but not removed from branch-2.
     xmlPropsToSkipCompare.add("map.sort.class");
     xmlPropsToSkipCompare.add("mapreduce.local.clientfactory.class.name");
+    xmlPropsToSkipCompare.add("mapreduce.jobtracker.system.dir");
+    xmlPropsToSkipCompare.add("mapreduce.jobtracker.staging.root.dir");
   }
 
 }
