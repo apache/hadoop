@@ -297,7 +297,6 @@ public class LocalMetadataStore implements MetadataStore {
     }
     Iterator<Map.Entry<Path, DirListingMetadata>> dirs =
         dirHash.entrySet().iterator();
-    Collection<Path> ancestors = new LinkedList<>();
     while (dirs.hasNext()) {
       Map.Entry<Path, DirListingMetadata> entry = dirs.next();
       Path path = entry.getKey();
@@ -311,11 +310,14 @@ public class LocalMetadataStore implements MetadataStore {
           newChildren.add(child);
         }
       }
-      if (newChildren.size() == 0) {
-        dirs.remove();
-        ancestors.add(entry.getKey());
-      } else {
+      if (newChildren.size() != oldChildren.size()) {
         dirHash.put(path, new DirListingMetadata(path, newChildren, false));
+        if (!path.isRoot()) {
+          DirListingMetadata parent = dirHash.get(path.getParent());
+          if (parent != null) {
+            parent.setAuthoritative(false);
+          }
+        }
       }
     }
   }

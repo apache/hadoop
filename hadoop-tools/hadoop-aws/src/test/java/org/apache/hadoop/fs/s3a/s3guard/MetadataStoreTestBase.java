@@ -688,6 +688,35 @@ public abstract class MetadataStoreTestBase extends Assert {
     assertDeleted("/pruneDirs/dir/file");
   }
 
+  @Test
+  public void testPruneUnsetsAuthoritative() throws Exception {
+    String rootDir = "/unpruned-root-dir";
+    String grandparentDir = rootDir + "/pruned-grandparent-dir";
+    String parentDir = grandparentDir + "/pruned-parent-dir";
+    String staleFile = parentDir + "/stale-file";
+    String freshFile = rootDir + "/fresh-file";
+    String[] directories = {rootDir, grandparentDir, parentDir};
+
+    createNewDirs(rootDir, grandparentDir, parentDir);
+    long time = System.currentTimeMillis();
+    ms.put(new PathMetadata(
+        new FileStatus(0, false, 0, 0, time - 1, strToPath(staleFile)),
+        Tristate.FALSE, false));
+    ms.put(new PathMetadata(
+        new FileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
+        Tristate.FALSE, false));
+
+    ms.prune(time);
+    DirListingMetadata listing;
+    for (String directory : directories) {
+      Path path = strToPath(directory);
+      if (ms.get(path) != null) {
+        listing = ms.listChildren(path);
+        assertFalse(listing.isAuthoritative());
+      }
+    }
+  }
+
   /*
    * Helper functions.
    */
