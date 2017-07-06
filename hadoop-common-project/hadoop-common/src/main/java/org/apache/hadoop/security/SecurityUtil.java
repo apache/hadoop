@@ -36,8 +36,6 @@ import javax.annotation.Nullable;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +51,8 @@ import org.apache.hadoop.util.StringUtils;
 
 
 //this will need to be replaced someday when there is a suitable replacement
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.net.dns.ResolverConfiguration;
 import sun.net.util.IPAddressUtil;
 
@@ -64,7 +64,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class SecurityUtil {
-  public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
   public static final String FAILED_TO_GET_UGI_MSG_HEADER = 
       "Failed to obtain user group information:";
@@ -473,7 +473,7 @@ public final class SecurityUtil {
       try { 
         ugi = UserGroupInformation.getLoginUser();
       } catch (IOException e) {
-        LOG.fatal("Exception while getting login user", e);
+        LOG.error("Exception while getting login user", e);
         e.printStackTrace();
         Runtime.getRuntime().exit(-1);
       }
