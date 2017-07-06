@@ -437,7 +437,7 @@ public abstract class GenericTestUtils {
    * method is called, then waits on another before continuing.
    */
   public static class DelayAnswer implements Answer<Object> {
-    private final Logger LOG;
+    private final Logger logger;
     
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
@@ -455,11 +455,11 @@ public abstract class GenericTestUtils {
      */
     @Deprecated
     public DelayAnswer(Log log) {
-      this.LOG = ((Log4JLogger) log).getLogger();
+      this.logger = ((Log4JLogger) log).getLogger();
     }
 
     public DelayAnswer(org.slf4j.Logger logger) {
-      this.LOG = toLog4j(logger);
+      this.logger = toLog4j(logger);
     }
 
     /**
@@ -479,13 +479,13 @@ public abstract class GenericTestUtils {
   
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
-      LOG.info("DelayAnswer firing fireLatch");
+      logger.info("DelayAnswer firing fireLatch");
       fireCounter.getAndIncrement();
       fireLatch.countDown();
       try {
-        LOG.info("DelayAnswer waiting on waitLatch");
+        logger.info("DelayAnswer waiting on waitLatch");
         waitLatch.await();
-        LOG.info("DelayAnswer delay complete");
+        logger.info("DelayAnswer delay complete");
       } catch (InterruptedException ie) {
         throw new IOException("Interrupted waiting on latch", ie);
       }
