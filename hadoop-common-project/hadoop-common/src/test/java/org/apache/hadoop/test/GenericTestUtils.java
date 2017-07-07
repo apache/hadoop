@@ -141,6 +141,20 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * A helper used in log4j2 migration to accept legacy
+   * org.apache.commons.logging apis.
+   * <p>
+   * And will be removed after migration.
+   *
+   * @param log   a log
+   * @param level level to be set
+   */
+  @Deprecated
+  public static void setLogLevel(Log log, org.slf4j.event.Level level) {
+    setLogLevel(log, Level.toLevel(level.toString()));
+  }
+
+  /**
    * @deprecated
    * use {@link #setLogLevel(org.slf4j.Logger, org.slf4j.event.Level)} instead
    */
@@ -172,6 +186,22 @@ public abstract class GenericTestUtils {
     setLogLevel(toLog4j(logger), Level.toLevel(level.toString()));
   }
 
+  public static void setRootLogLevel(org.slf4j.event.Level level) {
+    setLogLevel(LogManager.getRootLogger(), Level.toLevel(level.toString()));
+  }
+
+  public static org.slf4j.event.Level toLevel(String level) {
+    return toLevel(level, org.slf4j.event.Level.DEBUG);
+  }
+
+  public static org.slf4j.event.Level toLevel(
+      String level, org.slf4j.event.Level defaultLevel) {
+    try {
+      return org.slf4j.event.Level.valueOf(level);
+    } catch (IllegalArgumentException e) {
+      return defaultLevel;
+    }
+  }
   /**
    * Extracts the name of the method where the invocation has happened
    * @return String name of the invoking method

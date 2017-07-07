@@ -24,12 +24,11 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.UUID;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.State;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
-import org.apache.log4j.Level;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
@@ -39,6 +38,7 @@ import org.mockito.AdditionalMatchers;
 import org.mockito.Mockito;
 
 import com.google.common.primitives.Ints;
+import org.slf4j.event.Level;
 
 /**
  * Test for {@link ActiveStandbyElector} using real zookeeper.
@@ -47,8 +47,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
   static final int NUM_ELECTORS = 2;
   
   static {
-    ((Log4JLogger)ActiveStandbyElector.LOG).getLogger().setLevel(
-        Level.ALL);
+    GenericTestUtils.setLogLevel(ActiveStandbyElector.LOG, Level.TRACE);
   }
   
   static final String PARENT_DIR = "/" + UUID.randomUUID();

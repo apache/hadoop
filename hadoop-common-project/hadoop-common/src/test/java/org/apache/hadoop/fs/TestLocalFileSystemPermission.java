@@ -21,8 +21,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 import org.apache.hadoop.util.Shell;
+import org.slf4j.event.Level;
 
 import java.io.*;
 import java.util.*;
