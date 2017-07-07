@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * A simple LoadBalancing KMSClientProvider that round-robins requests
@@ -158,14 +159,23 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
   // This request is sent to all providers in the load-balancing group
   @Override
   public void warmUpEncryptedKeys(String... keyNames) throws IOException {
+    Preconditions.checkArgument(providers.length > 0,
+        "No providers are configured");
+    boolean success = false;
+    IOException e = null;
     for (KMSClientProvider provider : providers) {
       try {
         provider.warmUpEncryptedKeys(keyNames);
+        success = true;
       } catch (IOException ioe) {
+        e = ioe;
         LOG.error(
             "Error warming up keys for provider with url"
-            + "[" + provider.getKMSUrl() + "]");
+            + "[" + provider.getKMSUrl() + "]", ioe);
       }
+    }
+    if (!success && e != null) {
+      throw e;
     }
   }
 
