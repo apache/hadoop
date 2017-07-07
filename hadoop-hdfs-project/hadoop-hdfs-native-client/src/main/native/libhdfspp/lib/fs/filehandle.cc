@@ -181,7 +181,10 @@ void FileHandleImpl::AsyncPreadSome(
     return;
   }
 
-  if(offset >= file_info_->file_length_){
+  if(offset == file_info_->file_length_) {
+    handler(Status::OK(), "", 0);
+    return;
+  } else if(offset > file_info_->file_length_){
     handler(Status::InvalidOffset("AsyncPreadSome: trying to begin a read past the EOF"), "", 0);
     return;
   }
