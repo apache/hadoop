@@ -107,6 +107,10 @@ each filesystem for its testing.
 1. `test.fs.s3n.name` : the URL of the bucket for S3n tests
 1. `test.fs.s3a.name` : the URL of the bucket for S3a tests
 
+*Note* that running s3a and s3n tests in parallel mode, against the same bucket
+is unreliable.  We recommend using separate buckets or testing one connector
+at a time.
+
 The contents of each bucket will be destroyed during the test process:
 do not use the bucket for any purpose other than testing. Furthermore, for
 s3a, all in-progress multi-part uploads to the bucket will be aborted at the

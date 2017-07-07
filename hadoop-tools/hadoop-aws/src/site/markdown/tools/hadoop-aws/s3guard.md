@@ -443,7 +443,7 @@ at a time until the operations appear to be working.
 mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
 ```
 
-Notes
+### Notes
 
 1. If the `s3guard` profile is not set, then the s3guard properties are those
 of the test configuration set in `contract-test-options.xml` or `auth-keys.xml`
@@ -452,8 +452,14 @@ If the `s3guard` profile *is* set,
 1. The s3guard options from maven (the dynamo and authoritative flags)
   overwrite any previously set. in the configuration files.
 1. Dynamo will be configured to create any missing tables.
-1. 
 
+### Warning About Concurrent Tests
+
+You should not run S3A and S3N tests in parallel on the same bucket.  This is
+especially true when S3Guard is enabled.  S3Guard requires that all clients
+that are modifying the bucket have S3Guard enabled, so having S3N
+integration tests running in parallel with S3A tests will cause strange
+failures.
 
 ### Scale Testing MetadataStore Directly
 
