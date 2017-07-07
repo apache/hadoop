@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,25 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
-
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-
-import java.io.IOException;
-
 /**
- * Interface for allowing changing scheduler configurations.
+ * Data structures for scheduler configuration mutation info.
  */
-public interface MutableConfigurationProvider {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.yarn.webapp.dao;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-  /**
-   * Update the scheduler configuration with the provided key value pairs.
-   * @param user User issuing the request
-   * @param confUpdate Key-value pairs for configurations to be updated.
-   * @throws IOException if scheduler could not be reinitialized
-   */
-  void mutateConfiguration(UserGroupInformation user, SchedConfUpdateInfo
-      confUpdate) throws IOException;
-
-}
