@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
+package org.apache.hadoop.yarn.webapp.dao;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,16 +54,32 @@ public class SchedConfUpdateInfo {
     return addQueueInfo;
   }
 
+  public void setAddQueueInfo(ArrayList<QueueConfigInfo> addQueueInfo) {
+    this.addQueueInfo = addQueueInfo;
+  }
+
   public ArrayList<String> getRemoveQueueInfo() {
     return removeQueueInfo;
+  }
+
+  public void setRemoveQueueInfo(ArrayList<String> removeQueueInfo) {
+    this.removeQueueInfo = removeQueueInfo;
   }
 
   public ArrayList<QueueConfigInfo> getUpdateQueueInfo() {
     return updateQueueInfo;
   }
 
+  public void setUpdateQueueInfo(ArrayList<QueueConfigInfo> updateQueueInfo) {
+    this.updateQueueInfo = updateQueueInfo;
+  }
+
   @XmlElementWrapper(name = "global-updates")
   public HashMap<String, String> getGlobalParams() {
     return global;
+  }
+
+  public void setGlobalParams(HashMap<String, String> globalInfo) {
+    this.global = globalInfo;
   }
 }

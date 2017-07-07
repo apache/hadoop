@@ -142,6 +142,9 @@ function yarncmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.router.Router'
     ;;
+    schedconf)
+    HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'
+    ;;
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'
     ;;
