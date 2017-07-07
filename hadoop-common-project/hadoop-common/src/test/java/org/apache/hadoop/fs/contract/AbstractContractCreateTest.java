@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
@@ -40,7 +41,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
  * Test creating files, overwrite options etc.
  */
 public abstract class AbstractContractCreateTest extends
-                                                 AbstractFSContractTestBase {
+    AbstractFSContractTestBase {
 
   /**
    * How long to wait for a path to become visible.
@@ -331,5 +332,108 @@ public abstract class AbstractContractCreateTest extends
         1, fs.listStatus(grandparent).length);
     assertTrue("Grandparent directory does not appear to be a directory",
         fs.getFileStatus(grandparent).isDirectory());
+  }
+
+  @Test
+  public void testCreateFileUnderFile() throws Throwable {
+    describe("Verify that it is forbidden to create file/file");
+    Path grandparent = methodPath();
+    Path parent = new Path(grandparent, "parent");
+    expectCreateUnderFileFails(
+        "creating a file under a file",
+        grandparent,
+        parent);
+  }
+
+  @Test
+  public void testCreateUnderFileSubdir() throws Throwable {
+    describe("Verify that it is forbidden to create file/dir/file");
+    Path grandparent = methodPath();
+    Path parent = new Path(grandparent, "parent");
+    Path child = new Path(parent, "child");
+    expectCreateUnderFileFails(
+        "creating a file under a subdirectory of a file",
+        grandparent,
+        child);
+  }
+
+
+  @Test
+  public void testMkdirUnderFile() throws Throwable {
+    describe("Verify that it is forbidden to create file/dir");
+    Path grandparent = methodPath();
+    Path parent = new Path(grandparent, "parent");
+    expectMkdirsUnderFileFails("mkdirs() under a file",
+        grandparent, parent);
+  }
+
+  @Test
+  public void testMkdirUnderFileSubdir() throws Throwable {
+    describe("Verify that it is forbidden to create file/dir/dir");
+    Path grandparent = methodPath();
+    Path parent = new Path(grandparent, "parent");
+    Path child = new Path(parent, "child");
+    expectMkdirsUnderFileFails("mkdirs() file/dir",
+        grandparent, child);
+
+    try {
+      // create the child
+      mkdirs(child);
+    } catch (FileAlreadyExistsException | ParentNotDirectoryException ex) {
+      // either of these may be raised.
+      handleExpectedException(ex);
+    } catch (IOException e) {
+      handleRelaxedException("creating a file under a subdirectory of a file ",
+          "FileAlreadyExistsException",
+          e);
+    }
+  }
+
+  /**
+   * Expect that touch() will fail because the parent is a file.
+   * @param action action for message
+   * @param file filename to create
+   * @param path path under file
+   * @throws Exception
+   */
+  protected void expectCreateUnderFileFails(String action,
+      Path file, Path path)
+      throws Exception {
+    createFile(path);
+    try {
+      // create the child
+      createFile(path);
+    } catch (FileAlreadyExistsException | ParentNotDirectoryException ex) {
+      //expected
+      handleExpectedException(ex);
+    } catch (IOException e) {
+      handleRelaxedException(action,
+          "ParentNotDirectoryException",
+          e);
+    }
+  }
+
+  protected void expectMkdirsUnderFileFails(String action,
+      Path file, Path path)
+      throws Exception {
+    createFile(path);
+    try {
+      // now mkdirs
+      mkdirs(path);
+    } catch (FileAlreadyExistsException | ParentNotDirectoryException ex) {
+      //expected
+      handleExpectedException(ex);
+    } catch (IOException e) {
+      handleRelaxedException(action,
+          "ParentNotDirectoryException",
+          e);
+    }
+  }
+
+  private void createFile(Path path) throws IOException {
+    byte[] data = dataset(256, 'a', 'z');
+    FileSystem fs = getFileSystem();
+    writeDataset(fs, path, data, data.length, 1024 * 1024,
+        true);
   }
 }

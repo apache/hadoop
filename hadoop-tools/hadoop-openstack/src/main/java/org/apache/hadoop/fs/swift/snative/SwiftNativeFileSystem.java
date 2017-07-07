@@ -596,14 +596,12 @@ public class SwiftNativeFileSystem extends FileSystem {
       store.rename(makeAbsolute(src), makeAbsolute(dst));
       //success
       return true;
-    } catch (SwiftOperationFailedException e) {
+    } catch (SwiftOperationFailedException
+        | FileAlreadyExistsException
+        | FileNotFoundException
+        | ParentNotDirectoryException e) {
       //downgrade to a failure
-      return false;
-    } catch (FileAlreadyExistsException e) {
-      //downgrade to a failure
-      return false;
-    } catch (FileNotFoundException e) {
-      //downgrade to a failure
+      LOG.debug("rename({}, {}) failed",src, dst, e);
       return false;
     }
   }

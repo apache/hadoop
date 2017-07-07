@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.swift.snative;
 
 import com.fasterxml.jackson.databind.type.CollectionType;
 
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.apache.http.message.BasicHeader;
@@ -562,12 +563,16 @@ public class SwiftNativeFileSystemStore {
     //parent dir (in which case the dest dir exists), or the destination
     //directory is root, in which case it must also exist
     if (dstParent != null && !dstParent.equals(srcParent)) {
+      SwiftFileStatus fileStatus;
       try {
-        getObjectMetadata(dstParent);
+        fileStatus = getObjectMetadata(dstParent);
       } catch (FileNotFoundException e) {
         //destination parent doesn't exist; bail out
         LOG.debug("destination parent directory " + dstParent + " doesn't exist");
         throw e;
+      }
+      if (!fileStatus.isDir()) {
+        throw new ParentNotDirectoryException(dstParent.toString());
       }
     }
 

@@ -535,9 +535,17 @@ Create a directory and all its parents
 #### Preconditions
 
 
+The path must either be a directory or not exist
+ 
      if exists(FS, p) and not isDir(FS, p) :
          raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
+    
 
 #### Postconditions
 
@@ -577,6 +585,12 @@ Writing to or overwriting a directory must fail.
 
     if isDir(FS, p) : raise {FileAlreadyExistsException, FileNotFoundException, IOException}
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
+  
 
 FileSystems may reject the request for other
 reasons, such as the FS being read-only  (HDFS),

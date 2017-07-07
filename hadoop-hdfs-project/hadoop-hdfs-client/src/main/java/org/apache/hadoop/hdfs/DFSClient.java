@@ -1543,7 +1543,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           DSQuotaExceededException.class,
           QuotaByStorageTypeExceededException.class,
           UnresolvedPathException.class,
-          SnapshotAccessControlException.class);
+          SnapshotAccessControlException.class,
+          ParentNotDirectoryException.class);
     }
   }
 
