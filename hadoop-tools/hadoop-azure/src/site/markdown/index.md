@@ -317,7 +317,6 @@ To enable SAS key generation locally following property needs to be set to true.
 ```
 
 To use the remote SAS key generation mode, comma separated external REST services are expected to provided required SAS keys.
->>>>>>> 7576a688ea84aed7206321b1f03594e43a5f216e
 Following property can used to provide the end point to use for remote SAS Key generation:
 
 ```xml
@@ -360,7 +359,6 @@ the authorization. The service is expected to be running on comma separated URLs
 ```xml
 <property>
   <name>fs.azure.authorization.remote.service.urls</name>
->>>>>>> 7576a688ea84aed7206321b1f03594e43a5f216e
   <value>{URL}</value>
 </property>
 ```
