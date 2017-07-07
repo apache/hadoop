@@ -22,6 +22,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * The interface to call into underlying container layer.
@@ -58,6 +59,21 @@ public interface ScmClient {
    * @throws IOException
    */
   void deleteContainer(Pipeline pipeline, boolean force) throws IOException;
+
+  /**
+   * Lists a range of containers and get the pipelines info.
+   *
+   * @param startName start name, if null, start searching at the head.
+   * @param prefixName prefix name, if null, then filter is disabled.
+   * @param count count, if count < 0, the max size is unlimited.(
+   *              Usually the count will be replace with a very big
+   *              value instead of being unlimited in case the db is very big)
+   *
+   * @return a list of pipeline.
+   * @throws IOException
+   */
+  List<Pipeline> listContainer(String startName, String prefixName, int count)
+      throws IOException;
 
   /**
    * Read meta data from an existing container.

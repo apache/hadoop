@@ -18,11 +18,21 @@
 
 package org.apache.hadoop.scm.container.common.helpers;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,6 +52,26 @@ public class Pipeline {
    * private data.
    */
   private byte[] data;
+
+  static final String PIPELINE_INFO = "PIPELINE_INFO_FILTER";
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    String[] ignorableFieldNames = {"data", "leaderID", "datanodes"};
+    FilterProvider filters = new SimpleFilterProvider()
+        .addFilter(PIPELINE_INFO, SimpleBeanPropertyFilter
+            .serializeAllExcept(ignorableFieldNames));
+    mapper.setVisibility(PropertyAccessor.FIELD,
+        JsonAutoDetect.Visibility.ANY);
+    mapper.addMixIn(Object.class, MixIn.class);
+
+    WRITER = mapper.writer(filters);
+  }
+
+  @JsonFilter(PIPELINE_INFO)
+  class MixIn {
+  }
 
   /**
    * Constructs a new pipeline data structure.
@@ -86,8 +116,18 @@ public class Pipeline {
    *
    * @return First Machine.
    */
+  @JsonIgnore
   public DatanodeID getLeader() {
     return datanodes.get(leaderID);
+  }
+
+  /**
+   * Returns the leader host.
+   *
+   * @return First Machine.
+   */
+  public String getLeaderHost() {
+    return datanodes.get(leaderID).getHostName();
   }
 
   /**
@@ -95,8 +135,22 @@ public class Pipeline {
    *
    * @return List of Machines.
    */
+  @JsonIgnore
   public List<DatanodeID> getMachines() {
     return new ArrayList<>(datanodes.values());
+  }
+
+  /**
+   * Returns all machines that make up this pipeline.
+   *
+   * @return List of Machines.
+   */
+  public List<String> getDatanodeHosts() {
+    List<String> dataHosts = new ArrayList<>();
+    for (DatanodeID id : datanodes.values()) {
+      dataHosts.add(id.getHostName());
+    }
+    return dataHosts;
   }
 
   /**
@@ -104,6 +158,7 @@ public class Pipeline {
    *
    * @return Protobuf message
    */
+  @JsonIgnore
   public OzoneProtos.Pipeline getProtobufMessage() {
     OzoneProtos.Pipeline.Builder builder =
         OzoneProtos.Pipeline.newBuilder();
@@ -164,5 +219,15 @@ public class Pipeline {
         .forEach(id -> b.append(id.endsWith(leaderID)? "*" + id : id));
     b.append("] container:").append(containerName);
     return b.toString();
+  }
+
+  /**
+   * Returns a JSON string of this object.
+   *
+   * @return String - json string
+   * @throws IOException
+   */
+  public String toJsonString() throws IOException {
+    return WRITER.writeValueAsString(this);
   }
 }
