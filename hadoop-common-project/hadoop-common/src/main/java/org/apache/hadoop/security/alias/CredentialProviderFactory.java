@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -46,6 +47,15 @@ public abstract class CredentialProviderFactory {
 
   private static final ServiceLoader<CredentialProviderFactory> serviceLoader =
       ServiceLoader.load(CredentialProviderFactory.class);
+
+  // Iterate through the serviceLoader to avoid lazy loading.
+  // Lazy loading would require synchronization in concurrent use cases.
+  static {
+    Iterator<CredentialProviderFactory> iterServices = serviceLoader.iterator();
+    while (iterServices.hasNext()) {
+      iterServices.next();
+    }
+  }
 
   public static List<CredentialProvider> getProviders(Configuration conf
                                                ) throws IOException {
