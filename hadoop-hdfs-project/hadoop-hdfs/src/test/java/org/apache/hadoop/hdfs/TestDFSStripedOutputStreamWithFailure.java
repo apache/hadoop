@@ -391,6 +391,34 @@ public class TestDFSStripedOutputStreamWithFailure {
   }
 
   /**
+   * When all the two DataNodes with partial data block fail
+   */
+  @Test
+  public void runTestWithMultipleFailure2() throws Exception {
+    final HdfsConfiguration conf = newHdfsConfiguration();
+    // two DNs have cellSize and the other DNs have cellSize*2
+    final int length = cellSize * (dataBlocks * 2 - 2);
+    // select the two DNs with partial block to kill
+    final int[] dnIndex = {dataBlocks - 2, dataBlocks - 1};
+    final int[] killPos = getKillPositions(length, dnIndex.length);
+
+    try {
+      LOG.info("runTestWithMultipleFailure2: length==" + length + ", killPos="
+          + Arrays.toString(killPos) + ", dnIndex="
+          + Arrays.toString(dnIndex));
+      setup(conf);
+      runTest(length, killPos, dnIndex, false);
+    } catch (Throwable e) {
+      final String err = "failed, killPos=" + Arrays.toString(killPos)
+          + ", dnIndex=" + Arrays.toString(dnIndex) + ", length=" + length;
+      LOG.error(err);
+      throw e;
+    } finally {
+      tearDown();
+    }
+  }
+
+  /**
    * runTest implementation.
    * @param length file length
    * @param killPos killing positions in ascending order
