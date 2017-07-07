@@ -165,6 +165,16 @@ public interface MetadataStore extends Closeable {
   void put(PathMetadata meta) throws IOException;
 
   /**
+   * Saves metadata for any number of paths.
+   *
+   * Semantics are otherwise the same as single-path puts.
+   *
+   * @param metas the metadata to save
+   * @throws IOException if there is an error
+   */
+  void put(Collection<PathMetadata> metas) throws IOException;
+
+  /**
    * Save directory listing metadata. Callers may save a partial directory
    * listing for a given path, or may store a complete and authoritative copy
    * of the directory listing.  {@code MetadataStore} implementations may

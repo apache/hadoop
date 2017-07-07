@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -436,6 +436,30 @@ public class DynamoDBMetadataStore implements MetadataStore {
     }
   }
 
+  Collection<PathMetadata> completeAncestry(
+      Collection<PathMetadata> pathsToCreate) {
+    // Key on path to allow fast lookup
+    Map<Path, PathMetadata> ancestry = new HashMap<>();
+
+    for (PathMetadata meta : pathsToCreate) {
+      Preconditions.checkArgument(meta != null);
+      Path path = meta.getFileStatus().getPath();
+      if (path.isRoot()) {
+        break;
+      }
+      ancestry.put(path, meta);
+      Path parent = path.getParent();
+      while (!parent.isRoot() && !ancestry.containsKey(parent)) {
+        LOG.debug("auto-create ancestor path {} for child path {}",
+            parent, path);
+        final FileStatus status = makeDirStatus(parent, username);
+        ancestry.put(parent, new PathMetadata(status, Tristate.FALSE, false));
+        parent = parent.getParent();
+      }
+    }
+     return ancestry.values();
+   }
+
   @Override
   public void move(Collection<Path> pathsToDelete,
       Collection<PathMetadata> pathsToCreate) throws IOException {
@@ -457,27 +481,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // ancestor paths that are not explicitly added to paths to create
     Collection<PathMetadata> newItems = new ArrayList<>();
     if (pathsToCreate != null) {
-      newItems.addAll(pathsToCreate);
-      // help set for fast look up; we should avoid putting duplicate paths
-      final Collection<Path> fullPathsToCreate = new HashSet<>();
-      for (PathMetadata meta : pathsToCreate) {
-        fullPathsToCreate.add(meta.getFileStatus().getPath());
-      }
-
-      for (PathMetadata meta : pathsToCreate) {
-        Preconditions.checkArgument(meta != null);
-        Path parent = meta.getFileStatus().getPath().getParent();
-        while (parent != null
-            && !parent.isRoot()
-            && !fullPathsToCreate.contains(parent)) {
-          LOG.debug("move: auto-create ancestor path {} for child path {}",
-              parent, meta.getFileStatus().getPath());
-          final FileStatus status = makeDirStatus(parent, username);
-          newItems.add(new PathMetadata(status, Tristate.FALSE, false));
-          fullPathsToCreate.add(parent);
-          parent = parent.getParent();
-        }
-      }
+      newItems.addAll(completeAncestry(pathsToCreate));
     }
     if (pathsToDelete != null) {
       for (Path meta : pathsToDelete) {
@@ -575,7 +579,17 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // For performance purpose, we generate the full paths to put and use batch
     // write item request to save the items.
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
-    processBatchWriteRequest(null, pathMetadataToItem(fullPathsToPut(meta)));
+
+    Collection<PathMetadata> wrapper = new ArrayList<>(1);
+    wrapper.add(meta);
+    put(wrapper);
+  }
+
+  @Override
+  public void put(Collection<PathMetadata> metas) throws IOException {
+    LOG.debug("Saving batch to table {} in region {}", tableName, region);
+
+    processBatchWriteRequest(null, pathMetadataToItem(completeAncestry(metas)));
   }
 
   /**

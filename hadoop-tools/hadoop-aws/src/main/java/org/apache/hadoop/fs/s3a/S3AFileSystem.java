@@ -1773,7 +1773,7 @@ public class S3AFileSystem extends FileSystem {
       String key = pathToKey(f);
       createFakeDirectory(key);
     }
-    S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username);
+    S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username, true);
     // this is complicated because getParent(a/b/c/) returns a/b/c, but
     // we want a/b. See HADOOP-14428 for more details.
     deleteUnnecessaryFakeDirectories(new Path(f.toString()).getParent());
@@ -2292,6 +2292,7 @@ public class S3AFileSystem extends FileSystem {
     // See note about failure semantics in s3guard.md doc.
     try {
       if (hasMetadataStore()) {
+        S3Guard.addAncestors(metadataStore, p, username);
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username);

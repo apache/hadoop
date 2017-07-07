@@ -89,6 +89,11 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
+  public void put(Collection<PathMetadata> meta) throws IOException {
+    return;
+  }
+
+  @Override
   public void put(DirListingMetadata meta) throws IOException {
     return;
   }

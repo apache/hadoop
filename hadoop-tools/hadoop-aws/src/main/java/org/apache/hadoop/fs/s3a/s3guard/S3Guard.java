@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -251,9 +252,10 @@ public final class S3Guard {
    *              an empty, dir, and the other dirs only contain their child
    *              dir.
    * @param owner Hadoop user name.
+   * @param authoritative Whether to mark new directories as authoritative.
    */
   public static void makeDirsOrdered(MetadataStore ms, List<Path> dirs,
-      String owner) {
+      String owner, boolean authoritative) {
     if (dirs == null) {
       return;
     }
@@ -286,7 +288,7 @@ public final class S3Guard {
         children.add(new PathMetadata(prevStatus));
       }
       DirListingMetadata dirMeta =
-          new DirListingMetadata(f, children, true);
+          new DirListingMetadata(f, children, authoritative);
       try {
         ms.put(dirMeta);
         ms.put(new PathMetadata(status));
@@ -394,6 +396,25 @@ public final class S3Guard {
       parentSrc = parentSrc.getParent();
       parentDst = parentDst.getParent();
     }
+  }
+
+  public static void addAncestors(MetadataStore metadataStore,
+      Path qualifiedPath, String username) throws IOException {
+    Collection<PathMetadata> newDirs = new ArrayList<>();
+    Path parent = qualifiedPath.getParent();
+    while (!parent.isRoot()) {
+      PathMetadata directory = metadataStore.get(parent);
+      if (directory == null || directory.isDeleted()) {
+        FileStatus status = new FileStatus(0, true, 1, 0, 0, 0, null, username,
+            null, parent);
+        PathMetadata meta = new PathMetadata(status, Tristate.UNKNOWN, false);
+        newDirs.add(meta);
+      } else {
+        break;
+      }
+      parent = parent.getParent();
+    }
+    metadataStore.put(newDirs);
   }
 
   private static void addMoveStatus(Collection<Path> srcPaths,

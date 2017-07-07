@@ -273,6 +273,13 @@ public class LocalMetadataStore implements MetadataStore {
     dirHash.put(standardize(meta.getPath()), meta);
   }
 
+  public synchronized void put(Collection<PathMetadata> metas) throws
+      IOException {
+    for (PathMetadata meta : metas) {
+      put(meta);
+    }
+  }
+
   @Override
   public void close() throws IOException {
 
