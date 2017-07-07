@@ -18,21 +18,21 @@
 package org.apache.hadoop.io.serializer;
 
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
-import org.slf4j.event.Level;
+import org.apache.log4j.Level;
 
 public class TestSerializationFactory {
 
   static {
-    GenericTestUtils.setLogLevel(SerializationFactory.LOG, Level.TRACE);
+    ((Log4JLogger) SerializationFactory.LOG).getLogger().setLevel(Level.ALL);
   }
 
   static Configuration conf;

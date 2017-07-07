@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -33,7 +32,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.event.Level;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
@@ -63,7 +61,8 @@ public abstract class FileContextPermissionBase {
   
   {
     try {
-      GenericTestUtils.setLogLevel(FileSystem.LOG, Level.DEBUG);
+      ((org.apache.commons.logging.impl.Log4JLogger)FileSystem.LOG).getLogger()
+      .setLevel(org.apache.log4j.Level.DEBUG);
     }
     catch(Exception e) {
       System.out.println("Cannot change log level\n"

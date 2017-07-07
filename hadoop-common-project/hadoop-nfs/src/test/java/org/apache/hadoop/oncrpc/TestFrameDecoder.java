@@ -28,7 +28,8 @@ import java.util.Random;
 import org.apache.hadoop.oncrpc.RpcUtil.RpcFrameDecoder;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -37,12 +38,11 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.slf4j.event.Level;
 
 public class TestFrameDecoder {
   
   static {
-    GenericTestUtils.setLogLevel(RpcProgram.LOG, Level.TRACE);
+    ((Log4JLogger) RpcProgram.LOG).getLogger().setLevel(Level.ALL);
   }
 
   private static int resultSize;

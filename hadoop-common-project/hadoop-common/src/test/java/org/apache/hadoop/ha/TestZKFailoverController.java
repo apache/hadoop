@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import java.security.NoSuchAlgorithmException;
 
 import com.google.common.base.Supplier;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
@@ -29,6 +30,7 @@ import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.ha.MiniZKFCCluster.DummyZKFC;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
@@ -39,7 +41,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
-import org.slf4j.event.Level;
 
 public class TestZKFailoverController extends ClientBaseWithFixes {
   private Configuration conf;
@@ -70,7 +71,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     "digest:" + DIGEST_USER_HASH + ":rwcda";
   
   static {
-    GenericTestUtils.setLogLevel(ActiveStandbyElector.LOG, Level.TRACE);
+    ((Log4JLogger)ActiveStandbyElector.LOG).getLogger().setLevel(Level.ALL);
   }
   
   @Before

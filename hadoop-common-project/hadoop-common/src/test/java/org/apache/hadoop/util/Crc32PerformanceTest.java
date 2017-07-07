@@ -27,11 +27,10 @@ import java.util.Random;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.slf4j.event.Level;
-
-import static org.slf4j.LoggerFactory.getLogger;
+import org.apache.log4j.Level;
 
 /**
  * Performance tests to compare performance of Crc32|Crc32C implementations
@@ -177,8 +176,8 @@ public class Crc32PerformanceTest {
         crcs.add(Crc32.Native.class);
       }
       crcs.add(Crc32.NativeC.class);
-      GenericTestUtils.setLogLevel(getLogger(NativeCodeLoader.class),
-          Level.TRACE);
+      ((Log4JLogger)LogFactory.getLog(NativeCodeLoader.class))
+          .getLogger().setLevel(Level.ALL);
     }
   }
 

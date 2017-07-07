@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -29,7 +30,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.slf4j.event.Level;
 
 /**
  * <p>

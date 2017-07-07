@@ -25,16 +25,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.Test;
-import org.slf4j.event.Level;
 
 public class TestGroupFallback {
   public static final Log LOG = LogFactory.getLog(TestGroupFallback.class);
 
   @Test
   public void testGroupShell() throws Exception {
-    GenericTestUtils.setRootLogLevel(Level.DEBUG);
+    Logger.getRootLogger().setLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
@@ -50,7 +50,7 @@ public class TestGroupFallback {
 
   @Test
   public void testNetgroupShell() throws Exception {
-    GenericTestUtils.setRootLogLevel(Level.DEBUG);
+    Logger.getRootLogger().setLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.ShellBasedUnixGroupsNetgroupMapping");
@@ -69,7 +69,7 @@ public class TestGroupFallback {
     LOG.info("running 'mvn -Pnative -DTestGroupFallback clear test' will " +
         "test the normal path and 'mvn -DTestGroupFallback clear test' will" +
         " test the fall back functionality");
-    GenericTestUtils.setRootLogLevel(Level.DEBUG);
+    Logger.getRootLogger().setLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback");
@@ -88,7 +88,7 @@ public class TestGroupFallback {
     LOG.info("running 'mvn -Pnative -DTestGroupFallback clear test' will " +
         "test the normal path and 'mvn -DTestGroupFallback clear test' will" +
         " test the fall back functionality");
-    GenericTestUtils.setRootLogLevel(Level.DEBUG);
+    Logger.getRootLogger().setLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMappingWithFallback");
