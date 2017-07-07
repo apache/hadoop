@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm.container;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -31,6 +32,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.utils.LevelDBKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.iq80.leveldb.Options;
 import org.slf4j.Logger;
@@ -41,7 +43,9 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -173,6 +177,37 @@ public class ContainerMapping implements Mapping {
     } finally {
       lock.unlock();
     }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public List<Pipeline> listContainer(String startName,
+      String prefixName, int count)
+      throws IOException {
+    List<Pipeline> pipelineList = new ArrayList<>();
+    lock.lock();
+    try {
+      if(containerStore.isEmpty()) {
+        throw new IOException("No container exists in current db");
+      }
+      KeyPrefixFilter prefixFilter = new KeyPrefixFilter(prefixName);
+      byte[] startKey = startName == null ?
+          null : DFSUtil.string2Bytes(startName);
+      List<Map.Entry<byte[], byte[]>> range =
+          containerStore.getRangeKVs(startKey, count, prefixFilter);
+
+      // Transform the values into the pipelines.
+      for (Map.Entry<byte[], byte[]> entry : range) {
+        Pipeline pipeline = Pipeline.getFromProtoBuf(
+            OzoneProtos.Pipeline.PARSER.parseFrom(entry.getValue()));
+        pipelineList.add(pipeline);
+      }
+    } finally {
+      lock.unlock();
+    }
+    return pipelineList;
   }
 
   /**
