@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import java.io.IOException;
+import java.util.List;
+
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -36,6 +38,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.DeleteContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.ListContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.ListContainerRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 
@@ -84,6 +90,38 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       return GetContainerResponseProto.newBuilder()
           .setPipeline(pipeline.getProtobufMessage())
           .build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ListContainerResponseProto listContainer(RpcController controller,
+      ListContainerRequestProto request) throws ServiceException {
+    try {
+      String startName = null;
+      String prefixName = null;
+      int count = -1;
+
+      // Arguments check.
+      if (request.hasPrefixName()) {
+        // End container name is given.
+        prefixName = request.getPrefixName();
+      }
+      if (request.hasStartName()) {
+        // End container name is given.
+        startName = request.getStartName();
+      }
+
+      count = request.getCount();
+      List<Pipeline> pipelineList = impl.listContainer(startName,
+          prefixName, count);
+      ListContainerResponseProto.Builder builder =
+          ListContainerResponseProto.newBuilder();
+      for (Pipeline pipeline : pipelineList) {
+        builder.addPipeline(pipeline.getProtobufMessage());
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

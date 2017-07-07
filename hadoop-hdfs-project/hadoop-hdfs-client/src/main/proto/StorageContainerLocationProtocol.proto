@@ -66,6 +66,16 @@ message GetContainerResponseProto {
   required hadoop.hdfs.ozone.Pipeline pipeline = 1;
 }
 
+message ListContainerRequestProto {
+  required uint32 count = 1;
+  optional string startName = 2;
+  optional string prefixName = 3;
+}
+
+message ListContainerResponseProto {
+  repeated hadoop.hdfs.ozone.Pipeline pipeline = 1;
+}
+
 message DeleteContainerRequestProto {
   required string containerName = 1;
 }
@@ -90,6 +100,8 @@ service StorageContainerLocationProtocolService {
    * Returns the pipeline for a given container.
    */
   rpc getContainer(GetContainerRequestProto) returns (GetContainerResponseProto);
+
+  rpc listContainer(ListContainerRequestProto) returns (ListContainerResponseProto);
 
   /**
    * Deletes a container in SCM.

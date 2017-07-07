@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -154,6 +155,17 @@ public class ContainerOperationClient implements ScmClient {
         xceiverClientManager.releaseClient(client);
       }
     }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public List<Pipeline> listContainer(String startName,
+      String prefixName, int count)
+      throws IOException {
+    return storageContainerLocationClient.listContainer(
+        startName, prefixName, count);
   }
 
   /**

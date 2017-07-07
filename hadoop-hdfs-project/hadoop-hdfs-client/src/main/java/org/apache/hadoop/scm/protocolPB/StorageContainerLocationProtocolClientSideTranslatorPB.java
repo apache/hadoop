@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
@@ -32,10 +33,14 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -123,6 +128,36 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       GetContainerResponseProto response =
           rpcProxy.getContainer(NULL_RPC_CONTROLLER, request);
       return Pipeline.getFromProtoBuf(response.getPipeline());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public List<Pipeline> listContainer(String startName, String prefixName,
+      int count) throws IOException {
+    ListContainerRequestProto.Builder builder = ListContainerRequestProto
+        .newBuilder();
+    if (prefixName != null) {
+      builder.setPrefixName(prefixName);
+    }
+    if (startName != null) {
+      builder.setStartName(startName);
+    }
+    builder.setCount(count);
+    ListContainerRequestProto request = builder.build();
+
+    try {
+      ListContainerResponseProto response =
+          rpcProxy.listContainer(NULL_RPC_CONTROLLER, request);
+      List<Pipeline> pipelineList = new ArrayList<>();
+      for (OzoneProtos.Pipeline pipelineProto : response.getPipelineList()) {
+        pipelineList.add(Pipeline.getFromProtoBuf(pipelineProto));
+      }
+      return pipelineList;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

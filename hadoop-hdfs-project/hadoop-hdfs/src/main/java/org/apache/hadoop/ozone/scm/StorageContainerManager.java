@@ -406,6 +406,15 @@ public class StorageContainerManager
    * {@inheritDoc}
    */
   @Override
+  public List<Pipeline> listContainer(String startName,
+      String prefixName, int count) throws IOException {
+    return scmContainerManager.listContainer(startName, prefixName, count);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public void deleteContainer(String containerName) throws IOException {
     checkAdminAccess();
     scmContainerManager.deleteContainer(containerName);

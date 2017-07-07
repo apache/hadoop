@@ -353,6 +353,107 @@ public class TestSCMCli {
   }
 
   @Test
+  public void testListContainerCommand() throws Exception {
+    // Create 20 containers for testing.
+    String prefix = "ContainerForTesting";
+    for (int index = 0; index < 20; index++) {
+      String containerName = String.format("%s%02d", prefix, index);
+      Pipeline pipeline = scm.allocateContainer(containerName);
+      ContainerData data = new ContainerData(containerName);
+      containerManager.createContainer(pipeline, data);
+    }
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+    // Test without -start, -prefix and -count
+    String[] args = new String[] {"-container", "-list"};
+    int exitCode = runCommandAndGetOutput(args, out, err);
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertTrue(err.toString()
+        .contains("Expecting container count"));
+
+    out.reset();
+    err.reset();
+
+    // Test with -start and -count, the value of -count is negative.
+    args = new String[] {"-container", "-list",
+        "-start", prefix + 0, "-count", "-1"};
+    exitCode = runCommandAndGetOutput(args, out, err);
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertTrue(err.toString()
+        .contains("-count should not be negative"));
+
+    out.reset();
+    err.reset();
+
+    String startName = String.format("%s%02d", prefix, 0);
+
+    // Test with -start and -count.
+    args = new String[] {"-container", "-list", "-start",
+        startName, "-count", "10"};
+    exitCode = runCommandAndGetOutput(args, out, err);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    for (int index = 0; index < 10; index++) {
+      String containerName = String.format("%s%02d", prefix, index);
+      assertTrue(out.toString().contains(containerName));
+    }
+
+    out.reset();
+    err.reset();
+
+    // Test with -start, -prefix and -count.
+    startName = String.format("%s%02d", prefix, 0);
+    String prefixName = String.format("%s0", prefix);
+    args = new String[] {"-container", "-list", "-start",
+        startName, "-prefix", prefixName, "-count", "20"};
+    exitCode = runCommandAndGetOutput(args, out, err);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    for (int index = 0; index < 10; index++) {
+      String containerName = String.format("%s%02d", prefix, index);
+      assertTrue(out.toString().contains(containerName));
+    }
+
+    out.reset();
+    err.reset();
+
+    startName = String.format("%s%02d", prefix, 0);
+    prefixName = String.format("%s0", prefix);
+    args = new String[] {"-container", "-list", "-start",
+        startName, "-prefix", prefixName, "-count", "4"};
+    exitCode = runCommandAndGetOutput(args, out, err);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    for (int index = 0; index < 4; index++) {
+      String containerName = String.format("%s%02d", prefix, index);
+      assertTrue(out.toString().contains(containerName));
+    }
+
+    out.reset();
+    err.reset();
+
+    prefixName = String.format("%s0", prefix);
+    args = new String[] {"-container", "-list",
+        "-prefix", prefixName, "-count", "6"};
+    exitCode = runCommandAndGetOutput(args, out, err);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    for (int index = 0; index < 6; index++) {
+      String containerName = String.format("%s%02d", prefix, index);
+      assertTrue(out.toString().contains(containerName));
+    }
+
+    out.reset();
+    err.reset();
+
+    // Test with -start and -prefix, while -count doesn't exist.
+    prefixName = String.format("%s%02d", prefix, 20);
+    args = new String[] {"-container", "-list", "-start",
+        startName, "-prefix", prefixName, "-count", "10"};
+    exitCode = runCommandAndGetOutput(args, out, err);
+    assertEquals(ResultCode.SUCCESS, exitCode);
+    assertTrue(out.toString().isEmpty());
+  }
+
+  @Test
   public void testHelp() throws Exception {
     // TODO : this test assertion may break for every new help entry added
     // may want to disable this test some time later. For now, mainly to show
@@ -377,7 +478,8 @@ public class TestSCMCli {
         "where <commands> can be one of the following\n" +
         " -create   Create container\n" +
         " -delete   Delete container\n" +
-        " -info     Info container\n";
+        " -info     Info container\n" +
+        " -list     List container\n";
 
     assertEquals(expected1, testContent.toString());
     testContent.reset();
@@ -408,6 +510,17 @@ public class TestSCMCli {
         "where <option> is\n" +
         " -c <arg>   Specify container name\n";
     assertEquals(expected4, testContent.toString());
+    testContent.reset();
+
+    String[] args5 = {"-container", "-list", "-help"};
+    assertEquals(ResultCode.SUCCESS, cli.run(args5));
+    String expected5 =
+        "usage: hdfs scm -container -list <option>\n" +
+            "where <option> can be the following\n" +
+            " -count <arg>    Specify count number, required\n" +
+            " -prefix <arg>   Specify prefix container name\n" +
+            " -start <arg>    Specify start container name\n";
+    assertEquals(expected5, testContent.toString());
     testContent.reset();
 
     System.setOut(init);

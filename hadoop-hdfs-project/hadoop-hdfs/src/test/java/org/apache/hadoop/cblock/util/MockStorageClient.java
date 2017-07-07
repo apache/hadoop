@@ -23,6 +23,8 @@ import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class is the one that directly talks to SCM server.
@@ -59,6 +61,24 @@ public class MockStorageClient implements ScmClient {
   public void deleteContainer(Pipeline pipeline, boolean force)
       throws IOException {
 
+  }
+
+  /**
+   * This is a mock class, so returns the pipelines of start container
+   * and end container.
+   *
+   * @param startName start container name.
+   * @param prefixName prefix container name.
+   * @param count count.
+   * @return a list of pipeline.
+   * @throws IOException
+   */
+  @Override
+  public List<Pipeline> listContainer(String startName,
+      String prefixName, int count) throws IOException {
+    List<Pipeline> dataList = new ArrayList<>();
+    dataList.add(getContainer(startName));
+    return dataList;
   }
 
   /**

@@ -22,6 +22,7 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This is
@@ -36,6 +37,25 @@ public interface Mapping extends Closeable {
    * @throws IOException
    */
   Pipeline getContainer(String containerName) throws IOException;
+
+  /**
+   * Returns pipelines under certain conditions.
+   * Search container names from start name(exclusive),
+   * and use prefix name to filter the result. The max
+   * size of the searching range cannot exceed the
+   * value of count.
+   *
+   * @param startName start name, if null, start searching at the head.
+   * @param prefixName prefix name, if null, then filter is disabled.
+   * @param count count, if count < 0, the max size is unlimited.(
+   *              Usually the count will be replace with a very big
+   *              value instead of being unlimited in case the db is very big)
+   *
+   * @return a list of pipeline.
+   * @throws IOException
+   */
+  List<Pipeline> listContainer(String startName, String prefixName, int count)
+      throws IOException;
 
   /**
    * Allocates a new container for a given keyName.
