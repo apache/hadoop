@@ -62,6 +62,6 @@ public class ErasureEncodingStep implements ErasureCodingStep {
 
   @Override
   public void finish() {
-    rawEncoder.release();
+    // do nothing
   }
 }

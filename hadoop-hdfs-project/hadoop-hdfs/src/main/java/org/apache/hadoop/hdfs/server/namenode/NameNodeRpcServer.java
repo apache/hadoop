@@ -97,6 +97,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -109,9 +110,11 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.protocol.BlocksStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -1151,6 +1154,20 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public BlocksStats getBlocksStats() throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.READ);
+    return namesystem.getBlocksStats();
+  }
+
+  @Override // ClientProtocol
+  public ECBlockGroupsStats getECBlockGroupsStats() throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.READ);
+    return namesystem.getECBlockGroupsStats();
+  }
+
+  @Override // ClientProtocol
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
   throws IOException {
     checkNNStartup();
@@ -1290,6 +1307,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void metaSave(String filename) throws IOException {
     checkNNStartup();
     namesystem.metaSave(filename);
+  }
+
+  @Override // ClientProtocol
+  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId)
+      throws IOException {
+    checkNNStartup();
+    return namesystem.listOpenFiles(prevId);
   }
 
   @Override // ClientProtocol
@@ -1462,7 +1486,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
               blocks, context);
         }
       });
-      metrics.incrStorageBlockReportOps();
     }
     bm.removeBRLeaseIfNeeded(nodeReg, context);
 
@@ -2275,6 +2298,29 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
     return namesystem.addECPolicies(policies);
+  }
+
+  @Override
+  public void removeErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkNNStartup();
+    namesystem.removeErasureCodingPolicy(ecPolicyName);
+  }
+
+  @Override // ClientProtocol
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    namesystem.enableErasureCodingPolicy(ecPolicyName);
+  }
+
+  @Override // ClientProtocol
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    namesystem.disableErasureCodingPolicy(ecPolicyName);
   }
 
   @Override // ReconfigurationProtocol

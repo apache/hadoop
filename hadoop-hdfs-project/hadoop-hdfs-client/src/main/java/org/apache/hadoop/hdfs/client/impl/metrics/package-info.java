@@ -16,15 +16,12 @@
  * limitations under the License.
  */
 
-import { moduleFor, test } from 'ember-qunit';
+/**
+ * Support for tracking Block Reader Local's latencies.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+package org.apache.hadoop.hdfs.client.impl.metrics;
 
-moduleFor('controller:yarn-app/charts', 'Unit | Controller | yarn app/charts', {
-  // Specify the other units that are required for this test.
-  // needs: ['controller:foo']
-});
-
-// Replace this with your real tests.
-test('it exists', function(assert) {
-  let controller = this.subject();
-  assert.ok(controller);
-});
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

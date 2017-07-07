@@ -17,25 +17,28 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This tests write operation of DFS striped file with a random erasure code
- * policy except for the default policy.
+ * This test extends TestErasureCodingPolicies to use a random (non-default) EC
+ * policy.
  */
-public class TestDFSStripedOutputStreamWithRandomECPolicy extends
-    TestDFSStripedOutputStream {
-
-  private static final Log LOG = LogFactory.getLog(
-      TestDFSStripedOutputStreamWithRandomECPolicy.class.getName());
+public class TestErasureCodingPoliciesWithRandomECPolicy extends
+    TestErasureCodingPolicies {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestErasureCodingPoliciesWithRandomECPolicy.class);
 
   private ErasureCodingPolicy ecPolicy;
 
-  public TestDFSStripedOutputStreamWithRandomECPolicy() {
+  public TestErasureCodingPoliciesWithRandomECPolicy() {
+    // If you want to debug this test with a specific ec policy, please use
+    // SystemErasureCodingPolicies class.
+    // e.g. ecPolicy = SystemErasureCodingPolicies.getByID(RS_3_2_POLICY_ID);
     ecPolicy = StripedFileTestUtil.getRandomNonDefaultECPolicy();
-    LOG.info(ecPolicy);
+    LOG.info("run {} with {}.", TestErasureCodingPoliciesWithRandomECPolicy
+        .class.getSuperclass().getSimpleName(), ecPolicy.getName());
   }
 
   @Override

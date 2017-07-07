@@ -18,7 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -65,28 +73,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Scheduli
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AbstractContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
-
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Represents an application attempt from the viewpoint of the FIFO or Capacity
@@ -198,7 +196,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           "SchedulerApp", getApplicationId(), containerId, containerResource);
 
       // Update usage metrics
-      queue.getMetrics().releaseResources(getUser(), 1, containerResource);
+      queue.getMetrics().releaseResources(partition,
+          getUser(), 1, containerResource);
       attemptResourceUsage.decUsed(partition, containerResource);
 
       // Clear resource utilization metrics cache.
@@ -572,8 +571,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         node.unreserveResource(this);
 
         // Update reserved metrics
-        queue.getMetrics().unreserveResource(getUser(),
-            rmContainer.getReservedResource());
+        queue.getMetrics().unreserveResource(node.getPartition(),
+            getUser(), rmContainer.getReservedResource());
         queue.decReservedResource(node.getPartition(),
             rmContainer.getReservedResource());
         return true;
@@ -782,7 +781,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     // Update reserved metrics if this is the first reservation
     // rmContainer will be moved to reserved in the super.reserve
     if (!reReservation) {
-      queue.getMetrics().reserveResource(
+      queue.getMetrics().reserveResource(node.getPartition(),
           getUser(), container.getResource());
     }
 
@@ -882,8 +881,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         .append(queue.getAMResourceLimitPerPartition(appAMNodePartitionName));
     diagnosticMessage.append("; ");
     diagnosticMessage.append("User AM Resource Limit of the queue = ");
-    diagnosticMessage.append(
-        queue.getUserAMResourceLimitPerPartition(appAMNodePartitionName));
+    diagnosticMessage.append(queue.getUserAMResourceLimitPerPartition(
+        appAMNodePartitionName, getUser()));
     diagnosticMessage.append("; ");
     diagnosticMessage.append("Queue AM Resource Usage = ");
     diagnosticMessage.append(

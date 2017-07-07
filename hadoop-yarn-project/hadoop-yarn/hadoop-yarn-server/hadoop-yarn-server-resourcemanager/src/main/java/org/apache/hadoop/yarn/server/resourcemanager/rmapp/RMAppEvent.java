@@ -25,6 +25,7 @@ public class RMAppEvent extends AbstractEvent<RMAppEventType>{
 
   private final ApplicationId appId;
   private final String diagnosticMsg;
+  private boolean storeAppInfo;
 
   public RMAppEvent(ApplicationId appId, RMAppEventType type) {
     this(appId, type, "");
@@ -35,6 +36,21 @@ public class RMAppEvent extends AbstractEvent<RMAppEventType>{
     super(type);
     this.appId = appId;
     this.diagnosticMsg = diagnostic;
+    this.storeAppInfo = true;
+  }
+
+  /**
+   * Constructor to create RM Application Event type.
+   *
+   * @param appId application Id
+   * @param type RM Event type
+   * @param diagnostic Diagnostic message for event
+   * @param storeApp Application should be saved or not
+   */
+  public RMAppEvent(ApplicationId appId, RMAppEventType type, String diagnostic,
+      boolean storeApp) {
+    this(appId, type, diagnostic);
+    this.storeAppInfo = storeApp;
   }
 
   public ApplicationId getApplicationId() {
@@ -43,5 +59,14 @@ public class RMAppEvent extends AbstractEvent<RMAppEventType>{
 
   public String getDiagnosticMsg() {
     return this.diagnosticMsg;
+  }
+
+  /**
+   * Store application to state store or not.
+   *
+   * @return boolean application should be saved to store.
+   */
+  public boolean doStoreAppInfo() {
+    return storeAppInfo;
   }
 }

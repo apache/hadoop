@@ -343,6 +343,10 @@ public interface HdfsClientConfigKeys {
       int     STREAMS_CACHE_SIZE_DEFAULT = 256;
       String  STREAMS_CACHE_EXPIRY_MS_KEY = PREFIX + "streams.cache.expiry.ms";
       long    STREAMS_CACHE_EXPIRY_MS_DEFAULT = 5*MINUTE;
+
+      String  METRICS_SAMPLING_PERCENTAGE_KEY =
+          PREFIX + "metrics.sampling.percentage";
+      int     METRICS_SAMPLING_PERCENTAGE_DEFAULT = 0;
     }
   }
 

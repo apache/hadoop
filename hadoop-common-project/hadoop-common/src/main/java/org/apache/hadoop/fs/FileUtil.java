@@ -126,8 +126,10 @@ public class FileUtil {
     file.deleteOnExit();
     if (file.isDirectory()) {
       File[] files = file.listFiles();
-      for (File child : files) {
-        fullyDeleteOnExit(child);
+      if (files != null) {
+        for (File child : files) {
+          fullyDeleteOnExit(child);
+        }
       }
     }
   }

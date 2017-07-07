@@ -146,7 +146,7 @@ public class ResourceAllocationRequestPBImpl extends
   }
 
   private ResourceProto convertToProtoFormat(Resource p) {
-    return ((ResourcePBImpl)p).getProto();
+    return ProtoUtils.convertToProtoFormat(p);
   }
 
   private void mergeLocalToBuilder() {

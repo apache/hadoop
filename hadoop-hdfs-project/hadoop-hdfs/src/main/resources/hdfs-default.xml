@@ -1811,8 +1811,8 @@
   <name>dfs.namenode.stale.datanode.interval</name>
   <value>30000</value>
   <description>
-    Default time interval for marking a datanode as "stale", i.e., if 
-    the namenode has not received heartbeat msg from a datanode for 
+    Default time interval in milliseconds for marking a datanode as "stale",
+    i.e., if the namenode has not received heartbeat msg from a datanode for
     more than this time interval, the datanode will be marked and treated 
     as "stale" by default. The stale interval cannot be too small since 
     otherwise this may cause too frequent change of stale states. 
@@ -2760,6 +2760,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.fslock.fair</name>
+  <value>true</value>
+  <description>If this is true, the FS Namesystem lock will be used in Fair mode,
+    which will help to prevent writer threads from being starved, but can provide
+    lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
+    for more information on fair/non-fair locks.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.startup.delay.block.deletion.sec</name>
   <value>0</value>
   <description>The delay in seconds at which we will pause the blocks deletion
@@ -2787,6 +2797,16 @@
     batches improves namenode performance.
   </description>
 </property>
+
+  <property>
+    <name>dfs.namenode.list.openfiles.num.responses</name>
+    <value>1000</value>
+    <description>
+      When listing open files, the maximum number of open files that will be
+      returned in a single batch. Fetching the list incrementally in batches
+      improves namenode performance.
+    </description>
+  </property>
 
 <property>
   <name>dfs.namenode.edekcacheloader.interval.ms</name>
@@ -3355,7 +3375,10 @@
   <name>dfs.block.invalidate.limit</name>
   <value>1000</value>
   <description>
-    Limit on the list of invalidated block list kept by the Namenode.
+    The maximum number of invalidate blocks sent by namenode to a datanode
+    per heartbeat deletion command. This property works with
+    "dfs.namenode.invalidate.work.pct.per.iteration" to throttle block
+    deletions.
   </description>
 </property>
 
@@ -4514,7 +4537,7 @@
 
   <property>
     <name>dfs.use.dfs.network.topology</name>
-    <value>false</value>
+    <value>true</value>
     <description>
       Enables DFSNetworkTopology to choose nodes for placing replicas.
     </description>

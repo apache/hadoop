@@ -22,6 +22,9 @@ import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
 import com.microsoft.azure.storage.core.Base64;
 import org.apache.commons.configuration2.SubsetConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -39,6 +42,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.DEFAULT_STORAGE_EMULATOR_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_LOCAL_SAS_KEY_MODE;
+import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
 
 /**
  * Helper class to create WASB file systems backed by either a mock in-memory
@@ -46,6 +50,8 @@ import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_LOCA
  * for instructions on how to connect to a real Azure Storage account.
  */
 public final class AzureBlobStorageTestAccount {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AzureBlobStorageTestAccount.class);
 
   private static final String ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key.";
   private static final String SAS_PROPERTY_NAME = "fs.azure.sas.";
@@ -299,10 +305,9 @@ public final class AzureBlobStorageTestAccount {
     Configuration conf = createTestConfiguration();
     if (!conf.getBoolean(USE_EMULATOR_PROPERTY_NAME, false)) {
       // Not configured to test against the storage emulator.
-      System.out
-        .println("Skipping emulator Azure test because configuration " +
-            "doesn't indicate that it's running." +
-            " Please see RunningLiveWasbTests.txt for guidance.");
+      LOG.warn("Skipping emulator Azure test because configuration doesn't "
+          + "indicate that it's running. Please see RunningLiveWasbTests.txt "
+          + "for guidance.");
       return null;
     }
     CloudStorageAccount account =
@@ -331,6 +336,11 @@ public final class AzureBlobStorageTestAccount {
 
   public static AzureBlobStorageTestAccount createOutOfBandStore(
       int uploadBlockSize, int downloadBlockSize) throws Exception {
+    return createOutOfBandStore(uploadBlockSize, downloadBlockSize, false);
+  }
+
+   public static AzureBlobStorageTestAccount createOutOfBandStore(
+      int uploadBlockSize, int downloadBlockSize, boolean enableSecureMode) throws Exception {
 
     saveMetricsConfigFile();
 
@@ -355,6 +365,7 @@ public final class AzureBlobStorageTestAccount {
     // out-of-band appends.
     conf.setBoolean(KEY_DISABLE_THROTTLING, true);
     conf.setBoolean(KEY_READ_TOLERATE_CONCURRENT_APPEND, true);
+    conf.setBoolean(KEY_USE_SECURE_MODE, enableSecureMode);
     configureSecureModeTestSettings(conf);
 
     // Set account URI and initialize Azure file system.
@@ -456,18 +467,22 @@ public final class AzureBlobStorageTestAccount {
       KeyProviderException {
     String accountKey = AzureNativeFileSystemStore
         .getAccountKeyFromConfiguration(accountName, conf);
-    StorageCredentials credentials;
-    if (accountKey == null && allowAnonymous) {
-      credentials = StorageCredentialsAnonymous.ANONYMOUS;
+    final StorageCredentials credentials;
+    if (accountKey == null) {
+      if (allowAnonymous) {
+        credentials = StorageCredentialsAnonymous.ANONYMOUS;
+      } else {
+        LOG.warn("Skipping live Azure test because of missing key for"
+            + " account '" + accountName + "'. "
+            + "Please see RunningLiveWasbTests.txt for guidance.");
+        return null;
+      }
     } else {
       credentials = new StorageCredentialsAccountAndKey(
           accountName.split("\\.")[0], accountKey);
     }
-    if (credentials == null) {
-      return null;
-    } else {
-      return new CloudStorageAccount(credentials);
-    }
+
+    return new CloudStorageAccount(credentials);
   }
 
   public static Configuration createTestConfiguration() {
@@ -493,9 +508,8 @@ public final class AzureBlobStorageTestAccount {
       throws URISyntaxException, KeyProviderException {
     String testAccountName = conf.get(TEST_ACCOUNT_NAME_PROPERTY_NAME);
     if (testAccountName == null) {
-      System.out
-        .println("Skipping live Azure test because of missing test account." +
-                 " Please see RunningLiveWasbTests.txt for guidance.");
+      LOG.warn("Skipping live Azure test because of missing test account. "
+          + "Please see RunningLiveWasbTests.txt for guidance.");
       return null;
     }
     return createStorageAccount(testAccountName, conf, false);

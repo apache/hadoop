@@ -70,7 +70,7 @@ public class KMS {
   private KeyProviderCryptoExtension provider;
   private KMSAudit kmsAudit;
 
-  private static final Logger LOG = LoggerFactory.getLogger(KMS.class);
+  static final Logger LOG = LoggerFactory.getLogger(KMS.class);
 
   public KMS() throws Exception {
     provider = KMSWebApp.getKeyProvider();

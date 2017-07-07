@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.conf;
 
-import com.fasterxml.aalto.stax.InputFactoryImpl;
+import com.ctc.wstx.stax.WstxInputFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.annotations.VisibleForTesting;
@@ -284,7 +284,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Specify exact input factory to avoid time finding correct one.
    * Factory is reusable across un-synchronized threads once initialized
    */
-  private static final XMLInputFactory2 factory = new InputFactoryImpl();
+  private static final XMLInputFactory2 XML_INPUT_FACTORY = new WstxInputFactory();
 
   /**
    * Class to keep the information about the keys which replace the deprecated
@@ -2646,7 +2646,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (is == null) {
       return null;
     }
-    return factory.createXMLStreamReader(systemId, is);
+    return XML_INPUT_FACTORY.createXMLStreamReader(systemId, is);
   }
 
   private void loadResources(Properties properties,

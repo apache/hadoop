@@ -15,16 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import { moduleFor, test } from 'ember-qunit';
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
-moduleFor('controller:yarn-flow/info', 'Unit | Controller | yarn flow/info', {
-  // Specify the other units that are required for this test.
-  // needs: ['controller:foo']
-});
+/**
+ * This exception is thrown when Application Data size exceeds limit RM state
+ * store.
+ *
+ */
+public class StoreLimitException extends YarnException {
+  private static final long serialVersionUID = 1L;
 
-// Replace this with your real tests.
-test('it exists', function(assert) {
-  let controller = this.subject();
-  assert.ok(controller);
-});
+  public StoreLimitException(String message) {
+    super(message);
+  }
+}

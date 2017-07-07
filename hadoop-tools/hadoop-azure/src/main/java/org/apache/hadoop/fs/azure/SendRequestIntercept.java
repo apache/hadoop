@@ -35,7 +35,7 @@ import com.microsoft.azure.storage.StorageException;
 
 /**
  * Manages the lifetime of binding on the operation contexts to intercept send
- * request events to Azure storage.
+ * request events to Azure storage and allow concurrent OOB I/Os.
  */
 @InterfaceAudience.Private
 public final class SendRequestIntercept extends StorageEvent<SendingRequestEvent> {
@@ -43,70 +43,22 @@ public final class SendRequestIntercept extends StorageEvent<SendingRequestEvent
   public static final Log LOG = LogFactory.getLog(SendRequestIntercept.class);
 
   private static final String ALLOW_ALL_REQUEST_PRECONDITIONS = "*";
-  private final StorageCredentials storageCreds;
-  private final boolean allowConcurrentOOBIo;
-  private final OperationContext opContext;
 
   /**
-   * Getter returning the storage account credentials.
-   * 
-   * @return storageCreds - account storage credentials.
+   * Hidden default constructor for SendRequestIntercept.
    */
-  private StorageCredentials getCredentials() {
-    return storageCreds;
-  }
-
-  /**
-   * Query if out-of-band I/Os are allowed.
-   * 
-   * return allowConcurrentOOBIo - true if OOB I/O is allowed, and false
-   * otherwise.
-   */
-  private boolean isOutOfBandIoAllowed() {
-    return allowConcurrentOOBIo;
-  }
-
-  /**
-   * Getter returning the operation context.
-   * 
-   * @return storageCreds - account storage credentials.
-   */
-  private OperationContext getOperationContext() {
-    return opContext;
-  }
-
-  /**
-   * Constructor for SendRequestThrottle.
-   * 
-   * @param storageCreds
-   *          - storage account credentials for signing packets.
-   * 
-   */
-  private SendRequestIntercept(StorageCredentials storageCreds,
-      boolean allowConcurrentOOBIo, OperationContext opContext) {
-    // Capture the send delay callback interface.
-    this.storageCreds = storageCreds;
-    this.allowConcurrentOOBIo = allowConcurrentOOBIo;
-    this.opContext = opContext;
+  private SendRequestIntercept() {
   }
 
   /**
    * Binds a new lister to the operation context so the WASB file system can
-   * appropriately intercept sends. By allowing concurrent OOB I/Os, we bypass
-   * the blob immutability check when reading streams.
+   * appropriately intercept sends and allow concurrent OOB I/Os.  This
+   * by-passes the blob immutability check when reading streams.
    *
-   * @param storageCreds The credential of blob storage.
-   * @param opContext
-   *          The operation context to bind to listener.
-   * 
-   * @param allowConcurrentOOBIo
-   *          True if reads are allowed with concurrent OOB writes.
+   * @param opContext the operation context assocated with this request.
    */
-  public static void bind(StorageCredentials storageCreds,
-      OperationContext opContext, boolean allowConcurrentOOBIo) {
-    SendRequestIntercept sendListener = new SendRequestIntercept(storageCreds,
-        allowConcurrentOOBIo, opContext);
-    opContext.getSendingRequestEventHandler().addListener(sendListener);
+  public static void bind(OperationContext opContext) {
+    opContext.getSendingRequestEventHandler().addListener(new SendRequestIntercept());
   }
 
   /**
@@ -134,36 +86,11 @@ public final class SendRequestIntercept extends StorageEvent<SendingRequestEvent
     // Determine whether this is a download request by checking that the request
     // method
     // is a "GET" operation.
-    if (urlConnection.getRequestMethod().equalsIgnoreCase("GET")
-        && isOutOfBandIoAllowed()) {
+    if (urlConnection.getRequestMethod().equalsIgnoreCase("GET")) {
       // If concurrent reads on OOB writes are allowed, reset the if-match
       // condition on the conditional header.
       urlConnection.setRequestProperty(HeaderConstants.IF_MATCH,
           ALLOW_ALL_REQUEST_PRECONDITIONS);
-
-      // In the Java AzureSDK the packet is signed before firing the
-      // SendRequest. Setting
-      // the conditional packet header property changes the contents of the
-      // packet, therefore the packet has to be re-signed.
-      try {
-        // Sign the request. GET's have no payload so the content length is
-        // zero.
-        StorageCredentialsHelper.signBlobQueueAndFileRequest(getCredentials(),
-          urlConnection, -1L, getOperationContext());
-      } catch (InvalidKeyException e) {
-        // Log invalid key exception to track signing error before the send
-        // fails.
-        String errString = String.format(
-            "Received invalid key exception when attempting sign packet."
-                + " Cause: %s", e.getCause().toString());
-        LOG.error(errString);
-      } catch (StorageException e) {
-        // Log storage exception to track signing error before the call fails.
-        String errString = String.format(
-            "Received storage exception when attempting to sign packet."
-                + " Cause: %s", e.getCause().toString());
-        LOG.error(errString);
-      }
     }
   }
 }

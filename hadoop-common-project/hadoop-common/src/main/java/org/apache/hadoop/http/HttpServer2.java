@@ -431,6 +431,7 @@ public final class HttpServer2 implements FilterContainer {
       HttpConfiguration httpConfig = new HttpConfiguration();
       httpConfig.setRequestHeaderSize(requestHeaderSize);
       httpConfig.setResponseHeaderSize(responseHeaderSize);
+      httpConfig.setSendServerVersion(false);
 
       for (URI ep : endpoints) {
         final ServerConnector connector;

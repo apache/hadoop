@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang.StringUtils;
@@ -236,6 +237,20 @@ public class LeafQueue extends AbstractCSQueue {
 
       defaultAppPriorityPerQueue = Priority.newInstance(
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
+
+      // Validate leaf queue's user's weights.
+      int queueUL = Math.min(100, conf.getUserLimit(getQueuePath()));
+      for (Entry<String, Float> e : getUserWeights().entrySet()) {
+        float val = e.getValue().floatValue();
+        if (val < 0.0f || val > (100.0f / queueUL)) {
+          throw new IOException("Weight (" + val + ") for user \"" + e.getKey()
+              + "\" must be between 0 and" + " 100 / " + queueUL + " (= " +
+              100.0f/queueUL + ", the number of concurrent active users in "
+              + getQueuePath() + ")");
+        }
+      }
+
+      usersManager.updateUserWeights();
 
       LOG.info(
           "Initializing " + queueName + "\n" + "capacity = " + queueCapacities
@@ -619,11 +634,16 @@ public class LeafQueue extends AbstractCSQueue {
 
   @VisibleForTesting
   public Resource getUserAMResourceLimit() {
-     return getUserAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL);
+    return getUserAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL,
+         null);
   }
 
   public Resource getUserAMResourceLimitPerPartition(
-      String nodePartition) {
+      String nodePartition, String userName) {
+    float userWeight = 1.0f;
+    if (userName != null && getUser(userName) != null) {
+      userWeight = getUser(userName).getWeight();
+    }
     try {
       readLock.lock();
       /*
@@ -634,6 +654,7 @@ public class LeafQueue extends AbstractCSQueue {
        */
       float effectiveUserLimit = Math.max(usersManager.getUserLimit() / 100.0f,
           1.0f / Math.max(getAbstractUsersManager().getNumActiveUsers(), 1));
+      effectiveUserLimit = Math.min(effectiveUserLimit * userWeight, 1.0f);
 
       Resource queuePartitionResource = Resources
           .multiplyAndNormalizeUp(resourceCalculator,
@@ -696,7 +717,7 @@ public class LeafQueue extends AbstractCSQueue {
           resourceCalculator, queuePartitionUsableResource, amResourcePercent,
           minimumAllocation);
 
-      metrics.setAMResouceLimit(amResouceLimit);
+      metrics.setAMResouceLimit(nodePartition, amResouceLimit);
       queueUsage.setAMLimit(nodePartition, amResouceLimit);
       return amResouceLimit;
     } finally {
@@ -774,7 +795,8 @@ public class LeafQueue extends AbstractCSQueue {
 
         // Verify whether we already calculated user-am-limit for this label.
         if (userAMLimit == null) {
-          userAMLimit = getUserAMResourceLimitPerPartition(partitionName);
+          userAMLimit = getUserAMResourceLimitPerPartition(partitionName,
+              application.getUser());
           userAmPartitionLimit.put(partitionName, userAMLimit);
         }
 
@@ -811,9 +833,10 @@ public class LeafQueue extends AbstractCSQueue {
         user.getResourceUsage().incAMUsed(partitionName,
             application.getAMResource(partitionName));
         user.getResourceUsage().setAMLimit(partitionName, userAMLimit);
-        metrics.incAMUsed(application.getUser(),
+        metrics.incAMUsed(partitionName, application.getUser(),
             application.getAMResource(partitionName));
-        metrics.setAMResouceLimitForUser(application.getUser(), userAMLimit);
+        metrics.setAMResouceLimitForUser(partitionName,
+            application.getUser(), userAMLimit);
         fsApp.remove();
         LOG.info("Application " + applicationId + " from user: " + application
             .getUser() + " activated in queue: " + getQueueName());
@@ -894,7 +917,7 @@ public class LeafQueue extends AbstractCSQueue {
             application.getAMResource(partitionName));
         user.getResourceUsage().decAMUsed(partitionName,
             application.getAMResource(partitionName));
-        metrics.decAMUsed(application.getUser(),
+        metrics.decAMUsed(partitionName, application.getUser(),
             application.getAMResource(partitionName));
       }
       applicationAttemptMap.remove(application.getApplicationAttemptId());
@@ -1338,7 +1361,7 @@ public class LeafQueue extends AbstractCSQueue {
     
     application.setHeadroomProvider(headroomProvider);
 
-    metrics.setAvailableResourcesToUser(user, headroom);
+    metrics.setAvailableResourcesToUser(nodePartition, user, headroom);
     
     return userLimit;
   }
@@ -1583,7 +1606,8 @@ public class LeafQueue extends AbstractCSQueue {
       // Note this is a bit unconventional since it gets the object and modifies
       // it here, rather then using set routine
       Resources.subtractFrom(application.getHeadroom(), resource); // headroom
-      metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
+      metrics.setAvailableResourcesToUser(nodePartition,
+          userName, application.getHeadroom());
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(getQueueName() + " user=" + userName + " used="
@@ -1622,7 +1646,8 @@ public class LeafQueue extends AbstractCSQueue {
       User user = usersManager.updateUserResourceUsage(userName, resource,
           nodePartition, false);
 
-      metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
+      metrics.setAvailableResourcesToUser(nodePartition,
+          userName, application.getHeadroom());
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(

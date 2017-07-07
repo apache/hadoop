@@ -127,8 +127,7 @@ public class BlockRecoveryWorker {
       // - Original state is RWR or better
       for(DatanodeID id : locs) {
         try {
-          DatanodeID bpReg = new DatanodeID(
-              datanode.getBPOfferService(bpid).bpRegistration);
+          DatanodeID bpReg = getDatanodeID(bpid);
           InterDatanodeProtocol proxyDN = bpReg.equals(id)?
               datanode: DataNode.createInterDataNodeProtocolProxy(id, conf,
               dnConf.socketTimeout, dnConf.connectToDnViaHostname);
@@ -398,8 +397,7 @@ public class BlockRecoveryWorker {
       for (int i = 0; i < locs.length; i++) {
         DatanodeID id = locs[i];
         try {
-          DatanodeID bpReg = new DatanodeID(
-              datanode.getBPOfferService(bpid).bpRegistration);
+          DatanodeID bpReg = getDatanodeID(bpid);
           InterDatanodeProtocol proxyDN = bpReg.equals(id) ?
               datanode : DataNode.createInterDataNodeProtocolProxy(id, conf,
               dnConf.socketTimeout, dnConf.connectToDnViaHostname);
@@ -530,6 +528,14 @@ public class BlockRecoveryWorker {
             ", unable to start recovery. Locations=" + Arrays.asList(locs));
       }
     }
+  }
+
+  private DatanodeID getDatanodeID(String bpid) throws IOException {
+    BPOfferService bpos = datanode.getBPOfferService(bpid);
+    if (bpos == null) {
+      throw new IOException("No block pool offer service for bpid=" + bpid);
+    }
+    return new DatanodeID(bpos.bpRegistration);
   }
 
   private static void logRecoverBlock(String who, RecoveringBlock rb) {

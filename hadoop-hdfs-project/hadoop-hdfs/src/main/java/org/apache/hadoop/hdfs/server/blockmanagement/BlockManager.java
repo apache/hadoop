@@ -195,7 +195,7 @@ public class BlockManager implements BlockStatsMXBean {
     return pendingReconstructionBlocksCount;
   }
   /** Used by metrics */
-  public long getUnderReplicatedBlocksCount() {
+  public long getLowRedundancyBlocksCount() {
     return lowRedundancyBlocksCount;
   }
   /** Used by metrics */
@@ -229,6 +229,51 @@ public class BlockManager implements BlockStatsMXBean {
   /** Used by metrics. */
   public long getNumTimedOutPendingReconstructions() {
     return pendingReconstruction.getNumTimedOuts();
+  }
+
+  /** Used by metrics. */
+  public long getLowRedundancyBlocksStat() {
+    return neededReconstruction.getLowRedundancyBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getCorruptBlocksStat() {
+    return corruptReplicas.getCorruptBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getMissingBlocksStat() {
+    return neededReconstruction.getCorruptBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getMissingReplicationOneBlocksStat() {
+    return neededReconstruction.getCorruptReplicationOneBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getPendingDeletionBlocksStat() {
+    return invalidateBlocks.getBlocksStat();
+  }
+
+  /** Used by metrics. */
+  public long getLowRedundancyECBlockGroupsStat() {
+    return neededReconstruction.getLowRedundancyECBlockGroupsStat();
+  }
+
+  /** Used by metrics. */
+  public long getCorruptECBlockGroupsStat() {
+    return corruptReplicas.getCorruptECBlockGroupsStat();
+  }
+
+  /** Used by metrics. */
+  public long getMissingECBlockGroupsStat() {
+    return neededReconstruction.getCorruptECBlockGroupsStat();
+  }
+
+  /** Used by metrics. */
+  public long getPendingDeletionECBlockGroupsStat() {
+    return invalidateBlocks.getECBlockGroupsStat();
   }
 
   /**
@@ -1806,7 +1851,7 @@ public class BlockManager implements BlockStatsMXBean {
         (pendingReplicaNum > 0 || isPlacementPolicySatisfied(block));
   }
 
-  private BlockReconstructionWork scheduleReconstruction(BlockInfo block,
+  BlockReconstructionWork scheduleReconstruction(BlockInfo block,
       int priority) {
     // skip abandoned block or block reopened for append
     if (block.isDeleted() || !block.isCompleteOrCommitted()) {
@@ -1828,6 +1873,7 @@ public class BlockManager implements BlockStatsMXBean {
     if(srcNodes == null || srcNodes.length == 0) {
       // block can not be reconstructed from any node
       LOG.debug("Block {} cannot be reconstructed from any node", block);
+      NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
       return null;
     }
 
@@ -1840,6 +1886,7 @@ public class BlockManager implements BlockStatsMXBean {
       neededReconstruction.remove(block, priority);
       blockLog.debug("BLOCK* Removing {} from neededReconstruction as" +
           " it has enough replicas", block);
+      NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
       return null;
     }
 
@@ -1855,6 +1902,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (block.isStriped()) {
       if (pendingNum > 0) {
         // Wait the previous reconstruction to finish.
+        NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
         return null;
       }
 
@@ -2244,6 +2292,14 @@ public class BlockManager implements BlockStatsMXBean {
     return bmSafeMode.getBytesInFuture();
   }
 
+  public long getBytesInFutureReplicatedBlocksStat() {
+    return bmSafeMode.getBytesInFutureBlocks();
+  }
+
+  public long getBytesInFutureStripedBlocksStat() {
+    return bmSafeMode.getBytesInFutureECBlockGroups();
+  }
+
   /**
    * Removes the blocks from blocksmap and updates the safemode blocks total.
    * @param blocks An instance of {@link BlocksMapUpdateInfo} which contains a
@@ -2383,7 +2439,7 @@ public class BlockManager implements BlockStatsMXBean {
     // Log the block report processing stats from Namenode perspective
     final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
     if (metrics != null) {
-      metrics.addBlockReport((int) (endTime - startTime));
+      metrics.addStorageBlockReport((int) (endTime - startTime));
     }
     blockLog.info("BLOCK* processReport 0x{}: from storage {} node {}, " +
         "blocks: {}, hasStaleStorage: {}, processing time: {} msecs, " +
@@ -3674,8 +3730,8 @@ public class BlockManager implements BlockStatsMXBean {
    * The given node is reporting that it received a certain block.
    */
   @VisibleForTesting
-  void addBlock(DatanodeStorageInfo storageInfo, Block block, String delHint)
-      throws IOException {
+  public void addBlock(DatanodeStorageInfo storageInfo, Block block,
+      String delHint) throws IOException {
     DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
     // Decrement number of blocks scheduled to this datanode.
     // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
@@ -3696,8 +3752,11 @@ public class BlockManager implements BlockStatsMXBean {
     // Modify the blocks->datanode map and node's map.
     //
     BlockInfo storedBlock = getStoredBlock(block);
-    if (storedBlock != null) {
-      pendingReconstruction.decrement(storedBlock, node);
+    if (storedBlock != null &&
+        block.getGenerationStamp() == storedBlock.getGenerationStamp()) {
+      if (pendingReconstruction.decrement(storedBlock, node)) {
+        NameNode.getNameNodeMetrics().incSuccessfulReReplications();
+      }
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);
@@ -4245,7 +4304,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   public long getMissingReplOneBlocksCount() {
     // not locking
-    return this.neededReconstruction.getCorruptReplOneBlockSize();
+    return this.neededReconstruction.getCorruptReplicationOneBlockSize();
   }
 
   public BlockInfo addBlockCollection(BlockInfo block,

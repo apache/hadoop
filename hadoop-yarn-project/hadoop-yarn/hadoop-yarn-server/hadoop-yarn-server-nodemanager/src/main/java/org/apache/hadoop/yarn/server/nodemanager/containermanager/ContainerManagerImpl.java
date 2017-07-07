@@ -341,6 +341,10 @@ public class ContainerManagerImpl extends CompositeService implements
       rsrcLocalizationSrvc.recoverLocalizedResources(
           stateStore.loadLocalizationState());
 
+      if (this.amrmProxyEnabled) {
+        this.getAMRMProxyService().recover();
+      }
+
       RecoveredApplicationsState appsState = stateStore.loadApplicationsState();
       for (ContainerManagerApplicationProto proto :
            appsState.getApplications()) {

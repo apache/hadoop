@@ -1080,7 +1080,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         List<ACL> acl = zkClient.getACL(path, stat);
         if (acl == null || !acl.containsAll(zkAcl) ||
             !zkAcl.containsAll(acl)) {
-          zkClient.setACL(path, zkAcl, stat.getVersion());
+          zkClient.setACL(path, zkAcl, stat.getAversion());
         }
         return null;
       }

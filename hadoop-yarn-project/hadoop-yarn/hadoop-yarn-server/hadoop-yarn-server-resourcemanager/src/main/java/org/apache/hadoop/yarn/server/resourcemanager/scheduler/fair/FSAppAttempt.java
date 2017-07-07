@@ -18,6 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -50,16 +60,6 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Represents an application attempt from the viewpoint of the Fair Scheduler.
@@ -169,7 +169,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           "SchedulerApp", getApplicationId(), containerId, containerResource);
 
       // Update usage metrics
-      queue.getMetrics().releaseResources(getUser(), 1, containerResource);
+      queue.getMetrics().releaseResources(
+          rmContainer.getNodeLabelExpression(),
+          getUser(), 1, containerResource);
       this.attemptResourceUsage.decUsed(containerResource);
 
       // Clear resource utilization metrics cache.
@@ -653,7 +655,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         reservedContainer =
             createContainer(node, perAllocationResource,
               schedulerKey);
-        getMetrics().reserveResource(getUser(),
+        getMetrics().reserveResource(node.getPartition(), getUser(),
             reservedContainer.getResource());
         RMContainer rmContainer =
                 super.reserve(node, schedulerKey, null, reservedContainer);
@@ -712,7 +714,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     unreserveInternal(schedulerKey, node);
     node.unreserveResource(this);
     clearReservation(node);
-    getMetrics().unreserveResource(
+    getMetrics().unreserveResource(node.getPartition(),
         getUser(), rmContainer.getContainer().getResource());
   }
 

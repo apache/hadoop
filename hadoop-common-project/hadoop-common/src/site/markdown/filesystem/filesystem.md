@@ -1185,6 +1185,10 @@ on (possibly remote) filesystems. These filesystems are invariably accessed
 concurrently; the state of the filesystem MAY change between a `hasNext()`
 probe and the invocation of the `next()` call.
 
+During iteration through a `RemoteIterator`, if the directory is deleted on
+remote filesystem, then `hasNext()` or `next()` call may throw
+`FileNotFoundException`.
+
 Accordingly, a robust iteration through a `RemoteIterator` would catch and
 discard `NoSuchElementException` exceptions raised during the process, which
 could be done through the `while(true)` iteration example above, or

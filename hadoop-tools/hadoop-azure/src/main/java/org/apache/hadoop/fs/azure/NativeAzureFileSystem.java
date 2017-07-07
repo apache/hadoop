@@ -27,9 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.PrivilegedExceptionAction;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -46,6 +44,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -64,15 +63,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
-import org.apache.hadoop.fs.azure.security.SecurityUtils;
+import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
+import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
-import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -109,6 +107,9 @@ public class NativeAzureFileSystem extends FileSystem {
     private static final int FORMATTING_BUFFER = 10000;
     private boolean committed;
     public static final String SUFFIX = "-RenamePending.json";
+    private static final ObjectReader READER = new ObjectMapper()
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
+        .readerFor(JsonNode.class);
 
     // Prepare in-memory information needed to do or redo a folder rename.
     public FolderRenamePending(String srcKey, String dstKey, SelfRenewingLease lease,
@@ -168,11 +169,9 @@ public class NativeAzureFileSystem extends FileSystem {
       String contents = new String(bytes, 0, l, Charset.forName("UTF-8"));
 
       // parse the JSON
-      ObjectMapper objMapper = new ObjectMapper();
-      objMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
       JsonNode json = null;
       try {
-        json = objMapper.readValue(contents, JsonNode.class);
+        json = READER.readValue(contents);
         this.committed = true;
       } catch (JsonMappingException e) {
 
@@ -611,10 +610,12 @@ public class NativeAzureFileSystem extends FileSystem {
         // The rename already finished, so do nothing.
         ;
       } else {
-        throw new IOException(
-            "Attempting to complete rename of file " + srcKey + "/" + fileName
-            + " during folder rename redo, and file was not found in source "
-            + "or destination.");
+        // HADOOP-14512
+        LOG.warn(
+          "Attempting to complete rename of file " + srcKey + "/" + fileName
+          + " during folder rename redo, and file was not found in source "
+          + "or destination " + dstKey + "/" + fileName + ". "
+          + "This must mean the rename of this file has already completed");
       }
     }
 
@@ -1173,7 +1174,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
   private UserGroupInformation ugi;
 
-  private String delegationToken = null;
+  private WasbDelegationTokenManager wasbDelegationTokenManager;
 
   public NativeAzureFileSystem() {
     // set store in initialize()
@@ -1323,9 +1324,7 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     if (UserGroupInformation.isSecurityEnabled() && kerberosSupportEnabled) {
-      DelegationTokenAuthenticator authenticator = new KerberosDelegationTokenAuthenticator();
-      authURL = new DelegationTokenAuthenticatedURL(authenticator);
-      credServiceUrl = SecurityUtils.getCredServiceUrls(conf);
+      this.wasbDelegationTokenManager = new RemoteWasbDelegationTokenManager(conf);
     }
   }
 
@@ -2998,31 +2997,7 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
     if (kerberosSupportEnabled) {
-      try {
-        final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-        UserGroupInformation connectUgi = ugi.getRealUser();
-        final UserGroupInformation proxyUser = connectUgi;
-        if (connectUgi == null) {
-          connectUgi = ugi;
-        }
-        connectUgi.checkTGTAndReloginFromKeytab();
-        return connectUgi.doAs(new PrivilegedExceptionAction<Token<?>>() {
-          @Override
-          public Token<?> run() throws Exception {
-            return authURL.getDelegationToken(new URL(credServiceUrl
-                    + Constants.DEFAULT_DELEGATION_TOKEN_MANAGER_ENDPOINT),
-                authToken, renewer, (proxyUser != null)? ugi.getShortUserName(): null);
-          }
-        });
-      } catch (Exception ex) {
-        LOG.error("Error in fetching the delegation token from remote service",
-            ex);
-        if (ex instanceof IOException) {
-          throw (IOException) ex;
-        } else {
-          throw new IOException(ex);
-        }
-      }
+      return wasbDelegationTokenManager.getDelegationToken(renewer);
     } else {
       return super.getDelegationToken(renewer);
     }

@@ -40,10 +40,12 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,6 +57,7 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.security.auth.login.AppConfigurationEntry;
 
 import java.io.ByteArrayInputStream;
@@ -62,6 +65,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Writer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -69,6 +73,8 @@ import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
+import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,6 +89,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -96,6 +104,8 @@ public class TestKMS {
 
   private static final String SSL_RELOADER_THREAD_NAME =
       "Truststore reloader thread";
+
+  private SSLFactory sslFactory;
 
   @Rule
   public final Timeout testTimeout = new Timeout(180000);
@@ -317,6 +327,57 @@ public class TestKMS {
     }
   }
 
+  /**
+   * Read in the content from an URL connection.
+   * @param conn URLConnection To read
+   * @return the text from the output
+   * @throws IOException if something went wrong
+   */
+  private static String readOutput(URLConnection conn) throws IOException {
+    StringBuilder out = new StringBuilder();
+    InputStream in = conn.getInputStream();
+    byte[] buffer = new byte[64 * 1024];
+    int len = in.read(buffer);
+    while (len > 0) {
+      out.append(new String(buffer, 0, len));
+      len = in.read(buffer);
+    }
+    return out.toString();
+  }
+
+  private static void assertReFind(String re, String value) {
+    Pattern p = Pattern.compile(re);
+    Matcher m = p.matcher(value);
+    Assert.assertTrue("'" + p + "' does not match " + value, m.find());
+  }
+
+  private URLConnection openJMXConnection(URL baseUrl, boolean kerberos)
+      throws Exception {
+    URIBuilder b = new URIBuilder(baseUrl + "/jmx");
+    if (!kerberos) {
+      b.addParameter("user.name", "dr.who");
+    }
+    URL url = b.build().toURL();
+    LOG.info("JMX URL " + url);
+    URLConnection conn = url.openConnection();
+    if (sslFactory != null) {
+      HttpsURLConnection httpsConn = (HttpsURLConnection) conn;
+      try {
+        httpsConn.setSSLSocketFactory(sslFactory.createSSLSocketFactory());
+      } catch (GeneralSecurityException ex) {
+        throw new IOException(ex);
+      }
+      httpsConn.setHostnameVerifier(sslFactory.getHostnameVerifier());
+    }
+    return conn;
+  }
+
+  private void testJMXQuery(URL baseUrl, boolean kerberos) throws Exception {
+    LOG.info("Testing JMX");
+    assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"",
+        readOutput(openJMXConnection(baseUrl, kerberos)));
+  }
+
   public void testStartStop(final boolean ssl, final boolean kerberos)
       throws Exception {
     Configuration conf = new Configuration();
@@ -349,6 +410,15 @@ public class TestKMS {
     }
 
     writeConf(testDir, conf);
+
+    if (ssl) {
+      sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+      try {
+        sslFactory.init();
+      } catch (GeneralSecurityException ex) {
+        throw new IOException(ex);
+      }
+    }
 
     runServer(keystore, password, testDir, new KMSCallable<Void>() {
       @Override
@@ -390,6 +460,8 @@ public class TestKMS {
             doAs(user, new PrivilegedExceptionAction<Void>() {
               @Override
               public Void run() throws Exception {
+                testJMXQuery(url, kerberos);
+
                 final KeyProvider kp = createProvider(uri, conf);
                 // getKeys() empty
                 Assert.assertTrue(kp.getKeys().isEmpty());
@@ -406,6 +478,8 @@ public class TestKMS {
             });
           }
         } else {
+          testJMXQuery(url, kerberos);
+
           KeyProvider kp = createProvider(uri, conf);
           // getKeys() empty
           Assert.assertTrue(kp.getKeys().isEmpty());
@@ -421,6 +495,11 @@ public class TestKMS {
         return null;
       }
     });
+
+    if (sslFactory != null) {
+      sslFactory.destroy();
+      sslFactory = null;
+    }
   }
 
   @Test

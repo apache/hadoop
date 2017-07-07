@@ -141,7 +141,7 @@ Similar to get command, except that the destination is restricted to a local fil
 count
 -----
 
-Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] <paths> `
+Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] [-e] <paths> `
 
 Count the number of directories, files and bytes under the paths that match the specified file pattern. Get the quota and the usage. The output columns with -count are: DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
@@ -159,6 +159,12 @@ The -v option displays a header line.
 
 The -x option excludes snapshots from the result calculation. Without the -x option (default), the result is always calculated from all INodes, including all snapshots under the given path. The -x option is ignored if -u or -q option is given.
 
+The -e option shows the erasure coding policy for each file.
+
+The output columns with -count -e are: DIR\_COUNT, FILE\_COUNT, CONTENT_SIZE, ERASURECODING\_POLICY, PATHNAME
+
+The ERASURECODING\_POLICY is name of the policy for the file. If a erasure coding policy is setted on that file, it will return name of the policy. If no erasure coding policy is setted, it will return \"Replicated\" which means it use replication storage strategy.
+
 Example:
 
 * `hadoop fs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2`
@@ -168,6 +174,7 @@ Example:
 * `hadoop fs -count -u hdfs://nn1.example.com/file1`
 * `hadoop fs -count -u -h hdfs://nn1.example.com/file1`
 * `hadoop fs -count -u -h -v hdfs://nn1.example.com/file1`
+* `hadoop fs -count -e hdfs://nn1.example.com/file1`
 
 Exit Code:
 
@@ -403,7 +410,7 @@ Return usage output.
 ls
 ----
 
-Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] <args> `
+Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] [-e] <args> `
 
 Options:
 
@@ -416,6 +423,7 @@ Options:
 * -S: Sort output by file size.
 * -r: Reverse the sort order.
 * -u: Use access time rather than modification time for display and sorting.  
+* -e: Display the erasure coding policy of files and directories only.
 
 For a file ls returns stat on the file with the following format:
 
@@ -430,6 +438,7 @@ Files within a directory are order by filename by default.
 Example:
 
 * `hadoop fs -ls /user/hadoop/file1`
+* `hadoop fs -ls -e /ecdir`
 
 Exit Code:
 

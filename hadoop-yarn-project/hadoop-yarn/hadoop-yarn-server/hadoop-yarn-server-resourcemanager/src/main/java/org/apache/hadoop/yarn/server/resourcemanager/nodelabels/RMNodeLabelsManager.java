@@ -519,12 +519,16 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
   
   public Resource getResourceByLabel(String label, Resource clusterResource) {
     label = normalizeLabel(label);
+    if (label.equals(NO_LABEL)) {
+      return noNodeLabel.getResource();
+    }
     try {
       readLock.lock();
-      if (null == labelCollections.get(label)) {
+      RMNodeLabel nodeLabel = labelCollections.get(label);
+      if (nodeLabel == null) {
         return Resources.none();
       }
-      return labelCollections.get(label).getResource();
+      return nodeLabel.getResource();
     } finally {
       readLock.unlock();
     }
