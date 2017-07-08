@@ -56,7 +56,8 @@ public class BucketInfo implements Comparable<BucketInfo> {
     mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
     mapper.addMixIn(Object.class, MixIn.class);
 
-    WRITER = mapper.writer(filters);
+    mapper.setFilterProvider(filters);
+    WRITER = mapper.writerWithDefaultPrettyPrinter();
   }
 
   private String volumeName;

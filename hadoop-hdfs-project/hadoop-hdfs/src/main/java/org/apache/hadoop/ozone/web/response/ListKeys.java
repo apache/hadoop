@@ -58,7 +58,8 @@ public class ListKeys {
         JsonAutoDetect.Visibility.ANY);
     mapper.addMixIn(Object.class, MixIn.class);
 
-    WRITER = mapper.writer(filters);
+    mapper.setFilterProvider(filters);
+    WRITER = mapper.writerWithDefaultPrettyPrinter();
   }
 
   private String name;
