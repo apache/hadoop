@@ -54,7 +54,8 @@ public class KeyInfo implements Comparable<KeyInfo> {
         JsonAutoDetect.Visibility.ANY);
     mapper.addMixIn(Object.class, MixIn.class);
 
-    WRITER = mapper.writer(filters);
+    mapper.setFilterProvider(filters);
+    WRITER = mapper.writerWithDefaultPrettyPrinter();
   }
 
   /**
