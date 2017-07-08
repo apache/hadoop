@@ -58,7 +58,8 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
         JsonAutoDetect.Visibility.ANY);
     mapper.addMixIn(Object.class, MixIn.class);
 
-    WRITER = mapper.writer(filters);
+    mapper.setFilterProvider(filters);
+    WRITER = mapper.writerWithDefaultPrettyPrinter();
   }
 
   /**
