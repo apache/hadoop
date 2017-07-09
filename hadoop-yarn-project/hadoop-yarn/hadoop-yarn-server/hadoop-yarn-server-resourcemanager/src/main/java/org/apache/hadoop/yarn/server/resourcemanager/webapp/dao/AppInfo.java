@@ -91,6 +91,8 @@ public class AppInfo {
   private String amRPCAddress;
   protected long allocatedMB;
   protected long allocatedVCores;
+  protected long reservedMB;
+  protected long reservedVCores;
   protected int runningContainers;
   protected long memorySeconds;
   protected long vcoreSeconds;
@@ -189,8 +191,11 @@ public class AppInfo {
               .getApplicationResourceUsageReport();
           if (resourceReport != null) {
             Resource usedResources = resourceReport.getUsedResources();
+            Resource reservedResources = resourceReport.getReservedResources();
             allocatedMB = usedResources.getMemorySize();
             allocatedVCores = usedResources.getVirtualCores();
+            reservedMB = reservedResources.getMemorySize();
+            reservedVCores = reservedResources.getVirtualCores();
             runningContainers = resourceReport.getNumUsedContainers();
             queueUsagePercentage = resourceReport.getQueueUsagePercentage();
             clusterUsagePercentage = resourceReport.getClusterUsagePercentage();
@@ -391,6 +396,14 @@ public class AppInfo {
     return this.allocatedVCores;
   }
   
+  public long getReservedMB() {
+    return this.reservedMB;
+  }
+
+  public long getReservedVCores() {
+    return this.reservedVCores;
+  }
+
   public long getPreemptedMB() {
     return preemptedResourceMB;
   }
