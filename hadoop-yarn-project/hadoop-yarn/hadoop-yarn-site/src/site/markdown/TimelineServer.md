@@ -284,7 +284,7 @@ Here is an example:
 
     try {
       TimelineDomain myDomain = new TimelineDomain();
-      myDomain.setID("MyDomain");
+      myDomain.setId("MyDomain");
       // Compose other Domain info ....
 
       client.putDomain(myDomain);
@@ -292,7 +292,7 @@ Here is an example:
       TimelineEntity myEntity = new TimelineEntity();
       myEntity.setDomainId(myDomain.getId());
       myEntity.setEntityType("APPLICATION");
-      myEntity.setEntityID("MyApp1")
+      myEntity.setEntityId("MyApp1");
       // Compose other entity info
 
       TimelinePutResponse response = client.putEntities(entity);
