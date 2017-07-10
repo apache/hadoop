@@ -2115,17 +2115,39 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS =
       3000;
 
-  /** Overallocation (= allocation based on utilization) configs. */
-  public static final String NM_OVERALLOCATION_ALLOCATION_THRESHOLD =
-      NM_PREFIX + "overallocation.allocation-threshold";
-  public static final float DEFAULT_NM_OVERALLOCATION_ALLOCATION_THRESHOLD
-      = 0f;
+  /**
+   * General overallocation threshold if no resource-type-specific
+   * threshold is provided.
+   */
+  public static final String NM_OVERALLOCATION_GENERAL_THRESHOLD =
+      NM_PREFIX + "overallocation.general-utilization-threshold";
+  public static final float
+      DEFAULT_NM_OVERALLOCATION_GENERAL_THRESHOLD = -1.0f;
+  /**
+   * The maximum value of utilization threshold for all resource types
+   * up to which the scheduler allocates OPPORTUNISTIC containers.
+   */
   @Private
-  public static final float MAX_NM_OVERALLOCATION_ALLOCATION_THRESHOLD = 0.95f;
+  public static final float MAX_NM_OVERALLOCATION_THRESHOLD = 0.95f;
+
+  /**
+   * NM CPU utilization threshold up to which the scheduler allocates
+   * OPPORTUNISTIC containers after the node's capacity is fully allocated.
+   */
+  public static final String NM_OVERALLOCATION_CPU_UTILIZATION_THRESHOLD =
+      NM_PREFIX + "overallocation.cpu-utilization-threshold";
+
+  /**
+   * NM memory utilization threshold up to which the scheduler allocates
+   * OPPORTUNISTIC containers after the node's capacity is fully allocated.
+   */
+  public static final String NM_OVERALLOCATION_MEMORY_UTILIZATION_THRESHOLD =
+      NM_PREFIX + "overallocation.memory-utilization-threshold";
+
   public static final String NM_OVERALLOCATION_PREEMPTION_THRESHOLD =
       NM_PREFIX + "overallocation.preemption-threshold";
   public static final float DEFAULT_NM_OVERALLOCATION_PREEMPTION_THRESHOLD
-      = 0f;
+      = 0.96f;
 
   /**
    * Interval of time the linux container executor should try cleaning up

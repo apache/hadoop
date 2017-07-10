@@ -1727,14 +1727,44 @@
 
   <property>
     <description>The extent of over-allocation (container-allocation based on
+      current utilization instead of prior allocation) allowed on this node that
+      applies to all resource types (expressed as a float between 0 and 0.95).
+      By default, over-allocation is turned off (value = -1). When turned on,
+      the node allows running OPPORTUNISTIC containers when the aggregate
+      utilization for each resource type is under the value specified here
+      multiplied by the node's advertised capacity. Note for each resource type,
+      it can be overridden by the type specific setting:
+      yarn.nodemanager.overallocation.cpu-utilization-threshold for CPU
+      yarn.nodemanager.overallocation.memory-utilization-threshold for memory
+    </description>
+    <name>yarn.nodemanager.overallocation.general-utilization-threshold</name>
+    <value>-1.0</value>
+  </property>
+
+  <property>
+    <description>The extent of over-allocation (container-allocation based on
       current utilization instead of prior allocation) allowed on this node,
-      expressed as a float between 0 and 0.95. By default, over-allocation is
-      turned off (value = 0). When turned on, the node allows running
-      OPPORTUNISTIC containers when the aggregate utilization is under the
+      in terms of the percentage of overall NM memory capacity utilized (
+      expressed as a float between 0 and 0.95). By default, over-allocation is
+      turned off (value = -1). When turned on, the node allows running
+      OPPORTUNISTIC containers only when the aggregate utilization is under the
       value specified here multiplied by the node's advertised capacity.
     </description>
-    <name>yarn.nodemanager.overallocation.allocation-threshold</name>
-    <value>0f</value>
+    <name>yarn.nodemanager.overallocation.memory-utilization-threshold</name>
+    <value>${yarn.nodemanager.overallocation.general-utilization-threshold}</value>
+  </property>
+
+  <property>
+    <description>The extent of over-allocation (container-allocation based on
+      current utilization instead of prior allocation) allowed on this node,
+      in terms of the percentage of overall NM CPU capacity utilized (
+      expressed as a float between 0 and 0.95). By default, over-allocation is
+      turned off (value = -1). When turned on, the node allows running
+      OPPORTUNISTIC containers only when the aggregate utilization is under the
+      value specified here multiplied by the node's advertised capacity.
+    </description>
+    <name>yarn.nodemanager.overallocation.cpu-utilization-threshold</name>
+    <value>${yarn.nodemanager.overallocation.general-utilization-threshold}</value>
   </property>
 
   <property>
@@ -1743,7 +1773,7 @@
       beyond which OPPORTUNISTIC containers should start getting preempted.
     </description>
     <name>yarn.nodemanager.overallocation.preemption-threshold</name>
-    <value>1</value>
+    <value>0.96</value>
   </property>
 
   <property>
