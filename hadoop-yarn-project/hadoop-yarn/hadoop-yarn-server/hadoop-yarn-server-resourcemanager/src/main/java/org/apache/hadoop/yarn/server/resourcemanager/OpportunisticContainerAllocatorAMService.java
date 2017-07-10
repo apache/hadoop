@@ -23,6 +23,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.yarn.ams.ApplicationMasterServiceProcessor;
+import org.apache.hadoop.yarn.ams.ApplicationMasterServiceUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -37,8 +39,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 
@@ -69,7 +69,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
-import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 
 import java.io.IOException;
@@ -101,6 +100,84 @@ public class OpportunisticContainerAllocatorAMService
   private final long cacheRefreshInterval;
   private volatile List<RemoteNode> cachedNodes;
   private volatile long lastCacheUpdateTime;
+
+  class OpportunisticAMSProcessor extends DefaultAMSProcessor {
+
+    OpportunisticAMSProcessor(RMContext rmContext, YarnScheduler
+        scheduler) {
+      super(rmContext, scheduler);
+    }
+
+    @Override
+    public RegisterApplicationMasterResponse registerApplicationMaster(
+        ApplicationAttemptId applicationAttemptId,
+        RegisterApplicationMasterRequest request) throws IOException {
+      final SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
+          getScheduler()).getApplicationAttempt(applicationAttemptId);
+      if (appAttempt.getOpportunisticContainerContext() == null) {
+        OpportunisticContainerContext opCtx =
+            new OpportunisticContainerContext();
+        opCtx.setContainerIdGenerator(new OpportunisticContainerAllocator
+            .ContainerIdGenerator() {
+          @Override
+          public long generateContainerId() {
+            return appAttempt.getAppSchedulingInfo().getNewContainerId();
+          }
+        });
+        int tokenExpiryInterval = getConfig()
+            .getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+                YarnConfiguration.
+                    DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);
+        opCtx.updateAllocationParams(
+            getScheduler().getMinimumResourceCapability(),
+            getScheduler().getMaximumResourceCapability(),
+            getScheduler().getMinimumResourceCapability(),
+            tokenExpiryInterval);
+        appAttempt.setOpportunisticContainerContext(opCtx);
+      }
+      return super.registerApplicationMaster(applicationAttemptId, request);
+    }
+
+    @Override
+    public AllocateResponse allocate(ApplicationAttemptId appAttemptId,
+        AllocateRequest request) throws YarnException {
+      // Partition requests to GUARANTEED and OPPORTUNISTIC.
+      OpportunisticContainerAllocator.PartitionedResourceRequests
+          partitionedAsks =
+          oppContainerAllocator.partitionAskList(request.getAskList());
+
+      // Allocate OPPORTUNISTIC containers.
+      SchedulerApplicationAttempt appAttempt =
+          ((AbstractYarnScheduler)rmContext.getScheduler())
+              .getApplicationAttempt(appAttemptId);
+
+      OpportunisticContainerContext oppCtx =
+          appAttempt.getOpportunisticContainerContext();
+      oppCtx.updateNodeList(getLeastLoadedNodes());
+
+      List<Container> oppContainers =
+          oppContainerAllocator.allocateContainers(
+              request.getResourceBlacklistRequest(),
+              partitionedAsks.getOpportunistic(), appAttemptId, oppCtx,
+              ResourceManager.getClusterTimeStamp(), appAttempt.getUser());
+
+      // Create RMContainers and update the NMTokens.
+      if (!oppContainers.isEmpty()) {
+        handleNewContainers(oppContainers, false);
+        appAttempt.updateNMTokens(oppContainers);
+      }
+
+      // Allocate GUARANTEED containers.
+      request.setAskList(partitionedAsks.getGuaranteed());
+
+      AllocateResponse response = super.allocate(appAttemptId, request);
+      if (!oppContainers.isEmpty()) {
+        ApplicationMasterServiceUtils.addToAllocatedContainers(
+            response, oppContainers);
+      }
+      return response;
+    }
+  }
 
   public OpportunisticContainerAllocatorAMService(RMContext rmContext,
       YarnScheduler scheduler) {
@@ -160,6 +237,11 @@ public class OpportunisticContainerAllocatorAMService
   }
 
   @Override
+  protected ApplicationMasterServiceProcessor createProcessor() {
+    return new OpportunisticAMSProcessor(rmContext, rmContext.getScheduler());
+  }
+
+  @Override
   public Server getServer(YarnRPC rpc, Configuration serverConf,
       InetSocketAddress addr, AMRMTokenSecretManager secretManager) {
     if (YarnConfiguration.isDistSchedulingEnabled(serverConf)) {
@@ -177,80 +259,6 @@ public class OpportunisticContainerAllocatorAMService
       return server;
     }
     return super.getServer(rpc, serverConf, addr, secretManager);
-  }
-
-  @Override
-  public RegisterApplicationMasterResponse registerApplicationMaster
-      (RegisterApplicationMasterRequest request) throws YarnException,
-      IOException {
-    final ApplicationAttemptId appAttemptId = getAppAttemptId();
-    final SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
-        rmContext.getScheduler()).getApplicationAttempt(appAttemptId);
-    if (appAttempt.getOpportunisticContainerContext() == null) {
-      OpportunisticContainerContext opCtx = new OpportunisticContainerContext();
-      opCtx.setContainerIdGenerator(new OpportunisticContainerAllocator
-          .ContainerIdGenerator() {
-        @Override
-        public long generateContainerId() {
-          return appAttempt.getAppSchedulingInfo().getNewContainerId();
-        }
-      });
-      int tokenExpiryInterval = getConfig()
-          .getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
-              YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);
-      opCtx.updateAllocationParams(
-          rmContext.getScheduler().getMinimumResourceCapability(),
-          rmContext.getScheduler().getMaximumResourceCapability(),
-          rmContext.getScheduler().getMinimumResourceCapability(),
-          tokenExpiryInterval);
-      appAttempt.setOpportunisticContainerContext(opCtx);
-    }
-    return super.registerApplicationMaster(request);
-  }
-
-  @Override
-  public FinishApplicationMasterResponse finishApplicationMaster
-      (FinishApplicationMasterRequest request) throws YarnException,
-      IOException {
-    return super.finishApplicationMaster(request);
-  }
-
-  @Override
-  protected void allocateInternal(ApplicationAttemptId appAttemptId,
-      AllocateRequest request, AllocateResponse allocateResponse)
-      throws YarnException {
-
-    // Partition requests to GUARANTEED and OPPORTUNISTIC.
-    OpportunisticContainerAllocator.PartitionedResourceRequests
-        partitionedAsks =
-        oppContainerAllocator.partitionAskList(request.getAskList());
-
-    // Allocate OPPORTUNISTIC containers.
-    SchedulerApplicationAttempt appAttempt =
-        ((AbstractYarnScheduler)rmContext.getScheduler())
-            .getApplicationAttempt(appAttemptId);
-
-    OpportunisticContainerContext oppCtx =
-        appAttempt.getOpportunisticContainerContext();
-    oppCtx.updateNodeList(getLeastLoadedNodes());
-
-    List<Container> oppContainers =
-        oppContainerAllocator.allocateContainers(
-            request.getResourceBlacklistRequest(),
-            partitionedAsks.getOpportunistic(), appAttemptId, oppCtx,
-            ResourceManager.getClusterTimeStamp(), appAttempt.getUser());
-
-    // Create RMContainers and update the NMTokens.
-    if (!oppContainers.isEmpty()) {
-      handleNewContainers(oppContainers, false);
-      appAttempt.updateNMTokens(oppContainers);
-      addToAllocatedContainers(allocateResponse, oppContainers);
-    }
-
-    // Allocate GUARANTEED containers.
-    request.setAskList(partitionedAsks.getGuaranteed());
-
-    super.allocateInternal(appAttemptId, request, allocateResponse);
   }
 
   @Override
