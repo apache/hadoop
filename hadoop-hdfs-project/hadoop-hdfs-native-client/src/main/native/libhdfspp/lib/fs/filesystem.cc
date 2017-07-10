@@ -288,12 +288,14 @@ int FileSystemImpl::WorkerThreadCount() {
 }
 
 bool FileSystemImpl::CancelPendingConnect() {
+  if(connect_callback_.IsCallbackAccessed()) {
+    // Temp fix for failover hangs, allow CancelPendingConnect to be called so it can push a flag through the RPC engine
+    LOG_DEBUG(kFileSystem, << "FileSystemImpl@" << this << "::CancelPendingConnect called after Connect completed");
+    return nn_.CancelPendingConnect();
+  }
+
   if(!connect_callback_.IsCallbackSet()) {
     LOG_DEBUG(kFileSystem, << "FileSystemImpl@" << this << "::CancelPendingConnect called before Connect started");
-    return false;
-  }
-  if(connect_callback_.IsCallbackAccessed()) {
-    LOG_DEBUG(kFileSystem, << "FileSystemImpl@" << this << "::CancelPendingConnect called after Connect completed");
     return false;
   }
 
