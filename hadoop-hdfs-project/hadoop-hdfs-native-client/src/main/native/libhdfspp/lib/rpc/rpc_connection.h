@@ -80,6 +80,7 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
 
   void SetEventHandlers(std::shared_ptr<LibhdfsEvents> event_handlers);
   void SetClusterName(std::string cluster_name);
+  void SetAuthInfo(const AuthInfo& auth_info);
 
   LockFreeRpcEngine *engine() { return engine_; }
   ::asio::io_service &io_service();

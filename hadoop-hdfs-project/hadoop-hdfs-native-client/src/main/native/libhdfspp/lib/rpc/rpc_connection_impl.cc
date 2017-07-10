@@ -383,6 +383,11 @@ void RpcConnection::SetClusterName(std::string cluster_name) {
   cluster_name_ = cluster_name;
 }
 
+void RpcConnection::SetAuthInfo(const AuthInfo& auth_info) {
+  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
+  auth_info_ = auth_info;
+}
+
 void RpcConnection::CommsError(const Status &status) {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
   LOG_DEBUG(kRPC, << "RpcConnection::CommsError called");
