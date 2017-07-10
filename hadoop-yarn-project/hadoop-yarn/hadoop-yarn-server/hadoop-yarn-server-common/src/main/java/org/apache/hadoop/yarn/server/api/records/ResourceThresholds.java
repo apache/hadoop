@@ -28,10 +28,15 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.ResourceThresholdsPBImp
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class ResourceThresholds {
-  public static ResourceThresholds newInstance(float threshold) {
+  public static ResourceThresholds newInstance(float overallThreshold) {
+    return newInstance(overallThreshold, overallThreshold);
+  }
+
+  public static ResourceThresholds newInstance(float cpuThreshold,
+      float memoryThreshold) {
     ResourceThresholds thresholds = new ResourceThresholdsPBImpl();
-    thresholds.setMemoryThreshold(threshold);
-    thresholds.setCpuThreshold(threshold);
+    thresholds.setCpuThreshold(cpuThreshold);
+    thresholds.setMemoryThreshold(memoryThreshold);
     return thresholds;
   }
 

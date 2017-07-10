@@ -224,25 +224,60 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   private void initializeOverAllocation(Configuration conf) {
-    float overAllocationTreshold = conf.getFloat(
-        YarnConfiguration.NM_OVERALLOCATION_ALLOCATION_THRESHOLD,
-        YarnConfiguration.DEFAULT_NM_OVERALLOCATION_ALLOCATION_THRESHOLD);
-    overAllocationTreshold = Math.min(overAllocationTreshold,
-        YarnConfiguration.MAX_NM_OVERALLOCATION_ALLOCATION_THRESHOLD);
-    overAllocationTreshold = Math.max(0, overAllocationTreshold);
+    float generalResourceOverAllocationThreshold = conf.getFloat(
+        YarnConfiguration.NM_OVERALLOCATION_GENERAL_THRESHOLD,
+        YarnConfiguration.DEFAULT_NM_OVERALLOCATION_GENERAL_THRESHOLD);
 
-    if (overAllocationTreshold > 0f) {
-      ((NodeManager.NMContext) context).setOverAllocationInfo(
-          OverAllocationInfo.newInstance(
-              ResourceThresholds.newInstance(overAllocationTreshold)));
-
-      float preemptionThreshold = conf.getFloat(
-          YarnConfiguration.NM_OVERALLOCATION_PREEMPTION_THRESHOLD,
-          YarnConfiguration.DEFAULT_NM_OVERALLOCATION_PREEMPTION_THRESHOLD);
-
-      this.overAllocationPreemptionThresholds =
-          ResourceThresholds.newInstance(preemptionThreshold);
+    float overAllocationMemoryUtilizationThreshold = conf.getFloat(
+        YarnConfiguration.NM_OVERALLOCATION_MEMORY_UTILIZATION_THRESHOLD,
+        generalResourceOverAllocationThreshold);
+    overAllocationMemoryUtilizationThreshold = Math.min(
+        overAllocationMemoryUtilizationThreshold,
+        YarnConfiguration.MAX_NM_OVERALLOCATION_THRESHOLD);
+    if (overAllocationMemoryUtilizationThreshold <= 0) {
+      LOG.info("NodeManager oversubscription is disabled because the memory " +
+          "utilization threshold is no larger than zero.");
+      return;
     }
+
+    float overAllocationCpuUtilizationThreshold = conf.getFloat(
+        YarnConfiguration.NM_OVERALLOCATION_CPU_UTILIZATION_THRESHOLD,
+        generalResourceOverAllocationThreshold);
+    overAllocationCpuUtilizationThreshold = Math.min(
+        overAllocationCpuUtilizationThreshold,
+        YarnConfiguration.MAX_NM_OVERALLOCATION_THRESHOLD);
+    if (overAllocationCpuUtilizationThreshold <= 0) {
+      LOG.info("NodeManager oversubscription is disabled because the CPU " +
+          "utilization threshold is no larger than zero.");
+      return;
+    }
+
+    float preemptionThreshold = conf.getFloat(
+        YarnConfiguration.NM_OVERALLOCATION_PREEMPTION_THRESHOLD,
+        YarnConfiguration.DEFAULT_NM_OVERALLOCATION_PREEMPTION_THRESHOLD);
+    if (preemptionThreshold <= overAllocationCpuUtilizationThreshold) {
+      LOG.info("NodeManager oversubscription is disabled because preemption" +
+          "threshold is no larger than the cpu utilization threshold.");
+      return;
+    }
+    if (preemptionThreshold <= overAllocationMemoryUtilizationThreshold) {
+      LOG.info("NodeManager oversubscription is disabled because preemption" +
+          "threshold is no larger than the memory utilization threshold.");
+      return;
+    }
+
+    ResourceThresholds resourceThresholds = ResourceThresholds.newInstance(
+        overAllocationCpuUtilizationThreshold,
+        overAllocationMemoryUtilizationThreshold);
+    ((NodeManager.NMContext) context).setOverAllocationInfo(
+        OverAllocationInfo.newInstance(resourceThresholds));
+    this.overAllocationPreemptionThresholds =
+        ResourceThresholds.newInstance(preemptionThreshold);
+
+    LOG.info("NodeManager oversubscription enabled with overallocation " +
+        "thresholds (memory:" + overAllocationMemoryUtilizationThreshold +
+        ", CPU:" + overAllocationCpuUtilizationThreshold + ") and preemption" +
+        " threshold: " + preemptionThreshold);
   }
 
   private boolean isResourceCalculatorAvailable() {
