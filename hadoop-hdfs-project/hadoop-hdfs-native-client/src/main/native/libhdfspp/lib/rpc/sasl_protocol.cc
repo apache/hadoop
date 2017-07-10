@@ -87,6 +87,7 @@ void SaslProtocol::Authenticate(std::function<void(const Status & status, const 
   // We cheat here since this is always called while holding the RpcConnection's lock
   std::shared_ptr<RpcConnection> connection = connection_.lock();
   if (!connection) {
+    AuthComplete(Status::AuthenticationFailed("Lost RPC Connection"), AuthInfo());
     return;
   }
 
@@ -335,6 +336,7 @@ bool SaslProtocol::SendSaslMessage(RpcSaslProto & message)
   std::shared_ptr<RpcConnection> connection = connection_.lock();
   if (!connection) {
     LOG_DEBUG(kRPC, << "Tried sending a SASL Message but the RPC connection was gone");
+    AuthComplete(Status::AuthenticationFailed("Lost RPC Connection"), AuthInfo());
     return false;
   }
 
