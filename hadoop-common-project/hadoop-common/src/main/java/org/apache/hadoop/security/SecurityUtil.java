@@ -49,10 +49,9 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 
-
-//this will need to be replaced someday when there is a suitable replacement
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+//this will need to be replaced someday when there is a suitable replacement
 import sun.net.dns.ResolverConfiguration;
 import sun.net.util.IPAddressUtil;
 
