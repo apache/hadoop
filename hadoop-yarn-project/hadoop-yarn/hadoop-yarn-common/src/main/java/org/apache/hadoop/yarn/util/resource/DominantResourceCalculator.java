@@ -306,6 +306,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
           value = roundUp(value, stepFactorValue);
         }
         tmp.setValue(Math.min(value, maximumValue));
+        ret.setResourceInformation(resource, tmp);
       } catch (YarnException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
