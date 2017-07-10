@@ -204,24 +204,26 @@ public class OzoneRestClient implements Closeable {
    * List all the volumes owned by the user or Owned by the user specified in
    * the behalf of string.
    *
-   * @param onBehalfOf - User Name of the user if it is not the caller. for
-   *                   example, an admin wants to list some other users
-   *                   volumes.
-   * @param prefix     - Return only volumes that match this prefix.
-   * @param maxKeys    - Maximum number of results to return, if the result set
-   *                   is smaller than requested size, it means that list is
-   *                   complete.
-   * @param prevKey    - The last key that client got, server will continue
-   *                   returning results from that point.
+   * @param onBehalfOf
+   *  User Name of the user if it is not the caller. for example,
+   *  an admin wants to list some other users volumes.
+   * @param prefix
+   *   Return only volumes that match this prefix.
+   * @param maxKeys
+   *   Maximum number of results to return, if the result set
+   *   is smaller than requested size, it means that list is
+   *   complete.
+   * @param startVolume
+   *   The previous volume name.
    * @return List of Volumes
    * @throws OzoneException
    */
-  public List<OzoneVolume> listVolumes(String onBehalfOf, String prefix, int
-      maxKeys, OzoneVolume prevKey) throws OzoneException {
+  public List<OzoneVolume> listVolumes(String onBehalfOf, String prefix,
+      int maxKeys, String startVolume) throws OzoneException {
     HttpGet httpGet = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
       URIBuilder builder = new URIBuilder(endPointURI);
-      if (prefix != null) {
+      if (!Strings.isNullOrEmpty(prefix)) {
         builder.addParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix);
       }
 
@@ -230,9 +232,9 @@ public class OzoneRestClient implements Closeable {
             .toString(maxKeys));
       }
 
-      if (prevKey != null) {
+      if (!Strings.isNullOrEmpty(startVolume)) {
         builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY,
-            prevKey.getOwnerName() + "/" + prevKey.getVolumeName());
+            startVolume);
       }
 
       builder.setPath("/").build();
@@ -250,6 +252,33 @@ public class OzoneRestClient implements Closeable {
   }
 
   /**
+   * List all the volumes owned by the user or Owned by the user specified in
+   * the behalf of string.
+   *
+   * @param onBehalfOf - User Name of the user if it is not the caller. for
+   *                   example, an admin wants to list some other users
+   *                   volumes.
+   * @param prefix     - Return only volumes that match this prefix.
+   * @param maxKeys    - Maximum number of results to return, if the result set
+   *                   is smaller than requested size, it means that list is
+   *                   complete.
+   * @param prevKey    - The last key that client got, server will continue
+   *                   returning results from that point.
+   * @return List of Volumes
+   * @throws OzoneException
+   */
+  public List<OzoneVolume> listVolumes(String onBehalfOf, String prefix,
+      int maxKeys, OzoneVolume prevKey) throws OzoneException {
+    String volumeName = null;
+
+    if (prevKey != null) {
+      volumeName = prevKey.getVolumeName();
+    }
+
+    return listVolumes(onBehalfOf, prefix, maxKeys, volumeName);
+  }
+
+  /**
    * List volumes of the current user or if onBehalfof is not null lists volume
    * owned by that user. You need admin privilege to read other users volume
    * lists.
@@ -260,7 +289,8 @@ public class OzoneRestClient implements Closeable {
    */
   public List<OzoneVolume> listVolumes(String onBehalfOf)
       throws OzoneException {
-    return listVolumes(onBehalfOf, null, 1000, null);
+    return listVolumes(onBehalfOf, null,
+        Integer.parseInt(Header.OZONE_DEFAULT_LIST_SIZE), StringUtils.EMPTY);
   }
 
   /**
