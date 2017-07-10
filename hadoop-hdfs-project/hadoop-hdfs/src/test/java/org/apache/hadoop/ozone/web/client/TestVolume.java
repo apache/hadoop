@@ -20,11 +20,13 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
@@ -45,6 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -80,7 +83,7 @@ public class TestVolume {
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
 
@@ -123,8 +126,9 @@ public class TestVolume {
       client.createVolume("testvol", "bilbo", "100TB");
       assertFalse(true);
     } catch (OzoneException ex) {
-      // OZone will throw saying volume already exists
-      assertEquals(ex.getShortMessage(),"volumeAlreadyExists");
+      // Ozone will throw saying volume already exists
+      GenericTestUtils.assertExceptionContains(
+          Status.VOLUME_ALREADY_EXISTS.toString(), ex);
     }
   }
 
@@ -222,6 +226,58 @@ public class TestVolume {
     // becasue we are querying an existing ozone store, there will
     // be volumes created by other tests too. So we should get more page counts.
     Assert.assertEquals(volCount / step , pagecount);
+  }
+
+  @Test
+  public void testListVolumes() throws OzoneException, IOException {
+    final int volCount = 20;
+    final String user1 = "test-user-a";
+    final String user2 = "test-user-b";
+
+    client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+    // Create 20 volumes, 10 for user1 and another 10 for user2.
+    for (int x = 0; x < volCount; x++) {
+      String volumeName;
+      String userName;
+
+      if (x % 2 == 0) {
+        // create volume [test-vol0, test-vol2, ..., test-vol18] for user1
+        userName = user1;
+        volumeName = "test-vol" + x;
+      } else {
+        // create volume [test-vol1, test-vol3, ..., test-vol19] for user2
+        userName = user2;
+        volumeName = "test-vol" + x;
+      }
+      OzoneVolume vol = client.createVolume(volumeName, userName, "100TB");
+      assertNotNull(vol);
+    }
+
+    // list all the volumes belong to user1
+    List<OzoneVolume> volumeList = client.listVolumes(user1,
+        null, 100, StringUtils.EMPTY);
+    assertEquals(10, volumeList.size());
+    volumeList.stream()
+        .filter(item -> item.getOwnerName().equals(user1))
+        .collect(Collectors.toList());
+
+    // test max key parameter of listing volumes
+    volumeList = client.listVolumes(user1, null, 2, StringUtils.EMPTY);
+    assertEquals(2, volumeList.size());
+
+    // test prefix parameter of listing volumes
+    volumeList = client.listVolumes(user1, "test-vol10", 100,
+        StringUtils.EMPTY);
+    assertTrue(volumeList.size() == 1
+        && volumeList.get(0).getVolumeName().equals("test-vol10"));
+
+    volumeList = client.listVolumes(user1, "test-vol1",
+        100, StringUtils.EMPTY);
+    assertEquals(5, volumeList.size());
+
+    // test start key parameter of listing volumes
+    volumeList = client.listVolumes(user2, null, 100, "test-vol17");
+    assertEquals(2, volumeList.size());
   }
 
   /**

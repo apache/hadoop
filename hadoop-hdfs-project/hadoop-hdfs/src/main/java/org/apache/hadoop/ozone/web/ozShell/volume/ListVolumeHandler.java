@@ -55,16 +55,37 @@ public class ListVolumeHandler extends Handler {
           "Incorrect call : listVolume is missing");
     }
 
+    int maxKeys = 0;
+    if (cmd.hasOption(Shell.LIST_LENGTH)) {
+      String length = cmd.getOptionValue(Shell.LIST_LENGTH);
+      try {
+        maxKeys = Integer.parseInt(length);
+      } catch (NumberFormatException nfe) {
+        throw new OzoneRestClientException(
+            "Invalid max key length, the vaule should be digital.");
+      }
+
+      if (maxKeys <= 0) {
+        throw new OzoneRestClientException(
+            "Invalid max key length, the vaule should be a positive number.");
+      }
+    }
+
+    String startVolume = null;
+    if (cmd.hasOption(Shell.START)) {
+      startVolume = cmd.getOptionValue(Shell.START);
+    }
+
+    String prefix = null;
+    if (cmd.hasOption(Shell.PREFIX)) {
+      prefix = cmd.getOptionValue(Shell.PREFIX);
+    }
+
     String ozoneURIString = cmd.getOptionValue(Shell.LIST_VOLUME);
     URI ozoneURI = verifyURI(ozoneURIString);
 
     if (cmd.hasOption(Shell.RUNAS)) {
       rootName = "hdfs";
-    }
-
-    if (!cmd.hasOption(Shell.USER)) {
-      throw new OzoneRestClientException(
-          "User name is needed in listVolume call.");
     }
 
     if (cmd.hasOption(Shell.USER)) {
@@ -80,7 +101,8 @@ public class ListVolumeHandler extends Handler {
       client.setUserAuth(userName);
     }
 
-    List<OzoneVolume> volumes = client.listVolumes(userName);
+    List<OzoneVolume> volumes = client.listVolumes(userName, prefix, maxKeys,
+        startVolume);
     if (volumes != null) {
       if (cmd.hasOption(Shell.VERBOSE)) {
         System.out.printf("Found : %d volumes for user : %s %n", volumes.size(),
