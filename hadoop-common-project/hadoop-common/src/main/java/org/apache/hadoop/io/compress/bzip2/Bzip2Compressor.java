@@ -41,7 +41,8 @@ public class Bzip2Compressor implements Compressor {
   static final int DEFAULT_BLOCK_SIZE = 9;
   static final int DEFAULT_WORK_FACTOR = 30;
 
-  private static final Logger LOG = LoggerFactory.getLogger(Bzip2Compressor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Bzip2Compressor.class);
 
   private long stream;
   private int blockSize;

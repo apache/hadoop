@@ -48,7 +48,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class MutableRatesWithAggregation extends MutableMetric {
-  static final Logger LOG = LoggerFactory.getLogger(MutableRatesWithAggregation.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(MutableRatesWithAggregation.class);
   private final Map<String, MutableRate> globalMetrics =
       new ConcurrentHashMap<>();
   private final Set<Class<?>> protocolCache = Sets.newHashSet();

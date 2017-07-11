@@ -34,7 +34,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceStability.Unstable
 public class RefreshRegistry {
-  public static final Logger LOG = LoggerFactory.getLogger(RefreshRegistry.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RefreshRegistry.class);
 
   // Used to hold singleton instance
   private static class RegistryHolder {

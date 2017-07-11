@@ -41,7 +41,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
   extends ShellBasedUnixGroupsMapping {
   
   private static final Logger LOG =
-    LoggerFactory.getLogger(ShellBasedUnixGroupsNetgroupMapping.class);
+      LoggerFactory.getLogger(ShellBasedUnixGroupsNetgroupMapping.class);
 
   /**
    * Get unix groups (parent) and netgroups for given user

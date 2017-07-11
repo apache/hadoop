@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 public class TestProxyUsers {
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestProxyUsers.class);
+      LoggerFactory.getLogger(TestProxyUsers.class);
   private static final String REAL_USER_NAME = "proxier";
   private static final String PROXY_USER_NAME = "proxied_user";
   private static final String AUTHORIZED_PROXY_USER_NAME = "authorized_proxied_user";

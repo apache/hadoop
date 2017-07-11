@@ -43,7 +43,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Unstable
 public class AsyncDiskService {
   
-  public static final Logger LOG = LoggerFactory.getLogger(AsyncDiskService.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(AsyncDiskService.class);
   
   // ThreadPool core pool size
   private static final int CORE_THREADS_PER_VOLUME = 1;

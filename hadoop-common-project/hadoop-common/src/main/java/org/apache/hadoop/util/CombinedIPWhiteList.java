@@ -22,7 +22,8 @@ import org.slf4j.LoggerFactory;
 
 public class CombinedIPWhiteList implements IPList {
 
-  public static final Logger LOG = LoggerFactory.getLogger(CombinedIPWhiteList.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CombinedIPWhiteList.class);
   private static final String LOCALHOST_IP = "127.0.0.1";
 
   private final IPList[] networkLists;

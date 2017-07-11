@@ -47,7 +47,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_S
 public class StaticUserWebFilter extends FilterInitializer {
   static final String DEPRECATED_UGI_KEY = "dfs.web.ugi";
 
-  private static final Logger LOG = LoggerFactory.getLogger(StaticUserWebFilter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StaticUserWebFilter.class);
 
   static class User implements Principal {
     private final String name;

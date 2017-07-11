@@ -63,7 +63,8 @@ public final class RpcUtil {
    * each RPC client.
    */
   static class RpcFrameDecoder extends FrameDecoder {
-    public static final Logger LOG = LoggerFactory.getLogger(RpcFrameDecoder.class);
+    public static final Logger LOG =
+        LoggerFactory.getLogger(RpcFrameDecoder.class);
     private ChannelBuffer currentFrame;
 
     @Override

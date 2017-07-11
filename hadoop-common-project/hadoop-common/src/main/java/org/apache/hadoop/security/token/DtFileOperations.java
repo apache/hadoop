@@ -40,7 +40,8 @@ import org.slf4j.LoggerFactory;
  * DtFileOperations is a collection of delegation token file operations.
  */
 public final class DtFileOperations {
-  private static final Logger LOG = LoggerFactory.getLogger(DtFileOperations.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DtFileOperations.class);
 
   /** No public constructor as per checkstyle. */
   private DtFileOperations() { }

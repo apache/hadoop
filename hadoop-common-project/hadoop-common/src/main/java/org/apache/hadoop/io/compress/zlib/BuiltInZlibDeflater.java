@@ -33,7 +33,8 @@ import org.slf4j.LoggerFactory;
  */
 public class BuiltInZlibDeflater extends Deflater implements Compressor {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BuiltInZlibDeflater.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BuiltInZlibDeflater.class);
 
   public BuiltInZlibDeflater(int level, boolean nowrap) {
     super(level, nowrap);

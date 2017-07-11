@@ -34,7 +34,8 @@ import org.slf4j.LoggerFactory;
 @Evolving
 public class CompositeService extends AbstractService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(CompositeService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CompositeService.class);
 
   /**
    * Policy on shutdown: attempt to close everything (purest) or

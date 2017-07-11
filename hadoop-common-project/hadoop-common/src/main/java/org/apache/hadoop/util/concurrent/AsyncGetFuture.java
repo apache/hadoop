@@ -29,7 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** A {@link Future} implemented using an {@link AsyncGet} object. */
 public class AsyncGetFuture<T, E extends Throwable> extends AbstractFuture<T> {
-  public static final Logger LOG = LoggerFactory.getLogger(AsyncGetFuture.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(AsyncGetFuture.class);
 
   private final AtomicBoolean called = new AtomicBoolean(false);
   private final AsyncGet<T, E> asyncGet;

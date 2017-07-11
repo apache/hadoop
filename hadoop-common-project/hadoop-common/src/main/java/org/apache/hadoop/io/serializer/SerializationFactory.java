@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 public class SerializationFactory extends Configured {
 
   static final Logger LOG =
-    LoggerFactory.getLogger(SerializationFactory.class.getName());
+      LoggerFactory.getLogger(SerializationFactory.class.getName());
 
   private List<Serialization<?>> serializations = new ArrayList<Serialization<?>>();
 

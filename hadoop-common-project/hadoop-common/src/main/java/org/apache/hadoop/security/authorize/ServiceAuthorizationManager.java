@@ -70,7 +70,8 @@ public class ServiceAuthorizationManager {
     "hadoop.security.authorization";
   
   public static final Logger AUDITLOG =
-    LoggerFactory.getLogger("SecurityLogger."+ServiceAuthorizationManager.class.getName());
+      LoggerFactory.getLogger(
+          "SecurityLogger." + ServiceAuthorizationManager.class.getName());
 
   private static final String AUTHZ_SUCCESSFUL_FOR = "Authorization successful for ";
   private static final String AUTHZ_FAILED_FOR = "Authorization failed for ";

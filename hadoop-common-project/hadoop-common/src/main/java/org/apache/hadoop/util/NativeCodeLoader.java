@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 public final class NativeCodeLoader {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(NativeCodeLoader.class);
+      LoggerFactory.getLogger(NativeCodeLoader.class);
   
   private static boolean nativeCodeLoaded = false;
   

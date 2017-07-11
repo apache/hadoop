@@ -298,7 +298,8 @@ public class IntrusiveCollection<E extends IntrusiveCollection.Element>
     return true;
   }
 
-  public static final Logger LOG = LoggerFactory.getLogger(IntrusiveCollection.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(IntrusiveCollection.class);
 
   @Override
   public boolean remove(Object o) {

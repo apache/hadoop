@@ -211,7 +211,8 @@ public class LdapGroupsMapping
       LDAP_CONFIG_PREFIX + ".read.timeout.ms";
   public static final int READ_TIMEOUT_DEFAULT = 60 * 1000; // 60 seconds
 
-  private static final Logger LOG = LoggerFactory.getLogger(LdapGroupsMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LdapGroupsMapping.class);
 
   static final SearchControls SEARCH_CONTROLS = new SearchControls();
   static {

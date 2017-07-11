@@ -41,7 +41,8 @@ import org.slf4j.LoggerFactory;
  */
 public class CallQueueManager<E extends Schedulable>
     extends AbstractQueue<E> implements BlockingQueue<E> {
-  public static final Logger LOG = LoggerFactory.getLogger(CallQueueManager.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CallQueueManager.class);
   // Number of checkpoints for empty queue.
   private static final int CHECKPOINT_NUM = 20;
   // Interval to check empty queue.

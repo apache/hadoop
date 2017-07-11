@@ -39,7 +39,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  */
 @InterfaceAudience.Private
 public class OsSecureRandom extends Random implements Closeable, Configurable {
-  public static final Logger LOG = LoggerFactory.getLogger(OsSecureRandom.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(OsSecureRandom.class);
   
   private static final long serialVersionUID = 6391500337172057900L;
 

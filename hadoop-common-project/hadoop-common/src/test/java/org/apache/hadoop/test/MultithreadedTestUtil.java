@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
 public abstract class MultithreadedTestUtil {
 
   public static final Logger LOG =
-    LoggerFactory.getLogger(MultithreadedTestUtil.class);
+      LoggerFactory.getLogger(MultithreadedTestUtil.class);
 
   /**
    * TestContext is used to setup the multithreaded test runner.

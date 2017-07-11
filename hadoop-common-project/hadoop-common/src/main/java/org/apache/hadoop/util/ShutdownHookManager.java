@@ -47,7 +47,8 @@ public class ShutdownHookManager {
 
   private static final ShutdownHookManager MGR = new ShutdownHookManager();
 
-  private static final Logger LOG = LoggerFactory.getLogger(ShutdownHookManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ShutdownHookManager.class);
   private static final long TIMEOUT_DEFAULT = 10;
   private static final TimeUnit TIME_UNIT_DEFAULT = TimeUnit.SECONDS;
 

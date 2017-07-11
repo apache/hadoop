@@ -30,7 +30,8 @@ import org.slf4j.LoggerFactory;
  * A simple client that registers an RPC program with portmap.
  */
 public class RegistrationClient extends SimpleTcpClient {
-  public static final Logger LOG = LoggerFactory.getLogger(RegistrationClient.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RegistrationClient.class);
 
   public RegistrationClient(String host, int port, XDR request) {
     super(host, port, request);

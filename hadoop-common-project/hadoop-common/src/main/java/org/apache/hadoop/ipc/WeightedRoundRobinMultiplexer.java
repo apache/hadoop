@@ -44,7 +44,7 @@ public class WeightedRoundRobinMultiplexer implements RpcMultiplexer {
     "faircallqueue.multiplexer.weights";
 
   public static final Logger LOG =
-    LoggerFactory.getLogger(WeightedRoundRobinMultiplexer.class);
+      LoggerFactory.getLogger(WeightedRoundRobinMultiplexer.class);
 
   private final int numQueues; // The number of queues under our provisioning
 

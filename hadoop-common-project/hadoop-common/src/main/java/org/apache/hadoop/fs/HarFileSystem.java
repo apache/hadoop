@@ -50,7 +50,8 @@ import java.util.*;
 
 public class HarFileSystem extends FileSystem {
 
-  private static final Logger LOG = LoggerFactory.getLogger(HarFileSystem.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HarFileSystem.class);
 
   public static final String METADATA_CACHE_ENTRIES_KEY = "fs.har.metadatacache.entries";
   public static final int METADATA_CACHE_ENTRIES_DEFAULT = 10;

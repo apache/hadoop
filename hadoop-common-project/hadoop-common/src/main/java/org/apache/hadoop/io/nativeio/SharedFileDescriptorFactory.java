@@ -45,7 +45,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SharedFileDescriptorFactory {
-  public static final Logger LOG = LoggerFactory.getLogger(SharedFileDescriptorFactory.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SharedFileDescriptorFactory.class);
   private final String prefix;
   private final String path;
 

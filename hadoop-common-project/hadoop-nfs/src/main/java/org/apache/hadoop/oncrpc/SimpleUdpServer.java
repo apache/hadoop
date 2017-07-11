@@ -33,7 +33,8 @@ import org.slf4j.LoggerFactory;
  * Simple UDP server implemented based on netty.
  */
 public class SimpleUdpServer {
-  public static final Logger LOG = LoggerFactory.getLogger(SimpleUdpServer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SimpleUdpServer.class);
   private final int SEND_BUFFER_SIZE = 65536;
   private final int RECEIVE_BUFFER_SIZE = 65536;
 

@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
   
   private static final Logger LOG =
-    LoggerFactory.getLogger(JniBasedUnixGroupsMapping.class);
+      LoggerFactory.getLogger(JniBasedUnixGroupsMapping.class);
 
   static {
     if (!NativeCodeLoader.isNativeCodeLoaded()) {

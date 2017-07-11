@@ -54,7 +54,8 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class WhitelistBasedResolver extends SaslPropertiesResolver {
-  public static final Logger LOG = LoggerFactory.getLogger(WhitelistBasedResolver.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(WhitelistBasedResolver.class);
 
   private static final String FIXEDWHITELIST_DEFAULT_LOCATION = "/etc/hadoop/fixedwhitelist";
 

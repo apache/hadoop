@@ -49,7 +49,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class MetricsSourceBuilder {
-  private static final Logger LOG = LoggerFactory.getLogger(MetricsSourceBuilder.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MetricsSourceBuilder.class);
 
   private final Object source;
   private final MutableMetricsFactory factory;

@@ -113,7 +113,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class GenericOptionsParser {
 
-  private static final Logger LOG = LoggerFactory.getLogger(GenericOptionsParser.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GenericOptionsParser.class);
   private Configuration conf;
   private CommandLine commandLine;
   private final boolean parseSuccessful;

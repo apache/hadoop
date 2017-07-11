@@ -45,7 +45,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class SaslInputStream extends InputStream implements ReadableByteChannel {
-  public static final Logger LOG = LoggerFactory.getLogger(SaslInputStream.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SaslInputStream.class);
 
   private final DataInputStream inStream;
   /** Should we wrap the communication channel? */

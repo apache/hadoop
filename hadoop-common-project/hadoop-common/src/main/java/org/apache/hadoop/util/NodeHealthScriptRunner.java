@@ -43,7 +43,8 @@ import org.slf4j.LoggerFactory;
  */
 public class NodeHealthScriptRunner extends AbstractService {
 
-  private static Logger LOG = LoggerFactory.getLogger(NodeHealthScriptRunner.class);
+  private static Logger LOG =
+      LoggerFactory.getLogger(NodeHealthScriptRunner.class);
 
   /** Absolute path to the health script. */
   private String nodeHealthScript;

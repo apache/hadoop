@@ -36,7 +36,8 @@ import org.slf4j.LoggerFactory;
  */
 public class ZlibCompressor implements Compressor {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ZlibCompressor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ZlibCompressor.class);
 
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;
 

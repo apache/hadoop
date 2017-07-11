@@ -42,7 +42,8 @@ import org.slf4j.LoggerFactory;
 
 public class CrossOriginFilter implements Filter {
 
-  private static final Logger LOG = LoggerFactory.getLogger(CrossOriginFilter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CrossOriginFilter.class);
 
   // HTTP CORS Request Headers
   static final String ORIGIN = "Origin";

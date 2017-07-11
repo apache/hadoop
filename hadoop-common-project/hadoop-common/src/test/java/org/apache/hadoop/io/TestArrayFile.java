@@ -39,7 +39,8 @@ import static org.junit.Assert.fail;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestArrayFile {
-  private static final Logger LOG = LoggerFactory.getLogger(TestArrayFile.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestArrayFile.class);
   
   private static final Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
       TestMapFile.class.getSimpleName()));

@@ -34,7 +34,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class MutableMetricsFactory {
-  private static final Logger LOG = LoggerFactory.getLogger(MutableMetricsFactory.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MutableMetricsFactory.class);
 
   MutableMetric newForField(Field field, Metric annotation,
                             MetricsRegistry registry) {

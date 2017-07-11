@@ -116,7 +116,8 @@ import java.util.Set;
  *
  */
 public class JMXJsonServlet extends HttpServlet {
-  private static final Logger LOG = LoggerFactory.getLogger(JMXJsonServlet.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JMXJsonServlet.class);
   static final String ACCESS_CONTROL_ALLOW_METHODS =
       "Access-Control-Allow-Methods";
   static final String ACCESS_CONTROL_ALLOW_ORIGIN =

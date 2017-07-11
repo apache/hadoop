@@ -51,7 +51,8 @@ import static org.apache.hadoop.metrics2.util.Contracts.*;
  */
 class MetricsSourceAdapter implements DynamicMBean {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MetricsSourceAdapter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MetricsSourceAdapter.class);
 
   private final String prefix, name;
   private final MetricsSource source;

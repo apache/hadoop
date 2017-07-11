@@ -40,7 +40,7 @@ public class TestRPCCompatibility {
   private ProtocolProxy<?> proxy;
 
   public static final Logger LOG =
-    LoggerFactory.getLogger(TestRPCCompatibility.class);
+      LoggerFactory.getLogger(TestRPCCompatibility.class);
 
   private static Configuration conf = new Configuration();
 

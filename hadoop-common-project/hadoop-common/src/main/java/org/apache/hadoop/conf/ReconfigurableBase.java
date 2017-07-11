@@ -43,7 +43,7 @@ public abstract class ReconfigurableBase
   extends Configured implements Reconfigurable {
   
   private static final Logger LOG =
-    LoggerFactory.getLogger(ReconfigurableBase.class);
+      LoggerFactory.getLogger(ReconfigurableBase.class);
   // Use for testing purpose.
   private ReconfigurationUtil reconfigurationUtil = new ReconfigurationUtil();
 

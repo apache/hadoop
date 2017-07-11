@@ -30,7 +30,8 @@ import org.slf4j.LoggerFactory;
 @Evolving
 public class LoggingStateChangeListener implements ServiceStateChangeListener {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LoggingStateChangeListener.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LoggingStateChangeListener.class);
 
   private final Logger log;
 

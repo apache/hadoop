@@ -34,7 +34,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class Globber {
-  public static final Logger LOG = LoggerFactory.getLogger(Globber.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(Globber.class.getName());
 
   private final FileSystem fs;
   private final FileContext fc;

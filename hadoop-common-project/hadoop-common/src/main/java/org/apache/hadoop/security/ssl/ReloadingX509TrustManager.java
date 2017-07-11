@@ -47,7 +47,8 @@ public final class ReloadingX509TrustManager
   implements X509TrustManager, Runnable {
 
   @VisibleForTesting
-  static final Logger LOG = LoggerFactory.getLogger(ReloadingX509TrustManager.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(ReloadingX509TrustManager.class);
   @VisibleForTesting
   static final String RELOAD_ERROR_MESSAGE =
       "Could not load truststore (keep using existing one) : ";

@@ -55,7 +55,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class TrashPolicyDefault extends TrashPolicy {
   private static final Logger LOG =
-    LoggerFactory.getLogger(TrashPolicyDefault.class);
+      LoggerFactory.getLogger(TrashPolicyDefault.class);
 
   private static final Path CURRENT = new Path("Current");
 

@@ -57,7 +57,7 @@ public class ApplicationClassLoader extends URLClassLoader {
       "system.classes.default";
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(ApplicationClassLoader.class.getName());
+      LoggerFactory.getLogger(ApplicationClassLoader.class.getName());
 
   static {
     try (InputStream is = ApplicationClassLoader.class.getClassLoader()

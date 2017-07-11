@@ -44,7 +44,8 @@ import org.slf4j.LoggerFactory;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSequenceFile {
-  private static final Logger LOG = LoggerFactory.getLogger(TestSequenceFile.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSequenceFile.class);
 
   private Configuration conf = new Configuration();
 

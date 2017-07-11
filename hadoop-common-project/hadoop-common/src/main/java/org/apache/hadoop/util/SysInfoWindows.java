@@ -34,7 +34,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class SysInfoWindows extends SysInfo {
 
-  private static final Logger LOG = LoggerFactory.getLogger(SysInfoWindows.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SysInfoWindows.class);
 
   private long vmemSize;
   private long memSize;

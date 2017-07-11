@@ -51,7 +51,8 @@ final class RpcProgramPortmap extends IdleStateAwareChannelUpstreamHandler {
   static final int PMAPPROC_DUMP = 4;
   static final int PMAPPROC_GETVERSADDR = 9;
 
-  private static final Logger LOG = LoggerFactory.getLogger(RpcProgramPortmap.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RpcProgramPortmap.class);
 
   private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<String, PortmapMapping>();
 

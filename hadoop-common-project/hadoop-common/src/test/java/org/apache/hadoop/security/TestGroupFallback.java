@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 public class TestGroupFallback {
-  public static final Logger LOG = LoggerFactory.getLogger
-      (TestGroupFallback.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestGroupFallback.class);
 
   @Test
   public void testGroupShell() throws Exception {

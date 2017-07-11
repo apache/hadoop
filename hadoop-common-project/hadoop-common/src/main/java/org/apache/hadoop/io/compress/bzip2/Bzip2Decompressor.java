@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
 public class Bzip2Decompressor implements Decompressor {
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;
   
-  private static final Logger LOG = LoggerFactory.getLogger(Bzip2Decompressor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Bzip2Decompressor.class);
 
   private long stream;
   private boolean conserveMemory;

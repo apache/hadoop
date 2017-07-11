@@ -193,10 +193,11 @@ import com.google.common.base.Strings;
 public class Configuration implements Iterable<Map.Entry<String,String>>,
                                       Writable {
   private static final Logger LOG =
-    LoggerFactory.getLogger(Configuration.class);
+      LoggerFactory.getLogger(Configuration.class);
 
   private static final Logger LOG_DEPRECATION =
-      LoggerFactory.getLogger("org.apache.hadoop.conf.Configuration.deprecation");
+      LoggerFactory.getLogger(
+          "org.apache.hadoop.conf.Configuration.deprecation");
 
   private boolean quietmode = true;
 

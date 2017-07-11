@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 public class TestFileStatus {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestFileStatus.class);
+      LoggerFactory.getLogger(TestFileStatus.class);
   
   /** Values for creating {@link FileStatus} in some tests */
   static final int LENGTH = 1;

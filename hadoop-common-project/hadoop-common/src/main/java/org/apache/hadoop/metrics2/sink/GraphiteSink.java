@@ -42,7 +42,8 @@ import java.nio.charset.StandardCharsets;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class GraphiteSink implements MetricsSink, Closeable {
-    private static final Logger LOG = LoggerFactory.getLogger(GraphiteSink.class);
+    private static final Logger LOG =
+        LoggerFactory.getLogger(GraphiteSink.class);
     private static final String SERVER_HOST_KEY = "server_host";
     private static final String SERVER_PORT_KEY = "server_port";
     private static final String METRICS_PREFIX = "metrics_prefix";

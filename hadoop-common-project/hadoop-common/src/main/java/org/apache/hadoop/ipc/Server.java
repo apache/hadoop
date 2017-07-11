@@ -295,7 +295,7 @@ public abstract class Server {
 
   public static final Logger LOG = LoggerFactory.getLogger(Server.class);
   public static final Logger AUDITLOG =
-    LoggerFactory.getLogger("SecurityLogger."+Server.class.getName());
+      LoggerFactory.getLogger("SecurityLogger."+Server.class.getName());
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
   private static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
   

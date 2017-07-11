@@ -38,8 +38,8 @@ import java.nio.IntBuffer;
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
 abstract public class FSInputChecker extends FSInputStream {
-  public static final Logger LOG
-  = LoggerFactory.getLogger(FSInputChecker.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSInputChecker.class);
   
   /** The file name from which data is read from */
   protected Path file;

@@ -45,7 +45,8 @@ import org.slf4j.LoggerFactory;
 /** SFTP FileSystem. */
 public class SFTPFileSystem extends FileSystem {
 
-  public static final Logger LOG = LoggerFactory.getLogger(SFTPFileSystem.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SFTPFileSystem.class);
 
   private SFTPConnectionPool connectionPool;
   private URI uri;

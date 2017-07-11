@@ -30,7 +30,8 @@ import org.slf4j.LoggerFactory;
  * A simple TCP based RPC client handler used by {@link SimpleTcpServer}.
  */
 public class SimpleTcpClientHandler extends SimpleChannelHandler {
-  public static final Logger LOG = LoggerFactory.getLogger(SimpleTcpClient.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SimpleTcpClient.class);
   protected final XDR request;
 
   public SimpleTcpClientHandler(XDR request) {

@@ -48,7 +48,7 @@ import java.text.MessageFormat;
 public class FileBasedKeyStoresFactory implements KeyStoresFactory {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(FileBasedKeyStoresFactory.class);
+      LoggerFactory.getLogger(FileBasedKeyStoresFactory.class);
 
   public static final String SSL_KEYSTORE_LOCATION_TPL_KEY =
     "ssl.{0}.keystore.location";

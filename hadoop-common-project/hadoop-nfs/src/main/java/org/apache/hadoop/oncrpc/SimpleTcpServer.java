@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
  * Simple UDP server implemented using netty.
  */
 public class SimpleTcpServer {
-  public static final Logger LOG = LoggerFactory.getLogger(SimpleTcpServer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SimpleTcpServer.class);
   protected final int port;
   protected int boundPort = -1; // Will be set after server starts
   protected final SimpleChannelUpstreamHandler rpcProgram;

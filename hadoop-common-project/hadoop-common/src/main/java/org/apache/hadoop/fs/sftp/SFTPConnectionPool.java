@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
 /** Concurrent/Multiple Connections. */
 class SFTPConnectionPool {
 
-  public static final Logger LOG = LoggerFactory.getLogger(SFTPFileSystem.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SFTPFileSystem.class);
   // Maximum number of allowed live connections. This doesn't mean we cannot
   // have more live connections. It means that when we have more
   // live connections than this threshold, any unused connection will be

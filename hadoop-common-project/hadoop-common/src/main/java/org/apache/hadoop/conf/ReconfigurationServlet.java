@@ -46,7 +46,7 @@ public class ReconfigurationServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(ReconfigurationServlet.class);
+      LoggerFactory.getLogger(ReconfigurationServlet.class);
 
   // the prefix used to fing the attribute holding the reconfigurable 
   // for a given request

@@ -48,7 +48,8 @@ public class CompositeGroupsMapping
   public static final String MAPPING_PROVIDERS_COMBINED_CONFIG_KEY = MAPPING_PROVIDERS_CONFIG_KEY + ".combined";
   public static final String MAPPING_PROVIDER_CONFIG_PREFIX = GROUP_MAPPING_CONFIG_PREFIX + ".provider";
   
-  private static final Logger LOG = LoggerFactory.getLogger(CompositeGroupsMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CompositeGroupsMapping.class);
 
   private List<GroupMappingServiceProvider> providersList = 
 		  new ArrayList<GroupMappingServiceProvider>();

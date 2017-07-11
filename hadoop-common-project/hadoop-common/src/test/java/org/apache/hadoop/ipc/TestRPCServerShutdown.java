@@ -42,7 +42,8 @@ import static org.junit.Assert.fail;
 @SuppressWarnings("deprecation")
 public class TestRPCServerShutdown extends TestRpcBase {
 
-  public static final Logger LOG = LoggerFactory.getLogger(TestRPCServerShutdown.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestRPCServerShutdown.class);
 
   @Before
   public void setup() {

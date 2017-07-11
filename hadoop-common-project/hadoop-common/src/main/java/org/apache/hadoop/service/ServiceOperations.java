@@ -34,7 +34,8 @@ import org.slf4j.LoggerFactory;
 @Public
 @Evolving
 public final class ServiceOperations {
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractService.class);
 
   private ServiceOperations() {
   }

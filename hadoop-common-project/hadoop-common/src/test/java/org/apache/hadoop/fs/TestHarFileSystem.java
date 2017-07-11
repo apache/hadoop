@@ -48,7 +48,8 @@ import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("deprecation")
 public class TestHarFileSystem {
-  public static final Logger LOG = LoggerFactory.getLogger(TestHarFileSystem.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestHarFileSystem.class);
 
   /**
    * FileSystem methods that must not be overwritten by

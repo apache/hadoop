@@ -56,7 +56,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static final String BASEDIR =
       GenericTestUtils.getTempPath(TestSSLHttpServer.class.getSimpleName());
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSSLHttpServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static Configuration conf;
   private static HttpServer2 server;
   private static String keystoresDir;

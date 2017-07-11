@@ -57,7 +57,8 @@ public final class ProviderUtils {
       "Please review the documentation regarding provider passwords in\n" +
       "the keystore passwords section of the Credential Provider API\n";
 
-  private static final Logger LOG = LoggerFactory.getLogger(ProviderUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ProviderUtils.class);
 
   /**
    * Hidden ctor to ensure that this utility class isn't

@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ZlibFactory {
   private static final Logger LOG =
-    LoggerFactory.getLogger(ZlibFactory.class);
+      LoggerFactory.getLogger(ZlibFactory.class);
 
   private static boolean nativeZlibLoaded = false;
   

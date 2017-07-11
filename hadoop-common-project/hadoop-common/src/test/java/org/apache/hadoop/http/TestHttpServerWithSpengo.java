@@ -53,7 +53,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestHttpServerWithSpengo {
 
-  static final Logger LOG = LoggerFactory.getLogger(TestHttpServerWithSpengo.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestHttpServerWithSpengo.class);
 
   private static final String SECRET_STR = "secret";
   private static final String HTTP_USER = "HTTP";

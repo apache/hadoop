@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 public class CompressionCodecFactory {
 
   public static final Logger LOG =
-    LoggerFactory.getLogger(CompressionCodecFactory.class.getName());
+      LoggerFactory.getLogger(CompressionCodecFactory.class.getName());
   
   private static final ServiceLoader<CompressionCodec> CODEC_PROVIDERS =
     ServiceLoader.load(CompressionCodec.class);

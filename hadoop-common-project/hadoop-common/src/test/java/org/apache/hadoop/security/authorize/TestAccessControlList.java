@@ -46,7 +46,7 @@ import static org.mockito.Mockito.verify;
 public class TestAccessControlList {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestAccessControlList.class);
+      LoggerFactory.getLogger(TestAccessControlList.class);
 
   /**
    * Test the netgroups (groups in ACL rules that start with @)
