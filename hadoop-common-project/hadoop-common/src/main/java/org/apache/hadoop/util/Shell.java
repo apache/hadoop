@@ -48,8 +48,11 @@ abstract public class Shell {
   
   public static final Log LOG = LogFactory.getLog(Shell.class);
   
-  private static boolean IS_JAVA7_OR_ABOVE =
-      System.getProperty("java.version").substring(0, 3).compareTo("1.7") >= 0;
+  /**
+   * java.version is enforced via maven-enforcer-plugin.
+   * Starting from Hadoop 2.7.0 Java 1.7 or higher is required.
+   */
+  private static boolean IS_JAVA7_OR_ABOVE = true;
 
   public static boolean isJava7OrAbove() {
     return IS_JAVA7_OR_ABOVE;

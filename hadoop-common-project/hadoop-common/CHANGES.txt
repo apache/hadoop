@@ -9,6 +9,7 @@ Release 2.7.4 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
     HADOOP-12259. Utility to Dynamic port allocation (brahmareddy via rkanter)
 
     HADOOP-10597. RPC Server signals backoff to clients when all request
@@ -161,6 +162,9 @@ Release 2.7.4 - UNRELEASED
 
     HADOOP-14044. Synchronization issue in delegation token cancel
     functionality. (Hrishikesh Gadre via xiao)
+
+    HADOOP-14586. StringIndexOutOfBoundsException breaks
+    org.apache.hadoop.util.Shell on 2.7.x with Java 9. (Uwe Schindler via shv)
 
 Release 2.7.3 - 2016-08-25
 
