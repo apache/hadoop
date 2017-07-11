@@ -52,7 +52,7 @@ public class HttpFSServerWebServer {
   private static final String HTTP_HOST_DEFAULT = "0.0.0.0";
 
   // SSL properties
-  private static final String SSL_ENABLED_KEY = "hadoop.httpfs.ssl.enabled";
+  static final String SSL_ENABLED_KEY = "httpfs.ssl.enabled";
   private static final boolean SSL_ENABLED_DEFAULT = false;
 
   private static final String HTTP_ADMINS_KEY =
