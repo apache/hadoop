@@ -620,13 +620,17 @@ public class ResourceTrackerService extends AbstractService implements
     Map<ApplicationId, RMApp> rmApps = rmContext.getRMApps();
     // Set collectors for all running apps on this node.
     for (ApplicationId appId : runningApps) {
-      AppCollectorData appCollectorData = rmApps.get(appId).getCollectorData();
-      if (appCollectorData != null) {
-        liveAppCollectorsMap.put(appId, appCollectorData);
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Collector for applicaton: " + appId +
-              " hasn't registered yet!");
+      RMApp app = rmApps.get(appId);
+      if (app != null) {
+        AppCollectorData appCollectorData = rmApps.get(appId)
+            .getCollectorData();
+        if (appCollectorData != null) {
+          liveAppCollectorsMap.put(appId, appCollectorData);
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Collector for applicaton: " + appId +
+                " hasn't registered yet!");
+          }
         }
       }
     }
