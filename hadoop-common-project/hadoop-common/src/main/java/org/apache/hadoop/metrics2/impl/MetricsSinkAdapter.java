@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
 
-  private final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(MetricsSinkAdapter.class);
   private final String name, description, context;
   private final MetricsSink sink;

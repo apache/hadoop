@@ -246,7 +246,7 @@ public class LocalDirAllocator {
   
   private static class AllocatorPerContext {
 
-    private final Logger LOG =
+    private static final Logger LOG =
         LoggerFactory.getLogger(AllocatorPerContext.class);
 
     private Random dirIndexRandomizer = new Random();
