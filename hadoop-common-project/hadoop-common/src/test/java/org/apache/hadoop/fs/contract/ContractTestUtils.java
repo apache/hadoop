@@ -1459,6 +1459,14 @@ public class ContractTestUtils extends Assert {
       return now() - startTime;
     }
 
+    /**
+     * Elapsed time in milliseconds; no rounding.
+     * @return elapsed time
+     */
+    public long elapsedTimeMs() {
+      return elapsedTime() / 1000000;
+    }
+
     public double bandwidth(long bytes) {
       return bandwidthMBs(bytes, duration());
     }

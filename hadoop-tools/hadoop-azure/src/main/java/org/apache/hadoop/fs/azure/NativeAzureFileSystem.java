@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -55,6 +54,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
@@ -741,7 +741,7 @@ public class NativeAzureFileSystem extends FileSystem {
     // File length, valid only for streams over block blobs.
     private long fileLength;
 
-    public NativeAzureFsInputStream(DataInputStream in, String key, long fileLength) {
+    NativeAzureFsInputStream(InputStream in, String key, long fileLength) {
       this.in = in;
       this.key = key;
       this.isPageBlob = store.isPageBlobKey(key);
@@ -812,27 +812,6 @@ public class NativeAzureFileSystem extends FileSystem {
         }
 
        throw e;
-      }
-    }
-
-    @Override
-    public synchronized  void readFully(long position, byte[] buffer, int offset, int length)
-        throws IOException {
-      validatePositionedReadArgs(position, buffer, offset, length);
-
-      int nread = 0;
-      while (nread < length) {
-        // In case BlobInputStream is used, mark() can act as a hint to read ahead only this
-        // length instead of 4 MB boundary.
-        in.mark(length - nread);
-        int nbytes = read(position + nread,
-            buffer,
-            offset + nread,
-            length - nread);
-        if (nbytes < 0) {
-          throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
-        }
-        nread += nbytes;
       }
     }
 
@@ -907,9 +886,14 @@ public class NativeAzureFileSystem extends FileSystem {
           throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
         }
         if (this.pos > pos) {
-          IOUtils.closeStream(in);
-          in = store.retrieve(key);
-          this.pos = in.skip(pos);
+          if (in instanceof Seekable) {
+            ((Seekable) in).seek(pos);
+            this.pos = pos;
+          } else {
+            IOUtils.closeStream(in);
+            in = store.retrieve(key);
+            this.pos = in.skip(pos);
+          }
         } else {
           this.pos += in.skip(pos - this.pos);
         }
@@ -2546,7 +2530,7 @@ public class NativeAzureFileSystem extends FileSystem {
           + " is a directory not a file.");
     }
 
-    DataInputStream inputStream = null;
+    InputStream inputStream;
     try {
       inputStream = store.retrieve(key);
     } catch(Exception ex) {
