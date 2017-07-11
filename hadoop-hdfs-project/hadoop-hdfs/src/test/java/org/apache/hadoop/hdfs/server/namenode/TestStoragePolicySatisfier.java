@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 
 import java.io.FileNotFoundException;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
@@ -55,6 +58,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -582,7 +586,9 @@ public class TestStoragePolicySatisfier {
       Assert.assertTrue("SPS should be running as "
           + "no Mover really running", running);
     } finally {
-      hdfsCluster.shutdown();
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
     }
   }
 
@@ -976,6 +982,100 @@ public class TestStoragePolicySatisfier {
           .getINode(filePath.toString());
       Assert.assertTrue("XAttrFeature should be null for file",
           inode.getXAttrFeature() == null);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test SPS for low redundant file blocks.
+   * 1. Create cluster with 3 datanode.
+   * 1. Create one file with 3 replica.
+   * 2. Set policy and call satisfyStoragePolicy for file.
+   * 3. Stop NameNode and Datanodes.
+   * 4. Start NameNode with 2 datanode and wait for block movement.
+   * 5. Start third datanode.
+   * 6. Third Datanode replica also should be moved in proper
+   * sorage based on policy.
+   */
+  @Test(timeout = 300000)
+  public void testSPSWhenFileHasLowRedundancyBlocks() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      conf.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+          "3000");
+      StorageType[][] newtypes = new StorageType[][] {
+          {StorageType.ARCHIVE, StorageType.DISK},
+          {StorageType.ARCHIVE, StorageType.DISK},
+          {StorageType.ARCHIVE, StorageType.DISK}};
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+          .storageTypes(newtypes).build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path filePath = new Path("/zeroSizeFile");
+      DFSTestUtil.createFile(fs, filePath, 1024, (short) 3, 0);
+      fs.setStoragePolicy(filePath, "COLD");
+      List<DataNodeProperties> list = new ArrayList<>();
+      list.add(cluster.stopDataNode(0));
+      list.add(cluster.stopDataNode(0));
+      list.add(cluster.stopDataNode(0));
+      cluster.restartNameNodes();
+      cluster.restartDataNode(list.get(0), true);
+      cluster.restartDataNode(list.get(1), true);
+      cluster.waitActive();
+      fs.satisfyStoragePolicy(filePath);
+      Thread.sleep(3000 * 6);
+      cluster.restartDataNode(list.get(2), true);
+      DFSTestUtil.waitExpectedStorageType(filePath.toString(),
+          StorageType.ARCHIVE, 3, 30000, cluster.getFileSystem());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test SPS for extra redundant file blocks.
+   * 1. Create cluster with 5 datanode.
+   * 2. Create one file with 5 replica.
+   * 3. Set file replication to 3.
+   * 4. Set policy and call satisfyStoragePolicy for file.
+   * 5. Block should be moved successfully.
+   */
+  @Test(timeout = 300000)
+  public void testSPSWhenFileHasExcessRedundancyBlocks() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      conf.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+          "3000");
+      StorageType[][] newtypes = new StorageType[][] {
+          {StorageType.ARCHIVE, StorageType.DISK},
+          {StorageType.ARCHIVE, StorageType.DISK},
+          {StorageType.ARCHIVE, StorageType.DISK},
+          {StorageType.ARCHIVE, StorageType.DISK},
+          {StorageType.ARCHIVE, StorageType.DISK}};
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5)
+          .storageTypes(newtypes).build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path filePath = new Path("/zeroSizeFile");
+      DFSTestUtil.createFile(fs, filePath, 1024, (short) 5, 0);
+      fs.setReplication(filePath, (short) 3);
+      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+          LogFactory.getLog(BlockStorageMovementAttemptedItems.class));
+      fs.setStoragePolicy(filePath, "COLD");
+      fs.satisfyStoragePolicy(filePath);
+      DFSTestUtil.waitExpectedStorageType(filePath.toString(),
+          StorageType.ARCHIVE, 3, 30000, cluster.getFileSystem());
+      assertFalse("Log output does not contain expected log message: ",
+          logs.getOutput().contains("some of the blocks are low redundant"));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,8 +29,10 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
@@ -291,6 +295,92 @@ public class TestStoragePolicySatisfierWithStripedFile {
       cluster.shutdown();
     }
   }
+
+  /**
+   * Test SPS for low redundant file blocks.
+   * 1. Create cluster with 10 datanode.
+   * 1. Create one striped file with default EC Policy.
+   * 2. Set policy and call satisfyStoragePolicy for file.
+   * 3. Stop NameNode and Datanodes.
+   * 4. Start NameNode with 5 datanode and wait for block movement.
+   * 5. Start remaining 5 datanode.
+   * 6. All replica  should be moved in proper storage based on policy.
+   */
+  @Test(timeout = 300000)
+  public void testSPSWhenFileHasLowRedundancyBlocks() throws Exception {
+    // start 10 datanodes
+    int numOfDatanodes = 10;
+    int storagesPerDatanode = 2;
+    long capacity = 20 * defaultStripeBlockSize;
+    long[][] capacities = new long[numOfDatanodes][storagesPerDatanode];
+    for (int i = 0; i < numOfDatanodes; i++) {
+      for (int j = 0; j < storagesPerDatanode; j++) {
+        capacities[i][j] = capacity;
+      }
+    }
+
+    final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys
+        .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+        "3000");
+    initConfWithStripe(conf, defaultStripeBlockSize);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numOfDatanodes)
+        .storagesPerDatanode(storagesPerDatanode)
+        .storageTypes(new StorageType[][]{
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE}})
+        .storageCapacities(capacities)
+        .build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path barDir = new Path("/bar");
+      fs.mkdirs(barDir);
+      // set an EC policy on "/bar" directory
+      fs.setErasureCodingPolicy(barDir, null);
+
+      // write file to barDir
+      final Path fooFile = new Path("/bar/foo");
+      long fileLen = cellSize * dataBlocks;
+      DFSTestUtil.createFile(cluster.getFileSystem(), fooFile,
+          fileLen, (short) 3, 0);
+
+      // Move file to ARCHIVE.
+      fs.setStoragePolicy(barDir, "COLD");
+      //Stop DataNodes and restart namenode
+      List<DataNodeProperties> list = new ArrayList<>(numOfDatanodes);
+      for (int i = 0; i < numOfDatanodes; i++) {
+        list.add(cluster.stopDataNode(0));
+      }
+      cluster.restartNameNodes();
+      // Restart half datanodes
+      for (int i = 0; i < numOfDatanodes / 2; i++) {
+        cluster.restartDataNode(list.get(i), true);
+      }
+      cluster.waitActive();
+      fs.satisfyStoragePolicy(fooFile);
+      Thread.sleep(3000 * 6);
+      //Start reaming datanodes
+      for (int i = numOfDatanodes - 1; i > numOfDatanodes / 2; i--) {
+        cluster.restartDataNode(list.get(i), true);
+      }
+      // verify storage types and locations.
+      waitExpectedStorageType(cluster, fooFile.toString(), fileLen,
+          StorageType.ARCHIVE, 9, 9, 60000);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 
   /**
    * Tests to verify that for the given path, no blocks under the given path

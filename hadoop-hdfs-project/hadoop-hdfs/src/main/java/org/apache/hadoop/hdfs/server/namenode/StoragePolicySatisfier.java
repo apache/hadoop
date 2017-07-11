@@ -99,7 +99,10 @@ public class StoragePolicySatisfier implements Runnable {
     // Represents that, the analysis skipped due to some conditions.
     // Example conditions are if no blocks really exists in block collection or
     // if analysis is not required on ec files with unsuitable storage policies
-    BLOCKS_TARGET_PAIRING_SKIPPED;
+    BLOCKS_TARGET_PAIRING_SKIPPED,
+    // Represents that, All the reported blocks are satisfied the policy but
+    // some of the blocks are low redundant.
+    FEW_LOW_REDUNDANCY_BLOCKS
   }
 
   public StoragePolicySatisfier(final Namesystem namesystem,
@@ -247,6 +250,14 @@ public class StoragePolicySatisfier implements Runnable {
               case FEW_BLOCKS_TARGETS_PAIRED:
                 this.storageMovementsMonitor.add(blockCollectionID, false);
                 break;
+              case FEW_LOW_REDUNDANCY_BLOCKS:
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Adding trackID " + blockCollectionID
+                      + " back to retry queue as some of the blocks"
+                      + " are low redundant.");
+                }
+                this.storageMovementNeeded.add(blockCollectionID);
+                break;
               // Just clean Xattrs
               case BLOCKS_TARGET_PAIRING_SKIPPED:
               case BLOCKS_ALREADY_SATISFIED:
@@ -347,10 +358,15 @@ public class StoragePolicySatisfier implements Runnable {
         boolean computeStatus = computeBlockMovingInfos(blockMovingInfos,
             blockInfo, expectedStorageTypes, existing, storages);
         if (computeStatus
-            && status != BlocksMovingAnalysisStatus.FEW_BLOCKS_TARGETS_PAIRED) {
+            && status != BlocksMovingAnalysisStatus.FEW_BLOCKS_TARGETS_PAIRED
+            && !blockManager.hasLowRedundancyBlocks(blockCollection)) {
           status = BlocksMovingAnalysisStatus.ALL_BLOCKS_TARGETS_PAIRED;
         } else {
           status = BlocksMovingAnalysisStatus.FEW_BLOCKS_TARGETS_PAIRED;
+        }
+      } else {
+        if (blockManager.hasLowRedundancyBlocks(blockCollection)) {
+          status = BlocksMovingAnalysisStatus.FEW_LOW_REDUNDANCY_BLOCKS;
         }
       }
     }
