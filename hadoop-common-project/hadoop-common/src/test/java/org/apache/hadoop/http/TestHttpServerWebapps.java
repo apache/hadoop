@@ -28,7 +28,7 @@ import java.io.FileNotFoundException;
  * Test webapp loading
  */
 public class TestHttpServerWebapps extends HttpServerFunctionalTest {
-  private static final Logger log =
+  private static final Logger LOG =
       LoggerFactory.getLogger(TestHttpServerWebapps.class);
 
   /**
@@ -59,7 +59,7 @@ public class TestHttpServerWebapps extends HttpServerFunctionalTest {
       stop(server);
       fail("Expected an exception, got " + serverDescription);
     } catch (FileNotFoundException expected) {
-      log.debug("Expected exception " + expected, expected);
+      LOG.debug("Expected exception " + expected, expected);
     }
   }
 

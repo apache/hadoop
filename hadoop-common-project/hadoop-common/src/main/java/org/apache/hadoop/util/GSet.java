@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public interface GSet<K, E extends K> extends Iterable<E> {
-  static final Logger LOG = LoggerFactory.getLogger(GSet.class);
+  Logger LOG = LoggerFactory.getLogger(GSet.class);
 
   /**
    * @return The size of this set.
