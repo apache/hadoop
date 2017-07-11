@@ -46,7 +46,7 @@ public class TestNativeAzureFileSystemAuthorization
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
     Configuration conf = new Configuration();
     conf.set(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, "true");
-    conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URL, "http://localhost/");
+    conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost/");
     return AzureBlobStorageTestAccount.create(conf);
   }
 

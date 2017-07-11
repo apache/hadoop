@@ -21,34 +21,48 @@ package org.apache.hadoop.fs.azure;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.http.*;
+import org.apache.hadoop.io.retry.RetryUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
+import org.apache.http.ProtocolVersion;
+import org.apache.http.ParseException;
+import org.apache.http.HeaderElement;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.times;
 
 /**
  * Test class to hold all WasbRemoteCallHelper tests
  */
 public class TestWasbRemoteCallHelper
     extends AbstractWasbTestBase {
+  public static final String EMPTY_STRING = "";
+  private static final int INVALID_HTTP_STATUS_CODE_999 = 999;
 
   @Override
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
     Configuration conf = new Configuration();
     conf.set(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, "true");
-    conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URL, "http://localhost/");
+    conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost1/,http://localhost2/");
     return AzureBlobStorageTestAccount.create(conf);
   }
 
@@ -80,7 +94,7 @@ public class TestWasbRemoteCallHelper
     HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
     HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(999));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(INVALID_HTTP_STATUS_CODE_999));
     // finished setting up mocks
 
     performop(mockHttpClient);
@@ -99,7 +113,7 @@ public class TestWasbRemoteCallHelper
     HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
     HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(200));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
         .thenReturn(newHeader("Content-Type", "text/plain"));
     // finished setting up mocks
@@ -120,7 +134,7 @@ public class TestWasbRemoteCallHelper
     HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
     HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(200));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
         .thenReturn(newHeader("Content-Type", "application/json"));
     // finished setting up mocks
@@ -141,7 +155,7 @@ public class TestWasbRemoteCallHelper
     HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
     HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(200));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
         .thenReturn(newHeader("Content-Type", "application/json"));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
@@ -164,7 +178,7 @@ public class TestWasbRemoteCallHelper
     HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
     HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(200));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
         .thenReturn(newHeader("Content-Type", "application/json"));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
@@ -188,7 +202,7 @@ public class TestWasbRemoteCallHelper
     HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
 
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(200));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
         .thenReturn(newHeader("Content-Type", "application/json"));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
@@ -211,7 +225,7 @@ public class TestWasbRemoteCallHelper
   public void testMalFormedJSONResponse() throws Throwable {
 
     expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("com.fasterxml.jackson.core.JsonParseException: Unexpected end-of-input in FIELD_NAME");
+    expectedEx.expectMessage("org.codehaus.jackson.JsonParseException: Unexpected end-of-input within/between OBJECT entries");
 
     // set up mocks
     HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
@@ -220,7 +234,7 @@ public class TestWasbRemoteCallHelper
     HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
 
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(200));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
         .thenReturn(newHeader("Content-Type", "application/json"));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
@@ -250,7 +264,7 @@ public class TestWasbRemoteCallHelper
     HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
 
     Mockito.when(mockHttpClient.execute(Mockito.<HttpGet>any())).thenReturn(mockHttpResponse);
-    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(200));
+    Mockito.when(mockHttpResponse.getStatusLine()).thenReturn(newStatusLine(HttpStatus.SC_OK));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Type"))
         .thenReturn(newHeader("Content-Type", "application/json"));
     Mockito.when(mockHttpResponse.getFirstHeader("Content-Length"))
@@ -263,17 +277,155 @@ public class TestWasbRemoteCallHelper
     performop(mockHttpClient);
   }
 
-  private void setupExpectations() throws UnsupportedEncodingException {
+  @Test
+  public void testWhenOneInstanceIsDown() throws Throwable {
 
-    String path = new Path("/").makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString();
-    String pathEncoded = URLEncoder.encode(path, "UTF-8");
+    // set up mocks
+    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+    HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
 
-    String requestURI = String.format("http://localhost/CHECK_AUTHORIZATION?wasb_absolute_path=%s&operation_type=write", pathEncoded);
+    HttpResponse mockHttpResponseService1 = Mockito.mock(HttpResponse.class);
+    Mockito.when(mockHttpResponseService1.getStatusLine())
+        .thenReturn(newStatusLine(HttpStatus.SC_INTERNAL_SERVER_ERROR));
+    Mockito.when(mockHttpResponseService1.getFirstHeader("Content-Type"))
+        .thenReturn(newHeader("Content-Type", "application/json"));
+    Mockito.when(mockHttpResponseService1.getFirstHeader("Content-Length"))
+        .thenReturn(newHeader("Content-Length", "1024"));
+    Mockito.when(mockHttpResponseService1.getEntity())
+        .thenReturn(mockHttpEntity);
+
+    HttpResponse mockHttpResponseService2 = Mockito.mock(HttpResponse.class);
+    Mockito.when(mockHttpResponseService2.getStatusLine())
+        .thenReturn(newStatusLine(HttpStatus.SC_OK));
+    Mockito.when(mockHttpResponseService2.getFirstHeader("Content-Type"))
+        .thenReturn(newHeader("Content-Type", "application/json"));
+    Mockito.when(mockHttpResponseService2.getFirstHeader("Content-Length"))
+        .thenReturn(newHeader("Content-Length", "1024"));
+    Mockito.when(mockHttpResponseService2.getEntity())
+        .thenReturn(mockHttpEntity);
+
+    class HttpGetForService1 extends ArgumentMatcher<HttpGet>{
+      @Override public boolean matches(Object o) {
+        return checkHttpGetMatchHost((HttpGet) o, "localhost1");
+      }
+    }
+    class HttpGetForService2 extends ArgumentMatcher<HttpGet>{
+      @Override public boolean matches(Object o) {
+        return checkHttpGetMatchHost((HttpGet) o, "localhost2");
+      }
+    }
+    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService1())))
+        .thenReturn(mockHttpResponseService1);
+    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService2())))
+        .thenReturn(mockHttpResponseService2);
+
+    //Need 3 times because performop()  does 3 fs operations.
+    Mockito.when(mockHttpEntity.getContent())
+        .thenReturn(new ByteArrayInputStream(validJsonResponse()
+            .getBytes(StandardCharsets.UTF_8)))
+        .thenReturn(new ByteArrayInputStream(validJsonResponse()
+            .getBytes(StandardCharsets.UTF_8)))
+        .thenReturn(new ByteArrayInputStream(validJsonResponse()
+            .getBytes(StandardCharsets.UTF_8)));
+    // finished setting up mocks
+
+    performop(mockHttpClient);
+
+    Mockito.verify(mockHttpClient, times(3)).execute(Mockito.argThat(new HttpGetForService2()));
+  }
+
+  @Test
+  public void testWhenServiceInstancesAreDown() throws Throwable {
+    //expectedEx.expect(WasbAuthorizationException.class);
+    // set up mocks
+    HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
+    HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
+
+    HttpResponse mockHttpResponseService1 = Mockito.mock(HttpResponse.class);
+    Mockito.when(mockHttpResponseService1.getStatusLine())
+        .thenReturn(newStatusLine(HttpStatus.SC_INTERNAL_SERVER_ERROR));
+    Mockito.when(mockHttpResponseService1.getFirstHeader("Content-Type"))
+        .thenReturn(newHeader("Content-Type", "application/json"));
+    Mockito.when(mockHttpResponseService1.getFirstHeader("Content-Length"))
+        .thenReturn(newHeader("Content-Length", "1024"));
+    Mockito.when(mockHttpResponseService1.getEntity())
+        .thenReturn(mockHttpEntity);
+
+    HttpResponse mockHttpResponseService2 = Mockito.mock(HttpResponse.class);
+    Mockito.when(mockHttpResponseService2.getStatusLine())
+        .thenReturn(newStatusLine(
+        HttpStatus.SC_INTERNAL_SERVER_ERROR));
+    Mockito.when(mockHttpResponseService2.getFirstHeader("Content-Type"))
+        .thenReturn(newHeader("Content-Type", "application/json"));
+    Mockito.when(mockHttpResponseService2.getFirstHeader("Content-Length"))
+        .thenReturn(newHeader("Content-Length", "1024"));
+    Mockito.when(mockHttpResponseService2.getEntity())
+        .thenReturn(mockHttpEntity);
+
+    class HttpGetForService1 extends ArgumentMatcher<HttpGet>{
+      @Override public boolean matches(Object o) {
+        return checkHttpGetMatchHost((HttpGet) o, "localhost1");
+      }
+    }
+    class HttpGetForService2 extends ArgumentMatcher<HttpGet>{
+      @Override public boolean matches(Object o) {
+        return checkHttpGetMatchHost((HttpGet) o, "localhost2");
+      }
+    }
+    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService1())))
+        .thenReturn(mockHttpResponseService1);
+    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService2())))
+        .thenReturn(mockHttpResponseService2);
+
+    //Need 3 times because performop()  does 3 fs operations.
+    Mockito.when(mockHttpEntity.getContent())
+        .thenReturn(new ByteArrayInputStream(
+            validJsonResponse().getBytes(StandardCharsets.UTF_8)))
+        .thenReturn(new ByteArrayInputStream(
+            validJsonResponse().getBytes(StandardCharsets.UTF_8)))
+        .thenReturn(new ByteArrayInputStream(
+            validJsonResponse().getBytes(StandardCharsets.UTF_8)));
+    // finished setting up mocks
+    try {
+      performop(mockHttpClient);
+    }catch (WasbAuthorizationException e){
+      e.printStackTrace();
+      Mockito.verify(mockHttpClient, atLeast(3))
+          .execute(argThat(new HttpGetForService1()));
+      Mockito.verify(mockHttpClient, atLeast(3))
+          .execute(argThat(new HttpGetForService2()));
+      Mockito.verify(mockHttpClient, times(7)).execute(Mockito.<HttpGet>any());
+    }
+  }
+
+  private void setupExpectations() {
     expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("org.apache.hadoop.fs.azure.WasbRemoteCallException: "
-        + requestURI
-        + ":Encountered IOException while making remote call"
-    );
+
+    class MatchesPattern extends TypeSafeMatcher<String> {
+      private String pattern;
+
+      MatchesPattern(String pattern) {
+        this.pattern = pattern;
+      }
+
+      @Override protected boolean matchesSafely(String item) {
+        return item.matches(pattern);
+      }
+
+      @Override public void describeTo(Description description) {
+        description.appendText("matches pattern ").appendValue(pattern);
+      }
+
+      @Override protected void describeMismatchSafely(String item,
+          Description mismatchDescription) {
+        mismatchDescription.appendText("does not match");
+      }
+    }
+
+    expectedEx.expectMessage(new MatchesPattern(
+        "org\\.apache\\.hadoop\\.fs\\.azure\\.WasbRemoteCallException: "
+            + "Encountered error while making remote call to "
+            + "http:\\/\\/localhost1\\/,http:\\/\\/localhost2\\/ retried 6 time\\(s\\)\\."));
   }
 
   private void performop(HttpClient mockHttpClient) throws Throwable {
@@ -282,7 +434,10 @@ public class TestWasbRemoteCallHelper
 
     RemoteWasbAuthorizerImpl authorizer = new RemoteWasbAuthorizerImpl();
     authorizer.init(fs.getConf());
-    WasbRemoteCallHelper mockWasbRemoteCallHelper = new WasbRemoteCallHelper();
+    WasbRemoteCallHelper mockWasbRemoteCallHelper = new WasbRemoteCallHelper(
+        RetryUtils.getMultipleLinearRandomRetry(new Configuration(),
+            EMPTY_STRING, true,
+            EMPTY_STRING, "1000,3,10000,2"));
     mockWasbRemoteCallHelper.updateHttpClient(mockHttpClient);
     authorizer.updateWasbRemoteCallHelper(mockWasbRemoteCallHelper);
     fs.updateWasbAuthorizer(authorizer);
@@ -293,21 +448,26 @@ public class TestWasbRemoteCallHelper
   }
 
   private String validJsonResponse() {
-    return new String(
-        "{\"responseCode\": 0, \"authorizationResult\": true, \"responseMessage\": \"Authorized\"}"
-    );
+    return "{"
+        + "\"responseCode\": 0,"
+        + "\"authorizationResult\": true,"
+        + "\"responseMessage\": \"Authorized\""
+        + "}";
   }
 
   private String malformedJsonResponse() {
-    return new String(
-        "{\"responseCode\": 0, \"authorizationResult\": true, \"responseMessage\":"
-    );
+    return "{"
+        + "\"responseCode\": 0,"
+        + "\"authorizationResult\": true,"
+        + "\"responseMessage\":";
   }
 
   private String failureCodeJsonResponse() {
-    return new String(
-        "{\"responseCode\": 1, \"authorizationResult\": false, \"responseMessage\": \"Unauthorized\"}"
-    );
+    return "{"
+        + "\"responseCode\": 1,"
+        + "\"authorizationResult\": false,"
+        + "\"responseMessage\": \"Unauthorized\""
+        + "}";
   }
 
   private StatusLine newStatusLine(final int statusCode) {
@@ -347,4 +507,10 @@ public class TestWasbRemoteCallHelper
       }
     };
   }
+
+  /** Check that a HttpGet request is with given remote host. */
+  private static boolean checkHttpGetMatchHost(HttpGet g, String h) {
+    return g != null && g.getURI().getHost().equals(h);
+  }
+
 }
