@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 @InterfaceStability.Unstable
 public class FsShellPermissions extends FsCommand {
 
-  static Logger LOG = FsShell.LOG;
+  static final Logger LOG = FsShell.LOG;
   
   /**
    * Register the permission related commands with the factory

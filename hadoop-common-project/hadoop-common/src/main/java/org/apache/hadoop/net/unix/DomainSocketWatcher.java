@@ -68,7 +68,7 @@ public final class DomainSocketWatcher implements Closeable {
     }
   }
 
-  static Logger LOG = LoggerFactory.getLogger(DomainSocketWatcher.class);
+  static final Logger LOG = LoggerFactory.getLogger(DomainSocketWatcher.class);
 
   /**
    * The reason why DomainSocketWatcher is not available, or null if it is

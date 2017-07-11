@@ -30,8 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TestServiceLifecycle extends ServiceAssert {
-  private static Logger LOG = LoggerFactory.getLogger(TestServiceLifecycle
-      .class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestServiceLifecycle.class);
 
   /**
    * Walk the {@link BreakableService} through it's lifecycle, 

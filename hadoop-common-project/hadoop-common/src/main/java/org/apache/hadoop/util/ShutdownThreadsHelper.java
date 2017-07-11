@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  * Helper class to shutdown {@link Thread}s and {@link ExecutorService}s.
  */
 public class ShutdownThreadsHelper {
-  private static Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(ShutdownThreadsHelper.class);
 
   @VisibleForTesting

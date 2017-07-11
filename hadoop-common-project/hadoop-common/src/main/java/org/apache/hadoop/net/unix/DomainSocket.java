@@ -60,7 +60,7 @@ public class DomainSocket implements Closeable {
     }
   }
 
-  static Logger LOG = LoggerFactory.getLogger(DomainSocket.class);
+  static final Logger LOG = LoggerFactory.getLogger(DomainSocket.class);
 
   /**
    * True only if we should validate the paths used in

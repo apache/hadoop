@@ -48,7 +48,8 @@ import static org.junit.Assert.*;
  */
 public class TestSocketIOWithTimeout {
 
-  static Logger LOG = LoggerFactory.getLogger(TestSocketIOWithTimeout.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestSocketIOWithTimeout.class);
   
   private static int TIMEOUT = 1*1000; 
   private static String TEST_STRING = "1234567890";
