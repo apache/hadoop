@@ -466,6 +466,11 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
     }
 
     @Override
+    public int getStreamMinimumReadSizeInBytes() {
+        return getBlob().getStreamMinimumReadSizeInBytes();
+    }
+
+    @Override
     public void setStreamMinimumReadSizeInBytes(int minimumReadSizeBytes) {
       getBlob().setStreamMinimumReadSizeInBytes(minimumReadSizeBytes);
     }
