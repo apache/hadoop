@@ -59,17 +59,13 @@ public class TempAppPerPartition extends AbstractPreemptionEntity {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("NAME: " + getApplicationId())
-        .append("  PRIO: ").append(priority)
-        .append("  CUR: ").append(getUsed())
-        .append("  PEN: ").append(pending)
-        .append("  RESERVED: ").append(reserved)
-        .append("  IDEAL_ASSIGNED: ").append(idealAssigned)
-        .append("  PREEMPT_OTHER: ").append(getToBePreemptFromOther())
-        .append("  IDEAL_PREEMPT: ").append(toBePreempted)
-        .append("  ACTUAL_PREEMPT: ").append(getActuallyToBePreempted())
-        .append("  SELECTED: ").append(selected)
-        .append("\n");
+    sb.append(" NAME: " + getApplicationId()).append(" PRIO: ").append(priority)
+        .append(" CUR: ").append(getUsed()).append(" PEN: ").append(pending)
+        .append(" RESERVED: ").append(reserved).append(" IDEAL_ASSIGNED: ")
+        .append(idealAssigned).append(" PREEMPT_OTHER: ")
+        .append(getToBePreemptFromOther()).append(" IDEAL_PREEMPT: ")
+        .append(toBePreempted).append(" ACTUAL_PREEMPT: ")
+        .append(getActuallyToBePreempted()).append("\n");
 
     return sb.toString();
   }
@@ -95,12 +91,8 @@ public class TempAppPerPartition extends AbstractPreemptionEntity {
     return applicationId;
   }
 
-  public String getUser() {
-    return this.app.getUser();
-  }
-
   public void deductActuallyToBePreempted(ResourceCalculator resourceCalculator,
-      Resource cluster, Resource toBeDeduct) {
+      Resource cluster, Resource toBeDeduct, String partition) {
     if (Resources.greaterThan(resourceCalculator, cluster,
         getActuallyToBePreempted(), toBeDeduct)) {
       Resources.subtractFrom(getActuallyToBePreempted(), toBeDeduct);

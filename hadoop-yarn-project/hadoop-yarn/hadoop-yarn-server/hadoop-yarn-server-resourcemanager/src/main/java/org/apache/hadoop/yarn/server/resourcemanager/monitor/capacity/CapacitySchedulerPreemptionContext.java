@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
@@ -65,7 +63,4 @@ interface CapacitySchedulerPreemptionContext {
   float getMinimumThresholdForIntraQueuePreemption();
 
   float getMaxAllowableLimitForIntraQueuePreemption();
-
-  @Unstable
-  IntraQueuePreemptionOrderPolicy getIntraQueuePreemptionOrderPolicy();
 }

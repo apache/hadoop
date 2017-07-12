@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
@@ -32,13 +31,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -54,14 +51,14 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         Comparator<TempAppPerPartition> {
 
     @Override
-    public int compare(TempAppPerPartition ta1, TempAppPerPartition ta2) {
-      Priority p1 = Priority.newInstance(ta1.getPriority());
-      Priority p2 = Priority.newInstance(ta2.getPriority());
+    public int compare(TempAppPerPartition tq1, TempAppPerPartition tq2) {
+      Priority p1 = Priority.newInstance(tq1.getPriority());
+      Priority p2 = Priority.newInstance(tq2.getPriority());
 
       if (!p1.equals(p2)) {
         return p1.compareTo(p2);
       }
-      return ta1.getApplicationId().compareTo(ta2.getApplicationId());
+      return tq1.getApplicationId().compareTo(tq2.getApplicationId());
     }
   }
 
@@ -124,60 +121,37 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         Map<String, Resource> resToObtainByPartition = fifoPreemptionComputePlugin
             .getResourceDemandFromAppsPerQueue(queueName, partition);
 
-        // Default preemption iterator considers only FIFO+priority. For
-        // userlimit preemption, its possible that some lower priority apps
-        // needs from high priority app of another user. Hence use apps
-        // ordered by userlimit starvation as well.
-        Collection<FiCaSchedulerApp> apps = fifoPreemptionComputePlugin
-            .getPreemptableApps(queueName, partition);
-
-        // 6. Get user-limit to ensure that we do not preempt resources which
-        // will force user's resource to come under its UL.
-        Map<String, Resource> rollingResourceUsagePerUser = new HashMap<>();
-        initializeUsageAndUserLimitForCompute(clusterResource, partition,
-            leafQueue, rollingResourceUsagePerUser);
-
-        // 7. Based on the selected resource demand per partition, select
+        // 6. Based on the selected resource demand per partition, select
         // containers with known policy from inter-queue preemption.
         try {
           leafQueue.getReadLock().lock();
-          for (FiCaSchedulerApp app : apps) {
-            preemptFromLeastStarvedApp(leafQueue, app, selectedCandidates,
-                clusterResource, totalPreemptedResourceAllowed,
-                resToObtainByPartition, rollingResourceUsagePerUser);
+          Iterator<FiCaSchedulerApp> desc = leafQueue.getOrderingPolicy()
+              .getPreemptionIterator();
+          while (desc.hasNext()) {
+            FiCaSchedulerApp app = desc.next();
+            preemptFromLeastStarvedApp(selectedCandidates, clusterResource,
+                totalPreemptedResourceAllowed, resToObtainByPartition,
+                leafQueue, app);
           }
         } finally {
           leafQueue.getReadLock().unlock();
         }
       }
     }
+
     return selectedCandidates;
   }
 
-  private void initializeUsageAndUserLimitForCompute(Resource clusterResource,
-      String partition, LeafQueue leafQueue,
-      Map<String, Resource> rollingResourceUsagePerUser) {
-    for (String user : leafQueue.getAllUsers()) {
-      // Initialize used resource of a given user for rolling computation.
-      rollingResourceUsagePerUser.put(user, Resources.clone(
-          leafQueue.getUser(user).getResourceUsage().getUsed(partition)));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Rolling resource usage for user:" + user + " is : "
-            + rollingResourceUsagePerUser.get(user));
-      }
-    }
-  }
-
-  private void preemptFromLeastStarvedApp(LeafQueue leafQueue,
-      FiCaSchedulerApp app,
+  private void preemptFromLeastStarvedApp(
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource clusterResource, Resource totalPreemptedResourceAllowed,
-      Map<String, Resource> resToObtainByPartition,
-      Map<String, Resource> rollingResourceUsagePerUser) {
+      Map<String, Resource> resToObtainByPartition, LeafQueue leafQueue,
+      FiCaSchedulerApp app) {
 
     // ToDo: Reuse reservation selector here.
 
-    List<RMContainer> liveContainers = new ArrayList<>(app.getLiveContainers());
+    List<RMContainer> liveContainers = new ArrayList<>(
+        app.getLiveContainers());
     sortContainers(liveContainers);
 
     if (LOG.isDebugEnabled()) {
@@ -186,8 +160,6 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
               + totalPreemptedResourceAllowed);
     }
 
-    Resource rollingUsedResourcePerUser = rollingResourceUsagePerUser
-        .get(app.getUser());
     for (RMContainer c : liveContainers) {
 
       // if there are no demand, return.
@@ -212,34 +184,12 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         continue;
       }
 
-      // If selected container brings down resource usage under its user's
-      // UserLimit (or equals to), we must skip such containers.
-      if (fifoPreemptionComputePlugin.skipContainerBasedOnIntraQueuePolicy(app,
-          clusterResource, rollingUsedResourcePerUser, c)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Skipping container: " + c.getContainerId() + " with resource:"
-                  + c.getAllocatedResource() + " as UserLimit for user:"
-                  + app.getUser() + " with resource usage: "
-                  + rollingUsedResourcePerUser + " is going under UL");
-        }
-        break;
-      }
-
       // Try to preempt this container
-      boolean ret = CapacitySchedulerPreemptionUtils
-          .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
-              resToObtainByPartition, c, clusterResource, selectedCandidates,
-              totalPreemptedResourceAllowed);
-
-      // Subtract from respective user's resource usage once a container is
-      // selected for preemption.
-      if (ret && preemptionContext.getIntraQueuePreemptionOrderPolicy()
-          .equals(IntraQueuePreemptionOrderPolicy.USERLIMIT_FIRST)) {
-        Resources.subtractFrom(rollingUsedResourcePerUser,
-            c.getAllocatedResource());
-      }
+      CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
+          rc, preemptionContext, resToObtainByPartition, c, clusterResource,
+          selectedCandidates, totalPreemptedResourceAllowed);
     }
+
   }
 
   private void computeIntraQueuePreemptionDemand(Resource clusterResource,
@@ -255,7 +205,12 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         continue;
       }
 
-      // 2. loop through all queues corresponding to a partition.
+      // 2. Its better to get partition based resource limit earlier before
+      // starting calculation
+      Resource partitionBasedResource =
+          context.getPartitionResource(partition);
+
+      // 3. loop through all queues corresponding to a partition.
       for (String queueName : queueNames) {
         TempQueuePerPartition tq = context.getQueueByPartition(queueName,
             partition);
@@ -266,22 +221,23 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
           continue;
         }
 
-        // 3. Consider reassignableResource as (used - actuallyToBePreempted).
+        // 4. Consider reassignableResource as (used - actuallyToBePreempted).
         // This provides as upper limit to split apps quota in a queue.
         Resource queueReassignableResource = Resources.subtract(tq.getUsed(),
             tq.getActuallyToBePreempted());
 
-        // 4. Check queue's used capacity. Make sure that the used capacity is
+        // 5. Check queue's used capacity. Make sure that the used capacity is
         // above certain limit to consider for intra queue preemption.
         if (leafQueue.getQueueCapacities().getUsedCapacity(partition) < context
             .getMinimumThresholdForIntraQueuePreemption()) {
           continue;
         }
 
-        // 5. compute the allocation of all apps based on queue's unallocated
+        // 6. compute the allocation of all apps based on queue's unallocated
         // capacity
         fifoPreemptionComputePlugin.computeAppsIdealAllocation(clusterResource,
-            tq, selectedCandidates, totalPreemptedResourceAllowed,
+            partitionBasedResource, tq, selectedCandidates,
+            totalPreemptedResourceAllowed,
             queueReassignableResource,
             context.getMaxAllowableLimitForIntraQueuePreemption());
       }
