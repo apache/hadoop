@@ -25,7 +25,7 @@
   function load() {
     $.get('/jmx?qry=Hadoop:service=DataNode,name=DataNodeInfo', function(resp) {
       data.dn = workaround(resp.beans[0]);
-      data.dn.HostName=window.location.hostname;
+      data.dn.HostName = resp.beans[0]['DatanodeHostname'];
       render();
     }).fail(show_err_msg);
   }

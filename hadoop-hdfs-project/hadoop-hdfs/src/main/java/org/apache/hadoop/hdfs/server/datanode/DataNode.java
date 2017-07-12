@@ -2935,6 +2935,14 @@ public class DataNode extends ReconfigurableBase
     return JSON.toString(info);
   }
 
+ /**
+   * Return hostname of the datanode.
+   */
+  @Override // DataNodeMXBean
+  public String getDatanodeHostname() {
+    return this.hostName;
+  }
+
   /**
    * Returned information is a JSON representation of an array,
    * each element of the array is a map contains the information
