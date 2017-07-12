@@ -2144,10 +2144,33 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_OVERALLOCATION_MEMORY_UTILIZATION_THRESHOLD =
       NM_PREFIX + "overallocation.memory-utilization-threshold";
 
-  public static final String NM_OVERALLOCATION_PREEMPTION_THRESHOLD =
-      NM_PREFIX + "overallocation.preemption-threshold";
-  public static final float DEFAULT_NM_OVERALLOCATION_PREEMPTION_THRESHOLD
-      = 0.96f;
+  /**
+   * The CPU utilization threshold, if went beyond for a few times in a row,
+   * OPPORTUNISTIC containers started due to overallocation should start
+   * getting preempted.
+   */
+  public static final String NM_OVERALLOCATION_CPU_PREEMPTION_THRESHOLD =
+      NM_PREFIX + "overallocation.preemption-threshold.cpu";
+  public static final float
+      DEFAULT_NM_OVERALLOCATION_CPU_PREEMPTION_THRESHOLD = 0.99f;
+
+  /**
+   * The number of times that CPU utilization must go over the CPU preemption
+   * threshold consecutively before preemption starts to kick in.
+   */
+  public static final String NM_OVERALLOCATION_PREEMPTION_CPU_COUNT =
+      NM_PREFIX + "overallocation.preemption-threshold-count.cpu";
+  public static final int DEFAULT_NM_OVERALLOCATION_PREEMPTION_CPU_COUNT = 4;
+
+
+  /**
+   * The memory utilization threshold beyond which OPPORTUNISTIC containers
+   * started due to overallocation should start getting preempted.
+   */
+  public static final String NM_OVERALLOCATION_MEMORY_PREEMPTION_THRESHOLD =
+      NM_PREFIX + "overallocation.preemption-threshold.memory";
+  public static final float
+      DEFAULT_NM_OVERALLOCATION_MEMORY_PREEMPTION_THRESHOLD = 0.95f;
 
   /**
    * Interval of time the linux container executor should try cleaning up

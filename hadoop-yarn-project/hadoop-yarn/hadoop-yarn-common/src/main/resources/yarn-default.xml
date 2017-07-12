@@ -1769,11 +1769,37 @@
 
   <property>
     <description>When a node is over-allocated to improve utilization by
-      running OPPORTUNISTIC containers, this config captures the utilization
-      beyond which OPPORTUNISTIC containers should start getting preempted.
+      running OPPORTUNISTIC containers, this config captures the CPU
+      utilization beyond which OPPORTUNISTIC containers should start getting
+      preempted. This is used in combination with
+      yarn.nodemanager.overallocation.preemption-threshold-count.cpu, that is,
+      only when the CPU utilization goes over this threshold consecutively for
+      a few times will preemption kicks in.
     </description>
-    <name>yarn.nodemanager.overallocation.preemption-threshold</name>
-    <value>0.96</value>
+    <name>yarn.nodemanager.overallocation.preemption-threshold.cpu</name>
+    <value>0.99</value>
+  </property>
+
+  <property>
+    <description>When a node is over-allocated to improve utilization by
+      running OPPORTUNISTIC containers, this config captures the number of
+      times that CPU utilization has to go above
+      ${yarn.nodemanager.overallocation.preemption-threshold.cpu}
+      consecutively for NM to start preempting OPPORTUNISTIC containers
+      started due to overallocation.
+    </description>
+    <name>yarn.nodemanager.overallocation.preemption-threshold-count.cpu</name>
+    <value>4</value>
+  </property>
+
+  <property>
+    <description>When a node is over-allocated to improve utilization by
+      running OPPORTUNISTIC containers, this config captures the CPU
+      utilization beyond which OPPORTUNISTIC containers should start getting
+      preempted.
+    </description>
+    <name>yarn.nodemanager.overallocation.preemption-threshold.memory</name>
+    <value>0.95</value>
   </property>
 
   <property>
