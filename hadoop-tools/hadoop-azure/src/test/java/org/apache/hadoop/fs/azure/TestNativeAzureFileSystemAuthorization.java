@@ -688,7 +688,7 @@ public class TestNativeAzureFileSystemAuthorization
   public void testSetOwnerThrowsForUnauthorisedUsers() throws Throwable {
     expectedEx.expect(WasbAuthorizationException.class);
 
-    Path testPath = new Path("/testSetOwnerNegative");
+    final Path testPath = new Path("/testSetOwnerNegative");
     MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
@@ -723,15 +723,15 @@ public class TestNativeAzureFileSystemAuthorization
    * */
   @Test
   public void testSetOwnerSucceedsForAuthorisedUsers() throws Throwable {
-    Path testPath = new Path("/testsetownerpositive");
+    final Path testPath = new Path("/testsetownerpositive");
     MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
-    String newOwner = "newowner";
-    String newGroup = "newgroup";
+    final String newOwner = "newowner";
+    final String newGroup = "newgroup";
 
     UserGroupInformation authorisedUser = UserGroupInformation.createUserForTesting(
           "user2", new String[]{"group1"});
@@ -767,7 +767,7 @@ public class TestNativeAzureFileSystemAuthorization
   public void testSetOwnerSucceedsForAnyUserWhenWildCardIsSpecified() throws Throwable {
     Configuration conf = fs.getConf();
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "*");
-    Path testPath = new Path("/testsetownerpositivewildcard");
+    final Path testPath = new Path("/testsetownerpositivewildcard");
 
     MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
@@ -775,8 +775,8 @@ public class TestNativeAzureFileSystemAuthorization
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
-    String newOwner = "newowner";
-    String newGroup = "newgroup";
+    final String newOwner = "newowner";
+    final String newGroup = "newgroup";
 
     UserGroupInformation user = UserGroupInformation.createUserForTesting(
           "anyuser", new String[]{"group1"});
@@ -813,7 +813,7 @@ public class TestNativeAzureFileSystemAuthorization
 
     Configuration conf = fs.getConf();
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1, *");
-    Path testPath = new Path("/testSetOwnerFailsForIllegalSetup");
+    final Path testPath = new Path("/testSetOwnerFailsForIllegalSetup");
 
     MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
     authorizer.init(null);
