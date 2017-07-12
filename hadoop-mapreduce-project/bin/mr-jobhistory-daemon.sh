@@ -78,8 +78,10 @@ if [ -f "${HADOOP_CONF_DIR}/mapred-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/mapred-env.sh"
 fi
 
-mkdir -p "$HADOOP_MAPRED_LOG_DIR"
-chown $HADOOP_MAPRED_IDENT_STRING $HADOOP_MAPRED_LOG_DIR
+if [ ! -w "$HADOOP_MAPRED_LOG_DIR" ]; then
+  mkdir -p "$HADOOP_MAPRED_LOG_DIR"
+  chown "$HADOOP_MAPRED_IDENT_STRING" "$HADOOP_MAPRED_LOG_DIR"
+fi
 
 if [ "$HADOOP_MAPRED_PID_DIR" = "" ]; then
   HADOOP_MAPRED_PID_DIR=/tmp
