@@ -205,6 +205,12 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
 
+  /** Configured scheduler queue placement rules. */
+  public static final String QUEUE_PLACEMENT_RULES = YARN_PREFIX
+      + "scheduler.queue-placement-rules";
+  /** UserGroupMappingPlacementRule configuration string. */
+  public static final String USER_GROUP_PLACEMENT_RULE = "user-group";
+
   /** Enable Resource Manager webapp ui actions */
   public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =
     RM_PREFIX + "webapp.ui-actions.enabled";

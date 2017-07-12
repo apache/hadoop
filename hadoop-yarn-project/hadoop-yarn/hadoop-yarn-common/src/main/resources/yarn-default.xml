@@ -3012,4 +3012,14 @@
     <value>64</value>
   </property>
 
+  <property>
+    <description>
+      Comma-separated list of PlacementRules to determine how applications
+      submitted by certain users get mapped to certain queues. Default is
+      user-group, which corresponds to UserGroupMappingPlacementRule.
+    </description>
+    <name>yarn.scheduler.queue-placement-rules</name>
+    <value>user-group</value>
+  </property>
+
 </configuration>
