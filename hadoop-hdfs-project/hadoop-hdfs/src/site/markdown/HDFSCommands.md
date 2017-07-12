@@ -446,6 +446,7 @@ Usage:
          [-listPolicies]
          [-addPolicies -policyFile <file>]
          [-listCodecs]
+         [-removePolicy -policy <policy>]
          [-enablePolicy -policy <policy>]
          [-disablePolicy -policy <policy>]
          [-help [cmd ...]]
@@ -458,6 +459,7 @@ Usage:
 |-listPolicies| Lists all supported ErasureCoding policies|
 |-addPolicies| Add a list of erasure coding policies|
 |-listCodecs| Get the list of supported erasure coding codecs and coders in system|
+|-removePolicy| Remove an erasure coding policy|
 |-enablePolicy| Enable an ErasureCoding policy in system|
 |-disablePolicy| Disable an ErasureCoding policy in system|
 

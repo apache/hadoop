@@ -154,6 +154,7 @@ Deployment
          [-listPolicies]
          [-addPolicies -policyFile <file>]
          [-listCodecs]
+         [-removePolicy -policy <policy>]
          [-enablePolicy -policy <policy>]
          [-disablePolicy -policy <policy>]
          [-help [cmd ...]]
