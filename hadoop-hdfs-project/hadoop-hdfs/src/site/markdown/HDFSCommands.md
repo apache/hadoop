@@ -440,14 +440,14 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -policy <policy> -path <path>]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
          [-addPolicies -policyFile <file>]
          [-listCodecs]
-         [-enablePolicy -policy <policyName>]
-         [-disablePolicy -policy <policyName>]
+         [-enablePolicy -policy <policy>]
+         [-disablePolicy -policy <policy>]
          [-help [cmd ...]]
 
 | COMMAND\_OPTION | Description |

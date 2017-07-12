@@ -148,25 +148,25 @@ Deployment
   HDFS provides an `ec` subcommand to perform administrative commands related to erasure coding.
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -policy <policy> -path <path>]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
          [-addPolicies -policyFile <file>]
          [-listCodecs]
-         [-enablePolicy -policy <policyName>]
-         [-disablePolicy -policy <policyName>]
+         [-enablePolicy -policy <policy>]
+         [-disablePolicy -policy <policy>]
          [-help [cmd ...]]
 
 Below are the details about each command.
 
- *  `[-setPolicy -policy <policyName> -path <path>]`
+ *  `[-setPolicy -policy <policy> -path <path>]`
 
     Sets an erasure coding policy on a directory at the specified path.
 
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
-      `policyName`: The erasure coding policy to be used for files under this directory.
+      `policy`: The erasure coding policy to be used for files under this directory.
 
  *  `[-getPolicy -path <path>]`
 
@@ -188,14 +188,14 @@ Below are the details about each command.
 
      Get the list of supported erasure coding codecs and coders in system. A coder is an implementation of a codec. A codec can have different implementations, thus different coders. The coders for a codec are listed in a fall back order.
 
-*  `[-removePolicy -policy <policyName>]`
+*  `[-removePolicy -policy <policy>]`
 
      Remove an erasure coding policy.
 
-*  `[-enablePolicy -policy <policyName>]`
+*  `[-enablePolicy -policy <policy>]`
 
      Enable an erasure coding policy.
 
-*  `[-disablePolicy -policy <policyName>]`
+*  `[-disablePolicy -policy <policy>]`
 
      Disable an erasure coding policy.
