@@ -38,6 +38,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -684,6 +686,14 @@ public class NativeAzureFileSystem extends FileSystem {
    * default as DFS.
    */
   static final String AZURE_DEFAULT_GROUP_DEFAULT = "supergroup";
+
+  /**
+   * Configuration property used to specify list of users that can perform
+   * chown operation when authorization is enabled in WASB.
+   */
+  public static final String AZURE_CHOWN_USERLIST_PROPERTY_NAME = "fs.azure.chown.allowed.userlist";
+
+  static final String AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
 
   static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME =
       "fs.azure.block.location.impersonatedhost";
@@ -2936,6 +2946,33 @@ public class NativeAzureFileSystem extends FileSystem {
 
     if (metadata == null) {
       throw new FileNotFoundException("File doesn't exist: " + p);
+    }
+
+    /* If authorization is enabled, check if the user has privileges
+    *  to change the ownership of file/folder
+    */
+    if (this.azureAuthorization && username != null) {
+      String[] listOfUsers = getConf().getTrimmedStrings(AZURE_CHOWN_USERLIST_PROPERTY_NAME,
+        AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE);
+      boolean shouldSkipUserCheck = listOfUsers.length == 1 && listOfUsers[0].equals("*");
+      // skip the check if the chown allowed users config value is set as '*'
+      if (!shouldSkipUserCheck) {
+        UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+        UserGroupInformation actualUgi = currentUgi.getRealUser();
+
+        if (actualUgi == null) {
+          actualUgi = currentUgi;
+        }
+
+        List<String> userList = Arrays.asList(listOfUsers);
+        if (userList.contains("*")) {
+          throw new IllegalArgumentException("User list must contain "
+          + "either '*' or list of user names, but not both.");
+        } else if (!userList.contains(actualUgi.getShortUserName())) {
+          throw new WasbAuthorizationException(String.format("user '%s' does not have the privilege to change the ownership of files/folders.",
+            actualUgi.getShortUserName()));
+        }
+      }
     }
 
     PermissionStatus newPermissionStatus = new PermissionStatus(

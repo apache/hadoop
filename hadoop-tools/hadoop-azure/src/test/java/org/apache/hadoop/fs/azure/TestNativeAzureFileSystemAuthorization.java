@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.fs.azure;
 
+import java.security.PrivilegedExceptionAction;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
+
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
@@ -32,6 +37,7 @@ import org.junit.rules.ExpectedException;
 import com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test class to hold all WASB authorization tests.
@@ -47,6 +53,7 @@ public class TestNativeAzureFileSystemAuthorization
     Configuration conf = new Configuration();
     conf.set(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, "true");
     conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost/");
+    conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1 , user2");
     return AzureBlobStorageTestAccount.create(conf);
   }
 
@@ -672,5 +679,169 @@ public class TestNativeAzureFileSystemAuthorization
 
     Path testPathWithTripleSlash = new Path("wasb:///" + testPath);
     fs.listStatus(testPathWithTripleSlash);
+  }
+
+  /**
+   * Negative test for setOwner when Authorization is enabled
+   */
+  @Test
+  public void testSetOwnerThrowsForUnauthorisedUsers() throws Throwable {
+    expectedEx.expect(WasbAuthorizationException.class);
+
+    Path testPath = new Path("/testSetOwnerNegative");
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
+    authorizer.init(null);
+    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    String owner = null;
+    UserGroupInformation unauthorisedUser = UserGroupInformation.createUserForTesting(
+          "unauthoriseduser", new String[] {"group1"});
+    try {
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
+      owner = fs.getFileStatus(testPath).getOwner();
+
+      unauthorisedUser.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+          fs.setOwner(testPath, "newowner", null);
+          return null;
+        }
+      });
+    } finally {
+      // check that the owner is not modified
+      assertEquals(owner, fs.getFileStatus(testPath).getOwner());
+      fs.delete(testPath, false);
+    }
+  }
+
+  /**
+   * Test for setOwner when Authorization is enabled and
+   * the user is specified in chown allowed user list
+   * */
+  @Test
+  public void testSetOwnerSucceedsForAuthorisedUsers() throws Throwable {
+    Path testPath = new Path("/testsetownerpositive");
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
+    authorizer.init(null);
+    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    String newOwner = "newowner";
+    String newGroup = "newgroup";
+
+    UserGroupInformation authorisedUser = UserGroupInformation.createUserForTesting(
+          "user2", new String[]{"group1"});
+    try {
+
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
+
+      String owner = fs.getFileStatus(testPath).getOwner();
+      Assume.assumeTrue("changing owner requires original and new owner to be different",
+        !StringUtils.equalsIgnoreCase(owner, newOwner));
+
+      authorisedUser.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+          fs.setOwner(testPath, newOwner, newGroup);
+          assertEquals(newOwner, fs.getFileStatus(testPath).getOwner());
+          assertEquals(newGroup, fs.getFileStatus(testPath).getGroup());
+          return null;
+        }
+      });
+
+    } finally {
+      fs.delete(testPath, false);
+    }
+  }
+
+  /**
+   * Test for setOwner when Authorization is enabled and
+   * the userlist is specified as '*'
+   * */
+  @Test
+  public void testSetOwnerSucceedsForAnyUserWhenWildCardIsSpecified() throws Throwable {
+    Configuration conf = fs.getConf();
+    conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "*");
+    Path testPath = new Path("/testsetownerpositivewildcard");
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
+    authorizer.init(null);
+    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    String newOwner = "newowner";
+    String newGroup = "newgroup";
+
+    UserGroupInformation user = UserGroupInformation.createUserForTesting(
+          "anyuser", new String[]{"group1"});
+    try {
+
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
+
+      String owner = fs.getFileStatus(testPath).getOwner();
+      Assume.assumeTrue("changing owner requires original and new owner to be different",
+        !StringUtils.equalsIgnoreCase(owner, newOwner));
+
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+          fs.setOwner(testPath, newOwner, newGroup);
+          assertEquals(newOwner, fs.getFileStatus(testPath).getOwner());
+          assertEquals(newGroup, fs.getFileStatus(testPath).getGroup());
+          return null;
+        }
+      });
+
+    } finally {
+      fs.delete(testPath, false);
+    }
+  }
+
+  /** Test for setOwner  throws for illegal setup of chown
+   * allowed testSetOwnerSucceedsForAuthorisedUsers
+   */
+  @Test
+  public void testSetOwnerFailsForIllegalSetup() throws Throwable {
+    expectedEx.expect(IllegalArgumentException.class);
+
+    Configuration conf = fs.getConf();
+    conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1, *");
+    Path testPath = new Path("/testSetOwnerFailsForIllegalSetup");
+
+    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
+    authorizer.init(null);
+    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    String owner = null;
+    UserGroupInformation user = UserGroupInformation.createUserForTesting(
+          "anyuser", new String[]{"group1"});
+    try {
+
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
+
+      owner = fs.getFileStatus(testPath).getOwner();
+
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+          fs.setOwner(testPath, "newowner", null);
+          return null;
+        }
+      });
+    } finally {
+      // check that the owner is not modified
+      assertEquals(owner, fs.getFileStatus(testPath).getOwner());
+      fs.delete(testPath, false);
+    }
   }
 }
