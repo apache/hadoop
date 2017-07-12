@@ -23,9 +23,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.MapType;
 import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -120,6 +123,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String NEW_LENGTH_PARAM = "newlength";
   public static final String START_AFTER_PARAM = "startAfter";
   public static final String POLICY_NAME_PARAM = "storagepolicy";
+  public static final String OFFSET_PARAM = "offset";
+  public static final String LENGTH_PARAM = "length";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -201,6 +206,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
   public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
+  public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
@@ -1355,6 +1361,42 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return createStoragePolicy((JSONObject) json.get(STORAGE_POLICY_JSON));
+  }
+
+  @Override
+  public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
+      long len) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETFILEBLOCKLOCATIONS.toString());
+    params.put(OFFSET_PARAM, Long.toString(start));
+    params.put(LENGTH_PARAM, Long.toString(len));
+    HttpURLConnection conn =
+        getConnection(Operation.GETFILEBLOCKLOCATIONS.getMethod(), params,
+            file.getPath(), true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return toBlockLocations(json);
+  }
+
+  private BlockLocation[] toBlockLocations(JSONObject json)
+      throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    MapType subType = mapper.getTypeFactory().constructMapType(
+        Map.class,
+        String.class,
+        BlockLocation[].class);
+    MapType rootType = mapper.getTypeFactory().constructMapType(
+        Map.class,
+        mapper.constructType(String.class),
+        mapper.constructType(subType));
+
+    Map<String, Map<String, BlockLocation[]>> jsonMap = mapper
+        .readValue(json.toJSONString(), rootType);
+    Map<String, BlockLocation[]> locationMap = jsonMap
+        .get(BLOCK_LOCATIONS_JSON);
+    BlockLocation[] locationArray = locationMap.get(
+        BlockLocation.class.getSimpleName());
+    return locationArray;
   }
 
   private BlockStoragePolicy createStoragePolicy(JSONObject policyJson)
