@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.db;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
@@ -51,6 +52,8 @@ public class DBOutputFormat<K  extends DBWritable, V>
 extends OutputFormat<K,V> {
 
   private static final Log LOG = LogFactory.getLog(DBOutputFormat.class);
+  public String dbProductName = "DEFAULT";
+
   public void checkOutputSpecs(JobContext context) 
       throws IOException, InterruptedException {}
 
@@ -158,7 +161,12 @@ extends OutputFormat<K,V> {
         query.append(",");
       }
     }
-    query.append(");");
+
+    if (dbProductName.startsWith("DB2") || dbProductName.startsWith("ORACLE")) {
+      query.append(")");
+    } else {
+      query.append(");");
+    }
 
     return query.toString();
   }
@@ -177,7 +185,10 @@ extends OutputFormat<K,V> {
     try {
       Connection connection = dbConf.getConnection();
       PreparedStatement statement = null;
-  
+
+      DatabaseMetaData dbMeta = connection.getMetaData();
+      this.dbProductName = dbMeta.getDatabaseProductName().toUpperCase();
+
       statement = connection.prepareStatement(
                     constructQuery(tableName, fieldNames));
       return new DBRecordWriter(connection, statement);

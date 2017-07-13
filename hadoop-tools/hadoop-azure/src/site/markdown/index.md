@@ -412,6 +412,18 @@ The service is expected to return a response in JSON format for GETDELEGATIONTOK
     }
 }
 ```
+### chown behaviour when authorization is enabled in WASB
+
+When authorization is enabled, only the users listed in the following configuration
+are allowed to change the owning user of files/folders in WASB. The configuration
+value takes a comma seperated list of user names who are allowed to perform chown.
+
+```xml
+<property>
+  <name>fs.azure.chown.allowed.userlist</name>
+  <value>user1,user2</value>
+</property>
+```
 
 ## Testing the hadoop-azure Module
 

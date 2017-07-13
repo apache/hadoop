@@ -1046,16 +1046,13 @@ public class FairScheduler extends
         Resource maxResourcesToAssign = Resources.multiply(
             node.getUnallocatedResource(), 0.5f);
         while (node.getReservedContainer() == null) {
-          boolean assignedContainer = false;
           Resource assignment = queueMgr.getRootQueue().assignContainer(node);
-          if (!assignment.equals(Resources.none())) {
-            assignedContainers++;
-            assignedContainer = true;
-            Resources.addTo(assignedResource, assignment);
-          }
-          if (!assignedContainer) {
+          if (assignment.equals(Resources.none())) {
             break;
           }
+
+          assignedContainers++;
+          Resources.addTo(assignedResource, assignment);
           if (!shouldContinueAssigning(assignedContainers, maxResourcesToAssign,
               assignedResource)) {
             break;

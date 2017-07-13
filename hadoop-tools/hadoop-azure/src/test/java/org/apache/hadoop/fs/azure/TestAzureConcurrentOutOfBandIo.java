@@ -155,7 +155,7 @@ public class TestAzureConcurrentOutOfBandIo {
         "WASB_String.txt");
    writeBlockTask.startWriting();
    int count = 0;
-   DataInputStream inputStream = null;
+   InputStream inputStream = null;
 
    for (int i = 0; i < 5; i++) {
      try {

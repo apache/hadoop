@@ -349,25 +349,7 @@ public class SchedulerUtils {
     }
     return null;
   }
-  
-  public static boolean checkResourceRequestMatchingNodePartition(
-      String requestedPartition, String nodePartition,
-      SchedulingMode schedulingMode) {
-    // We will only look at node label = nodeLabelToLookAt according to
-    // schedulingMode and partition of node.
-    String nodePartitionToLookAt = null;
-    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-      nodePartitionToLookAt = nodePartition;
-    } else {
-      nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
-    }
 
-    if (null == requestedPartition) {
-      requestedPartition = RMNodeLabelsManager.NO_LABEL;
-    }
-    return requestedPartition.equals(nodePartitionToLookAt);
-  }
-  
   private static boolean hasPendingResourceRequest(ResourceCalculator rc,
       ResourceUsage usage, String partitionToLookAt, Resource cluster) {
     if (Resources.greaterThan(rc, cluster,

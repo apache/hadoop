@@ -95,6 +95,8 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".runningcontainer", "Running Containers").
             th(".allocatedCpu", "Allocated CPU VCores").
             th(".allocatedMemory", "Allocated Memory MB").
+            th(".reservedCpu", "Reserved CPU VCores").
+            th(".reservedMemory", "Reserved Memory MB").
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
@@ -142,6 +144,10 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         .valueOf(appInfo.getAllocatedVCores())).append("\",\"")
       .append(appInfo.getAllocatedMB() == -1 ? "N/A" : String
         .valueOf(appInfo.getAllocatedMB())).append("\",\"")
+      .append(appInfo.getReservedVCores() == -1 ? "N/A" : String
+        .valueOf(appInfo.getReservedVCores())).append("\",\"")
+      .append(appInfo.getReservedMB() == -1 ? "N/A" : String
+        .valueOf(appInfo.getReservedMB())).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
