@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azure;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -190,7 +191,7 @@ public class WasbRemoteCallHelper {
                                 : urls[index]);
         } catch (IOException ioex) {
           String message =
-              "Encountered error while making remote call to " + String
+              "Encountered error while making remote call to " + StringUtils
                   .join(",", urls) + " retried " + retry + " time(s).";
           LOG.error(message, ioex);
           throw new WasbRemoteCallException(message, ioex);
