@@ -275,6 +275,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
   }
 
+  protected PrivilegedOperationExecutor getPrivilegedOperationExecutor() {
+    return PrivilegedOperationExecutor.getInstance(getConf());
+  }
+
   @Override
   public void init() throws IOException {
     Configuration conf = super.getConf();
@@ -285,7 +289,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       PrivilegedOperation checkSetupOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.CHECK_SETUP);
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(checkSetupOp,
           false);
@@ -382,7 +386,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     try {
       Configuration conf = super.getConf();
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(prefixCommands,
           initializeContainerOp, null, null, false, true);
@@ -549,8 +553,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         }
         builder.append("Stack trace: "
             + StringUtils.stringifyException(e) + "\n");
-        if (!e.getOutput().isEmpty()) {
-          builder.append("Shell output: " + e.getOutput() + "\n");
+        String output = e.getOutput();
+        if (output != null && !e.getOutput().isEmpty()) {
+          builder.append("Shell output: " + output + "\n");
         }
         String diagnostics = builder.toString();
         logOutput(diagnostics);
@@ -704,7 +709,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     try {
       Configuration conf = super.getConf();
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(deleteAsUserOp,
           false);
@@ -734,7 +739,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     try {
       PrivilegedOperationExecutor privOpExecutor =
-          PrivilegedOperationExecutor.getInstance(super.getConf());
+          getPrivilegedOperationExecutor();
 
       String results =
           privOpExecutor.executePrivilegedOperation(listAsUserOp, true);
@@ -793,7 +798,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
       mountCGroupsOp.appendArgs(cgroupKVs);
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(mountCGroupsOp,
           false);
