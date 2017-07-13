@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -34,7 +33,10 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceInformationProto;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Collections;
+
 
 @Private
 @Unstable
