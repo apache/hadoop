@@ -391,6 +391,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     
   }
   
+  @Test
   public void testListStatusFilterWithSomeMatches() throws Exception {
     Path[] testDirs = {
         getTestRootPath(fc, TEST_DIR_AAA),
