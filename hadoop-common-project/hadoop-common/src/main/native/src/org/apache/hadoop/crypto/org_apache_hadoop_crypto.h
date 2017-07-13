@@ -47,6 +47,7 @@
 #define JLONG(context) ((jlong)((ptrdiff_t)(context)))
 
 #define KEY_LENGTH_128 16
+#define KEY_LENGTH_192 24
 #define KEY_LENGTH_256 32
 #define IV_LENGTH 16
 
