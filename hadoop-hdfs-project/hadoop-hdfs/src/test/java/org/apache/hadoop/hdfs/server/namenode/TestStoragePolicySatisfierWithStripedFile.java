@@ -323,6 +323,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
     conf.set(DFSConfigKeys
         .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
         "3000");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
@@ -346,7 +348,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
       Path barDir = new Path("/bar");
       fs.mkdirs(barDir);
       // set an EC policy on "/bar" directory
-      fs.setErasureCodingPolicy(barDir, null);
+      fs.setErasureCodingPolicy(barDir,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // write file to barDir
       final Path fooFile = new Path("/bar/foo");

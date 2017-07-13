@@ -927,7 +927,8 @@ public class TestStoragePolicySatisfier {
       String fooDir = "/foo";
       client.mkdirs(fooDir, new FsPermission((short) 777), true);
       // set an EC policy on "/foo" directory
-      client.setErasureCodingPolicy(fooDir, null);
+      client.setErasureCodingPolicy(fooDir,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // write file to fooDir
       final String testFile = "/foo/bar";

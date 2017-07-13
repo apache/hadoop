@@ -128,6 +128,14 @@ public class StoragePolicySatisfier implements Runnable {
    */
   public synchronized void start(boolean reconfigStart) {
     isRunning = true;
+    if (checkIfMoverRunning()) {
+      isRunning = false;
+      LOG.error(
+          "Stopping StoragePolicySatisfier thread " + "as Mover ID file "
+              + HdfsServerConstants.MOVER_ID_PATH.toString()
+              + " been opened. Maybe a Mover instance is running!");
+      return;
+    }
     if (reconfigStart) {
       LOG.info("Starting StoragePolicySatisfier, as admin requested to "
           + "activate it.");
@@ -211,20 +219,6 @@ public class StoragePolicySatisfier implements Runnable {
 
   @Override
   public void run() {
-    boolean isMoverRunning = !checkIfMoverRunning();
-    synchronized (this) {
-      isRunning = isMoverRunning;
-      if (!isRunning) {
-        // Stopping monitor thread and clearing queues as well
-        this.clearQueues();
-        this.storageMovementsMonitor.stopGracefully();
-        LOG.error(
-            "Stopping StoragePolicySatisfier thread " + "as Mover ID file "
-                + HdfsServerConstants.MOVER_ID_PATH.toString()
-                + " been opened. Maybe a Mover instance is running!");
-        return;
-      }
-    }
     while (namesystem.isRunning() && isRunning) {
       try {
         if (!namesystem.isInSafeMode()) {
@@ -274,25 +268,34 @@ public class StoragePolicySatisfier implements Runnable {
         // we want to check block movements.
         Thread.sleep(3000);
       } catch (Throwable t) {
-        synchronized (this) {
+        handleException(t);
+      }
+    }
+  }
+
+  private void handleException(Throwable t) {
+    // double check to avoid entering into synchronized block.
+    if (isRunning) {
+      synchronized (this) {
+        if (isRunning) {
           isRunning = false;
           // Stopping monitor thread and clearing queues as well
           this.clearQueues();
           this.storageMovementsMonitor.stopGracefully();
-        }
-        if (!namesystem.isRunning()) {
-          LOG.info("Stopping StoragePolicySatisfier.");
-          if (!(t instanceof InterruptedException)) {
-            LOG.info("StoragePolicySatisfier received an exception"
-                + " while shutting down.", t);
+          if (!namesystem.isRunning()) {
+            LOG.info("Stopping StoragePolicySatisfier.");
+            if (!(t instanceof InterruptedException)) {
+              LOG.info("StoragePolicySatisfier received an exception"
+                  + " while shutting down.", t);
+            }
+            return;
           }
-          break;
         }
-        LOG.error("StoragePolicySatisfier thread received runtime exception. "
-            + "Stopping Storage policy satisfier work", t);
-        break;
       }
     }
+    LOG.error("StoragePolicySatisfier thread received runtime exception. "
+        + "Stopping Storage policy satisfier work", t);
+    return;
   }
 
   private BlocksMovingAnalysisStatus analyseBlocksStorageMovementsAndAssignToDN(
