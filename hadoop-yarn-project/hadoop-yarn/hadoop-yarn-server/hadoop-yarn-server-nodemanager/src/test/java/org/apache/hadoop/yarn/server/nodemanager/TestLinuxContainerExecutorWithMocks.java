@@ -22,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -39,6 +41,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,12 +49,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DefaultLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntime;
@@ -479,5 +485,84 @@ public class TestLinuxContainerExecutorWithMocks {
     assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
         appSubmitter, cmd, "", baseDir0.toString(), baseDir1.toString()),
         readMockParams());
+  }
+
+  @Test
+  public void testNoExitCodeFromPrivilegedOperation() throws Exception {
+    Configuration conf = new Configuration();
+    final PrivilegedOperationExecutor spyPrivilegedExecutor =
+        spy(PrivilegedOperationExecutor.getInstance(conf));
+    doThrow(new PrivilegedOperationException("interrupted"))
+        .when(spyPrivilegedExecutor).executePrivilegedOperation(
+            any(List.class), any(PrivilegedOperation.class),
+            any(File.class), any(Map.class), anyBoolean(), anyBoolean());
+    LinuxContainerRuntime runtime = new DefaultLinuxContainerRuntime(
+        spyPrivilegedExecutor);
+    runtime.initialize(conf);
+    mockExec = new LinuxContainerExecutor(runtime);
+    mockExec.setConf(conf);
+    LinuxContainerExecutor lce = new LinuxContainerExecutor(runtime) {
+      @Override
+      protected PrivilegedOperationExecutor getPrivilegedOperationExecutor() {
+        return spyPrivilegedExecutor;
+      }
+    };
+    lce.setConf(conf);
+    InetSocketAddress address = InetSocketAddress.createUnresolved(
+        "localhost", 8040);
+    Path nmPrivateCTokensPath= new Path("file:///bin/nmPrivateCTokensPath");
+    LocalDirsHandlerService dirService = new LocalDirsHandlerService();
+    dirService.init(conf);
+
+    String appSubmitter = "nobody";
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 1);
+    HashMap<String, String> env = new HashMap<>();
+    Container container = mock(Container.class);
+    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
+    when(container.getContainerId()).thenReturn(cid);
+    when(container.getLaunchContext()).thenReturn(context);
+    when(context.getEnvironment()).thenReturn(env);
+    Path workDir = new Path("/tmp");
+
+    try {
+      lce.startLocalizer(new LocalizerStartContext.Builder()
+          .setNmPrivateContainerTokens(nmPrivateCTokensPath)
+          .setNmAddr(address)
+          .setUser(appSubmitter)
+          .setAppId(appId.toString())
+          .setLocId("12345")
+          .setDirsHandler(dirService)
+          .build());
+      Assert.fail("startLocalizer should have thrown an exception");
+    } catch (IOException e) {
+      assertTrue("Unexpected exception " + e,
+          e.getMessage().contains("exitCode"));
+    }
+
+    lce.activateContainer(cid, new Path(workDir, "pid.txt"));
+    lce.launchContainer(new ContainerStartContext.Builder()
+        .setContainer(container)
+        .setNmPrivateContainerScriptPath(new Path("file:///bin/echo"))
+        .setNmPrivateTokensPath(new Path("file:///dev/null"))
+        .setUser(appSubmitter)
+        .setAppId(appId.toString())
+        .setContainerWorkDir(workDir)
+        .setLocalDirs(dirsHandler.getLocalDirs())
+        .setLogDirs(dirsHandler.getLogDirs())
+        .build());
+    lce.deleteAsUser(new DeletionAsUserContext.Builder()
+        .setUser(appSubmitter)
+        .setSubDir(new Path("/tmp/testdir"))
+        .build());
+
+    try {
+      lce.mountCgroups(new ArrayList<String>(), "hierarchy");
+      Assert.fail("mountCgroups should have thrown an exception");
+    } catch (IOException e) {
+      assertTrue("Unexpected exception " + e,
+          e.getMessage().contains("exit code"));
+    }
   }
 }
