@@ -148,34 +148,18 @@ Deployment
   HDFS provides an `ec` subcommand to perform administrative commands related to erasure coding.
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policy> -path <path>]
-         [-getPolicy -path <path>]
-         [-unsetPolicy -path <path>]
          [-listPolicies]
          [-addPolicies -policyFile <file>]
-         [-listCodecs]
-         [-removePolicy -policy <policy>]
          [-enablePolicy -policy <policy>]
          [-disablePolicy -policy <policy>]
+         [-removePolicy -policy <policy>]
+         [-getPolicy -path <path>]
+         [-setPolicy -policy <policy> -path <path>]
+         [-unsetPolicy -path <path>]
+         [-listCodecs]
          [-help [cmd ...]]
 
 Below are the details about each command.
-
- *  `[-setPolicy -policy <policy> -path <path>]`
-
-    Sets an erasure coding policy on a directory at the specified path.
-
-      `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
-
-      `policy`: The erasure coding policy to be used for files under this directory.
-
- *  `[-getPolicy -path <path>]`
-
-     Get details of the erasure coding policy of a file or directory at the specified path.
-
- *  `[-unsetPolicy -path <path>]`
-
-     Unset an erasure coding policy set by a previous call to `setPolicy` on a directory. If the directory inherits the erasure coding policy from an ancestor directory, `unsetPolicy` is a no-op. Unsetting the policy on a directory which doesn't have an explicit policy set will not return an error.
 
  *  `[-listPolicies]`
 
@@ -185,18 +169,34 @@ Below are the details about each command.
 
      Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB.
 
- *  `[-listCodecs]`
-
-     Get the list of supported erasure coding codecs and coders in system. A coder is an implementation of a codec. A codec can have different implementations, thus different coders. The coders for a codec are listed in a fall back order.
-
-*  `[-removePolicy -policy <policy>]`
-
-     Remove an erasure coding policy.
-
-*  `[-enablePolicy -policy <policy>]`
+ *  `[-enablePolicy -policy <policy>]`
 
      Enable an erasure coding policy.
 
-*  `[-disablePolicy -policy <policy>]`
+ *  `[-disablePolicy -policy <policy>]`
 
      Disable an erasure coding policy.
+
+ *  `[-removePolicy -policy <policy>]`
+
+     Remove an erasure coding policy.
+
+ *  `[-getPolicy -path <path>]`
+
+     Get details of the erasure coding policy of a file or directory at the specified path.
+
+ *  `[-setPolicy -policy <policy> -path <path>]`
+
+    Sets an erasure coding policy on a directory at the specified path.
+
+      `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
+
+      `policy`: The erasure coding policy to be used for files under this directory.
+
+ *  `[-unsetPolicy -path <path>]`
+
+     Unset an erasure coding policy set by a previous call to `setPolicy` on a directory. If the directory inherits the erasure coding policy from an ancestor directory, `unsetPolicy` is a no-op. Unsetting the policy on a directory which doesn't have an explicit policy set will not return an error.
+
+ *  `[-listCodecs]`
+
+     Get the list of supported erasure coding codecs and coders in system. A coder is an implementation of a codec. A codec can have different implementations, thus different coders. The coders for a codec are listed in a fall back order.

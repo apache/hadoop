@@ -562,12 +562,12 @@ public class ECAdmin extends Configured implements Tool {
   private static final AdminHelper.Command[] COMMANDS = {
       new ListECPoliciesCommand(),
       new AddECPoliciesCommand(),
-      new GetECPolicyCommand(),
+      new EnableECPolicyCommand(),
+      new DisableECPolicyCommand(),
       new RemoveECPolicyCommand(),
+      new GetECPolicyCommand(),
       new SetECPolicyCommand(),
       new UnsetECPolicyCommand(),
       new ListECCodecsCommand(),
-      new EnableECPolicyCommand(),
-      new DisableECPolicyCommand()
   };
 }

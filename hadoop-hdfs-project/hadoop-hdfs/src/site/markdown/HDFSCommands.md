@@ -440,28 +440,28 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policy> -path <path>]
-         [-getPolicy -path <path>]
-         [-unsetPolicy -path <path>]
          [-listPolicies]
          [-addPolicies -policyFile <file>]
-         [-listCodecs]
-         [-removePolicy -policy <policy>]
          [-enablePolicy -policy <policy>]
          [-disablePolicy -policy <policy>]
+         [-removePolicy -policy <policy>]
+         [-getPolicy -path <path>]
+         [-setPolicy -policy <policy> -path <path>]
+         [-unsetPolicy -path <path>]
+         [-listCodecs]
          [-help [cmd ...]]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-|-setPolicy| Set a specified ErasureCoding policy to a directory|
-|-getPolicy| Get ErasureCoding policy information about a specified path|
-|-unsetPolicy| Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory |
 |-listPolicies| Lists all supported ErasureCoding policies|
 |-addPolicies| Add a list of erasure coding policies|
-|-listCodecs| Get the list of supported erasure coding codecs and coders in system|
-|-removePolicy| Remove an erasure coding policy|
 |-enablePolicy| Enable an ErasureCoding policy in system|
 |-disablePolicy| Disable an ErasureCoding policy in system|
+|-removePolicy| Remove an erasure coding policy|
+|-getPolicy| Get ErasureCoding policy information about a specified path|
+|-setPolicy| Set a specified ErasureCoding policy to a directory|
+|-unsetPolicy| Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory |
+|-listCodecs| Get the list of supported erasure coding codecs and coders in system|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.
 
