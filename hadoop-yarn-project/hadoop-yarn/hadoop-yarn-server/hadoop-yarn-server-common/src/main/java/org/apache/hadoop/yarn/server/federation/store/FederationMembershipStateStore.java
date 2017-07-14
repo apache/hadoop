@@ -70,7 +70,7 @@ public interface FederationMembershipStateStore {
    */
   SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest subClusterDeregisterRequest)
-          throws YarnException;
+      throws YarnException;
 
   /**
    * Periodic heartbeat from a <code>ResourceManager</code> participating in
@@ -86,7 +86,7 @@ public interface FederationMembershipStateStore {
    */
   SubClusterHeartbeatResponse subClusterHeartbeat(
       SubClusterHeartbeatRequest subClusterHeartbeatRequest)
-          throws YarnException;
+      throws YarnException;
 
   /**
    * Get the membership information of <em>subcluster</em> as identified by
@@ -94,7 +94,8 @@ public interface FederationMembershipStateStore {
    * endpoint and current capabilities as represented by {@code SubClusterInfo}.
    *
    * @param subClusterRequest the subcluster whose information is required
-   * @return the {@code SubClusterInfo}
+   * @return the {@code SubClusterInfo}, or {@code null} if there is no mapping
+   *         for the subcluster
    * @throws YarnException if the request is invalid/fails
    */
   GetSubClusterInfoResponse getSubCluster(

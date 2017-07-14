@@ -45,7 +45,8 @@ public interface FederationPolicyStore {
    *
    * @param request the queue whose {@code SubClusterPolicyConfiguration} is
    *          required
-   * @return the {@code SubClusterPolicyConfiguration} for the specified queue
+   * @return the {@code SubClusterPolicyConfiguration} for the specified queue,
+   *         or {@code null} if there is no mapping for the queue
    * @throws YarnException if the request is invalid/fails
    */
   GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(

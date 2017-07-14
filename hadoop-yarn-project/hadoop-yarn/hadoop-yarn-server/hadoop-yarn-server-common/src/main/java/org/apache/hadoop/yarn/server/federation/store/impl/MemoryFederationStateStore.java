@@ -165,9 +165,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
     if (!membership.containsKey(subClusterId)) {
-      String errMsg =
-          "SubCluster " + subClusterId.toString() + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      LOG.warn("The queried SubCluster: {} does not exist.", subClusterId);
+      return null;
     }
 
     return GetSubClusterInfoResponse.newInstance(membership.get(subClusterId));
@@ -274,8 +273,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     FederationPolicyStoreInputValidator.validate(request);
     String queue = request.getQueue();
     if (!policies.containsKey(queue)) {
-      String errMsg = "Policy for queue " + queue + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      LOG.warn("Policy for queue: {} does not exist.", queue);
+      return null;
     }
 
     return GetSubClusterPolicyConfigurationResponse

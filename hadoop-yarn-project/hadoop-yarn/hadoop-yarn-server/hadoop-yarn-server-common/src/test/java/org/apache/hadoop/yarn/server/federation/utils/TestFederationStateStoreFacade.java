@@ -47,9 +47,10 @@ import org.junit.runners.Parameterized.Parameters;
 public class TestFederationStateStoreFacade {
 
   @Parameters
+  @SuppressWarnings({"NoWhitespaceAfter"})
   public static Collection<Boolean[]> getParameters() {
     return Arrays
-        .asList(new Boolean[][] {{Boolean.FALSE }, {Boolean.TRUE } });
+        .asList(new Boolean[][] { { Boolean.FALSE }, { Boolean.TRUE } });
   }
 
   private final long clusterTs = System.currentTimeMillis();
@@ -99,6 +100,13 @@ public class TestFederationStateStoreFacade {
   }
 
   @Test
+  public void testInvalidGetSubCluster() throws YarnException {
+    SubClusterId subClusterId =
+        SubClusterId.newInstance(FederationStateStoreTestUtil.INVALID);
+    Assert.assertNull(facade.getSubCluster(subClusterId));
+  }
+
+  @Test
   public void testGetSubClusterFlushCache() throws YarnException {
     for (int i = 0; i < numSubClusters; i++) {
       SubClusterId subClusterId =
@@ -125,6 +133,12 @@ public class TestFederationStateStoreFacade {
       Assert.assertEquals(stateStoreTestUtil.queryPolicyConfiguration(queue),
           facade.getPolicyConfiguration(queue));
     }
+  }
+
+  @Test
+  public void testInvalidGetPolicyConfiguration() throws YarnException {
+    Assert.assertNull(
+        facade.getPolicyConfiguration(FederationStateStoreTestUtil.INVALID));
   }
 
   @Test
