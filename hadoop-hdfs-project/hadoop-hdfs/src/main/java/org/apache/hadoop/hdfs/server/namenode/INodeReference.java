@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.security.AccessControlException;
 
 /**
  * An anonymous reference to an inode.
@@ -315,7 +314,7 @@ public abstract class INodeReference extends INode {
 
   @Override
   public ContentSummaryComputationContext computeContentSummary(int snapshotId,
-      ContentSummaryComputationContext summary) throws AccessControlException {
+      ContentSummaryComputationContext summary) {
     return referred.computeContentSummary(snapshotId, summary);
   }
 

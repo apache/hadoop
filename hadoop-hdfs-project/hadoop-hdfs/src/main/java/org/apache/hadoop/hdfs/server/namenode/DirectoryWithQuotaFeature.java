@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.EnumCounters;
-import org.apache.hadoop.security.AccessControlException;
 
 /**
  * Quota feature for {@link INodeDirectory}. 
@@ -126,8 +125,7 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
   }
 
   ContentSummaryComputationContext computeContentSummary(final INodeDirectory dir,
-      final ContentSummaryComputationContext summary)
-      throws AccessControlException {
+      final ContentSummaryComputationContext summary) {
     final long original = summary.getCounts().getStoragespace();
     long oldYieldCount = summary.getYieldCount();
     dir.computeDirectoryContentSummary(summary, Snapshot.CURRENT_STATE_ID);
