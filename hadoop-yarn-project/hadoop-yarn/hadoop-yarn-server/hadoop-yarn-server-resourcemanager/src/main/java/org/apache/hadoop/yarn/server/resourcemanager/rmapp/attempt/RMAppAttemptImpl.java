@@ -1207,6 +1207,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
                                                     RMAppAttemptEvent event) {
+
+      appAttempt.registerClientToken();
       appAttempt.launchAttempt();
     }
   }
@@ -1527,13 +1529,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Register with AMLivelinessMonitor
       appAttempt.attemptLaunched();
 
-      // register the ClientTokenMasterKey after it is saved in the store,
-      // otherwise client may hold an invalid ClientToken after RM restarts.
-      if (UserGroupInformation.isSecurityEnabled()) {
-        appAttempt.rmContext.getClientToAMTokenSecretManager()
-            .registerApplication(appAttempt.getAppAttemptId(),
-            appAttempt.getClientTokenMasterKey());
-      }
     }
   }
 
@@ -1600,9 +1595,18 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.amrmToken =
           appAttempt.rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
             appAttempt.applicationAttemptId);
-
+      appAttempt.registerClientToken();
       super.transition(appAttempt, event);
     }    
+  }
+
+  private void registerClientToken() {
+    // register the ClientTokenMasterKey after it is saved in the store,
+    // otherwise client may hold an invalid ClientToken after RM restarts.
+    if (UserGroupInformation.isSecurityEnabled()) {
+      rmContext.getClientToAMTokenSecretManager()
+          .registerApplication(getAppAttemptId(), getClientTokenMasterKey());
+    }
   }
 
   private static final class LaunchFailedTransition extends BaseFinalTransition {
