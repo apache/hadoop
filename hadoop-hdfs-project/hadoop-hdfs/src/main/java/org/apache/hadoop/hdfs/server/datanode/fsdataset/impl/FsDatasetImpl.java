@@ -124,6 +124,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -304,6 +305,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
     this.datasetLock = new AutoCloseableLock(
         new InstrumentedLock(getClass().getName(), LOG,
+          new ReentrantLock(true),
           conf.getTimeDuration(
             DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY,
             DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT,
