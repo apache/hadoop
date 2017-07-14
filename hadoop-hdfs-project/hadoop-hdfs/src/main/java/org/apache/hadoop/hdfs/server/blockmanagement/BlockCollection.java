@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.security.AccessControlException;
 
 /** 
  * This interface is used by the block manager to expose a
@@ -36,7 +37,8 @@ public interface BlockCollection {
   /** 
    * Get content summary.
    */
-  public ContentSummary computeContentSummary(BlockStoragePolicySuite bsps);
+  public ContentSummary computeContentSummary(BlockStoragePolicySuite bsps)
+      throws AccessControlException;
 
   /**
    * @return the number of blocks or block groups
