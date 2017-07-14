@@ -61,6 +61,8 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.container.common.SCMTestUtils
+    .getDatanodeID;
 import static org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState.states
     .noContainerReports;
@@ -193,7 +195,7 @@ public class TestEndPoint {
   public void testRegister() throws Exception {
     String[] scmAddressArray = new String[1];
     scmAddressArray[0] = serverAddress.toString();
-    DatanodeID nodeToRegister = SCMTestUtils.getDatanodeID();
+    DatanodeID nodeToRegister = getDatanodeID();
     try (EndpointStateMachine rpcEndPoint =
              SCMTestUtils.createEndpoint(
                  SCMTestUtils.getConf(), serverAddress, 1000)) {
@@ -218,7 +220,7 @@ public class TestEndPoint {
     if (!clearContainerID) {
       ContainerNodeIDProto containerNodeID = ContainerNodeIDProto.newBuilder()
           .setClusterID(UUID.randomUUID().toString())
-          .setDatanodeID(SCMTestUtils.getDatanodeID().getProtoBufMessage())
+          .setDatanodeID(getDatanodeID().getProtoBufMessage())
           .build();
       endpointTask.setContainerNodeIDProto(containerNodeID);
     }
@@ -272,7 +274,7 @@ public class TestEndPoint {
 
   @Test
   public void testHeartbeat() throws Exception {
-    DatanodeID dataNode = SCMTestUtils.getDatanodeID();
+    DatanodeID dataNode = getDatanodeID();
     try (EndpointStateMachine rpcEndPoint =
              SCMTestUtils.createEndpoint(SCMTestUtils.getConf(),
                  serverAddress, 1000)) {
@@ -299,7 +301,7 @@ public class TestEndPoint {
             scmAddress, rpcTimeout)) {
     ContainerNodeIDProto containerNodeID = ContainerNodeIDProto.newBuilder()
         .setClusterID(UUID.randomUUID().toString())
-        .setDatanodeID(SCMTestUtils.getDatanodeID().getProtoBufMessage())
+        .setDatanodeID(getDatanodeID().getProtoBufMessage())
         .build();
     rpcEndPoint.setState(EndpointStateMachine.EndPointStates.HEARTBEAT);
 
@@ -365,6 +367,8 @@ public class TestEndPoint {
       reportsBuilder.addReports(getRandomContainerReport()
           .getProtoBufMessage());
     }
+    reportsBuilder.setDatanodeID(SCMTestUtils.getDatanodeID()
+        .getProtoBufMessage());
     reportsBuilder.setType(StorageContainerDatanodeProtocolProtos
         .ContainerReportsProto.reportType.fullReport);
     return reportsBuilder.build();

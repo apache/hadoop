@@ -252,6 +252,17 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
+   * Returns the node state of a specific node.
+   *
+   * @param id - DatanodeID
+   * @return Healthy/Stale/Dead.
+   */
+  @Override
+  public NODESTATE getNodeState(DatanodeID id) {
+    return null;
+  }
+
+  /**
    * Closes this stream and releases any system resources associated with it. If
    * the stream is already closed then invoking this method has no effect.
    * <p>

@@ -191,6 +191,29 @@ public final class ScmConfigKeys {
 
 
   /**
+   * Don't start processing a pool if we have not had a minimum number of
+   * seconds from the last processing.
+   */
+  public static final String
+      OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_SECONDS =
+      "ozone.scm.container.report.processing.interval.seconds";
+  public static final int
+      OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_DEFAULT = 60;
+
+  /**
+   * These 2 settings control the number of threads in executor pool and time
+   * outs for thw container reports from all nodes.
+   */
+  public static final String OZONE_SCM_MAX_CONTAINER_REPORT_THREADS =
+      "ozone.scm.max.container.report.threads";
+  public static final int OZONE_SCM_MAX_CONTAINER_REPORT_THREADS_DEFAULT = 100;
+  public static final String OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_SECONDS =
+      "ozone.scm.container.reports.wait.timeout.seconds";
+  public static final int OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT =
+      300; // Default 5 minute wait.
+
+
+  /**
    * Never constructed.
    */
   private ScmConfigKeys() {

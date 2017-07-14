@@ -376,6 +376,12 @@ public class SCMNodeManager
       return staleNodeCount.get();
     case DEAD:
       return deadNodeCount.get();
+    case UNKNOWN:
+      // This is unknown due to the fact that some nodes can be in
+      // transit between the other states. Returning a count for that is not
+      // possible. The fact that we have such state is to deal with the fact
+      // that this information might not be consistent always.
+      return 0;
     default:
       throw new IllegalArgumentException("Unknown node state requested.");
     }
@@ -390,6 +396,37 @@ public class SCMNodeManager
   @Override
   public boolean waitForHeartbeatProcessed() {
     return lastHBcheckFinished != 0;
+  }
+
+  /**
+   * Returns the node state of a specific node.
+   *
+   * @param id - DatanodeID
+   * @return Healthy/Stale/Dead/Unknown.
+   */
+  @Override
+  public NODESTATE getNodeState(DatanodeID id) {
+    // There is a subtle race condition here, hence we also support
+    // the NODEState.UNKNOWN. It is possible that just before we check the
+    // healthyNodes, we have removed the node from the healthy list but stil
+    // not added it to Stale Nodes list.
+    // We can fix that by adding the node to stale list before we remove, but
+    // then the node is in 2 states to avoid this race condition. Instead we
+    // just deal with the possibilty of getting a state called unknown.
+
+    if(healthyNodes.containsKey(id.getDatanodeUuid())) {
+      return NODESTATE.HEALTHY;
+    }
+
+    if(staleNodes.containsKey(id.getDatanodeUuid())) {
+      return NODESTATE.STALE;
+    }
+
+    if(deadNodes.containsKey(id.getDatanodeUuid())) {
+      return NODESTATE.DEAD;
+    }
+
+    return NODESTATE.UNKNOWN;
   }
 
   /**

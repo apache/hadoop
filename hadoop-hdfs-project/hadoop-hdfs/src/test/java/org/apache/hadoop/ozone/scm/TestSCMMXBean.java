@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 import java.util.Iterator;
+import java.util.concurrent.TimeoutException;
 
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.TabularData;
@@ -53,12 +54,14 @@ public class TestSCMMXBean {
   private static MBeanServer mbs;
 
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws IOException, TimeoutException,
+      InterruptedException {
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .build();
+    cluster.waitOzoneReady();
     scm = cluster.getStorageContainerManager();
     mbs = ManagementFactory.getPlatformMBeanServer();
   }

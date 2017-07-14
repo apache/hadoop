@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -354,7 +355,7 @@ public class TestContainerPersistence {
     pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName);
     cData.addMetadata("VOLUME", "shire");
-    cData.addMetadata("owner)", "bilbo");
+    cData.addMetadata("owner", "bilbo");
     if(!containerManager.getContainerMap()
         .containsKey(containerName)) {
       containerManager.createContainer(pipeline, cData);
@@ -773,7 +774,7 @@ public class TestContainerPersistence {
 
   @Test
   public void testListKey() throws Exception {
-    String containerName = "c-0";
+    String containerName = "c0" + RandomStringUtils.randomAscii(10);
     Pipeline pipeline = createSingleNodePipeline(containerName);
     List<String> expectedKeys = new ArrayList<String>();
     for (int i = 0; i < 10; i++) {
