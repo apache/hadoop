@@ -63,7 +63,7 @@ public interface BucketManager {
    *   to return.
    * @param startBucket
    *   Optional start bucket name parameter indicating where to start
-   *   the bucket listing from.
+   *   the bucket listing from, this key is excluded from the result.
    * @param bucketPrefix
    *   Optional start key parameter, restricting the response to buckets
    *   that begin with the specified name.

@@ -345,9 +345,9 @@ public class TestKeys {
     Assert.assertEquals(keyList2.size(), 1);
 
     // test startKey parameter of list keys
-    keyList1 = helper.getBucket().listKeys("100", "list-key5", null);
+    keyList1 = helper.getBucket().listKeys("100", "list-key4", null);
     keyList2 = client.listKeys(helper.getVol().getVolumeName(),
-        helper.getBucket().getBucketName(), "100", "list-key5", null);
+        helper.getBucket().getBucketName(), "100", "list-key4", null);
     Assert.assertEquals(keyList1.size(), 5);
     Assert.assertEquals(keyList2.size(), 5);
 

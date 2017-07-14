@@ -213,13 +213,13 @@ public class OzoneRestClient implements Closeable {
    *   Maximum number of results to return, if the result set
    *   is smaller than requested size, it means that list is
    *   complete.
-   * @param startVolume
+   * @param previousVolume
    *   The previous volume name.
    * @return List of Volumes
    * @throws OzoneException
    */
   public List<OzoneVolume> listVolumes(String onBehalfOf, String prefix,
-      int maxKeys, String startVolume) throws OzoneException {
+      int maxKeys, String previousVolume) throws OzoneException {
     HttpGet httpGet = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
       URIBuilder builder = new URIBuilder(endPointURI);
@@ -232,9 +232,9 @@ public class OzoneRestClient implements Closeable {
             .toString(maxKeys));
       }
 
-      if (!Strings.isNullOrEmpty(startVolume)) {
+      if (!Strings.isNullOrEmpty(previousVolume)) {
         builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY,
-            startVolume);
+            previousVolume);
       }
 
       builder.setPath("/").build();
@@ -672,13 +672,14 @@ public class OzoneRestClient implements Closeable {
    * @param volumeName - Volume name
    * @param bucketName - Bucket name
    * @param resultLength The max length of listing result.
-   * @param startKey The start key where to start listing from.
+   * @param previousKey The key from where listing should start,
+   *                    this key is excluded in the result.
    * @param prefix The prefix that return list keys start with.
    *
    * @return List of OzoneKeys
    */
   public List<OzoneKey> listKeys(String volumeName, String bucketName,
-      String resultLength, String startKey, String prefix)
+      String resultLength, String previousKey, String prefix)
       throws OzoneException {
     OzoneUtils.verifyResourceName(volumeName);
     OzoneUtils.verifyResourceName(bucketName);
@@ -692,8 +693,8 @@ public class OzoneRestClient implements Closeable {
         builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, resultLength);
       }
 
-      if (!Strings.isNullOrEmpty(startKey)) {
-        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, startKey);
+      if (!Strings.isNullOrEmpty(previousKey)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, previousKey);
       }
 
       if (!Strings.isNullOrEmpty(prefix)) {

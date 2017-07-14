@@ -305,14 +305,22 @@ public class MetadataManagerImpl implements  MetadataManager {
           ResultCodes.FAILED_VOLUME_NOT_FOUND);
     }
 
-    byte[] startKeyBytes = null;
-    if (!Strings.isNullOrEmpty(startBucket)) {
-      startKeyBytes = getBucketKey(volumeName, startBucket);
-    }
     LevelDBKeyFilter filter =
         new KeyPrefixFilter(getBucketKeyPrefix(volumeName, bucketPrefix));
-    List<Map.Entry<byte[], byte[]>> rangeResult =
-        store.getRangeKVs(startKeyBytes, maxNumOfBuckets, filter);
+
+    List<Map.Entry<byte[], byte[]>> rangeResult;
+    if (!Strings.isNullOrEmpty(startBucket)) {
+      //Since we are excluding start key from the result,
+      // the maxNumOfBuckets is incremented.
+      rangeResult = store.getRangeKVs(
+          getBucketKey(volumeName, startBucket),
+          maxNumOfBuckets + 1, filter);
+      //Remove start key from result.
+      rangeResult.remove(0);
+    } else {
+      rangeResult = store.getRangeKVs(null, maxNumOfBuckets, filter);
+    }
+
     for (Map.Entry<byte[], byte[]> entry : rangeResult) {
       KsmBucketInfo info = KsmBucketInfo.getFromProtobuf(
           BucketInfo.parseFrom(entry.getValue()));
@@ -341,14 +349,22 @@ public class MetadataManagerImpl implements  MetadataManager {
           ResultCodes.FAILED_BUCKET_NOT_FOUND);
     }
 
-    byte[] startKeyBytes = null;
-    if (!Strings.isNullOrEmpty(startKey)) {
-      startKeyBytes = getDBKeyForKey(volumeName, bucketName, startKey);
-    }
     LevelDBKeyFilter filter =
         new KeyPrefixFilter(getKeyKeyPrefix(volumeName, bucketName, keyPrefix));
-    List<Map.Entry<byte[], byte[]>> rangeResult =
-        store.getRangeKVs(startKeyBytes, maxKeys, filter);
+
+    List<Map.Entry<byte[], byte[]>> rangeResult;
+    if (!Strings.isNullOrEmpty(startKey)) {
+      //Since we are excluding start key from the result,
+      // the maxNumOfBuckets is incremented.
+      rangeResult = store.getRangeKVs(
+          getDBKeyForKey(volumeName, bucketName, startKey),
+          maxKeys + 1, filter);
+      //Remove start key from result.
+      rangeResult.remove(0);
+    } else {
+      rangeResult = store.getRangeKVs(null, maxKeys, filter);
+    }
+
     for (Map.Entry<byte[], byte[]> entry : rangeResult) {
       KsmKeyInfo info = KsmKeyInfo.getFromProtobuf(
           KeyInfo.parseFrom(entry.getValue()));
@@ -382,6 +398,7 @@ public class MetadataManagerImpl implements  MetadataManager {
 
       if (!startKeyFound && volumeName.equals(startKey)) {
         startKeyFound = true;
+        continue;
       }
       if (startKeyFound && result.size() < maxKeys) {
         byte[] volumeInfo = store.get(this.getVolumeKey(volumeName));

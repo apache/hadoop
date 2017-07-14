@@ -430,7 +430,7 @@ public class OzoneVolume {
    * @throws OzoneException
    */
   public List<OzoneBucket> listBuckets(String resultLength,
-      String startBucket, String prefix) throws OzoneException {
+      String previousBucket, String prefix) throws OzoneException {
     HttpGet getRequest = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
@@ -438,8 +438,8 @@ public class OzoneVolume {
       if (!Strings.isNullOrEmpty(resultLength)) {
         builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, resultLength);
       }
-      if (!Strings.isNullOrEmpty(startBucket)) {
-        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, startBucket);
+      if (!Strings.isNullOrEmpty(previousBucket)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, previousBucket);
       }
       if (!Strings.isNullOrEmpty(prefix)) {
         builder.addParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix);

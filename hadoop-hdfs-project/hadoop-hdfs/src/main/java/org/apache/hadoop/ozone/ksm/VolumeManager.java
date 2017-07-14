@@ -88,7 +88,8 @@ public interface VolumeManager {
    * @param prefix
    *   the volume prefix used to filter the listing result.
    * @param startKey
-   *   the start volume name determines where to start listing from.
+   *   the start volume name determines where to start listing from,
+   *   this key is excluded from the result.
    * @param maxKeys
    *   the maximum number of volumes to return.
    * @return a list of {@link KsmVolumeArgs}
