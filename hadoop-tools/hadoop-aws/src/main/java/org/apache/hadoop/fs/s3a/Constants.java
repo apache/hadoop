@@ -67,6 +67,10 @@ public final class Constants {
   public static final String SECURE_CONNECTIONS =
       "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
+  
+  //allow access to requester pay buckets
+  public static final String ALLOW_REQUESTER_PAYS = "fs.s3a.requester-pays.enabled";
+  public static final boolean DEFAULT_ALLOW_REQUESTER_PAYS = false;
 
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";

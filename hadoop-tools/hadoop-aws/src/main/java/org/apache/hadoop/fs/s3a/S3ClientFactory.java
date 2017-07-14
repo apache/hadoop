@@ -90,6 +90,8 @@ interface S3ClientFactory {
           DEFAULT_MAXIMUM_CONNECTIONS, 1));
       boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
           DEFAULT_SECURE_CONNECTIONS);
+      boolean requesterPays = conf.getBoolean(ALLOW_REQUESTER_PAYS,
+    		  DEFAULT_ALLOW_REQUESTER_PAYS);
       awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
       awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
           DEFAULT_MAX_ERROR_RETRIES, 0));
@@ -106,6 +108,12 @@ interface S3ClientFactory {
       if (!signerOverride.isEmpty()) {
         LOG.debug("Signer override = {}", signerOverride);
         awsConf.setSignerOverride(signerOverride);
+      }
+      System.out.printf("\n\nRequester Pays is enabled? %b\n\n", requesterPays);
+      if (requesterPays == true) {
+    	  LOG.info("fs.s3a.requester-pays.enabled has been set to true. You will be charged for any requests made to Requester Pays buckets.");
+    	  LOG.info("For more information on Requester Pays buckets visit: http://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html");
+    	  awsConf.addHeader("x-amz-request-payer", "requester");
       }
     }
 
