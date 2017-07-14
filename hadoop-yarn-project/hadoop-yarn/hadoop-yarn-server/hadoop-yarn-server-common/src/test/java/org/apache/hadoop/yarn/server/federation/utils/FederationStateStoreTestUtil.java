@@ -51,6 +51,7 @@ public class FederationStateStoreTestUtil {
   public static final String SC_PREFIX = "SC-";
   public static final String Q_PREFIX = "queue-";
   public static final String POLICY_PREFIX = "policy-";
+  public static final String INVALID = "dummy";
 
   private FederationStateStore stateStore;
 

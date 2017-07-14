@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
@@ -157,13 +158,8 @@ public abstract class FederationStateStoreBaseTest {
     GetSubClusterInfoRequest request =
         GetSubClusterInfoRequest.newInstance(subClusterId);
 
-    try {
-      stateStore.getSubCluster(request).getSubClusterInfo();
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("SubCluster SC does not exist"));
-    }
+    GetSubClusterInfoResponse response = stateStore.getSubCluster(request);
+    Assert.assertNull(response);
   }
 
   @Test
@@ -473,13 +469,10 @@ public abstract class FederationStateStoreBaseTest {
 
     GetSubClusterPolicyConfigurationRequest request =
         GetSubClusterPolicyConfigurationRequest.newInstance("Queue");
-    try {
-      stateStore.getPolicyConfiguration(request);
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Policy for queue Queue does not exist"));
-    }
+
+    GetSubClusterPolicyConfigurationResponse response =
+        stateStore.getPolicyConfiguration(request);
+    Assert.assertNull(response);
   }
 
   @Test

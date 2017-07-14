@@ -385,6 +385,12 @@ public class SQLFederationStateStore implements FederationStateStore {
       String rmAdminAddress = cstmt.getString(4);
       String webAppAddress = cstmt.getString(5);
 
+      // first check if the subCluster exists
+      if((amRMAddress == null) || (clientRMAddress == null)) {
+        LOG.warn("The queried SubCluster: {} does not exist.", subClusterId);
+        return null;
+      }
+
       Timestamp heartBeatTimeStamp = cstmt.getTimestamp(6, utcCalendar);
       long lastHeartBeat =
           heartBeatTimeStamp != null ? heartBeatTimeStamp.getTime() : 0;
@@ -788,9 +794,8 @@ public class SQLFederationStateStore implements FederationStateStore {
               + subClusterPolicyConfiguration.toString());
         }
       } else {
-        String errMsg =
-            "Policy for queue " + request.getQueue() + " does not exist";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        LOG.warn("Policy for queue: {} does not exist.", request.getQueue());
+        return null;
       }
 
     } catch (SQLException e) {
