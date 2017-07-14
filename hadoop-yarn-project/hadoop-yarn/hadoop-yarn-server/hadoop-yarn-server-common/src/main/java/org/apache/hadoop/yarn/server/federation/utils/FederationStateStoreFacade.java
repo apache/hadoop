@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
@@ -221,7 +222,8 @@ public final class FederationStateStoreFacade {
    * Returns the {@link SubClusterInfo} for the specified {@link SubClusterId}.
    *
    * @param subClusterId the identifier of the sub-cluster
-   * @return the sub cluster information
+   * @return the sub cluster information, or
+   *         {@code null} if there is no mapping for the subClusterId
    * @throws YarnException if the call to the state store is unsuccessful
    */
   public SubClusterInfo getSubCluster(final SubClusterId subClusterId)
@@ -229,9 +231,13 @@ public final class FederationStateStoreFacade {
     if (isCachingEnabled()) {
       return getSubClusters(false).get(subClusterId);
     } else {
-      return stateStore
-          .getSubCluster(GetSubClusterInfoRequest.newInstance(subClusterId))
-          .getSubClusterInfo();
+      GetSubClusterInfoResponse response = stateStore
+          .getSubCluster(GetSubClusterInfoRequest.newInstance(subClusterId));
+      if (response == null) {
+        return null;
+      } else {
+        return response.getSubClusterInfo();
+      }
     }
   }
 
@@ -282,7 +288,8 @@ public final class FederationStateStoreFacade {
    * Returns the {@link SubClusterPolicyConfiguration} for the specified queue.
    *
    * @param queue the queue whose policy is required
-   * @return the corresponding configured policy
+   * @return the corresponding configured policy, or {@code null} if there is no
+   *         mapping for the queue
    * @throws YarnException if the call to the state store is unsuccessful
    */
   public SubClusterPolicyConfiguration getPolicyConfiguration(
@@ -295,8 +302,7 @@ public final class FederationStateStoreFacade {
           stateStore.getPolicyConfiguration(
               GetSubClusterPolicyConfigurationRequest.newInstance(queue));
       if (response == null) {
-        throw new YarnException("The stateStore returned a null for "
-            + "GetSubClusterPolicyConfigurationResponse for queue " + queue);
+        return null;
       } else {
         return response.getPolicyConfiguration();
       }
