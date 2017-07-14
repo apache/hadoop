@@ -233,7 +233,27 @@ public class ProportionalCapacityPreemptionPolicy
     }
 
     // initialize candidates preemption selection policies
-    candidatesSelectionPolicies.add(new FifoCandidatesSelector(this));
+    // When select candidates for reserved containers is enabled, exclude reserved
+    // resource in fifo policy (less aggressive). Otherwise include reserved
+    // resource.
+    //
+    // Why doing this? In YARN-4390, we added preemption-based-on-reserved-container
+    // Support. To reduce unnecessary preemption for large containers. We will
+    // not include reserved resources while calculating ideal-allocation in
+    // FifoCandidatesSelector.
+    //
+    // Changes in YARN-4390 will significantly reduce number of containers preempted
+    // When cluster has heterogeneous container requests. (Please check test
+    // report: https://issues.apache.org/jira/secure/attachment/12796197/YARN-4390-test-results.pdf
+    //
+    // However, on the other hand, in some corner cases, especially for
+    // fragmented cluster. It could lead to preemption cannot kick in in some
+    // cases. Please see YARN-5731.
+    //
+    // So to solve the problem, we will include reserved when surgical preemption
+    // for reserved container, which reverts behavior when YARN-4390 is disabled.
+    candidatesSelectionPolicies.add(new FifoCandidatesSelector(this,
+        !selectCandidatesForResevedContainers));
 
     // Do we need to specially consider intra queue
     boolean isIntraQueuePreemptionEnabled = csConfig.getBoolean(
