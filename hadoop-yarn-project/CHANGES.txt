@@ -124,6 +124,9 @@ Release 2.7.4 - UNRELEASED
     YARN-6719. Fix findbugs warnings in SLSCapacityScheduler.java.
     (Akira Ajisaka via naganarasimha_gr)
 
+    YARN-3260. AM attempt fail to register before RM processes launch event
+    (Bibin A Chundatt via jlowe)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
