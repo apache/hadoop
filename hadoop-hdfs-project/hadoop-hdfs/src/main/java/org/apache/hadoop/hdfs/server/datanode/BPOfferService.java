@@ -70,6 +70,7 @@ class BPOfferService {
   volatile DatanodeRegistration bpRegistration;
 
   private final String nameserviceId;
+  private volatile String bpId;
   private final DataNode dn;
 
   /**
@@ -182,6 +183,11 @@ class BPOfferService {
   }
 
   String getBlockPoolId(boolean quiet) {
+    // avoid lock contention unless the registration hasn't completed.
+    String id = bpId;
+    if (id != null) {
+      return id;
+    }
     readLock();
     try {
       if (bpNSInfo != null) {
@@ -203,7 +209,7 @@ class BPOfferService {
   }
 
   boolean hasBlockPoolId() {
-    return getNamespaceInfo() != null;
+    return getBlockPoolId(true) != null;
   }
 
   NamespaceInfo getNamespaceInfo() {
@@ -212,6 +218,28 @@ class BPOfferService {
       return bpNSInfo;
     } finally {
       readUnlock();
+    }
+  }
+
+  @VisibleForTesting
+  NamespaceInfo setNamespaceInfo(NamespaceInfo nsInfo) throws IOException {
+    writeLock();
+    try {
+      NamespaceInfo old = bpNSInfo;
+      if (bpNSInfo != null && nsInfo != null) {
+        checkNSEquality(bpNSInfo.getBlockPoolID(), nsInfo.getBlockPoolID(),
+            "Blockpool ID");
+        checkNSEquality(bpNSInfo.getNamespaceID(), nsInfo.getNamespaceID(),
+            "Namespace ID");
+        checkNSEquality(bpNSInfo.getClusterID(), nsInfo.getClusterID(),
+            "Cluster ID");
+      }
+      bpNSInfo = nsInfo;
+      // cache the block pool id for lock-free access.
+      bpId = (nsInfo != null) ? nsInfo.getBlockPoolID() : null;
+      return old;
+    } finally {
+      writeUnlock();
     }
   }
 
@@ -287,9 +315,10 @@ class BPOfferService {
   private void checkBlock(ExtendedBlock block) {
     Preconditions.checkArgument(block != null,
         "block is null");
-    Preconditions.checkArgument(block.getBlockPoolId().equals(getBlockPoolId()),
+    final String bpId = getBlockPoolId();
+    Preconditions.checkArgument(block.getBlockPoolId().equals(bpId),
         "block belongs to BP %s instead of BP %s",
-        block.getBlockPoolId(), getBlockPoolId());
+        block.getBlockPoolId(), bpId);
   }
 
   //This must be called only by blockPoolManager
@@ -335,8 +364,7 @@ class BPOfferService {
     }
 
     try {
-      if (this.bpNSInfo == null) {
-        this.bpNSInfo = nsInfo;
+      if (setNamespaceInfo(nsInfo) == null) {
         boolean success = false;
 
         // Now that we know the namespace ID, etc, we can pass this to the DN.
@@ -350,16 +378,9 @@ class BPOfferService {
             // The datanode failed to initialize the BP. We need to reset
             // the namespace info so that other BPService actors still have
             // a chance to set it, and re-initialize the datanode.
-            this.bpNSInfo = null;
+            setNamespaceInfo(null);
           }
         }
-      } else {
-        checkNSEquality(bpNSInfo.getBlockPoolID(), nsInfo.getBlockPoolID(),
-            "Blockpool ID");
-        checkNSEquality(bpNSInfo.getNamespaceID(), nsInfo.getNamespaceID(),
-            "Namespace ID");
-        checkNSEquality(bpNSInfo.getClusterID(), nsInfo.getClusterID(),
-            "Cluster ID");
       }
     } finally {
       writeUnlock();
