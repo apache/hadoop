@@ -123,6 +123,8 @@ public class TestSchedulingPolicy {
     private Resource minShare = Resource.newInstance(0, 1);
 
     private Resource demand = Resource.newInstance(4, 1);
+    private Resource[] demandCollection = {
+        Resource.newInstance(0, 0), Resource.newInstance(4, 1) };
 
     private String[] nameCollection = {"A", "B", "C"};
 
@@ -160,9 +162,11 @@ public class TestSchedulingPolicy {
         for (int j = 0; j < startTimeColloection.length; j++) {
           for (int k = 0; k < usageCollection.length; k++) {
             for (int t = 0; t < weightsCollection.length; t++) {
-              genSchedulable.push(createSchedulable(i, j, k, t));
-              generateAndTest(genSchedulable);
-              genSchedulable.pop();
+              for (int m = 0; m < demandCollection.length; m++) {
+                genSchedulable.push(createSchedulable(m, i, j, k, t));
+                generateAndTest(genSchedulable);
+                genSchedulable.pop();
+              }
             }
           }
         }
@@ -171,10 +175,11 @@ public class TestSchedulingPolicy {
     }
 
     private Schedulable createSchedulable(
-        int nameIdx, int startTimeIdx, int usageIdx, int weightsIdx) {
-      return new MockSchedulable(minShare, demand, nameCollection[nameIdx],
-        startTimeColloection[startTimeIdx], usageCollection[usageIdx],
-        weightsCollection[weightsIdx]);
+        int demandId, int nameIdx, int startTimeIdx,
+        int usageIdx, int weightsIdx) {
+      return new MockSchedulable(minShare, demandCollection[demandId],
+        nameCollection[nameIdx], startTimeColloection[startTimeIdx],
+        usageCollection[usageIdx], weightsCollection[weightsIdx]);
     }
 
     private boolean checkTransitivity(
