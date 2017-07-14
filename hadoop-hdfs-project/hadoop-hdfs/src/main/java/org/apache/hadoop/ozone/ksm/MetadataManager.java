@@ -148,6 +148,7 @@ public interface MetadataManager {
    * @param startBucket
    *   the start bucket name. Only the buckets whose name is
    *   after this value will be included in the result.
+   *   This key is excluded from the result.
    * @param bucketPrefix
    *   bucket name prefix. Only the buckets whose name has
    *   this prefix will be included in the result.
@@ -171,6 +172,7 @@ public interface MetadataManager {
    * @param startKey
    *   the start key name, only the keys whose name is
    *   after this value will be included in the result.
+   *   This key is excluded from the result.
    * @param keyPrefix
    *   key name prefix, only the keys whose name has
    *   this prefix will be included in the result.
@@ -193,7 +195,8 @@ public interface MetadataManager {
    * @param prefix
    *   the volume prefix used to filter the listing result.
    * @param startKey
-   *   the start volume name determines where to start listing from.
+   *   the start volume name determines where to start listing from,
+   *   this key is excluded from the result.
    * @param maxKeys
    *   the maximum number of volumes to return.
    * @return a list of {@link KsmVolumeArgs}

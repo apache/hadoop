@@ -276,7 +276,7 @@ public class TestVolume {
     assertEquals(5, volumeList.size());
 
     // test start key parameter of listing volumes
-    volumeList = client.listVolumes(user2, null, 100, "test-vol17");
+    volumeList = client.listVolumes(user2, null, 100, "test-vol15");
     assertEquals(2, volumeList.size());
   }
 

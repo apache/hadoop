@@ -177,7 +177,7 @@ public class TestBuckets {
     bucketList = vol.listBuckets("3", null, null);
     assertEquals(bucketList.size(), 3);
 
-    bucketList = vol.listBuckets("100", "listbucket-test-5", null);
+    bucketList = vol.listBuckets("100", "listbucket-test-4", null);
     assertEquals(bucketList.size(), 5);
 
     bucketList = vol.listBuckets("100", null, "listbucket-test-3");

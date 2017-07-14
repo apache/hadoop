@@ -451,12 +451,13 @@ public class OzoneBucket {
    * List all keys in a bucket.
    *
    * @param resultLength The max length of listing result.
-   * @param startKey The start key where to start listing from.
+   * @param previousKey The key from where listing should start,
+   *                    this key is excluded in the result.
    * @param prefix The prefix that return list keys start with.
    * @return List of OzoneKeys
    * @throws OzoneException
    */
-  public List<OzoneKey> listKeys(String resultLength, String startKey,
+  public List<OzoneKey> listKeys(String resultLength, String previousKey,
       String prefix) throws OzoneException {
     HttpGet getRequest = null;
     try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
@@ -469,8 +470,8 @@ public class OzoneBucket {
         builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, resultLength);
       }
 
-      if (!Strings.isNullOrEmpty(startKey)) {
-        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, startKey);
+      if (!Strings.isNullOrEmpty(previousKey)) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY, previousKey);
       }
 
       if (!Strings.isNullOrEmpty(prefix)) {
