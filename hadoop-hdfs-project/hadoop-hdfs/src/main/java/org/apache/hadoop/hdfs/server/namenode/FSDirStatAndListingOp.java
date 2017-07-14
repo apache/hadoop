@@ -127,8 +127,10 @@ class FSDirStatAndListingOp {
       FSDirectory fsd, String src) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
-    // getContentSummaryInt() call will check access (if enabled) when
-    // traversing all sub directories.
+    if (fsd.isPermissionEnabled()) {
+      fsd.checkPermission(pc, iip, false, null, null, null,
+          FsAction.READ_EXECUTE);
+    }
     return getContentSummaryInt(fsd, iip);
   }
 
@@ -511,8 +513,7 @@ class FSDirStatAndListingOp {
         // processed. 0 means disabled. I.e. blocking for the entire duration.
         ContentSummaryComputationContext cscc =
             new ContentSummaryComputationContext(fsd, fsd.getFSNamesystem(),
-                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec(),
-                fsd.getPermissionChecker());
+                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec());
         ContentSummary cs = targetNode.computeAndConvertContentSummary(
             iip.getPathSnapshotId(), cscc);
         fsd.addYieldCount(cscc.getYieldCount());
