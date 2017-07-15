@@ -126,7 +126,8 @@ public final class ObjectStoreHandler implements Closeable {
               NetUtils.getDefaultSocketFactory(conf),
               Client.getRpcTimeout(conf)));
 
-      storageHandler = new DistributedStorageHandler(new OzoneConfiguration(),
+      storageHandler = new DistributedStorageHandler(
+          new OzoneConfiguration(conf),
           this.storageContainerLocationClient,
           this.keySpaceManagerClient);
     } else {

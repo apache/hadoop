@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
+import org.apache.hadoop.ozone.scm.ratis.RatisManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -75,6 +76,8 @@ public final class MiniOzoneCluster extends MiniDFSCluster
   private final KeySpaceManager ksm;
   private final Path tempPath;
 
+  private final RatisManager ratisManager;
+
   /**
    * Creates a new MiniOzoneCluster.
    *
@@ -90,6 +93,15 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     this.scm = scm;
     this.ksm = ksm;
     tempPath = Paths.get(builder.getPath(), builder.getRunID());
+
+    final boolean useRatis = conf.getBoolean(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
+    this.ratisManager = useRatis? RatisManager.newRatisManager(conf): null;
+  }
+
+  public RatisManager getRatisManager() {
+    return ratisManager;
   }
 
   @Override

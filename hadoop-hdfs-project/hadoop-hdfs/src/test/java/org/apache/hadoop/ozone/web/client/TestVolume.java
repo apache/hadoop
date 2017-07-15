@@ -36,10 +36,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -58,7 +55,7 @@ import static org.mockito.Mockito.verify;
 
 public class TestVolume {
   private static MiniOzoneCluster cluster = null;
-  private static OzoneRestClient client = null;
+  private static OzoneRestClient ozoneRestClient = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -87,7 +84,8 @@ public class TestVolume {
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
 
-    client = new OzoneRestClient(String.format("http://localhost:%d", port));
+    ozoneRestClient = new OzoneRestClient(
+        String.format("http://localhost:%d", port));
   }
 
   /**
@@ -102,6 +100,11 @@ public class TestVolume {
 
   @Test
   public void testCreateVolume() throws OzoneException, IOException {
+    runTestCreateVolume(ozoneRestClient);
+  }
+
+  static void runTestCreateVolume(OzoneRestClient client)
+      throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
 
@@ -120,6 +123,11 @@ public class TestVolume {
 
   @Test
   public void testCreateDuplicateVolume() throws OzoneException {
+    runTestCreateDuplicateVolume(ozoneRestClient);
+  }
+
+  static void runTestCreateDuplicateVolume(OzoneRestClient client)
+      throws OzoneException {
     try {
       client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
       client.createVolume("testvol", "bilbo", "100TB");
@@ -134,6 +142,11 @@ public class TestVolume {
 
   @Test
   public void testDeleteVolume() throws OzoneException {
+    runTestDeleteVolume(ozoneRestClient);
+  }
+
+  static void runTestDeleteVolume(OzoneRestClient client)
+      throws OzoneException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -142,6 +155,11 @@ public class TestVolume {
 
   @Test
   public void testChangeOwnerOnVolume() throws OzoneException {
+    runTestChangeOwnerOnVolume(ozoneRestClient);
+  }
+
+  static void runTestChangeOwnerOnVolume(OzoneRestClient client)
+      throws OzoneException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -152,6 +170,11 @@ public class TestVolume {
 
   @Test
   public void testChangeQuotaOnVolume() throws OzoneException, IOException {
+    runTestChangeQuotaOnVolume(ozoneRestClient);
+  }
+
+  static void runTestChangeQuotaOnVolume(OzoneRestClient client)
+      throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -163,6 +186,11 @@ public class TestVolume {
 
   @Test
   public void testListVolume() throws OzoneException, IOException {
+    runTestListVolume(ozoneRestClient);
+  }
+
+  static void runTestListVolume(OzoneRestClient client)
+      throws OzoneException, IOException {
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     for (int x = 0; x < 10; x++) {
       String volumeName = OzoneUtils.getRequestID().toLowerCase();
@@ -174,9 +202,15 @@ public class TestVolume {
     assertTrue(ovols.size() >= 10);
   }
 
-  //@Test
-  // Takes 3m to run, disable for now.
+  // TODO: remove @Ignore below once the problem has been resolved.
+  @Ignore("Takes 3m to run, disable for now.")
+  @Test
   public void testListVolumePagination() throws OzoneException, IOException {
+    runTestListVolumePagination(ozoneRestClient);
+  }
+
+  static void runTestListVolumePagination(OzoneRestClient client)
+      throws OzoneException, IOException {
     final int volCount = 2000;
     final int step = 100;
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
@@ -198,8 +232,15 @@ public class TestVolume {
     Assert.assertEquals(volCount / step, pagecount);
   }
 
-  //@Test
+  // TODO: remove @Ignore below once the problem has been resolved.
+  @Ignore
+  @Test
   public void testListAllVolumes() throws OzoneException, IOException {
+    runTestListAllVolumes(ozoneRestClient);
+  }
+
+  static void runTestListAllVolumes(OzoneRestClient client)
+      throws OzoneException, IOException {
     final int volCount = 200;
     final int step = 10;
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
@@ -230,6 +271,11 @@ public class TestVolume {
 
   @Test
   public void testListVolumes() throws OzoneException, IOException {
+    runTestListVolumes(ozoneRestClient);
+  }
+
+  static void runTestListVolumes(OzoneRestClient client)
+      throws OzoneException, IOException {
     final int volCount = 20;
     final String user1 = "test-user-a";
     final String user2 = "test-user-b";
@@ -288,12 +334,12 @@ public class TestVolume {
    * of this method is always used as the input of
    * {@link TestVolume#verifyHttpConnectionClosed(List)}.
    *
-   * @param ozoneRestClient mocked ozone client.
+   * @param mockedClient mocked ozone client.
    * @return a list of mocked {@link CloseableHttpClient}.
    * @throws IOException
    */
-  private List<CloseableHttpClient> mockHttpClients(
-      OzoneRestClient ozoneRestClient)
+  private static List<CloseableHttpClient> mockHttpClients(
+      OzoneRestClient mockedClient)
       throws IOException {
     List<CloseableHttpClient> spyHttpClients = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
@@ -304,7 +350,7 @@ public class TestVolume {
 
     List<CloseableHttpClient> nextReturns =
         new ArrayList<>(spyHttpClients.subList(1, spyHttpClients.size()));
-    Mockito.when(ozoneRestClient.newHttpClient()).thenReturn(
+    Mockito.when(mockedClient.newHttpClient()).thenReturn(
         spyHttpClients.get(0),
         nextReturns.toArray(new CloseableHttpClient[nextReturns.size()]));
     return spyHttpClients;
@@ -320,7 +366,7 @@ public class TestVolume {
    *
    * @param mockedHttpClients
    */
-  private void verifyHttpConnectionClosed(
+  private static void verifyHttpConnectionClosed(
       List<CloseableHttpClient> mockedHttpClients) {
     final AtomicInteger totalCalled = new AtomicInteger();
     Assert.assertTrue(mockedHttpClients.stream().allMatch(
