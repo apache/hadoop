@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.handlers;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
@@ -96,6 +97,12 @@ public abstract class KeyProcessTemplate {
       LOG.debug("Invalid bucket in key call. ex:{}", argExp);
       throw newError(INVALID_BUCKET_NAME, userArgs, argExp);
     } catch (IOException fsExp) {
+      // Map KEY_NOT_FOUND to INVALID_KEY
+      if (fsExp.getMessage().endsWith(
+          KeySpaceManagerProtocolProtos.Status.KEY_NOT_FOUND.name())) {
+        throw ErrorTable.newError(ErrorTable.INVALID_KEY, userArgs, fsExp);
+      }
+
       // TODO : Handle errors from the FileSystem , let us map to server error
       // for now.
       LOG.debug("IOException. ex : {}", fsExp);

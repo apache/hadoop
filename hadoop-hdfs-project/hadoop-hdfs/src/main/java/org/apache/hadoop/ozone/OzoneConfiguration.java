@@ -33,4 +33,11 @@ public class OzoneConfiguration extends Configuration {
     Configuration.addDefaultResource("ozone-default.xml");
     Configuration.addDefaultResource("ozone-site.xml");
   }
+
+  public OzoneConfiguration() {
+  }
+
+  public OzoneConfiguration(Configuration conf) {
+    super(conf);
+  }
 }

@@ -49,7 +49,7 @@ public class TestBuckets {
   public Timeout testTimeout = new Timeout(300000);
 
   private static MiniOzoneCluster cluster = null;
-  private static OzoneRestClient client = null;
+  private static OzoneRestClient ozoneRestClient = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -75,7 +75,8 @@ public class TestBuckets {
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
-    client = new OzoneRestClient(String.format("http://localhost:%d", port));
+    ozoneRestClient = new OzoneRestClient(
+        String.format("http://localhost:%d", port));
   }
 
   /**
@@ -90,6 +91,11 @@ public class TestBuckets {
 
   @Test
   public void testCreateBucket() throws OzoneException, IOException {
+    runTestCreateBucket(ozoneRestClient);
+  }
+
+  static void runTestCreateBucket(OzoneRestClient client)
+      throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -113,6 +119,11 @@ public class TestBuckets {
 
   @Test
   public void testAddBucketAcls() throws OzoneException, IOException {
+    runTestAddBucketAcls(ozoneRestClient);
+  }
+
+  static void runTestAddBucketAcls(OzoneRestClient client)
+      throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -127,6 +138,11 @@ public class TestBuckets {
 
   @Test
   public void testRemoveBucketAcls() throws OzoneException, IOException {
+    runTestRemoveBucketAcls(ozoneRestClient);
+  }
+
+  static void runTestRemoveBucketAcls(OzoneRestClient client)
+      throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -144,6 +160,11 @@ public class TestBuckets {
 
   @Test
   public void testDeleteBucket() throws OzoneException, IOException {
+    runTestDeleteBucket(ozoneRestClient);
+  }
+
+  static void runTestDeleteBucket(OzoneRestClient client)
+      throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -163,6 +184,11 @@ public class TestBuckets {
 
   @Test
   public void testListBucket() throws OzoneException, IOException {
+    runTestListBucket(ozoneRestClient);
+  }
+
+  static void runTestListBucket(OzoneRestClient client)
+      throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");

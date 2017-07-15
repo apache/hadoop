@@ -59,9 +59,9 @@ public class TestKeys {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static MiniOzoneCluster cluster = null;
+  private static MiniOzoneCluster ozoneCluster = null;
   static private String path;
-  private static OzoneRestClient client = null;
+  private static OzoneRestClient ozoneRestClient = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -82,11 +82,12 @@ public class TestKeys {
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
-    cluster = new MiniOzoneCluster.Builder(conf)
+    ozoneCluster = new MiniOzoneCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    DataNode dataNode = cluster.getDataNodes().get(0);
+    DataNode dataNode = ozoneCluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
-    client = new OzoneRestClient(String.format("http://localhost:%d", port));
+    ozoneRestClient = new OzoneRestClient(
+        String.format("http://localhost:%d", port));
   }
 
   /**
@@ -94,8 +95,8 @@ public class TestKeys {
    */
   @AfterClass
   public static void shutdown() {
-    if (cluster != null) {
-      cluster.shutdown();
+    if (ozoneCluster != null) {
+      ozoneCluster.shutdown();
     }
   }
 
@@ -104,10 +105,10 @@ public class TestKeys {
    *
    * @return File.
    */
-  private File createRandomDataFile(String fileName, long size) {
-    File tmpDir = new File(path);
+  static File createRandomDataFile(String dir, String fileName, long size) {
+    File tmpDir = new File(dir);
     tmpDir.mkdirs();
-    File tmpFile = new File(path + "/" + fileName);
+    File tmpFile = new File(tmpDir, fileName);
     try {
       FileOutputStream randFile = new FileOutputStream(tmpFile);
       Random r = new Random();
@@ -122,11 +123,18 @@ public class TestKeys {
     return tmpFile;
   }
 
+  static class PutHelper {
+    private final OzoneRestClient client;
+    private final String dir;
 
-  private class PutHelper {
     OzoneVolume vol;
     OzoneBucket bucket;
     File file;
+
+    PutHelper(OzoneRestClient client, String dir) {
+      this.client = client;
+      this.dir = dir;
+    }
 
     public OzoneVolume getVol() {
       return vol;
@@ -157,7 +165,7 @@ public class TestKeys {
       bucket = vol.createBucket(bucketName, acls, StorageType.DEFAULT);
 
       String keyName = OzoneUtils.getRequestID().toLowerCase();
-      file = createRandomDataFile(keyName, 1024);
+      file = createRandomDataFile(dir, keyName, 1024);
 
       bucket.putKey(keyName, file);
       return keyName;
@@ -167,7 +175,11 @@ public class TestKeys {
 
   @Test
   public void testPutKey() throws OzoneException {
-    PutHelper helper  = new PutHelper();
+    runTestPutKey(new PutHelper(ozoneRestClient, path));
+  }
+
+  static void runTestPutKey(PutHelper helper) throws OzoneException {
+    final OzoneRestClient client = helper.client;
     helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
@@ -203,7 +215,8 @@ public class TestKeys {
     }
   }
 
-  private void restartDatanode(int datanodeIdx)
+  private static void restartDatanode(
+      MiniOzoneCluster cluster, int datanodeIdx, OzoneRestClient client)
       throws IOException, OzoneException, URISyntaxException {
     cluster.restartDataNode(datanodeIdx);
     // refresh the datanode endpoint uri after datanode restart
@@ -215,17 +228,23 @@ public class TestKeys {
   @Test
   public void testPutAndGetKeyWithDnRestart()
       throws OzoneException, IOException, URISyntaxException {
+    runTestPutAndGetKeyWithDnRestart(
+        new PutHelper(ozoneRestClient, path), ozoneCluster);
+  }
 
-    PutHelper helper  = new PutHelper();
+  static void runTestPutAndGetKeyWithDnRestart(
+      PutHelper helper, MiniOzoneCluster cluster)
+      throws OzoneException, IOException, URISyntaxException {
     String keyName = helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
     // restart the datanode
-    restartDatanode(0);
+    restartDatanode(cluster, 0, helper.client);
 
     // verify getKey after the datanode restart
-    String newFileName =  path + "/" +OzoneUtils.getRequestID().toLowerCase();
+    String newFileName = helper.dir + "/"
+        + OzoneUtils.getRequestID().toLowerCase();
     Path newPath = Paths.get(newFileName);
 
     helper.getBucket().getKey(keyName, newPath);
@@ -244,14 +263,21 @@ public class TestKeys {
 
   @Test
   public void testPutAndGetKey() throws OzoneException, IOException {
+    runTestPutAndGetKey(new PutHelper(ozoneRestClient, path));
+  }
 
-    PutHelper helper  = new PutHelper();
+  static void runTestPutAndGetKey(PutHelper helper)
+      throws OzoneException, IOException {
+    final OzoneRestClient client = helper.client;
+
     String keyName = helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
-    String newFileName1 =  path + "/" +OzoneUtils.getRequestID().toLowerCase();
-    String newFileName2 =  path + "/" +OzoneUtils.getRequestID().toLowerCase();
+    final String newFileName1 =  helper.dir + "/"
+        + OzoneUtils.getRequestID().toLowerCase();
+    final String newFileName2 =  helper.dir + "/"
+        + OzoneUtils.getRequestID().toLowerCase();
 
     Path newPath1 = Paths.get(newFileName1);
     Path newPath2 = Paths.get(newFileName2);
@@ -300,8 +326,11 @@ public class TestKeys {
 
   @Test
   public void testPutAndDeleteKey() throws OzoneException, IOException {
+    runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path));
+  }
 
-    PutHelper helper  = new PutHelper();
+  static void runTestPutAndDeleteKey(PutHelper helper)
+      throws OzoneException, IOException {
     String keyName = helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
@@ -318,7 +347,12 @@ public class TestKeys {
 
   @Test
   public void testPutAndListKey() throws OzoneException, IOException {
-    PutHelper helper  = new PutHelper();
+    runTestPutAndListKey(new PutHelper(ozoneRestClient, path));
+  }
+
+  static void runTestPutAndListKey(PutHelper helper)
+      throws OzoneException, IOException {
+    final OzoneRestClient client = helper.client;
     helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
@@ -382,7 +416,10 @@ public class TestKeys {
 
   @Test
   public void testGetKeyInfo() throws OzoneException, IOException {
-    PutHelper helper = new PutHelper();
+    runTestGetKeyInfo(new PutHelper(ozoneRestClient, path));
+  }
+
+  static void runTestGetKeyInfo(PutHelper helper) throws OzoneException {
     String keyName = helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
