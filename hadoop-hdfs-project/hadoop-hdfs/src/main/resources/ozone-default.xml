@@ -328,6 +328,37 @@
   </property>
 
   <property>
+    <name>ozone.scm.max.container.report.threads</name>
+    <value>100</value>
+    <description>
+      Maximum number of threads to process container reports in scm.
+      Each container report from a datanode is processed by scm in
+      a worker thread, fetched from a thread pool. This property is
+      used to control the maximum size of the thread pool.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.reports.wait.timeout.seconds</name>
+    <value>300</value>
+    <description>
+      Maximum time to wait in seconds for processing all container
+      reports from a node pool. It determines the timeout for a
+      node pool reports.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.report.processing.interval.seconds</name>
+    <value>60</value>
+    <description>
+      Time interval in seconds for scm to process container reports
+      for a node pool. Scm handles node pool reports in a cyclic clock
+      manner, it fetches pools periodically with this time interval.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.container.ipc</name>
     <value>50011</value>
     <description>
