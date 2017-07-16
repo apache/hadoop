@@ -566,6 +566,17 @@
   </property>
 
   <property>
+    <name>ozone.metastore.impl</name>
+    <value>LevelDB</value>
+    <description>
+      Ozone metadata store implementation. Ozone metadata are well distributed
+      to multiple services such as ksm, scm. They are stored in some local
+      key-value databases. This property determines which database library to
+      use. Supported value is either LevelDB or RocksDB.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.cblock.servicerpc-address</name>
     <value></value>
     <description>

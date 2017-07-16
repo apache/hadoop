@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
@@ -32,12 +32,11 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyI
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.utils.LevelDBKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.utils.LevelDBKeyFilters.LevelDBKeyFilter;
-import org.apache.hadoop.utils.LevelDBStore;
-import org.iq80.leveldb.DBIterator;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.WriteBatch;
+import org.apache.hadoop.utils.BatchOperation;
+import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
+import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,9 +56,9 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
 /**
  * KSM metadata manager interface.
  */
-public class MetadataManagerImpl implements  MetadataManager {
+public class MetadataManagerImpl implements MetadataManager {
 
-  private final LevelDBStore store;
+  private final MetadataStore store;
   private final ReadWriteLock lock;
 
 
@@ -67,10 +66,12 @@ public class MetadataManagerImpl implements  MetadataManager {
     File metaDir = OzoneUtils.getScmMetadirPath(conf);
     final int cacheSize = conf.getInt(OZONE_KSM_DB_CACHE_SIZE_MB,
         OZONE_KSM_DB_CACHE_SIZE_DEFAULT);
-    Options options = new Options();
-    options.cacheSize(cacheSize * OzoneConsts.MB);
     File ksmDBFile = new File(metaDir.getPath(), KSM_DB_NAME);
-    this.store = new LevelDBStore(ksmDBFile, options);
+    this.store = MetadataStoreBuilder.newBuilder()
+        .setConf(conf)
+        .setDbFile(ksmDBFile)
+        .setCacheSize(cacheSize * OzoneConsts.MB)
+        .build();
     this.lock = new ReentrantReadWriteLock();
   }
 
@@ -153,7 +154,7 @@ public class MetadataManagerImpl implements  MetadataManager {
    * @param key - key name
    */
   @Override
-  public void deleteKey(byte[] key) {
+  public void deleteKey(byte[] key) throws IOException {
     store.delete(key);
   }
 
@@ -181,7 +182,7 @@ public class MetadataManagerImpl implements  MetadataManager {
    * @return value
    */
   @Override
-  public byte[] get(byte[] key) {
+  public byte[] get(byte[] key) throws IOException {
     return store.get(key);
   }
 
@@ -191,7 +192,7 @@ public class MetadataManagerImpl implements  MetadataManager {
    * @param value - value
    */
   @Override
-  public void put(byte[] key, byte[] value) {
+  public void put(byte[] key, byte[] value) throws IOException {
     store.put(key, value);
   }
 
@@ -199,45 +200,13 @@ public class MetadataManagerImpl implements  MetadataManager {
    * Deletes a Key from Metadata DB.
    * @param key   - key
    */
-  public void delete(byte[] key) {
+  public void delete(byte[] key) throws IOException {
     store.delete(key);
   }
 
-  /**
-   * Performs a batch Put and Delete from Metadata DB.
-   * Can be used to do multiple puts and deletes atomically.
-   * @param putList - list of key and value pairs to put to Metadata DB.
-   * @param delList - list of keys to delete from Metadata DB.
-   */
   @Override
-  public void batchPutDelete(List<Map.Entry<byte[], byte[]>> putList,
-                             List<byte[]> delList)
-      throws IOException {
-    WriteBatch batch = store.createWriteBatch();
-    putList.forEach(entry -> batch.put(entry.getKey(), entry.getValue()));
-    delList.forEach(entry -> batch.delete(entry));
-    try {
-      store.commitWriteBatch(batch);
-    } finally {
-      store.closeWriteBatch(batch);
-    }
-  }
-
-  /**
-   * Performs a batch Put to Metadata DB.
-   * Can be used to do multiple puts atomically.
-   * @param list - list of Map.Entry
-   */
-  @Override
-  public void batchPut(List<Map.Entry<byte[], byte[]>> list)
-      throws IOException {
-    WriteBatch batch = store.createWriteBatch();
-    list.forEach(entry -> batch.put(entry.getKey(), entry.getValue()));
-    try {
-      store.commitWriteBatch(batch);
-    } finally {
-      store.closeWriteBatch(batch);
-    }
+  public void writeBatch(BatchOperation batch) throws IOException {
+    this.store.writeBatch(batch);
   }
 
   /**
@@ -246,21 +215,17 @@ public class MetadataManagerImpl implements  MetadataManager {
    * @return true if the volume is empty
    */
   public boolean isVolumeEmpty(String volume) throws IOException {
-    try (DBIterator iterator = store.getIterator()) {
-      String dbVolumeRootName = OzoneConsts.KSM_VOLUME_PREFIX + volume
-          + OzoneConsts.KSM_BUCKET_PREFIX;
-      byte[] dbVolumeRootKey = DFSUtil.string2Bytes(dbVolumeRootName);
-      // Seek to the root of the volume and look for the next key
-      iterator.seek(dbVolumeRootKey);
-      if (iterator.hasNext()) {
-        String firstBucketKey = DFSUtil.bytes2String(iterator.next().getKey());
-        // if the key starts with /<volume name>/
-        // then there is at least one bucket
-        return !firstBucketKey.startsWith(dbVolumeRootName);
-      } else {
-        return true;
-      }
+    String dbVolumeRootName = OzoneConsts.KSM_VOLUME_PREFIX + volume;
+    byte[] dbVolumeRootKey = DFSUtil.string2Bytes(dbVolumeRootName);
+    // Seek to the root of the volume and look for the next key
+    ImmutablePair<byte[], byte[]> volumeRoot =
+        store.peekAround(1, dbVolumeRootKey);
+    if (volumeRoot != null) {
+      String firstBucketKey = DFSUtil.bytes2String(volumeRoot.getKey());
+      return !firstBucketKey.startsWith(dbVolumeRootName
+          + OzoneConsts.KSM_BUCKET_PREFIX);
     }
+    return true;
   }
 
   /**
@@ -272,18 +237,15 @@ public class MetadataManagerImpl implements  MetadataManager {
    */
   public boolean isBucketEmpty(String volume, String bucket)
       throws IOException {
-    try (DBIterator iterator = store.getIterator()) {
-      String keyRootName = OzoneConsts.KSM_VOLUME_PREFIX + volume
-          + OzoneConsts.KSM_BUCKET_PREFIX + bucket
-          + OzoneConsts.KSM_KEY_PREFIX;
-      byte[] keyRoot = DFSUtil.string2Bytes(keyRootName);
-      iterator.seek(keyRoot);
-      if(iterator.hasNext()) {
-        return !DFSUtil.bytes2String(iterator.next().getKey())
-            .startsWith(keyRootName);
-      }
-      return true;
+    String keyRootName = OzoneConsts.KSM_VOLUME_PREFIX + volume
+        + OzoneConsts.KSM_BUCKET_PREFIX + bucket;
+    byte[] keyRoot = DFSUtil.string2Bytes(keyRootName);
+    ImmutablePair<byte[], byte[]> firstKey = store.peekAround(1, keyRoot);
+    if (firstKey != null) {
+      return !DFSUtil.bytes2String(firstKey.getKey())
+          .startsWith(keyRootName + OzoneConsts.KSM_KEY_PREFIX);
     }
+    return true;
   }
 
   /**
@@ -305,8 +267,19 @@ public class MetadataManagerImpl implements  MetadataManager {
           ResultCodes.FAILED_VOLUME_NOT_FOUND);
     }
 
-    LevelDBKeyFilter filter =
-        new KeyPrefixFilter(getBucketKeyPrefix(volumeName, bucketPrefix));
+
+    // A bucket must start with /volume/bucket_prefix
+    // and exclude keys /volume/bucket_xxx/key_xxx
+    MetadataKeyFilter filter = (preKey, currentKey, nextKey) -> {
+      if (currentKey != null) {
+        String bucketNamePrefix = getBucketKeyPrefix(volumeName, bucketPrefix);
+        String bucket = DFSUtil.bytes2String(currentKey);
+        return bucket.startsWith(bucketNamePrefix) &&
+            !bucket.replaceFirst(bucketNamePrefix, "")
+                .contains(OzoneConsts.KSM_KEY_PREFIX);
+      }
+      return false;
+    };
 
     List<Map.Entry<byte[], byte[]>> rangeResult;
     if (!Strings.isNullOrEmpty(startBucket)) {
@@ -349,7 +322,7 @@ public class MetadataManagerImpl implements  MetadataManager {
           ResultCodes.FAILED_BUCKET_NOT_FOUND);
     }
 
-    LevelDBKeyFilter filter =
+    MetadataKeyFilter filter =
         new KeyPrefixFilter(getKeyKeyPrefix(volumeName, bucketName, keyPrefix));
 
     List<Map.Entry<byte[], byte[]>> rangeResult;
@@ -427,18 +400,17 @@ public class MetadataManagerImpl implements  MetadataManager {
   private VolumeList getVolumesByUser(byte[] userNameKey)
       throws KSMException {
     VolumeList volumes = null;
-    byte[] volumesInBytes = store.get(userNameKey);
-    if (volumesInBytes == null) {
-      // No volume found for this user, return an empty list
-      return VolumeList.newBuilder().build();
-    }
-
     try {
+      byte[] volumesInBytes = store.get(userNameKey);
+      if (volumesInBytes == null) {
+        // No volume found for this user, return an empty list
+        return VolumeList.newBuilder().build();
+      }
       volumes = VolumeList.parseFrom(volumesInBytes);
-    } catch (InvalidProtocolBufferException e) {
+    } catch (IOException e) {
       throw new KSMException("Unable to get volumes info by the given user, "
-          + "metadata might be corrupted",
-          e, ResultCodes.FAILED_METADATA_ERROR);
+          + "metadata might be corrupted", e,
+          ResultCodes.FAILED_METADATA_ERROR);
     }
     return volumes;
   }

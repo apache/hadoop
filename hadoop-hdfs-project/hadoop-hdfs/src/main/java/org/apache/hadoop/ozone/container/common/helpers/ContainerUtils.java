@@ -27,8 +27,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
-import org.apache.hadoop.utils.LevelDBStore;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -233,7 +234,8 @@ public final class ContainerUtils {
    * @param containerPath - Container Path.
    * @throws IOException
    */
-  public static Path createMetadata(Path containerPath) throws IOException {
+  public static Path createMetadata(Path containerPath, Configuration conf)
+      throws IOException {
     Logger log = LoggerFactory.getLogger(ContainerManagerImpl.class);
     Preconditions.checkNotNull(containerPath);
     Path metadataPath = containerPath.resolve(OzoneConsts.CONTAINER_META_PATH);
@@ -243,9 +245,11 @@ public final class ContainerUtils {
       throw new IOException("Unable to create directory for metadata storage." +
           " Path: " + metadataPath);
     }
-    LevelDBStore store =
-        new LevelDBStore(metadataPath.resolve(OzoneConsts.CONTAINER_DB)
-            .toFile(), true);
+    MetadataStore store = MetadataStoreBuilder.newBuilder()
+        .setConf(conf)
+        .setCreateIfMissing(true)
+        .setDbFile(metadataPath.resolve(OzoneConsts.CONTAINER_DB).toFile())
+        .build();
 
     // we close since the SCM pre-creates containers.
     // we will open and put Db handle into a cache when keys are being created
@@ -347,7 +351,7 @@ public final class ContainerUtils {
     Preconditions.checkNotNull(containerData);
     Path dbPath = Paths.get(containerData.getDBPath());
 
-    LevelDBStore db = KeyUtils.getDB(containerData, conf);
+    MetadataStore db = KeyUtils.getDB(containerData, conf);
     // If the container is not empty and cannot be deleted forcibly,
     // then throw a SCE to stop deleting.
     if(!forceDelete && !db.isEmpty()) {

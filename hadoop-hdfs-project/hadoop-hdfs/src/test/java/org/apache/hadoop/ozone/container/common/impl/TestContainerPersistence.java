@@ -32,9 +32,10 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.hadoop.utils.LevelDBStore;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -182,10 +183,13 @@ public class TestContainerPersistence {
 
 
     String dbPath = status.getContainer().getDBPath();
-    LevelDBStore store = null;
+    MetadataStore store = null;
     try {
-      store = new LevelDBStore(new File(dbPath), false);
-      Assert.assertNotNull(store.getDB());
+      store = MetadataStoreBuilder.newBuilder()
+          .setDbFile(new File(dbPath))
+          .setCreateIfMissing(false)
+          .build();
+      Assert.assertNotNull(store);
     } finally {
       if (store != null) {
         store.close();

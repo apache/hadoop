@@ -274,6 +274,8 @@ public class TestKeySpaceManager {
 
     try {
       storageHandler.deleteVolume(createVolumeArgs);
+      Assert.fail("Expecting deletion should fail "
+          + "because volume is not empty");
     } catch (IOException ex) {
       Assert.assertEquals(ex.getMessage(),
           "Delete Volume failed, error:VOLUME_NOT_EMPTY");

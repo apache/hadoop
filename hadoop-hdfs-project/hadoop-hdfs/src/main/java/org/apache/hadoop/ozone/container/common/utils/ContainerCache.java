@@ -24,7 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.utils.LevelDBStore;
+import org.apache.hadoop.utils.MetadataStore;
 
 import java.io.IOException;
 import java.util.concurrent.locks.Lock;
@@ -69,7 +69,7 @@ public final class ContainerCache extends LRUMap {
   protected boolean removeLRU(LinkEntry entry) {
     lock.lock();
     try {
-      LevelDBStore db = (LevelDBStore) entry.getValue();
+      MetadataStore db = (MetadataStore) entry.getValue();
       db.close();
     } catch (IOException e) {
       LOG.error("Error closing DB. Container: " + entry.getKey().toString(), e);
@@ -83,14 +83,14 @@ public final class ContainerCache extends LRUMap {
    * Returns a DB handle if available, null otherwise.
    *
    * @param containerName - Name of the container.
-   * @return OzoneLevelDBStore.
+   * @return MetadataStore.
    */
-  public LevelDBStore getDB(String containerName) {
+  public MetadataStore getDB(String containerName) {
     Preconditions.checkNotNull(containerName);
     Preconditions.checkState(!containerName.isEmpty());
     lock.lock();
     try {
-      return (LevelDBStore) this.get(containerName);
+      return (MetadataStore) this.get(containerName);
     } finally {
       lock.unlock();
     }
@@ -106,7 +106,7 @@ public final class ContainerCache extends LRUMap {
     Preconditions.checkState(!containerName.isEmpty());
     lock.lock();
     try {
-      LevelDBStore db = this.getDB(containerName);
+      MetadataStore db = this.getDB(containerName);
       if (db != null) {
         try {
           db.close();
@@ -126,7 +126,7 @@ public final class ContainerCache extends LRUMap {
    * @param containerName - Name of the container
    * @param db            - DB handle
    */
-  public void putDB(String containerName, LevelDBStore db) {
+  public void putDB(String containerName, MetadataStore db) {
     Preconditions.checkNotNull(containerName);
     Preconditions.checkState(!containerName.isEmpty());
     lock.lock();

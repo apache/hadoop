@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.utils;
 
-import org.apache.hadoop.utils.LevelDBKeyFilters.LevelDBKeyFilter;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.WriteBatch;
 import org.iq80.leveldb.DB;
@@ -30,7 +31,6 @@ import org.iq80.leveldb.ReadOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -41,7 +41,7 @@ import java.util.Map.Entry;
 /**
  * LevelDB interface.
  */
-public class LevelDBStore implements Closeable {
+public class LevelDBStore implements MetadataStore {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(LevelDBStore.class);
@@ -51,23 +51,13 @@ public class LevelDBStore implements Closeable {
   private final Options dbOptions;
   private final WriteOptions writeOptions;
 
-  /**
-   * Opens a DB file.
-   *
-   * @param dbPath          - DB File path
-   * @param createIfMissing - Create if missing
-   * @throws IOException
-   */
-  public LevelDBStore(File dbPath, boolean createIfMissing) throws
-      IOException {
+  public LevelDBStore(File dbPath, boolean createIfMissing)
+      throws IOException {
     dbOptions = new Options();
     dbOptions.createIfMissing(createIfMissing);
-    db = JniDBFactory.factory.open(dbPath, dbOptions);
-    if (db == null) {
-      throw new IOException("Db is null");
-    }
     this.dbFile = dbPath;
     this.writeOptions = new WriteOptions().sync(true);
+    openDB(dbPath, dbOptions);
   }
 
   /**
@@ -79,14 +69,23 @@ public class LevelDBStore implements Closeable {
   public LevelDBStore(File dbPath, Options options)
       throws IOException {
     dbOptions = options;
-    db = JniDBFactory.factory.open(dbPath, options);
-    if (db == null) {
-      throw new IOException("Db is null");
-    }
     this.dbFile = dbPath;
     this.writeOptions = new WriteOptions().sync(true);
+    openDB(dbPath, dbOptions);
   }
 
+  private void openDB(File dbPath, Options options) throws IOException {
+    db = JniDBFactory.factory.open(dbPath, options);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("LevelDB successfully opened");
+      LOG.debug("[Option] cacheSize = " + options.cacheSize());
+      LOG.debug("[Option] createIfMissing = " + options.createIfMissing());
+      LOG.debug("[Option] blockSize = " + options.blockSize());
+      LOG.debug("[Option] compressionType= " + options.compressionType());
+      LOG.debug("[Option] maxOpenFiles= " + options.maxOpenFiles());
+      LOG.debug("[Option] writeBufferSize= "+ options.writeBufferSize());
+    }
+  }
 
   /**
    * Puts a Key into file.
@@ -94,6 +93,7 @@ public class LevelDBStore implements Closeable {
    * @param key   - key
    * @param value - value
    */
+  @Override
   public void put(byte[] key, byte[] value) {
     db.put(key, value, writeOptions);
   }
@@ -104,6 +104,7 @@ public class LevelDBStore implements Closeable {
    * @param key key
    * @return value
    */
+  @Override
   public byte[] get(byte[] key) {
     return db.get(key);
   }
@@ -113,6 +114,7 @@ public class LevelDBStore implements Closeable {
    *
    * @param key - Key
    */
+  @Override
   public void delete(byte[] key) {
     db.delete(key);
   }
@@ -133,22 +135,13 @@ public class LevelDBStore implements Closeable {
    * @return boolean
    * @throws IOException
    */
+  @Override
   public boolean isEmpty() throws IOException {
-    DBIterator iter = db.iterator();
-    try {
+    try (DBIterator iter = db.iterator()) {
       iter.seekToFirst();
-      return !iter.hasNext();
-    } finally {
-      iter.close();
+      boolean hasNext = !iter.hasNext();
+      return hasNext;
     }
-  }
-
-  /**
-   * Returns Java File Object that points to the DB.
-   * @return File
-   */
-  public File getDbFile() {
-    return dbFile;
   }
 
   /**
@@ -168,39 +161,71 @@ public class LevelDBStore implements Closeable {
   }
 
 
+  @Override
   public void destroy() throws IOException {
     JniDBFactory.factory.destroy(dbFile, dbOptions);
   }
 
-  /**
-   * Returns a write batch for write multiple key-value pairs atomically.
-   * @return write batch that can be commit atomically.
-   */
-  public WriteBatch createWriteBatch() {
-    return db.createWriteBatch();
+  @Override
+  public ImmutablePair<byte[], byte[]> peekAround(int offset,
+      byte[] from) throws IOException, IllegalArgumentException {
+    try (DBIterator it = db.iterator()) {
+      if (from == null) {
+        it.seekToFirst();
+      } else {
+        it.seek(from);
+      }
+      if (!it.hasNext()) {
+        throw new IOException("Key not found");
+      }
+      switch (offset) {
+      case 0:
+        Entry<byte[], byte[]> current = it.next();
+        return new ImmutablePair<>(current.getKey(), current.getValue());
+      case 1:
+        if (it.next() != null && it.hasNext()) {
+          Entry<byte[], byte[]> next = it.peekNext();
+          return new ImmutablePair<>(next.getKey(), next.getValue());
+        }
+        break;
+      case -1:
+        if (it.hasPrev()) {
+          Entry<byte[], byte[]> prev = it.peekPrev();
+          return new ImmutablePair<>(prev.getKey(), prev.getValue());
+        }
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "Position can only be -1, 0 " + "or 1, but found " + offset);
+      }
+    }
+    return null;
   }
 
-  /**
-   * Commit multiple writes of key-value pairs atomically.
-   * @param wb
-   */
-  public void commitWriteBatch(WriteBatch wb) {
-    db.write(wb, writeOptions);
-  }
-
-  /**
-   * Close a write batch of multiple writes to key-value pairs.
-   * @param wb - write batch.
-   * @throws IOException
-   */
-  public void closeWriteBatch(WriteBatch wb) throws IOException {
-    wb.close();
+  @Override
+  public void iterate(byte[] from, EntryConsumer consumer)
+      throws IOException {
+    try (DBIterator iter = db.iterator()) {
+      if (from != null) {
+        iter.seek(from);
+      } else {
+        iter.seekToFirst();
+      }
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> current = iter.next();
+        if (!consumer.consume(current.getKey(),
+            current.getValue())) {
+          break;
+        }
+      }
+    }
   }
 
   /**
    * Compacts the DB by removing deleted keys etc.
    * @throws IOException if there is an error.
    */
+  @Override
   public void compactDB() throws IOException {
     if(db != null) {
       // From LevelDB docs : begin == null and end == null means the whole DB.
@@ -208,26 +233,33 @@ public class LevelDBStore implements Closeable {
     }
   }
 
-  /**
-   * Returns a certain range of key value pairs as a list based on a startKey
-   * or count.
-   *
-   * @param keyPrefix start key.
-   * @param count number of entries to return.
-   * @return a range of entries or an empty list if nothing found.
-   * @throws IOException
-   *
-   * @see #getRangeKVs(byte[], int, LevelDBKeyFilter...)
-   */
-  public List<Entry<byte[], byte[]>> getRangeKVs(byte[] keyPrefix, int count)
-      throws IOException {
-    LevelDBKeyFilter emptyFilter = (preKey, currentKey, nextKey) -> true;
-    return getRangeKVs(keyPrefix, count, emptyFilter);
+  @Override
+  public void writeBatch(BatchOperation operation) throws IOException {
+    List<BatchOperation.SingleOperation> operations =
+        operation.getOperations();
+    if (!operations.isEmpty()) {
+      try (WriteBatch writeBatch = db.createWriteBatch()) {
+        for (BatchOperation.SingleOperation opt : operations) {
+          switch (opt.getOpt()) {
+          case DELETE:
+            writeBatch.delete(opt.getKey());
+            break;
+          case PUT:
+            writeBatch.put(opt.getKey(), opt.getValue());
+            break;
+          default:
+            throw new IllegalArgumentException("Invalid operation "
+                + opt.getOpt());
+          }
+        }
+        db.write(writeBatch);
+      }
+    }
   }
 
   /**
    * Returns a certain range of key value pairs as a list based on a
-   * startKey or count. Further a {@link LevelDBKeyFilter} can be added to
+   * startKey or count. Further a {@link MetadataKeyFilter} can be added to
    * filter keys if necessary. To prevent race conditions while listing
    * entries, this implementation takes a snapshot and lists the entries from
    * the snapshot. This may, on the other hand, cause the range result slight
@@ -241,19 +273,20 @@ public class LevelDBStore implements Closeable {
    * The count argument is to limit number of total entries to return,
    * the value for count must be an integer greater than 0.
    * <p>
-   * This method allows to specify one or more {@link LevelDBKeyFilter}
+   * This method allows to specify one or more {@link MetadataKeyFilter}
    * to filter keys by certain condition. Once given, only the entries
    * whose key passes all the filters will be included in the result.
    *
    * @param startKey a start key.
    * @param count max number of entries to return.
-   * @param filters customized one or more {@link LevelDBKeyFilter}.
+   * @param filters customized one or more {@link MetadataKeyFilter}.
    * @return a list of entries found in the database.
    * @throws IOException if an invalid startKey is given or other I/O errors.
    * @throws IllegalArgumentException if count is less than 0.
    */
+  @Override
   public List<Entry<byte[], byte[]>> getRangeKVs(byte[] startKey,
-      int count, LevelDBKeyFilter... filters) throws IOException {
+      int count, MetadataKeyFilter... filters) throws IOException {
     List<Entry<byte[], byte[]>> result = new ArrayList<>();
     long start = System.currentTimeMillis();
     if (count < 0) {
@@ -295,8 +328,7 @@ public class LevelDBStore implements Closeable {
       long timeConsumed = end - start;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Time consumed for getRangeKVs() is {},"
-                + " result length is {}.",
-            timeConsumed, result.size());
+                + " result length is {}.", timeConsumed, result.size());
       }
     }
     return result;
