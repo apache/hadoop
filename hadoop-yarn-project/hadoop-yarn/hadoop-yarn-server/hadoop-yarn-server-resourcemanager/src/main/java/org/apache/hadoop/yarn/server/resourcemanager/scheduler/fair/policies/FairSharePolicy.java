@@ -58,6 +58,9 @@ public class FairSharePolicy extends SchedulingPolicy {
   /**
    * Compare Schedulables via weighted fair sharing. In addition, Schedulables
    * below their min share get priority over those whose min share is met.
+   *
+   * Schedulables without resource demand get lower priority than
+   * ones who have demands.
    * 
    * Schedulables below their min share are compared by how far below it they
    * are as a ratio. For example, if job A has 8 out of a min share of 10 tasks
@@ -79,6 +82,16 @@ public class FairSharePolicy extends SchedulingPolicy {
 
     @Override
     public int compare(Schedulable s1, Schedulable s2) {
+      Resource demand1 = s1.getDemand();
+      Resource demand2 = s2.getDemand();
+      if (demand1.equals(Resources.none()) && Resources.greaterThan(
+          RESOURCE_CALCULATOR, null, demand2, Resources.none())) {
+        return 1;
+      } else if (demand2.equals(Resources.none()) && Resources.greaterThan(
+          RESOURCE_CALCULATOR, null, demand1, Resources.none())) {
+        return -1;
+      }
+
       double minShareRatio1, minShareRatio2;
       double useToWeightRatio1, useToWeightRatio2;
       double weight1, weight2;
@@ -86,9 +99,9 @@ public class FairSharePolicy extends SchedulingPolicy {
       Resource resourceUsage1 = s1.getResourceUsage();
       Resource resourceUsage2 = s2.getResourceUsage();
       Resource minShare1 = Resources.min(RESOURCE_CALCULATOR, null,
-          s1.getMinShare(), s1.getDemand());
+          s1.getMinShare(), demand1);
       Resource minShare2 = Resources.min(RESOURCE_CALCULATOR, null,
-          s2.getMinShare(), s2.getDemand());
+          s2.getMinShare(), demand2);
       boolean s1Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
           resourceUsage1, minShare1);
       boolean s2Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,

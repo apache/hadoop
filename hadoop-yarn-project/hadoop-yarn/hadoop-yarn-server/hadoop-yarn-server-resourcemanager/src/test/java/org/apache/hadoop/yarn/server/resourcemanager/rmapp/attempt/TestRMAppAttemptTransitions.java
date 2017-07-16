@@ -663,21 +663,29 @@ public class TestRMAppAttemptTransitions {
     
     assertEquals(RMAppAttemptState.ALLOCATED_SAVING, 
         applicationAttempt.getAppAttemptState());
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // Before SAVED state, can't create ClientToken as at this time
+      // ClientTokenMasterKey has not been registered in the SecretManager
+      assertNull(applicationAttempt.createClientToken("some client"));
+    }
+
     applicationAttempt.handle(
         new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(),
             RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
-    
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // Before SAVED state, can't create ClientToken as at this time
+      // ClientTokenMasterKey has not been registered in the SecretManager
+      assertNotNull(applicationAttempt.createClientToken("some client"));
+    }
+
     testAppAttemptAllocatedState(container);
     
     return container;
   }
   
   private void launchApplicationAttempt(Container container) {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      // Before LAUNCHED state, can't create ClientToken as at this time
-      // ClientTokenMasterKey has not been registered in the SecretManager
-      assertNull(applicationAttempt.createClientToken("some client"));
-    }
     applicationAttempt.handle(
         new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.LAUNCHED));
@@ -1477,8 +1485,6 @@ public class TestRMAppAttemptTransitions {
     Token<ClientToAMTokenIdentifier> token =
         applicationAttempt.createClientToken(null);
     Assert.assertNull(token);
-    token = applicationAttempt.createClientToken("clientuser");
-    Assert.assertNull(token);
 
     launchApplicationAttempt(amContainer);
     // after attempt is launched , can get ClientToken
@@ -1505,22 +1511,15 @@ public class TestRMAppAttemptTransitions {
   public void testApplicationAttemptMasterKey() throws Exception {
     Container amContainer = allocateApplicationAttempt();
     ApplicationAttemptId appid = applicationAttempt.getAppAttemptId();
-    boolean isMasterKeyExisted = false;
+    boolean isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
 
-    // before attempt is launched, can not get MasterKey
-    isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
-    Assert.assertFalse(isMasterKeyExisted);
-
-    launchApplicationAttempt(amContainer);
-    // after attempt is launched and in secure mode, can get MasterKey
-    isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
     if (isSecurityEnabled) {
       Assert.assertTrue(isMasterKeyExisted);
       Assert.assertNotNull(clientToAMTokenManager.getMasterKey(appid));
     } else {
       Assert.assertFalse(isMasterKeyExisted);
     }
-
+    launchApplicationAttempt(amContainer);
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
       .getAppAttemptId(), RMAppAttemptEventType.KILL));
     assertEquals(YarnApplicationAttemptState.LAUNCHED,

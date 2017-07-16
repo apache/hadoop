@@ -37,7 +37,11 @@ public class LabelsToNodesInfo {
   public LabelsToNodesInfo() {
   } // JAXB needs this
 
+  public LabelsToNodesInfo(Map<NodeLabelInfo, NodeIDsInfo> labelsToNodes) {
+    this.labelsToNodes = labelsToNodes;
+  }
+
   public Map<NodeLabelInfo, NodeIDsInfo> getLabelsToNodes() {
-   return labelsToNodes;
+    return labelsToNodes;
   }
 }
