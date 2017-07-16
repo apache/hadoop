@@ -23,7 +23,8 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
-import org.apache.hadoop.utils.LevelDBStore;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,20 +58,21 @@ public final class KeyUtils {
    *
    * @param container container.
    * @param conf configuration.
-   * @return LevelDB handle.
+   * @return MetadataStore handle.
    * @throws StorageContainerException
    */
-  public static LevelDBStore getDB(ContainerData container,
+  public static MetadataStore getDB(ContainerData container,
       Configuration conf) throws StorageContainerException {
     Preconditions.checkNotNull(container);
     ContainerCache cache = ContainerCache.getInstance(conf);
     Preconditions.checkNotNull(cache);
     try {
-      LevelDBStore db = cache.getDB(container.getContainerName());
+      MetadataStore db = cache.getDB(container.getContainerName());
       if (db == null) {
-        db = new LevelDBStore(
-            new File(container.getDBPath()),
-            false);
+        db = MetadataStoreBuilder.newBuilder()
+            .setDbFile(new File(container.getDBPath()))
+            .setCreateIfMissing(false)
+            .build();
         cache.putDB(container.getContainerName(), db);
       }
       return db;
@@ -103,10 +105,10 @@ public final class KeyUtils {
   @SuppressWarnings("unchecked")
   public static void shutdownCache(ContainerCache cache)  {
     Logger log = LoggerFactory.getLogger(KeyManagerImpl.class);
-    LevelDBStore[] handles = new LevelDBStore[cache.values().size()];
+    MetadataStore[] handles = new MetadataStore[cache.values().size()];
     cache.values().toArray(handles);
     Preconditions.checkState(handles.length == cache.values().size());
-    for (LevelDBStore db : handles) {
+    for (MetadataStore db : handles) {
       try {
         db.close();
       } catch (IOException ex) {

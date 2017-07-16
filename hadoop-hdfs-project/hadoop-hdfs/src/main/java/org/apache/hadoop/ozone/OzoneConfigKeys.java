@@ -61,6 +61,15 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CONTAINER_METADATA_DIRS =
       "ozone.container.metadata.dirs";
 
+  public static final String OZONE_METADATA_STORE_IMPL =
+      "ozone.metastore.impl";
+  public static final String OZONE_METADATA_STORE_IMPL_LEVELDB =
+      "LevelDB";
+  public static final String OZONE_METADATA_STORE_IMPL_ROCKSDB =
+      "RocksDB";
+  public static final String OZONE_METADATA_STORE_IMPL_DEFAULT =
+      OZONE_METADATA_STORE_IMPL_LEVELDB;
+
   public static final String OZONE_KEY_CACHE = "ozone.key.cache.size";
   public static final int OZONE_KEY_CACHE_DEFAULT = 1024;
 

@@ -23,12 +23,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 /**
  * An utility class to filter levelDB keys.
  */
-public class LevelDBKeyFilters {
+public class MetadataKeyFilters {
 
   /**
    * Interface for levelDB key filters.
    */
-  public interface LevelDBKeyFilter {
+  public interface MetadataKeyFilter {
     /**
      * Filter levelDB key with a certain condition.
      *
@@ -44,7 +44,7 @@ public class LevelDBKeyFilters {
    * Utility class to filter key by a string prefix. This filter
    * assumes keys can be parsed to a string.
    */
-  public static class KeyPrefixFilter implements LevelDBKeyFilter {
+  public static class KeyPrefixFilter implements MetadataKeyFilter {
 
     private String keyPrefix = null;
 

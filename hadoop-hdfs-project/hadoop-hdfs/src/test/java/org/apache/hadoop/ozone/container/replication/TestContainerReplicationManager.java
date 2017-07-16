@@ -41,6 +41,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -229,8 +230,8 @@ public class TestContainerReplicationManager {
    * @throws TimeoutException
    * @throws InterruptedException
    */
-  public void testAddingNewPoolWorks() throws TimeoutException,
-      InterruptedException {
+  public void testAddingNewPoolWorks()
+      throws TimeoutException, InterruptedException, IOException {
     LogCapturer inProgressLog = LogCapturer.captureLogs(
         LogFactory.getLog(InProgressPool.class));
     GenericTestUtils.setLogLevel(InProgressPool.LOG, Level.ALL);

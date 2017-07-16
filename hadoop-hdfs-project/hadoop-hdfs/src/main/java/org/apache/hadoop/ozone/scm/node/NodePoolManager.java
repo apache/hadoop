@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -35,7 +36,7 @@ public interface NodePoolManager extends Closeable {
    * @param pool - name of the node pool.
    * @param node - data node.
    */
-  void addNode(String pool, DatanodeID node);
+  void addNode(String pool, DatanodeID node) throws IOException;
 
   /**
    * Remove a node from a node pool.
@@ -67,5 +68,5 @@ public interface NodePoolManager extends Closeable {
    * @return node pool name if it has been assigned.
    * null if the node has not been assigned to any node pool yet.
    */
-  String getNodePool(DatanodeID datanodeID);
+  String getNodePool(DatanodeID datanodeID) throws SCMException;
 }

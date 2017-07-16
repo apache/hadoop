@@ -29,10 +29,9 @@ import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.utils.LevelDBStore;
-import org.iq80.leveldb.DBIterator;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.WriteBatch;
+import org.apache.hadoop.utils.BatchOperation;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,13 +74,13 @@ public class BlockManagerImpl implements BlockManager {
 
   private final NodeManager nodeManager;
   private final Mapping containerManager;
-  private final LevelDBStore blockStore;
+  private final MetadataStore blockStore;
 
   private final Lock lock;
   private final long containerSize;
   private final long cacheSize;
 
-  private final LevelDBStore openContainerStore;
+  private final MetadataStore openContainerStore;
   private Map<String, Long> openContainers;
   private final int containerProvisionBatchSize;
   private final Random rand;
@@ -102,12 +101,14 @@ public class BlockManagerImpl implements BlockManager {
     this.cacheSize = cacheSizeMB;
     File metaDir = OzoneUtils.getScmMetadirPath(conf);
     String scmMetaDataDir = metaDir.getPath();
-    Options options = new Options();
-    options.cacheSize(this.cacheSize * OzoneConsts.MB);
 
     // Write the block key to container name mapping.
     File blockContainerDbPath = new File(scmMetaDataDir, BLOCK_DB);
-    blockStore = new LevelDBStore(blockContainerDbPath, options);
+    blockStore = MetadataStoreBuilder.newBuilder()
+        .setConf(conf)
+        .setDbFile(blockContainerDbPath)
+        .setCacheSize(this.cacheSize * OzoneConsts.MB)
+        .build();
 
     this.containerSize = OzoneConsts.GB * conf.getInt(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
@@ -115,7 +116,12 @@ public class BlockManagerImpl implements BlockManager {
 
     // Load store of all open contains for block allocation
     File openContainsDbPath = new File(scmMetaDataDir, OPEN_CONTAINERS_DB);
-    openContainerStore = new LevelDBStore(openContainsDbPath, options);
+    openContainerStore = MetadataStoreBuilder.newBuilder()
+        .setConf(conf)
+        .setDbFile(openContainsDbPath)
+        .setCacheSize(this.cacheSize * OzoneConsts.MB)
+        .build();
+
     openContainers = new HashMap<>();
     loadOpenContainers();
 
@@ -132,20 +138,19 @@ public class BlockManagerImpl implements BlockManager {
    * @throws IOException
    */
   private void loadOpenContainers() throws IOException {
-    try (DBIterator iter = openContainerStore.getIterator()) {
-      for (iter.seekToFirst(); iter.hasNext(); iter.next()) {
+    try {
+      openContainerStore.iterate(null, (key, value) -> {
         try {
-          byte[] key = iter.peekNext().getKey();
           String containerName = DFSUtil.bytes2String(key);
-          byte[] value = iter.peekNext().getValue();
           Long containerUsed = Long.parseLong(DFSUtil.bytes2String(value));
           openContainers.put(containerName, containerUsed);
           LOG.debug("Loading open container: {} used : {}", containerName,
               containerUsed);
-        } catch (Exception ex) {
+        } catch (Exception e) {
           LOG.warn("Failed loading open container, continue next...");
         }
-      }
+        return true;
+      });
     } catch (IOException e) {
       LOG.error("Loading open container store failed." + e);
       throw new SCMException("Failed to load open container store",
@@ -321,21 +326,19 @@ public class BlockManagerImpl implements BlockManager {
         throw new SCMException("Specified block key does not exist. key : " +
             key, FAILED_TO_FIND_BLOCK);
       }
-      try (WriteBatch wb = blockStore.createWriteBatch()) {
-        containerManager.getContainer(
-            DFSUtil.bytes2String(containerBytes));
-        String deletedKeyName = getDeletedKeyName(key);
-        // Add a tombstone for the deleted key
-        wb.put(DFSUtil.string2Bytes(deletedKeyName), containerBytes);
-        // Delete the block key
-        wb.delete(DFSUtil.string2Bytes(key));
-        blockStore.commitWriteBatch(wb);
-        // TODO: Add async tombstone clean thread to send delete command to
-        // datanodes in the pipeline to clean up the blocks from containers.
-        // TODO: Container report handling of the deleted blocks:
-        // Remove tombstone and update open container usage.
-        // We will revisit this when the closed container replication is done.
-      }
+      BatchOperation batch = new BatchOperation();
+      containerManager.getContainer(DFSUtil.bytes2String(containerBytes));
+      String deletedKeyName = getDeletedKeyName(key);
+      // Add a tombstone for the deleted key
+      batch.put(DFSUtil.string2Bytes(deletedKeyName), containerBytes);
+      // Delete the block key
+      batch.delete(DFSUtil.string2Bytes(key));
+      blockStore.writeBatch(batch);
+      // TODO: Add async tombstone clean thread to send delete command to
+      // datanodes in the pipeline to clean up the blocks from containers.
+      // TODO: Container report handling of the deleted blocks:
+      // Remove tombstone and update open container usage.
+      // We will revisit this when the closed container replication is done.
     } finally {
       lock.unlock();
     }

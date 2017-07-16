@@ -30,8 +30,9 @@ import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
-import org.apache.hadoop.utils.LevelDBKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.utils.LevelDBStore;
+import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
+import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
+import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +42,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .Result.IO_EXCEPTION;
-import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .Result.NO_SUCH_KEY;
-
 
 /**
  * Key Manager impl.
@@ -74,8 +72,7 @@ public class KeyManagerImpl implements KeyManager {
    * {@inheritDoc}
    */
   @Override
-  public void putKey(Pipeline pipeline, KeyData data)
-      throws StorageContainerException {
+  public void putKey(Pipeline pipeline, KeyData data) throws IOException {
     containerManager.readLock();
     try {
       // We are not locking the key manager since LevelDb serializes all actions
@@ -85,7 +82,7 @@ public class KeyManagerImpl implements KeyManager {
           "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(
           pipeline.getContainerName());
-      LevelDBStore db = KeyUtils.getDB(cData, conf);
+      MetadataStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.
       // Should never fail.
@@ -102,7 +99,7 @@ public class KeyManagerImpl implements KeyManager {
    * {@inheritDoc}
    */
   @Override
-  public KeyData getKey(KeyData data) throws StorageContainerException {
+  public KeyData getKey(KeyData data) throws IOException {
     containerManager.readLock();
     try {
       Preconditions.checkNotNull(data, "Key data cannot be null");
@@ -110,7 +107,7 @@ public class KeyManagerImpl implements KeyManager {
           "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(data
           .getContainerName());
-      LevelDBStore db = KeyUtils.getDB(cData, conf);
+      MetadataStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.
       // Should never fail.
@@ -124,8 +121,6 @@ public class KeyManagerImpl implements KeyManager {
       ContainerProtos.KeyData keyData =
           ContainerProtos.KeyData.parseFrom(kData);
       return KeyData.getFromProtoBuf(keyData);
-    } catch (IOException ex) {
-      throw new StorageContainerException(ex, IO_EXCEPTION);
     } finally {
       containerManager.readUnlock();
     }
@@ -136,7 +131,7 @@ public class KeyManagerImpl implements KeyManager {
    */
   @Override
   public void deleteKey(Pipeline pipeline, String keyName)
-      throws StorageContainerException {
+      throws IOException {
     containerManager.readLock();
     try {
       Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
@@ -144,7 +139,7 @@ public class KeyManagerImpl implements KeyManager {
           "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(pipeline
           .getContainerName());
-      LevelDBStore db = KeyUtils.getDB(cData, conf);
+      MetadataStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.
       // Should never fail.
@@ -171,32 +166,28 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public List<KeyData> listKey(
       Pipeline pipeline, String prefix, String startKey, int count)
-      throws StorageContainerException {
+      throws IOException {
     Preconditions.checkNotNull(pipeline,
         "Pipeline cannot be null.");
     Preconditions.checkArgument(count > 0,
         "Count must be a positive number.");
     ContainerData cData = containerManager.readContainer(pipeline
         .getContainerName());
-    LevelDBStore db = KeyUtils.getDB(cData, conf);
-    try {
-      List<KeyData> result = new ArrayList<KeyData>();
-      byte[] startKeyInBytes = startKey == null ? null :
-          DFSUtil.string2Bytes(startKey);
-      KeyPrefixFilter prefixFilter = new KeyPrefixFilter(prefix);
-      List<Map.Entry<byte[], byte[]>> range =
-          db.getRangeKVs(startKeyInBytes, count, prefixFilter);
-      for(Map.Entry<byte[], byte[]> entry : range) {
-        String keyName = KeyUtils.getKeyName(entry.getKey());
-        KeyData value = KeyUtils.getKeyData(entry.getValue());
-        KeyData data = new KeyData(value.getContainerName(), keyName);
-        result.add(data);
-      }
-      return result;
-    } catch (IOException e) {
-      throw new StorageContainerException(e,
-          ContainerProtos.Result.IO_EXCEPTION);
+    MetadataStore db = KeyUtils.getDB(cData, conf);
+
+    List<KeyData> result = new ArrayList<KeyData>();
+    byte[] startKeyInBytes = startKey == null ? null :
+        DFSUtil.string2Bytes(startKey);
+    MetadataKeyFilter prefixFilter = new KeyPrefixFilter(prefix);
+    List<Map.Entry<byte[], byte[]>> range =
+        db.getRangeKVs(startKeyInBytes, count, prefixFilter);
+    for (Map.Entry<byte[], byte[]> entry : range) {
+      String keyName = KeyUtils.getKeyName(entry.getKey());
+      KeyData value = KeyUtils.getKeyData(entry.getValue());
+      KeyData data = new KeyData(value.getContainerName(), keyName);
+      result.add(data);
     }
+    return result;
   }
 
   /**

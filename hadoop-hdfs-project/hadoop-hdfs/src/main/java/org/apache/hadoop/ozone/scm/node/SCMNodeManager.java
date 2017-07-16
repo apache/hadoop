@@ -726,8 +726,16 @@ public class SCMNodeManager
     // TODO: define node pool policy for non-default node pool.
     // For now, all nodes are added to the "DefaultNodePool" upon registration
     // if it has not been added to any node pool yet.
-    if (nodePoolManager.getNodePool(datanodeID) == null) {
-      nodePoolManager.addNode(SCMNodePoolManager.DEFAULT_NODEPOOL, datanodeID);
+    try {
+      if (nodePoolManager.getNodePool(datanodeID) == null) {
+        nodePoolManager.addNode(SCMNodePoolManager.DEFAULT_NODEPOOL,
+            datanodeID);
+      }
+    } catch (IOException e) {
+      // TODO: make sure registration failure is handled correctly.
+      return RegisteredCommand.newBuilder()
+          .setErrorCode(ErrorCode.errorNodeNotPermitted)
+          .build();
     }
     LOG.info("Data node with ID: {} Registered.",
         datanodeID.getDatanodeUuid());

@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.CommandQueue;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
@@ -260,8 +261,17 @@ public class ContainerReplicationManager implements Closeable {
    * a datanode.
    */
   public void handleContainerReport(ContainerReportsProto containerReport) {
-    String poolName = poolManager.getNodePool(
-        DatanodeID.getFromProtoBuf(containerReport.getDatanodeID()));
+    String poolName = null;
+    DatanodeID datanodeID = DatanodeID
+        .getFromProtoBuf(containerReport.getDatanodeID());
+    try {
+      poolName = poolManager.getNodePool(datanodeID);
+    } catch (SCMException e) {
+      LOG.warn("Skipping processing container report from datanode {}, "
+              + "cause: failed to get the corresponding node pool",
+          datanodeID.toString(), e);
+      return;
+    }
 
     for(InProgressPool ppool : inProgressPoolList) {
       if(ppool.getPoolName().equalsIgnoreCase(poolName)) {

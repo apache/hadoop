@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.utils.LevelDBStore;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
@@ -39,8 +38,8 @@ import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.response.VolumeOwner;
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.DBIterator;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,8 +127,8 @@ public final class OzoneMetadataManager {
   private static final String USER_DB = "/user.db";
   private static final String META_DB = "/metadata.db";
   private static OzoneMetadataManager bm = null;
-  private LevelDBStore userDB;
-  private LevelDBStore metadataDB;
+  private MetadataStore userDB;
+  private MetadataStore metadataDB;
   private ReadWriteLock lock;
   private Charset encoding = Charset.forName("UTF-8");
   private String storageRoot;
@@ -157,8 +156,14 @@ public final class OzoneMetadataManager {
     }
 
     try {
-      userDB = new LevelDBStore(new File(storageRoot + USER_DB), true);
-      metadataDB = new LevelDBStore(new File(storageRoot + META_DB), true);
+      userDB = MetadataStoreBuilder.newBuilder()
+          .setDbFile(new File(storageRoot + USER_DB))
+          .setCreateIfMissing(true)
+          .build();
+      metadataDB = MetadataStoreBuilder.newBuilder()
+          .setDbFile(new File(storageRoot + META_DB))
+          .setCreateIfMissing(true)
+          .build();
       inProgressObjects = new ConcurrentHashMap<>();
     } catch (IOException ex) {
       LOG.error("Cannot open db :" + ex.getMessage());
@@ -230,7 +235,7 @@ public final class OzoneMetadataManager {
       metadataDB.put(args.getVolumeName().getBytes(encoding),
           newVInfo.toDBString().getBytes(encoding));
 
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
       lock.writeLock().unlock();
@@ -295,7 +300,7 @@ public final class OzoneMetadataManager {
       userDB.put(args.getResourceName().getBytes(encoding),
           volumeList.toDBString().getBytes(encoding));
 
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
       lock.writeLock().unlock();
@@ -341,7 +346,7 @@ public final class OzoneMetadataManager {
 
       VolumeInfo info = VolumeInfo.parse(new String(volumeInfo, encoding));
       return info.getOwner().getName().equals(acl.getName());
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, null, ex);
     } finally {
       lock.readLock().unlock();
@@ -365,7 +370,7 @@ public final class OzoneMetadataManager {
       }
 
       return VolumeInfo.parse(new String(volumeInfo, encoding));
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
       lock.readLock().unlock();
@@ -405,7 +410,7 @@ public final class OzoneMetadataManager {
         prevKey = volName[1];
       }
       return getFilteredVolumes(volumeList, prefix, prevKey, maxCount);
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args.getArgs(), ex);
     } finally {
       lock.readLock().unlock();
@@ -448,80 +453,54 @@ public final class OzoneMetadataManager {
    * @return ListVolumes.
    * @throws OzoneException
    */
-  public ListVolumes listAllVolumes(ListArgs args) throws OzoneException,
-      IOException {
+  public ListVolumes listAllVolumes(ListArgs args)
+      throws OzoneException, IOException {
     String prefix = args.getPrefix();
-    String prevKey = args.getPrevKey();
+    final String prevKey;
     int maxCount = args.getMaxKeys();
     String userName = null;
-    try (DBIterator iterator = this.userDB.getDB().iterator()) {
 
-      if (prevKey != null) {
-        // Format is username/volumeName
-
-        String[] volName = args.getPrevKey().split("/");
-        if (volName.length < 2) {
-          throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
-        }
-        seekToUser(iterator, volName[0]);
-        userName = new String(iterator.peekNext().getKey(), encoding);
-        prevKey = volName[1];
-      } else {
-        userName = getFirstUser(iterator);
-      }
-
-      if (userName == null || userName.isEmpty()) {
+    if (args.getPrevKey() != null) {
+      // Format is username/volumeName
+      String[] volName = args.getPrevKey().split("/");
+      if (volName.length < 2) {
         throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
       }
 
-      ListVolumes returnSet = new ListVolumes();
-      int count = maxCount - returnSet.getVolumes().size();
+      byte[] userNameBytes = userDB.get(volName[0].getBytes(encoding));
+      userName = new String(userNameBytes, encoding);
+      prevKey = volName[1];
+    } else {
+      userName = new String(userDB.peekAround(0, null).getKey(), encoding);
+      prevKey = null;
+    }
 
-      // we need to iterate through users until we get maxcount volumes
-      // or no more volumes are left.
-      while (iterator.hasNext() && count > 0) {
+    if (userName == null || userName.isEmpty()) {
+      throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
+    }
 
-        userName = new String(iterator.next().getKey(), encoding);
-
-        byte[] volumeList = userDB.get(userName.getBytes(encoding));
+    ListVolumes returnSet = new ListVolumes();
+    // we need to iterate through users until we get maxcount volumes
+    // or no more volumes are left.
+    userDB.iterate(null, (key, value) -> {
+      int currentSize = returnSet.getVolumes().size();
+      if (currentSize < maxCount) {
+        String name = new String(key, encoding);
+        byte[] volumeList = userDB.get(name.getBytes(encoding));
         if (volumeList == null) {
-          throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs());
+          throw new IOException(
+              ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args.getArgs()));
         }
-
-        returnSet.getVolumes().addAll(getFilteredVolumes(
-            volumeList, prefix, prevKey, count).getVolumes());
-        count = maxCount - returnSet.getVolumes().size();
+        returnSet.getVolumes().addAll(
+            getFilteredVolumes(volumeList, prefix, prevKey,
+                maxCount - currentSize).getVolumes());
+        return true;
+      } else {
+        return false;
       }
-      return returnSet;
-    }
-  }
+    });
 
-  /**
-   * Returns the first user name from the UserDB.
-   *
-   * @return - UserName.
-   * @throws IOException
-   */
-  String getFirstUser(DBIterator iterator) throws IOException {
-    iterator.seekToFirst();
-    if (iterator.hasNext()) {
-      return new String(iterator.peekNext().getKey(), encoding);
-    }
-    return null;
-  }
-
-  /**
-   * Reposition the DB cursor to the user name.
-   *
-   * @param iterator - Current Iterator.
-   * @param userName - userName to seek to
-   * @return - DBIterator.
-   * @throws IOException
-   */
-  DBIterator seekToUser(DBIterator iterator, String userName) throws
-      IOException {
-    iterator.seek(userName.getBytes(encoding));
-    return iterator;
+    return returnSet;
   }
 
   /**
@@ -587,7 +566,7 @@ public final class OzoneMetadataManager {
       metadataDB.delete(args.getVolumeName().getBytes(encoding));
       userDB.put(user.getBytes(encoding),
           volumeList.toDBString().getBytes(encoding));
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
       lock.writeLock().unlock();
@@ -659,7 +638,7 @@ public final class OzoneMetadataManager {
       metadataDB.put(args.getResourceName().getBytes(encoding),
           bucketInfo.toDBString().getBytes(encoding));
 
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
       lock.writeLock().unlock();
@@ -716,7 +695,7 @@ public final class OzoneMetadataManager {
 
       userDB.put(args.getParentName().getBytes(encoding),
           bucketList.toDBString().getBytes(encoding));
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
       lock.writeLock().unlock();
@@ -807,7 +786,7 @@ public final class OzoneMetadataManager {
       metadataDB.delete(args.getResourceName().getBytes(encoding));
       userDB.put(args.getParentName().getBytes(encoding),
           bucketList.toDBString().getBytes(encoding));
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
       lock.writeLock().unlock();

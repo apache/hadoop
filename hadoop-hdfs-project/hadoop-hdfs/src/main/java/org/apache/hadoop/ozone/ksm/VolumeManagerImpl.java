@@ -26,15 +26,13 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
-import org.iq80.leveldb.DBException;
+import org.apache.hadoop.utils.BatchOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import static org.apache.hadoop.ozone.ksm
     .KSMConfigKeys.OZONE_KSM_USER_MAX_VOLUME_DEFAULT;
@@ -67,8 +65,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
   // Helpers to add and delete volume from user list
   private void addVolumeToOwnerList(String volume, String owner,
-                                    List<Map.Entry<byte[], byte[]>> putBatch)
-      throws IOException {
+      BatchOperation batchOperation) throws IOException {
     // Get the volume list
     byte[] dbUserKey = metadataManager.getUserKey(owner);
     byte[] volumeList  = metadataManager.get(dbUserKey);
@@ -88,12 +85,11 @@ public class VolumeManagerImpl implements VolumeManager {
     prevVolList.add(volume);
     VolumeList newVolList = VolumeList.newBuilder()
         .addAllVolumeNames(prevVolList).build();
-    putBatch.add(batchEntry(dbUserKey, newVolList.toByteArray()));
+    batchOperation.put(dbUserKey, newVolList.toByteArray());
   }
 
   private void delVolumeFromOwnerList(String volume, String owner,
-                                      List<Map.Entry<byte[], byte[]>> putBatch,
-                                      List<byte[]> deleteBatch)
+                                      BatchOperation batchOperation)
       throws IOException {
     // Get the volume list
     byte[] dbUserKey = metadataManager.getUserKey(owner);
@@ -109,16 +105,12 @@ public class VolumeManagerImpl implements VolumeManager {
     // Remove the volume from the list
     prevVolList.remove(volume);
     if (prevVolList.size() == 0) {
-      deleteBatch.add(dbUserKey);
+      batchOperation.delete(dbUserKey);
     } else {
       VolumeList newVolList = VolumeList.newBuilder()
           .addAllVolumeNames(prevVolList).build();
-      putBatch.add(batchEntry(dbUserKey, newVolList.toByteArray()));
+      batchOperation.put(dbUserKey, newVolList.toByteArray());
     }
-  }
-
-  private Map.Entry<byte[], byte[]> batchEntry(byte[] key, byte[] value) {
-    return new AbstractMap.SimpleEntry<>(key, value);
   }
 
   /**
@@ -129,7 +121,6 @@ public class VolumeManagerImpl implements VolumeManager {
   public void createVolume(KsmVolumeArgs args) throws IOException {
     Preconditions.checkNotNull(args);
     metadataManager.writeLock().lock();
-    List<Map.Entry<byte[], byte[]>> batch = new LinkedList<>();
     try {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(args.getVolume());
       byte[] volumeInfo = metadataManager.get(dbVolumeKey);
@@ -140,16 +131,17 @@ public class VolumeManagerImpl implements VolumeManager {
         throw new KSMException(ResultCodes.FAILED_VOLUME_ALREADY_EXISTS);
       }
 
+      BatchOperation batch = new BatchOperation();
       // Write the vol info
       VolumeInfo newVolumeInfo = args.getProtobuf();
-      batch.add(batchEntry(dbVolumeKey, newVolumeInfo.toByteArray()));
+      batch.put(dbVolumeKey, newVolumeInfo.toByteArray());
 
       // Add volume to user list
       addVolumeToOwnerList(args.getVolume(), args.getOwnerName(), batch);
-      metadataManager.batchPut(batch);
+      metadataManager.writeBatch(batch);
       LOG.info("created volume:{} user:{}",
                                   args.getVolume(), args.getOwnerName());
-    } catch (IOException | DBException ex) {
+    } catch (IOException ex) {
       LOG.error("Volume creation failed for user:{} volname:{}",
                                 args.getOwnerName(), args.getVolume(), ex);
       throw ex;
@@ -169,8 +161,6 @@ public class VolumeManagerImpl implements VolumeManager {
   public void setOwner(String volume, String owner) throws IOException {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(owner);
-    List<Map.Entry<byte[], byte[]>> putBatch = new LinkedList<>();
-    List<byte[]> deleteBatch = new LinkedList<>();
     metadataManager.writeLock().lock();
     try {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
@@ -183,9 +173,9 @@ public class VolumeManagerImpl implements VolumeManager {
       KsmVolumeArgs volumeArgs = KsmVolumeArgs.getFromProtobuf(volumeInfo);
       Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
 
-      delVolumeFromOwnerList(volume, volumeArgs.getOwnerName(),
-          putBatch, deleteBatch);
-      addVolumeToOwnerList(volume, owner, putBatch);
+      BatchOperation batch = new BatchOperation();
+      delVolumeFromOwnerList(volume, volumeArgs.getOwnerName(), batch);
+      addVolumeToOwnerList(volume, owner, batch);
 
       KsmVolumeArgs newVolumeArgs =
           KsmVolumeArgs.newBuilder().setVolume(volumeArgs.getVolume())
@@ -195,9 +185,9 @@ public class VolumeManagerImpl implements VolumeManager {
               .build();
 
       VolumeInfo newVolumeInfo = newVolumeArgs.getProtobuf();
-      putBatch.add(batchEntry(dbVolumeKey, newVolumeInfo.toByteArray()));
+      batch.put(dbVolumeKey, newVolumeInfo.toByteArray());
 
-      metadataManager.batchPutDelete(putBatch, deleteBatch);
+      metadataManager.writeBatch(batch);
     } catch (IOException ex) {
       LOG.error("Changing volume ownership failed for user:{} volume:{}",
           owner, volume, ex);
@@ -285,8 +275,7 @@ public class VolumeManagerImpl implements VolumeManager {
     Preconditions.checkNotNull(volume);
     metadataManager.writeLock().lock();
     try {
-      List<Map.Entry<byte[], byte[]>> putBatch = new LinkedList<>();
-      List<byte[]> deleteBatch = new LinkedList<>();
+      BatchOperation batch = new BatchOperation();
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
       byte[] volInfo = metadataManager.get(dbVolumeKey);
       if (volInfo == null) {
@@ -301,10 +290,9 @@ public class VolumeManagerImpl implements VolumeManager {
       Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
       // delete the volume from the owner list
       // as well as delete the volume entry
-      delVolumeFromOwnerList(volume, volumeInfo.getOwnerName(),
-          putBatch, deleteBatch);
-      deleteBatch.add(dbVolumeKey);
-      metadataManager.batchPutDelete(putBatch, deleteBatch);
+      delVolumeFromOwnerList(volume, volumeInfo.getOwnerName(), batch);
+      batch.delete(dbVolumeKey);
+      metadataManager.writeBatch(batch);
     } catch (IOException ex) {
       LOG.error("Delete volume failed for volume:{}", volume, ex);
       throw ex;
