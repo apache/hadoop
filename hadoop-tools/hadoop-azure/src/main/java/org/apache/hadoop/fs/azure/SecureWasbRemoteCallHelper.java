@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azure;
 
 import org.apache.commons.lang.Validate;
 import org.apache.hadoop.fs.azure.security.Constants;
+import org.apache.hadoop.fs.azure.security.SpnegoToken;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenIdentifier;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -39,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
@@ -69,10 +71,21 @@ public class SecureWasbRemoteCallHelper extends WasbRemoteCallHelper {
    */
   private boolean alwaysRequiresKerberosAuth;
 
+  /**
+   * Enable caching of Spnego token.
+   */
+  private boolean isSpnegoTokenCachingEnabled;
+
+  /**
+   * Cached SPNEGO token.
+   */
+  private SpnegoToken spnegoToken;
+
   public SecureWasbRemoteCallHelper(RetryPolicy retryPolicy,
-      boolean alwaysRequiresKerberosAuth) {
+      boolean alwaysRequiresKerberosAuth, boolean isSpnegoTokenCachingEnabled) {
     super(retryPolicy);
     this.alwaysRequiresKerberosAuth = alwaysRequiresKerberosAuth;
+    this.isSpnegoTokenCachingEnabled = isSpnegoTokenCachingEnabled;
   }
 
   @Override
@@ -81,9 +94,35 @@ public class SecureWasbRemoteCallHelper extends WasbRemoteCallHelper {
       final String httpMethod) throws IOException {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation connectUgi = ugi.getRealUser();
-    if (connectUgi == null) {
+    if (connectUgi != null) {
+      queryParams.add(new NameValuePair() {
+        @Override public String getName() {
+          return Constants.DOAS_PARAM;
+        }
+
+        @Override public String getValue() {
+          return ugi.getShortUserName();
+        }
+      });
+    } else  {
       connectUgi = ugi;
     }
+
+    final Token delegationToken = getDelegationToken(ugi);
+    if (!alwaysRequiresKerberosAuth && delegationToken != null) {
+      final String delegationTokenEncodedUrlString =
+          delegationToken.encodeToUrlString();
+      queryParams.add(new NameValuePair() {
+        @Override public String getName() {
+          return DELEGATION_TOKEN_QUERY_PARAM_NAME;
+        }
+
+        @Override public String getValue() {
+          return delegationTokenEncodedUrlString;
+        }
+      });
+    }
+
     if (delegationToken == null) {
       connectUgi.checkTGTAndReloginFromKeytab();
     }
@@ -103,39 +142,13 @@ public class SecureWasbRemoteCallHelper extends WasbRemoteCallHelper {
 
   @Override
   public HttpUriRequest getHttpRequest(String[] urls, String path,
-      List<NameValuePair> queryParams, int urlIndex, String httpMethod)
-      throws URISyntaxException, IOException {
-    final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    UserGroupInformation connectUgi = ugi.getRealUser();
-    if (connectUgi != null) {
-      queryParams.add(new NameValuePair() {
-        @Override public String getName() {
-          return Constants.DOAS_PARAM;
-        }
-
-        @Override public String getValue() {
-          return ugi.getShortUserName();
-        }
-      });
-    }
-
-    final Token delegationToken = getDelegationToken(ugi);
-    if (!alwaysRequiresKerberosAuth && delegationToken != null) {
-      final String delegationTokenEncodedUrlString =
-          delegationToken.encodeToUrlString();
-      queryParams.add(new NameValuePair() {
-        @Override public String getName() {
-          return DELEGATION_TOKEN_QUERY_PARAM_NAME;
-        }
-
-        @Override public String getValue() {
-          return delegationTokenEncodedUrlString;
-        }
-      });
-    }
-
+      List<NameValuePair> queryParams, int urlIndex, String httpMethod,
+      boolean requiresNewAuth) throws URISyntaxException, IOException {
     URIBuilder uriBuilder =
         new URIBuilder(urls[urlIndex]).setPath(path).setParameters(queryParams);
+    if (uriBuilder.getHost().equals("localhost")) {
+      uriBuilder.setHost(InetAddress.getLocalHost().getCanonicalHostName());
+    }
     HttpUriRequest httpUriRequest = null;
     switch (httpMethod) {
     case HttpPut.METHOD_NAME:
@@ -152,11 +165,18 @@ public class SecureWasbRemoteCallHelper extends WasbRemoteCallHelper {
     LOG.debug("SecureWasbRemoteCallHelper#getHttpRequest() {}",
         uriBuilder.build().toURL());
     if (alwaysRequiresKerberosAuth || delegationToken == null) {
-      AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+      AuthenticatedURL.Token token = null;
       final Authenticator kerberosAuthenticator =
           new KerberosDelegationTokenAuthenticator();
       try {
-        kerberosAuthenticator.authenticate(uriBuilder.build().toURL(), token);
+        if (isSpnegoTokenCachingEnabled && !requiresNewAuth
+            && spnegoToken != null && spnegoToken.isTokenValid()){
+          token = spnegoToken.getToken();
+        } else {
+          token = new AuthenticatedURL.Token();
+          kerberosAuthenticator.authenticate(uriBuilder.build().toURL(), token);
+          spnegoToken = new SpnegoToken(token);
+        }
       } catch (AuthenticationException e) {
         throw new WasbRemoteCallException(
             Constants.AUTHENTICATION_FAILED_ERROR_MESSAGE, e);
@@ -170,7 +190,7 @@ public class SecureWasbRemoteCallHelper extends WasbRemoteCallHelper {
     return httpUriRequest;
   }
 
-  private synchronized Token<?> getDelegationToken(
+  private Token<?> getDelegationToken(
       UserGroupInformation userGroupInformation) throws IOException {
     if (this.delegationToken == null) {
       Token<?> token = null;

@@ -93,10 +93,11 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
    * Authorization Remote http client retry policy spec default value. {@value}
    */
   private static final String AUTHORIZER_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
-      "1000,3,10000,2";
+      "10,3,100,2";
 
   private WasbRemoteCallHelper remoteCallHelper = null;
   private boolean isKerberosSupportEnabled;
+  private boolean isSpnegoTokenCacheEnabled;
   private RetryPolicy retryPolicy;
   private String[] commaSeparatedUrls = null;
 
@@ -111,6 +112,8 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
     LOG.debug("Initializing RemoteWasbAuthorizerImpl instance");
     this.isKerberosSupportEnabled =
         conf.getBoolean(Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
+    this.isSpnegoTokenCacheEnabled =
+        conf.getBoolean(Constants.AZURE_ENABLE_SPNEGO_TOKEN_CACHE, true);
     this.commaSeparatedUrls =
         conf.getTrimmedStrings(KEY_REMOTE_AUTH_SERVICE_URLS);
     if (this.commaSeparatedUrls == null
@@ -123,7 +126,8 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
         AUTHORIZER_HTTP_CLIENT_RETRY_POLICY_SPEC_SPEC,
         AUTHORIZER_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT);
     if (isKerberosSupportEnabled && UserGroupInformation.isSecurityEnabled()) {
-      this.remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, false);
+      this.remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, false,
+          isSpnegoTokenCacheEnabled);
     } else {
       this.remoteCallHelper = new WasbRemoteCallHelper(retryPolicy);
     }

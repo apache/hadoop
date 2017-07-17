@@ -43,6 +43,8 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
@@ -62,7 +64,7 @@ public class TestWasbRemoteCallHelper
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
     Configuration conf = new Configuration();
     conf.set(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, "true");
-    conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost1/,http://localhost2/");
+    conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost1/,http://localhost2/,http://localhost:8080");
     return AzureBlobStorageTestAccount.create(conf);
   }
 
@@ -304,6 +306,18 @@ public class TestWasbRemoteCallHelper
     Mockito.when(mockHttpResponseService2.getEntity())
         .thenReturn(mockHttpEntity);
 
+    HttpResponse mockHttpResponseServiceLocal = Mockito.mock(HttpResponse.class);
+    Mockito.when(mockHttpResponseServiceLocal.getStatusLine())
+        .thenReturn(newStatusLine(HttpStatus.SC_INTERNAL_SERVER_ERROR));
+    Mockito.when(mockHttpResponseServiceLocal.getFirstHeader("Content-Type"))
+        .thenReturn(newHeader("Content-Type", "application/json"));
+    Mockito.when(mockHttpResponseServiceLocal.getFirstHeader("Content-Length"))
+        .thenReturn(newHeader("Content-Length", "1024"));
+    Mockito.when(mockHttpResponseServiceLocal.getEntity())
+        .thenReturn(mockHttpEntity);
+
+
+
     class HttpGetForService1 extends ArgumentMatcher<HttpGet>{
       @Override public boolean matches(Object o) {
         return checkHttpGetMatchHost((HttpGet) o, "localhost1");
@@ -314,10 +328,21 @@ public class TestWasbRemoteCallHelper
         return checkHttpGetMatchHost((HttpGet) o, "localhost2");
       }
     }
+    class HttpGetForServiceLocal extends ArgumentMatcher<HttpGet>{
+      @Override public boolean matches(Object o) {
+        try {
+          return checkHttpGetMatchHost((HttpGet) o, InetAddress.getLocalHost().getCanonicalHostName());
+        } catch (UnknownHostException e) {
+          return checkHttpGetMatchHost((HttpGet) o, "localhost");
+        }
+      }
+    }
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService1())))
         .thenReturn(mockHttpResponseService1);
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService2())))
         .thenReturn(mockHttpResponseService2);
+    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForServiceLocal())))
+        .thenReturn(mockHttpResponseServiceLocal);
 
     //Need 3 times because performop()  does 3 fs operations.
     Mockito.when(mockHttpEntity.getContent())
@@ -331,6 +356,7 @@ public class TestWasbRemoteCallHelper
 
     performop(mockHttpClient);
 
+    Mockito.verify(mockHttpClient, times(3)).execute(Mockito.argThat(new HttpGetForServiceLocal()));
     Mockito.verify(mockHttpClient, times(3)).execute(Mockito.argThat(new HttpGetForService2()));
   }
 
@@ -362,6 +388,17 @@ public class TestWasbRemoteCallHelper
     Mockito.when(mockHttpResponseService2.getEntity())
         .thenReturn(mockHttpEntity);
 
+    HttpResponse mockHttpResponseService3 = Mockito.mock(HttpResponse.class);
+    Mockito.when(mockHttpResponseService3.getStatusLine())
+        .thenReturn(newStatusLine(
+            HttpStatus.SC_INTERNAL_SERVER_ERROR));
+    Mockito.when(mockHttpResponseService3.getFirstHeader("Content-Type"))
+        .thenReturn(newHeader("Content-Type", "application/json"));
+    Mockito.when(mockHttpResponseService3.getFirstHeader("Content-Length"))
+        .thenReturn(newHeader("Content-Length", "1024"));
+    Mockito.when(mockHttpResponseService3.getEntity())
+        .thenReturn(mockHttpEntity);
+
     class HttpGetForService1 extends ArgumentMatcher<HttpGet>{
       @Override public boolean matches(Object o) {
         return checkHttpGetMatchHost((HttpGet) o, "localhost1");
@@ -372,10 +409,21 @@ public class TestWasbRemoteCallHelper
         return checkHttpGetMatchHost((HttpGet) o, "localhost2");
       }
     }
+    class HttpGetForService3 extends ArgumentMatcher<HttpGet> {
+      @Override public boolean matches(Object o){
+        try {
+          return checkHttpGetMatchHost((HttpGet) o, InetAddress.getLocalHost().getCanonicalHostName());
+        } catch (UnknownHostException e) {
+          return checkHttpGetMatchHost((HttpGet) o, "localhost");
+        }
+      }
+    }
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService1())))
         .thenReturn(mockHttpResponseService1);
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService2())))
         .thenReturn(mockHttpResponseService2);
+    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService3())))
+        .thenReturn(mockHttpResponseService3);
 
     //Need 3 times because performop()  does 3 fs operations.
     Mockito.when(mockHttpEntity.getContent())
@@ -390,10 +438,12 @@ public class TestWasbRemoteCallHelper
       performop(mockHttpClient);
     }catch (WasbAuthorizationException e){
       e.printStackTrace();
-      Mockito.verify(mockHttpClient, atLeast(3))
+      Mockito.verify(mockHttpClient, atLeast(2))
           .execute(argThat(new HttpGetForService1()));
-      Mockito.verify(mockHttpClient, atLeast(3))
+      Mockito.verify(mockHttpClient, atLeast(2))
           .execute(argThat(new HttpGetForService2()));
+      Mockito.verify(mockHttpClient, atLeast(3))
+          .execute(argThat(new HttpGetForService3()));
       Mockito.verify(mockHttpClient, times(7)).execute(Mockito.<HttpGet>any());
     }
   }
@@ -425,7 +475,7 @@ public class TestWasbRemoteCallHelper
     expectedEx.expectMessage(new MatchesPattern(
         "org\\.apache\\.hadoop\\.fs\\.azure\\.WasbRemoteCallException: "
             + "Encountered error while making remote call to "
-            + "http:\\/\\/localhost1\\/,http:\\/\\/localhost2\\/ retried 6 time\\(s\\)\\."));
+            + "http:\\/\\/localhost1\\/,http:\\/\\/localhost2\\/,http:\\/\\/localhost:8080 retried 6 time\\(s\\)\\."));
   }
 
   private void performop(HttpClient mockHttpClient) throws Throwable {

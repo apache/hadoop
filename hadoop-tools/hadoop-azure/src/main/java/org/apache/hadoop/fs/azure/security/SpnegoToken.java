@@ -18,32 +18,32 @@
 
 package org.apache.hadoop.fs.azure.security;
 
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+
 /**
- * Constants for used with WASB security implementation.
+ * Class to represent SPNEGO token.
  */
-public final class Constants {
+public class SpnegoToken {
+  private AuthenticatedURL.Token token;
+  private long expiryTime;
+  private static final long TOKEN_VALIDITY_TIME_IN_MS = 60 * 60 * 1000L;
 
-  /**
-   * The configuration property to enable Kerberos support.
-   */
+  public SpnegoToken(AuthenticatedURL.Token token) {
+    this.token = token;
+    //set the expiry time of the token to be 60 minutes,
+    // actual token will be valid for more than few hours and treating token as opaque.
+    this.expiryTime = System.currentTimeMillis() + TOKEN_VALIDITY_TIME_IN_MS;
+  }
 
-  public static final String AZURE_KERBEROS_SUPPORT_PROPERTY_NAME =
-      "fs.azure.enable.kerberos.support";
-  /**
-   * The configuration property to enable SPNEGO token cache.
-   */
-  public static final String AZURE_ENABLE_SPNEGO_TOKEN_CACHE =
-      "fs.azure.enable.spnego.token.cache";
-  /**
-   * Parameter to be used for impersonation.
-   */
-  public static final String DOAS_PARAM = "doas";
-  /**
-   * Error message for Authentication failures.
-   */
-  public static final String AUTHENTICATION_FAILED_ERROR_MESSAGE =
-      "Authentication Failed ";
+  public AuthenticatedURL.Token getToken() {
+    return token;
+  }
 
-  private Constants() {
+  public long getExpiryTime() {
+    return expiryTime;
+  }
+
+  public boolean isTokenValid() {
+    return (expiryTime >= System.currentTimeMillis());
   }
 }

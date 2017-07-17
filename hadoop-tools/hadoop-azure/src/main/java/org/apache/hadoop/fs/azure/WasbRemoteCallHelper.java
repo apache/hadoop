@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,6 +41,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
+import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -85,8 +86,7 @@ public class WasbRemoteCallHelper {
     this.retryPolicy = retryPolicy;
   }
 
-  @VisibleForTesting
-  public void updateHttpClient(HttpClient client) {
+  @VisibleForTesting public void updateHttpClient(HttpClient client) {
     this.client = client;
   }
 
@@ -112,25 +112,57 @@ public class WasbRemoteCallHelper {
     HttpResponse response = null;
     HttpUriRequest httpRequest = null;
 
-    for (int retry = 0, index =
-         random.nextInt(urls.length);; retry++, index++) {
+    /**
+     * Get the index of local url if any. If list of urls contains strings like
+     * "https://localhost:" or "http://localhost", consider it as local url and
+     * give it affinity more than other urls in the list.
+     */
+
+    int indexOfLocalUrl = -1;
+    for (int i = 0; i < urls.length; i++) {
+      if (urls[i].toLowerCase().startsWith("https://localhost:") || urls[i]
+          .toLowerCase().startsWith("http://localhost:")) {
+        indexOfLocalUrl = i;
+      }
+    }
+
+    boolean requiresNewAuth = false;
+    for (int retry = 0, index = (indexOfLocalUrl != -1)
+                                ? indexOfLocalUrl
+                                : random
+                                    .nextInt(urls.length);; retry++, index++) {
       if (index >= urls.length) {
         index = index % urls.length;
       }
-
+      /**
+       * If the first request fails to localhost, then randomly pick the next url
+       * from the remaining urls in the list, so that load can be balanced.
+       */
+      if (indexOfLocalUrl != -1 && retry == 1) {
+        index = (index + random.nextInt(urls.length)) % urls.length;
+        if (index == indexOfLocalUrl) {
+          index = (index + 1) % urls.length;
+        }
+      }
       try {
         httpRequest =
-            getHttpRequest(urls, path, queryParams, index, httpMethod);
-
+            getHttpRequest(urls, path, queryParams, index, httpMethod,
+                requiresNewAuth);
         httpRequest.setHeader("Accept", APPLICATION_JSON);
         response = client.execute(httpRequest);
         StatusLine statusLine = response.getStatusLine();
         if (statusLine == null
             || statusLine.getStatusCode() != HttpStatus.SC_OK) {
+          requiresNewAuth =
+              (statusLine == null)
+                  || (statusLine.getStatusCode() == HttpStatus.SC_UNAUTHORIZED);
+
           throw new WasbRemoteCallException(
               httpRequest.getURI().toString() + ":" + ((statusLine != null)
                                                        ? statusLine.toString()
                                                        : "NULL"));
+        } else {
+          requiresNewAuth = false;
         }
 
         Header contentTypeHeader = response.getFirstHeader("Content-Type");
@@ -201,11 +233,14 @@ public class WasbRemoteCallHelper {
   }
 
   protected HttpUriRequest getHttpRequest(String[] urls, String path,
-      List<NameValuePair> queryParams, int urlIndex, String httpMethod)
-      throws URISyntaxException, IOException {
+      List<NameValuePair> queryParams, int urlIndex, String httpMethod,
+      boolean requiresNewAuth) throws URISyntaxException, IOException {
     URIBuilder uriBuilder = null;
     uriBuilder =
         new URIBuilder(urls[urlIndex]).setPath(path).setParameters(queryParams);
+    if (uriBuilder.getHost().equals("localhost")) {
+      uriBuilder.setHost(InetAddress.getLocalHost().getCanonicalHostName());
+    }
     HttpUriRequest httpUriRequest = null;
     switch (httpMethod) {
     case HttpPut.METHOD_NAME:
@@ -247,7 +282,7 @@ public class WasbRemoteCallHelper {
         Thread.sleep(a.delayMillis);
         return;
       }
-    } catch(InterruptedIOException e) {
+    } catch (InterruptedIOException e) {
       LOG.warn(e.getMessage(), e);
       Thread.currentThread().interrupt();
       return;

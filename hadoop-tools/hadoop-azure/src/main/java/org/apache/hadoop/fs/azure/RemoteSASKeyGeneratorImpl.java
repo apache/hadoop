@@ -104,10 +104,11 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
    */
   private static final String
       SAS_KEY_GENERATOR_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
-      "1000,3,10000,2";
+      "10,3,100,2";
 
   private WasbRemoteCallHelper remoteCallHelper = null;
   private boolean isKerberosSupportEnabled;
+  private boolean isSpnegoTokenCacheEnabled;
   private RetryPolicy retryPolicy;
   private String[] commaSeparatedUrls;
 
@@ -126,13 +127,16 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
 
     this.isKerberosSupportEnabled =
         conf.getBoolean(Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
+    this.isSpnegoTokenCacheEnabled =
+        conf.getBoolean(Constants.AZURE_ENABLE_SPNEGO_TOKEN_CACHE, true);
     this.commaSeparatedUrls = conf.getTrimmedStrings(KEY_CRED_SERVICE_URLS);
     if (this.commaSeparatedUrls == null || this.commaSeparatedUrls.length <= 0) {
       throw new IOException(
           KEY_CRED_SERVICE_URLS + " config not set" + " in configuration.");
     }
     if (isKerberosSupportEnabled && UserGroupInformation.isSecurityEnabled()) {
-      this.remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, false);
+      this.remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, false,
+          isSpnegoTokenCacheEnabled);
     } else {
       this.remoteCallHelper = new WasbRemoteCallHelper(retryPolicy);
     }
