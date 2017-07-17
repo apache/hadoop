@@ -1025,12 +1025,13 @@ public class TestStoragePolicySatisfier {
       list.add(cluster.stopDataNode(0));
       list.add(cluster.stopDataNode(0));
       cluster.restartNameNodes();
-      cluster.restartDataNode(list.get(0), true);
-      cluster.restartDataNode(list.get(1), true);
+      cluster.restartDataNode(list.get(0), false);
+      cluster.restartDataNode(list.get(1), false);
       cluster.waitActive();
       fs.satisfyStoragePolicy(filePath);
-      Thread.sleep(3000 * 6);
-      cluster.restartDataNode(list.get(2), true);
+      DFSTestUtil.waitExpectedStorageType(filePath.toString(),
+          StorageType.ARCHIVE, 2, 30000, cluster.getFileSystem());
+      cluster.restartDataNode(list.get(2), false);
       DFSTestUtil.waitExpectedStorageType(filePath.toString(),
           StorageType.ARCHIVE, 3, 30000, cluster.getFileSystem());
     } finally {

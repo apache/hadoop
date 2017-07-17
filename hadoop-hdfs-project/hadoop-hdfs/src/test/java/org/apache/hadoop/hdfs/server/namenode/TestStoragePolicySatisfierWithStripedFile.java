@@ -308,8 +308,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
    */
   @Test(timeout = 300000)
   public void testSPSWhenFileHasLowRedundancyBlocks() throws Exception {
-    // start 10 datanodes
-    int numOfDatanodes = 10;
+    // start 9 datanodes
+    int numOfDatanodes = 9;
     int storagesPerDatanode = 2;
     long capacity = 20 * defaultStripeBlockSize;
     long[][] capacities = new long[numOfDatanodes][storagesPerDatanode];
@@ -330,7 +330,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
         .numDataNodes(numOfDatanodes)
         .storagesPerDatanode(storagesPerDatanode)
         .storageTypes(new StorageType[][]{
-            {StorageType.DISK, StorageType.ARCHIVE},
             {StorageType.DISK, StorageType.ARCHIVE},
             {StorageType.DISK, StorageType.ARCHIVE},
             {StorageType.DISK, StorageType.ARCHIVE},
@@ -366,15 +365,16 @@ public class TestStoragePolicySatisfierWithStripedFile {
       }
       cluster.restartNameNodes();
       // Restart half datanodes
-      for (int i = 0; i < numOfDatanodes / 2; i++) {
-        cluster.restartDataNode(list.get(i), true);
+      for (int i = 0; i < 5; i++) {
+        cluster.restartDataNode(list.get(i), false);
       }
       cluster.waitActive();
       fs.satisfyStoragePolicy(fooFile);
-      Thread.sleep(3000 * 6);
+      DFSTestUtil.waitExpectedStorageType(fooFile.toString(),
+          StorageType.ARCHIVE, 5, 30000, cluster.getFileSystem());
       //Start reaming datanodes
-      for (int i = numOfDatanodes - 1; i > numOfDatanodes / 2; i--) {
-        cluster.restartDataNode(list.get(i), true);
+      for (int i = numOfDatanodes - 1; i >= 5; i--) {
+        cluster.restartDataNode(list.get(i), false);
       }
       // verify storage types and locations.
       waitExpectedStorageType(cluster, fooFile.toString(), fileLen,
