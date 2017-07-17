@@ -335,6 +335,91 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   }
 
   /**
+   * Starts one GUARANTEED container that takes us the whole node's resources.
+   * and submit more OPPORTUNISTIC containers than the opportunistic container
+   * queue can hold. OPPORTUNISTIC containers that cannot be queue should be
+   * killed.
+   * @throws Exception
+   */
+  @Test
+  public void testStartOpportunistcsWhenOppQueueIsFull() throws Exception {
+    containerManager.start();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(2048, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.GUARANTEED)));
+
+    final int maxOppQueueLength = conf.getInt(
+        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
+        YarnConfiguration.DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH);
+    for (int i = 1; i < maxOppQueueLength + 2; i++) {
+      list.add(StartContainerRequest.newInstance(
+          containerLaunchContext,
+          createContainerToken(createContainerId(i), DUMMY_RM_IDENTIFIER,
+              context.getNodeId(),
+              user, BuilderUtils.newResource(2048, 1),
+              context.getContainerTokenSecretManager(), null,
+              ExecutionType.OPPORTUNISTIC)));
+    }
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    BaseContainerManagerTest.waitForNMContainerState(containerManager,
+        createContainerId(0), ContainerState.RUNNING, 40);
+    BaseContainerManagerTest.waitForNMContainerState(containerManager,
+        createContainerId(maxOppQueueLength + 1), ContainerState.DONE,
+        40);
+    Thread.sleep(5000);
+
+    // Get container statuses. Container 0 should be running and container
+    // 1 to maxOppQueueLength should be queued and the last container should
+    // be killed
+    List<ContainerId> statList = new ArrayList<>();
+    for (int i = 0; i < maxOppQueueLength + 2; i++) {
+      statList.add(createContainerId(i));
+    }
+    GetContainerStatusesRequest statRequest =
+        GetContainerStatusesRequest.newInstance(statList);
+    List<ContainerStatus> containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
+      if (status.getContainerId().equals(createContainerId(0))) {
+        Assert.assertEquals(
+            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+            status.getState());
+      } else if (status.getContainerId().equals(createContainerId(
+          maxOppQueueLength + 1))) {
+        Assert.assertTrue(status.getDiagnostics().contains(
+            "Opportunistic container queue is full"));
+      } else {
+        Assert.assertEquals(
+            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
+            status.getState());
+      }
+      System.out.println("\nStatus : [" + status + "]\n");
+    }
+
+    ContainerScheduler containerScheduler =
+        containerManager.getContainerScheduler();
+    Assert.assertEquals(maxOppQueueLength,
+        containerScheduler.getNumQueuedContainers());
+    Assert.assertEquals(0,
+        containerScheduler.getNumQueuedGuaranteedContainers());
+    Assert.assertEquals(maxOppQueueLength,
+        containerScheduler.getNumQueuedOpportunisticContainers());
+  }
+
+  /**
    * Submit two OPPORTUNISTIC and one GUARANTEED containers. The resources
    * requests by each container as such that only one can run in parallel.
    * Thus, the OPPORTUNISTIC container that started running, will be
