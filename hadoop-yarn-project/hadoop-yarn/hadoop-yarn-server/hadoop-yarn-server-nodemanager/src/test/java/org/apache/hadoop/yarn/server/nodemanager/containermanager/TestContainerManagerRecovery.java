@@ -583,7 +583,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
               @Override
               public long getPmemAllocatedForContainers() {
-                return 10240;
+                return (long) 2048 << 20;
               }
 
               @Override
