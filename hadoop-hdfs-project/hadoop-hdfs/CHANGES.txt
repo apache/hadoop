@@ -114,6 +114,12 @@ Release 2.7.4 - UNRELEASED
     HDFS-9503. Use generic option -fs for NNThroughputBenchmark instead of
     -namenode. (Mingliang Liu via shv)
 
+    HDFS-11628. Clarify the behavior of HDFS Mover in documentation.
+    (Xiaobing Zhou via arp)
+
+    HDFS-10941. Improve BlockManager#processMisReplicatesAsync log.
+    (Chen Liang via Xiaoyu Yao)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
@@ -369,6 +375,15 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11741. Long running balancer may fail due to expired DataEncryptionKey.
         Contributed by Wei-Chiu Chuang and Xiao Chen.
+
+    HDFS-10733. NameNode terminated after full GC thinking QJM is unresponsive.
+    (Vinitha Gankidi via shv)
+
+    HDFS-11280. Allow WebHDFS to reuse HTTP connections to NN.
+    (Zheng Shao via wheat9)
+
+    HDFS-10921. TestDiskspaceQuotaUpdate doesn't wait for NN to get out of
+    safe mode. (Eric Badger via Mingliang Liu)
 
 Release 2.7.3 - 2016-08-25
 

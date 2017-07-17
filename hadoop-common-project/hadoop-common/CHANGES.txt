@@ -166,6 +166,22 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14586. StringIndexOutOfBoundsException breaks
     org.apache.hadoop.util.Shell on 2.7.x with Java 9. (Uwe Schindler via shv)
 
+    HADOOP-13119. Add ability to secure log servlet using proxy users.
+    (Contribute by Yuanbo Liu via Eric Yang)
+
+    HADOOP-14293. Initialize FakeTimer with a less trivial value. (wang)
+
+    HADOOP-14066. VersionInfo should be marked as public API.
+    (Akira Ajisaka via stevel)
+
+    HADOOP-13958. Bump up release year to 2017. (Junping Du)
+
+    HADOOP-14195. CredentialProviderFactory$getProviders is not thread-safe.
+    (Vihang Karajgaonkar via John Zhuge)
+
+    HADOOP-14356. Update CHANGES.txt to reflect all the changes in branch-2.7.
+    (Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

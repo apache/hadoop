@@ -121,6 +121,22 @@ Release 2.7.4 - UNRELEASED
     YARN-5121. fix some container-executor portability issues.
     (Allen Wittenauer) Backport YARN-6698 by  Akira Ajisaka.
 
+    YARN-6274. Documentation refers to incorrect nodemanager health checker
+    interval property. (WeiWei Yang via jlowe)
+
+    YARN-6152. Used queue percentage not accurate in UI for 2.7 and below
+    when using DominantResourceCalculator. (Jonathan Hung via Eric Payne)
+
+    YARN-6024. Capacity Scheduler 'continuous reservation looking' doesn't work
+    when sum of queue's used and reserved resources is equal to max.
+    (Wangda Tan via Sunil G)
+
+    YARN-1728. Workaround guice3x-undecoded pathInfo in YARN WebApp.
+    (Yuanbo Liu via gera)
+
+    YARN-5694. ZKRMStateStore can prevent the transition to standby if the ZK
+    node is unreachable. (Daniel Templeton via jian He)
+
     YARN-6719. Fix findbugs warnings in SLSCapacityScheduler.java.
     (Akira Ajisaka via naganarasimha_gr)
 
@@ -1175,6 +1191,9 @@ Release 2.6.5 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    YARN-3877. YarnClientImpl.submitApplication swallows exceptions.
+    (Varun Saxena via Naganarasimha G R)
 
   OPTIMIZATIONS
 
