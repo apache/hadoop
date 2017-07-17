@@ -329,7 +329,7 @@ public class StoragePolicySatisfyWorker {
   /**
    * Block movement status code.
    */
-  public static enum BlockMovementStatus {
+  public enum BlockMovementStatus {
     /** Success. */
     DN_BLK_STORAGE_MOVEMENT_SUCCESS(0),
     /**
@@ -343,7 +343,7 @@ public class StoragePolicySatisfyWorker {
 
     private final int code;
 
-    private BlockMovementStatus(int code) {
+    BlockMovementStatus(int code) {
       this.code = code;
     }
 
@@ -365,7 +365,7 @@ public class StoragePolicySatisfyWorker {
     private final DatanodeInfo target;
     private final BlockMovementStatus status;
 
-    public BlockMovementResult(long trackId, long blockId,
+    BlockMovementResult(long trackId, long blockId,
         DatanodeInfo target, BlockMovementStatus status) {
       this.trackId = trackId;
       this.blockId = blockId;

@@ -427,7 +427,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   private final BlockIdManager blockIdManager;
 
-  /** For satisfying block storage policies */
+  /** For satisfying block storage policies. */
   private final StoragePolicySatisfier sps;
   private final BlockStorageMovementNeeded storageMovementNeeded =
       new BlockStorageMovementNeeded();

@@ -714,10 +714,10 @@ public class StoragePolicySatisfier implements Runnable {
   }
 
   private static class StorageTypeNodePair {
-    public StorageType storageType = null;
-    public DatanodeDescriptor dn = null;
+    private StorageType storageType = null;
+    private DatanodeDescriptor dn = null;
 
-    public StorageTypeNodePair(StorageType storageType, DatanodeDescriptor dn) {
+    StorageTypeNodePair(StorageType storageType, DatanodeDescriptor dn) {
       this.storageType = storageType;
       this.dn = dn;
     }

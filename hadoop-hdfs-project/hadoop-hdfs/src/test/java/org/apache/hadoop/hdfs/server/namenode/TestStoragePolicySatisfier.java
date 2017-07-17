@@ -496,8 +496,8 @@ public class TestStoragePolicySatisfier {
       namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
       hdfsCluster.triggerHeartbeats();
 
-      // No block movement will be scheduled as there is no target node available
-      // with the required storage type.
+      // No block movement will be scheduled as there is no target node
+      // available with the required storage type.
       waitForAttemptedItems(1, 30000);
       DFSTestUtil.waitExpectedStorageType(
           file, StorageType.DISK, 3, 30000, dfs);
@@ -1174,14 +1174,14 @@ public class TestStoragePolicySatisfier {
 
   private void startAdditionalDNs(final Configuration conf,
       int newNodesRequired, int existingNodesNum, StorageType[][] newTypes,
-      int storagesPerDatanode, long capacity, final MiniDFSCluster cluster)
+      int storagesPerDn, long nodeCapacity, final MiniDFSCluster cluster)
           throws IOException {
     long[][] capacities;
     existingNodesNum += newNodesRequired;
-    capacities = new long[newNodesRequired][storagesPerDatanode];
+    capacities = new long[newNodesRequired][storagesPerDn];
     for (int i = 0; i < newNodesRequired; i++) {
-      for (int j = 0; j < storagesPerDatanode; j++) {
-        capacities[i][j] = capacity;
+      for (int j = 0; j < storagesPerDn; j++) {
+        capacities[i][j] = nodeCapacity;
       }
     }
 

@@ -126,9 +126,10 @@ public class TestMover {
       nnMap.put(nn, null);
     }
 
-    final List<NameNodeConnector> nncs = NameNodeConnector.newNameNodeConnectors(
-        nnMap, Mover.class.getSimpleName(), HdfsServerConstants.MOVER_ID_PATH, conf,
-        NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
+    final List<NameNodeConnector> nncs = NameNodeConnector.
+        newNameNodeConnectors(nnMap, Mover.class.getSimpleName(),
+            HdfsServerConstants.MOVER_ID_PATH, conf,
+            NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
     return new Mover(nncs.get(0), conf, new AtomicInteger(0), new HashMap<>());
   }
 
