@@ -32,55 +32,56 @@ public interface BlockCollection {
   /**
    * Get the last block of the collection.
    */
-  public BlockInfo getLastBlock();
+  BlockInfo getLastBlock();
 
   /** 
    * Get content summary.
    */
-  public ContentSummary computeContentSummary(BlockStoragePolicySuite bsps)
+  ContentSummary computeContentSummary(BlockStoragePolicySuite bsps)
       throws AccessControlException;
 
   /**
    * @return the number of blocks
    */ 
-  public int numBlocks();
+  int numBlocks();
 
   /**
    * Get the blocks.
    */
-  public BlockInfo[] getBlocks();
+  BlockInfo[] getBlocks();
 
   /**
    * Get preferred block size for the collection 
    * @return preferred block size in bytes
    */
-  public long getPreferredBlockSize();
+  long getPreferredBlockSize();
 
   /**
    * @return the storage policy ID.
    */
-  public byte getStoragePolicyID();
+  byte getStoragePolicyID();
 
   /**
    * Get the name of the collection.
    */
-  public String getName();
+  String getName();
 
   /**
    * Set the block at the given index.
    */
-  public void setBlock(int index, BlockInfo blk);
+  void setBlock(int index, BlockInfo blk);
 
   /**
    * Convert the last block of the collection to an under-construction block
    * and set the locations.
    */
-  public void convertLastBlockToUC(BlockInfo lastBlock, DatanodeStorageInfo[] targets) throws IOException;
+  void convertLastBlockToUC(BlockInfo lastBlock,
+      DatanodeStorageInfo[] targets) throws IOException;
 
   /**
    * @return whether the block collection is under construction.
    */
-  public boolean isUnderConstruction();
+  boolean isUnderConstruction();
 
   /**
    * @return the id for the block collection
