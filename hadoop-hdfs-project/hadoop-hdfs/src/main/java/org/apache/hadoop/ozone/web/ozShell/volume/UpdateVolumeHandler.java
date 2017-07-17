@@ -73,8 +73,8 @@ public class UpdateVolumeHandler extends Handler {
       quota = cmd.getOptionValue(Shell.QUOTA);
     }
 
-    if (cmd.hasOption(Shell.OWNER)) {
-      ownerName = cmd.getOptionValue(Shell.OWNER);
+    if (cmd.hasOption(Shell.USER)) {
+      ownerName = cmd.getOptionValue(Shell.USER);
     }
 
     client.setEndPointURI(ozoneURI);
