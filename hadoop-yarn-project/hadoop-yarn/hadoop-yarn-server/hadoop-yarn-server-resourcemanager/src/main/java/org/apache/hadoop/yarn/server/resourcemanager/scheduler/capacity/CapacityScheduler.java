@@ -2414,7 +2414,10 @@ public class CapacityScheduler extends
 
     if (attemptId != null) {
       FiCaSchedulerApp app = getApplicationAttempt(attemptId);
-      if (app != null) {
+      // Required sanity check for attemptId - when async-scheduling enabled,
+      // proposal might be outdated if AM failover just finished
+      // and proposal queue was not be consumed in time
+      if (app != null && attemptId.equals(app.getApplicationAttemptId())) {
         if (app.accept(cluster, request)) {
           app.apply(cluster, request);
           LOG.info("Allocation proposal accepted");
