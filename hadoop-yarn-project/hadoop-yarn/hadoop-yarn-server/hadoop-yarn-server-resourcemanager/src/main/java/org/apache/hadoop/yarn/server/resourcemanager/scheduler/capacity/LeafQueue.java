@@ -1138,7 +1138,7 @@ public class LeafQueue extends AbstractCSQueue {
         if (Resources.lessThanOrEqual(
             resourceCalculator,
             clusterResource,
-            Resources.subtract(user.getUsed(), application.getCurrentReservation()),
+            Resources.subtract(user.getUsed(label), application.getCurrentReservation()),
             limit)) {
 
           if (LOG.isDebugEnabled()) {

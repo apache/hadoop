@@ -127,6 +127,9 @@ Release 2.7.4 - UNRELEASED
     YARN-3260. AM attempt fail to register before RM processes launch event
     (Bibin A Chundatt via jlowe)
 
+    YARN-6818. User limit per partition is not honored in branch-2.7.
+    (Jonathan Hung via shv)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
