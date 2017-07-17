@@ -411,7 +411,11 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
   public OzoneBucket getBucketDetails(String volumeName,
                                         String bucketName)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    KsmBucketInfo bucketInfo =
+        keySpaceManagerClient.getBucketInfo(volumeName, bucketName);
+    return new OzoneBucket(bucketInfo);
   }
 
   @Override
@@ -493,7 +497,17 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
   public OzoneKey getkeyDetails(String volumeName, String bucketName,
                                   String keyName)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(keyName);
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+    KsmKeyInfo keyInfo =
+        keySpaceManagerClient.lookupKey(keyArgs);
+    return new OzoneKey(keyInfo);
   }
 
   @Override

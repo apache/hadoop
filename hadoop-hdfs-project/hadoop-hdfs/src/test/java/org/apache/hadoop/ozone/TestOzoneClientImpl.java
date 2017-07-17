@@ -60,9 +60,8 @@ public class TestOzoneClientImpl {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName);
-    //Assert to be done once infoVolume is implemented in OzoneClient.
-    //For now the test will fail if there are any Exception
-    // during volume creation
+    OzoneVolume volume = ozClient.getVolumeDetails(volumeName);
+    Assert.assertEquals(volumeName, volume.getVolumeName());
   }
 
   @Test
@@ -70,7 +69,9 @@ public class TestOzoneClientImpl {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName, "test");
-    //Assert has to be done after infoVolume implementation.
+    OzoneVolume volume = ozClient.getVolumeDetails(volumeName);
+    Assert.assertEquals(volumeName, volume.getVolumeName());
+    Assert.assertEquals("test", volume.getOwnerName());
   }
 
   @Test
@@ -79,6 +80,10 @@ public class TestOzoneClientImpl {
     String volumeName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName, "test",
         10000000000L);
+    OzoneVolume volume = ozClient.getVolumeDetails(volumeName);
+    Assert.assertEquals(volumeName, volume.getVolumeName());
+    Assert.assertEquals("test", volume.getOwnerName());
+    Assert.assertEquals(10000000000L, volume.getQuota());
   }
 
   @Test
@@ -102,7 +107,8 @@ public class TestOzoneClientImpl {
     String bucketName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
   }
 
   @Test
@@ -113,7 +119,10 @@ public class TestOzoneClientImpl {
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName,
         OzoneConsts.Versioning.ENABLED);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertEquals(OzoneConsts.Versioning.ENABLED,
+        bucket.getVersioning());
   }
 
   @Test
@@ -123,7 +132,9 @@ public class TestOzoneClientImpl {
     String bucketName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName, StorageType.SSD);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertEquals(StorageType.SSD, bucket.getStorageType());
   }
 
   @Test
@@ -135,7 +146,9 @@ public class TestOzoneClientImpl {
         OzoneAcl.OzoneACLRights.READ_WRITE);
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName, userAcl);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertTrue(bucket.getAcls().contains(userAcl));
   }
 
   @Test
@@ -149,7 +162,12 @@ public class TestOzoneClientImpl {
     ozClient.createBucket(volumeName, bucketName,
         OzoneConsts.Versioning.ENABLED,
         StorageType.SSD, userAcl);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertEquals(OzoneConsts.Versioning.ENABLED,
+        bucket.getVersioning());
+    Assert.assertEquals(StorageType.SSD, bucket.getStorageType());
+    Assert.assertTrue(bucket.getAcls().contains(userAcl));
   }
 
   @Test
@@ -178,7 +196,9 @@ public class TestOzoneClientImpl {
     OzoneOutputStream out = ozClient.createKey(volumeName, bucketName,
         keyName, value.getBytes().length);
     out.write(value.getBytes());
-    //Assert has to be done.
+    OzoneKey key = ozClient.getkeyDetails(volumeName, bucketName, keyName);
+    Assert.assertEquals(keyName, key.getKeyName());
+    //Content validation has to be done after getKey implementation.
   }
 
   /**
