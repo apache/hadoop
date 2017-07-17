@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.DeSelectFields;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.DeSelectFields.DeSelectType;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -123,9 +125,13 @@ public class AppInfo {
   public AppInfo() {
   } // JAXB needs this
 
-  @SuppressWarnings({ "rawtypes", "unchecked" })
   public AppInfo(ResourceManager rm, RMApp app, Boolean hasAccess,
       String schemePrefix) {
+    this(rm, app, hasAccess, schemePrefix, new DeSelectFields());
+  }
+
+  public AppInfo(ResourceManager rm, RMApp app, Boolean hasAccess,
+      String schemePrefix, DeSelectFields deSelects) {
     this.schemePrefix = schemePrefix;
     if (app != null) {
       String trackingUrl = app.getTrackingUrl();
@@ -201,13 +207,18 @@ public class AppInfo {
             clusterUsagePercentage = resourceReport.getClusterUsagePercentage();
           }
 
-          List<ResourceRequest> resourceRequestsRaw = rm.getRMContext()
+          /* When the deSelects parameter contains "resourceRequests",
+             it skips returning massive ResourceRequest objects and vice versa.
+             Default behavior is no skipping. (YARN-6280)
+          */
+          if (!deSelects.contains(DeSelectType.RESOURCE_REQUESTS)) {
+            List<ResourceRequest> resourceRequestsRaw = rm.getRMContext()
               .getScheduler()
               .getPendingResourceRequestsForAttempt(attempt.getAppAttemptId());
-
-          if (resourceRequestsRaw != null) {
-            for (ResourceRequest req : resourceRequestsRaw) {
-              resourceRequests.add(new ResourceRequestInfo(req));
+            if (resourceRequestsRaw != null) {
+              for (ResourceRequest req : resourceRequestsRaw) {
+                resourceRequests.add(new ResourceRequestInfo(req));
+              }
             }
           }
         }

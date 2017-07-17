@@ -443,7 +443,7 @@ public class TestRMWebServices extends JerseyTestBase {
         clusterinfo.getInt("totalMB"), clusterinfo.getInt("totalNodes"),
         clusterinfo.getInt("lostNodes"), clusterinfo.getInt("unhealthyNodes"),
         clusterinfo.getInt("decommissionedNodes"),
-        clusterinfo.getInt("rebootedNodes"),clusterinfo.getInt("activeNodes"),
+        clusterinfo.getInt("rebootedNodes"), clusterinfo.getInt("activeNodes"),
         clusterinfo.getInt("shutdownNodes"));
   }
 
@@ -652,12 +652,12 @@ public class TestRMWebServices extends JerseyTestBase {
     // verify we don't get any apps when querying
     HttpServletRequest mockHsr = mock(HttpServletRequest.class);
     AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
-        null, null, null, null, null, null, null, emptySet, emptySet);
+        null, null, null, null, null, null, null, emptySet, emptySet, null);
     assertTrue(appsInfo.getApps().isEmpty());
 
     // verify we don't get an NPE when specifying a final status query
     appsInfo = webSvc.getApps(mockHsr, null, emptySet, "FAILED",
-        null, null, null, null, null, null, null, emptySet, emptySet);
+        null, null, null, null, null, null, null, emptySet, emptySet, null);
     assertTrue(appsInfo.getApps().isEmpty());
   }
 

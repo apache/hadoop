@@ -426,7 +426,8 @@ public class RMWebServices extends WebServices {
       @QueryParam("finishedTimeBegin") String finishBegin,
       @QueryParam("finishedTimeEnd") String finishEnd,
       @QueryParam("applicationTypes") Set<String> applicationTypes,
-      @QueryParam("applicationTags") Set<String> applicationTags) {
+      @QueryParam("applicationTags") Set<String> applicationTags,
+      @QueryParam("deSelects") Set<String> unselectedFields) {
     boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
@@ -582,8 +583,11 @@ public class RMWebServices extends WebServices {
         }
       }
 
-      AppInfo app = new AppInfo(rm, rmapp,
-          hasAccess(rmapp, hsr), WebAppUtils.getHttpSchemePrefix(conf));
+      DeSelectFields deSelectFields = new DeSelectFields();
+      deSelectFields.initFields(unselectedFields);
+
+      AppInfo app = new AppInfo(rm, rmapp, hasAccess(rmapp, hsr),
+          WebAppUtils.getHttpSchemePrefix(conf), deSelectFields);
       allApps.add(app);
     }
     return allApps;
@@ -798,14 +802,20 @@ public class RMWebServices extends WebServices {
   @Path("/apps/{appid}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppInfo getApp(@Context HttpServletRequest hsr,
-      @PathParam("appid") String appId) {
+      @PathParam("appid") String appId,
+      @QueryParam("deSelects") Set<String> unselectedFields) {
     init();
     ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
-    return new AppInfo(rm, app, hasAccess(app, hsr), hsr.getScheme() + "://");
+
+    DeSelectFields deSelectFields = new DeSelectFields();
+    deSelectFields.initFields(unselectedFields);
+
+    return new AppInfo(rm, app, hasAccess(app, hsr), hsr.getScheme() + "://",
+        deSelectFields);
   }
 
   @GET
@@ -1473,7 +1483,7 @@ public class RMWebServices extends WebServices {
   }
 
   /**
-   * Generates a new ApplicationId which is then sent to the client
+   * Generates a new ApplicationId which is then sent to the client.
    * 
    * @param hsr
    *          the servlet request
@@ -1508,7 +1518,7 @@ public class RMWebServices extends WebServices {
   // get the new app id and submit app
   // set location header with new app location
   /**
-   * Function to submit an app to the RM
+   * Function to submit an app to the RM.
    * 
    * @param newApp
    *          structure containing information to construct the
@@ -1763,8 +1773,7 @@ public class RMWebServices extends WebServices {
               + KerberosAuthenticationHandler.TYPE + ", got type " + authType;
       throw new YarnException(msg);
     }
-    if (hsr
-      .getAttribute(DelegationTokenAuthenticationHandler.DELEGATION_TOKEN_UGI_ATTRIBUTE) != null) {
+    if (hsr.getAttribute(DelegationTokenAuthenticationHandler.DELEGATION_TOKEN_UGI_ATTRIBUTE) != null) {
       String msg =
           "Delegation token operations cannot be carried out using delegation"
               + " token authentication.";
