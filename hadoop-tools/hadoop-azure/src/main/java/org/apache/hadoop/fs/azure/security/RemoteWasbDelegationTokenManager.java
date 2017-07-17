@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- *  Class to manage delegation token operations by making rest call to remote service.
+ * Class to manage delegation token operations by making rest call to remote service.
  */
 public class RemoteWasbDelegationTokenManager
     implements WasbDelegationTokenManager {
@@ -64,24 +64,26 @@ public class RemoteWasbDelegationTokenManager
    * Default for delegation token service http retry policy spec.
    */
   private static final String DT_MANAGER_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
-      "1000,3,10000,2";
+      "10,3,100,2";
 
   private static final boolean
       DT_MANAGER_HTTP_CLIENT_RETRY_POLICY_ENABLED_DEFAULT = true;
 
   private static final Text WASB_DT_SERVICE_NAME = new Text("WASB_DT_SERVICE");
   /**
-   *  Query parameter value for Getting delegation token http request
+   * Query parameter value for Getting delegation token http request
    */
   private static final String GET_DELEGATION_TOKEN_OP = "GETDELEGATIONTOKEN";
   /**
    * Query parameter value for renewing delegation token http request
    */
-  private static final String RENEW_DELEGATION_TOKEN_OP = "RENEWDELEGATIONTOKEN";
+  private static final String RENEW_DELEGATION_TOKEN_OP =
+      "RENEWDELEGATIONTOKEN";
   /**
    * Query parameter value for canceling the delegation token http request
    */
-  private static final String CANCEL_DELEGATION_TOKEN_OP = "CANCELDELEGATIONTOKEN";
+  private static final String CANCEL_DELEGATION_TOKEN_OP =
+      "CANCELDELEGATIONTOKEN";
   /**
    * op parameter to represent the operation.
    */
@@ -100,6 +102,7 @@ public class RemoteWasbDelegationTokenManager
   private static final String TOKEN_PARAM_KEY_NAME = "token";
   private WasbRemoteCallHelper remoteCallHelper;
   private String[] dtServiceUrls;
+  private boolean isSpnegoTokenCacheEnabled;
 
   public RemoteWasbDelegationTokenManager(Configuration conf)
       throws IOException {
@@ -108,8 +111,11 @@ public class RemoteWasbDelegationTokenManager
         DT_MANAGER_HTTP_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
         DT_MANAGER_HTTP_CLIENT_RETRY_POLICY_SPEC_KEY,
         DT_MANAGER_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT);
+    this.isSpnegoTokenCacheEnabled =
+        conf.getBoolean(Constants.AZURE_ENABLE_SPNEGO_TOKEN_CACHE, true);
 
-    remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, true);
+    remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, true,
+        isSpnegoTokenCacheEnabled);
     this.dtServiceUrls =
         conf.getTrimmedStrings(KEY_DELEGATION_TOKEN_SERVICE_URLS);
     if (this.dtServiceUrls == null || this.dtServiceUrls.length <= 0) {
@@ -126,7 +132,8 @@ public class RemoteWasbDelegationTokenManager
         new URIBuilder().setPath(DEFAULT_DELEGATION_TOKEN_MANAGER_ENDPOINT)
             .addParameter(OP_PARAM_KEY_NAME, GET_DELEGATION_TOKEN_OP)
             .addParameter(RENEWER_PARAM_KEY_NAME, renewer)
-            .addParameter(SERVICE_PARAM_KEY_NAME, WASB_DT_SERVICE_NAME.toString());
+            .addParameter(SERVICE_PARAM_KEY_NAME,
+                WASB_DT_SERVICE_NAME.toString());
     String responseBody = remoteCallHelper
         .makeRemoteRequest(dtServiceUrls, uriBuilder.getPath(),
             uriBuilder.getQueryParams(), HttpGet.METHOD_NAME);
