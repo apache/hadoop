@@ -123,6 +123,16 @@
   </property>
 
   <property>
+    <description>
+      Comma separated class names of ApplicationMasterServiceProcessor
+      implementations. The processors will be applied in the order
+      they are specified.
+    </description>
+    <name>yarn.resourcemanager.application-master-service.processors</name>
+    <value></value>
+  </property>
+
+  <property>
       <description>
         This configures the HTTP endpoint for Yarn Daemons.The following
         values are supported:
