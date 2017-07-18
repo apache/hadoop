@@ -85,10 +85,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
 
-  // Set to 1.1 by YARN-5049
-  // Set to 1.2 by YARN-6127
-  private static final Version CURRENT_VERSION_INFO = Version
-      .newInstance(1, 2);
+  /**
+   * Changes from 1.0 to 1.1: Save AMRMProxy state in NMSS.
+   * Changes from 1.2 to 1.2: Save queued container information.
+   */
+  private static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 2);
 
   private static final String DELETION_TASK_KEY_PREFIX =
       "DeletionService/deltask_";
@@ -491,8 +492,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.delete(bytes(keyPrefix + CONTAINER_QUEUED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
-        List<String> unknownKeysForContainer =
-            containerUnknownKeySuffixes.removeAll(containerId);
+        List<String> unknownKeysForContainer = containerUnknownKeySuffixes
+            .removeAll(containerId);
         for (String unknownKeySuffix : unknownKeysForContainer) {
           batch.delete(bytes(keyPrefix + unknownKeySuffix));
         }
