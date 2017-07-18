@@ -21,15 +21,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Testing {@link LightWeightGSet} */
 public class TestLightWeightGSet {
-  public static final Log LOG = LogFactory.getLog(TestLightWeightGSet.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestLightWeightGSet.class);
 
   private static ArrayList<Integer> getRandomList(int length, int randomSeed) {
     Random random = new Random(randomSeed);

@@ -24,16 +24,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class TestCompositeGroupMapping {
-  public static final Log LOG = LogFactory.getLog(TestCompositeGroupMapping.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestCompositeGroupMapping.class);
   private static Configuration conf = new Configuration();
   
   private static class TestUser {

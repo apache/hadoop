@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.util.concurrent;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -32,8 +32,8 @@ import java.util.concurrent.ThreadFactory;
 public class HadoopScheduledThreadPoolExecutor extends
     ScheduledThreadPoolExecutor {
 
-  private static final Log LOG = LogFactory
-      .getLog(HadoopScheduledThreadPoolExecutor.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(HadoopScheduledThreadPoolExecutor.class);
 
   public HadoopScheduledThreadPoolExecutor(int corePoolSize) {
     super(corePoolSize);

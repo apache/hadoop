@@ -26,12 +26,12 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A daemon thread that waits for the next file system to renew.
@@ -39,8 +39,8 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 public class DelegationTokenRenewer
     extends Thread {
-  private static final Log LOG = LogFactory
-      .getLog(DelegationTokenRenewer.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(DelegationTokenRenewer.class);
 
   /** The renewable interface used by the renewer. */
   public interface Renewable {
@@ -243,7 +243,7 @@ public class DelegationTokenRenewer
         LOG.error("Interrupted while canceling token for " + fs.getUri()
             + "filesystem");
         if (LOG.isDebugEnabled()) {
-          LOG.debug(ie.getStackTrace());
+          LOG.debug("Exception in removeRenewAction: ", ie);
         }
       }
     }

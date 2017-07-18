@@ -18,8 +18,8 @@
 package org.apache.hadoop.util.concurrent;
 
 import com.google.common.util.concurrent.AbstractFuture;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -29,7 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** A {@link Future} implemented using an {@link AsyncGet} object. */
 public class AsyncGetFuture<T, E extends Throwable> extends AbstractFuture<T> {
-  public static final Log LOG = LogFactory.getLog(AsyncGetFuture.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(AsyncGetFuture.class);
 
   private final AtomicBoolean called = new AtomicBoolean(false);
   private final AsyncGet<T, E> asyncGet;

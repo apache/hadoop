@@ -19,8 +19,6 @@ package org.apache.hadoop.portmap;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcInfo;
@@ -39,6 +37,8 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.handler.timeout.IdleState;
 import org.jboss.netty.handler.timeout.IdleStateAwareChannelUpstreamHandler;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class RpcProgramPortmap extends IdleStateAwareChannelUpstreamHandler {
   static final int PROGRAM = 100000;
@@ -51,7 +51,8 @@ final class RpcProgramPortmap extends IdleStateAwareChannelUpstreamHandler {
   static final int PMAPPROC_DUMP = 4;
   static final int PMAPPROC_GETVERSADDR = 9;
 
-  private static final Log LOG = LogFactory.getLog(RpcProgramPortmap.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RpcProgramPortmap.class);
 
   private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<String, PortmapMapping>();
 

@@ -32,8 +32,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CreateFlag;
@@ -49,6 +47,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The load generator is a tool for testing NameNode behavior under
  * different client loads. Note there is a subclass of this clas that lets 
@@ -129,7 +129,7 @@ import com.google.common.base.Preconditions;
  *   -scriptFile <file name>: text file to parse for scripted operation
  */
 public class LoadGenerator extends Configured implements Tool {
-  public static final Log LOG = LogFactory.getLog(LoadGenerator.class);
+  public static final Logger LOG = LoggerFactory.getLogger(LoadGenerator.class);
   
   private volatile static boolean shouldRun = true;
   protected static Path root = DataGenerator.DEFAULT_ROOT;
@@ -341,7 +341,7 @@ public class LoadGenerator extends Configured implements Tool {
         executionTime[WRITE_CLOSE] += (Time.now() - startTime);
         numOfOps[WRITE_CLOSE]++;
       } finally {
-        IOUtils.cleanup(LOG, out);
+        IOUtils.cleanupWithLogger(LOG, out);
       }
     }
   }
@@ -651,7 +651,7 @@ public class LoadGenerator extends Configured implements Tool {
       System.err.println("Line: " + lineNum + ", " + e.getMessage());
       return -1;
     } finally {
-      IOUtils.cleanup(LOG, br);
+      IOUtils.cleanupWithLogger(LOG, br);
     }
     
     // Copy vectors to arrays of values, to avoid autoboxing overhead later

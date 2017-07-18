@@ -21,16 +21,17 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 public class TestGroupFallback {
-  public static final Log LOG = LogFactory.getLog(TestGroupFallback.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestGroupFallback.class);
 
   @Test
   public void testGroupShell() throws Exception {

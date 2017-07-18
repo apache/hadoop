@@ -35,8 +35,6 @@ import java.util.Stack;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -63,6 +61,8 @@ import org.apache.hadoop.util.ShutdownHookManager;
 
 import com.google.common.base.Preconditions;
 import org.apache.htrace.core.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The FileContext class provides an interface for users of the Hadoop
@@ -169,7 +169,7 @@ import org.apache.htrace.core.Tracer;
 @InterfaceStability.Stable
 public class FileContext {
   
-  public static final Log LOG = LogFactory.getLog(FileContext.class);
+  public static final Logger LOG = LoggerFactory.getLogger(FileContext.class);
   /**
    * Default permission for directory and symlink
    * In previous versions, this default permission was also used to
@@ -332,7 +332,7 @@ public class FileContext {
         }
       });
     } catch (InterruptedException ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString());
       throw new IOException("Failed to get the AbstractFileSystem for path: "
           + uri, ex);
     }
@@ -446,7 +446,7 @@ public class FileContext {
     } catch (UnsupportedFileSystemException ex) {
       throw ex;
     } catch (IOException ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString());
       throw new RuntimeException(ex);
     }
     return getFileContext(defaultAfs, aConf);

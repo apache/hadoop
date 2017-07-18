@@ -33,8 +33,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
@@ -46,14 +44,16 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This test validates that chmod, chown, chgrp returning correct exit codes
  * 
  */
 public class TestFsShellReturnCode {
-  private static final Log LOG = LogFactory
-      .getLog("org.apache.hadoop.fs.TestFsShellReturnCode");
+  private static final Logger LOG = LoggerFactory
+      .getLogger("org.apache.hadoop.fs.TestFsShellReturnCode");
 
   private static final Configuration conf = new Configuration();
   private static FileSystem fileSys;

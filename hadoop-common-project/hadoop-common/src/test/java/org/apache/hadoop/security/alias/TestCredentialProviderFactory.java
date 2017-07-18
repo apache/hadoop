@@ -23,8 +23,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,13 +37,16 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestCredentialProviderFactory {
-  public static final Log LOG = LogFactory.getLog(TestCredentialProviderFactory.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestCredentialProviderFactory.class);
 
   @Rule
   public final TestName test = new TestName();
