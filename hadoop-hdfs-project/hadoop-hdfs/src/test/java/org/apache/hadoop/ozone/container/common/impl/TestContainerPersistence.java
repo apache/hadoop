@@ -57,6 +57,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -72,6 +73,8 @@ import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper
     .setDataChecksum;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -452,6 +455,41 @@ public class TestContainerPersistence {
         sha.reset();
       }
     }
+  }
+
+  /**
+   * Test partial within a single chunk.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testPartialRead() throws Exception {
+    final int datalen = 1024;
+    final int start = datalen/4;
+    final int length = datalen/2;
+
+    String containerName = OzoneUtils.getRequestID();
+    String keyName = OzoneUtils.getRequestID();
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+
+    pipeline.setContainerName(containerName);
+    ContainerData cData = new ContainerData(containerName);
+    cData.addMetadata("VOLUME", "shire");
+    cData.addMetadata("owner)", "bilbo");
+    containerManager.createContainer(pipeline, cData);
+    ChunkInfo info = getChunk(keyName, 0, 0, datalen);
+    byte[] data = getData(datalen);
+    setDataChecksum(info, data);
+    chunkManager.writeChunk(pipeline, keyName, info, data);
+
+    byte[] readData = chunkManager.readChunk(pipeline, keyName, info);
+    assertTrue(Arrays.equals(data, readData));
+
+    ChunkInfo info2 = getChunk(keyName, 0, start, length);
+    byte[] readData2 = chunkManager.readChunk(pipeline, keyName, info2);
+    assertEquals(length, readData2.length);
+    assertTrue(Arrays.equals(
+        Arrays.copyOfRange(data, start, start + length), readData2));
   }
 
   /**
