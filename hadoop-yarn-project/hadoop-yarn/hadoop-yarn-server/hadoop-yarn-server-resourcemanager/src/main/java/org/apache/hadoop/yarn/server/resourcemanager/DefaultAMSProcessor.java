@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceUtils;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceProcessor;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -81,7 +82,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
+/**
+ * This is the default Application Master Service processor. It has be the
+ * last processor in the @{@link AMSProcessingChain}.
+ */
+final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
   private static final Log LOG = LogFactory.getLog(DefaultAMSProcessor.class);
 
@@ -93,17 +98,19 @@ class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
 
-  private final RMContext rmContext;
-  private final YarnScheduler scheduler;
+  private RMContext rmContext;
 
-  DefaultAMSProcessor(RMContext rmContext, YarnScheduler scheduler) {
-    this.rmContext = rmContext;
-    this.scheduler = scheduler;
+  @Override
+  public void init(ApplicationMasterServiceContext amsContext,
+      ApplicationMasterServiceProcessor nextProcessor) {
+    this.rmContext = (RMContext)amsContext;
   }
 
-  public RegisterApplicationMasterResponse registerApplicationMaster(
+  @Override
+  public void registerApplicationMaster(
       ApplicationAttemptId applicationAttemptId,
-      RegisterApplicationMasterRequest request) throws IOException {
+      RegisterApplicationMasterRequest request,
+      RegisterApplicationMasterResponse response) throws IOException {
 
     RMApp app = getRmContext().getRMApps().get(
         applicationAttemptId.getApplicationId());
@@ -116,8 +123,6 @@ class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         RMAuditLogger.AuditConstants.REGISTER_AM,
         "ApplicationMasterService", app.getApplicationId(),
         applicationAttemptId);
-    RegisterApplicationMasterResponse response = recordFactory
-        .newRecordInstance(RegisterApplicationMasterResponse.class);
     response.setMaximumResourceCapability(getScheduler()
         .getMaximumResourceCapability(app.getQueue()));
     response.setApplicationACLs(app.getRMAppAttempt(applicationAttemptId)
@@ -165,11 +170,11 @@ class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setSchedulerResourceTypes(getScheduler()
         .getSchedulingResourceTypes());
-    return response;
   }
 
-  public AllocateResponse allocate(ApplicationAttemptId appAttemptId,
-      AllocateRequest request) throws YarnException {
+  @Override
+  public void allocate(ApplicationAttemptId appAttemptId,
+      AllocateRequest request, AllocateResponse response) throws YarnException {
 
     handleProgress(appAttemptId, request);
 
@@ -259,42 +264,38 @@ class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
           "blacklistRemovals: " + blacklistRemovals);
     }
     RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
-    AllocateResponse allocateResponse =
-        recordFactory.newRecordInstance(AllocateResponse.class);
 
     if (allocation.getNMTokens() != null &&
         !allocation.getNMTokens().isEmpty()) {
-      allocateResponse.setNMTokens(allocation.getNMTokens());
+      response.setNMTokens(allocation.getNMTokens());
     }
 
     // Notify the AM of container update errors
     ApplicationMasterServiceUtils.addToUpdateContainerErrors(
-        allocateResponse, updateErrors);
+        response, updateErrors);
 
     // update the response with the deltas of node status changes
-    handleNodeUpdates(app, allocateResponse);
+    handleNodeUpdates(app, response);
 
     ApplicationMasterServiceUtils.addToAllocatedContainers(
-        allocateResponse, allocation.getContainers());
+        response, allocation.getContainers());
 
-    allocateResponse.setCompletedContainersStatuses(appAttempt
+    response.setCompletedContainersStatuses(appAttempt
         .pullJustFinishedContainers());
-    allocateResponse.setAvailableResources(allocation.getResourceLimit());
+    response.setAvailableResources(allocation.getResourceLimit());
 
-    addToContainerUpdates(allocateResponse, allocation,
+    addToContainerUpdates(response, allocation,
         ((AbstractYarnScheduler)getScheduler())
             .getApplicationAttempt(appAttemptId).pullUpdateContainerErrors());
 
-    allocateResponse.setNumClusterNodes(getScheduler().getNumClusterNodes());
+    response.setNumClusterNodes(getScheduler().getNumClusterNodes());
 
     // add preemption to the allocateResponse message (if any)
-    allocateResponse
-        .setPreemptionMessage(generatePreemptionMessage(allocation));
+    response.setPreemptionMessage(generatePreemptionMessage(allocation));
 
     // Set application priority
-    allocateResponse.setApplicationPriority(app
+    response.setApplicationPriority(app
         .getApplicationPriority());
-    return allocateResponse;
   }
 
   private void handleNodeUpdates(RMApp app, AllocateResponse allocateResponse) {
@@ -343,20 +344,20 @@ class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
             .getProgress()));
   }
 
-  public FinishApplicationMasterResponse finishApplicationMaster(
+  @Override
+  public void finishApplicationMaster(
       ApplicationAttemptId applicationAttemptId,
-      FinishApplicationMasterRequest request) {
+      FinishApplicationMasterRequest request,
+      FinishApplicationMasterResponse response) {
     RMApp app =
         getRmContext().getRMApps().get(applicationAttemptId.getApplicationId());
     // For UnmanagedAMs, return true so they don't retry
-    FinishApplicationMasterResponse response =
-        FinishApplicationMasterResponse.newInstance(
+    response.setIsUnregistered(
             app.getApplicationSubmissionContext().getUnmanagedAM());
     getRmContext().getDispatcher().getEventHandler().handle(
         new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
             .getTrackingUrl(), request.getFinalApplicationStatus(), request
             .getDiagnostics()));
-    return response;
   }
 
   private PreemptionMessage generatePreemptionMessage(Allocation allocation){
@@ -416,7 +417,7 @@ class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   }
 
   protected YarnScheduler getScheduler() {
-    return scheduler;
+    return rmContext.getScheduler();
   }
 
   private static void addToContainerUpdates(AllocateResponse allocateResponse,

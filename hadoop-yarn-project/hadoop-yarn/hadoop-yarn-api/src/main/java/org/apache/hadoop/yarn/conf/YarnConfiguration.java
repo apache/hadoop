@@ -99,7 +99,7 @@ public class YarnConfiguration extends Configuration {
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
   public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = false;
-  
+
   ////////////////////////////////
   // IPC Configs
   ////////////////////////////////
@@ -144,6 +144,9 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_PORT = 8032;
   public static final String DEFAULT_RM_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_PORT;
+
+  public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
+      RM_PREFIX + "application-master-service.processors";
 
   /** The actual bind address for the RM.*/
   public static final String RM_BIND_HOST =
