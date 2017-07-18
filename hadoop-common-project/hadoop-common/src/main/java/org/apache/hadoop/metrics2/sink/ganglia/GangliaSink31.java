@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.metrics2.sink.ganglia;
 
-import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
 
 /**
  * This code supports Ganglia 3.1
@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class GangliaSink31 extends GangliaSink30 {
 
-  public final Log LOG = LogFactory.getLog(this.getClass());    
+  public final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
   /**
    * The method sends metrics to Ganglia servers. The method has been taken from

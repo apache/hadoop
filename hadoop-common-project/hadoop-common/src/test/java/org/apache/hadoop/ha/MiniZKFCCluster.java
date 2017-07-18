@@ -23,8 +23,6 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -39,6 +37,8 @@ import org.apache.zookeeper.server.ZooKeeperServer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Harness for starting two dummy ZK FailoverControllers, associated with
@@ -55,7 +55,8 @@ public class MiniZKFCCluster {
   
   private DummySharedResource sharedResource = new DummySharedResource();
   
-  private static final Log LOG = LogFactory.getLog(MiniZKFCCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniZKFCCluster.class);
   
   public MiniZKFCCluster(Configuration conf, ZooKeeperServer zks) {
     this.conf = conf;

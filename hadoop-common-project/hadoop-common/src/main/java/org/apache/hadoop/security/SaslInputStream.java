@@ -30,10 +30,10 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A SaslInputStream is composed of an InputStream and a SaslServer (or
@@ -45,7 +45,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class SaslInputStream extends InputStream implements ReadableByteChannel {
-  public static final Log LOG = LogFactory.getLog(SaslInputStream.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SaslInputStream.class);
 
   private final DataInputStream inStream;
   /** Should we wrap the communication channel? */

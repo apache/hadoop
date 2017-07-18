@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,9 +32,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * FileBasedIPList loads a list of subnets in CIDR format and ip addresses from
  * a file.
@@ -43,7 +43,8 @@ import org.apache.commons.logging.LogFactory;
  */
 public class FileBasedIPList implements IPList {
 
-  private static final Log LOG = LogFactory.getLog(FileBasedIPList.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileBasedIPList.class);
 
   private final String fileName;
   private final MachineList addressList;
@@ -107,7 +108,7 @@ public class FileBasedIPList implements IPList {
         }
       }
     } catch (IOException ioe) {
-      LOG.error(ioe);
+      LOG.error(ioe.toString());
       throw ioe;
     }
     return null;

@@ -23,10 +23,10 @@ import java.util.ArrayList;
 
 import javax.net.ssl.SSLEngine;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.mortbay.jetty.security.SslSelectChannelConnector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This subclass of the Jetty SslSelectChannelConnector exists solely to
@@ -36,8 +36,8 @@ import org.mortbay.jetty.security.SslSelectChannelConnector;
  */
 @InterfaceAudience.Private
 public class SslSelectChannelConnectorSecure extends SslSelectChannelConnector {
-  public static final Log LOG =
-      LogFactory.getLog(SslSelectChannelConnectorSecure.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SslSelectChannelConnectorSecure.class);
 
   public SslSelectChannelConnectorSecure() {
     super();

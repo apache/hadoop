@@ -23,14 +23,15 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration; 
+import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An implementation of a round-robin scheme for disk allocation for creating
  * files. The way it works is that it is kept track what disk was last
@@ -245,8 +246,8 @@ public class LocalDirAllocator {
   
   private static class AllocatorPerContext {
 
-    private final Log LOG =
-      LogFactory.getLog(AllocatorPerContext.class);
+    private static final Logger LOG =
+        LoggerFactory.getLogger(AllocatorPerContext.class);
 
     private Random dirIndexRandomizer = new Random();
     private String contextCfgItemName;

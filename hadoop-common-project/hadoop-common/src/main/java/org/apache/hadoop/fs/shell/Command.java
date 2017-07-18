@@ -26,8 +26,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +33,8 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An abstract class for the execution of a file system command
@@ -58,7 +58,7 @@ abstract public class Command extends Configured {
   private int depth = 0;
   protected ArrayList<Exception> exceptions = new ArrayList<Exception>();
 
-  private static final Log LOG = LogFactory.getLog(Command.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Command.class);
 
   /** allows stdout to be captured if necessary */
   public PrintStream out = System.out;

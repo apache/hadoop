@@ -26,8 +26,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +34,8 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -45,8 +45,8 @@ import static org.mockito.Mockito.verify;
 @InterfaceStability.Evolving
 public class TestAccessControlList {
 
-  private static final Log LOG =
-    LogFactory.getLog(TestAccessControlList.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAccessControlList.class);
 
   /**
    * Test the netgroups (groups in ACL rules that start with @)

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.io.compress.zlib;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
@@ -28,6 +26,8 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A collection of factories to create the right 
@@ -35,8 +35,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  * 
  */
 public class ZlibFactory {
-  private static final Log LOG =
-    LogFactory.getLog(ZlibFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZlibFactory.class);
 
   private static boolean nativeZlibLoaded = false;
   

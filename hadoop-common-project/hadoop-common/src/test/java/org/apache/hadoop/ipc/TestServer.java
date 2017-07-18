@@ -27,12 +27,12 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server.Call;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 /**
  * This is intended to be a set of unit tests for the 
@@ -136,7 +136,7 @@ public class TestServer {
   public void testLogExceptions() throws Exception {
     final Configuration conf = new Configuration();
     final Call dummyCall = new Call(0, 0, null, null);
-    Log logger = mock(Log.class);
+    Logger logger = mock(Logger.class);
     Server server = new Server("0.0.0.0", 0, LongWritable.class, 1, conf) {
       @Override
       public Writable call(
@@ -154,12 +154,12 @@ public class TestServer {
 
     // No stack trace should be logged for a terse exception.
     server.logException(logger, new TestException2(), dummyCall);
-    verify(logger, times(1)).info(anyObject());
+    verify(logger, times(1)).info(anyString());
 
     // Full stack trace should be logged for other exceptions.
     final Throwable te3 = new TestException3();
     server.logException(logger, te3, dummyCall);
-    verify(logger, times(1)).info(anyObject(), eq(te3));
+    verify(logger, times(1)).info(anyString(), eq(te3));
   }
 
   @Test

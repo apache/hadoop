@@ -21,15 +21,15 @@ package org.apache.hadoop.security;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JniBasedUnixGroupsNetgroupMappingWithFallback implements
     GroupMappingServiceProvider {
 
-  private static final Log LOG = LogFactory
-      .getLog(JniBasedUnixGroupsNetgroupMappingWithFallback.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(JniBasedUnixGroupsNetgroupMappingWithFallback.class);
 
   private GroupMappingServiceProvider impl;
 

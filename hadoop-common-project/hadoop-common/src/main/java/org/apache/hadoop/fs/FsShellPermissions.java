@@ -22,7 +22,6 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.ChmodParser;
@@ -32,6 +31,7 @@ import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.util.Shell;
+import org.slf4j.Logger;
 
 /**
  * This class is the home for file permissions related commands.
@@ -41,7 +41,7 @@ import org.apache.hadoop.util.Shell;
 @InterfaceStability.Unstable
 public class FsShellPermissions extends FsCommand {
 
-  static Log LOG = FsShell.LOG;
+  static final Logger LOG = FsShell.LOG;
   
   /**
    * Register the permission related commands with the factory

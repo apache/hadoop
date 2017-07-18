@@ -77,8 +77,6 @@ import javax.xml.transform.stream.StreamResult;
 
 import com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -98,6 +96,8 @@ import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.stax2.XMLInputFactory2;
 import org.codehaus.stax2.XMLStreamReader2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -183,11 +183,11 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Stable
 public class Configuration implements Iterable<Map.Entry<String,String>>,
                                       Writable {
-  private static final Log LOG =
-    LogFactory.getLog(Configuration.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Configuration.class);
 
-  private static final Log LOG_DEPRECATION =
-    LogFactory.getLog("org.apache.hadoop.conf.Configuration.deprecation");
+  private static final Logger LOG_DEPRECATION = LoggerFactory.getLogger(
+          "org.apache.hadoop.conf.Configuration.deprecation");
 
   private boolean quietmode = true;
 
@@ -2801,10 +2801,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
       return null;
     } catch (IOException e) {
-      LOG.fatal("error parsing conf " + name, e);
+      LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
     } catch (XMLStreamException e) {
-      LOG.fatal("error parsing conf " + name, e);
+      LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
     }
   }

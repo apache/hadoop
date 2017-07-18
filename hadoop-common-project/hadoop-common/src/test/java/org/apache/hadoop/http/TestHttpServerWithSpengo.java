@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.http;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -38,6 +36,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -53,7 +53,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestHttpServerWithSpengo {
 
-  static final Log LOG = LogFactory.getLog(TestHttpServerWithSpengo.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestHttpServerWithSpengo.class);
 
   private static final String SECRET_STR = "secret";
   private static final String HTTP_USER = "HTTP";
