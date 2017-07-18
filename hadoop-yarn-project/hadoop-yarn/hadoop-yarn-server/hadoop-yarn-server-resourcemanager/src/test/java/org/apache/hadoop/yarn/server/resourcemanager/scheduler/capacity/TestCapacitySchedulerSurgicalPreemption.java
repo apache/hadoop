@@ -813,9 +813,11 @@ public class TestCapacitySchedulerSurgicalPreemption
 
   @Test(timeout = 60000)
   public void testPreemptionForFragmentatedCluster() throws Exception {
+    // Set additional_balance_queue_based_on_reserved_res to true to get
+    // additional preemptions.
     conf.setBoolean(
-        CapacitySchedulerConfiguration.PREEMPTION_SELECT_CANDIDATES_FOR_RESERVED_CONTAINERS,
-        false);
+        CapacitySchedulerConfiguration.ADDITIONAL_RESOURCE_BALANCE_BASED_ON_RESERVED_CONTAINERS,
+        true);
 
     /**
      * Two queues, a/b, each of them are 50/50
