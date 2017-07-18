@@ -28,8 +28,6 @@ import java.net.InetSocketAddress;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureRequestProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureResponseProto;
@@ -39,6 +37,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Unit test for supporting method-name based compatible RPCs. */
 public class TestRPCCompatibility {
@@ -47,8 +47,8 @@ public class TestRPCCompatibility {
   private static RPC.Server server;
   private ProtocolProxy<?> proxy;
 
-  public static final Log LOG =
-    LogFactory.getLog(TestRPCCompatibility.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestRPCCompatibility.class);
   
   private static Configuration conf = new Configuration();
 

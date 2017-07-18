@@ -32,8 +32,6 @@ import java.util.Map;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -49,11 +47,14 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecret
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 public class TestDelegationToken {
-  private static final Log LOG = LogFactory.getLog(TestDelegationToken.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDelegationToken.class);
   private static final Text KIND = new Text("MY KIND");
 
   public static class TestDelegationTokenIdentifier 

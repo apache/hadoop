@@ -22,10 +22,9 @@ import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
@@ -36,7 +35,7 @@ import com.google.common.primitives.UnsignedBytes;
  * class to be able to compare arrays that start at non-zero offsets.
  */
 abstract class FastByteComparisons {
-  static final Log LOG = LogFactory.getLog(FastByteComparisons.class);
+  static final Logger LOG = LoggerFactory.getLogger(FastByteComparisons.class);
 
   /**
    * Lexicographically compare two byte arrays.

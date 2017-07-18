@@ -40,9 +40,9 @@ import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.PerformanceAdvisory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -98,7 +98,7 @@ public class NativeIO {
        write.  */
     public static int SYNC_FILE_RANGE_WAIT_AFTER = 4;
 
-    private static final Log LOG = LogFactory.getLog(NativeIO.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NativeIO.class);
 
     // Set to true via JNI if possible
     public static boolean fadvisePossible = false;
@@ -634,7 +634,7 @@ public class NativeIO {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(NativeIO.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NativeIO.class);
 
   private static boolean nativeLoaded = false;
 
@@ -940,10 +940,10 @@ public class NativeIO {
           position += transferred;
         }
       } finally {
-        IOUtils.cleanup(LOG, output);
-        IOUtils.cleanup(LOG, fos);
-        IOUtils.cleanup(LOG, input);
-        IOUtils.cleanup(LOG, fis);
+        IOUtils.cleanupWithLogger(LOG, output);
+        IOUtils.cleanupWithLogger(LOG, fos);
+        IOUtils.cleanupWithLogger(LOG, input);
+        IOUtils.cleanupWithLogger(LOG, fis);
       }
     }
   }

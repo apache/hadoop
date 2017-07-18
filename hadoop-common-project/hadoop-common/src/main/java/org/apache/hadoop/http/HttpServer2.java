@@ -46,8 +46,6 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -96,6 +94,9 @@ import org.mortbay.util.MultiException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
 
@@ -112,7 +113,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_US
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class HttpServer2 implements FilterContainer {
-  public static final Log LOG = LogFactory.getLog(HttpServer2.class);
+  public static final Logger LOG = LoggerFactory.getLogger(HttpServer2.class);
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";

@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A helper to load the native hadoop code i.e. libhadoop.so.
@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 @InterfaceStability.Unstable
 public class NativeCodeLoader {
 
-  private static final Log LOG =
-    LogFactory.getLog(NativeCodeLoader.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NativeCodeLoader.class);
   
   private static boolean nativeCodeLoaded = false;
   

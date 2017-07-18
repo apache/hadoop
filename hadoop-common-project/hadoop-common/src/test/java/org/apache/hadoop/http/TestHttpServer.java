@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.http;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -40,6 +38,8 @@ import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.mortbay.jetty.Connector;
 import org.mortbay.util.ajax.JSON;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -72,7 +72,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_S
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
-  static final Log LOG = LogFactory.getLog(TestHttpServer.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer2 server;
   private static final int MAX_THREADS = 10;
 

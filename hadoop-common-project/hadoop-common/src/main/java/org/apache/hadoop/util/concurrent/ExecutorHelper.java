@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.util.concurrent;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -29,8 +29,8 @@ import java.util.concurrent.Future;
 /** Helper functions for Executors. */
 public final class ExecutorHelper {
 
-  private static final Log LOG = LogFactory
-      .getLog(ExecutorHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ExecutorHelper.class);
 
   static void logThrowableFromAfterExecute(Runnable r, Throwable t) {
     if (LOG.isDebugEnabled()) {

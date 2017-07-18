@@ -23,8 +23,6 @@ import java.util.Collection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -272,7 +270,7 @@ public class SshFenceByTcpPort extends Configured
    * Adapter from JSch's logger interface to our log4j
    */
   private static class LogAdapter implements com.jcraft.jsch.Logger {
-    static final Log LOG = LogFactory.getLog(
+    static final Logger LOG = LoggerFactory.getLogger(
         SshFenceByTcpPort.class.getName() + ".jsch");
 
     @Override
@@ -285,9 +283,8 @@ public class SshFenceByTcpPort extends Configured
       case com.jcraft.jsch.Logger.WARN:
         return LOG.isWarnEnabled();
       case com.jcraft.jsch.Logger.ERROR:
-        return LOG.isErrorEnabled();
       case com.jcraft.jsch.Logger.FATAL:
-        return LOG.isFatalEnabled();
+        return LOG.isErrorEnabled();
       default:
         return false;
       }
@@ -306,10 +303,8 @@ public class SshFenceByTcpPort extends Configured
         LOG.warn(message);
         break;
       case com.jcraft.jsch.Logger.ERROR:
-        LOG.error(message);
-        break;
       case com.jcraft.jsch.Logger.FATAL:
-        LOG.fatal(message);
+        LOG.error(message);
         break;
       default:
         break;

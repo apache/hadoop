@@ -24,8 +24,6 @@ import java.util.concurrent.*;
 
 import static com.google.common.base.Preconditions.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
@@ -36,13 +34,16 @@ import static org.apache.hadoop.metrics2.util.Contracts.*;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An adapter class for metrics sink and associated filters
  */
 class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
 
-  private final Log LOG = LogFactory.getLog(MetricsSinkAdapter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MetricsSinkAdapter.class);
   private final String name, description, context;
   private final MetricsSink sink;
   private final MetricsFilter sourceFilter, recordFilter, metricFilter;
@@ -210,7 +211,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
     stopping = true;
     sinkThread.interrupt();
     if (sink instanceof Closeable) {
-      IOUtils.cleanup(LOG, (Closeable)sink);
+      IOUtils.cleanupWithLogger(LOG, (Closeable)sink);
     }
     try {
       sinkThread.join();

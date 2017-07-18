@@ -68,18 +68,19 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public class TestCodec {
 
-  private static final Log LOG= LogFactory.getLog(TestCodec.class);
+  private static final Logger LOG= LoggerFactory.getLogger(TestCodec.class);
 
   private Configuration conf = new Configuration();
   private int count = 10000;
@@ -373,7 +374,7 @@ public class TestCodec {
       }
       LOG.info("Wrote " + seq + " records to " + file);
     } finally {
-      IOUtils.cleanup(LOG, fout);
+      IOUtils.cleanupWithLogger(LOG, fout);
       CodecPool.returnCompressor(cmp);
     }
     return file;

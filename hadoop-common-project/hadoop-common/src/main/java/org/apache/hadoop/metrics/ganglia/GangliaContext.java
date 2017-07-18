@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.Charsets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,6 +32,8 @@ import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.hadoop.metrics.spi.Util;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Context for sending metrics to Ganglia.
@@ -63,7 +63,7 @@ public class GangliaContext extends AbstractMetricsContext {
   private static final int BUFFER_SIZE = 1500;       // as per libgmond.c
   private static final int DEFAULT_MULTICAST_TTL = 1;
 
-  private final Log LOG = LogFactory.getLog(this.getClass());    
+  private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
   private static final Map<Class,String> typeTable = new HashMap<Class,String>(5);
     
@@ -126,7 +126,7 @@ public class GangliaContext extends AbstractMetricsContext {
         datagramSocket = new DatagramSocket();
       }
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString());
     }
   }
 

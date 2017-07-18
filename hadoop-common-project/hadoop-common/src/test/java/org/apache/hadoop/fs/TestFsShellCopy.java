@@ -29,17 +29,17 @@ import static org.junit.Assume.assumeTrue;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFsShellCopy {
-  static final Log LOG = LogFactory.getLog(TestFsShellCopy.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestFsShellCopy.class);
 
   static Configuration conf;
   static FsShell shell; 

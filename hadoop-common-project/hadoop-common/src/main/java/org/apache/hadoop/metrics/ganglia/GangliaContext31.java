@@ -23,11 +23,11 @@ import java.net.DatagramPacket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.net.DNS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Context for sending metrics to Ganglia version 3.1.x.
@@ -42,8 +42,8 @@ public class GangliaContext31 extends GangliaContext {
 
   String hostName = "UNKNOWN.example.com";
 
-  private static final Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.util.GangliaContext31");
+  private static final Logger LOG =
+      LoggerFactory.getLogger("org.apache.hadoop.util.GangliaContext31");
 
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
@@ -62,7 +62,7 @@ public class GangliaContext31 extends GangliaContext {
           conf.get("dfs.datanode.dns.interface","default"),
           conf.get("dfs.datanode.dns.nameserver","default"));
       } catch (UnknownHostException uhe) {
-        LOG.error(uhe);
+        LOG.error(uhe.toString());
     	hostName = "UNKNOWN.example.com";
       }
     }

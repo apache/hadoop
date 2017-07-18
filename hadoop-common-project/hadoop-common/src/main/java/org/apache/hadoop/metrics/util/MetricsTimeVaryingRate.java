@@ -19,8 +19,8 @@ package org.apache.hadoop.metrics.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The MetricsTimeVaryingRate class is for a rate based metric that
@@ -36,8 +36,8 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MetricsTimeVaryingRate extends MetricsBase {
 
-  private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.metrics.util");
+  private static final Logger LOG =
+      LoggerFactory.getLogger("org.apache.hadoop.metrics.util");
 
   static class Metrics {
     int numOperations = 0;
