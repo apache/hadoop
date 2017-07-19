@@ -214,7 +214,7 @@ public class TestCredentialProviderFactory {
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue(s.getPermission().toString().equals("rw-------"));
+    assertEquals("rw-------", s.getPermission().toString());
     assertTrue(file + " should exist", file.isFile());
 
     // check permission retention after explicit change
@@ -236,8 +236,8 @@ public class TestCredentialProviderFactory {
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue("Unexpected permissions: " + s.getPermission().toString(),
-        s.getPermission().toString().equals("rw-------"));
+    assertEquals("Unexpected permissions: " + s.getPermission().toString(),
+        "rw-------", s.getPermission().toString());
     assertTrue(file + " should exist", file.isFile());
 
     // check permission retention after explicit change
@@ -267,8 +267,8 @@ public class TestCredentialProviderFactory {
 
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue("Permissions should have been retained from the preexisting " +
-    		"keystore.", s.getPermission().toString().equals("rwxrwxrwx"));
+    assertEquals("Permissions should have been retained from the preexisting " +
+        "keystore.", "rwxrwxrwx", s.getPermission().toString());
   }
 }
 
