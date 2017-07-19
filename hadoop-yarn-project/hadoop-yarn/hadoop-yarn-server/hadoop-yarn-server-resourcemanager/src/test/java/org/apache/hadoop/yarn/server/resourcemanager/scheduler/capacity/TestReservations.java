@@ -1207,7 +1207,7 @@ public class TestReservations {
     // not over the limit
     Resource limit = Resources.createResource(14 * GB, 0);
     ResourceLimits userResourceLimits = new ResourceLimits(clusterResource);
-    boolean res = a.canAssignToUser(clusterResource, user_0, limit, app_0, "", userResourceLimits);
+    boolean res = a.canAssignToUser(clusterResource, user_0, limit, app_0.getCurrentReservation(), "", userResourceLimits);
     assertTrue(res);
     assertEquals(Resources.none(), userResourceLimits.getAmountNeededUnreserve());
 
@@ -1215,7 +1215,7 @@ public class TestReservations {
     // set limit so it subtracts reservations and it can continue
     limit = Resources.createResource(12 * GB, 0);
     userResourceLimits = new ResourceLimits(clusterResource);
-    res = a.canAssignToUser(clusterResource, user_0, limit, app_0,
+    res = a.canAssignToUser(clusterResource, user_0, limit, app_0.getCurrentReservation(),
              "", userResourceLimits);
     assertTrue(res);
     // limit set to 12GB, we are using 13GB (8 allocated,  5 reserved), to get under limit
@@ -1228,7 +1228,7 @@ public class TestReservations {
     userResourceLimits = new ResourceLimits(clusterResource);
 
     // should now return false since feature off
-    res = a.canAssignToUser(clusterResource, user_0, limit, app_0, "", userResourceLimits);
+    res = a.canAssignToUser(clusterResource, user_0, limit, app_0.getCurrentReservation(), "", userResourceLimits);
     assertFalse(res);
     assertEquals(Resources.none(), userResourceLimits.getAmountNeededUnreserve());
   }

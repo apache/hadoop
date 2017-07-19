@@ -956,25 +956,56 @@ public class LeafQueue extends AbstractCSQueue {
         return CSAssignment.NULL_ASSIGNMENT;
       }
 
+      Map<String, CachedUserLimit> userLimits = new HashMap<>();
+      boolean needAssignToQueueCheck = true;
       for (Iterator<FiCaSchedulerApp> assignmentIterator =
            orderingPolicy.getAssignmentIterator(); assignmentIterator
                .hasNext(); ) {
         FiCaSchedulerApp application = assignmentIterator.next();
 
         // Check queue max-capacity limit
-        if (!super.canAssignToThisQueue(clusterResource, node.getPartition(),
-            currentResourceLimits, application.getCurrentReservation(),
-            schedulingMode)) {
-          return CSAssignment.NULL_ASSIGNMENT;
+        Resource appReserved = application.getCurrentReservation();
+        if (needAssignToQueueCheck) {
+          if (!super.canAssignToThisQueue(clusterResource, node.getPartition(),
+              currentResourceLimits, appReserved, schedulingMode)) {
+            return CSAssignment.NULL_ASSIGNMENT;
+          }
+          // If there was no reservation and canAssignToThisQueue returned
+          // true, there is no reason to check further.
+          if (!this.reservationsContinueLooking
+              || appReserved.equals(Resources.none()) || !node.getPartition()
+                  .equals(CommonNodeLabelsManager.NO_LABEL)) {
+            needAssignToQueueCheck = false;
+          }
         }
 
+        CachedUserLimit cul = userLimits.get(application.getUser());
+        Resource cachedUserLimit = null;
+        if (cul != null) {
+          cachedUserLimit = cul.userLimit;
+        }
         Resource userLimit =
             computeUserLimitAndSetHeadroom(application, clusterResource,
-                node.getPartition(), schedulingMode);
+                node.getPartition(), schedulingMode, cachedUserLimit);
+        if (cul == null) {
+          cul = new CachedUserLimit(userLimit);
+          userLimits.put(application.getUser(), cul);
+        }
 
         // Check user limit
-        if (!canAssignToUser(clusterResource, application.getUser(), userLimit,
-            application, node.getPartition(), currentResourceLimits)) {
+        boolean userAssignable = true;
+        if (!cul.canAssign && Resources.fitsIn(appReserved, cul.reservation)) {
+          userAssignable = false;
+        } else {
+          userAssignable =
+              canAssignToUser(clusterResource, application.getUser(), userLimit,
+                  appReserved, node.getPartition(), currentResourceLimits);
+          if (!userAssignable && Resources.fitsIn(cul.reservation, appReserved)) {
+            cul.canAssign = false;
+            cul.reservation = appReserved;
+          }
+        }
+        if (!userAssignable) {
           application.updateAMContainerDiagnostics(AMState.ACTIVATED,
               "User capacity has reached its maximum limit.");
           continue;
@@ -1113,19 +1144,21 @@ public class LeafQueue extends AbstractCSQueue {
   @Lock({LeafQueue.class, FiCaSchedulerApp.class})
   Resource computeUserLimitAndSetHeadroom(FiCaSchedulerApp application,
       Resource clusterResource, String nodePartition,
-      SchedulingMode schedulingMode) {
+      SchedulingMode schedulingMode, Resource userLimit) {
     String user = application.getUser();
     User queueUser = getUser(user);
 
     // Compute user limit respect requested labels,
     // TODO, need consider headroom respect labels also
-    Resource userLimit =
+    if (userLimit == null) {
+      userLimit =
         computeUserLimit(application.getUser(), clusterResource, queueUser,
             nodePartition, schedulingMode, true);
-
+    }
     setQueueResourceLimitsInfo(clusterResource);
 
     Resource headroom =
+        metrics.getUserMetrics(user) == null ? Resources.none() :
         getHeadroom(queueUser, cachedResourceLimitsForHeadroom.getLimit(),
             clusterResource, userLimit, nodePartition);
     
@@ -1133,8 +1166,7 @@ public class LeafQueue extends AbstractCSQueue {
       LOG.debug("Headroom calculation for user " + user + ": " + 
           " userLimit=" + userLimit + 
           " queueMaxAvailRes=" + cachedResourceLimitsForHeadroom.getLimit() +
-          " consumed=" + queueUser.getUsed() + 
-          " headroom=" + headroom);
+          " consumed=" + queueUser.getUsed());
     }
     
     CapacityHeadroomProvider headroomProvider = new CapacityHeadroomProvider(
@@ -1289,36 +1321,37 @@ public class LeafQueue extends AbstractCSQueue {
   
   @Private
   protected synchronized boolean canAssignToUser(Resource clusterResource,
-      String userName, Resource limit, FiCaSchedulerApp application,
+      String userName, Resource limit, Resource rsrv,
       String nodePartition, ResourceLimits currentResourceLimits) {
     User user = getUser(userName);
-
+    Resource used = user.getUsed(nodePartition);
     currentResourceLimits.setAmountNeededUnreserve(Resources.none());
 
     // Note: We aren't considering the current request since there is a fixed
     // overhead of the AM, but it's a > check, not a >= check, so...
     if (Resources
         .greaterThan(resourceCalculator, clusterResource,
-            user.getUsed(nodePartition),
+            used,
             limit)) {
       // if enabled, check to see if could we potentially use this node instead
       // of a reserved node if the application has reserved containers
-      if (this.reservationsContinueLooking &&
-          nodePartition.equals(CommonNodeLabelsManager.NO_LABEL)) {
+      if (this.reservationsContinueLooking && !rsrv.equals(Resources.none())
+          && nodePartition.equals(CommonNodeLabelsManager.NO_LABEL)) {
+
         if (Resources.lessThanOrEqual(
             resourceCalculator,
             clusterResource,
-            Resources.subtract(user.getUsed(),
-                application.getCurrentReservation()), limit)) {
+            Resources.subtract(used,
+                rsrv), limit)) {
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("User " + userName + " in queue " + getQueueName()
                 + " will exceed limit based on reservations - " + " consumed: "
-                + user.getUsed() + " reserved: "
-                + application.getCurrentReservation() + " limit: " + limit);
+                + used + " reserved: "
+                + rsrv + " limit: " + limit);
           }
           Resource amountNeededToUnreserve =
-              Resources.subtract(user.getUsed(nodePartition), limit);
+              Resources.subtract(used, limit);
           // we can only acquire a new container if we unreserve first to
           // respect user-limit
           currentResourceLimits.setAmountNeededUnreserve(amountNeededToUnreserve);
@@ -1328,7 +1361,7 @@ public class LeafQueue extends AbstractCSQueue {
       if (LOG.isDebugEnabled()) {
         LOG.debug("User " + userName + " in queue " + getQueueName()
             + " will exceed limit - " + " consumed: "
-            + user.getUsed(nodePartition) + " limit: " + limit);
+            + used + " limit: " + limit);
       }
       return false;
     }
@@ -1623,7 +1656,7 @@ public class LeafQueue extends AbstractCSQueue {
       synchronized (application) {
         computeUserLimitAndSetHeadroom(application, clusterResource,
             RMNodeLabelsManager.NO_LABEL,
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
       }
     }
   }
@@ -1733,7 +1766,7 @@ public class LeafQueue extends AbstractCSQueue {
     public ResourceUsage getResourceUsage() {
       return userResourceUsage;
     }
-    
+
     public synchronized float resetAndUpdateUsageRatio(
         ResourceCalculator resourceCalculator,
         Resource resource, String nodePartition) {
@@ -2106,6 +2139,16 @@ public class LeafQueue extends AbstractCSQueue {
     
     public Resource getClusterResource() {
       return clusterResource;
+    }
+  }
+
+  static class CachedUserLimit {
+    final Resource userLimit;
+    boolean canAssign = true;
+    Resource reservation = Resources.none();
+
+    CachedUserLimit(Resource userLimit) {
+      this.userLimit = userLimit;
     }
   }
 
