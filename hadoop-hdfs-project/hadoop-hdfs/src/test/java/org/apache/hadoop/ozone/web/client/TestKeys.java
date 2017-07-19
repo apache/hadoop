@@ -25,7 +25,6 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Status;
-import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -401,7 +400,7 @@ public class TestKeys {
       fail("List keys should have thrown when using invalid volume name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.SERVER_ERROR.getMessage(), e);
+          Status.BUCKET_NOT_FOUND.toString(), e);
     }
 
     try {
@@ -410,7 +409,7 @@ public class TestKeys {
       fail("List keys should have thrown when using invalid bucket name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          ErrorTable.SERVER_ERROR.getMessage(), e);
+          Status.BUCKET_NOT_FOUND.toString(), e);
     }
   }
 

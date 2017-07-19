@@ -151,24 +151,32 @@ public abstract class BucketProcessTemplate {
                          IOException fsExp) throws OzoneException {
     LOG.debug("IOException: {}", fsExp);
 
+    OzoneException exp = null;
     if (fsExp instanceof FileAlreadyExistsException) {
-      throw ErrorTable
+      exp = ErrorTable
           .newError(ErrorTable.BUCKET_ALREADY_EXISTS, reqID, bucket, hostName);
     }
 
     if (fsExp instanceof DirectoryNotEmptyException) {
-      throw ErrorTable
+      exp = ErrorTable
           .newError(ErrorTable.BUCKET_NOT_EMPTY, reqID, bucket, hostName);
     }
 
     if (fsExp instanceof NoSuchFileException) {
-      throw ErrorTable
+      exp = ErrorTable
           .newError(ErrorTable.INVALID_BUCKET_NAME, reqID, bucket, hostName);
     }
 
-    // default we don't handle this exception yet.
-
-    throw ErrorTable.newError(ErrorTable.SERVER_ERROR, reqID, bucket, hostName);
+    // Default we don't handle this exception yet,
+    // report a Server Internal Error.
+    if (exp == null) {
+      exp =
+          ErrorTable.newError(ErrorTable.SERVER_ERROR, reqID, bucket, hostName);
+      if (fsExp != null) {
+        exp.setMessage(fsExp.getMessage());
+      }
+    }
+    throw exp;
   }
 
   /**
