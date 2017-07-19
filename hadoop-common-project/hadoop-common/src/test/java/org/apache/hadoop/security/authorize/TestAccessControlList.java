@@ -187,18 +187,18 @@ public class TestAccessControlList {
     AccessControlList acl;
 
     acl = new AccessControlList("*");
-    assertTrue(acl.toString().equals("All users are allowed"));
+    assertEquals("All users are allowed", acl.toString());
     validateGetAclString(acl);
 
     acl = new AccessControlList(" ");
-    assertTrue(acl.toString().equals("No users are allowed"));
+    assertEquals("No users are allowed", acl.toString());
 
     acl = new AccessControlList("user1,user2");
-    assertTrue(acl.toString().equals("Users [user1, user2] are allowed"));
+    assertEquals("Users [user1, user2] are allowed", acl.toString());
     validateGetAclString(acl);
 
     acl = new AccessControlList("user1,user2 ");// with space
-    assertTrue(acl.toString().equals("Users [user1, user2] are allowed"));
+    assertEquals("Users [user1, user2] are allowed", acl.toString());
     validateGetAclString(acl);
 
     acl = new AccessControlList(" group1,group2");
