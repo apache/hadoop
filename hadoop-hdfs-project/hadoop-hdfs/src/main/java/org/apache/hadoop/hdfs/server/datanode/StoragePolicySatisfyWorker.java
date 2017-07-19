@@ -137,8 +137,8 @@ public class StoragePolicySatisfyWorker {
    * thread.
    */
   void stop() {
-    movementTrackerThread.interrupt();
     movementTracker.stopTracking();
+    movementTrackerThread.interrupt();
   }
 
   /**
@@ -147,7 +147,8 @@ public class StoragePolicySatisfyWorker {
   void waitToFinishWorkerThread() {
     try {
       movementTrackerThread.join(3000);
-    } catch (InterruptedException ie) {
+    } catch (InterruptedException ignore) {
+      // ignore
     }
   }
 

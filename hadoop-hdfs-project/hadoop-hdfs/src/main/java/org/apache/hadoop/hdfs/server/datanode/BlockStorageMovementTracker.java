@@ -77,7 +77,8 @@ public class BlockStorageMovementTracker implements Runnable {
             moverTaskFutures.wait(2000);
           }
         } catch (InterruptedException ignore) {
-          // ignore
+          // Sets interrupt flag of this thread.
+          Thread.currentThread().interrupt();
         }
       }
       try {
@@ -102,12 +103,19 @@ public class BlockStorageMovementTracker implements Runnable {
             synchronized (moverTaskFutures) {
               moverTaskFutures.remove(trackId);
             }
-            // handle completed or inprogress blocks movements per trackId.
-            blksMovementsStatusHandler.handle(resultPerTrackIdList);
+            if (running) {
+              // handle completed or inprogress blocks movements per trackId.
+              blksMovementsStatusHandler.handle(resultPerTrackIdList);
+            }
             movementResults.remove(trackId);
           }
         }
-      } catch (ExecutionException | InterruptedException e) {
+      } catch (InterruptedException e) {
+        if (running) {
+          LOG.error("Exception while moving block replica to target storage"
+              + " type", e);
+        }
+      } catch (ExecutionException e) {
         // TODO: Do we need failure retries and implement the same if required.
         LOG.error("Exception while moving block replica to target storage type",
             e);
