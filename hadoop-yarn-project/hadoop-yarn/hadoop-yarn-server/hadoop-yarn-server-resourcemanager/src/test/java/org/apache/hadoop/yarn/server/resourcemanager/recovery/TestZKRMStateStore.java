@@ -269,20 +269,22 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        return dispatcher.apprejectedEvnt;
+        return dispatcher.appsavefailedEvnt;
       }
     }, 100, 5000);
   }
 
   static class TestAppRejDispatcher extends TestDispatcher {
-    private boolean apprejectedEvnt;
+    private boolean appsavefailedEvnt;
 
     public void handle(Event event) {
-      if (event instanceof RMAppEvent
-          && event.getType().equals(RMAppEventType.APP_REJECTED)) {
-        apprejectedEvnt = true;
+      if (event instanceof RMAppEvent && event.getType()
+          .equals(RMAppEventType.APP_SAVE_FAILED)) {
+        appsavefailedEvnt = true;
       }
-    };
+    }
+
+    ;
   }
 
   @Test (timeout = 60000)
