@@ -479,6 +479,16 @@ public class SecondaryNameNode implements Runnable,
             DFS_SECONDARY_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
         DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
 
+    final boolean xFrameEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED,
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED_DEFAULT);
+
+    final String xFrameOptionValue = conf.getTrimmed(
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE,
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE_DEFAULT);
+
+    builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
+
     infoServer = builder.build();
     infoServer.setAttribute("secondary.name.node", this);
     infoServer.setAttribute("name.system.image", checkpointImage);
