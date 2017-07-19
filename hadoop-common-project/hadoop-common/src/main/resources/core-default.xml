@@ -1343,7 +1343,14 @@
     configuration
   </description>
 </property>
-
+<property>
+  <name>fs.azure.authorization.caching.enable</name>
+  <value>true</value>
+  <description>
+    Config flag to enable caching of authorization results and saskeys in WASB.
+    This flag is relevant only when fs.azure.authorization is enabled.
+  </description>
+</property>
 
 <property>
   <name>io.seqfile.compress.blocksize</name>

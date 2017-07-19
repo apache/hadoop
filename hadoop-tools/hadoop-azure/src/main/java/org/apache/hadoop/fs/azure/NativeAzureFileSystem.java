@@ -2113,9 +2113,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Capture the absolute path and the path to key.
     Path absolutePath = makeAbsolute(f);
-
-    performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "getFileStatus", absolutePath);
-
     String key = pathToKey(absolutePath);
     if (key.length() == 0) { // root always exists
       return newDirectory(null, absolutePath);

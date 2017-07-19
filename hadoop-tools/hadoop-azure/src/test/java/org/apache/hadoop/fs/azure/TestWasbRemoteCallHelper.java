@@ -344,7 +344,7 @@ public class TestWasbRemoteCallHelper
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForServiceLocal())))
         .thenReturn(mockHttpResponseServiceLocal);
 
-    //Need 3 times because performop()  does 3 fs operations.
+    //Need 2 times because performop()  does 2 fs operations.
     Mockito.when(mockHttpEntity.getContent())
         .thenReturn(new ByteArrayInputStream(validJsonResponse()
             .getBytes(StandardCharsets.UTF_8)))
@@ -356,8 +356,8 @@ public class TestWasbRemoteCallHelper
 
     performop(mockHttpClient);
 
-    Mockito.verify(mockHttpClient, times(3)).execute(Mockito.argThat(new HttpGetForServiceLocal()));
-    Mockito.verify(mockHttpClient, times(3)).execute(Mockito.argThat(new HttpGetForService2()));
+    Mockito.verify(mockHttpClient, times(2)).execute(Mockito.argThat(new HttpGetForServiceLocal()));
+    Mockito.verify(mockHttpClient, times(2)).execute(Mockito.argThat(new HttpGetForService2()));
   }
 
   @Test
