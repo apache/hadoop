@@ -31,8 +31,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -46,9 +44,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.primitives.Longs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestCryptoCodec {
-  private static final Log LOG= LogFactory.getLog(TestCryptoCodec.class);
+  private static final Logger LOG= LoggerFactory.getLogger(TestCryptoCodec
+      .class);
   private static byte[] key = new byte[16];
   private static byte[] iv = new byte[16];
   private static final int bufferSize = 4096;

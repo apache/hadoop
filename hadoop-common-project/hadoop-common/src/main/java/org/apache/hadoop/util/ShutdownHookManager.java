@@ -18,9 +18,9 @@
 package org.apache.hadoop.util;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,7 +47,8 @@ public class ShutdownHookManager {
 
   private static final ShutdownHookManager MGR = new ShutdownHookManager();
 
-  private static final Log LOG = LogFactory.getLog(ShutdownHookManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ShutdownHookManager.class);
   private static final long TIMEOUT_DEFAULT = 10;
   private static final TimeUnit TIME_UNIT_DEFAULT = TimeUnit.SECONDS;
 

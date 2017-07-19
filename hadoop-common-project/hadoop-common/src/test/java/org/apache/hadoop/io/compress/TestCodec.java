@@ -49,8 +49,6 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
@@ -81,10 +79,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestCodec {
 
-  private static final Log LOG= LogFactory.getLog(TestCodec.class);
+  private static final Logger LOG= LoggerFactory.getLogger(TestCodec.class);
 
   private Configuration conf = new Configuration();
   private int count = 10000;
@@ -382,7 +382,7 @@ public class TestCodec {
       }
       LOG.info("Wrote " + seq + " records to " + file);
     } finally {
-      IOUtils.cleanup(LOG, fout);
+      IOUtils.cleanupWithLogger(LOG, fout);
       CodecPool.returnCompressor(cmp);
     }
     return file;

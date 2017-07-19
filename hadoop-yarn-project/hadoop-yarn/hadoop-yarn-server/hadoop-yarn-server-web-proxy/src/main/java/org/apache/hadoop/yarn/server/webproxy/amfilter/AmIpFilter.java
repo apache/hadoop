@@ -23,10 +23,12 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collection;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -38,12 +40,12 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +68,8 @@ public class AmIpFilter implements Filter {
   private String[] proxyHosts;
   private Set<String> proxyAddresses = null;
   private long lastUpdate;
-  private Map<String, String> proxyUriBases;
+  @VisibleForTesting
+  Map<String, String> proxyUriBases;
 
   @Override
   public void init(FilterConfig conf) throws ServletException {
@@ -187,24 +190,55 @@ public class AmIpFilter implements Filter {
     }
   }
 
-  protected String findRedirectUrl() throws ServletException {
-    String addr;
-    if (proxyUriBases.size() == 1) {  // external proxy or not RM HA
+  @VisibleForTesting
+  public String findRedirectUrl() throws ServletException {
+    String addr = null;
+    if (proxyUriBases.size() == 1) {
+      // external proxy or not RM HA
       addr = proxyUriBases.values().iterator().next();
-    } else {                          // RM HA
+    } else {
+      // RM HA
       YarnConfiguration conf = new YarnConfiguration();
-      String activeRMId = RMHAUtils.findActiveRMHAId(conf);
-      String addressPropertyPrefix = YarnConfiguration.useHttps(conf)
-          ? YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS
-          : YarnConfiguration.RM_WEBAPP_ADDRESS;
-      String host = conf.get(
-          HAUtil.addSuffix(addressPropertyPrefix, activeRMId));
-      addr = proxyUriBases.get(host);
+      for (String rmId : getRmIds(conf)) {
+        String url = getUrlByRmId(conf, rmId);
+        if (isValidUrl(url)) {
+          addr = url;
+          break;
+        }
+      }
     }
+
     if (addr == null) {
       throw new ServletException(
           "Could not determine the proxy server for redirection");
     }
     return addr;
+  }
+
+  @VisibleForTesting
+  Collection<String> getRmIds(YarnConfiguration conf) {
+    return conf.getStringCollection(YarnConfiguration.RM_HA_IDS);
+  }
+
+  @VisibleForTesting
+  String getUrlByRmId(YarnConfiguration conf, String rmId) {
+    String addressPropertyPrefix = YarnConfiguration.useHttps(conf) ?
+        YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS :
+        YarnConfiguration.RM_WEBAPP_ADDRESS;
+    String host = conf.get(HAUtil.addSuffix(addressPropertyPrefix, rmId));
+    return proxyUriBases.get(host);
+  }
+
+  private boolean isValidUrl(String url) {
+    boolean isValid = false;
+    try {
+      HttpURLConnection conn =
+          (HttpURLConnection) new URL(url).openConnection();
+      conn.connect();
+      isValid = conn.getResponseCode() == HttpURLConnection.HTTP_OK;
+    } catch (Exception e) {
+      LOG.debug("Failed to connect to " + url + ": " + e.toString());
+    }
+    return isValid;
   }
 }

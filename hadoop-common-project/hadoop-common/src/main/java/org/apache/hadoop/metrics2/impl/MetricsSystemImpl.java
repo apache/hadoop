@@ -36,8 +36,6 @@ import com.google.common.annotations.VisibleForTesting;
 import static com.google.common.base.Preconditions.*;
 
 import org.apache.commons.configuration2.PropertiesConfiguration;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.util.ArithmeticUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -62,6 +60,8 @@ import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A base class for metrics system singletons
@@ -70,7 +70,7 @@ import org.apache.hadoop.util.Time;
 @Metrics(context="metricssystem")
 public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
 
-  static final Log LOG = LogFactory.getLog(MetricsSystemImpl.class);
+  static final Logger LOG = LoggerFactory.getLogger(MetricsSystemImpl.class);
   static final String MS_NAME = "MetricsSystem";
   static final String MS_STATS_NAME = MS_NAME +",sub=Stats";
   static final String MS_STATS_DESC = "Metrics system metrics";

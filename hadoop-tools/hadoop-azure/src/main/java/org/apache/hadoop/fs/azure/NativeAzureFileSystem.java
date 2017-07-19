@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -39,6 +38,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.List;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -60,6 +61,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
@@ -687,6 +689,14 @@ public class NativeAzureFileSystem extends FileSystem {
    */
   static final String AZURE_DEFAULT_GROUP_DEFAULT = "supergroup";
 
+  /**
+   * Configuration property used to specify list of users that can perform
+   * chown operation when authorization is enabled in WASB.
+   */
+  public static final String AZURE_CHOWN_USERLIST_PROPERTY_NAME = "fs.azure.chown.allowed.userlist";
+
+  static final String AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
+
   static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME =
       "fs.azure.block.location.impersonatedhost";
   private static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT =
@@ -743,7 +753,7 @@ public class NativeAzureFileSystem extends FileSystem {
     // File length, valid only for streams over block blobs.
     private long fileLength;
 
-    public NativeAzureFsInputStream(DataInputStream in, String key, long fileLength) {
+    NativeAzureFsInputStream(InputStream in, String key, long fileLength) {
       this.in = in;
       this.key = key;
       this.isPageBlob = store.isPageBlobKey(key);
@@ -814,27 +824,6 @@ public class NativeAzureFileSystem extends FileSystem {
         }
 
        throw e;
-      }
-    }
-
-    @Override
-    public synchronized  void readFully(long position, byte[] buffer, int offset, int length)
-        throws IOException {
-      validatePositionedReadArgs(position, buffer, offset, length);
-
-      int nread = 0;
-      while (nread < length) {
-        // In case BlobInputStream is used, mark() can act as a hint to read ahead only this
-        // length instead of 4 MB boundary.
-        in.mark(length - nread);
-        int nbytes = read(position + nread,
-            buffer,
-            offset + nread,
-            length - nread);
-        if (nbytes < 0) {
-          throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
-        }
-        nread += nbytes;
       }
     }
 
@@ -909,9 +898,14 @@ public class NativeAzureFileSystem extends FileSystem {
           throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
         }
         if (this.pos > pos) {
-          IOUtils.closeStream(in);
-          in = store.retrieve(key);
-          this.pos = in.skip(pos);
+          if (in instanceof Seekable) {
+            ((Seekable) in).seek(pos);
+            this.pos = pos;
+          } else {
+            IOUtils.closeStream(in);
+            in = store.retrieve(key);
+            this.pos = in.skip(pos);
+          }
         } else {
           this.pos += in.skip(pos - this.pos);
         }
@@ -2119,9 +2113,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Capture the absolute path and the path to key.
     Path absolutePath = makeAbsolute(f);
-
-    performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "getFileStatus", absolutePath);
-
     String key = pathToKey(absolutePath);
     if (key.length() == 0) { // root always exists
       return newDirectory(null, absolutePath);
@@ -2538,7 +2529,7 @@ public class NativeAzureFileSystem extends FileSystem {
           + " is a directory not a file.");
     }
 
-    DataInputStream inputStream = null;
+    InputStream inputStream;
     try {
       inputStream = store.retrieve(key);
     } catch(Exception ex) {
@@ -2944,6 +2935,33 @@ public class NativeAzureFileSystem extends FileSystem {
 
     if (metadata == null) {
       throw new FileNotFoundException("File doesn't exist: " + p);
+    }
+
+    /* If authorization is enabled, check if the user has privileges
+    *  to change the ownership of file/folder
+    */
+    if (this.azureAuthorization && username != null) {
+      String[] listOfUsers = getConf().getTrimmedStrings(AZURE_CHOWN_USERLIST_PROPERTY_NAME,
+        AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE);
+      boolean shouldSkipUserCheck = listOfUsers.length == 1 && listOfUsers[0].equals("*");
+      // skip the check if the chown allowed users config value is set as '*'
+      if (!shouldSkipUserCheck) {
+        UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+        UserGroupInformation actualUgi = currentUgi.getRealUser();
+
+        if (actualUgi == null) {
+          actualUgi = currentUgi;
+        }
+
+        List<String> userList = Arrays.asList(listOfUsers);
+        if (userList.contains("*")) {
+          throw new IllegalArgumentException("User list must contain "
+          + "either '*' or list of user names, but not both.");
+        } else if (!userList.contains(actualUgi.getShortUserName())) {
+          throw new WasbAuthorizationException(String.format("user '%s' does not have the privilege to change the ownership of files/folders.",
+            actualUgi.getShortUserName()));
+        }
+      }
     }
 
     PermissionStatus newPermissionStatus = new PermissionStatus(

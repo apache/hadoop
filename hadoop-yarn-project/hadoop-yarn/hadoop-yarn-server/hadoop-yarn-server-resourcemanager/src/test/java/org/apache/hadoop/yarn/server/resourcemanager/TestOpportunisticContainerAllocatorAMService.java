@@ -79,6 +79,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo
+    .FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -651,6 +654,11 @@ public class TestOpportunisticContainerAllocatorAMService {
       @Override
       public RMContainerTokenSecretManager getContainerTokenSecretManager() {
         return new RMContainerTokenSecretManager(conf);
+      }
+
+      @Override
+      public ResourceScheduler getScheduler() {
+        return new FifoScheduler();
       }
     };
     Container c = factory.newRecordInstance(Container.class);

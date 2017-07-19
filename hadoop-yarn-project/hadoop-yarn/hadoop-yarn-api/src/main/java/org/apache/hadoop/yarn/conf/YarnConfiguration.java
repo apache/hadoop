@@ -103,7 +103,7 @@ public class YarnConfiguration extends Configuration {
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
   public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = false;
-  
+
   ////////////////////////////////
   // IPC Configs
   ////////////////////////////////
@@ -149,6 +149,9 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_PORT = 8032;
   public static final String DEFAULT_RM_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_PORT;
+
+  public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
+      RM_PREFIX + "application-master-service.processors";
 
   /** The actual bind address for the RM.*/
   public static final String RM_BIND_HOST =
@@ -209,6 +212,12 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "scheduler.include-port-in-node-name";
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
+
+  /** Configured scheduler queue placement rules. */
+  public static final String QUEUE_PLACEMENT_RULES = YARN_PREFIX
+      + "scheduler.queue-placement-rules";
+  /** UserGroupMappingPlacementRule configuration string. */
+  public static final String USER_GROUP_PLACEMENT_RULE = "user-group";
 
   /** Enable Resource Manager webapp ui actions */
   public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =

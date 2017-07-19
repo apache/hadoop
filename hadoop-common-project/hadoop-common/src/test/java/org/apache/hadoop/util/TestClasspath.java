@@ -28,21 +28,22 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests covering the classpath command-line utility.
  */
 public class TestClasspath {
 
-  private static final Log LOG = LogFactory.getLog(TestClasspath.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestClasspath
+      .class);
   private static final File TEST_DIR = GenericTestUtils.getTestDir(
       "TestClasspath");
   private static final Charset UTF8 = Charset.forName("UTF-8");
@@ -75,7 +76,7 @@ public class TestClasspath {
   public void tearDown() {
     System.setOut(oldStdout);
     System.setErr(oldStderr);
-    IOUtils.cleanup(LOG, printStdout, printStderr);
+    IOUtils.cleanupWithLogger(LOG, printStdout, printStderr);
     assertTrue(FileUtil.fullyDelete(TEST_DIR));
   }
 

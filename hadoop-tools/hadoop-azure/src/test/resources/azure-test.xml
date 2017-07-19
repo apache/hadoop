@@ -31,9 +31,8 @@
 
   <property>
     <name>fs.azure.secure.mode</name>
-    <value>false</value>
+    <value>true</value>
   </property>
-
 
   <!-- Save the above configuration properties in a separate file named -->
   <!-- azure-auth-keys.xml in the same directory as this file. -->

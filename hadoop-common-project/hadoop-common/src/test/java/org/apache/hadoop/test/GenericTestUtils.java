@@ -141,6 +141,20 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * A helper used in log4j2 migration to accept legacy
+   * org.apache.commons.logging apis.
+   * <p>
+   * And will be removed after migration.
+   *
+   * @param log   a log
+   * @param level level to be set
+   */
+  @Deprecated
+  public static void setLogLevel(Log log, org.slf4j.event.Level level) {
+    setLogLevel(log, Level.toLevel(level.toString()));
+  }
+
+  /**
    * @deprecated
    * use {@link #setLogLevel(org.slf4j.Logger, org.slf4j.event.Level)} instead
    */
@@ -172,6 +186,22 @@ public abstract class GenericTestUtils {
     setLogLevel(toLog4j(logger), Level.toLevel(level.toString()));
   }
 
+  public static void setRootLogLevel(org.slf4j.event.Level level) {
+    setLogLevel(LogManager.getRootLogger(), Level.toLevel(level.toString()));
+  }
+
+  public static org.slf4j.event.Level toLevel(String level) {
+    return toLevel(level, org.slf4j.event.Level.DEBUG);
+  }
+
+  public static org.slf4j.event.Level toLevel(
+      String level, org.slf4j.event.Level defaultLevel) {
+    try {
+      return org.slf4j.event.Level.valueOf(level);
+    } catch (IllegalArgumentException e) {
+      return defaultLevel;
+    }
+  }
   /**
    * Extracts the name of the method where the invocation has happened
    * @return String name of the invoking method
@@ -305,25 +335,40 @@ public abstract class GenericTestUtils {
     }
   }  
 
+  /**
+   * Wait for the specified test to return true. The test will be performed
+   * initially and then every {@code checkEveryMillis} until at least
+   * {@code waitForMillis} time has expired. If {@code check} is null or
+   * {@code waitForMillis} is less than {@code checkEveryMillis} this method
+   * will throw an {@link IllegalArgumentException}.
+   *
+   * @param check the test to perform
+   * @param checkEveryMillis how often to perform the test
+   * @param waitForMillis the amount of time after which no more tests will be
+   * performed
+   * @throws TimeoutException if the test does not return true in the allotted
+   * time
+   * @throws InterruptedException if the method is interrupted while waiting
+   */
   public static void waitFor(Supplier<Boolean> check, int checkEveryMillis,
       int waitForMillis) throws TimeoutException, InterruptedException {
     Preconditions.checkNotNull(check, ERROR_MISSING_ARGUMENT);
-    Preconditions.checkArgument(waitForMillis > checkEveryMillis,
+    Preconditions.checkArgument(waitForMillis >= checkEveryMillis,
         ERROR_INVALID_ARGUMENT);
 
-    long st = Time.now();
-    do {
-      boolean result = check.get();
-      if (result) {
-        return;
-      }
-      
+    long st = Time.monotonicNow();
+    boolean result = check.get();
+
+    while (!result && (Time.monotonicNow() - st < waitForMillis)) {
       Thread.sleep(checkEveryMillis);
-    } while (Time.now() - st < waitForMillis);
-    
-    throw new TimeoutException("Timed out waiting for condition. " +
-        "Thread diagnostics:\n" +
-        TimedOutTestsListener.buildThreadDiagnosticString());
+      result = check.get();
+    }
+
+    if (!result) {
+      throw new TimeoutException("Timed out waiting for condition. " +
+          "Thread diagnostics:\n" +
+          TimedOutTestsListener.buildThreadDiagnosticString());
+    }
   }
 
   /**

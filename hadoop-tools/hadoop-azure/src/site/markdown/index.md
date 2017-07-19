@@ -412,6 +412,56 @@ The service is expected to return a response in JSON format for GETDELEGATIONTOK
     }
 }
 ```
+### chown behaviour when authorization is enabled in WASB
+
+When authorization is enabled, only the users listed in the following configuration
+are allowed to change the owning user of files/folders in WASB. The configuration
+value takes a comma seperated list of user names who are allowed to perform chown.
+
+```xml
+<property>
+  <name>fs.azure.chown.allowed.userlist</name>
+  <value>user1,user2</value>
+</property>
+```
+
+Caching of both SAS keys and Authorization responses can be enabled using the following setting:
+The cache settings are applicable only when fs.azure.authorization is enabled.
+The cache is maintained at a filesystem object level.
+```
+    <property>
+      <name>fs.azure.authorization.caching.enable</name>
+      <value>true</value>
+    </property>
+```
+
+The maximum number of entries that that cache can hold can be customized using the following setting:
+```
+    <property>
+      <name>fs.azure.authorization.caching.maxentries</name>
+      <value>512</value>
+    </property>
+```
+
+ The validity of an authorization cache-entry can be controlled using the following setting:
+ Setting the value to zero disables authorization-caching.
+ If the key is not specified, a default expiry duration of 5m takes effect.
+ ```
+    <property>
+      <name>fs.azure.authorization.cacheentry.expiry.period</name>
+      <value>5m</value>
+    </property>
+```
+
+ The validity of a SASKey cache-entry can be controlled using the following setting.
+ Setting the value to zero disables SASKey-caching.
+ If the key is not specified, the default expiry duration specified in the sas-key request takes effect.
+ ```
+    <property>
+      <name>fs.azure.saskey.cacheentry.expiry.period</name>
+      <value>90d</value>
+    </property>
+```
 
 ## Testing the hadoop-azure Module
 

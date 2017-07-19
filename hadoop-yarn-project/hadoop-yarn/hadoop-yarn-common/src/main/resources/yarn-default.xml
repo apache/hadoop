@@ -123,6 +123,16 @@
   </property>
 
   <property>
+    <description>
+      Comma separated class names of ApplicationMasterServiceProcessor
+      implementations. The processors will be applied in the order
+      they are specified.
+    </description>
+    <name>yarn.resourcemanager.application-master-service.processors</name>
+    <value></value>
+  </property>
+
+  <property>
       <description>
         This configures the HTTP endpoint for Yarn Daemons.The following
         values are supported:
@@ -3114,6 +3124,16 @@
     </description>
     <name>yarn.timeline-service.http-cross-origin.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Comma-separated list of PlacementRules to determine how applications
+      submitted by certain users get mapped to certain queues. Default is
+      user-group, which corresponds to UserGroupMappingPlacementRule.
+    </description>
+    <name>yarn.scheduler.queue-placement-rules</name>
+    <value>user-group</value>
   </property>
 
 </configuration>

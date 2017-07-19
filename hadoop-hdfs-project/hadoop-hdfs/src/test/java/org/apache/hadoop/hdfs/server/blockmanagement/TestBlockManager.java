@@ -1219,7 +1219,7 @@ public class TestBlockManager {
     }
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testBlockManagerMachinesArray() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final MiniDFSCluster cluster =
@@ -1230,6 +1230,8 @@ public class TestBlockManager {
     final Path filePath = new Path("/tmp.txt");
     final long fileLen = 1L;
     DFSTestUtil.createFile(fs, filePath, fileLen, (short) 3, 1L);
+    DFSTestUtil.waitForReplication((DistributedFileSystem)fs,
+        filePath, (short) 3, 60000);
     ArrayList<DataNode> datanodes = cluster.getDataNodes();
     assertEquals(datanodes.size(), 4);
     FSNamesystem ns = cluster.getNamesystem();

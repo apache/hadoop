@@ -36,7 +36,7 @@ public class TestNativeAzureFileSystemAuthorizationWithOwner
   @Before
   public void beforeMethod() {
     super.beforeMethod();
-    authorizer.init(null, true);
+    authorizer.init(fs.getConf(), true);
   }
 
   /**

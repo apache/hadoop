@@ -25,9 +25,10 @@ import java.io.UTFDataFormatException;
 
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.commons.logging.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** A WritableComparable for strings that uses the UTF8 encoding.
  * 
@@ -42,7 +43,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Stable
 public class UTF8 implements WritableComparable<UTF8> {
-  private static final Log LOG= LogFactory.getLog(UTF8.class);
+  private static final Logger LOG= LoggerFactory.getLogger(UTF8.class);
   private static final DataInputBuffer IBUF = new DataInputBuffer();
 
   private static final ThreadLocal<DataOutputBuffer> OBUF_FACTORY =

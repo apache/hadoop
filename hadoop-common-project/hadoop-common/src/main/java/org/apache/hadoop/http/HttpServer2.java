@@ -53,8 +53,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -103,6 +101,8 @@ import org.eclipse.jetty.util.MultiException;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
@@ -117,7 +117,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class HttpServer2 implements FilterContainer {
-  public static final Log LOG = LogFactory.getLog(HttpServer2.class);
+  public static final Logger LOG = LoggerFactory.getLogger(HttpServer2.class);
 
   public static final String HTTP_SCHEME = "http";
   public static final String HTTPS_SCHEME = "https";

@@ -23,10 +23,12 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * <p>
@@ -48,8 +50,7 @@ public abstract class FileContextUtilBase {
   
   {
     try {
-      ((org.apache.commons.logging.impl.Log4JLogger)FileSystem.LOG).getLogger()
-      .setLevel(org.apache.log4j.Level.DEBUG);
+      GenericTestUtils.setLogLevel(FileSystem.LOG, Level.DEBUG);
     } catch(Exception e) {
       System.out.println("Cannot change log level\n"
           + StringUtils.stringifyException(e));

@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.shell.CopyCommands.Cp;
 import org.apache.hadoop.fs.shell.CopyCommands.Get;
 import org.apache.hadoop.fs.shell.CopyCommands.Put;
+import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -117,6 +118,24 @@ public class TestCopyPreserveFlag {
   public void testPutWithoutP() throws Exception {
     run(new Put(), FROM.toString(), TO.toString());
     assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testCopyFromLocal() throws Exception {
+    run(new CopyFromLocal(), FROM.toString(), TO.toString());
+    assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testCopyFromLocalWithThreads() throws Exception {
+    run(new CopyFromLocal(), "-t", "10", FROM.toString(), TO.toString());
+    assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testCopyFromLocalWithThreadsPreserve() throws Exception {
+    run(new CopyFromLocal(), "-p", "-t", "10", FROM.toString(), TO.toString());
+    assertAttributesPreserved(TO);
   }
 
   @Test(timeout = 10000)

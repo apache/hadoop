@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.test;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.junit.Test;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
+import org.slf4j.event.Level;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -88,7 +87,7 @@ public class TestGenericTestUtils extends GenericTestUtils {
 
   @Test(timeout = 10000)
   public void testLogCapturer() {
-    final Log log = LogFactory.getLog(TestGenericTestUtils.class);
+    final Logger log = LoggerFactory.getLogger(TestGenericTestUtils.class);
     LogCapturer logCapturer = LogCapturer.captureLogs(log);
     final String infoMessage = "info message";
     // test get output message
@@ -150,5 +149,13 @@ public class TestGenericTestUtils extends GenericTestUtils {
     } catch (IllegalArgumentException e) {
       assertExceptionContains(GenericTestUtils.ERROR_INVALID_ARGUMENT, e);
     }
+  }
+
+  @Test
+  public void testToLevel() throws Throwable {
+    assertEquals(Level.INFO, toLevel("INFO"));
+    assertEquals(Level.DEBUG, toLevel("NonExistLevel"));
+    assertEquals(Level.INFO, toLevel("INFO", Level.TRACE));
+    assertEquals(Level.TRACE, toLevel("NonExistLevel", Level.TRACE));
   }
 }

@@ -88,6 +88,10 @@ public class TestDataNodeMXBean {
       String namenodeAddresses = (String)mbs.getAttribute(mxbeanName, 
           "NamenodeAddresses");
       Assert.assertEquals(datanode.getNamenodeAddresses(),namenodeAddresses);
+      // get attribute "getDatanodeHostname"
+      String datanodeHostname = (String)mbs.getAttribute(mxbeanName,
+          "DatanodeHostname");
+      Assert.assertEquals(datanode.getDatanodeHostname(),datanodeHostname);
       // get attribute "getVolumeInfo"
       String volumeInfo = (String)mbs.getAttribute(mxbeanName, "VolumeInfo");
       Assert.assertEquals(replaceDigits(datanode.getVolumeInfo()),
