@@ -356,10 +356,10 @@ public abstract class GenericTestUtils {
     Preconditions.checkArgument(waitForMillis >= checkEveryMillis,
         ERROR_INVALID_ARGUMENT);
 
-    long st = Time.now();
+    long st = Time.monotonicNow();
     boolean result = check.get();
 
-    while (!result && (Time.now() - st < waitForMillis)) {
+    while (!result && (Time.monotonicNow() - st < waitForMillis)) {
       Thread.sleep(checkEveryMillis);
       result = check.get();
     }
