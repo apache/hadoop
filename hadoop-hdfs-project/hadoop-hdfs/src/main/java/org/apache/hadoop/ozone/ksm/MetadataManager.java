@@ -19,10 +19,10 @@ package org.apache.hadoop.ozone.ksm;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.utils.BatchOperation;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -56,36 +56,27 @@ public interface MetadataManager {
    * @param key - key
    * @return value
    */
-  byte[] get(byte[] key);
+  byte[] get(byte[] key) throws IOException;
 
   /**
    * Puts a Key into Metadata DB.
    * @param key   - key
    * @param value - value
    */
-  void put(byte[] key, byte[] value);
+  void put(byte[] key, byte[] value) throws IOException;
 
   /**
    * Deletes a Key from Metadata DB.
    * @param key   - key
    */
-  void delete(byte[] key);
+  void delete(byte[] key) throws IOException;
 
   /**
-   * Performs batch Put and Delete to Metadata DB.
-   * Can be used to do multiple puts and deletes atomically.
-   * @param putList - list of Key/Value to put into DB
-   * @param delList - list of Key to delete from DB
+   * Atomic write a batch of operations.
+   * @param batch
+   * @throws IOException
    */
-  void batchPutDelete(List<Map.Entry<byte[], byte[]>> putList,
-                      List<byte[]> delList) throws IOException;
-
-  /**
-   * Performs a batch Put to Metadata DB.
-   * Can be used to do multiple puts atomically.
-   * @param putList - list of Key/Value to put into DB
-   */
-  void batchPut(List<Map.Entry<byte[], byte[]>> putList) throws IOException;
+  void writeBatch(BatchOperation batch) throws IOException;
 
   /**
    * Given a volume return the corresponding DB key.
@@ -120,7 +111,7 @@ public interface MetadataManager {
    *
    * @param key - key name
    */
-  void deleteKey(byte[] key);
+  void deleteKey(byte[] key) throws IOException;
 
   /**
    * Given a volume, check if it is empty,
@@ -148,6 +139,7 @@ public interface MetadataManager {
    * @param startBucket
    *   the start bucket name. Only the buckets whose name is
    *   after this value will be included in the result.
+   *   This key is excluded from the result.
    * @param bucketPrefix
    *   bucket name prefix. Only the buckets whose name has
    *   this prefix will be included in the result.
@@ -171,6 +163,7 @@ public interface MetadataManager {
    * @param startKey
    *   the start key name, only the keys whose name is
    *   after this value will be included in the result.
+   *   This key is excluded from the result.
    * @param keyPrefix
    *   key name prefix, only the keys whose name has
    *   this prefix will be included in the result.
@@ -193,7 +186,8 @@ public interface MetadataManager {
    * @param prefix
    *   the volume prefix used to filter the listing result.
    * @param startKey
-   *   the start volume name determines where to start listing from.
+   *   the start volume name determines where to start listing from,
+   *   this key is excluded from the result.
    * @param maxKeys
    *   the maximum number of volumes to return.
    * @return a list of {@link KsmVolumeArgs}

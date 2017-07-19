@@ -139,6 +139,30 @@ public final class OzoneUtils {
   }
 
   /**
+   * Verifies that max key length is a valid value.
+   *
+   * @param length
+   *          The max key length to be validated
+   *
+   * @throws IllegalArgumentException
+   */
+  public static void verifyMaxKeyLength(String length)
+      throws IllegalArgumentException {
+    int maxKey = 0;
+    try {
+      maxKey = Integer.parseInt(length);
+    } catch (NumberFormatException nfe) {
+      throw new IllegalArgumentException(
+          "Invalid max key length, the vaule should be digital.");
+    }
+
+    if (maxKey <= 0) {
+      throw new IllegalArgumentException(
+          "Invalid max key length, the vaule should be a positive number.");
+    }
+  }
+
+  /**
    * Returns a random Request ID.
    *
    * Request ID is returned to the client as well as flows through the system

@@ -109,7 +109,8 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   enum NODESTATE {
     HEALTHY,
     STALE,
-    DEAD
+    DEAD,
+    UNKNOWN
   }
 
   /**
@@ -137,4 +138,11 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    */
   @VisibleForTesting
   boolean waitForHeartbeatProcessed();
+
+  /**
+   * Returns the node state of a specific node.
+   * @param id - DatanodeID
+   * @return Healthy/Stale/Dead.
+   */
+  NODESTATE getNodeState(DatanodeID id);
 }

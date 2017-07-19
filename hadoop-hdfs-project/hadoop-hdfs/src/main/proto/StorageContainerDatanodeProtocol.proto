@@ -110,8 +110,9 @@ message ContainerReportsProto {
     fullReport = 0;
     deltaReport = 1;
   }
-  repeated ContainerInfo reports = 1;
-  required reportType type = 2;
+  required DatanodeIDProto datanodeID = 1;
+  repeated ContainerInfo reports = 2;
+  required reportType type = 3;
 }
 
 

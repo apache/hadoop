@@ -274,6 +274,8 @@ public class TestKeySpaceManager {
 
     try {
       storageHandler.deleteVolume(createVolumeArgs);
+      Assert.fail("Expecting deletion should fail "
+          + "because volume is not empty");
     } catch (IOException ex) {
       Assert.assertEquals(ex.getMessage(),
           "Delete Volume failed, error:VOLUME_NOT_EMPTY");
@@ -676,9 +678,9 @@ public class TestKeySpaceManager {
     listBucketArgs = new ListArgs(volArgs, null, 2, "bBucket_3");
     result = storageHandler.listBuckets(listBucketArgs);
     Assert.assertEquals(2, result.getBuckets().size());
-    Assert.assertEquals("bBucket_3",
-        result.getBuckets().get(0).getBucketName());
     Assert.assertEquals("bBucket_4",
+        result.getBuckets().get(0).getBucketName());
+    Assert.assertEquals("bBucket_5",
         result.getBuckets().get(1).getBucketName());
 
     // Provide an invalid bucket name as start key.
@@ -692,7 +694,7 @@ public class TestKeySpaceManager {
     }
 
     // Use all arguments.
-    listBucketArgs = new ListArgs(volArgs, "b", 5, "bBucket_8");
+    listBucketArgs = new ListArgs(volArgs, "b", 5, "bBucket_7");
     result = storageHandler.listBuckets(listBucketArgs);
     Assert.assertEquals(2, result.getBuckets().size());
     Assert.assertEquals("bBucket_8",
@@ -801,9 +803,9 @@ public class TestKeySpaceManager {
     listKeyArgs = new ListArgs(bucketArgs, null, 2, "bKey1");
     result = storageHandler.listKeys(listKeyArgs);
     Assert.assertEquals(2, result.getKeyList().size());
-    Assert.assertEquals("bKey1",
-        result.getKeyList().get(0).getKeyName());
     Assert.assertEquals("bKey11",
+        result.getKeyList().get(0).getKeyName());
+    Assert.assertEquals("bKey13",
         result.getKeyList().get(1).getKeyName());
 
     // Provide an invalid key name as start key.
@@ -908,8 +910,9 @@ public class TestKeySpaceManager {
         volumes.getVolumes().get(3).getOwner().getName());
 
     // Make sure all available fields are returned
+    final String user0vol4 = "Vol-" + user0 + "-4";
     final String user0vol5 = "Vol-" + user0 + "-5";
-    listVolumeArgs = new ListArgs(userArgs0, null, 1, user0vol5);
+    listVolumeArgs = new ListArgs(userArgs0, null, 1, user0vol4);
     listVolumeArgs.setRootScan(false);
     volumes = storageHandler.listVolumes(listVolumeArgs);
     Assert.assertEquals(1, volumes.getVolumes().size());

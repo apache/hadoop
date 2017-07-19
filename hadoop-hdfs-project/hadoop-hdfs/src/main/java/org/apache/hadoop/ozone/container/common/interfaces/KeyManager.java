@@ -21,6 +21,7 @@ import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -32,18 +33,18 @@ public interface KeyManager {
    *
    * @param pipeline - Pipeline.
    * @param data     - Key Data.
-   * @throws StorageContainerException
+   * @throws IOException
    */
-  void putKey(Pipeline pipeline, KeyData data) throws StorageContainerException;
+  void putKey(Pipeline pipeline, KeyData data) throws IOException;
 
   /**
    * Gets an existing key.
    *
    * @param data - Key Data.
    * @return Key Data.
-   * @throws StorageContainerException
+   * @throws IOException
    */
-  KeyData getKey(KeyData data) throws StorageContainerException;
+  KeyData getKey(KeyData data) throws IOException;
 
   /**
    * Deletes an existing Key.
@@ -53,7 +54,7 @@ public interface KeyManager {
    * @throws StorageContainerException
    */
   void deleteKey(Pipeline pipeline, String keyName)
-      throws StorageContainerException;
+      throws IOException;
 
   /**
    * List keys in a container.
@@ -65,7 +66,7 @@ public interface KeyManager {
    * @return List of Keys that match the criteria.
    */
   List<KeyData> listKey(Pipeline pipeline, String prefix, String startKey,
-      int count) throws StorageContainerException;
+      int count) throws IOException;
 
   /**
    * Shutdown keyManager.

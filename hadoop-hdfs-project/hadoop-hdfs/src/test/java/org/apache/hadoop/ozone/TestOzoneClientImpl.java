@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.ozone.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -31,10 +32,10 @@ import java.util.UUID;
 /**
  * This class is to test all the public facing APIs of Ozone Client.
  */
-public class TestOzoneClient {
+public class TestOzoneClientImpl {
 
   private static MiniOzoneCluster cluster = null;
-  private static OzoneClient ozClient = null;
+  private static OzoneClientImpl ozClient = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -51,7 +52,7 @@ public class TestOzoneClient {
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = new MiniOzoneCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    ozClient = new OzoneClient(conf);
+    ozClient = new OzoneClientImpl(conf);
   }
 
   @Test
@@ -59,9 +60,8 @@ public class TestOzoneClient {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName);
-    //Assert to be done once infoVolume is implemented in OzoneClient.
-    //For now the test will fail if there are any Exception
-    // during volume creation
+    OzoneVolume volume = ozClient.getVolumeDetails(volumeName);
+    Assert.assertEquals(volumeName, volume.getVolumeName());
   }
 
   @Test
@@ -69,14 +69,21 @@ public class TestOzoneClient {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName, "test");
-    //Assert has to be done after infoVolume implementation.
+    OzoneVolume volume = ozClient.getVolumeDetails(volumeName);
+    Assert.assertEquals(volumeName, volume.getVolumeName());
+    Assert.assertEquals("test", volume.getOwnerName());
   }
 
   @Test
   public void testCreateVolumeWithQuota()
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
-    ozClient.createVolume(volumeName, "test", "10GB");
+    ozClient.createVolume(volumeName, "test",
+        10000000000L);
+    OzoneVolume volume = ozClient.getVolumeDetails(volumeName);
+    Assert.assertEquals(volumeName, volume.getVolumeName());
+    Assert.assertEquals("test", volume.getOwnerName());
+    Assert.assertEquals(10000000000L, volume.getQuota());
   }
 
   @Test
@@ -100,7 +107,8 @@ public class TestOzoneClient {
     String bucketName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
   }
 
   @Test
@@ -111,7 +119,10 @@ public class TestOzoneClient {
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName,
         OzoneConsts.Versioning.ENABLED);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertEquals(OzoneConsts.Versioning.ENABLED,
+        bucket.getVersioning());
   }
 
   @Test
@@ -121,7 +132,9 @@ public class TestOzoneClient {
     String bucketName = UUID.randomUUID().toString();
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName, StorageType.SSD);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertEquals(StorageType.SSD, bucket.getStorageType());
   }
 
   @Test
@@ -133,7 +146,9 @@ public class TestOzoneClient {
         OzoneAcl.OzoneACLRights.READ_WRITE);
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName, userAcl);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertTrue(bucket.getAcls().contains(userAcl));
   }
 
   @Test
@@ -147,7 +162,12 @@ public class TestOzoneClient {
     ozClient.createBucket(volumeName, bucketName,
         OzoneConsts.Versioning.ENABLED,
         StorageType.SSD, userAcl);
-    //Assert has to be done.
+    OzoneBucket bucket = ozClient.getBucketDetails(volumeName, bucketName);
+    Assert.assertEquals(bucketName, bucket.getBucketName());
+    Assert.assertEquals(OzoneConsts.Versioning.ENABLED,
+        bucket.getVersioning());
+    Assert.assertEquals(StorageType.SSD, bucket.getStorageType());
+    Assert.assertTrue(bucket.getAcls().contains(userAcl));
   }
 
   @Test
@@ -173,8 +193,12 @@ public class TestOzoneClient {
     String value = "sample value";
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName);
-    ozClient.putKey(volumeName, bucketName, keyName, value.getBytes());
-    //Assert has to be done.
+    OzoneOutputStream out = ozClient.createKey(volumeName, bucketName,
+        keyName, value.getBytes().length);
+    out.write(value.getBytes());
+    OzoneKey key = ozClient.getkeyDetails(volumeName, bucketName, keyName);
+    Assert.assertEquals(keyName, key.getKeyName());
+    //Content validation has to be done after getKey implementation.
   }
 
   /**

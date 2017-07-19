@@ -180,7 +180,7 @@ This API allows user to list all volumes owned by themselves. Administrators can
 
 Schema:
 
-- `GET /?prefix=<PREFIX>&max-keys=<MAX_RESULT_SIZE>&prev-key=<VOLUME_TO_START_LISTING_FROM>`
+- `GET /?prefix=<PREFIX>&max-keys=<MAX_RESULT_SIZE>&prev-key=<PREVIOUS_VOLUME_KEY>`
 
 Query Parameter:
 
@@ -188,7 +188,7 @@ Query Parameter:
 |:---- |:---- |:----
 | prefix | string | Optional. Only volumes with this prefix are included in the result. |
 | max-keys | int | Optional. Maximum number of volumes included in the result. Default is 1024 if not specified. |
-| prev-key | string | Optional. Volume name where to start listing from. It must be a valid volume name. |
+| prev-key | string | Optional. Volume name from where listing should start, this key is excluded in the result. It must be a valid volume name. |
 | root-scan | bool | Optional. List all volumes in the cluster if this is set to true. Default false. |
 
 Sample HTTP GET request:
@@ -345,7 +345,7 @@ List buckets in a given volume.
 
 Schema:
 
-- `GET /{volume}?prefix=<PREFIX>&max-keys=<MAX_RESULT_SIZE>&prev-key=<BUCKET_TO_START_LISTING_FROM>`
+- `GET /{volume}?prefix=<PREFIX>&max-keys=<MAX_RESULT_SIZE>&prev-key=<PREVIOUS_BUCKET_KEY>`
 
 Query Parameters:
 
@@ -353,7 +353,7 @@ Query Parameters:
 |:---- |:---- |:----
 | prefix | string | Optional. Only buckets with this prefix are included in the result. |
 | max-keys | int | Optional. Maximum number of buckets included in the result. Default is 1024 if not specified. |
-| prev-key | string | Optional. Bucket name where to start listing from. It must be a valid bucket name. |
+| prev-key | string | Optional. Bucket name from where listing should start, this key is excluded in the result. It must be a valid bucket name. |
 
 Sample HTTP GET request:
 
@@ -504,7 +504,7 @@ This API allows user to list keys in a bucket.
 
 Schema:
 
-- `GET /{volume}/{bucket}?prefix=<PREFIX>&max-keys=<MAX_RESULT_SIZE>&prev-key=<KEY_TO_START_LISTING_FROM>`
+- `GET /{volume}/{bucket}?prefix=<PREFIX>&max-keys=<MAX_RESULT_SIZE>&prev-key=<PREVIOUS_KEY>`
 
 Query Parameters:
 
@@ -512,7 +512,7 @@ Query Parameters:
 |:---- |:---- |:----
 | prefix | string | Optional. Only keys with this prefix are included in the result. |
 | max-keys | int | Optional. Maximum number of keys included in the result. Default is 1024 if not specified. |
-| prev-key | string | Optional. Key name where to start listing from. It must be a valid key name. |
+| prev-key | string | Optional. Key name from where listing should start, this key is excluded in the result. It must be a valid key name. |
 
 Sample HTTP GET request:
 

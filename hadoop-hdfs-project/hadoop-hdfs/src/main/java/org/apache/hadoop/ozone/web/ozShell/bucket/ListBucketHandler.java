@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -85,6 +86,7 @@ public class ListBucketHandler extends Handler {
     String length = null;
     if (cmd.hasOption(Shell.LIST_LENGTH)) {
       length = cmd.getOptionValue(Shell.LIST_LENGTH);
+      OzoneUtils.verifyMaxKeyLength(length);
     }
 
     String startBucket = null;

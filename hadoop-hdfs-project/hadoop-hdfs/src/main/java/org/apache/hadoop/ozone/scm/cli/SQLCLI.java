@@ -31,8 +31,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.Pipeline;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.utils.LevelDBStore;
-import org.iq80.leveldb.DBIterator;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
@@ -153,6 +152,7 @@ public class SQLCLI  extends Configured implements Tool {
         .withDescription("specify output path")
         .create("o");
     allOptions.addOption(outPathOption);
+
     return allOptions;
   }
 
@@ -254,22 +254,25 @@ public class SQLCLI  extends Configured implements Tool {
       throws Exception {
     LOG.info("Create tables for sql container db.");
     File dbFile = dbPath.toFile();
-    org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
-    try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
-         Connection conn = connectDB(outPath.toString());
-         DBIterator iter = dbStore.getIterator()) {
+    try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
+        .setDbFile(dbFile).build();
+        Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_CONTAINER_INFO);
       executeSQL(conn, CREATE_CONTAINER_MEMBERS);
       executeSQL(conn, CREATE_DATANODE_INFO);
 
-      iter.seekToFirst();
       HashSet<String> uuidChecked = new HashSet<>();
-      while (iter.hasNext()) {
-        Map.Entry<byte[], byte[]> entry = iter.next();
-        String containerName = new String(entry.getKey(), encoding);
-        Pipeline pipeline = Pipeline.parseFrom(entry.getValue());
-        insertContainerDB(conn, containerName, pipeline, uuidChecked);
-      }
+      dbStore.iterate(null, (key, value) -> {
+        String containerName = new String(key, encoding);
+        Pipeline pipeline = null;
+        pipeline = Pipeline.parseFrom(value);
+        try {
+          insertContainerDB(conn, containerName, pipeline, uuidChecked);
+          return true;
+        } catch (SQLException e) {
+          throw new IOException(e);
+        }
+      });
     }
   }
 
@@ -330,21 +333,24 @@ public class SQLCLI  extends Configured implements Tool {
   private void convertBlockDB(Path dbPath, Path outPath) throws Exception {
     LOG.info("Create tables for sql block db.");
     File dbFile = dbPath.toFile();
-    org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
-    try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
-         Connection conn = connectDB(outPath.toString());
-         DBIterator iter = dbStore.getIterator()) {
+    try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
+        .setDbFile(dbFile).build();
+        Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_BLOCK_CONTAINER);
 
-      iter.seekToFirst();
-      while (iter.hasNext()) {
-        Map.Entry<byte[], byte[]> entry = iter.next();
-        String blockKey = DFSUtilClient.bytes2String(entry.getKey());
-        String containerName = DFSUtilClient.bytes2String(entry.getValue());
+      dbStore.iterate(null, (key, value) -> {
+        String blockKey = DFSUtilClient.bytes2String(key);
+        String containerName = DFSUtilClient.bytes2String(value);
         String insertBlockContainer = String.format(
             INSERT_BLOCK_CONTAINER, blockKey, containerName);
-        executeSQL(conn, insertBlockContainer);
-      }
+
+        try {
+          executeSQL(conn, insertBlockContainer);
+          return true;
+        } catch (SQLException e) {
+          throw new IOException(e);
+        }
+      });
     }
   }
 
@@ -374,21 +380,23 @@ public class SQLCLI  extends Configured implements Tool {
   private void convertNodePoolDB(Path dbPath, Path outPath) throws Exception {
     LOG.info("Create table for sql node pool db.");
     File dbFile = dbPath.toFile();
-    org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
-    try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
-         Connection conn = connectDB(outPath.toString());
-         DBIterator iter = dbStore.getIterator()) {
+    try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
+        .setDbFile(dbFile).build();
+        Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_NODE_POOL);
       executeSQL(conn, CREATE_DATANODE_INFO);
 
-      iter.seekToFirst();
-      while (iter.hasNext()) {
-        Map.Entry<byte[], byte[]> entry = iter.next();
-        DatanodeID nodeId = DatanodeID.getFromProtoBuf(
-            HdfsProtos.DatanodeIDProto.PARSER.parseFrom(entry.getKey()));
-        String blockPool = DFSUtil.bytes2String(entry.getValue());
-        insertNodePoolDB(conn, blockPool, nodeId);
-      }
+      dbStore.iterate(null, (key, value) -> {
+        DatanodeID nodeId = DatanodeID
+            .getFromProtoBuf(HdfsProtos.DatanodeIDProto.PARSER.parseFrom(key));
+        String blockPool = DFSUtil.bytes2String(value);
+        try {
+          insertNodePoolDB(conn, blockPool, nodeId);
+          return true;
+        } catch (SQLException e) {
+          throw new IOException(e);
+        }
+      });
     }
   }
 
@@ -423,22 +431,24 @@ public class SQLCLI  extends Configured implements Tool {
       throws Exception {
     LOG.info("Create table for open container db.");
     File dbFile = dbPath.toFile();
-    org.iq80.leveldb.Options dbOptions = new org.iq80.leveldb.Options();
-    try (LevelDBStore dbStore = new LevelDBStore(dbFile, dbOptions);
-        Connection conn = connectDB(outPath.toString());
-        DBIterator iter = dbStore.getIterator()) {
+    try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
+        .setDbFile(dbFile).build();
+        Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_OPEN_CONTAINER);
 
-      iter.seekToFirst();
-      while (iter.hasNext()) {
-        Map.Entry<byte[], byte[]> entry = iter.next();
-        String containerName = DFSUtil.bytes2String(entry.getKey());
-        Long containerUsed = Long.parseLong(
-            DFSUtil.bytes2String(entry.getValue()));
-        String insertOpenContainer = String.format(
-            INSERT_OPEN_CONTAINER, containerName, containerUsed);
-        executeSQL(conn, insertOpenContainer);
-      }
+      dbStore.iterate(null, (key, value) -> {
+        String containerName = DFSUtil.bytes2String(key);
+        Long containerUsed =
+            Long.parseLong(DFSUtil.bytes2String(value));
+        String insertOpenContainer = String
+            .format(INSERT_OPEN_CONTAINER, containerName, containerUsed);
+        try {
+          executeSQL(conn, insertOpenContainer);
+          return true;
+        } catch (SQLException e) {
+          throw new IOException(e);
+        }
+      });
     }
   }
 

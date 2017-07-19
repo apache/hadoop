@@ -509,8 +509,16 @@ public class StorageContainerManager
       LOG.info("Stopping the RPC server for DataNodes");
       datanodeRpcServer.stop();
     } catch (Exception ex) {
-      LOG.error("Storage Container Manager httpServer stop failed.", ex);
+      LOG.error("Storage Container Manager datanodeRpcServer stop failed.", ex);
     }
+
+    try {
+      LOG.info("Stopping Storage Container Manager HTTP server.");
+      httpServer.stop();
+    } catch (Exception ex) {
+      LOG.error("Storage Container Manager HTTP server stop failed.", ex);
+    }
+
     unregisterMXBean();
     IOUtils.closeQuietly(scmContainerManager);
     IOUtils.closeQuietly(scmBlockManager);

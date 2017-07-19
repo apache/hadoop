@@ -41,7 +41,7 @@ import org.apache.hadoop.ozone.container.common.interfaces
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.utils.LevelDBStore;
+import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -335,7 +335,7 @@ public class ContainerManagerImpl implements ContainerManager {
         ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
         metadataPath = this.locationManager.getDataPath(
             containerData.getContainerName());
-        metadataPath = ContainerUtils.createMetadata(metadataPath);
+        metadataPath = ContainerUtils.createMetadata(metadataPath, conf);
       }  else {
         metadataPath = ContainerUtils.getMetadataDirectory(containerData);
       }
@@ -502,7 +502,7 @@ public class ContainerManagerImpl implements ContainerManager {
     ContainerData containerData = readContainer(containerName);
     containerData.closeContainer();
     writeContainerInfo(containerData, true);
-    LevelDBStore db = KeyUtils.getDB(containerData, conf);
+    MetadataStore db = KeyUtils.getDB(containerData, conf);
 
     // It is ok if this operation takes a bit of time.
     // Close container is not expected to be instantaneous.

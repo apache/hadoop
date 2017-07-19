@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -31,9 +32,10 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.hadoop.utils.LevelDBStore;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -55,6 +57,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -70,6 +73,8 @@ import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper
     .setDataChecksum;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -181,10 +186,13 @@ public class TestContainerPersistence {
 
 
     String dbPath = status.getContainer().getDBPath();
-    LevelDBStore store = null;
+    MetadataStore store = null;
     try {
-      store = new LevelDBStore(new File(dbPath), false);
-      Assert.assertNotNull(store.getDB());
+      store = MetadataStoreBuilder.newBuilder()
+          .setDbFile(new File(dbPath))
+          .setCreateIfMissing(false)
+          .build();
+      Assert.assertNotNull(store);
     } finally {
       if (store != null) {
         store.close();
@@ -354,7 +362,7 @@ public class TestContainerPersistence {
     pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName);
     cData.addMetadata("VOLUME", "shire");
-    cData.addMetadata("owner)", "bilbo");
+    cData.addMetadata("owner", "bilbo");
     if(!containerManager.getContainerMap()
         .containsKey(containerName)) {
       containerManager.createContainer(pipeline, cData);
@@ -447,6 +455,41 @@ public class TestContainerPersistence {
         sha.reset();
       }
     }
+  }
+
+  /**
+   * Test partial within a single chunk.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testPartialRead() throws Exception {
+    final int datalen = 1024;
+    final int start = datalen/4;
+    final int length = datalen/2;
+
+    String containerName = OzoneUtils.getRequestID();
+    String keyName = OzoneUtils.getRequestID();
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+
+    pipeline.setContainerName(containerName);
+    ContainerData cData = new ContainerData(containerName);
+    cData.addMetadata("VOLUME", "shire");
+    cData.addMetadata("owner)", "bilbo");
+    containerManager.createContainer(pipeline, cData);
+    ChunkInfo info = getChunk(keyName, 0, 0, datalen);
+    byte[] data = getData(datalen);
+    setDataChecksum(info, data);
+    chunkManager.writeChunk(pipeline, keyName, info, data);
+
+    byte[] readData = chunkManager.readChunk(pipeline, keyName, info);
+    assertTrue(Arrays.equals(data, readData));
+
+    ChunkInfo info2 = getChunk(keyName, 0, start, length);
+    byte[] readData2 = chunkManager.readChunk(pipeline, keyName, info2);
+    assertEquals(length, readData2.length);
+    assertTrue(Arrays.equals(
+        Arrays.copyOfRange(data, start, start + length), readData2));
   }
 
   /**
@@ -773,7 +816,7 @@ public class TestContainerPersistence {
 
   @Test
   public void testListKey() throws Exception {
-    String containerName = "c-0";
+    String containerName = "c0" + RandomStringUtils.randomAscii(10);
     Pipeline pipeline = createSingleNodePipeline(containerName);
     List<String> expectedKeys = new ArrayList<String>();
     for (int i = 0; i < 10; i++) {

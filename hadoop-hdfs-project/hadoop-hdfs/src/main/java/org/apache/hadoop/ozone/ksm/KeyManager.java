@@ -76,6 +76,7 @@ public interface KeyManager {
    * @param startKey
    *   the start key name, only the keys whose name is
    *   after this value will be included in the result.
+   *   This key is excluded from the result.
    * @param keyPrefix
    *   key name prefix, only the keys whose name has
    *   this prefix will be included in the result.

@@ -32,9 +32,10 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.utils.LevelDBKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.utils.LevelDBStore;
-import org.iq80.leveldb.Options;
+import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
+import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
+import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +64,7 @@ public class ContainerMapping implements Mapping {
   private final long cacheSize;
   private final Lock lock;
   private final Charset encoding = Charset.forName("UTF-8");
-  private final LevelDBStore containerStore;
+  private final MetadataStore containerStore;
   private final ContainerPlacementPolicy placementPolicy;
   private final long containerSize;
 
@@ -85,12 +86,14 @@ public class ContainerMapping implements Mapping {
     this.cacheSize = cacheSizeMB;
 
     File metaDir = OzoneUtils.getScmMetadirPath(conf);
-    Options options = new Options();
-    options.cacheSize(this.cacheSize * OzoneConsts.MB);
 
     // Write the container name to pipeline mapping.
     File containerDBPath = new File(metaDir, CONTAINER_DB);
-    containerStore = new LevelDBStore(containerDBPath, options);
+    containerStore = MetadataStoreBuilder.newBuilder()
+        .setConf(conf)
+        .setDbFile(containerDBPath)
+        .setCacheSize(this.cacheSize * OzoneConsts.MB)
+        .build();
 
     this.lock = new ReentrantLock();
 
@@ -192,7 +195,7 @@ public class ContainerMapping implements Mapping {
       if(containerStore.isEmpty()) {
         throw new IOException("No container exists in current db");
       }
-      KeyPrefixFilter prefixFilter = new KeyPrefixFilter(prefixName);
+      MetadataKeyFilter prefixFilter = new KeyPrefixFilter(prefixName);
       byte[] startKey = startName == null ?
           null : DFSUtil.string2Bytes(startName);
       List<Map.Entry<byte[], byte[]>> range =
