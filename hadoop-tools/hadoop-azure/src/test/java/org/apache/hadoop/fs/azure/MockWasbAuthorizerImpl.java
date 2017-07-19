@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azure;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.security.UserGroupInformation;
@@ -35,6 +36,7 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   private Map<AuthorizationComponent, Boolean> authRules;
   private boolean performOwnerMatch;
+  private CachingAuthorizer<CachedAuthorizerEntry, Boolean> cache;
 
  // The full qualified URL to the root directory
   private String qualifiedPrefixUrl;
@@ -42,6 +44,7 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
   public MockWasbAuthorizerImpl(NativeAzureFileSystem fs) {
     qualifiedPrefixUrl = new Path("/").makeQualified(fs.getUri(), fs.getWorkingDirectory())
         .toString().replaceAll("/$", "");
+    cache = new CachingAuthorizer<>(TimeUnit.MINUTES.convert(5L, TimeUnit.MINUTES), "AUTHORIZATION");
   }
 
   @Override
@@ -54,7 +57,8 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
   if currentUserShortName is set to a string that is not empty
   */
   public void init(Configuration conf, boolean matchOwner) {
-    authRules = new HashMap<AuthorizationComponent, Boolean>();
+    cache.init(conf);
+    authRules = new HashMap<>();
     this.performOwnerMatch = matchOwner;
   }
 
@@ -75,6 +79,21 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
     if (wasbAbsolutePath.endsWith(NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
       return true;
     }
+
+    CachedAuthorizerEntry cacheKey = new CachedAuthorizerEntry(wasbAbsolutePath, accessType, owner);
+    Boolean cacheresult = cache.get(cacheKey);
+    if (cacheresult != null) {
+      return cacheresult;
+    }
+
+    boolean authorizeresult = authorizeInternal(wasbAbsolutePath, accessType, owner);
+    cache.put(cacheKey, authorizeresult);
+
+    return authorizeresult;
+  }
+
+  private boolean authorizeInternal(String wasbAbsolutePath, String accessType, String owner)
+      throws WasbAuthorizationException {
 
     String currentUserShortName = "";
     if (this.performOwnerMatch) {
@@ -120,6 +139,7 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   public void deleteAllAuthRules() {
     authRules.clear();
+    cache.clear();
   }
 }
 
