@@ -75,15 +75,17 @@ public class FSOperations {
 
   /**
    * @param fileStatuses list of FileStatus objects
+   * @param isFile is the fileStatuses from a file path
    * @return JSON map suitable for wire transport
    */
   @SuppressWarnings({"unchecked"})
-  private static Map<String, Object> toJson(FileStatus[] fileStatuses) {
+  private static Map<String, Object> toJson(FileStatus[] fileStatuses,
+      boolean isFile) {
     Map<String, Object> json = new LinkedHashMap<>();
     Map<String, Object> inner = new LinkedHashMap<>();
     JSONArray statuses = new JSONArray();
     for (FileStatus f : fileStatuses) {
-      statuses.add(toJsonInner(f, false));
+      statuses.add(toJsonInner(f, isFile));
     }
     inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
     json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
@@ -129,13 +131,14 @@ public class FSOperations {
    * These two classes are slightly different, due to the impedance
    * mismatches between the WebHDFS and FileSystem APIs.
    * @param entries
+   * @param isFile is the entries from a file path
    * @return json
    */
   private static Map<String, Object> toJson(FileSystem.DirectoryEntries
-      entries) {
+      entries, boolean isFile) {
     Map<String, Object> json = new LinkedHashMap<>();
     Map<String, Object> inner = new LinkedHashMap<>();
-    Map<String, Object> fileStatuses = toJson(entries.getEntries());
+    Map<String, Object> fileStatuses = toJson(entries.getEntries(), isFile);
     inner.put(HttpFSFileSystem.PARTIAL_LISTING_JSON, fileStatuses);
     inner.put(HttpFSFileSystem.REMAINING_ENTRIES_JSON, entries.hasMore() ? 1
         : 0);
@@ -690,7 +693,7 @@ public class FSOperations {
     @Override
     public Map execute(FileSystem fs) throws IOException {
       FileStatus[] fileStatuses = fs.listStatus(path, filter);
-      return toJson(fileStatuses);
+      return toJson(fileStatuses, fs.getFileStatus(path).isFile());
     }
 
     @Override
@@ -735,7 +738,7 @@ public class FSOperations {
       WrappedFileSystem wrappedFS = new WrappedFileSystem(fs);
       FileSystem.DirectoryEntries entries =
           wrappedFS.listStatusBatch(path, token);
-      return toJson(entries);
+      return toJson(entries, wrappedFS.getFileStatus(path).isFile());
     }
   }
 
