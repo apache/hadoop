@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -58,17 +59,9 @@ public class ListVolumeHandler extends Handler {
     int maxKeys = 0;
     if (cmd.hasOption(Shell.LIST_LENGTH)) {
       String length = cmd.getOptionValue(Shell.LIST_LENGTH);
-      try {
-        maxKeys = Integer.parseInt(length);
-      } catch (NumberFormatException nfe) {
-        throw new OzoneRestClientException(
-            "Invalid max key length, the vaule should be digital.");
-      }
+      OzoneUtils.verifyMaxKeyLength(length);
 
-      if (maxKeys <= 0) {
-        throw new OzoneRestClientException(
-            "Invalid max key length, the vaule should be a positive number.");
-      }
+      maxKeys = Integer.parseInt(length);
     }
 
     String startVolume = null;
