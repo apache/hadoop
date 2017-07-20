@@ -190,7 +190,6 @@ public class ColumnHelper<T> {
 
       NavigableMap<byte[], NavigableMap<Long, byte[]>> columnCellMap =
           resultMap.get(columnFamilyBytes);
-
       // could be that there is no such column family.
       if (columnCellMap != null) {
         for (Entry<byte[], NavigableMap<Long, byte[]>> entry : columnCellMap
