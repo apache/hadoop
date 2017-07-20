@@ -1552,10 +1552,7 @@ public class UserGroupInformation {
    * @return the user's name up to the first '/' or '@'.
    */
   public String getShortUserName() {
-    for (User p: subject.getPrincipals(User.class)) {
-      return p.getShortName();
-    }
-    return null;
+    return user.getShortName();
   }
 
   public String getPrimaryGroupName() throws IOException {
