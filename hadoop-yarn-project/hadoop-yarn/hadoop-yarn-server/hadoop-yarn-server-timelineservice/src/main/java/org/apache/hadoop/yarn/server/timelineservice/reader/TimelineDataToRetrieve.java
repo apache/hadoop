@@ -57,6 +57,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Fiel
  * metricsToRetrieve is specified, this limit defines an upper limit to the
  * number of metrics to return. This parameter is ignored if METRICS are not to
  * be fetched.</li>
+ * <li><b>metricsTimeStart</b> - Metric values before this timestamp would not
+ * be retrieved. If null or {@literal <0}, defaults to 0.</li>
+ * <li><b>metricsTimeEnd</b> - Metric values after this timestamp would not
+ * be retrieved. If null or {@literal <0}, defaults to {@link Long#MAX_VALUE}.
+ * </li>
  * </ul>
  */
 @Private
@@ -66,6 +71,10 @@ public class TimelineDataToRetrieve {
   private TimelineFilterList metricsToRetrieve;
   private EnumSet<Field> fieldsToRetrieve;
   private Integer metricsLimit;
+  private Long metricsTimeBegin;
+  private Long metricsTimeEnd;
+  private static final long DEFAULT_METRICS_BEGIN_TIME = 0L;
+  private static final long DEFAULT_METRICS_END_TIME = Long.MAX_VALUE;
 
   /**
    * Default limit of number of metrics to return.
@@ -73,12 +82,12 @@ public class TimelineDataToRetrieve {
   public static final Integer DEFAULT_METRICS_LIMIT = 1;
 
   public TimelineDataToRetrieve() {
-    this(null, null, null, null);
+    this(null, null, null, null, null, null);
   }
 
   public TimelineDataToRetrieve(TimelineFilterList confs,
       TimelineFilterList metrics, EnumSet<Field> fields,
-      Integer limitForMetrics) {
+      Integer limitForMetrics, Long metricTimeBegin, Long metricTimeEnd) {
     this.confsToRetrieve = confs;
     this.metricsToRetrieve = metrics;
     this.fieldsToRetrieve = fields;
@@ -90,6 +99,20 @@ public class TimelineDataToRetrieve {
 
     if (this.fieldsToRetrieve == null) {
       this.fieldsToRetrieve = EnumSet.noneOf(Field.class);
+    }
+    if (metricTimeBegin == null || metricTimeBegin < 0) {
+      this.metricsTimeBegin = DEFAULT_METRICS_BEGIN_TIME;
+    } else {
+      this.metricsTimeBegin = metricTimeBegin;
+    }
+    if (metricTimeEnd == null || metricTimeEnd < 0) {
+      this.metricsTimeEnd = DEFAULT_METRICS_END_TIME;
+    } else {
+      this.metricsTimeEnd = metricTimeEnd;
+    }
+    if (this.metricsTimeBegin > this.metricsTimeEnd) {
+      throw new IllegalArgumentException("metricstimebegin should not be " +
+          "greater than metricstimeend");
     }
   }
 
@@ -135,6 +158,14 @@ public class TimelineDataToRetrieve {
 
   public Integer getMetricsLimit() {
     return metricsLimit;
+  }
+
+  public Long getMetricsTimeBegin() {
+    return this.metricsTimeBegin;
+  }
+
+  public Long getMetricsTimeEnd() {
+    return metricsTimeEnd;
   }
 
   public void setMetricsLimit(Integer limit) {
