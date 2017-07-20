@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -434,8 +435,8 @@ class GenericEntityReader extends TimelineEntityReader {
           context.getUserId(), context.getFlowName(), context.getFlowRunId(),
           context.getAppId(), context.getEntityType(),
           context.getEntityIdPrefix(), context.getEntityId()).getRowKey();
-
       Get get = new Get(rowKey);
+      setMetricsTimeRange(get);
       get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
       if (filterList != null && !filterList.getFilters().isEmpty()) {
         get.setFilter(filterList);
@@ -466,6 +467,14 @@ class GenericEntityReader extends TimelineEntityReader {
       }
     }
     return result;
+  }
+
+  private void setMetricsTimeRange(Query query) {
+    // Set time range for metric values.
+    HBaseTimelineStorageUtils.
+        setMetricsTimeRange(query, EntityColumnFamily.METRICS.getBytes(),
+            getDataToRetrieve().getMetricsTimeBegin(),
+            getDataToRetrieve().getMetricsTimeEnd());
   }
 
   @Override
@@ -513,6 +522,7 @@ class GenericEntityReader extends TimelineEntityReader {
       // mode.
       filterList.addFilter(new PageFilter(getFilters().getLimit()));
     }
+    setMetricsTimeRange(scan);
     scan.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       scan.setFilter(filterList);

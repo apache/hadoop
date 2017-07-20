@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
@@ -307,5 +308,21 @@ public final class HBaseTimelineStorageUtils {
   public static boolean isIntegralValue(Object obj) {
     return (obj instanceof Short) || (obj instanceof Integer) ||
         (obj instanceof Long);
+  }
+
+  public static void setMetricsTimeRange(Query query, byte[] metricsCf,
+      long tsBegin, long tsEnd) {
+    if (tsBegin != 0 || tsEnd != Long.MAX_VALUE) {
+      long supplementedTsBegin = tsBegin == 0 ? 0 :
+          TimestampGenerator.getSupplementedTimestamp(tsBegin, null);
+      long supplementedTsEnd =
+          (tsEnd == Long.MAX_VALUE) ? Long.MAX_VALUE :
+          TimestampGenerator.getSupplementedTimestamp(tsEnd + 1, null);
+      // Handle overflow by resetting time begin to 0 and time end to
+      // Long#MAX_VALUE, if required.
+      query.setColumnFamilyTimeRange(metricsCf,
+          ((supplementedTsBegin < 0) ? 0 : supplementedTsBegin),
+          ((supplementedTsEnd < 0) ? Long.MAX_VALUE : supplementedTsEnd));
+    }
   }
 }
