@@ -149,7 +149,6 @@ HTTPFS_MAX_THREADS          | hadoop.http.max.threads      | httpfs-site.xml
 HTTPFS_SSL_ENABLED          | httpfs.ssl.enabled           | httpfs-site.xml
 HTTPFS_SSL_KEYSTORE_FILE    | ssl.server.keystore.location | ssl-server.xml
 HTTPFS_SSL_KEYSTORE_PASS    | ssl.server.keystore.password | ssl-server.xml
-HTTPFS_TEMP                 | hadoop.http.temp.dir         | httpfs-site.xml
 
 HTTP Default Services
 ---------------------
