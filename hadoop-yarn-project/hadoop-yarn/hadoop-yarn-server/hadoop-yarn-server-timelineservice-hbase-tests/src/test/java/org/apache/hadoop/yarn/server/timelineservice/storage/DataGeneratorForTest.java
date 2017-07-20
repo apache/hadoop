@@ -58,7 +58,8 @@ public final class DataGeneratorForTest {
     TimelineSchemaCreator.createAllTables(conf, false);
   }
 
-  public static void loadApps(HBaseTestingUtility util) throws IOException {
+  public static void loadApps(HBaseTestingUtility util, long ts)
+      throws IOException {
     TimelineEntities te = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
     String id = "application_1111111111_2222";
@@ -92,7 +93,6 @@ public final class DataGeneratorForTest {
     entity.addConfigs(conf);
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
-    long ts = System.currentTimeMillis();
     metrics.add(getMetric4(ts));
 
     TimelineMetric m12 = new TimelineMetric();
@@ -137,7 +137,7 @@ public final class DataGeneratorForTest {
     entity1.addConfigs(conf1);
 
     // add metrics
-    entity1.addMetrics(getMetrics4());
+    entity1.addMetrics(getMetrics4(ts));
     TimelineEvent event11 = new TimelineEvent();
     event11.setId("end_event");
     event11.setTimestamp(ts);
@@ -175,18 +175,17 @@ public final class DataGeneratorForTest {
     }
   }
 
-  private static Set<TimelineMetric> getMetrics4() {
+  private static Set<TimelineMetric> getMetrics4(long ts) {
     Set<TimelineMetric> metrics1 = new HashSet<>();
     TimelineMetric m2 = new TimelineMetric();
     m2.setId("MAP1_SLOT_MILLIS");
-    long ts1 = System.currentTimeMillis();
     Map<Long, Number> metricValues1 = new HashMap<>();
-    metricValues1.put(ts1 - 120000, 100000000);
-    metricValues1.put(ts1 - 100000, 200000000);
-    metricValues1.put(ts1 - 80000, 300000000);
-    metricValues1.put(ts1 - 60000, 400000000);
-    metricValues1.put(ts1 - 40000, 50000000000L);
-    metricValues1.put(ts1 - 20000, 60000000000L);
+    metricValues1.put(ts - 120000, 100000000);
+    metricValues1.put(ts - 100000, 200000000);
+    metricValues1.put(ts - 80000, 300000000);
+    metricValues1.put(ts - 60000, 400000000);
+    metricValues1.put(ts - 40000, 50000000000L);
+    metricValues1.put(ts - 20000, 60000000000L);
     m2.setType(Type.TIME_SERIES);
     m2.setValues(metricValues1);
     metrics1.add(m2);
@@ -307,7 +306,7 @@ public final class DataGeneratorForTest {
     return metricValues;
   }
 
-  public static void loadEntities(HBaseTestingUtility util)
+  public static void loadEntities(HBaseTestingUtility util, long ts)
       throws IOException {
     TimelineEntities te = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
@@ -332,7 +331,6 @@ public final class DataGeneratorForTest {
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();
     m1.setId("MAP_SLOT_MILLIS");
-    long ts = System.currentTimeMillis();
     m1.setType(Type.TIME_SERIES);
     m1.setValues(getMetricValues1(ts));
     metrics.add(m1);
@@ -383,9 +381,8 @@ public final class DataGeneratorForTest {
     Set<TimelineMetric> metrics1 = new HashSet<>();
     TimelineMetric m2 = new TimelineMetric();
     m2.setId("MAP1_SLOT_MILLIS");
-    long ts1 = System.currentTimeMillis();
     m2.setType(Type.TIME_SERIES);
-    m2.setValues(getMetricValues2(ts1));
+    m2.setValues(getMetricValues2(ts));
     metrics1.add(m2);
     entity1.addMetrics(metrics1);
     te.addEntity(entity1);
