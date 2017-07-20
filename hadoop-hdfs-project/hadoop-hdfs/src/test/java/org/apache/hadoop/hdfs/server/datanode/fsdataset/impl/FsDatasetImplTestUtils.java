@@ -303,6 +303,13 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     rbw.getBlockFile().createNewFile();
     rbw.getMetaFile().createNewFile();
     dataset.volumeMap.add(bpid, rbw);
+
+    try (RandomAccessFile blockRAF =
+        new RandomAccessFile(rbw.getBlockFile(), "rw")) {
+      //extend blockFile
+      blockRAF.setLength(eb.getNumBytes());
+    }
+    saveMetaFileHeader(rbw.getMetaFile());
     return rbw;
   }
 
