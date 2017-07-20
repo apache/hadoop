@@ -265,6 +265,11 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the entities
+   *     would not contain metric values before this timestamp(Optional query
+   *     param).
+   * @param metricsTimeEnd If specified, returned metrics for the entities would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of entities from the
    *     given fromId. The set of entities retrieved is inclusive of specified
    *     fromId. fromId should be taken from the value associated with FROM_ID
@@ -300,6 +305,8 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -326,7 +333,8 @@ public class TimelineReaderWebServices {
               infofilters, conffilters, metricfilters, eventfilters,
               fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+          metricsTimeStart, metricsTimeEnd));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -407,6 +415,11 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the entities
+   *     would not contain metric values before this timestamp(Optional query
+   *     param).
+   * @param metricsTimeEnd If specified, returned metrics for the entities would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of entities from the
    *     given fromId. The set of entities retrieved is inclusive of specified
    *     fromId. fromId should be taken from the value associated with FROM_ID
@@ -447,12 +460,14 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     return getEntities(req, res, null, appId, entityType, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
         confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-        fromId);
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -523,6 +538,11 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the entities
+   *     would not contain metric values before this timestamp(Optional query
+   *     param).
+   * @param metricsTimeEnd If specified, returned metrics for the entities would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of entities from the
    *     given fromId. The set of entities retrieved is inclusive of specified
    *     fromId. fromId should be taken from the value associated with FROM_ID
@@ -564,6 +584,8 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -586,7 +608,8 @@ public class TimelineReaderWebServices {
               infofilters, conffilters, metricfilters, eventfilters,
               fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+          metricsTimeStart, metricsTimeEnd));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -628,6 +651,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the entity would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the entity would
+   *     not contain metric values after this timestamp(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -649,7 +676,9 @@ public class TimelineReaderWebServices {
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
-      @QueryParam("metricslimit") String metricsLimit) {
+      @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -669,7 +698,8 @@ public class TimelineReaderWebServices {
       }
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+          metricsTimeStart, metricsTimeEnd));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -723,6 +753,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the entity would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the entity would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *     If specified, then entity retrieval will be faster.
    *
@@ -752,10 +786,12 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("entityidprefix") String entityIdPrefix) {
     return getEntity(req, res, null, appId, entityType, entityId, userId,
         flowName, flowRunId, confsToRetrieve, metricsToRetrieve, fields,
-        metricsLimit, entityIdPrefix);
+        metricsLimit, metricsTimeStart, metricsTimeEnd, entityIdPrefix);
   }
 
   /**
@@ -797,6 +833,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the entity would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the entity would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *     If specified, then entity retrieval will be faster.
    *
@@ -827,6 +867,8 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("entityidprefix") String entityIdPrefix) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -845,7 +887,8 @@ public class TimelineReaderWebServices {
               clusterId, userId, flowName, flowRunId, appId, entityType,
               entityIdPrefix, entityId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+          metricsTimeStart, metricsTimeEnd));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -912,7 +955,7 @@ public class TimelineReaderWebServices {
       context.setEntityType(TimelineEntityType.YARN_FLOW_RUN.toString());
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, null, null));
+          null, metricsToRetrieve, null, null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1021,7 +1064,7 @@ public class TimelineReaderWebServices {
           clusterId, userId, flowName, flowRunId, null,
               TimelineEntityType.YARN_FLOW_RUN.toString(), null, null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, null, null));
+          null, metricsToRetrieve, null, null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1115,7 +1158,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, null, null, null,
               null, null, null, fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, fields, null));
+          null, metricsToRetrieve, fields, null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or fromId");
@@ -1265,7 +1308,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, null, null, null,
               null, null, null, fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, fields, null));
+          null, metricsToRetrieve, fields, null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or fromId");
@@ -1400,7 +1443,7 @@ public class TimelineReaderWebServices {
           clusterId, null, null, null, null,
               TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null, null),
           entityFilters, TimelineReaderWebServicesUtils.
-          createTimelineDataToRetrieve(null, null, null, null));
+              createTimelineDataToRetrieve(null, null, null, null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "limit");
     }
@@ -1441,6 +1484,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the apps would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the apps would
+   *     not contain metric values after this timestamp(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -1462,7 +1509,9 @@ public class TimelineReaderWebServices {
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
-      @QueryParam("metricslimit") String metricsLimit) {
+      @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -1483,7 +1532,8 @@ public class TimelineReaderWebServices {
       context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+          metricsTimeStart, metricsTimeEnd));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1532,6 +1582,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the app would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the app would
+   *     not contain metric values after this timestamp(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -1556,9 +1610,12 @@ public class TimelineReaderWebServices {
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
-      @QueryParam("metricslimit") String metricsLimit) {
+      @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd) {
     return getApp(req, res, null, appId, flowName, flowRunId, userId,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+        metricsTimeStart, metricsTimeEnd);
   }
 
   /**
@@ -1596,6 +1653,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the app would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the app would
+   *     not contain metric values after this timestamp(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -1621,7 +1682,9 @@ public class TimelineReaderWebServices {
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
-      @QueryParam("metricslimit") String metricsLimit) {
+      @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -1639,7 +1702,8 @@ public class TimelineReaderWebServices {
           clusterId, userId, flowName, flowRunId, appId,
               TimelineEntityType.YARN_APPLICATION.toString(), null, null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+          metricsTimeStart, metricsTimeEnd));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1712,6 +1776,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the apps would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the apps would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of applications
    *     from the given fromId. The set of applications retrieved is inclusive
    *     of specified fromId. fromId should be taken from the value associated
@@ -1746,6 +1814,8 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -1771,7 +1841,8 @@ public class TimelineReaderWebServices {
               infofilters, conffilters, metricfilters, eventfilters,
               fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+          metricsTimeStart, metricsTimeEnd));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -1845,6 +1916,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the apps would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the apps would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of applications
    *     from the given fromId. The set of applications retrieved is inclusive
    *     of specified fromId. fromId should be taken from the value associated
@@ -1881,12 +1956,15 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -1950,6 +2028,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the apps would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the apps would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of applications
    *     from the given fromId. The set of applications retrieved is inclusive
    *     of specified fromId. fromId should be taken from the value associated
@@ -1988,12 +2070,15 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -2054,6 +2139,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the apps would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the apps would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of applications
    *     from the given fromId. The set of applications retrieved is inclusive
    *     of specified fromId. fromId should be taken from the value associated
@@ -2089,12 +2178,15 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -2156,6 +2248,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
+   * @param metricsTimeStart If specified, returned metrics for the apps would
+   *     not contain metric values before this timestamp(Optional query param).
+   * @param metricsTimeEnd If specified, returned metrics for the apps would
+   *     not contain metric values after this timestamp(Optional query param).
    * @param fromId If specified, retrieve the next set of applications
    *     from the given fromId. The set of applications retrieved is inclusive
    *     of specified fromId. fromId should be taken from the value associated
@@ -2192,12 +2288,15 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -2268,6 +2367,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the app attempts
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the app attempts
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param fromId If specified, retrieve the next set of application-attempt
    *         entities from the given fromId. The set of application-attempt
    *         entities retrieved is inclusive of specified fromId. fromId should
@@ -2306,12 +2411,15 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
 
     return getAppAttempts(req, res, null, appId, userId, flowName, flowRunId,
         limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters, confsToRetrieve,
-        metricsToRetrieve, fields, metricsLimit, fromId);
+        metricsToRetrieve, fields, metricsLimit, metricsTimeStart,
+        metricsTimeEnd, fromId);
   }
 
   /**
@@ -2383,6 +2491,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the app attempts
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the app attempts
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param fromId If specified, retrieve the next set of application-attempt
    *         entities from the given fromId. The set of application-attempt
    *         entities retrieved is inclusive of specified fromId. fromId should
@@ -2422,6 +2536,8 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
 
     return getEntities(req, res, clusterId, appId,
@@ -2429,7 +2545,7 @@ public class TimelineReaderWebServices {
         flowName, flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
         confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-        fromId);
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -2472,6 +2588,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the app attempt
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the app attempt
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
@@ -2499,10 +2621,12 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("entityidprefix") String entityIdPrefix) {
     return getAppAttempt(req, res, null, appId, appAttemptId, userId, flowName,
         flowRunId, confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-        entityIdPrefix);
+        metricsTimeStart, metricsTimeEnd, entityIdPrefix);
   }
 
   /**
@@ -2545,6 +2669,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the app attempt
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the app attempt
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
@@ -2574,11 +2704,13 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("entityidprefix") String entityIdPrefix) {
     return getEntity(req, res, clusterId, appId,
         TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(), appAttemptId,
         userId, flowName, flowRunId, confsToRetrieve, metricsToRetrieve, fields,
-        metricsLimit, entityIdPrefix);
+        metricsLimit, metricsTimeStart, metricsTimeEnd, entityIdPrefix);
   }
 
   /**
@@ -2651,6 +2783,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the containers
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the containers
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param fromId If specified, retrieve the next set of container
    *         entities from the given fromId. The set of container
    *         entities retrieved is inclusive of specified fromId. fromId should
@@ -2690,12 +2828,14 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
     return getContainers(req, res, null, appId, appattemptId, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
         confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-        fromId);
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -2769,6 +2909,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the containers
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the containers
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param fromId If specified, retrieve the next set of container
    *         entities from the given fromId. The set of container
    *         entities retrieved is inclusive of specified fromId. fromId should
@@ -2810,6 +2956,8 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("fromid") String fromId) {
 
     String entityType = TimelineEntityType.YARN_CONTAINER.toString();
@@ -2829,7 +2977,7 @@ public class TimelineReaderWebServices {
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilter, conffilters, metricfilters, eventfilters,
         confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-        fromId);
+        metricsTimeStart, metricsTimeEnd, fromId);
   }
 
   /**
@@ -2871,6 +3019,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the container
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the container
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
@@ -2898,10 +3052,12 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("entityidprefix") String entityIdPrefix) {
     return getContainer(req, res, null, appId, containerId, userId, flowName,
         flowRunId, confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-        entityIdPrefix);
+        entityIdPrefix, metricsTimeStart, metricsTimeEnd);
   }
 
   /**
@@ -2944,6 +3100,12 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
+   * @param metricsTimeStart If specified, returned metrics for the container
+   *          would not contain metric values before this timestamp(Optional
+   *          query param).
+   * @param metricsTimeEnd If specified, returned metrics for the container
+   *          would not contain metric values after this timestamp(Optional
+   *          query param).
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
@@ -2973,11 +3135,13 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
+      @QueryParam("metricstimestart") String metricsTimeStart,
+      @QueryParam("metricstimeend") String metricsTimeEnd,
       @QueryParam("entityidprefix") String entityIdPrefix) {
     return getEntity(req, res, clusterId, appId,
         TimelineEntityType.YARN_CONTAINER.toString(), containerId, userId,
         flowName, flowRunId, confsToRetrieve, metricsToRetrieve, fields,
-        metricsLimit, entityIdPrefix);
+        metricsLimit, metricsTimeStart, metricsTimeEnd, entityIdPrefix);
   }
 
   /**

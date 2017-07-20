@@ -127,11 +127,13 @@ final class TimelineReaderWebServicesUtils {
    * @throws TimelineParseException if any problem occurs during parsing.
    */
   static TimelineDataToRetrieve createTimelineDataToRetrieve(String confs,
-      String metrics, String fields, String metricsLimit)
+      String metrics, String fields, String metricsLimit,
+      String metricsTimeBegin, String metricsTimeEnd)
       throws TimelineParseException {
     return new TimelineDataToRetrieve(parseDataToRetrieve(confs),
         parseDataToRetrieve(metrics), parseFieldsStr(fields,
-        TimelineParseConstants.COMMA_DELIMITER), parseIntStr(metricsLimit));
+        TimelineParseConstants.COMMA_DELIMITER), parseIntStr(metricsLimit),
+        parseLongStr(metricsTimeBegin), parseLongStr(metricsTimeEnd));
   }
 
   /**

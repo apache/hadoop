@@ -319,7 +319,7 @@ public class TestFileSystemTimelineReaderImpl {
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
         "app", "id_1"),
-        new TimelineDataToRetrieve(null, null, null, null));
+        new TimelineDataToRetrieve(null, null, null, null, null, null));
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
@@ -334,7 +334,7 @@ public class TestFileSystemTimelineReaderImpl {
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", null, null, null, "app1", "app",
         "id_1"),
-        new TimelineDataToRetrieve(null, null, null, null));
+        new TimelineDataToRetrieve(null, null, null, null, null, null));
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
@@ -351,7 +351,7 @@ public class TestFileSystemTimelineReaderImpl {
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", null, null, null, "app2",
         "app", "id_5"),
-        new TimelineDataToRetrieve(null, null, null, null));
+        new TimelineDataToRetrieve(null, null, null, null, null, null));
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_5")).toString(),
         result.getIdentifier().toString());
@@ -365,7 +365,8 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
         "app", "id_1"),
         new TimelineDataToRetrieve(null, null,
-        EnumSet.of(Field.INFO, Field.CONFIGS, Field.METRICS), null));
+        EnumSet.of(Field.INFO, Field.CONFIGS, Field.METRICS), null, null,
+        null));
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
@@ -383,7 +384,8 @@ public class TestFileSystemTimelineReaderImpl {
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
         "app", "id_1"),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null,
+        null, null));
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
@@ -399,7 +401,8 @@ public class TestFileSystemTimelineReaderImpl {
     Set<TimelineEntity> result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
         "app", null), new TimelineEntityFilters.Builder().build(),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null,
+        null, null));
     // All 4 entities will be returned
     Assert.assertEquals(4, result.size());
   }
