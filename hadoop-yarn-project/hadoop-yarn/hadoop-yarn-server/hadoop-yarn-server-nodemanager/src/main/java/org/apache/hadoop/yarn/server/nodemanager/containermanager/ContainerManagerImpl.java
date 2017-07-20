@@ -905,6 +905,12 @@ public class ContainerManagerImpl extends CompositeService implements
       if (rsrc.getValue() == null || rsrc.getValue().getResource() == null) {
         throw new YarnException(
             "Null resource URL for local resource " + rsrc.getKey() + " : " + rsrc.getValue());
+      } else if (rsrc.getValue().getType() == null) {
+        throw new YarnException(
+            "Null resource type for local resource " + rsrc.getKey() + " : " + rsrc.getValue());
+      } else if (rsrc.getValue().getVisibility() == null) {
+        throw new YarnException(
+            "Null resource visibility for local resource " + rsrc.getKey() + " : " + rsrc.getValue());
       }
     }
 

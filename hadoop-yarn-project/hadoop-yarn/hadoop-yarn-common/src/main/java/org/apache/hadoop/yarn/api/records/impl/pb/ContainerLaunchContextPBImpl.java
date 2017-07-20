@@ -211,6 +211,14 @@ extends ContainerLaunchContext {
         throw new NullPointerException(
             "Null resource URL for local resource " + rsrcEntry.getKey() + " : "
                 + rsrcEntry.getValue());
+      } else if (rsrcEntry.getValue().getType() == null) {
+        throw new NullPointerException(
+            "Null resource type for local resource " + rsrcEntry.getKey() + " : "
+                + rsrcEntry.getValue());
+      } else if (rsrcEntry.getValue().getVisibility() == null) {
+          throw new NullPointerException(
+            "Null resource visibility for local resource " + rsrcEntry.getKey() + " : "
+                + rsrcEntry.getValue());
       }
     }
   }
