@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../libhdfs/include
     ${GENERATED_JAVAH}
