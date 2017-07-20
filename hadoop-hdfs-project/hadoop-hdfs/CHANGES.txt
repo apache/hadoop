@@ -388,6 +388,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10921. TestDiskspaceQuotaUpdate doesn't wait for NN to get out of
     safe mode. (Eric Badger via Mingliang Liu)
 
+    HDFS-11472. Fix inconsistent replica size after a data pipeline failure.
+    (Erik Krogen and Wei-Chiu Chuang via shv)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
