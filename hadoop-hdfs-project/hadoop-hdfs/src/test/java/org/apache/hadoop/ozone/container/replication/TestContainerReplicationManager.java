@@ -35,7 +35,7 @@ import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,10 +74,12 @@ public class TestContainerReplicationManager {
   @After
   public void tearDown() throws Exception {
     logCapturer.stopCapturing();
+    GenericTestUtils.setLogLevel(ContainerReplicationManager.LOG, Level.INFO);
   }
 
   @Before
   public void setUp() throws Exception {
+    GenericTestUtils.setLogLevel(ContainerReplicationManager.LOG, Level.DEBUG);
     Map<DatanodeID, NodeManager.NODESTATE> nodeStateMap = new HashMap<>();
     // We are setting up 3 pools with 24 nodes each in this cluster.
     // First we create 72 Datanodes.
@@ -234,7 +236,7 @@ public class TestContainerReplicationManager {
       throws TimeoutException, InterruptedException, IOException {
     LogCapturer inProgressLog = LogCapturer.captureLogs(
         LogFactory.getLog(InProgressPool.class));
-    GenericTestUtils.setLogLevel(InProgressPool.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(InProgressPool.LOG, Level.DEBUG);
     try {
       DatanodeID id = SCMTestUtils.getDatanodeID();
       ((ReplicationNodeManagerMock) (nodeManager)).addNode(id, NodeManager
