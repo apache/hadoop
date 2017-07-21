@@ -60,8 +60,9 @@ public abstract class AbstractProviderService extends AbstractService
     super(name);
   }
 
-  public abstract void processArtifact(ContainerLauncher launcher, Component
-      component, SliderFileSystem fileSystem) throws IOException;
+  public abstract void processArtifact(ContainerLauncher launcher,
+      Application application, RoleInstance roleInstance,
+      SliderFileSystem fileSystem) throws IOException;
 
   @Override
   public void setAMState(StateAccessForProviders stateAccessor) {
@@ -78,7 +79,7 @@ public abstract class AbstractProviderService extends AbstractService
       SliderFileSystem fileSystem, RoleInstance roleInstance)
       throws IOException, SliderException {
     Component component = providerRole.component;
-    processArtifact(launcher, component, fileSystem);
+    processArtifact(launcher, application, roleInstance, fileSystem);
 
     // Generate tokens (key-value pair) for config substitution.
     // Get pre-defined tokens

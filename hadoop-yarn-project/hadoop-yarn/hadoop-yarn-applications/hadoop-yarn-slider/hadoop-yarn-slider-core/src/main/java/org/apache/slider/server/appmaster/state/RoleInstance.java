@@ -125,6 +125,7 @@ public final class RoleInstance implements Cloneable {
     } else {
       compInstanceName = role.name;
     }
+    compInstanceName = compInstanceName.toLowerCase().replaceAll("_", "-");
     this.providerRole = role;
   }
 

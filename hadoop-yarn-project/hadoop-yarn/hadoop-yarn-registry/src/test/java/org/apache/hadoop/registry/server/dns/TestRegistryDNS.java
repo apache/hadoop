@@ -111,7 +111,7 @@ public class TestRegistryDNS extends Assert {
       + "}\n";
   static final String CONTAINER_RECORD = "{\n"
       + "  \"type\" : \"JSONServiceRecord\",\n"
-      + "  \"description\" : \"YCLOUD\",\n"
+      + "  \"description\" : \"COMP-NAME\",\n"
       + "  \"external\" : [ ],\n"
       + "  \"internal\" : [ ],\n"
       + "  \"yarn:id\" : \"container_e50_1451931954322_0016_01_000002\",\n"
@@ -122,7 +122,7 @@ public class TestRegistryDNS extends Assert {
 
   private static final String CONTAINER_RECORD_NO_IP = "{\n"
       + "  \"type\" : \"JSONServiceRecord\",\n"
-      + "  \"description\" : \"YCLOUD\",\n"
+      + "  \"description\" : \"COMP-NAME\",\n"
       + "  \"external\" : [ ],\n"
       + "  \"internal\" : [ ],\n"
       + "  \"yarn:id\" : \"container_e50_1451931954322_0016_01_000002\",\n"
@@ -131,7 +131,7 @@ public class TestRegistryDNS extends Assert {
 
   private static final String CONTAINER_RECORD_YARN_PERSISTANCE_ABSENT = "{\n"
       + "  \"type\" : \"JSONServiceRecord\",\n"
-      + "  \"description\" : \"YCLOUD\",\n"
+      + "  \"description\" : \"COMP-NAME\",\n"
       + "  \"external\" : [ ],\n"
       + "  \"internal\" : [ ],\n"
       + "  \"yarn:id\" : \"container_e50_1451931954322_0016_01_000003\",\n"
@@ -216,7 +216,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
@@ -225,7 +225,7 @@ public class TestRegistryDNS extends Assert {
     assertEquals("wrong result", "172.17.0.19",
         ((ARecord) recs[0]).getAddress().getHostAddress());
 
-    recs = assertDNSQuery("ycloud.test1.root.hwx.test.", 1);
+    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", 1);
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
   }
 
@@ -235,7 +235,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD_YARN_PERSISTANCE_ABSENT.getBytes());
     registryDNS.register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000003",
+            + "ctr-e50-1451931954322-0016-01-000003",
          record);
 
     Name name =
@@ -254,7 +254,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
@@ -264,7 +264,7 @@ public class TestRegistryDNS extends Assert {
         ((ARecord) recs[0]).getAddress().getHostAddress());
     assertEquals("wrong ttl", 30L, recs[0].getTTL());
 
-    recs = assertDNSQuery("ycloud.test1.root.hwx.test.", 1);
+    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", 1);
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
 
     assertEquals("wrong ttl", 30L, recs[0].getTTL());
@@ -276,13 +276,13 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
     Record[] recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
-        "ctr-e50-1451931954322-0016-01-000002.hwx.test.",
+        "comp-name.test1.root.hwx.test.",
         ((PTRRecord) recs[0]).getTarget().toString());
   }
 
@@ -302,13 +302,13 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
     Record[] recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
-        "ctr-e50-1451931954322-0016-01-000002.hwx.test.",
+        "comp-name.test1.root.hwx.test.",
         ((PTRRecord) recs[0]).getTarget().toString());
   }
 
@@ -318,7 +318,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
@@ -339,7 +339,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD_NO_IP.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
@@ -453,7 +453,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
@@ -462,7 +462,7 @@ public class TestRegistryDNS extends Assert {
     assertEquals("wrong result", "172.17.0.19",
         ((AAAARecord) recs[0]).getAddress().getHostAddress());
 
-    recs = assertDNSQuery("ycloud.test1.root.hwx.test.", Type.AAAA, 1);
+    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", Type.AAAA, 1);
     assertTrue("not an ARecord", recs[0] instanceof AAAARecord);
   }
 
@@ -472,7 +472,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
@@ -528,7 +528,7 @@ public class TestRegistryDNS extends Assert {
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
-            + "container-e50-1451931954322-0016-01-000002",
+            + "ctr-e50-1451931954322-0016-01-000002",
         record);
 
     // start assessing whether correct records are available
@@ -537,13 +537,13 @@ public class TestRegistryDNS extends Assert {
     assertEquals("wrong result", "172.17.0.19",
         ((ARecord) recs[0]).getAddress().getHostAddress());
 
-    recs = assertDNSQuery("ycloud.test1.root.hwx.test.", 1);
+    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", 1);
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
 
     // lookup dyanmic reverse records
     recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
-        "ctr-e50-1451931954322-0016-01-000002.hwx.test.",
+        "comp-name.test1.root.hwx.test.",
         ((PTRRecord) recs[0]).getTarget().toString());
 
     // now lookup static reverse records

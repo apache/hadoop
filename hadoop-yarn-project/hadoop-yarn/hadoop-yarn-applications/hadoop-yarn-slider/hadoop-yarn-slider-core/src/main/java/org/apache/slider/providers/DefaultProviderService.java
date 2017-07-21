@@ -17,10 +17,10 @@
  */
 package org.apache.slider.providers;
 
-import org.apache.slider.api.resource.Component;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.launch.ContainerLauncher;
-import org.apache.slider.providers.AbstractProviderService;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 
 import java.io.IOException;
 
@@ -31,7 +31,8 @@ public class DefaultProviderService extends AbstractProviderService {
   }
 
   @Override
-  public void processArtifact(ContainerLauncher launcher, Component
-      component, SliderFileSystem fileSystem) throws IOException {
+  public void processArtifact(ContainerLauncher launcher, Application
+      application, RoleInstance roleInstance, SliderFileSystem fileSystem)
+      throws IOException {
   }
 }

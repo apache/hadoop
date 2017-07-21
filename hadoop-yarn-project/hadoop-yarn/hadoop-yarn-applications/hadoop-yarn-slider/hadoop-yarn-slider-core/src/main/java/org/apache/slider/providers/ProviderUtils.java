@@ -504,8 +504,7 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
         // create and publish updated service record (including hostname & ip)
         ServiceRecord record = new ServiceRecord();
         record.set(YarnRegistryAttributes.YARN_ID, containerId);
-        String componentInstanceName = role.getCompInstanceName();
-        record.description = componentInstanceName.replaceAll("_", "-");
+        record.description = role.getCompInstanceName();
         record.set(YarnRegistryAttributes.YARN_PERSISTENCE,
             PersistencePolicies.CONTAINER);
         // TODO: use constants from YarnRegistryAttributes

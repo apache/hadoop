@@ -81,6 +81,7 @@ public abstract class AbstractLauncher extends Configured {
   protected boolean yarnDockerMode = false;
   protected String dockerImage;
   protected String dockerNetwork = DEFAULT_DOCKER_NETWORK;
+  protected String dockerHostname;
   protected String yarnContainerMountPoints;
   protected String runPrivilegedContainer;
 
@@ -236,6 +237,8 @@ public abstract class AbstractLauncher extends Configured {
       env.put("YARN_CONTAINER_RUNTIME_TYPE", "docker");
       env.put("YARN_CONTAINER_RUNTIME_DOCKER_IMAGE", dockerImage);
       env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK", dockerNetwork);
+      env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME",
+          dockerHostname);
       env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER", runPrivilegedContainer);
       StringBuilder sb = new StringBuilder();
       for (Entry<String,String> mount : mountPaths.entrySet()) {
@@ -467,6 +470,10 @@ public abstract class AbstractLauncher extends Configured {
 
   public void setDockerNetwork(String dockerNetwork) {
     this.dockerNetwork = dockerNetwork;
+  }
+
+  public void setDockerHostname(String dockerHostname) {
+    this.dockerHostname = dockerHostname;
   }
 
   public void setYarnContainerMountPoints(String yarnContainerMountPoints) {
