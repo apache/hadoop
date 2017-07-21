@@ -126,7 +126,9 @@ public class LevelDBStore implements MetadataStore {
    */
   @Override
   public void close() throws IOException {
-    db.close();
+    if (db != null){
+      db.close();
+    }
   }
 
   /**
@@ -163,6 +165,7 @@ public class LevelDBStore implements MetadataStore {
 
   @Override
   public void destroy() throws IOException {
+    close();
     JniDBFactory.factory.destroy(dbFile, dbOptions);
   }
 

@@ -598,7 +598,7 @@
 
   <property>
     <name>ozone.metastore.impl</name>
-    <value>LevelDB</value>
+    <value>RocksDB</value>
     <description>
       Ozone metadata store implementation. Ozone metadata are well distributed
       to multiple services such as ksm, scm. They are stored in some local

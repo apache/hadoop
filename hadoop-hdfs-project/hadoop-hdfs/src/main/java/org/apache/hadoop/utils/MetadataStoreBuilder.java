@@ -21,6 +21,7 @@ package org.apache.hadoop.utils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.iq80.leveldb.Options;
+import org.rocksdb.BlockBasedTableConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,8 +83,15 @@ public class MetadataStoreBuilder {
       }
       store = new LevelDBStore(dbFile, options);
     } else if (OZONE_METADATA_STORE_IMPL_ROCKSDB.equals(impl)) {
-      // TODO replace with rocksDB impl
-      store = new LevelDBStore(dbFile, new Options());
+      org.rocksdb.Options opts = new org.rocksdb.Options();
+      opts.setCreateIfMissing(createIfMissing);
+
+      if (cacheSize > 0) {
+        BlockBasedTableConfig tableConfig = new BlockBasedTableConfig();
+        tableConfig.setBlockCacheSize(cacheSize);
+        opts.setTableFormatConfig(tableConfig);
+      }
+      store = new RocksDBStore(dbFile, opts);
     } else {
       throw new IllegalArgumentException("Invalid argument for "
           + OzoneConfigKeys.OZONE_METADATA_STORE_IMPL
