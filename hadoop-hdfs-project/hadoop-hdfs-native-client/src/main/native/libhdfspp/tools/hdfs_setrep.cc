@@ -90,13 +90,9 @@ int main(int argc, char *argv[]) {
   std::string uri_path = argv[optind + 1];
 
   //Building a URI object from the given uri_path
-  hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
-  if (!uri) {
-    std::cerr << "Malformed URI: " << uri_path << std::endl;
-    exit(EXIT_FAILURE);
-  }
+  hdfs::URI uri = hdfs::parse_path_or_exit(uri_path);
 
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), true);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri, true);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
@@ -161,7 +157,7 @@ int main(int argc, char *argv[]) {
   };
 
   //Asynchronous call to Find
-  fs->Find(uri->get_path(), "*", hdfs::FileSystem::GetDefaultFindMaxDepth(), handlerFind);
+  fs->Find(uri.get_path(), "*", hdfs::FileSystem::GetDefaultFindMaxDepth(), handlerFind);
 
   /* block until promise is set */
   hdfs::Status status = future.get();

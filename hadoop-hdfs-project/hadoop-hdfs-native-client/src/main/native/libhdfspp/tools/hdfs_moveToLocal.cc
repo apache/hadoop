@@ -68,13 +68,9 @@ int main(int argc, char *argv[]) {
   std::string dest = argv[optind+1];
 
   //Building a URI object from the given uri_path
-  hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
-  if (!uri) {
-    std::cerr << "Malformed URI: " << uri_path << std::endl;
-    exit(EXIT_FAILURE);
-  }
+  hdfs::URI uri = hdfs::parse_path_or_exit(uri_path);
 
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), false);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri, false);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
@@ -85,7 +81,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Unable to open the destination file: " << dest << std::endl;
     exit(EXIT_FAILURE);
   }
-  readFile(fs, uri->get_path(), 0, dst_file, true);
+  readFile(fs, uri.get_path(), 0, dst_file, true);
   std::fclose(dst_file);
 
   // Clean up static data and prevent valgrind memory leaks

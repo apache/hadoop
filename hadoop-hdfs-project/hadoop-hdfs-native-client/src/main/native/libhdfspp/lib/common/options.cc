@@ -48,11 +48,14 @@ Options::Options() : rpc_timeout(kDefaultRpcTimeout),
 std::string NamenodeInfo::get_host() const {
   return uri.get_host();
 }
+
 std::string NamenodeInfo::get_port() const {
-  optional<uint16_t> p = uri.get_port();
-  if(!p)
-    return std::to_string(-1);
-  return std::to_string(p.value());
+  if(uri.has_port()) {
+    return std::to_string(uri.get_port());
+  }
+  return "-1";
 }
+
+
 
 }

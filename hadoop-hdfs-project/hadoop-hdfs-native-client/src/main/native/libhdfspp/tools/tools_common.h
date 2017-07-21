@@ -21,6 +21,7 @@
 #define TOOLS_COMMON_H_
 
 #include "hdfspp/hdfspp.h"
+#include "hdfspp/uri.h"
 #include "common/hdfs_configuration.h"
 #include "common/configuration_loader.h"
 #include <mutex>
@@ -32,6 +33,8 @@ namespace hdfs {
 
   //Open HDFS file at offset, read it to destination file, optionally delete source file
   void readFile(std::shared_ptr<hdfs::FileSystem> fs, std::string path, off_t offset, std::FILE* dst_file, bool to_delete);
+
+  URI parse_path_or_exit(const std::string& path);
 }
 
 #endif

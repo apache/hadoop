@@ -67,19 +67,15 @@ int main(int argc, char *argv[]) {
   std::string name = argv[optind+1];
 
   //Building a URI object from the given uri_path
-  hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
-  if (!uri) {
-    std::cerr << "Malformed URI: " << uri_path << std::endl;
-    exit(EXIT_FAILURE);
-  }
+  hdfs::URI uri = hdfs::parse_path_or_exit(uri_path);
 
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), false);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri, false);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  hdfs::Status status = fs->DeleteSnapshot(uri->get_path(), name);
+  hdfs::Status status = fs->DeleteSnapshot(uri.get_path(), name);
   if (!status.ok()) {
     std::cerr << "Error: " << status.ToString() << std::endl;
     exit(EXIT_FAILURE);

@@ -16,103 +16,127 @@
  * limitations under the License.
  */
 
-#include "common/uri.h"
+#include "hdfspp/uri.h"
 #include <gmock/gmock.h>
 
 using ::testing::_;
 
 using namespace hdfs;
 
+
+URI expect_uri_throw(const char *uri) {
+  bool threw = false;
+  std::string what_msg;
+  URI val;
+  try {
+    val = URI::parse_from_string(uri);
+  } catch (const uri_parse_error& e) {
+    threw = true;
+    what_msg = e.what();
+  } catch (...) {
+    threw = true;
+  }
+
+  EXPECT_TRUE(threw);
+  EXPECT_EQ(what_msg, uri);
+  return val;
+}
+
+URI expect_uri_nothrow(const char *uri) {
+  bool threw = false;
+  std::string what_msg;
+  URI val;
+  try {
+    val = URI::parse_from_string(uri);
+  } catch (const uri_parse_error& e) {
+    threw = true;
+    what_msg = e.what();
+  } catch (...) {
+    threw = true;
+  }
+
+  EXPECT_FALSE(threw);
+  EXPECT_EQ(what_msg, "");
+  return val;
+}
+
+
 TEST(UriTest, TestDegenerateInputs) {
   /* Empty input */
-  {
-    optional<URI> uri = URI::parse_from_string("");
-    EXPECT_TRUE(uri && "Empty input");
-  }
+  expect_uri_nothrow("");
 
   /* Invalid encoding */
-  {
-    optional<URI> uri = URI::parse_from_string("%%");
-    EXPECT_FALSE(uri && "Bad input");
-  }
+  expect_uri_throw("%%");
 
   /* Invalid port */
-  {
-    optional<URI> uri = URI::parse_from_string("hdfs://nn:foo/");
-    EXPECT_FALSE(uri && "Bad port");
-  }
+  expect_uri_throw("hdfs://nn:foo/");
 
   /* Negative port */
-  {
-    optional<URI> uri = URI::parse_from_string("hdfs://nn:-100/");
-    EXPECT_FALSE(uri && "Negative port");
-  }
+  expect_uri_throw("hdfs://nn:-100/");
 
   /* Empty paths */
-  {
-    optional<URI> uri = URI::parse_from_string("hdfs://////");
-    EXPECT_TRUE(uri && "Empty paths");
-  }
-
+  expect_uri_nothrow("hdfs://////");
 }
 
 
 TEST(UriTest, TestNominalInputs) {
   /* Simple input */
   {
-    optional<URI> uri = URI::parse_from_string("hdfs:///foo");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("hdfs", uri->get_scheme());
-    EXPECT_EQ("", uri->get_host());
-    EXPECT_EQ(0, uri->get_port().value_or(0));
-    EXPECT_EQ("/foo", uri->get_path());
-    EXPECT_EQ("", uri->get_fragment());
-    EXPECT_EQ("", uri->get_query());
+    URI uri = expect_uri_nothrow("hdfs:///foo");
+    EXPECT_EQ("hdfs", uri.get_scheme());
+    EXPECT_EQ("", uri.get_host());
+    EXPECT_FALSE(uri.has_port());
+    EXPECT_EQ(0, uri.get_port_or_default(0));
+    EXPECT_EQ("/foo", uri.get_path());
+    EXPECT_EQ("", uri.get_fragment());
+    EXPECT_EQ("", uri.get_query());
   }
 
   /* With authority */
   {
-    optional<URI> uri = URI::parse_from_string("hdfs://host:100/foo");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("hdfs", uri->get_scheme());
-    EXPECT_EQ("host", uri->get_host());
-    EXPECT_EQ(100, uri->get_port().value_or(0));
-    EXPECT_EQ("/foo", uri->get_path());
-    EXPECT_EQ("", uri->get_fragment());
-    EXPECT_EQ("", uri->get_query());
+    URI uri = expect_uri_nothrow("hdfs://host:100/foo");
+    EXPECT_EQ("hdfs", uri.get_scheme());
+    EXPECT_EQ("host", uri.get_host());
+    EXPECT_TRUE(uri.has_port());
+    EXPECT_EQ(100, uri.get_port());
+    EXPECT_EQ(100, uri.get_port_or_default(0));
+    EXPECT_EQ("/foo", uri.get_path());
+    EXPECT_EQ("", uri.get_fragment());
+    EXPECT_EQ("", uri.get_query());
   }
 
   /* No scheme */
   {
-    optional<URI> uri = URI::parse_from_string("/foo");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("", uri->get_scheme());
-    EXPECT_EQ("", uri->get_host());
-    EXPECT_EQ(0, uri->get_port().value_or(0));
-    EXPECT_EQ("/foo", uri->get_path());
-    EXPECT_EQ("", uri->get_fragment());
-    EXPECT_EQ("", uri->get_query());
+    URI uri = expect_uri_nothrow("/foo");
+    EXPECT_EQ("", uri.get_scheme());
+    EXPECT_EQ("", uri.get_host());
+    EXPECT_FALSE(uri.has_port());
+    EXPECT_EQ(0, uri.get_port_or_default(0));
+    EXPECT_EQ("/foo", uri.get_path());
+    EXPECT_EQ("", uri.get_fragment());
+    EXPECT_EQ("", uri.get_query());
   }
 
   /* All fields */
   {
-    optional<URI> uri = URI::parse_from_string("hdfs://nn:8020/path/to/data?a=b&c=d#fragment");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("hdfs", uri->get_scheme());
-    EXPECT_EQ("nn", uri->get_host());
-    EXPECT_EQ(8020, uri->get_port().value_or(0));
-    EXPECT_EQ("/path/to/data", uri->get_path());
-    EXPECT_EQ("a=b&c=d", uri->get_query());
-    EXPECT_EQ(3, uri->get_path_elements().size());
-    EXPECT_EQ("path", uri->get_path_elements()[0]);
-    EXPECT_EQ("to", uri->get_path_elements()[1]);
-    EXPECT_EQ("data", uri->get_path_elements()[2]);
-    EXPECT_EQ(2, uri->get_query_elements().size());
-    EXPECT_EQ("a", uri->get_query_elements()[0].first);
-    EXPECT_EQ("b", uri->get_query_elements()[0].second);
-    EXPECT_EQ("c", uri->get_query_elements()[1].first);
-    EXPECT_EQ("d", uri->get_query_elements()[1].second);
-    EXPECT_EQ("fragment", uri->get_fragment());
+    URI uri = expect_uri_nothrow("hdfs://nn:8020/path/to/data?a=b&c=d#fragment");
+    EXPECT_EQ("hdfs", uri.get_scheme());
+    EXPECT_EQ("nn", uri.get_host());
+    EXPECT_TRUE(uri.has_port());
+    EXPECT_EQ(8020, uri.get_port());
+    EXPECT_EQ(8020, uri.get_port_or_default(0));
+    EXPECT_EQ("/path/to/data", uri.get_path());
+    EXPECT_EQ("a=b&c=d", uri.get_query());
+    EXPECT_EQ(3, uri.get_path_elements().size());
+    EXPECT_EQ("path", uri.get_path_elements()[0]);
+    EXPECT_EQ("to", uri.get_path_elements()[1]);
+    EXPECT_EQ("data", uri.get_path_elements()[2]);
+    EXPECT_EQ(2, uri.get_query_elements().size());
+    EXPECT_EQ("a", uri.get_query_elements()[0].key);
+    EXPECT_EQ("b", uri.get_query_elements()[0].value);
+    EXPECT_EQ("c", uri.get_query_elements()[1].key);
+    EXPECT_EQ("d", uri.get_query_elements()[1].value);
+    EXPECT_EQ("fragment", uri.get_fragment());
   }
 }
 
@@ -121,52 +145,48 @@ TEST(UriTest, TestEncodedInputs) {
 
   /* Encoded input */
   {
-    optional<URI> uri = URI::parse_from_string("S://%5E:1/+%5E%20?%5E=%5E#%5E");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("S", uri->get_scheme());
-    EXPECT_EQ("^", uri->get_host());
-    EXPECT_EQ(1, uri->get_port().value_or(0));
-    EXPECT_EQ("/ ^ ", uri->get_path());
-    EXPECT_EQ("^", uri->get_fragment());
-    EXPECT_EQ("^=^", uri->get_query());
+    URI uri = expect_uri_nothrow("S://%5E:1/+%5E%20?%5E=%5E#%5E");
+    EXPECT_EQ("S", uri.get_scheme());
+    EXPECT_EQ("^", uri.get_host());
+    EXPECT_EQ(1, uri.get_port_or_default(0));
+    EXPECT_EQ("/ ^ ", uri.get_path());
+    EXPECT_EQ("^", uri.get_fragment());
+    EXPECT_EQ("^=^", uri.get_query());
   }
 
   /* Lowercase */
   {
-    optional<URI> uri = URI::parse_from_string("S://%5e:1/+%5e%20?%5e=%5e#%5e");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("S", uri->get_scheme());
-    EXPECT_EQ("^", uri->get_host());
-    EXPECT_EQ(1, uri->get_port().value_or(0));
-    EXPECT_EQ("/ ^ ", uri->get_path());
-    EXPECT_EQ("^", uri->get_fragment());
-    EXPECT_EQ("^=^", uri->get_query());
+    URI uri = expect_uri_nothrow("S://%5e:1/+%5e%20?%5e=%5e#%5e");
+    EXPECT_EQ("S", uri.get_scheme());
+    EXPECT_EQ("^", uri.get_host());
+    EXPECT_EQ(1, uri.get_port_or_default(0));
+    EXPECT_EQ("/ ^ ", uri.get_path());
+    EXPECT_EQ("^", uri.get_fragment());
+    EXPECT_EQ("^=^", uri.get_query());
   }
 }
 
 TEST(UriTest, TestDecodedInputsAndOutputs) {
   /* All fields non-encoded and shouldn't be interpreted */
   {
-    optional<URI> uri = URI::parse_from_string("S://%25/%25+?%25=%25#%25");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("S", uri->get_scheme());
-    EXPECT_EQ("%", uri->get_host());
-    EXPECT_EQ(0, uri->get_port().value_or(0));
-    EXPECT_EQ("/% ", uri->get_path());
-    EXPECT_EQ("%", uri->get_fragment());
-    EXPECT_EQ("%=%", uri->get_query());
+    URI uri = expect_uri_nothrow("S://%25/%25+?%25=%25#%25");
+    EXPECT_EQ("S", uri.get_scheme());
+    EXPECT_EQ("%", uri.get_host());
+    EXPECT_EQ(0, uri.get_port_or_default(0));
+    EXPECT_EQ("/% ", uri.get_path());
+    EXPECT_EQ("%", uri.get_fragment());
+    EXPECT_EQ("%=%", uri.get_query());
   }
 
   /* All fields encode fields on their way out */
   {
-    optional<URI> uri = URI::parse_from_string("S://%25/%25+?%25=%25#%25");
-    ASSERT_TRUE(uri && "Parsed");
-    EXPECT_EQ("S", uri->get_scheme(true));
-    EXPECT_EQ("%25", uri->get_host(true));
-    EXPECT_EQ(0, uri->get_port().value_or(0));
-    EXPECT_EQ("/%25+", uri->get_path(true));
-    EXPECT_EQ("%25", uri->get_fragment(true));
-    EXPECT_EQ("%25=%25", uri->get_query(true));
+    URI uri = expect_uri_nothrow("S://%25/%25+?%25=%25#%25");
+    EXPECT_EQ("S", uri.get_scheme(true));
+    EXPECT_EQ("%25", uri.get_host(true));
+    EXPECT_EQ(0, uri.get_port_or_default(0));
+    EXPECT_EQ("/%25+", uri.get_path(true));
+    EXPECT_EQ("%25", uri.get_fragment(true));
+    EXPECT_EQ("%25=%25", uri.get_query(true));
   }
 
 }
@@ -231,6 +251,35 @@ TEST(UriTest, TestSetters) {
     uri.add_path("%25", true);
     uri.add_query("%25", "%25", true);
     EXPECT_EQ("S://%25:100/%25/%25?%25=%25&%25=%25#%25", uri.str());
+  }
+
+}
+
+TEST(UriTest, QueryManip) {
+  // Not encoded, just basic adding and removing query parts
+  {
+    URI uri = URI::parse_from_string("hdfs://nn:8020/path?thedude=lebowski&donny=outofhiselement");
+    EXPECT_TRUE(uri.has_port());
+    EXPECT_EQ(uri.get_query(), "thedude=lebowski&donny=outofhiselement");
+
+    std::vector<URI::Query> queries = uri.get_query_elements();
+    EXPECT_EQ(queries.size(), 2);
+    EXPECT_EQ(queries[0].key, "thedude");
+    EXPECT_EQ(queries[0].value, "lebowski");
+    EXPECT_EQ(queries[1].key, "donny");
+    EXPECT_EQ(queries[1].value, "outofhiselement");
+
+    uri.remove_query("donny"); // that's a bummer, man
+    EXPECT_EQ(uri.get_query(), "thedude=lebowski");
+    queries = uri.get_query_elements();
+    EXPECT_EQ(queries.size(), 1);
+    EXPECT_EQ(queries[0].key, "thedude");
+    EXPECT_EQ(queries[0].value, "lebowski");
+
+    uri.add_query("HeyPeter", "CheckItOut");
+    EXPECT_EQ(uri.get_query(), "thedude=lebowski&HeyPeter=CheckItOut");
+    queries = uri.get_query_elements();
+    EXPECT_EQ(queries.size(), 2);
   }
 
 }
