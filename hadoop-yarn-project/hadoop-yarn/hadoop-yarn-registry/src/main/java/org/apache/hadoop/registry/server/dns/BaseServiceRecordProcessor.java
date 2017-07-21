@@ -285,7 +285,6 @@ public abstract class BaseServiceRecordProcessor
      */
     protected Name getContainerIDName() throws TextParseException {
       String containerID = RegistryPathUtils.lastPathEntry(getPath());
-      containerID = containerID.replace("container", "ctr");
       return Name.fromString(String.format("%s.%s", containerID, domain));
     }
 

@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -398,6 +399,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     if (name == null || name.isEmpty()) {
       name = RegistryPathUtils.encodeYarnID(containerIdStr);
+
+      String domain = conf.get(RegistryConstants.KEY_DNS_DOMAIN);
+      if (domain != null) {
+        name += ("." + domain);
+      }
       validateHostname(name);
     }
 

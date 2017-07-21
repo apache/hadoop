@@ -20,10 +20,12 @@ package org.apache.slider.providers.tarball;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.launch.ContainerLauncher;
 import org.apache.slider.providers.AbstractProviderService;
+import org.apache.slider.server.appmaster.state.RoleInstance;
 
 import java.io.IOException;
 
@@ -34,9 +36,11 @@ public class TarballProviderService extends AbstractProviderService {
   }
 
   @Override
-  public void processArtifact(ContainerLauncher launcher, Component
-      component, SliderFileSystem fileSystem) throws IOException {
-    Path artifact =  new Path(component.getArtifact().getId());
+  public void processArtifact(ContainerLauncher launcher, Application
+      application, RoleInstance roleInstance, SliderFileSystem fileSystem)
+      throws IOException {
+    Path artifact = new Path(roleInstance.providerRole.component
+        .getArtifact().getId());
     if (!fileSystem.isFile(artifact)) {
       throw new IOException("Package doesn't exist as a resource: " +
           artifact.toString());

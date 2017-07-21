@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.registry.server.dns;
 
+import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.xbill.DNS.Name;
@@ -156,8 +157,10 @@ public class ContainerServiceRecordProcessor extends
      */
     @Override protected void init(ServiceRecord serviceRecord) {
       try {
-        this.setNames(new Name[] {getContainerIDName()});
+        this.setNames(new Name[] {getContainerName()});
       } catch (TextParseException e) {
+        // log
+      } catch (PathNotFoundException e) {
         // log
       }
       List<String> txts = new ArrayList<>();
@@ -200,8 +203,10 @@ public class ContainerServiceRecordProcessor extends
       }
       this.setNames(new Name[] {reverseLookupName});
       try {
-        this.setTarget(getContainerIDName());
+        this.setTarget(getContainerName());
       } catch (TextParseException e) {
+        //LOG
+      } catch (PathNotFoundException e) {
         //LOG
       }
     }
