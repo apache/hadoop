@@ -391,6 +391,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11472. Fix inconsistent replica size after a data pipeline failure.
     (Erik Krogen and Wei-Chiu Chuang via shv)
 
+    HDFS-12177. NameNode exits due to setting BlockPlacementPolicy loglevel to Debug.
+    (Jiandan Yang via Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
