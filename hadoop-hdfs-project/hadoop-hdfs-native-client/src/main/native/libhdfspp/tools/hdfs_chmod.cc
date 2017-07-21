@@ -97,13 +97,9 @@ int main(int argc, char *argv[]) {
   std::string uri_path = argv[optind + 1];
 
   //Building a URI object from the given uri_path
-  hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
-  if (!uri) {
-    std::cerr << "Malformed URI: " << uri_path << std::endl;
-    exit(EXIT_FAILURE);
-  }
+  hdfs::URI uri = hdfs::parse_path_or_exit(uri_path);
 
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), true);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri, true);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
@@ -119,7 +115,7 @@ int main(int argc, char *argv[]) {
   //strtol() is reading the value with base 8, NULL because we are reading in just one value.
   uint16_t perm = strtol(permissions.c_str(), NULL, 8);
   if(!recursive){
-    fs->SetPermission(uri->get_path(), perm, handler);
+    fs->SetPermission(uri.get_path(), perm, handler);
   }
   else {
     //Allocating shared state, which includes:
@@ -171,7 +167,7 @@ int main(int argc, char *argv[]) {
     };
 
     //Asynchronous call to Find
-    fs->Find(uri->get_path(), "*", hdfs::FileSystem::GetDefaultFindMaxDepth(), handlerFind);
+    fs->Find(uri.get_path(), "*", hdfs::FileSystem::GetDefaultFindMaxDepth(), handlerFind);
   }
 
   /* block until promise is set */

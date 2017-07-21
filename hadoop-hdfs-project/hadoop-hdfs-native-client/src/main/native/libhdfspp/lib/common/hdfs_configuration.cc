@@ -131,13 +131,14 @@ std::vector<NamenodeInfo> HdfsConfiguration::LookupNameService(const std::string
     for(auto node_id=namenode_ids.begin(); node_id != namenode_ids.end(); node_id++) {
       // find URI
       std::string dom_node_name = std::string("dfs.namenode.rpc-address.") + nameservice + "." + *node_id;
-      optional<URI> node_uri = URI::parse_from_string(PrependHdfsScheme(Get(dom_node_name)));
 
-      if(!node_uri) {
+      URI uri;
+      try {
+        uri = URI::parse_from_string(PrependHdfsScheme(Get(dom_node_name)));
+      } catch (const uri_parse_error) {
         throw ha_parse_error("unable to find " + dom_node_name);
       }
 
-      URI uri = node_uri.value();
       if(uri.str() == "") {
         LOG_WARN(kRPC, << "Attempted to read info for nameservice " << nameservice << " node " << dom_node_name << " but didn't find anything.")
       } else {

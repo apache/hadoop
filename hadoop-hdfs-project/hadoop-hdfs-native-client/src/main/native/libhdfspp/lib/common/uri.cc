@@ -17,16 +17,15 @@
  */
 
 
-#include <common/uri.h>
+#include <hdfspp/uri.h>
 
 #include <uriparser2/uriparser/Uri.h>
 
 #include <string.h>
 #include <sstream>
 #include <cstdlib>
+#include <cassert>
 #include <limits>
-
-using std::experimental::nullopt;
 
 namespace hdfs
 {
@@ -140,24 +139,22 @@ std::string copy_range(const UriTextRangeA *r) {
   return "";
 }
 
-bool parse_int(const UriTextRangeA *r, optional<uint16_t> * result) {
-  assert(result); // output
-  std::string int_string = copy_range(r);
-  if (!int_string.empty()) {
+bool parse_int(const UriTextRangeA *r, int32_t& result)
+{
+  std::string int_str = copy_range(r);
+  if(!int_str.empty()) {
     errno = 0;
-    unsigned long val = ::strtoul(int_string.c_str(), nullptr, 10);
-    if (errno == 0 && val < std::numeric_limits<uint16_t>::max() ) {
-      *result = std::experimental::make_optional<uint16_t>(val);
+    unsigned long val = ::strtoul(int_str.c_str(), nullptr, 10);
+    if(errno == 0 && val < std::numeric_limits<uint16_t>::max()) {
+      result = val;
       return true;
     } else {
       return false;
     }
   }
-
-  // No value
-  *result = nullopt;
   return true;
 }
+
 
 std::vector<std::string> copy_path(const UriPathSegmentA *ps) {
     std::vector<std::string> result;
@@ -190,8 +187,8 @@ void parse_user_info(const UriTextRangeA *r, std::string * user, std::string * p
 }
 
 
-std::vector<std::pair<std::string, std::string > > parse_query(const char *first, const char * afterLast) {
-    std::vector<std::pair<std::string, std::string > >  result;
+std::vector<URI::Query> parse_queries(const char *first, const char * afterLast) {
+    std::vector<URI::Query>  result;
     UriQueryListA * query;
     int count;
     int dissect_result = uriDissectQueryMallocExA(&query, &count, first, afterLast, false, URI_BR_DONT_TOUCH);
@@ -199,7 +196,7 @@ std::vector<std::pair<std::string, std::string > > parse_query(const char *first
       for (auto ps = query; ps != nullptr; ps = ps->next) {
         std::string key = ps->key ? URI::encode(ps->key) : "";
         std::string value = ps->value ? URI::encode(ps->value) : "";
-          result.push_back(std::make_pair(key, value));
+          result.emplace_back(key, value);
       }
       uriFreeQueryListA(query);
     }
@@ -207,8 +204,8 @@ std::vector<std::pair<std::string, std::string > > parse_query(const char *first
   return result;
 }
 
-
-optional<URI> URI::parse_from_string(const std::string &str)
+// Parse a string into a URI.  Throw a hdfs::uri_parse_error if URI is malformed.
+URI URI::parse_from_string(const std::string &str)
 {
   URI ret;
   bool ok = true;
@@ -224,9 +221,9 @@ optional<URI> URI::parse_from_string(const std::string &str)
   if (ok) {
     ret.scheme = copy_range(&uu.scheme);
     ret.host = copy_range(&uu.hostText);
-    ok &= parse_int(&uu.portText, &ret.port);
+    ok &= parse_int(&uu.portText, ret._port);
     ret.path = copy_path(uu.pathHead);
-    ret.query = parse_query(uu.query.first, uu.query.afterLast);
+    ret.queries = parse_queries(uu.query.first, uu.query.afterLast);
     ret.fragment = copy_range(&uu.fragment);
     parse_user_info(&uu.userInfo, &ret.user, &ret.pass);
     uriFreeUriMembersA(&uu);
@@ -234,9 +231,9 @@ optional<URI> URI::parse_from_string(const std::string &str)
   uriFreeUriMembersA(&uu);
 
   if (ok) {
-    return std::experimental::make_optional(ret);
+    return ret;
   } else {
-    return nullopt;
+    throw uri_parse_error(str);
   }
 }
 
@@ -245,6 +242,9 @@ optional<URI> URI::parse_from_string(const std::string &str)
 //   Getters and setters
 //
 ///////////////////////////////////////////////////////////////////////////////
+
+URI::URI() : _port(-1) {}
+URI::Query::Query(const std::string& k, const std::string& v) : key(k), value(v) {}
 
 std::string URI::str(bool encoded_output) const
 {
@@ -257,7 +257,7 @@ std::string URI::str(bool encoded_output) const
   }
   if (has_authority()) ss << build_authority(encoded_output);
   if (!path.empty()) ss << get_path(encoded_output);
-  if (!query.empty()) ss << "?" << get_query(encoded_output);
+  if (!queries.empty()) ss << "?" << get_query(encoded_output);
   if (!fragment.empty()) ss << "#" << from_encoded(encoded_output, fragment);
 
   return ss.str();
@@ -265,25 +265,62 @@ std::string URI::str(bool encoded_output) const
 
 bool URI::has_authority() const
 {
-  return (!host.empty()) || (port);
+  return (!host.empty()) || (has_port());
 }
 
 std::string URI::build_authority(bool encoded_output) const
 {
   std::stringstream ss;
   ss << URI::from_encoded(encoded_output, host);
-  if (port)
+  if (has_port())
   {
-    ss << ":" << *port;
+    ss << ":" << _port;
   }
   return ss.str();
 }
 
+std::string URI::get_scheme(bool encoded_output) const {
+  return from_encoded(encoded_output,scheme);
+}
+
+void URI::set_scheme(const std::string &s, bool encoded_input) {
+  scheme = to_encoded(encoded_input,s);
+}
+
+std::string URI::get_host(bool encoded_output) const {
+  return from_encoded(encoded_output,host);
+}
+
+void URI::set_host(const std::string& h, bool encoded_input) {
+  host = to_encoded(encoded_input,h);
+}
+
+bool URI::has_port() const {
+  return _port != -1;
+}
+
+uint16_t URI::get_port() const {
+  return (uint16_t)_port;
+}
+
+uint16_t URI::get_port_or_default(uint16_t val) const {
+  return has_port() ? (uint16_t)_port : val;
+}
+
+void URI::set_port(uint16_t p)
+{
+  _port = (int32_t)p & 0xFFFF;
+}
+
+void URI::clear_port()
+{
+  _port = -1;
+}
 
 std::string URI::get_path(bool encoded_output) const
 {
   std::ostringstream out;
-  for (auto s: path) {
+  for (const std::string& s: path) {
     out << "/" << from_encoded(encoded_output, s);
   }
   return out.str();
@@ -292,7 +329,7 @@ std::string URI::get_path(bool encoded_output) const
 std::vector<std::string> URI::get_path_elements(bool encoded_output) const
 {
   std::vector<std::string> result;
-  for (auto path_elem: path) {
+  for (const std::string& path_elem: path) {
     result.push_back(from_encoded(encoded_output, path_elem));
   }
 
@@ -302,70 +339,87 @@ std::vector<std::string> URI::get_path_elements(bool encoded_output) const
 void URI::parse_path(bool input_encoded, const std::string &input_path)
 {
   std::vector<std::string> split_path = split(input_path, '/');
-  for (auto s: split_path) {
+  for (const std::string& s: split_path) {
     path.push_back(to_encoded(input_encoded, s));
   }
 }
 
-
 // Mostly copied and modified from uriparser2.c
+
+void URI::set_path(const std::string &p, bool encoded_input) {
+  parse_path(encoded_input, p);
+}
 
 void URI::add_path(const std::string &p, bool encoded_input)
 {
   path.push_back(to_encoded(encoded_input, p));
 }
 
-
 std::string URI::get_query(bool encoded_output) const {
   bool first = true;
   std::stringstream ss;
-  for (auto q: query) {
+  for (const Query& q: queries) {
     if (!first) {
       ss << "&";
     }
-    ss << from_encoded(encoded_output, q.first) << "=" << from_encoded(encoded_output, q.second);
+    ss << from_encoded(encoded_output, q.key) << "=" << from_encoded(encoded_output, q.value);
     first = false;
   }
 
   return ss.str();
 }
 
-std::vector< std::pair<std::string, std::string> > URI::get_query_elements(bool encoded_output) const
+std::vector<URI::Query> URI::get_query_elements(bool encoded_output) const
 {
-  std::vector< std::pair<std::string, std::string> > result;
-  for (auto q: query) {
-    auto key = from_encoded(encoded_output, q.first);
-    auto value = from_encoded(encoded_output, q.second);
-    result.push_back(std::make_pair(key, value));
+  std::vector<Query> result;
+  for (const Query& q: queries) {
+    std::string key = from_encoded(encoded_output, q.key);
+    std::string value = from_encoded(encoded_output, q.value);
+    result.emplace_back(key, value);
   }
 
   return result;
 }
 
-
 void URI::set_query(const std::string &q) {
-  query = parse_query(q.c_str(), q.c_str() + q.size() + 1);
+  queries = parse_queries(q.c_str(), q.c_str() + q.size() + 1);
 }
 
 
 void URI::add_query(const std::string &name, const std::string & value, bool encoded_input)
 {
-  query.push_back(std::make_pair(to_encoded(encoded_input, name), to_encoded(encoded_input, value)));
+  queries.emplace_back(to_encoded(encoded_input, name), to_encoded(encoded_input, value));
 }
 
-void URI::remove_queries(const std::string &q_name, bool encoded_input)
+void URI::remove_query(const std::string &q_name, bool encoded_input)
 {
-  if (query.empty())
+  if (queries.empty())
     return;
 
   // This is the one place we need to do decoded comparisons
   std::string decoded_key = encoded_input ? decode(q_name) : q_name;
 
-  for (int i = query.size() - 1; i >= 0; i--) {
-    if (decode(query[i].first) == decoded_key) {
-      query.erase(query.begin() + i);
+  for (int i = queries.size() - 1; i >= 0; i--) {
+    if (decode(queries[i].key) == decoded_key) {
+      queries.erase(queries.begin() + i);
     }
   }
+}
+
+std::string URI::get_fragment(bool encoded_output) const {
+  return from_encoded(encoded_output, fragment);
+}
+
+void URI::set_fragment(const std::string &f, bool encoded_input) {
+  fragment = to_encoded(encoded_input,f);
+}
+
+std::string URI::from_encoded(bool encoded_output, const std::string & input) {
+  return encoded_output ? input : decode(input);
+}
+
+std::string URI::to_encoded(bool encoded_input, const std::string & input) {
+  return encoded_input ? input : encode(input);
 }
 
 std::string URI::GetDebugString() const {
@@ -375,25 +429,25 @@ std::string URI::GetDebugString() const {
   ss << "\t" << "uri.get_scheme() = \"" << get_scheme() << "\"" << std::endl;
   ss << "\t" << "uri.get_host() = \"" << get_host() << "\"" << std::endl;
 
-  if(!port)
-    ss << "\t" << "uri.get_port() = unset optional<uint16_t>" << std::endl;
+  if(_port == -1)
+    ss << "\t" << "uri.get_port() = invalid (uninitialized)" << std::endl;
   else
-    ss << "\t" << "uri.get_port() = \"" << port.value() << "\"" << std::endl;
+    ss << "\t" << "uri.get_port() = \"" << _port << "\"" << std::endl;
 
   ss << "\t" << "uri.get_path() = \"" << get_path() << "\"" << std::endl;
   ss << "\t" << "uri.get_fragment() = \"" << get_fragment() << "\"" << std::endl;
 
 
-  std::vector<std::pair<std::string, std::string> > elems = get_query_elements();
+  std::vector<Query> query_elems = get_query_elements();
 
-  if(elems.size() > 0)
+  if(query_elems.size() > 0)
     ss << "\t" << "Query elements:" << std::endl;
 
-  for(auto qry = elems.begin(); qry != elems.end(); qry++) {
-    ss << "\t\t" << qry->first << " -> " << qry->second << std::endl;
+  for(auto qry = query_elems.begin(); qry != query_elems.end(); qry++) {
+    ss << "\t\t" << qry->key << " -> " << qry->value << std::endl;
   }
 
   return ss.str();
 }
 
-}
+} // end namespace hdfs

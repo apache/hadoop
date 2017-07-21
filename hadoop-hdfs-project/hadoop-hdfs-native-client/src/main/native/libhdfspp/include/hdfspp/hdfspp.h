@@ -25,6 +25,7 @@
 #include "hdfspp/statinfo.h"
 #include "hdfspp/fsinfo.h"
 #include "hdfspp/content_summary.h"
+#include "hdfspp/uri.h"
 
 #include <functional>
 #include <memory>
@@ -199,9 +200,17 @@ class FileSystem {
    **/
   static FileSystem *New();
 
+  /**
+   *  Callback type for async FileSystem::Connect calls.
+   *    Provides the result status and instance pointer to the handler.
+   **/
+  typedef std::function<void(const Status& result_status, FileSystem *created_fs)> AsyncConnectCallback;
 
+  /**
+   *  Connect directly to the specified namenode using the host and port (service).
+   **/
   virtual void Connect(const std::string &server, const std::string &service,
-      const std::function<void(const Status &, FileSystem *)> &handler) = 0;
+      const AsyncConnectCallback &handler) = 0;
 
   /* Synchronous call of Connect */
   virtual Status Connect(const std::string &server, const std::string &service) = 0;
@@ -214,7 +223,7 @@ class FileSystem {
    * If no defaultFs is defined, returns an error.
    */
   virtual void ConnectToDefaultFs(
-      const std::function<void(const Status &, FileSystem *)> &handler) = 0;
+      const AsyncConnectCallback& handler) = 0;
   virtual Status ConnectToDefaultFs() = 0;
 
   /**

@@ -19,7 +19,7 @@
 #ifndef COMMON_CONFIGURATION_H_
 #define COMMON_CONFIGURATION_H_
 
-#include "common/uri.h"
+#include "hdfspp/uri.h"
 
 #include <string>
 #include <map>

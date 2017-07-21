@@ -47,7 +47,7 @@ namespace hdfs {
     //Check if the user supplied the host
     if(!uri.get_host().empty()){
       //If port is supplied we use it, otherwise we use the empty string so that it will be looked up in configs.
-      std::string port = (uri.get_port()) ? std::to_string(uri.get_port().value()) : "";
+      std::string port = uri.has_port() ? std::to_string(uri.get_port()) : "";
       status = fs->Connect(uri.get_host(), port);
       if (!status.ok()) {
         std::cerr << "Could not connect to " << uri.get_host() << ":" << port << ". " << status.ToString() << std::endl;
@@ -111,5 +111,18 @@ namespace hdfs {
       }
     } while (last_bytes_read > 0);
     return;
+  }
+
+
+  URI parse_path_or_exit(const std::string& path)
+  {
+    URI uri;
+    try {
+      uri = hdfs::URI::parse_from_string(path);
+    } catch (const uri_parse_error& e) {
+      std::cerr << "Malformed URI: " << path << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    return uri;
   }
 }

@@ -18,7 +18,7 @@
 #ifndef LIBHDFSPP_OPTIONS_H_
 #define LIBHDFSPP_OPTIONS_H_
 
-#include "common/uri.h"
+#include "hdfspp/uri.h"
 
 #include <string>
 #include <vector>

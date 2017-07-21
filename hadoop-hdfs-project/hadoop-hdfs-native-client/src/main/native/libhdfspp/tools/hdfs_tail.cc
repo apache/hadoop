@@ -73,13 +73,9 @@ int main(int argc, char *argv[]) {
   std::string uri_path = argv[optind];
 
   //Building a URI object from the given uri_path
-  hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
-  if (!uri) {
-    std::cerr << "Malformed URI: " << uri_path << std::endl;
-    exit(EXIT_FAILURE);
-  }
+  hdfs::URI uri = hdfs::parse_path_or_exit(uri_path);
 
-  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), false);
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri, false);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
@@ -87,7 +83,7 @@ int main(int argc, char *argv[]) {
 
   //We need to get the size of the file using stat
   hdfs::StatInfo stat_info;
-  hdfs::Status status = fs->GetFileInfo(uri->get_path(), stat_info);
+  hdfs::Status status = fs->GetFileInfo(uri.get_path(), stat_info);
   if (!status.ok()) {
     std::cerr << "Error: " << status.ToString() << std::endl;
     exit(EXIT_FAILURE);
@@ -101,7 +97,7 @@ int main(int argc, char *argv[]) {
 
   do {
     off_t current_length = (off_t) stat_info.length;
-    readFile(fs, uri->get_path(), offset, stdout, false);
+    readFile(fs, uri.get_path(), offset, stdout, false);
 
     //Exit if -f flag was not set
     if(!follow){
@@ -112,7 +108,7 @@ int main(int argc, char *argv[]) {
       //Sleep for the REFRESH_RATE
       sleep(REFRESH_RATE);
       //Use stat to check the new filesize.
-      status = fs->GetFileInfo(uri->get_path(), stat_info);
+      status = fs->GetFileInfo(uri.get_path(), stat_info);
       if (!status.ok()) {
         std::cerr << "Error: " << status.ToString() << std::endl;
         exit(EXIT_FAILURE);

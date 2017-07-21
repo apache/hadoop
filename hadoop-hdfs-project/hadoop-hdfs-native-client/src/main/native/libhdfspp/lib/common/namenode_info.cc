@@ -41,11 +41,11 @@ std::string ResolvedNamenodeInfo::str() const {
   std::stringstream ss;
   ss << "ResolvedNamenodeInfo {nameservice: " << nameservice << ", name: " << name << ", uri: " << uri.str();
   ss << ", host: " << uri.get_host();
-  auto port = uri.get_port();
-  if(port)
-    ss << ", port: " << port.value();
+
+  if(uri.has_port())
+    ss << ", port: " << uri.get_port();
   else
-    ss << ", port: unable to parse";
+    ss << ", invalid port (uninitialized)";
 
   ss << ", scheme: " << uri.get_scheme();
 

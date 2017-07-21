@@ -32,7 +32,7 @@
  */
 
 #include "configuration.h"
-#include "uri.h"
+#include "hdfspp/uri.h"
 
 #include <strings.h>
 #include <sstream>
@@ -140,12 +140,15 @@ bool Configuration::GetBoolWithDefault(const std::string& key,
 }
 
 optional<URI> Configuration::GetUri(const std::string& key) const {
-  auto raw = Get(key);
+  optional<std::string> raw = Get(key);
   if (raw) {
-    return URI::parse_from_string(*raw);
-  } else {
-    return optional<URI>();
+    try {
+      return std::experimental::make_optional(URI::parse_from_string(*raw));
+    } catch (const uri_parse_error& e) {
+      // Return empty below
+    }
   }
+  return optional<URI>();
 }
 
 URI Configuration::GetUriWithDefault(const std::string& key,
@@ -154,10 +157,9 @@ URI Configuration::GetUriWithDefault(const std::string& key,
   if (result) {
     return *result;
   } else {
-    result = URI::parse_from_string(default_value);
-    if (result) {
-      return *result;
-    } else {
+    try {
+      return URI::parse_from_string(default_value);
+    } catch (const uri_parse_error& e) {
       return URI();
     }
   }

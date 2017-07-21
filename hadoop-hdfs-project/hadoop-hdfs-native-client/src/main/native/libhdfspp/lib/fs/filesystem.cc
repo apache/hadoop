@@ -221,12 +221,12 @@ void FileSystemImpl::Connect(const std::string &server,
 
     // tmp namenode info just to get this in the right format for BulkResolve
     NamenodeInfo tmp_info;
-    optional<URI> uri = URI::parse_from_string("hdfs://" + cluster_name_);
-    if(!uri) {
+    try {
+      tmp_info.uri = URI::parse_from_string("hdfs://" + cluster_name_);
+    } catch (const uri_parse_error& e) {
       LOG_ERROR(kFileSystem, << "Unable to use URI for cluster " << cluster_name_);
       handler(Status::Error(("Invalid namenode " + cluster_name_ + " in config").c_str()), this);
     }
-    tmp_info.uri = uri.value();
 
     resolved_namenodes = BulkResolve(&io_service_->io_service(), {tmp_info});
   }
@@ -258,11 +258,8 @@ void FileSystemImpl::ConnectToDefaultFs(const std::function<void(const Status &,
     return;
   }
 
-  optional<uint16_t>  port = options_.defaultFS.get_port();
-  if (!port) {
-    port = kDefaultPort;
-  }
-  std::string port_as_string = std::to_string(*port);
+  int16_t port = options_.defaultFS.get_port_or_default(kDefaultPort);
+  std::string port_as_string = std::to_string(port);
 
   Connect(host, port_as_string, handler);
 }
