@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.scm;
 
 import com.google.common.cache.Cache;
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -30,7 +29,6 @@ import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.junit.Assert;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,11 +59,6 @@ public class TestXceiverClientManager {
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient = cluster
         .createStorageContainerLocationClient();
-  }
-
-  @AfterClass
-  public static void shutdown() {
-    IOUtils.cleanup(null, cluster, storageContainerLocationClient);
   }
 
   @Test
