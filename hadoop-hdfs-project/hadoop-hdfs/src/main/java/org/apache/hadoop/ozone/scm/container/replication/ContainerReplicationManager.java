@@ -64,7 +64,7 @@ import static org.apache.hadoop.scm.ScmConfigKeys
  * computes the replication levels for each container.
  */
 public class ContainerReplicationManager implements Closeable {
-  static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(ContainerReplicationManager.class);
 
   private final NodePoolManager poolManager;
