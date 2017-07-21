@@ -521,7 +521,7 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
       throw ProtobufHelper.getRemoteException(e);
     }
     if (resp.getStatus() != Status.OK) {
-      throw new IOException("Get key failed, error:" +
+      throw new IOException("Create key failed, error:" +
           resp.getStatus());
     }
     return KsmKeyInfo.getFromProtobuf(resp.getKeyInfo());

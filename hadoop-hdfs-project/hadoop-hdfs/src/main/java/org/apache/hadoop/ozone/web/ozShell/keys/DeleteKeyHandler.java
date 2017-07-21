@@ -89,7 +89,7 @@ public class DeleteKeyHandler extends Handler {
 
 
     OzoneVolume vol = client.getVolume(volumeName);
-    OzoneBucket bucket = vol.createBucket(bucketName);
+    OzoneBucket bucket = vol.getBucket(bucketName);
     bucket.deleteKey(keyName);
 
   }

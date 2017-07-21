@@ -108,6 +108,8 @@ public class KeyManagerImpl implements KeyManager {
       LOG.debug("Key {} allocated in volume {} bucket {}",
           keyName, volumeName, bucketName);
       return keyBlock;
+    } catch (KSMException e) {
+      throw e;
     } catch (IOException ex) {
       LOG.error("Key allocation failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
