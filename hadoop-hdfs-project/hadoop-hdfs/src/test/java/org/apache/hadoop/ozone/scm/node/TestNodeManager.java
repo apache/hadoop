@@ -949,6 +949,7 @@ public class TestNodeManager {
   public void testScmStatsFromNodeReport() throws IOException,
       InterruptedException, TimeoutException {
     OzoneConfiguration conf = getConf();
+    conf.setLong(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 1000);
     final int nodeCount = 10;
     final long capacity = 2000;
     final long used = 100;
