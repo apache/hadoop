@@ -200,7 +200,7 @@ public class TestKeys {
           + " when using invalid volume name.");
     } catch(OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          Status.INTERNAL_ERROR.toString(), e);
+          Status.VOLUME_NOT_FOUND.toString(), e);
     }
 
     try {
@@ -210,7 +210,7 @@ public class TestKeys {
           + "when using invalid bucket name.");
     } catch (OzoneException e) {
       GenericTestUtils.assertExceptionContains(
-          Status.INTERNAL_ERROR.toString(), e);
+          Status.BUCKET_NOT_FOUND.toString(), e);
     }
   }
 
