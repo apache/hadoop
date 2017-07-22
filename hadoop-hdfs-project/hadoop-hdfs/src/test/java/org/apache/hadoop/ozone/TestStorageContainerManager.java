@@ -20,24 +20,16 @@ package org.apache.hadoop.ozone;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.junit.Rule;
 import org.junit.Assert;
-// TODO : We need this when we enable these tests back.
 import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.After;
 import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.scm.protocol.LocatedContainer;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
@@ -54,23 +46,8 @@ public class TestStorageContainerManager {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
-  private static StorageContainerLocationProtocolClientSideTranslatorPB
-      storageContainerLocationClient;
-
   @Rule
   public ExpectedException exception = ExpectedException.none();
-
-  @BeforeClass
-  public static void init() throws IOException {
-    conf = new OzoneConfiguration();
-  }
-
-  @After
-  public void shutdown() throws InterruptedException {
-    IOUtils.cleanup(null, storageContainerLocationClient, cluster);
-  }
 
   @Test
   public void testRpcPermission() throws IOException {
@@ -91,65 +68,70 @@ public class TestStorageContainerManager {
   private void testRpcPermissionWithConf(
       OzoneConfiguration ozoneConf, String fakeRemoteUsername,
       boolean expectPermissionDenied) throws IOException {
-    cluster = new MiniOzoneCluster.Builder(ozoneConf).numDataNodes(1)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-
-    String fakeUser = fakeRemoteUsername;
-    StorageContainerManager mockScm = Mockito.spy(
-        cluster.getStorageContainerManager());
-    Mockito.when(mockScm.getPpcRemoteUsername())
-        .thenReturn(fakeUser);
+    MiniOzoneCluster cluster =
+        new MiniOzoneCluster.Builder(ozoneConf).numDataNodes(1)
+            .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
 
     try {
-      mockScm.deleteContainer("container1");
-      fail("Operation should fail, expecting an IOException here.");
-    } catch (Exception e) {
-      if (expectPermissionDenied) {
-        verifyPermissionDeniedException(e, fakeUser);
-      } else {
-        // If passes permission check, it should fail with
-        // container not exist exception.
-        Assert.assertTrue(e.getMessage()
-            .contains("container doesn't exist"));
-      }
-    }
+      String fakeUser = fakeRemoteUsername;
+      StorageContainerManager mockScm = Mockito.spy(
+          cluster.getStorageContainerManager());
+      Mockito.when(mockScm.getPpcRemoteUsername())
+          .thenReturn(fakeUser);
 
-    try {
-      Pipeline pipeLine2 = mockScm.allocateContainer("container2");
-      if(expectPermissionDenied) {
+      try {
+        mockScm.deleteContainer("container1");
         fail("Operation should fail, expecting an IOException here.");
-      } else {
-        Assert.assertEquals("container2", pipeLine2.getContainerName());
+      } catch (Exception e) {
+        if (expectPermissionDenied) {
+          verifyPermissionDeniedException(e, fakeUser);
+        } else {
+          // If passes permission check, it should fail with
+          // container not exist exception.
+          Assert.assertTrue(e.getMessage()
+              .contains("container doesn't exist"));
+        }
       }
-    } catch (Exception e) {
-      verifyPermissionDeniedException(e, fakeUser);
-    }
 
-    try {
-      Pipeline pipeLine3 = mockScm.allocateContainer("container3",
-          ScmClient.ReplicationFactor.ONE);
-      if(expectPermissionDenied) {
-        fail("Operation should fail, expecting an IOException here.");
-      } else {
-        Assert.assertEquals("container3", pipeLine3.getContainerName());
-        Assert.assertEquals(1, pipeLine3.getMachines().size());
-      }
-    } catch (Exception e) {
-      verifyPermissionDeniedException(e, fakeUser);
-    }
-
-    try {
-      mockScm.getContainer("container4");
-      fail("Operation should fail, expecting an IOException here.");
-    } catch (Exception e) {
-      if (expectPermissionDenied) {
+      try {
+        Pipeline pipeLine2 = mockScm.allocateContainer("container2");
+        if (expectPermissionDenied) {
+          fail("Operation should fail, expecting an IOException here.");
+        } else {
+          Assert.assertEquals("container2", pipeLine2.getContainerName());
+        }
+      } catch (Exception e) {
         verifyPermissionDeniedException(e, fakeUser);
-      } else {
-        // If passes permission check, it should fail with
-        // key not exist exception.
-        Assert.assertTrue(e.getMessage()
-            .contains("Specified key does not exist"));
       }
+
+      try {
+        Pipeline pipeLine3 = mockScm.allocateContainer("container3",
+            ScmClient.ReplicationFactor.ONE);
+        if (expectPermissionDenied) {
+          fail("Operation should fail, expecting an IOException here.");
+        } else {
+          Assert.assertEquals("container3", pipeLine3.getContainerName());
+          Assert.assertEquals(1, pipeLine3.getMachines().size());
+        }
+      } catch (Exception e) {
+        verifyPermissionDeniedException(e, fakeUser);
+      }
+
+      try {
+        mockScm.getContainer("container4");
+        fail("Operation should fail, expecting an IOException here.");
+      } catch (Exception e) {
+        if (expectPermissionDenied) {
+          verifyPermissionDeniedException(e, fakeUser);
+        } else {
+          // If passes permission check, it should fail with
+          // key not exist exception.
+          Assert.assertTrue(e.getMessage()
+              .contains("Specified key does not exist"));
+        }
+      }
+    } finally {
+      IOUtils.cleanup(null, cluster);
     }
   }
 
