@@ -816,7 +816,7 @@ public class TestContainerPersistence {
 
   @Test
   public void testListKey() throws Exception {
-    String containerName = "c0" + RandomStringUtils.randomAscii(10);
+    String containerName = "c0" + RandomStringUtils.randomAlphanumeric(10);
     Pipeline pipeline = createSingleNodePipeline(containerName);
     List<String> expectedKeys = new ArrayList<String>();
     for (int i = 0; i < 10; i++) {
