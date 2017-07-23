@@ -1215,7 +1215,6 @@ char* sanitize_docker_command(const char *line) {
     {"rm", no_argument, 0, 'r' },
     {"workdir", required_argument, 0, 'w' },
     {"net", required_argument, 0, 'e' },
-    {"hostname", required_argument, 0, 'h' },
     {"cgroup-parent", required_argument, 0, 'g' },
     {"privileged", no_argument, 0, 'p' },
     {"cap-add", required_argument, 0, 'a' },
@@ -1256,9 +1255,6 @@ char* sanitize_docker_command(const char *line) {
         break;
       case 'e':
         quote_and_append_arg(&output, &output_size, "--net=", optarg);
-        break;
-      case 'h':
-        quote_and_append_arg(&output, &output_size, "--hostname=", optarg);
         break;
       case 'v':
         quote_and_append_arg(&output, &output_size, "-v ", optarg);
