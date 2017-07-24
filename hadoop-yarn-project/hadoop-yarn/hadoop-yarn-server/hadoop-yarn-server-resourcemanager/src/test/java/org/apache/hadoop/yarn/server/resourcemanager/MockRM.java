@@ -1042,7 +1042,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected AdminService createAdminService() {
-    return new AdminService(this, getRMContext()) {
+    return new AdminService(this) {
       @Override
       protected void startServer() {
         // override to not start rpc handler
