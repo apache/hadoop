@@ -499,7 +499,15 @@
     name to use for the service when the client wishes to make an RPC call.
   </description>
 </property>
-
+  <property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>unknown</value>
+    <description>
+      WASB passes User-Agent header to the Azure back-end. The default value
+      contains WASB version, Java Runtime version, Azure Client library version,
+      and the value of the configuration option fs.azure.user.agent.prefix.
+    </description>
+  </property>
 
 <property>
     <name>hadoop.security.uid.cache.secs</name>
