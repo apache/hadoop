@@ -313,16 +313,8 @@ public final class HBaseTimelineStorageUtils {
   public static void setMetricsTimeRange(Query query, byte[] metricsCf,
       long tsBegin, long tsEnd) {
     if (tsBegin != 0 || tsEnd != Long.MAX_VALUE) {
-      long supplementedTsBegin = tsBegin == 0 ? 0 :
-          TimestampGenerator.getSupplementedTimestamp(tsBegin, null);
-      long supplementedTsEnd =
-          (tsEnd == Long.MAX_VALUE) ? Long.MAX_VALUE :
-          TimestampGenerator.getSupplementedTimestamp(tsEnd + 1, null);
-      // Handle overflow by resetting time begin to 0 and time end to
-      // Long#MAX_VALUE, if required.
       query.setColumnFamilyTimeRange(metricsCf,
-          ((supplementedTsBegin < 0) ? 0 : supplementedTsBegin),
-          ((supplementedTsEnd < 0) ? Long.MAX_VALUE : supplementedTsEnd));
+          tsBegin, ((tsEnd == Long.MAX_VALUE) ? Long.MAX_VALUE : (tsEnd + 1)));
     }
   }
 }
