@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies;
 import java.util.Collection;
 import java.util.Comparator;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -174,6 +175,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
      * by largest share.  So if resource=<10 MB, 5 CPU>, and pool=<100 MB, 10 CPU>,
      * shares will be [.1, .5] and resourceOrder will be [CPU, MEMORY].
      */
+    @VisibleForTesting
     void calculateShares(Resource resource, Resource pool,
         ResourceWeights shares, ResourceType[] resourceOrder, ResourceWeights weights) {
       shares.setWeight(MEMORY, (float)resource.getMemorySize() /
