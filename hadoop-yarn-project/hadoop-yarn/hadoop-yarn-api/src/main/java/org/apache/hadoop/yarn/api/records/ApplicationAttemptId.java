@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import java.text.NumberFormat;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.FastNumberFormat;
 import org.apache.hadoop.yarn.util.Records;
-
-import com.google.common.base.Splitter;
 
 /**
  * <p><code>ApplicationAttemptId</code> denotes the particular <em>attempt</em>
@@ -42,11 +37,13 @@ import com.google.common.base.Splitter;
 @Stable
 public abstract class ApplicationAttemptId implements
     Comparable<ApplicationAttemptId> {
-  private static Splitter _spliter = Splitter.on('_').trimResults();
 
   @Private
   @Unstable
   public static final String appAttemptIdStrPrefix = "appattempt";
+
+  private static final String APP_ATTEMPT_ID_PREFIX = appAttemptIdStrPrefix
+    + '_';
 
   @Public
   @Unstable
@@ -84,16 +81,8 @@ public abstract class ApplicationAttemptId implements
   @Unstable
   protected abstract void setAttemptId(int attemptId);
 
-  static final ThreadLocal<NumberFormat> attemptIdFormat =
-      new ThreadLocal<NumberFormat>() {
-        @Override
-        public NumberFormat initialValue() {
-          NumberFormat fmt = NumberFormat.getInstance();
-          fmt.setGroupingUsed(false);
-          fmt.setMinimumIntegerDigits(6);
-          return fmt;
-        }
-      };
+  private static final int ATTEMPT_ID_MIN_DIGITS = 6;
+  private static final int APP_ID_MIN_DIGITS = 4;
 
   @Override
   public int hashCode() {
@@ -135,12 +124,14 @@ public abstract class ApplicationAttemptId implements
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder(appAttemptIdStrPrefix);
-    sb.append("_");
-    sb.append(this.getApplicationId().getClusterTimestamp()).append("_");
-    sb.append(ApplicationId.appIdFormat.get().format(
-        this.getApplicationId().getId()));
-    sb.append("_").append(attemptIdFormat.get().format(getAttemptId()));
+    StringBuilder sb = new StringBuilder(64);
+    sb.append(APP_ATTEMPT_ID_PREFIX);
+    ApplicationId appId = getApplicationId();
+    sb.append(appId.getClusterTimestamp());
+    sb.append('_');
+    FastNumberFormat.format(sb, appId.getId(), APP_ID_MIN_DIGITS);
+    sb.append('_');
+    FastNumberFormat.format(sb, getAttemptId(), ATTEMPT_ID_MIN_DIGITS);
     return sb.toString();
   }
 
@@ -148,29 +139,33 @@ public abstract class ApplicationAttemptId implements
   
   @Public
   @Stable
-  public static ApplicationAttemptId fromString(String applicationAttemptIdStr) {
-    Iterator<String> it = _spliter.split(applicationAttemptIdStr).iterator();
-    if (!it.next().equals(appAttemptIdStrPrefix)) {
+  public static ApplicationAttemptId fromString(String appAttemptIdStr) {
+    if (!appAttemptIdStr.startsWith(APP_ATTEMPT_ID_PREFIX)) {
       throw new IllegalArgumentException("Invalid AppAttemptId prefix: "
-          + applicationAttemptIdStr);
+          + appAttemptIdStr);
     }
     try {
-      return toApplicationAttemptId(it);
+      int pos1 = APP_ATTEMPT_ID_PREFIX.length() - 1;
+      int pos2 = appAttemptIdStr.indexOf('_', pos1 + 1);
+      if (pos2 < 0) {
+        throw new IllegalArgumentException("Invalid AppAttemptId: "
+            + appAttemptIdStr);
+      }
+      long rmId = Long.parseLong(appAttemptIdStr.substring(pos1 + 1, pos2));
+      int pos3 = appAttemptIdStr.indexOf('_', pos2 + 1);
+      if (pos3 < 0) {
+        throw new IllegalArgumentException("Invalid AppAttemptId: "
+            + appAttemptIdStr);
+      }
+      int appId = Integer.parseInt(appAttemptIdStr.substring(pos2 + 1, pos3));
+      ApplicationId applicationId = ApplicationId.newInstance(rmId, appId);
+      int attemptId = Integer.parseInt(appAttemptIdStr.substring(pos3 + 1));
+      ApplicationAttemptId applicationAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, attemptId);
+      return applicationAttemptId;
     } catch (NumberFormatException n) {
       throw new IllegalArgumentException("Invalid AppAttemptId: "
-          + applicationAttemptIdStr, n);
-    } catch (NoSuchElementException e) {
-      throw new IllegalArgumentException("Invalid AppAttemptId: "
-          + applicationAttemptIdStr, e);
+          + appAttemptIdStr, n);
     }
-  }
-  
-  private static ApplicationAttemptId toApplicationAttemptId(
-      Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
-        Integer.parseInt(it.next()));
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, Integer.parseInt(it.next()));
-    return appAttemptId;
   }
 }
