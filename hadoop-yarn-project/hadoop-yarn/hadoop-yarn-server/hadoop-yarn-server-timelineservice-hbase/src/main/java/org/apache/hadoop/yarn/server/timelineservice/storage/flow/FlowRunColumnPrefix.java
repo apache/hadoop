@@ -69,7 +69,7 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
   private FlowRunColumnPrefix(ColumnFamily<FlowRunTable> columnFamily,
       String columnPrefix, AggregationOperation fra, ValueConverter converter,
       boolean compoundColQual) {
-    column = new ColumnHelper<FlowRunTable>(columnFamily, converter);
+    column = new ColumnHelper<FlowRunTable>(columnFamily, converter, true);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
     if (columnPrefix == null) {
