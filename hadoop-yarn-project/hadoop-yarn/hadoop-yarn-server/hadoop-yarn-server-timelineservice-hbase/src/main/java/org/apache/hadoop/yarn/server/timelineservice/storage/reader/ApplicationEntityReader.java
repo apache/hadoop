@@ -362,10 +362,10 @@ class ApplicationEntityReader extends GenericEntityReader {
 
   private void setMetricsTimeRange(Query query) {
     // Set time range for metric values.
-    HBaseTimelineStorageUtils.
-        setMetricsTimeRange(query, ApplicationColumnFamily.METRICS.getBytes(),
-            getDataToRetrieve().getMetricsTimeBegin(),
-            getDataToRetrieve().getMetricsTimeEnd());
+    HBaseTimelineStorageUtils.setMetricsTimeRange(
+        query, ApplicationColumnFamily.METRICS.getBytes(),
+        getDataToRetrieve().getMetricsTimeBegin(),
+        getDataToRetrieve().getMetricsTimeEnd());
   }
 
   @Override
