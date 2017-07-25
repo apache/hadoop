@@ -20,6 +20,8 @@
 
 namespace hdfs {
 
+NodeExclusionRule::~NodeExclusionRule() {}
+
 BadDataNodeTracker::BadDataNodeTracker(const Options& options)
     : timeout_duration_(options.host_exclusion_duration),
       test_clock_shift_(0) {}

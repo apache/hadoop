@@ -26,7 +26,7 @@ namespace hdfs {
 class Status {
  public:
   // Create a success status.
-  Status() : code_(0) {};
+  Status() : code_(0) {}
 
   // Note: Avoid calling the Status constructors directly, call the factory methods instead
 

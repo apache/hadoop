@@ -27,7 +27,7 @@
 #include <set>
 #include <istream>
 #include <stdint.h>
-#include <optional.hpp>
+#include "common/optional_wrapper.h"
 
 namespace hdfs {
 
@@ -76,8 +76,8 @@ protected:
   struct ConfigData {
     std::string value;
     bool final;
-    ConfigData() : final(false){};
-    ConfigData(const std::string &value) : value(value), final(false) {}
+    ConfigData() : final(false){}
+    ConfigData(const std::string &value_) : value(value_), final(false) {}
     void operator=(const std::string &new_value) {
       value = new_value;
       final = false;
@@ -85,9 +85,9 @@ protected:
   };
   typedef std::map<std::string, ConfigData> ConfigMap;
 
-  Configuration() {};
-  Configuration(ConfigMap &src_map) : raw_values_(src_map){};
-  Configuration(const ConfigMap &src_map) : raw_values_(src_map){};
+  Configuration() {}
+  Configuration(ConfigMap &src_map) : raw_values_(src_map){}
+  Configuration(const ConfigMap &src_map) : raw_values_(src_map){}
 
   static std::vector<std::string> GetDefaultFilenames();
 
@@ -98,7 +98,7 @@ protected:
 
   static std::string fixCase(const std::string &in) {
     std::string result(in);
-    for (auto & c: result) c = (char) toupper(c);
+    for (auto & c: result) c = static_cast<char>(toupper(c));
     return result;
   }
 };

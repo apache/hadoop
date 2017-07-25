@@ -42,6 +42,47 @@ find_package(CyrusSASL)
 find_package(GSasl)
 find_package(Threads)
 
+include(CheckCXXSourceCompiles)
+
+# Check if thread_local is supported
+unset (THREAD_LOCAL_SUPPORTED CACHE)
+set (CMAKE_REQUIRED_DEFINITIONS "-std=c++11")
+set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+check_cxx_source_compiles(
+    "#include <thread>
+    int main(void) {
+      thread_local int s;
+      return 0;
+    }"
+    THREAD_LOCAL_SUPPORTED)
+if (NOT THREAD_LOCAL_SUPPORTED)
+  message(FATAL_ERROR
+  "FATAL ERROR: The required feature thread_local storage is not supported by your compiler. \
+  Known compilers that support this feature: GCC, Visual Studio, Clang (community version), \
+  Clang (version for iOS 9 and later).")
+endif (NOT THREAD_LOCAL_SUPPORTED)
+
+# Check if PROTOC library was compiled with the compatible compiler by trying
+# to compile some dummy code
+unset (PROTOC_IS_COMPATIBLE CACHE)
+set (CMAKE_REQUIRED_LIBRARIES ${PROTOBUF_LIBRARY} ${PROTOBUF_PROTOC_LIBRARY})
+check_cxx_source_compiles(
+    "#include <google/protobuf/io/printer.h>
+    #include <string>
+    int main(void) {
+      ::google::protobuf::io::ZeroCopyOutputStream *out = NULL;
+      ::google::protobuf::io::Printer printer(out, '$');
+      printer.PrintRaw(std::string(\"test\"));
+      return 0;
+    }"
+    PROTOC_IS_COMPATIBLE)
+if (NOT PROTOC_IS_COMPATIBLE)
+  message(FATAL_ERROR
+  "FATAL ERROR: the Protocol Buffers Library and the Libhdfs++ Library must both be compiled \
+  with the same (or compatible) compiler. Normally only the same major versions of the same \
+  compiler are compatible with each other.")
+endif (NOT PROTOC_IS_COMPATIBLE)
+
 find_program(MEMORYCHECK_COMMAND valgrind HINTS ${VALGRIND_DIR} )
 set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full --error-exitcode=1")
 message(STATUS "valgrind location: ${MEMORYCHECK_COMMAND}")
@@ -103,6 +144,11 @@ if(UNIX)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -std=c++11 -g -fPIC -fno-strict-aliasing")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fPIC -fno-strict-aliasing")
 endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    add_definitions(-DASIO_HAS_STD_ADDRESSOF -DASIO_HAS_STD_ARRAY -DASIO_HAS_STD_ATOMIC -DASIO_HAS_CSTDINT -DASIO_HAS_STD_SHARED_PTR -DASIO_HAS_STD_TYPE_TRAITS -DASIO_HAS_VARIADIC_TEMPLATES -DASIO_HAS_STD_FUNCTION -DASIO_HAS_STD_CHRONO -DASIO_HAS_STD_SYSTEM_ERROR)
+endif ()
 
 # Mac OS 10.7 and later deprecates most of the methods in OpenSSL.
 # Add -Wno-deprecated-declarations to avoid the warnings.
