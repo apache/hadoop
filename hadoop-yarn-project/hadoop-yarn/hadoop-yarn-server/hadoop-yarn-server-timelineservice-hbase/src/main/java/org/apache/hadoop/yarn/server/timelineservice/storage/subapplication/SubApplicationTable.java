@@ -15,10 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.timelineservice.storage.application;
+package org.apache.hadoop.yarn.server.timelineservice.storage.subapplication;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -28,70 +30,72 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBaseSchemaConstants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * The application table as column families info, config and metrics. Info
- * stores information about a YARN application entity, config stores
- * configuration data of a YARN application, metrics stores the metrics of a
- * YARN application. This table is entirely analogous to the entity table but
- * created for better performance.
+ * The sub application table has column families:
+ * info, config and metrics.
+ * Info stores information about a timeline entity object
+ * config stores configuration data of a timeline entity object
+ * metrics stores the metrics of a timeline entity object
  *
- * Example application table record:
+ * Example sub application table record:
  *
  * <pre>
  * |-------------------------------------------------------------------------|
- * |  Row       | Column Family                | Column Family| Column Family|
- * |  key       | info                         | metrics      | config       |
+ * |  Row          | Column Family             | Column Family| Column Family|
+ * |  key          | info                      | metrics      | config       |
  * |-------------------------------------------------------------------------|
- * | clusterId! | id:appId                     | metricId1:   | configKey1:  |
- * | userName!  |                              | metricValue1 | configValue1 |
- * | flowName!  | created_time:                | @timestamp1  |              |
- * | flowRunId! | 1392993084018                |              | configKey2:  |
- * | AppId      |                              | metriciD1:   | configValue2 |
- * |            | i!infoKey:                   | metricValue2 |              |
- * |            | infoValue                    | @timestamp2  |              |
- * |            |                              |              |              |
- * |            | r!relatesToKey:              | metricId2:   |              |
- * |            | id3=id4=id5                  | metricValue1 |              |
- * |            |                              | @timestamp2  |              |
- * |            | s!isRelatedToKey:            |              |              |
- * |            | id7=id9=id6                  |              |              |
- * |            |                              |              |              |
- * |            | e!eventId=timestamp=infoKey: |              |              |
- * |            | eventInfoValue               |              |              |
- * |            |                              |              |              |
- * |            | flowVersion:                 |              |              |
- * |            | versionValue                 |              |              |
+ * | subAppUserId! | id:entityId               | metricId1:   | configKey1:  |
+ * | clusterId!    | type:entityType           | metricValue1 | configValue1 |
+ * | entityType!   |                           | @timestamp1  |              |
+ * | idPrefix!|    |                           |              | configKey2:  |
+ * | entityId!     | created_time:             | metricId1:   | configValue2 |
+ * | userId        | 1392993084018             | metricValue2 |              |
+ * |               |                           | @timestamp2  |              |
+ * |               | i!infoKey:                |              |              |
+ * |               | infoValue                 | metricId1:   |              |
+ * |               |                           | metricValue1 |              |
+ * |               |                           | @timestamp2  |              |
+ * |               | e!eventId=timestamp=      |              |              |
+ * |               | infoKey:                  |              |              |
+ * |               | eventInfoValue            |              |              |
+ * |               |                           |              |              |
+ * |               | r!relatesToKey:           |              |              |
+ * |               | id3=id4=id5               |              |              |
+ * |               |                           |              |              |
+ * |               | s!isRelatedToKey          |              |              |
+ * |               | id7=id9=id6               |              |              |
+ * |               |                           |              |              |
+ * |               | flowVersion:              |              |              |
+ * |               | versionValue              |              |              |
  * |-------------------------------------------------------------------------|
  * </pre>
  */
-public class ApplicationTable extends BaseTable<ApplicationTable> {
-  /** application prefix. */
+public class SubApplicationTable extends BaseTable<SubApplicationTable> {
+  /** sub app prefix. */
   private static final String PREFIX =
-      YarnConfiguration.TIMELINE_SERVICE_PREFIX + "application";
+      YarnConfiguration.TIMELINE_SERVICE_PREFIX + "subapplication";
 
-  /** config param name that specifies the application table name. */
+  /** config param name that specifies the subapplication table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
 
   /**
    * config param name that specifies the TTL for metrics column family in
-   * application table.
+   * subapplication table.
    */
   private static final String METRICS_TTL_CONF_NAME = PREFIX
       + ".table.metrics.ttl";
 
   /**
-   * config param name that specifies max-versions for metrics column family in
-   * entity table.
+   * config param name that specifies max-versions for
+   * metrics column family in subapplication table.
    */
   private static final String METRICS_MAX_VERSIONS =
       PREFIX + ".table.metrics.max-versions";
 
-  /** default value for application table name. */
-  private static final String DEFAULT_TABLE_NAME =
-      "timelineservice.application";
+  /** default value for subapplication table name. */
+  public static final String DEFAULT_TABLE_NAME =
+      "timelineservice.subapplication";
 
   /** default TTL is 30 days for metrics timeseries. */
   private static final int DEFAULT_METRICS_TTL = 2592000;
@@ -99,10 +103,10 @@ public class ApplicationTable extends BaseTable<ApplicationTable> {
   /** default max number of versions. */
   private static final int DEFAULT_METRICS_MAX_VERSIONS = 10000;
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ApplicationTable.class);
+  private static final Log LOG = LogFactory.getLog(
+      SubApplicationTable.class);
 
-  public ApplicationTable() {
+  public SubApplicationTable() {
     super(TABLE_NAME_CONF_NAME, DEFAULT_TABLE_NAME);
   }
 
@@ -126,21 +130,21 @@ public class ApplicationTable extends BaseTable<ApplicationTable> {
           + " already exists.");
     }
 
-    HTableDescriptor applicationTableDescp = new HTableDescriptor(table);
+    HTableDescriptor subAppTableDescp = new HTableDescriptor(table);
     HColumnDescriptor infoCF =
-        new HColumnDescriptor(ApplicationColumnFamily.INFO.getBytes());
+        new HColumnDescriptor(SubApplicationColumnFamily.INFO.getBytes());
     infoCF.setBloomFilterType(BloomType.ROWCOL);
-    applicationTableDescp.addFamily(infoCF);
+    subAppTableDescp.addFamily(infoCF);
 
     HColumnDescriptor configCF =
-        new HColumnDescriptor(ApplicationColumnFamily.CONFIGS.getBytes());
+        new HColumnDescriptor(SubApplicationColumnFamily.CONFIGS.getBytes());
     configCF.setBloomFilterType(BloomType.ROWCOL);
     configCF.setBlockCacheEnabled(true);
-    applicationTableDescp.addFamily(configCF);
+    subAppTableDescp.addFamily(configCF);
 
     HColumnDescriptor metricsCF =
-        new HColumnDescriptor(ApplicationColumnFamily.METRICS.getBytes());
-    applicationTableDescp.addFamily(metricsCF);
+        new HColumnDescriptor(SubApplicationColumnFamily.METRICS.getBytes());
+    subAppTableDescp.addFamily(metricsCF);
     metricsCF.setBlockCacheEnabled(true);
     // always keep 1 version (the latest)
     metricsCF.setMinVersions(1);
@@ -148,19 +152,19 @@ public class ApplicationTable extends BaseTable<ApplicationTable> {
         hbaseConf.getInt(METRICS_MAX_VERSIONS, DEFAULT_METRICS_MAX_VERSIONS));
     metricsCF.setTimeToLive(hbaseConf.getInt(METRICS_TTL_CONF_NAME,
         DEFAULT_METRICS_TTL));
-    applicationTableDescp.setRegionSplitPolicyClassName(
+    subAppTableDescp.setRegionSplitPolicyClassName(
         "org.apache.hadoop.hbase.regionserver.KeyPrefixRegionSplitPolicy");
-    applicationTableDescp.setValue("KeyPrefixRegionSplitPolicy.prefix_length",
+    subAppTableDescp.setValue("KeyPrefixRegionSplitPolicy.prefix_length",
         TimelineHBaseSchemaConstants.USERNAME_SPLIT_KEY_PREFIX_LENGTH);
-    admin.createTable(applicationTableDescp,
+    admin.createTable(subAppTableDescp,
         TimelineHBaseSchemaConstants.getUsernameSplits());
     LOG.info("Status of table creation for " + table.getNameAsString() + "="
         + admin.tableExists(table));
   }
 
   /**
-   * @param metricsTTL time to live parameter for the metrics in this table.
-   * @param hbaseConf configuration in which to set the metrics TTL config
+   * @param metricsTTL time to live parameter for the metricss in this table.
+   * @param hbaseConf configururation in which to set the metrics TTL config
    *          variable.
    */
   public void setMetricsTTL(int metricsTTL, Configuration hbaseConf) {

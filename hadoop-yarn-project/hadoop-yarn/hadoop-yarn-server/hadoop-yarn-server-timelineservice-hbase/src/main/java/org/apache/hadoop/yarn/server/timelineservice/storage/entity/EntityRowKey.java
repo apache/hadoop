@@ -209,18 +209,18 @@ public class EntityRowKey {
             Separator.EMPTY_BYTES);
       }
 
-      byte[] enitityIdPrefix = Bytes.toBytes(rowKey.getEntityIdPrefix());
+      byte[] entityIdPrefix = Bytes.toBytes(rowKey.getEntityIdPrefix());
 
       if (rowKey.getEntityId() == null) {
         return Separator.QUALIFIERS.join(first, second, third, entityType,
-            enitityIdPrefix, Separator.EMPTY_BYTES);
+            entityIdPrefix, Separator.EMPTY_BYTES);
       }
 
       byte[] entityId = Separator.encode(rowKey.getEntityId(), Separator.SPACE,
           Separator.TAB, Separator.QUALIFIERS);
 
       byte[] fourth =
-          Separator.QUALIFIERS.join(entityType, enitityIdPrefix, entityId);
+          Separator.QUALIFIERS.join(entityType, entityIdPrefix, entityId);
 
       return Separator.QUALIFIERS.join(first, second, third, fourth);
     }
