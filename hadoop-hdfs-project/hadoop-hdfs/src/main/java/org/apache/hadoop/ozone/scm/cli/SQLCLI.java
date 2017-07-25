@@ -27,6 +27,11 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
+import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.Pipeline;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.util.Tool;
@@ -51,6 +56,9 @@ import java.util.Set;
 
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
+import static org.apache.hadoop.ozone.OzoneConsts.KSM_USER_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.KSM_VOLUME_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
@@ -125,6 +133,68 @@ public class SQLCLI  extends Configured implements Tool {
       "INSERT INTO openContainer (containerName, containerUsed) " +
           "VALUES (\"%s\", \"%s\")";
 
+  // for ksm.db
+  private static final String CREATE_VOLUME_LIST =
+      "CREATE TABLE volumeList (" +
+          "userName TEXT NOT NULL," +
+          "volumeName TEXT NOT NULL," +
+          "PRIMARY KEY (userName, volumeName))";
+  private static final String INSERT_VOLUME_LIST =
+      "INSERT INTO volumeList (userName, volumeName) " +
+          "VALUES (\"%s\", \"%s\")";
+
+  private static final String CREATE_VOLUME_INFO =
+      "CREATE TABLE volumeInfo (" +
+          "adminName TEXT NOT NULL," +
+          "ownerName TEXT NOT NULL," +
+          "volumeName TEXT NOT NULL," +
+          "PRIMARY KEY (adminName, ownerName, volumeName))";
+  private static final String INSERT_VOLUME_INFO =
+      "INSERT INTO volumeInfo (adminName, ownerName, volumeName) " +
+          "VALUES (\"%s\", \"%s\", \"%s\")";
+
+  private static final String CREATE_ACL_INFO =
+      "CREATE TABLE aclInfo (" +
+          "adminName TEXT NOT NULL," +
+          "ownerName TEXT NOT NULL," +
+          "volumeName TEXT NOT NULL," +
+          "type TEXT NOT NULL," +
+          "userName TEXT NOT NULL," +
+          "rights TEXT NOT NULL," +
+          "FOREIGN KEY (adminName, ownerName, volumeName, userName, type)" +
+          "REFERENCES " +
+          "volumeInfo(adminName, ownerName, volumeName, userName, type)" +
+          "PRIMARY KEY (adminName, ownerName, volumeName, userName, type))";
+  private static final String INSERT_ACL_INFO =
+      "INSERT INTO aclInfo (adminName, ownerName, volumeName, type, " +
+          "userName, rights) " +
+          "VALUES (\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\")";
+
+  private static final String CREATE_BUCKET_INFO =
+      "CREATE TABLE bucketInfo (" +
+          "volumeName TEXT NOT NULL," +
+          "bucketName TEXT NOT NULL," +
+          "versionEnabled BOOLEAN NOT NULL," +
+          "storageType TEXT," +
+          "PRIMARY KEY (volumeName, bucketName))";
+  private static final String INSERT_BUCKET_INFO =
+      "INSERT INTO bucketInfo(volumeName, bucketName, " +
+          "versionEnabled, storageType)" +
+          "VALUES (\"%s\", \"%s\", \"%s\", \"%s\")";
+
+  private static final String CREATE_KEY_INFO =
+      "CREATE TABLE keyInfo (" +
+          "volumeName TEXT NOT NULL," +
+          "bucketName TEXT NOT NULL," +
+          "keyName TEXT NOT NULL," +
+          "dataSize INTEGER," +
+          "blockKey TEXT NOT NULL," +
+          "containerName TEXT NOT NULL," +
+          "PRIMARY KEY (volumeName, bucketName, keyName))";
+  private static final String INSERT_KEY_INFO =
+      "INSERT INTO keyInfo (volumeName, bucketName, keyName, dataSize, " +
+          "blockKey, containerName)" +
+          "VALUES (\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\")";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(SQLCLI.class);
@@ -203,6 +273,9 @@ public class SQLCLI  extends Configured implements Tool {
     } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
       LOG.info("Converting open container DB");
       convertOpenContainerDB(dbPath, outPath);
+    } else if (dbName.toString().equals(KSM_DB_NAME)) {
+      LOG.info("Converting ksm DB");
+      convertKSMDB(dbPath, outPath);
     } else {
       LOG.error("Unrecognized db name {}", dbName);
     }
@@ -220,6 +293,146 @@ public class SQLCLI  extends Configured implements Tool {
     try (Statement stmt = conn.createStatement()) {
       stmt.executeUpdate(sql);
     }
+  }
+
+  /**
+   * Convert ksm.db to sqlite db file. With following schema.
+   * (* for primary key)
+   *
+   * 1. for key type USER, it contains a username and a list volumes
+   * volumeList
+   * --------------------------------
+   *   userName*     |  volumeName*
+   * --------------------------------
+   *
+   * 2. for key type VOLUME:
+   *
+   * volumeInfo
+   * ----------------------------------------------
+   * adminName | ownerName* | volumeName* | aclID
+   * ----------------------------------------------
+   *
+   * aclInfo
+   * ----------------------------------------------
+   * aclEntryID* | type* | userName* | rights
+   * ----------------------------------------------
+   *
+   * 3. for key type BUCKET
+   * bucketInfo
+   * --------------------------------------------------------
+   * volumeName* | bucketName* | versionEnabled | storageType
+   * --------------------------------------------------------
+   *
+   * TODO : the following table will be changed when key partition is added.
+   * Only has the minimum entries for test purpose now.
+   * 4. for key type KEY
+   * -----------------------------------------------
+   * volumeName* | bucketName* | keyName* | dataSize
+   * -----------------------------------------------
+   *
+   *
+   *
+   * @param dbPath
+   * @param outPath
+   * @throws Exception
+   */
+  private void convertKSMDB(Path dbPath, Path outPath) throws Exception {
+    LOG.info("Create tables for sql ksm db.");
+    File dbFile = dbPath.toFile();
+    try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
+        .setDbFile(dbFile).build();
+         Connection conn = connectDB(outPath.toString())) {
+      executeSQL(conn, CREATE_VOLUME_LIST);
+      executeSQL(conn, CREATE_VOLUME_INFO);
+      executeSQL(conn, CREATE_ACL_INFO);
+      executeSQL(conn, CREATE_BUCKET_INFO);
+      executeSQL(conn, CREATE_KEY_INFO);
+
+      dbStore.iterate(null, (key, value) -> {
+        String keyString = DFSUtilClient.bytes2String(key);
+        KeyType type = getKeyType(keyString);
+        try {
+          insertKSMDB(conn, type, keyString, value);
+        } catch (IOException | SQLException ex) {
+          LOG.error("Exception inserting key {}", keyString, ex);
+        }
+        return true;
+      });
+    }
+  }
+
+  private void insertKSMDB(Connection conn, KeyType type, String keyName,
+      byte[] value) throws IOException, SQLException {
+    switch (type) {
+    case USER:
+      VolumeList volumeList = VolumeList.parseFrom(value);
+      for (String volumeName : volumeList.getVolumeNamesList()) {
+        String insertVolumeList =
+            String.format(INSERT_VOLUME_LIST, keyName, volumeName);
+        executeSQL(conn, insertVolumeList);
+      }
+      break;
+    case VOLUME:
+      VolumeInfo volumeInfo = VolumeInfo.parseFrom(value);
+      String adminName = volumeInfo.getAdminName();
+      String ownerName = volumeInfo.getOwnerName();
+      String volumeName = volumeInfo.getVolume();
+      String insertVolumeInfo =
+          String.format(INSERT_VOLUME_INFO, adminName, ownerName, volumeName);
+      executeSQL(conn, insertVolumeInfo);
+      for (OzoneAclInfo aclInfo : volumeInfo.getVolumeAclsList()) {
+        String insertAclInfo =
+            String.format(INSERT_ACL_INFO, adminName, ownerName, volumeName,
+                aclInfo.getType(), aclInfo.getName(), aclInfo.getRights());
+        executeSQL(conn, insertAclInfo);
+      }
+      break;
+    case BUCKET:
+      BucketInfo bucketInfo = BucketInfo.parseFrom(value);
+      String insertBucketInfo =
+          String.format(INSERT_BUCKET_INFO, bucketInfo.getVolumeName(),
+              bucketInfo.getBucketName(), bucketInfo.getIsVersionEnabled(),
+              bucketInfo.getStorageType());
+      executeSQL(conn, insertBucketInfo);
+      break;
+    case KEY:
+      KeyInfo keyInfo = KeyInfo.parseFrom(value);
+      String insertKeyInfo =
+          String.format(INSERT_KEY_INFO, keyInfo.getVolumeName(),
+              keyInfo.getBucketName(), keyInfo.getKeyName(),
+              keyInfo.getDataSize(), keyInfo.getBlockKey(),
+              keyInfo.getContainerName());
+      executeSQL(conn, insertKeyInfo);
+      break;
+    default:
+      throw new IOException("Unknown key from ksm.db");
+    }
+  }
+
+  private KeyType getKeyType(String key) {
+    if (key.startsWith(KSM_USER_PREFIX)) {
+      return KeyType.USER;
+    } else {
+      int count = key.length() - key.replace(KSM_VOLUME_PREFIX, "").length();
+      // NOTE : when delimiter gets changed, will need to change this part
+      if (count == 1) {
+        return KeyType.VOLUME;
+      } else if (count == 2) {
+        return KeyType.BUCKET;
+      } else if (count >= 3) {
+        return KeyType.KEY;
+      } else {
+        return KeyType.UNKNOWN;
+      }
+    }
+  }
+
+  private enum KeyType {
+    USER,
+    VOLUME,
+    BUCKET,
+    KEY,
+    UNKNOWN
   }
 
   /**
