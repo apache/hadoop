@@ -2053,6 +2053,10 @@ public class DataNode extends ReconfigurableBase
     if (isOzoneEnabled()) {
       if (this.objectStoreHandler != null) {
         this.objectStoreHandler.close();
+        if(datanodeStateMachine != null &&
+            !datanodeStateMachine.isDaemonStopped()) {
+          datanodeStateMachine.stopDaemon();
+        }
       }
     }
 

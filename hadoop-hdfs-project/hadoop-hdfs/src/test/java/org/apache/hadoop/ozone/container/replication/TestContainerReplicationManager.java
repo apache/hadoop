@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.container.TestUtils.ReplicationNodeManagerMock;
 import org.apache.hadoop.ozone.container.TestUtils
     .ReplicationNodePoolManagerMock;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.scm.container.replication
@@ -49,6 +50,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_SECONDS;
 import static org.apache.ratis.shaded.com.google.common.util.concurrent
@@ -80,13 +82,13 @@ public class TestContainerReplicationManager {
   @Before
   public void setUp() throws Exception {
     GenericTestUtils.setLogLevel(ContainerReplicationManager.LOG, Level.DEBUG);
-    Map<DatanodeID, NodeManager.NODESTATE> nodeStateMap = new HashMap<>();
+    Map<DatanodeID, NodeState> nodeStateMap = new HashMap<>();
     // We are setting up 3 pools with 24 nodes each in this cluster.
     // First we create 72 Datanodes.
     for (int x = 0; x < MAX_DATANODES; x++) {
       DatanodeID datanode = SCMTestUtils.getDatanodeID();
       datanodes.add(datanode);
-      nodeStateMap.put(datanode, NodeManager.NODESTATE.HEALTHY);
+      nodeStateMap.put(datanode, HEALTHY);
     }
 
     // All nodes in this cluster are healthy for time being.
@@ -239,8 +241,7 @@ public class TestContainerReplicationManager {
     GenericTestUtils.setLogLevel(InProgressPool.LOG, Level.DEBUG);
     try {
       DatanodeID id = SCMTestUtils.getDatanodeID();
-      ((ReplicationNodeManagerMock) (nodeManager)).addNode(id, NodeManager
-          .NODESTATE.HEALTHY);
+      ((ReplicationNodeManagerMock) (nodeManager)).addNode(id, HEALTHY);
       poolManager.addNode("PoolNew", id);
       GenericTestUtils.waitFor(() ->
               logCapturer.getOutput().contains("PoolNew"),

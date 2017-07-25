@@ -84,6 +84,33 @@ message DeleteContainerResponseProto {
   // Empty response
 }
 
+/*
+ NodeQueryRequest sends a request to SCM asking to send a list of nodes that
+ match the NodeState that we are requesting.
+*/
+message NodeQueryRequestProto {
+
+
+  // Repeated, So we can specify more than one status type.
+  // These NodeState types are additive for now, in the sense that
+  // if you specify HEALTHY and FREE_NODE members --
+  // Then you get all healthy node which are not raft members.
+  //
+  // if you specify all healthy and dead nodes, you will get nothing
+  // back. Server is not going to dictate what combinations make sense,
+  // it is entirely up to the caller.
+  // TODO: Support operators like OR and NOT. Currently it is always an
+  // implied AND.
+
+  repeated hadoop.hdfs.ozone.NodeState query = 1;
+  required hadoop.hdfs.ozone.QueryScope scope = 2;
+  optional string poolName = 3; // if scope is pool, then pool name is needed.
+}
+
+message NodeQueryResponseProto {
+  required hadoop.hdfs.ozone.NodePool datanodes = 1;
+}
+
 
 /**
  * Protocol used from an HDFS node to StorageContainerManager.  See the request
@@ -107,4 +134,9 @@ service StorageContainerLocationProtocolService {
    * Deletes a container in SCM.
    */
   rpc deleteContainer(DeleteContainerRequestProto) returns (DeleteContainerResponseProto);
+
+  /**
+  * Returns a set of Nodes that meet a criteria.
+  */
+  rpc queryNode(NodeQueryRequestProto)  returns (NodeQueryResponseProto);
 }

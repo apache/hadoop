@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto
@@ -49,11 +50,14 @@ import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.DEAD;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
+    .HEALTHY;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
+    .STALE;
 import static org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.Type;
-import static org.apache.hadoop.ozone.scm.node.NodeManager.NODESTATE.DEAD;
-import static org.apache.hadoop.ozone.scm.node.NodeManager.NODESTATE.HEALTHY;
-import static org.apache.hadoop.ozone.scm.node.NodeManager.NODESTATE.STALE;
+
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_DEADNODE_INTERVAL_MS;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS;
@@ -413,8 +417,7 @@ public class TestNodeManager {
       // Wait for 2 seconds, wait a total of 4 seconds to make sure that the
       // node moves into stale state.
       Thread.sleep(2 * 1000);
-      List<DatanodeID> staleNodeList = nodeManager.getNodes(NodeManager
-          .NODESTATE.STALE);
+      List<DatanodeID> staleNodeList = nodeManager.getNodes(STALE);
       assertEquals("Expected to find 1 stale node",
           1, nodeManager.getNodeCount(STALE));
       assertEquals("Expected to find 1 stale node",
@@ -433,8 +436,7 @@ public class TestNodeManager {
       Thread.sleep(2 * 1000);
 
       // the stale node has been removed
-      staleNodeList = nodeManager.getNodes(NodeManager
-          .NODESTATE.STALE);
+      staleNodeList = nodeManager.getNodes(STALE);
       assertEquals("Expected to find 1 stale node",
           0, nodeManager.getNodeCount(STALE));
       assertEquals("Expected to find 1 stale node",
@@ -682,7 +684,7 @@ public class TestNodeManager {
    * @return true if we found the expected number.
    */
   private boolean findNodes(NodeManager nodeManager, int count,
-      NodeManager.NODESTATE state) {
+      OzoneProtos.NodeState state) {
     return count == nodeManager.getNodeCount(state);
   }
 
@@ -1056,7 +1058,7 @@ public class TestNodeManager {
       // Wait up to 4s so that the node becomes stale
       // Verify the usage info should be unchanged.
       GenericTestUtils.waitFor(
-          () -> nodeManager.getNodeCount(NodeManager.NODESTATE.STALE) == 1, 100,
+          () -> nodeManager.getNodeCount(STALE) == 1, 100,
           4 * 1000);
       assertEquals(nodeCount, nodeManager.getNodeStats().size());
 
@@ -1074,7 +1076,7 @@ public class TestNodeManager {
       // Wait up to 4 more seconds so the node becomes dead
       // Verify usage info should be updated.
       GenericTestUtils.waitFor(
-          () -> nodeManager.getNodeCount(NodeManager.NODESTATE.DEAD) == 1, 100,
+          () -> nodeManager.getNodeCount(DEAD) == 1, 100,
           4 * 1000);
 
       assertEquals(0, nodeManager.getNodeStats().size());
@@ -1099,7 +1101,7 @@ public class TestNodeManager {
       // Wait up to 5 seconds so that the dead node becomes healthy
       // Verify usage info should be updated.
       GenericTestUtils.waitFor(
-          () -> nodeManager.getNodeCount(NodeManager.NODESTATE.HEALTHY) == 1,
+          () -> nodeManager.getNodeCount(HEALTHY) == 1,
           100, 5 * 1000);
       GenericTestUtils.waitFor(
           () -> nodeManager.getStats().getScmUsed().get() == expectedScmUsed,

@@ -31,6 +31,8 @@ import org.junit.Test;
 import java.util.List;
 import java.util.Random;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
+    .HEALTHY;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -40,7 +42,7 @@ public class TestContainerPlacement {
 
   private DescriptiveStatistics computeStatistics(NodeManager nodeManager) {
     DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
-    for (DatanodeID id : nodeManager.getNodes(NodeManager.NODESTATE.HEALTHY)) {
+    for (DatanodeID id : nodeManager.getNodes(HEALTHY)) {
       float weightedValue =
           nodeManager.getNodeStat(id).get().getScmUsed().get() / (float)
               nodeManager.getNodeStat(id).get().getCapacity().get();

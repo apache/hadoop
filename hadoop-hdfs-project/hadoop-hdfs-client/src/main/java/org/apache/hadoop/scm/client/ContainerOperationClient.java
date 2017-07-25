@@ -19,6 +19,7 @@ package org.apache.hadoop.scm.client;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -28,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -128,6 +130,23 @@ public class ContainerOperationClient implements ScmClient {
         xceiverClientManager.releaseClient(client);
       }
     }
+  }
+
+  /**
+   * Returns a set of Nodes that meet a query criteria.
+   *
+   * @param nodeStatuses - A set of criteria that we want the node to have.
+   * @param queryScope - Query scope - Cluster or pool.
+   * @param poolName - if it is pool, a pool name is required.
+   * @return A set of nodes that meet the requested criteria.
+   * @throws IOException
+   */
+  @Override
+  public OzoneProtos.NodePool queryNode(EnumSet<OzoneProtos.NodeState>
+      nodeStatuses, OzoneProtos.QueryScope queryScope, String poolName)
+      throws IOException {
+    return storageContainerLocationClient.queryNode(nodeStatuses, queryScope,
+        poolName);
   }
 
   /**

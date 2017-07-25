@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
     .ErrorCode;
@@ -64,6 +65,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.DEAD;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.STALE;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.UNKNOWN;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 /**
@@ -212,7 +217,7 @@ public class SCMNodeManager
    * @return List of Datanodes that are known to SCM in the requested state.
    */
   @Override
-  public List<DatanodeID> getNodes(NODESTATE nodestate)
+  public List<DatanodeID> getNodes(NodeState nodestate)
       throws IllegalArgumentException {
     Map<String, Long> set;
     switch (nodestate) {
@@ -368,7 +373,7 @@ public class SCMNodeManager
    * @return int -- count
    */
   @Override
-  public int getNodeCount(NODESTATE nodestate) {
+  public int getNodeCount(NodeState nodestate) {
     switch (nodestate) {
     case HEALTHY:
       return healthyNodeCount.get();
@@ -383,7 +388,7 @@ public class SCMNodeManager
       // that this information might not be consistent always.
       return 0;
     default:
-      throw new IllegalArgumentException("Unknown node state requested.");
+      return 0;
     }
   }
 
@@ -405,7 +410,7 @@ public class SCMNodeManager
    * @return Healthy/Stale/Dead/Unknown.
    */
   @Override
-  public NODESTATE getNodeState(DatanodeID id) {
+  public NodeState getNodeState(DatanodeID id) {
     // There is a subtle race condition here, hence we also support
     // the NODEState.UNKNOWN. It is possible that just before we check the
     // healthyNodes, we have removed the node from the healthy list but stil
@@ -415,18 +420,18 @@ public class SCMNodeManager
     // just deal with the possibilty of getting a state called unknown.
 
     if(healthyNodes.containsKey(id.getDatanodeUuid())) {
-      return NODESTATE.HEALTHY;
+      return HEALTHY;
     }
 
     if(staleNodes.containsKey(id.getDatanodeUuid())) {
-      return NODESTATE.STALE;
+      return STALE;
     }
 
     if(deadNodes.containsKey(id.getDatanodeUuid())) {
-      return NODESTATE.DEAD;
+      return DEAD;
     }
 
-    return NODESTATE.UNKNOWN;
+    return UNKNOWN;
   }
 
   /**
@@ -826,7 +831,7 @@ public class SCMNodeManager
   @Override
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
-    for(NodeManager.NODESTATE state : NodeManager.NODESTATE.values()) {
+    for(NodeState state : NodeState.values()) {
       nodeCountMap.put(state.toString(), getNodeCount(state));
     }
     return nodeCountMap;

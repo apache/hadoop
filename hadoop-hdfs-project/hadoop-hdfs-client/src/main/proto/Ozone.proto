@@ -41,3 +41,33 @@ message KeyValue {
     required string key = 1;
     optional string value = 2;
 }
+
+/**
+ * Enum that represents the Node State. This is used in calls to getNodeList
+ * and getNodeCount.
+ */
+enum NodeState {
+    HEALTHY             = 1;
+    STALE               = 2;
+    DEAD                = 3;
+    DECOMMISSIONING     = 4;
+    DECOMMISSIONED      = 5;
+    RAFT_MEMBER         = 6;
+    FREE_NODE           = 7; // Not a member in raft.
+    UNKNOWN             = 8;
+}
+
+enum QueryScope {
+    CLUSTER = 1;
+    POOL = 2;
+}
+
+message Node {
+    required DatanodeIDProto nodeID = 1;
+    repeated NodeState nodeStates = 2;
+}
+
+message NodePool {
+    repeated Node nodes = 1;
+}
+

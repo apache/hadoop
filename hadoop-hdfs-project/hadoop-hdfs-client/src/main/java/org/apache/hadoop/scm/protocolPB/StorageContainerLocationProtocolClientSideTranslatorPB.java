@@ -35,11 +35,15 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryResponseProto;
+
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -184,6 +188,33 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
+  }
+
+  /**
+   * Queries a list of Node Statuses.
+   *
+   * @param nodeStatuses
+   * @return List of Datanodes.
+   */
+  @Override
+  public OzoneProtos.NodePool queryNode(EnumSet<OzoneProtos.NodeState>
+      nodeStatuses, OzoneProtos.QueryScope queryScope, String poolName)
+      throws IOException {
+    // TODO : We support only cluster wide query right now. So ignoring checking
+    // queryScope and poolName
+    Preconditions.checkNotNull(nodeStatuses);
+    Preconditions.checkState(nodeStatuses.size() > 0);
+    NodeQueryRequestProto request = NodeQueryRequestProto.newBuilder()
+        .addAllQuery(nodeStatuses)
+        .setScope(queryScope).setPoolName(poolName).build();
+    try {
+      NodeQueryResponseProto response =
+          rpcProxy.queryNode(NULL_RPC_CONTROLLER, request);
+      return response.getDatanodes();
+    } catch (ServiceException e) {
+      throw  ProtobufHelper.getRemoteException(e);
+    }
+
   }
 
   @Override

@@ -32,18 +32,19 @@ import org.apache.hadoop.ozone.scm.node.NodeManager;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 
 /**
  * A Node Manager to test replication.
  */
 public class ReplicationNodeManagerMock implements NodeManager {
-  private final Map<DatanodeID, NODESTATE> nodeStateMap;
+  private final Map<DatanodeID, NodeState> nodeStateMap;
 
   /**
    * A list of Datanodes and current states.
    * @param nodeState A node state map.
    */
-  public ReplicationNodeManagerMock(Map<DatanodeID, NODESTATE> nodeState) {
+  public ReplicationNodeManagerMock(Map<DatanodeID, NodeState> nodeState) {
     Preconditions.checkNotNull(nodeState);
     nodeStateMap = nodeState;
   }
@@ -118,7 +119,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return List of Datanodes that are Heartbeating SCM.
    */
   @Override
-  public List<DatanodeID> getNodes(NODESTATE nodestate) {
+  public List<DatanodeID> getNodes(NodeState nodestate) {
     return null;
   }
 
@@ -129,7 +130,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return int -- count
    */
   @Override
-  public int getNodeCount(NODESTATE nodestate) {
+  public int getNodeCount(NodeState nodestate) {
     return 0;
   }
 
@@ -220,7 +221,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return Healthy/Stale/Dead.
    */
   @Override
-  public NODESTATE getNodeState(DatanodeID id) {
+  public NodeState getNodeState(DatanodeID id) {
     return nodeStateMap.get(id);
   }
 
@@ -308,7 +309,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @param id - DatanodeID
    * @param state State you want to put that node to.
    */
-  public void addNode(DatanodeID id, NODESTATE state) {
+  public void addNode(DatanodeID id, NodeState state) {
     nodeStateMap.put(id, state);
   }
 

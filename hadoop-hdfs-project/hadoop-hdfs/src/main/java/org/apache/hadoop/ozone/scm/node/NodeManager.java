@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 
@@ -62,18 +63,17 @@ public interface NodeManager extends StorageContainerNodeProtocol,
 
   /**
    * Gets all Live Datanodes that is currently communicating with SCM.
-   * @param nodestate - State of the node
+   * @param nodeState - State of the node
    * @return List of Datanodes that are Heartbeating SCM.
    */
-
-  List<DatanodeID> getNodes(NODESTATE nodestate);
+  List<DatanodeID> getNodes(NodeState nodeState);
 
   /**
    * Returns the Number of Datanodes that are communicating with SCM.
-   * @param nodestate - State of the node
+   * @param nodeState - State of the node
    * @return int -- count
    */
-  int getNodeCount(NODESTATE nodestate);
+  int getNodeCount(NodeState nodeState);
 
   /**
    * Get all datanodes known to SCM.
@@ -101,17 +101,6 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * Clears the manual chill mode flag.
    */
   void clearChillModeFlag();
-
-  /**
-   * Enum that represents the Node State. This is used in calls to getNodeList
-   * and getNodeCount. TODO: Add decommission when we support it.
-   */
-  enum NODESTATE {
-    HEALTHY,
-    STALE,
-    DEAD,
-    UNKNOWN
-  }
 
   /**
    * Returns the aggregated node stats.
@@ -144,5 +133,5 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param id - DatanodeID
    * @return Healthy/Stale/Dead.
    */
-  NODESTATE getNodeState(DatanodeID id);
+  NodeState getNodeState(DatanodeID id);
 }

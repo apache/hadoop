@@ -31,20 +31,12 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos;
-import org.apache.hadoop.ozone.protocolPB
-    .ScmBlockLocationProtocolServerSideTranslatorPB;
-import org.apache.hadoop.ozone.scm.block.BlockManager;
-import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
-import org.apache.hadoop.ozone.scm.exceptions.SCMException;
-import org.apache.hadoop.scm.client.ScmClient;
-import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
-import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
-import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
@@ -62,6 +54,8 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMReregisterCmdResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
@@ -71,20 +65,28 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMReregisterCmdResponseProto;
+import org.apache.hadoop.ozone.protocolPB
+    .ScmBlockLocationProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB
     .StorageContainerDatanodeProtocolServerSideTranslatorPB;
-import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.protocolPB
     .StorageContainerLocationProtocolServerSideTranslatorPB;
+import org.apache.hadoop.ozone.scm.block.BlockManager;
+import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.Mapping;
+import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
+import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -93,32 +95,30 @@ import org.slf4j.LoggerFactory;
 import javax.management.ObjectName;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Collection;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import static org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result;
-
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY;
-import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
-import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_DB_CACHE_SIZE_MB;
+import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
@@ -134,7 +134,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
 public class StorageContainerManager
     implements StorageContainerDatanodeProtocol,
-    StorageContainerLocationProtocol, ScmBlockLocationProtocol, SCMMXBean{
+    StorageContainerLocationProtocol, ScmBlockLocationProtocol, SCMMXBean {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(StorageContainerManager.class);
@@ -421,6 +421,96 @@ public class StorageContainerManager
   }
 
   /**
+   * Queries a list of Node Statuses.
+   *
+   * @param nodeStatuses
+   * @param queryScope
+   * @param poolName @return List of Datanodes.
+   */
+  @Override
+  public OzoneProtos.NodePool queryNode(EnumSet<NodeState> nodeStatuses,
+      OzoneProtos.QueryScope queryScope, String poolName) throws IOException {
+
+    if (queryScope == OzoneProtos.QueryScope.POOL) {
+      throw new IllegalArgumentException("Not Supported yet");
+    }
+
+    List<DatanodeID> datanodes = queryNode(nodeStatuses);
+    OzoneProtos.NodePool.Builder poolBuilder =
+        OzoneProtos.NodePool.newBuilder();
+
+    for (DatanodeID datanode : datanodes) {
+      OzoneProtos.Node node = OzoneProtos.Node.newBuilder()
+          .setNodeID(datanode.getProtoBufMessage())
+          .addAllNodeStates(nodeStatuses)
+          .build();
+      poolBuilder.addNodes(node);
+    }
+
+    return poolBuilder.build();
+  }
+
+  /**
+   * Queries a list of Node that match a set of statuses.
+   * <p>
+   * For example, if the nodeStatuses is HEALTHY and RAFT_MEMBER,
+   * then this call will return all healthy nodes which members in
+   * Raft pipeline.
+   * <p>
+   * Right now we don't support operations, so we assume it is an AND operation
+   * between the operators.
+   *
+   * @param nodeStatuses - A set of NodeStates.
+   * @return List of Datanodes.
+   */
+
+  public List<DatanodeID> queryNode(EnumSet<NodeState> nodeStatuses) {
+    Preconditions.checkNotNull(nodeStatuses, "Node Query set cannot be null");
+    Preconditions.checkState(nodeStatuses.size() > 0, "No valid arguments " +
+        "in the query set");
+    List<DatanodeID> resultList = new LinkedList<>();
+    Set<DatanodeID> currentSet = new TreeSet<>();
+
+    for (NodeState nodeState : nodeStatuses) {
+      Set<DatanodeID> nextSet = queryNodeState(nodeState);
+      if ((nextSet == null) || (nextSet.size() == 0)) {
+        // Right now we only support AND operation. So intersect with
+        // any empty set is null.
+        return resultList;
+      }
+      // First time we have to add all the elements, next time we have to
+      // do an intersection operation on the set.
+      if (currentSet.size() == 0) {
+        currentSet.addAll(nextSet);
+      } else {
+        currentSet.retainAll(nextSet);
+      }
+    }
+
+    resultList.addAll(currentSet);
+    return resultList;
+  }
+
+  /**
+   * Query the System for Nodes.
+   *
+   * @param nodeState - NodeState that we are interested in matching.
+   * @return Set of Datanodes that match the NodeState.
+   */
+  private Set<DatanodeID> queryNodeState(NodeState nodeState) {
+    if (nodeState == NodeState.RAFT_MEMBER ||
+        nodeState == NodeState.FREE_NODE) {
+      throw new IllegalStateException("Not implemented yet");
+    }
+    Set<DatanodeID> returnSet = new TreeSet<>();
+    List<DatanodeID> tmp = getScmNodeManager().getNodes(nodeState);
+    if ((tmp != null) && (tmp.size() > 0)) {
+      returnSet.addAll(tmp);
+    }
+    return returnSet;
+  }
+
+  /**
    * Asks SCM where a container should be allocated. SCM responds with the set
    * of datanodes that should be used creating this container.
    *
@@ -610,14 +700,14 @@ public class StorageContainerManager
    * @param nodestate Healthy, Dead etc.
    * @return int -- count
    */
-  public int getNodeCount(SCMNodeManager.NODESTATE nodestate) {
+  public int getNodeCount(NodeState nodestate) {
     return scmNodeManager.getNodeCount(nodestate);
   }
 
   @Override
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> countMap = new HashMap<String, Integer>();
-    for (SCMNodeManager.NODESTATE state : SCMNodeManager.NODESTATE.values()) {
+    for (NodeState state : NodeState.values()) {
       countMap.put(state.toString(), scmNodeManager.getNodeCount(state));
     }
     return countMap;

@@ -20,10 +20,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerInfo;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.scm.node.CommandQueue;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
@@ -40,11 +39,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static com.google.common.util.concurrent.Uninterruptibles
-    .sleepUninterruptibly;
-import static org.apache.hadoop.ozone.scm.node.NodeManager.NODESTATE.HEALTHY;
-import static org.apache.hadoop.ozone.scm.node.NodeManager.NODESTATE.STALE;
-import static org.apache.hadoop.ozone.scm.node.NodeManager.NODESTATE.UNKNOWN;
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.STALE;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.UNKNOWN;
 
 /**
  * These are pools that are actively checking for replication status of the
@@ -183,7 +181,7 @@ public final class InProgressPool {
      */
     SendContainerCommand cmd = SendContainerCommand.newBuilder().build();
     for (DatanodeID id : datanodeIDList) {
-      NodeManager.NODESTATE currentState = getNodestate(id);
+      NodeState currentState = getNodestate(id);
       if (currentState == HEALTHY || currentState == STALE) {
         nodeCount.incrementAndGet();
         // Queue commands to all datanodes in this pool to send us container
@@ -202,8 +200,8 @@ public final class InProgressPool {
    * @param id - datanode ID.
    * @return NodeState.
    */
-  private NodeManager.NODESTATE getNodestate(DatanodeID id) {
-    NodeManager.NODESTATE currentState = UNKNOWN;
+  private NodeState getNodestate(DatanodeID id) {
+    NodeState  currentState = UNKNOWN;
     int maxTry = 100;
     // We need to loop to make sure that we will retry if we get
     // node state unknown. This can lead to infinite loop if we send
