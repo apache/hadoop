@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm.container.placement.algorithms;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -103,7 +104,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
   public List<DatanodeID> chooseDatanodes(int nodesRequired, final long
       sizeRequired) throws SCMException {
     List<DatanodeID> healthyNodes =
-        nodeManager.getNodes(NodeManager.NODESTATE.HEALTHY);
+        nodeManager.getNodes(OzoneProtos.NodeState.HEALTHY);
     String msg;
     if (healthyNodes.size() == 0) {
       msg = "No healthy node found to allocate container.";

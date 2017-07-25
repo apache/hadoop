@@ -27,6 +27,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
+
 /**
  * This class  manages the state of datanode
  * in conjunction with the node pool and node managers.
@@ -74,7 +76,7 @@ public class ReplicationDatanodeStateManager {
       DatanodeID id = nodesInPool.get(r.nextInt(nodesInPool.size()));
       nodesInPool.remove(id);
       // We return container reports only for nodes that are healthy.
-      if (nodeManager.getNodeState(id) == NodeManager.NODESTATE.HEALTHY) {
+      if (nodeManager.getNodeState(id) == HEALTHY) {
         ContainerInfo info = ContainerInfo.newBuilder()
             .setContainerName(containerName)
             .setFinalhash(DigestUtils.sha256Hex(containerName))

@@ -37,7 +37,6 @@ import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
-import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -56,6 +55,8 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
+    .HEALTHY;
 import static org.junit.Assert.assertFalse;
 
 /**
@@ -236,7 +237,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
    */
   public void waitOzoneReady() throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> {
-      final int healthy = scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY);
+      final int healthy = scm.getNodeCount(HEALTHY);
       final boolean isReady = healthy >= numDataNodes;
       LOG.info("{}. Got {} of {} DN Heartbeats.",
             isReady? "Cluster is ready" : "Waiting for cluster to be ready",

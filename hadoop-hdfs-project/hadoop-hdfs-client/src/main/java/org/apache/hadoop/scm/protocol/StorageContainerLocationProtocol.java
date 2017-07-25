@@ -19,10 +19,12 @@
 package org.apache.hadoop.scm.protocol;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 /**
  * ContainerLocationProtocol is used by an HDFS node to find the set of nodes
@@ -88,4 +90,13 @@ public interface StorageContainerLocationProtocol {
    *   or container doesn't exist.
    */
   void deleteContainer(String containerName) throws IOException;
+
+  /**
+   *  Queries a list of Node Statuses.
+   * @param nodeStatuses
+   * @return List of Datanodes.
+   */
+  OzoneProtos.NodePool queryNode(EnumSet<OzoneProtos.NodeState> nodeStatuses,
+      OzoneProtos.QueryScope queryScope, String poolName) throws IOException;
+
 }

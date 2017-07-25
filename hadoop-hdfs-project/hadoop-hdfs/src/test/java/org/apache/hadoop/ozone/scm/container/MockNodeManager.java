@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -22,6 +22,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
@@ -36,13 +37,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.DEAD;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
+    .HEALTHY;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
+    .STALE;
+
 /**
  * Test Helper for testing container Mapping.
  */
 public class MockNodeManager implements NodeManager {
-  private static final int HEALTHY_NODE_COUNT = 10;
   private final static NodeData[] NODES = {
-      new NodeData(10L * OzoneConsts.TB,  OzoneConsts.GB),
+      new NodeData(10L * OzoneConsts.TB, OzoneConsts.GB),
       new NodeData(64L * OzoneConsts.TB, 100 * OzoneConsts.GB),
       new NodeData(128L * OzoneConsts.TB, 256 * OzoneConsts.GB),
       new NodeData(40L * OzoneConsts.TB, OzoneConsts.TB),
@@ -50,20 +56,26 @@ public class MockNodeManager implements NodeManager {
       new NodeData(20L * OzoneConsts.TB, 10 * OzoneConsts.GB),
       new NodeData(32L * OzoneConsts.TB, 16 * OzoneConsts.TB),
       new NodeData(OzoneConsts.TB, 900 * OzoneConsts.GB),
+      new NodeData(OzoneConsts.TB, 900 * OzoneConsts.GB, NodeData.STALE),
+      new NodeData(OzoneConsts.TB, 200L * OzoneConsts.GB, NodeData.STALE),
+      new NodeData(OzoneConsts.TB, 200L * OzoneConsts.GB, NodeData.DEAD)
   };
   private final List<DatanodeID> healthyNodes;
+  private final List<DatanodeID> staleNodes;
+  private final List<DatanodeID> deadNodes;
   private final Map<String, SCMNodeStat> nodeMetricMap;
   private final SCMNodeStat aggregateStat;
   private boolean chillmode;
 
   public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
+    this.staleNodes = new LinkedList<>();
+    this.deadNodes = new LinkedList<>();
     this.nodeMetricMap = new HashMap<>();
     aggregateStat = new SCMNodeStat();
     if (initializeFakeNodes) {
       for (int x = 0; x < nodeCount; x++) {
         DatanodeID id = SCMTestUtils.getDatanodeID();
-        healthyNodes.add(id);
         populateNodeMetric(id, x);
       }
     }
@@ -84,6 +96,19 @@ public class MockNodeManager implements NodeManager {
         (NODES[x % NODES.length].used), remaining);
     this.nodeMetricMap.put(datanodeID.toString(), newStat);
     aggregateStat.add(newStat);
+
+    if (NODES[x % NODES.length].getCurrentState() == NodeData.HEALTHY) {
+      healthyNodes.add(datanodeID);
+    }
+
+    if (NODES[x % NODES.length].getCurrentState() == NodeData.STALE) {
+      staleNodes.add(datanodeID);
+    }
+
+    if (NODES[x % NODES.length].getCurrentState() == NodeData.DEAD) {
+      deadNodes.add(datanodeID);
+    }
+
   }
 
   /**
@@ -112,10 +137,19 @@ public class MockNodeManager implements NodeManager {
    * @return List of Datanodes that are Heartbeating SCM.
    */
   @Override
-  public List<DatanodeID> getNodes(NODESTATE nodestate) {
-    if (nodestate == NODESTATE.HEALTHY) {
+  public List<DatanodeID> getNodes(OzoneProtos.NodeState nodestate) {
+    if (nodestate == HEALTHY) {
       return healthyNodes;
     }
+
+    if (nodestate == STALE) {
+      return staleNodes;
+    }
+
+    if (nodestate == DEAD) {
+      return deadNodes;
+    }
+
     return null;
   }
 
@@ -126,9 +160,10 @@ public class MockNodeManager implements NodeManager {
    * @return int -- count
    */
   @Override
-  public int getNodeCount(NODESTATE nodestate) {
-    if (nodestate == NODESTATE.HEALTHY) {
-      return HEALTHY_NODE_COUNT;
+  public int getNodeCount(OzoneProtos.NodeState nodestate) {
+    List<DatanodeID> nodes = getNodes(nodestate);
+    if (nodes != null) {
+      return nodes.size();
     }
     return 0;
   }
@@ -258,7 +293,7 @@ public class MockNodeManager implements NodeManager {
    * @return Healthy/Stale/Dead.
    */
   @Override
-  public NODESTATE getNodeState(DatanodeID id) {
+  public OzoneProtos.NodeState getNodeState(DatanodeID id) {
     return null;
   }
 
@@ -341,7 +376,7 @@ public class MockNodeManager implements NodeManager {
       for (StorageContainerDatanodeProtocolProtos.SCMStorageReport report :
           storageReports) {
         totalCapacity += report.getCapacity();
-        totalRemaining +=report.getRemaining();
+        totalRemaining += report.getRemaining();
         totalScmUsed += report.getScmUsed();
       }
       aggregateStat.subtract(stat);
@@ -356,7 +391,7 @@ public class MockNodeManager implements NodeManager {
   @Override
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
-    for (NodeManager.NODESTATE state : NodeManager.NODESTATE.values()) {
+    for (OzoneProtos.NodeState state : OzoneProtos.NodeState.values()) {
       nodeCountMap.put(state.toString(), getNodeCount(state));
     }
     return nodeCountMap;
@@ -399,17 +434,35 @@ public class MockNodeManager implements NodeManager {
    * won't fail.
    */
   private static class NodeData {
-    private long capacity, used;
+    public static final long HEALTHY = 1;
+    public static final long STALE = 2;
+    public static final long DEAD = 3;
+
+    private long capacity;
+    private long used;
+
+    private long currentState;
+
+    /**
+     * By default nodes are healthy.
+     * @param capacity
+     * @param used
+     */
+    NodeData(long capacity, long used) {
+      this(capacity, used, HEALTHY);
+    }
 
     /**
      * Constructs a nodeDefinition.
      *
      * @param capacity capacity.
      * @param used used.
+     * @param currentState - Healthy, Stale and DEAD nodes.
      */
-    NodeData(long capacity, long used) {
+    NodeData(long capacity, long used, long currentState) {
       this.capacity = capacity;
       this.used = used;
+      this.currentState = currentState;
     }
 
     public long getCapacity() {
@@ -427,5 +480,14 @@ public class MockNodeManager implements NodeManager {
     public void setUsed(long used) {
       this.used = used;
     }
+
+    public long getCurrentState() {
+      return currentState;
+    }
+
+    public void setCurrentState(long currentState) {
+      this.currentState = currentState;
+    }
+
   }
 }

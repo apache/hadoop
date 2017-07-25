@@ -20,8 +20,10 @@ package org.apache.hadoop.scm.client;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -128,4 +130,15 @@ public interface ScmClient {
    */
   Pipeline createContainer(String containerId,
       ReplicationFactor replicationFactor) throws IOException;
+
+  /**
+   * Returns a set of Nodes that meet a query criteria.
+   * @param nodeStatuses - A set of criteria that we want the node to have.
+   * @param queryScope - Query scope - Cluster or pool.
+   * @param poolName - if it is pool, a pool name is required.
+   * @return A set of nodes that meet the requested criteria.
+   * @throws IOException
+   */
+  OzoneProtos.NodePool queryNode(EnumSet<OzoneProtos.NodeState> nodeStatuses,
+      OzoneProtos.QueryScope queryScope, String poolName) throws IOException;
 }

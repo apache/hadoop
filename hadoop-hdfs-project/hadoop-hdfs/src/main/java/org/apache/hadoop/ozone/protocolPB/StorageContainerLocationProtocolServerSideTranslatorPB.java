@@ -18,12 +18,16 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 
 import static org.apache.hadoop.ozone.protocol.proto
@@ -135,6 +139,25 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       impl.deleteContainer(request.getContainerName());
       return DeleteContainerResponseProto.newBuilder().build();
     } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public StorageContainerLocationProtocolProtos.NodeQueryResponseProto
+      queryNode(RpcController controller,
+      StorageContainerLocationProtocolProtos.NodeQueryRequestProto request)
+      throws ServiceException {
+    try {
+      EnumSet<OzoneProtos.NodeState> nodeStateEnumSet = EnumSet.copyOf(request
+          .getQueryList());
+      OzoneProtos.NodePool datanodes = impl.queryNode(nodeStateEnumSet,
+          request.getScope(), request.getPoolName());
+      return StorageContainerLocationProtocolProtos
+          .NodeQueryResponseProto.newBuilder()
+          .setDatanodes(datanodes)
+          .build();
+    } catch (Exception e) {
       throw new ServiceException(e);
     }
   }
