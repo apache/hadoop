@@ -31,9 +31,14 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
 import org.junit.Test;
 
 
+/**
+ * Class to test the row key structures for various tables.
+ *
+ */
 public class TestRowKeys {
 
   private final static String QUALIFIER_SEP = Separator.QUALIFIERS.getValue();
@@ -41,6 +46,7 @@ public class TestRowKeys {
       .toBytes(QUALIFIER_SEP);
   private final static String CLUSTER = "cl" + QUALIFIER_SEP + "uster";
   private final static String USER = QUALIFIER_SEP + "user";
+  private final static String SUB_APP_USER = QUALIFIER_SEP + "subAppUser";
   private final static String FLOW_NAME = "dummy_" + QUALIFIER_SEP + "flow"
       + QUALIFIER_SEP;
   private final static Long FLOW_RUN_ID;
@@ -245,6 +251,26 @@ public class TestRowKeys {
     assertEquals(FLOW_NAME,
         Separator.QUALIFIERS.decode(Bytes.toString(splits[2])));
     verifyRowPrefixBytes(byteRowKeyPrefix);
+  }
+
+  @Test
+  public void testSubAppRowKey() {
+    TimelineEntity entity = new TimelineEntity();
+    entity.setId("entity1");
+    entity.setType("DAG");
+    entity.setIdPrefix(54321);
+
+    byte[] byteRowKey =
+        new SubApplicationRowKey(SUB_APP_USER, CLUSTER,
+            entity.getType(), entity.getIdPrefix(),
+            entity.getId(), USER).getRowKey();
+    SubApplicationRowKey rowKey = SubApplicationRowKey.parseRowKey(byteRowKey);
+    assertEquals(CLUSTER, rowKey.getClusterId());
+    assertEquals(SUB_APP_USER, rowKey.getSubAppUserId());
+    assertEquals(entity.getType(), rowKey.getEntityType());
+    assertEquals(entity.getIdPrefix(), rowKey.getEntityIdPrefix().longValue());
+    assertEquals(entity.getId(), rowKey.getEntityId());
+    assertEquals(USER, rowKey.getUserId());
   }
 
 }
