@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.apache.hadoop.test.MockitoMaker.make;
-import static org.apache.hadoop.test.MockitoMaker.stub;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -226,8 +224,8 @@ public class TestQueueMetrics {
 
     QueueMetrics parentMetrics =
       QueueMetrics.forQueue(ms, parentQueueName, null, true, conf);
-    Queue parentQueue = make(stub(Queue.class).returning(parentMetrics).
-        from.getMetrics());
+    Queue parentQueue = mock(Queue.class);
+    when(parentQueue.getMetrics()).thenReturn(parentMetrics);
     QueueMetrics metrics =
       QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true, conf);
     MetricsSource parentQueueSource = queueSource(ms, parentQueueName);
@@ -272,8 +270,8 @@ public class TestQueueMetrics {
 
     QueueMetrics parentMetrics =
       QueueMetrics.forQueue(ms, parentQueueName, null, true, conf);
-    Queue parentQueue = make(stub(Queue.class).returning(parentMetrics).
-        from.getMetrics());
+    Queue parentQueue = mock(Queue.class);
+    when(parentQueue.getMetrics()).thenReturn(parentMetrics);
     QueueMetrics metrics =
       QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true, conf);
     MetricsSource parentQueueSource = queueSource(ms, parentQueueName);
@@ -359,8 +357,8 @@ public class TestQueueMetrics {
 
       QueueMetrics p1Metrics =
           QueueMetrics.forQueue(ms, p1, null, true, conf);
-      Queue parentQueue1 = make(stub(Queue.class).returning(p1Metrics).
-          from.getMetrics());
+      Queue parentQueue1 = mock(Queue.class);
+      when(parentQueue1.getMetrics()).thenReturn(p1Metrics);
       QueueMetrics metrics =
           QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
 
