@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
 import org.junit.Test;
 
 /**
@@ -38,6 +39,9 @@ public class TestRowKeysAsString {
           + TimelineReaderUtils.DEFAULT_ESCAPE_CHAR;
   private final static String USER =
       TimelineReaderUtils.DEFAULT_ESCAPE_CHAR + "user";
+  private final static String SUB_APP_USER =
+      TimelineReaderUtils.DEFAULT_ESCAPE_CHAR + "subAppUser";
+
   private final static String FLOW_NAME =
       "dummy_" + TimelineReaderUtils.DEFAULT_DELIMITER_CHAR
           + TimelineReaderUtils.DEFAULT_ESCAPE_CHAR + "flow"
@@ -111,5 +115,30 @@ public class TestRowKeysAsString {
     assertEquals(USER, rowKey.getUserId());
     assertEquals(FLOW_NAME, rowKey.getFlowName());
     assertEquals(FLOW_RUN_ID, rowKey.getFlowRunId());
+  }
+
+  @Test(timeout = 10000)
+  public void testSubApplicationRowKey() {
+    char del = TimelineReaderUtils.DEFAULT_DELIMITER_CHAR;
+    char esc = TimelineReaderUtils.DEFAULT_ESCAPE_CHAR;
+    String id = del + esc + "ent" + esc + del + "ity" + esc + del + esc + "id"
+        + esc + del + esc;
+    String type = "entity" + esc + del + esc + "Type";
+    TimelineEntity entity = new TimelineEntity();
+    entity.setId(id);
+    entity.setType(type);
+    entity.setIdPrefix(54321);
+
+    String rowKeyAsString = new SubApplicationRowKey(SUB_APP_USER, CLUSTER,
+        entity.getType(), entity.getIdPrefix(), entity.getId(), USER)
+            .getRowKeyAsString();
+    SubApplicationRowKey rowKey = SubApplicationRowKey
+        .parseRowKeyFromString(rowKeyAsString);
+    assertEquals(SUB_APP_USER, rowKey.getSubAppUserId());
+    assertEquals(CLUSTER, rowKey.getClusterId());
+    assertEquals(entity.getType(), rowKey.getEntityType());
+    assertEquals(entity.getIdPrefix(), rowKey.getEntityIdPrefix().longValue());
+    assertEquals(entity.getId(), rowKey.getEntityId());
+    assertEquals(USER, rowKey.getUserId());
   }
 }
