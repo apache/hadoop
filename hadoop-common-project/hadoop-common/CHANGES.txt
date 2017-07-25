@@ -185,6 +185,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13867. FilterFileSystem should override rename(.., options) to take effect of Rename options called via
     FilterFileSystem implementations. (Vinayakumar B via Brahma Reddy Battula)
 
+    HADOOP-10829. Iteration on CredentialProviderFactory.serviceLoader is
+    thread-unsafe. (enoy Antony via jnp)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
