@@ -801,6 +801,15 @@
 </property>
 
 <property>
+  <name>fs.viewfs.rename.strategy</name>
+  <value>SAME_MOUNTPOINT</value>
+  <description>Allowed rename strategy to rename between multiple mountpoints.
+    Allowed values are SAME_MOUNTPOINT,SAME_TARGET_URI_ACROSS_MOUNTPOINT and
+    SAME_FILESYSTEM_ACROSS_MOUNTPOINT.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FtpFs</value>
   <description>The FileSystem for Ftp: uris.</description>

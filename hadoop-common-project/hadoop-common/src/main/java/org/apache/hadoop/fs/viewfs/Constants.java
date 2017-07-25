@@ -66,4 +66,6 @@ public interface Constants {
 
   static public final FsPermission PERMISSION_555 =
       new FsPermission((short) 0555);
+
+  String CONFIG_VIEWFS_RENAME_STRATEGY = "fs.viewfs.rename.strategy";
 }

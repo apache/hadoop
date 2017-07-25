@@ -95,6 +95,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
     xmlPropsToSkipCompare.add("test.fs.s3n.name");
+    xmlPropsToSkipCompare.add("fs.viewfs.rename.strategy");
 
     // S3N/S3A properties are in a different subtree.
     // - org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys
