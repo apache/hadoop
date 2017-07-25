@@ -283,12 +283,14 @@ public abstract class INodeWithAdditionalFields extends INode
 
   protected void removeFeature(Feature f) {
     int size = features.length;
-    Preconditions.checkState(size > 0, "Feature "
-        + f.getClass().getSimpleName() + " not found.");
+    if (size == 0) {
+      throwFeatureNotFoundException(f);
+    }
 
     if (size == 1) {
-      Preconditions.checkState(features[0] == f, "Feature "
-          + f.getClass().getSimpleName() + " not found.");
+      if (features[0] != f) {
+        throwFeatureNotFoundException(f);
+      }
       features = EMPTY_FEATURE;
       return;
     }
@@ -307,14 +309,22 @@ public abstract class INodeWithAdditionalFields extends INode
       }
     }
 
-    Preconditions.checkState(!overflow && j == size - 1, "Feature "
-        + f.getClass().getSimpleName() + " not found.");
+    if (overflow || j != size - 1) {
+      throwFeatureNotFoundException(f);
+    }
     features = arr;
+  }
+
+  private void throwFeatureNotFoundException(Feature f) {
+    throw new IllegalStateException(
+        "Feature " + f.getClass().getSimpleName() + " not found.");
   }
 
   protected <T extends Feature> T getFeature(Class<? extends Feature> clazz) {
     Preconditions.checkArgument(clazz != null);
-    for (Feature f : features) {
+    final int size = features.length;
+    for (int i=0; i < size; i++) {
+      Feature f = features[i];
       if (clazz.isAssignableFrom(f.getClass())) {
         @SuppressWarnings("unchecked")
         T ret = (T) f;
