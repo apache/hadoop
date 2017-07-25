@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
@@ -101,6 +102,11 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     property.
  *   </li>
  *   <li>
+ *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME} sets the
+ *     hostname to be used by the Docker container. If not specified, a
+ *     hostname will be derived from the container ID.
+ *   </li>
+ *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER}
  *     controls whether the Docker container is a privileged container. In order
  *     to use privileged containers, the
@@ -134,6 +140,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       "^(([a-zA-Z0-9.-]+)(:\\d+)?/)?([a-z0-9_./-]+)(:[\\w.-]+)?$";
   private static final Pattern dockerImagePattern =
       Pattern.compile(DOCKER_IMAGE_PATTERN);
+  public static final String HOSTNAME_PATTERN =
+      "^[a-zA-Z0-9][a-zA-Z0-9_.-]+$";
+  private static final Pattern hostnamePattern = Pattern.compile(
+      HOSTNAME_PATTERN);
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -147,6 +157,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_NETWORK =
       "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK";
+  @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_HOSTNAME =
+      "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME";
+  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER";
   @InterfaceAudience.Private
@@ -211,9 +225,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     this.privilegedOperationExecutor = privilegedOperationExecutor;
 
     if (cGroupsHandler == null) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("cGroupsHandler is null - cgroups not in use.");
-      }
+      LOG.info("cGroupsHandler is null - cgroups not in use.");
     } else {
       this.cGroupsHandler = cGroupsHandler;
     }
@@ -265,6 +277,29 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         + "' specified. Allowed networks: are " + allowedNetworks
         .toString();
     throw new ContainerExecutionException(msg);
+  }
+
+  public static void validateHostname(String hostname) throws
+      ContainerExecutionException {
+    if (hostname != null && !hostname.isEmpty()) {
+      if (!hostnamePattern.matcher(hostname).matches()) {
+        throw new ContainerExecutionException("Hostname '" + hostname
+            + "' doesn't match docker hostname pattern");
+      }
+    }
+  }
+
+  /** Set a DNS friendly hostname. */
+  private void setHostname(DockerRunCommand runCommand, String
+      containerIdStr, String name)
+      throws ContainerExecutionException {
+    if (name == null || name.isEmpty()) {
+      name = RegistryPathUtils.encodeYarnID(containerIdStr);
+      validateHostname(name);
+    }
+
+    LOG.info("setting hostname in container to: " + name);
+    runCommand.setHostname(name);
   }
 
   /**
@@ -343,10 +378,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       return false;
     }
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Privileged container requested for : " + container
-          .getContainerId().toString());
-    }
+    LOG.info("Privileged container requested for : " + container
+        .getContainerId().toString());
 
     //Ok, so we have been asked to run a privileged container. Security
     // checks need to be run. Each violation is an error.
@@ -375,10 +408,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throw new ContainerExecutionException(message);
     }
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("All checks pass. Launching privileged container for : "
-          + container.getContainerId().toString());
-    }
+    LOG.info("All checks pass. Launching privileged container for : "
+        + container.getContainerId().toString());
 
     return true;
   }
@@ -413,12 +444,15 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         .getEnvironment();
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
     String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
+    String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
 
     if(network == null || network.isEmpty()) {
       network = defaultNetwork;
     }
 
     validateContainerNetworkType(network);
+
+    validateHostname(hostname);
 
     validateImageName(imageName);
 
@@ -454,12 +488,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         runAsUser, imageName)
         .detachOnRun()
         .setContainerWorkDir(containerWorkDir.toString())
-        .setNetworkType(network)
-        .setCapabilities(capabilities)
+        .setNetworkType(network);
+    setHostname(runCommand, containerIdStr, hostname);
+    runCommand.setCapabilities(capabilities)
         .addMountLocation(CGROUPS_ROOT_DIRECTORY,
             CGROUPS_ROOT_DIRECTORY + ":ro", false);
-    List<String> allDirs = new ArrayList<>(containerLocalDirs);
 
+    List<String> allDirs = new ArrayList<>(containerLocalDirs);
     allDirs.addAll(filecacheDirs);
     allDirs.add(containerWorkDir.toString());
     allDirs.addAll(containerLogDirs);
@@ -500,9 +535,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE);
 
     if (disableOverride != null && disableOverride.equals("true")) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("command override disabled");
-      }
+      LOG.info("command override disabled");
     } else {
       List<String> overrideCommands = new ArrayList<>();
       Path launchDst =
