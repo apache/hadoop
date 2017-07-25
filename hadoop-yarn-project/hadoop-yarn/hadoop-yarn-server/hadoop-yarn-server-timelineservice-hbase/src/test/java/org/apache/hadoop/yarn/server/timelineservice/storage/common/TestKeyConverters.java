@@ -26,6 +26,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.junit.Test;
 
+/**
+ * Unit tests for key converters for various tables' row keys.
+ *
+ */
 public class TestKeyConverters {
 
   @Test
