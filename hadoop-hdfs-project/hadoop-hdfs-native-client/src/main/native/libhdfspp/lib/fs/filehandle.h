@@ -36,7 +36,7 @@
 namespace hdfs {
 
 class BlockReader;
-class BlockReaderOptions;
+struct BlockReaderOptions;
 class DataNodeConnection;
 
 /*

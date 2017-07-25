@@ -20,7 +20,7 @@
 #define LIB_RPC_SASLENGINE_H
 
 #include "hdfspp/status.h"
-#include "optional.hpp"
+#include "common/optional_wrapper.h"
 
 #include <vector>
 

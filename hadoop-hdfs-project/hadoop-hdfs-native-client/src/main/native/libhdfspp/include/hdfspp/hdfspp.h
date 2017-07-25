@@ -93,7 +93,7 @@ class IoService : public std::enable_shared_from_this<IoService>
  **/
 class NodeExclusionRule {
  public:
-  virtual ~NodeExclusionRule(){};
+  virtual ~NodeExclusionRule();
   virtual bool IsBadNode(const std::string &node_uuid) = 0;
 };
 
@@ -258,7 +258,7 @@ class FileSystem {
    * this method call. The blocks will be populated or removed in the
    * background as the result of the routine block maintenance procedures.
    *
-   * @param src file name
+   * @param path file name
    * @param replication new replication
    */
   virtual void SetReplication(const std::string & path, int16_t replication, std::function<void(const Status &)> handler) = 0;
@@ -266,7 +266,7 @@ class FileSystem {
 
   /**
    * Sets the modification and access time of the file to the specified time.
-   * @param src The string representation of the path
+   * @param path The string representation of the path
    * @param mtime The number of milliseconds since Jan 1, 1970.
    *              Setting mtime to -1 means that modification time should not
    *              be set by this call.
@@ -297,7 +297,7 @@ class FileSystem {
    * Retrieves the file system information as a whole, such as the total raw size of all files in the filesystem
    * and the raw capacity of the filesystem
    *
-   *  @param FsInfo      struct to be populated by GetFsStats
+   *  FsInfo struct is populated by GetFsStats
    **/
   virtual void GetFsStats(
       const std::function<void(const Status &, const FsInfo &)> &handler) = 0;
@@ -357,7 +357,6 @@ class FileSystem {
    *  Rename - Rename file.
    *  @param oldPath The path of the source file.       (must be non-empty)
    *  @param newPath The path of the destination file.  (must be non-empty)
-   *  @return Returns 0 on success, -1 on error.
    */
   virtual void Rename(const std::string &oldPath, const std::string &newPath,
       const std::function<void(const Status &)> &handler) = 0;
@@ -379,7 +378,6 @@ class FileSystem {
    * @param path      file path
    * @param username  If it is empty, the original username remains unchanged.
    * @param groupname If it is empty, the original groupname remains unchanged.
-   * @param recursive If true, the change will be propagated recursively.
    */
   virtual void SetOwner(const std::string & path, const std::string & username,
       const std::string & groupname, const std::function<void(const Status &)> &handler) = 0;
@@ -469,7 +467,7 @@ class FileSystem {
    * Note that it is an error to destroy the filesystem from within a filesystem
    * callback.  It will lead to a deadlock and the termination of the process.
    */
-  virtual ~FileSystem() {};
+  virtual ~FileSystem();
 
 
   /**

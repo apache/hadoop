@@ -160,7 +160,7 @@ class SwappableCallbackHolder {
     } else if (callback_accessed_) {
       // Common case where callback has been invoked but caller may not know
       LOG_DEBUG(kAsyncRuntime, << "AtomicSwapCallback called after callback has been accessed");
-      return false;
+      return callback_;
     }
 
     CallbackType old = callback_;

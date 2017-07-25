@@ -38,10 +38,12 @@ ENV DEBCONF_TERSE true
 # WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
 # Ubuntu Java.  See Java section below!
 ######
+<<<<<<< 5f556eacf0fedbaec3cdb819847c7c6c3bacc048
 RUN apt-get -q update && apt-get -q install -y \
     apt-utils \
     build-essential \
     bzip2 \
+    clang \
     curl \
     doxygen \
     fuse \

@@ -23,152 +23,152 @@ namespace hdfs {
 
 class DNInfo {
 public:
-  DNInfo() : xfer_port(-1), info_port(-1), IPC_port(-1), info_secure_port(-1) {}
+  DNInfo() : xfer_port_(-1), info_port_(-1), IPC_port_(-1), info_secure_port_(-1) {}
 
   std::string getHostname() const {
-    return hostname;
+    return hostname_;
   }
 
   void setHostname(const std::string & hostname) {
-    this->hostname = hostname;
+    this->hostname_ = hostname;
   }
 
   std::string getIPAddr() const {
-    return ip_addr;
+    return ip_addr_;
   }
 
   void setIPAddr(const std::string & ip_addr) {
-    this->ip_addr = ip_addr;
+    this->ip_addr_ = ip_addr;
   }
 
   std::string getNetworkLocation() const {
-    return network_location;
+    return network_location_;
   }
 
   void setNetworkLocation(const std::string & location) {
-    this->network_location = location;
+    this->network_location_ = location;
   }
 
   int getXferPort() const {
-    return xfer_port;
+    return xfer_port_;
   }
 
   void setXferPort(int xfer_port) {
-    this->xfer_port = xfer_port;
+    this->xfer_port_ = xfer_port;
   }
 
   int getInfoPort() const {
-    return info_port;
+    return info_port_;
   }
 
   void setInfoPort(int info_port) {
-    this->info_port = info_port;
+    this->info_port_ = info_port;
   }
 
   int getIPCPort() const {
-    return IPC_port;
+    return IPC_port_;
   }
 
   void setIPCPort(int IPC_port) {
-    this->IPC_port = IPC_port;
+    this->IPC_port_ = IPC_port;
   }
 
   int getInfoSecurePort() const {
-    return info_secure_port;
+    return info_secure_port_;
   }
 
   void setInfoSecurePort(int info_secure_port) {
-    this->info_secure_port = info_secure_port;
+    this->info_secure_port_ = info_secure_port;
   }
 private:
-  std::string hostname;
-  std::string ip_addr;
-  std::string network_location;
-  int         xfer_port;
-  int         info_port;
-  int         IPC_port;
-  int         info_secure_port;
+  std::string hostname_;
+  std::string ip_addr_;
+  std::string network_location_;
+  int         xfer_port_;
+  int         info_port_;
+  int         IPC_port_;
+  int         info_secure_port_;
 };
 
 class BlockLocation {
 public:
     bool isCorrupt() const {
-        return corrupt;
+        return corrupt_;
     }
 
     void setCorrupt(bool corrupt) {
-        this->corrupt = corrupt;
+        this->corrupt_ = corrupt;
     }
 
     int64_t getLength() const {
-        return length;
+        return length_;
     }
 
     void setLength(int64_t length) {
-        this->length = length;
+        this->length_ = length;
     }
 
     int64_t getOffset() const {
-        return offset;
+        return offset_;
     }
 
     void setOffset(int64_t offset) {
-        this->offset = offset;
+        this->offset_ = offset;
     }
 
     const std::vector<DNInfo> & getDataNodes() const {
-        return dn_info;
+        return dn_info_;
     }
 
     void setDataNodes(const std::vector<DNInfo> & dn_info) {
-        this->dn_info = dn_info;
+        this->dn_info_ = dn_info;
     }
 
 private:
-    bool corrupt;
-    int64_t length;
-    int64_t offset;  // Offset of the block in the file
-    std::vector<DNInfo> dn_info; // Info about who stores each block
+    bool corrupt_;
+    int64_t length_;
+    int64_t offset_;  // Offset of the block in the file
+    std::vector<DNInfo> dn_info_; // Info about who stores each block
 };
 
 class FileBlockLocation {
 public:
   uint64_t getFileLength() {
-    return fileLength;
+    return fileLength_;
   }
 
   void setFileLength(uint64_t fileLength) {
-    this->fileLength = fileLength;
+    this->fileLength_ = fileLength;
   }
 
   bool isLastBlockComplete() const {
-    return this->lastBlockComplete;
+    return this->lastBlockComplete_;
   }
 
   void setLastBlockComplete(bool lastBlockComplete) {
-    this->lastBlockComplete = lastBlockComplete;
+    this->lastBlockComplete_ = lastBlockComplete;
   }
 
   bool isUnderConstruction() const {
-    return underConstruction;
+    return underConstruction_;
   }
 
   void setUnderConstruction(bool underConstruction) {
-    this->underConstruction = underConstruction;
+    this->underConstruction_ = underConstruction;
   }
 
   const std::vector<BlockLocation> & getBlockLocations() const {
-    return blockLocations;
+    return blockLocations_;
   }
 
   void setBlockLocations(const std::vector<BlockLocation> & blockLocations) {
-    this->blockLocations = blockLocations;
+    this->blockLocations_ = blockLocations;
   }
 private:
-  uint64_t fileLength;
-  bool     lastBlockComplete;
-  bool     underConstruction;
-  std::vector<BlockLocation> blockLocations;
+  uint64_t fileLength_;
+  bool     lastBlockComplete_;
+  bool     underConstruction_;
+  std::vector<BlockLocation> blockLocations_;
 };
 
 } // namespace hdfs

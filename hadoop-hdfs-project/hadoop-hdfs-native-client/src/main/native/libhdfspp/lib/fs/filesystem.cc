@@ -70,6 +70,8 @@ Status FileSystem::CheckValidReplication(uint16_t replication) {
   return Status::OK();
 }
 
+FileSystem::~FileSystem() {}
+
 /*****************************************************************************
  *                    FILESYSTEM BASE CLASS
  ****************************************************************************/

@@ -19,7 +19,7 @@
 #ifndef LIB_FS_AUTHINFO_H
 #define LIB_FS_AUTHINFO_H
 
-#include <optional.hpp>
+#include "common/optional_wrapper.h"
 
 namespace hdfs {
 

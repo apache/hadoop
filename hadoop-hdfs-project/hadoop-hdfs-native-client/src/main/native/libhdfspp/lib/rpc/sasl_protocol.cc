@@ -19,6 +19,7 @@
 #include "rpc_engine.h"
 #include "rpc_connection.h"
 #include "common/logging.h"
+#include "common/optional_wrapper.h"
 
 #include "sasl_engine.h"
 #include "sasl_protocol.h"
@@ -32,8 +33,6 @@
     #error USE_SASL defined but no engine (USE_GSASL) defined
   #endif
 #endif
-
-#include <optional.hpp>
 
 namespace hdfs {
 
