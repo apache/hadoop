@@ -29,7 +29,6 @@ import static org.junit.Assert.*;
 
 import static org.mockito.Mockito.*;
 
-import static org.apache.hadoop.test.MockitoMaker.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -83,13 +82,14 @@ public class TestDiskChecker {
 
   private void _mkdirs(boolean exists, FsPermission before, FsPermission after)
       throws Throwable {
-    File localDir = make(stub(File.class).returning(exists).from.exists());
+    File localDir = mock(File.class);
+    when(localDir.exists()).thenReturn(exists);
     when(localDir.mkdir()).thenReturn(true);
     Path dir = mock(Path.class); // use default stubs
-    LocalFileSystem fs = make(stub(LocalFileSystem.class)
-        .returning(localDir).from.pathToFile(dir));
-    FileStatus stat = make(stub(FileStatus.class)
-        .returning(after).from.getPermission());
+    LocalFileSystem fs = mock(LocalFileSystem.class);
+    when(fs.pathToFile(dir)).thenReturn(localDir);
+    FileStatus stat = mock(FileStatus.class);
+    when(stat.getPermission()).thenReturn(after);
     when(fs.getFileStatus(dir)).thenReturn(stat);
 
     try {
