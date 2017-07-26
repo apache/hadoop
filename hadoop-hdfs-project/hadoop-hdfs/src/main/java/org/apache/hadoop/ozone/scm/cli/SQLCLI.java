@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
@@ -75,6 +76,7 @@ public class SQLCLI  extends Configured implements Tool {
   private Options options;
   private BasicParser parser;
   private final Charset encoding = Charset.forName("UTF-8");
+  private final OzoneConfiguration conf;
 
   // for container.db
   private static final String CREATE_CONTAINER_INFO =
@@ -199,9 +201,10 @@ public class SQLCLI  extends Configured implements Tool {
   private static final Logger LOG =
       LoggerFactory.getLogger(SQLCLI.class);
 
-  public SQLCLI() {
+  public SQLCLI(OzoneConfiguration conf) {
     this.options = getOptions();
     this.parser = new BasicParser();
+    this.conf = conf;
   }
 
   @SuppressWarnings("static-access")
@@ -468,7 +471,7 @@ public class SQLCLI  extends Configured implements Tool {
     LOG.info("Create tables for sql container db.");
     File dbFile = dbPath.toFile();
     try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setDbFile(dbFile).build();
+        .setConf(conf).setDbFile(dbFile).build();
         Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_CONTAINER_INFO);
       executeSQL(conn, CREATE_CONTAINER_MEMBERS);
@@ -547,7 +550,7 @@ public class SQLCLI  extends Configured implements Tool {
     LOG.info("Create tables for sql block db.");
     File dbFile = dbPath.toFile();
     try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setDbFile(dbFile).build();
+        .setConf(conf).setDbFile(dbFile).build();
         Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_BLOCK_CONTAINER);
 
@@ -594,7 +597,7 @@ public class SQLCLI  extends Configured implements Tool {
     LOG.info("Create table for sql node pool db.");
     File dbFile = dbPath.toFile();
     try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setDbFile(dbFile).build();
+        .setConf(conf).setDbFile(dbFile).build();
         Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_NODE_POOL);
       executeSQL(conn, CREATE_DATANODE_INFO);
@@ -645,7 +648,7 @@ public class SQLCLI  extends Configured implements Tool {
     LOG.info("Create table for open container db.");
     File dbFile = dbPath.toFile();
     try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setDbFile(dbFile).build();
+        .setConf(conf).setDbFile(dbFile).build();
         Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_OPEN_CONTAINER);
 
@@ -671,7 +674,7 @@ public class SQLCLI  extends Configured implements Tool {
   }
 
   public static void main(String[] args) {
-    Tool shell = new SQLCLI();
+    Tool shell = new SQLCLI(new OzoneConfiguration());
     int res = 0;
     try {
       ToolRunner.run(shell, args);

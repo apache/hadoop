@@ -30,9 +30,9 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,6 +44,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -57,6 +58,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * This class tests the CLI that transforms ksm.db into SQLite DB files.
  */
+@RunWith(Parameterized.class)
 public class TestKSMSQLCli {
   private static MiniOzoneCluster cluster = null;
   private static StorageHandler storageHandler;
@@ -76,8 +78,19 @@ public class TestKSMSQLCli {
   private static String keyName2 = "key2";
   private static String keyName3 = "key3";
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {
+        {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB},
+        {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB}
+    });
+  }
+
+  private static String metaStoreType;
+
+  public TestKSMSQLCli(String type) {
+    metaStoreType = type;
+  }
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -142,7 +155,8 @@ public class TestKSMSQLCli {
 
   @Before
   public void init() throws Exception {
-    cli = new SQLCLI();
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, metaStoreType);
+    cli = new SQLCLI(conf);
   }
 
   @Test
