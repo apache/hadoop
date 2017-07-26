@@ -635,7 +635,8 @@ public class Client implements AutoCloseable {
       return false;
     }
     
-    private synchronized void setupConnection() throws IOException {
+    private synchronized void setupConnection(
+        UserGroupInformation ticket) throws IOException {
       short ioFailures = 0;
       short timeoutFailures = 0;
       while (true) {
@@ -663,24 +664,26 @@ public class Client implements AutoCloseable {
            * client, to ensure Server matching address of the client connection
            * to host name in principal passed.
            */
-          UserGroupInformation ticket = remoteId.getTicket();
+          InetSocketAddress bindAddr = null;
           if (ticket != null && ticket.hasKerberosCredentials()) {
             KerberosInfo krbInfo = 
               remoteId.getProtocol().getAnnotation(KerberosInfo.class);
-            if (krbInfo != null && krbInfo.clientPrincipal() != null) {
-              String host = 
-                SecurityUtil.getHostFromPrincipal(remoteId.getTicket().getUserName());
-              
+            if (krbInfo != null) {
+              String principal = ticket.getUserName();
+              String host = SecurityUtil.getHostFromPrincipal(principal);
               // If host name is a valid local address then bind socket to it
               InetAddress localAddr = NetUtils.getLocalInetAddress(host);
               if (localAddr != null) {
                 this.socket.setReuseAddress(true);
-                this.socket.bind(new InetSocketAddress(localAddr, 0));
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Binding " + principal + " to " + localAddr);
+                }
+                bindAddr = new InetSocketAddress(localAddr, 0);
               }
             }
           }
           
-          NetUtils.connect(this.socket, server, connectionTimeout);
+          NetUtils.connect(this.socket, server, bindAddr, connectionTimeout);
           this.socket.setSoTimeout(soTimeout);
           return;
         } catch (ConnectTimeoutException toe) {
@@ -764,7 +767,14 @@ public class Client implements AutoCloseable {
         AtomicBoolean fallbackToSimpleAuth) {
       if (socket != null || shouldCloseConnection.get()) {
         return;
-      } 
+      }
+      UserGroupInformation ticket = remoteId.getTicket();
+      if (ticket != null) {
+        final UserGroupInformation realUser = ticket.getRealUser();
+        if (realUser != null) {
+          ticket = realUser;
+        }
+      }
       try {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
@@ -776,14 +786,10 @@ public class Client implements AutoCloseable {
         short numRetries = 0;
         Random rand = null;
         while (true) {
-          setupConnection();
+          setupConnection(ticket);
           ipcStreams = new IpcStreams(socket, maxResponseLength);
           writeConnectionHeader(ipcStreams);
           if (authProtocol == AuthProtocol.SASL) {
-            UserGroupInformation ticket = remoteId.getTicket();
-            if (ticket.getRealUser() != null) {
-              ticket = ticket.getRealUser();
-            }
             try {
               authMethod = ticket
                   .doAs(new PrivilegedExceptionAction<AuthMethod>() {
