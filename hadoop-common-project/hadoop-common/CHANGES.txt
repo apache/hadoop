@@ -191,6 +191,8 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14214. DomainSocketWatcher::add()/delete() should not self
     interrupt while looping await(). (Mingliang Liu)
 
+    HADOOP-14686. Add patchprocess/ to .gitignore. Sean Busbey via (shv)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
