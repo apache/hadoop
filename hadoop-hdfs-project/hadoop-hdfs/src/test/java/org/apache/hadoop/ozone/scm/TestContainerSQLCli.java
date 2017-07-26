@@ -33,9 +33,11 @@ import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -45,6 +47,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -59,27 +63,43 @@ import static org.junit.Assert.assertTrue;
 /**
  * This class tests the CLI that transforms container into SQLite DB files.
  */
+@RunWith(Parameterized.class)
 public class TestContainerSQLCli {
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {
+        {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB},
+        {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB}
+    });
+  }
+
+  private static String metaStoreType;
+
+  public TestContainerSQLCli(String type) {
+    metaStoreType = type;
+  }
+
   private static SQLCLI cli;
 
-  private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
-  private static StorageContainerLocationProtocolClientSideTranslatorPB
+  private MiniOzoneCluster cluster;
+  private OzoneConfiguration conf;
+  private StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
 
-  private static ContainerMapping mapping;
-  private static NodeManager nodeManager;
-  private static BlockManagerImpl blockManager;
+  private ContainerMapping mapping;
+  private NodeManager nodeManager;
+  private BlockManagerImpl blockManager;
 
-  private static Pipeline pipeline1;
-  private static Pipeline pipeline2;
+  private Pipeline pipeline1;
+  private Pipeline pipeline2;
 
-  private static HashMap<String, String> blockContainerMap;
+  private HashMap<String, String> blockContainerMap;
 
   private final static long DEFAULT_BLOCK_SIZE = 4 * KB;
 
-  @BeforeClass
-  public static void init() throws Exception {
+  @Before
+  public void setup() throws Exception {
     long datanodeCapacities = 3 * OzoneConsts.TB;
     blockContainerMap = new HashMap<>();
 
@@ -138,11 +158,13 @@ public class TestContainerSQLCli {
     mapping.close();
     nodeManager.close();
 
-    cli = new SQLCLI();
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, metaStoreType);
+    cli = new SQLCLI(conf);
+
   }
 
-  @AfterClass
-  public static void shutdown() throws InterruptedException {
+  @After
+  public void shutdown() throws InterruptedException {
     IOUtils.cleanup(null, storageContainerLocationClient, cluster);
   }
 
