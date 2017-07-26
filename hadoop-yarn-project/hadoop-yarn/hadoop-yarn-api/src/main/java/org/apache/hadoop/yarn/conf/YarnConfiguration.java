@@ -2645,7 +2645,7 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "clientrm.";
 
   public static final String ROUTER_CLIENTRM_ADDRESS =
-      ROUTER_CLIENTRM_PREFIX + ".address";
+      ROUTER_CLIENTRM_PREFIX + "address";
   public static final int DEFAULT_ROUTER_CLIENTRM_PORT = 8050;
   public static final String DEFAULT_ROUTER_CLIENTRM_ADDRESS =
       "0.0.0.0:" + DEFAULT_ROUTER_CLIENTRM_PORT;
@@ -2663,7 +2663,7 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_RMADMIN_PREFIX = ROUTER_PREFIX + "rmadmin.";
 
   public static final String ROUTER_RMADMIN_ADDRESS =
-      ROUTER_RMADMIN_PREFIX + ".address";
+      ROUTER_RMADMIN_PREFIX + "address";
   public static final int DEFAULT_ROUTER_RMADMIN_PORT = 8052;
   public static final String DEFAULT_ROUTER_RMADMIN_ADDRESS =
       "0.0.0.0:" + DEFAULT_ROUTER_RMADMIN_PORT;

@@ -209,9 +209,9 @@ Optional:
 | Property | Example | Description |
 |:---- |:---- |
 |`yarn.router.hostname` | `0.0.0.0` | Router host name.
-|`yarn.router.clientrm.address` | `0.0.0.0:8032` | Router client address. |
+|`yarn.router.clientrm.address` | `0.0.0.0:8050` | Router client address. |
 |`yarn.router.webapp.address` | `0.0.0.0:80` | Webapp address at the router. |
-|`yarn.router.admin.address` | `0.0.0.0:8033` | Admin address at the router. |
+|`yarn.router.admin.address` | `0.0.0.0:8052` | Admin address at the router. |
 |`yarn.router.webapp.https.address` | `0.0.0.0:443` | Secure webapp address at the router. |
 |`yarn.router.submit.retry` | `3` | The number of retries in the router before we give up. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
@@ -227,7 +227,7 @@ These are extra configurations that should appear in the **conf/yarn-site.xml** 
 |:---- |:---- |
 | `yarn.nodemanager.amrmproxy.enabled` | `true` | Whether or not the AMRMProxy is enabled.
 |`yarn.nodemanager.amrmproxy.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.nodemanager.amrmproxy.FederationInterceptor` | A comma-separated list of interceptors to be run at the amrmproxy. For federation the last step in the pipeline should be the FederationInterceptor.
-| `yarn.client.failover.proxy-provider` | `org.apache.hadoop.yarn.server.federation.failover.FederationRMFailoverProxyProvider` | The class used to connect to the RMs by looking up the membership information in federation state-store. This must be set if federation is enabled, even if RM HA is not enabled.|
+| `yarn.client.failover-proxy-provider` | `org.apache.hadoop.yarn.server.federation.failover.FederationRMFailoverProxyProvider` | The class used to connect to the RMs by looking up the membership information in federation state-store. This must be set if federation is enabled, even if RM HA is not enabled.|
 
 Optional:
 
@@ -242,7 +242,7 @@ Currently, the only supported implementation of the state-store is Microsoft SQL
 
 Running a Sample Job
 --------------------
-In order to submit jobs to a Federation cluster one must create a seperate set of configs for the client from which said jobs will be submitted. In these, the **conf/yarn-site.xml** should have the following additional configurations:
+In order to submit jobs to a Federation cluster one must create a seperate set of configs for the client from which jobs will be submitted. In these, the **conf/yarn-site.xml** should have the following additional configurations:
 
 | Property | Example | Description |
 |:--- |:--- |

@@ -77,6 +77,10 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.RM_EPOCH);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.ROUTER_CLIENTRM_ADDRESS);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.ROUTER_RMADMIN_ADDRESS);
 
     // Federation policies configs to be ignored
     configurationPropsToSkipCompare
