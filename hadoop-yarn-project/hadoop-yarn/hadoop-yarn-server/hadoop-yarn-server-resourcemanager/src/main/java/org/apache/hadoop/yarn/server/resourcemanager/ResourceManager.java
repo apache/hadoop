@@ -1313,7 +1313,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContextImpl.setDispatcher(dispatcher);
 
     rmContext = rmContextImpl;
-    rmContext.setDispatcher(rmDispatcher);
   }
 
   private void setSchedulerRecoveryStartAndWaitTime(RMState state,
