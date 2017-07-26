@@ -25,7 +25,6 @@ import org.apache.hadoop.cblock.jscsiHelper.cache.impl.CBlockLocalCache;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -37,9 +36,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -69,9 +66,8 @@ public class TestBufferManager {
   @BeforeClass
   public static void init() throws IOException {
     config = new OzoneConfiguration();
-    File p = GenericTestUtils.getTestDir();
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils.getTempPath(
+        TestBufferManager.class.getSimpleName());
     config.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     config.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     config.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
@@ -129,11 +125,9 @@ public class TestBufferManager {
       InterruptedException, TimeoutException {
     // Create a new config so that this tests write metafile to new location
     OzoneConfiguration flushTestConfig = new OzoneConfiguration();
-    URL p = flushTestConfig.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName() +
-            GenericTestUtils.getMethodName() +
-            RandomStringUtils.randomNumeric(4));
+    String path = GenericTestUtils
+        .getTempPath(TestBufferManager.class.getSimpleName()
+            + RandomStringUtils.randomNumeric(4));
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
@@ -214,8 +208,9 @@ public class TestBufferManager {
       InterruptedException, TimeoutException{
     // Create a new config so that this tests write metafile to new location
     OzoneConfiguration flushTestConfig = new OzoneConfiguration();
-    URL p = flushTestConfig.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestBufferManager.class.getSimpleName()
+            + RandomStringUtils.randomNumeric(4));
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
@@ -258,8 +253,9 @@ public class TestBufferManager {
       InterruptedException, TimeoutException {
     // Create a new config so that this tests write metafile to new location
     OzoneConfiguration flushTestConfig = new OzoneConfiguration();
-    URL p = flushTestConfig.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestBufferManager.class.getSimpleName()
+            + RandomStringUtils.randomNumeric(4));
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
@@ -306,8 +302,9 @@ public class TestBufferManager {
       InterruptedException, TimeoutException {
     // Create a new config so that this tests write metafile to new location
     OzoneConfiguration flushTestConfig = new OzoneConfiguration();
-    URL p = flushTestConfig.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestBufferManager.class.getSimpleName()
+            + RandomStringUtils.randomNumeric(4));
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
@@ -354,8 +351,9 @@ public class TestBufferManager {
       InterruptedException, TimeoutException{
     // Create a new config so that this tests write metafile to new location
     OzoneConfiguration flushTestConfig = new OzoneConfiguration();
-    URL p = flushTestConfig.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestBufferManager.class.getSimpleName()
+            + RandomStringUtils.randomNumeric(4));
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
@@ -400,8 +398,9 @@ public class TestBufferManager {
       InterruptedException, TimeoutException{
     // Create a new config so that this tests write metafile to new location
     OzoneConfiguration flushTestConfig = new OzoneConfiguration();
-    URL p = flushTestConfig.getClass().getResource("");
-    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestBufferManager.class.getSimpleName()
+            + RandomStringUtils.randomNumeric(4));
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);

@@ -29,7 +29,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -45,7 +44,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -80,9 +78,8 @@ public class TestLocalBlockCache {
   @BeforeClass
   public static void init() throws IOException {
     config = new OzoneConfiguration();
-    URL p = config.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestLocalBlockCache.class.getSimpleName());
     config.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     config.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     config.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
