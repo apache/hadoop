@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URL;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
@@ -94,9 +93,8 @@ public class TestDatanodeStateMachine {
     conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES,
         serverAddresses.toArray(new String[0]));
 
-    URL p = this.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestDatanodeStateMachine.class.getSimpleName());
+    String path = GenericTestUtils
+        .getTempPath(TestDatanodeStateMachine.class.getSimpleName());
     testRoot = new File(path);
     if (!testRoot.mkdirs()) {
       LOG.info("Required directories already exist.");
