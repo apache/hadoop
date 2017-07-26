@@ -398,6 +398,7 @@ Usage:
         hdfs haadmin -checkHealth <serviceId>
         hdfs haadmin -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
         hdfs haadmin -getServiceState <serviceId>
+        hdfs haadmin -getAllServiceState
         hdfs haadmin -help <command>
         hdfs haadmin -transitionToActive <serviceId> [--forceactive]
         hdfs haadmin -transitionToStandby <serviceId>
@@ -407,6 +408,7 @@ Usage:
 | `-checkHealth` | check the health of the given NameNode |
 | `-failover` | initiate a failover between two NameNodes |
 | `-getServiceState` | determine whether the given NameNode is Active or Standby |
+| `-getAllServiceState` | returns the state of all the NameNodes | |
 | `-transitionToActive` | transition the state of the given NameNode to Active (Warning: No fencing is done) |
 | `-transitionToStandby` | transition the state of the given NameNode to Standby (Warning: No fencing is done) |
 

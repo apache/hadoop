@@ -174,6 +174,10 @@ public class RMAdminCLI extends HAAdmin {
     this.errOut = errOut;
   }
 
+  protected void setOut(PrintStream out) {
+    this.out = out;
+  }
+
   private static void appendHAUsage(final StringBuilder usageBuilder) {
     for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
       if (cmdEntry.getKey().equals("-help")
@@ -181,7 +185,12 @@ public class RMAdminCLI extends HAAdmin {
         continue;
       }
       UsageInfo usageInfo = cmdEntry.getValue();
-      usageBuilder.append(" [" + cmdEntry.getKey() + " " + usageInfo.args + "]");
+      if (usageInfo.args == null) {
+        usageBuilder.append(" [" + cmdEntry.getKey() + "]");
+      } else {
+        usageBuilder.append(" [" + cmdEntry.getKey() + " " + usageInfo.args
+            + "]");
+      }
     }
   }
 
@@ -193,9 +202,13 @@ public class RMAdminCLI extends HAAdmin {
         return;
       }
     }
-    String space = (usageInfo.args == "") ? "" : " ";
-    builder.append("   " + cmd + space + usageInfo.args + ": " +
-        usageInfo.help);
+    if (usageInfo.args == null) {
+      builder.append("   " + cmd + ": " + usageInfo.help);
+    } else {
+      String space = (usageInfo.args == "") ? "" : " ";
+      builder.append("   " + cmd + space + usageInfo.args + ": "
+          + usageInfo.help);
+    }
   }
 
   private static void buildIndividualUsageMsg(String cmd,
@@ -209,10 +222,13 @@ public class RMAdminCLI extends HAAdmin {
       }
       isHACommand = true;
     }
-    String space = (usageInfo.args == "") ? "" : " ";
-    builder.append("Usage: yarn rmadmin ["
-        + cmd + space + usageInfo.args
-        + "]\n");
+    if (usageInfo.args == null) {
+      builder.append("Usage: yarn rmadmin [" + cmd + "]\n");
+    } else {
+      String space = (usageInfo.args == "") ? "" : " ";
+      builder.append("Usage: yarn rmadmin [" + cmd + space + usageInfo.args
+          + "]\n");
+    }
     if (isHACommand) {
       builder.append(cmd + " can only be used when RM HA is enabled");
     }
@@ -230,7 +246,11 @@ public class RMAdminCLI extends HAAdmin {
         String cmdKey = cmdEntry.getKey();
         if (!cmdKey.equals("-help")) {
           UsageInfo usageInfo = cmdEntry.getValue();
-          builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+          if (usageInfo.args == null) {
+            builder.append("   " + cmdKey + "\n");
+          } else {
+            builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+          }
         }
       }
     }
