@@ -110,12 +110,12 @@ public class TestHttpFSServerNoACLs extends HTestCase {
 
     // HDFS configuration
     File hadoopConfDir = new File(new File(homeDir, "conf"), "hadoop-conf");
-    if ( !hadoopConfDir.mkdirs() ) {
+    if (!hadoopConfDir.mkdirs()) {
       throw new IOException();
     }
 
     String fsDefaultName =
-            nnConf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
+        nnConf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
     Configuration conf = new Configuration(false);
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, fsDefaultName);
 
@@ -146,7 +146,7 @@ public class TestHttpFSServerNoACLs extends HTestCase {
 
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     URL url = cl.getResource("webapp");
-    if ( url == null ) {
+    if (url == null) {
       throw new IOException();
     }
     WebAppContext context = new WebAppContext(url.getPath(), "/webhdfs");
@@ -168,7 +168,7 @@ public class TestHttpFSServerNoACLs extends HTestCase {
           throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
-    if ( filename.charAt(0) == '/' ) {
+    if (filename.charAt(0) == '/') {
       filename = filename.substring(1);
     }
     String pathOps = MessageFormat.format(
@@ -179,7 +179,7 @@ public class TestHttpFSServerNoACLs extends HTestCase {
     conn.connect();
     int resp = conn.getResponseCode();
     BufferedReader reader;
-    if ( expectOK ) {
+    if (expectOK) {
       Assert.assertEquals(HttpURLConnection.HTTP_OK, resp);
       reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
       String res = reader.readLine();
@@ -204,7 +204,7 @@ public class TestHttpFSServerNoACLs extends HTestCase {
                       String params, boolean expectOK) throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
-    if ( filename.charAt(0) == '/' ) {
+    if (filename.charAt(0) == '/') {
       filename = filename.substring(1);
     }
     String pathOps = MessageFormat.format(
@@ -216,7 +216,7 @@ public class TestHttpFSServerNoACLs extends HTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     int resp = conn.getResponseCode();
-    if ( expectOK ) {
+    if (expectOK) {
       Assert.assertEquals(HttpURLConnection.HTTP_OK, resp);
     } else {
       Assert.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
@@ -229,6 +229,7 @@ public class TestHttpFSServerNoACLs extends HTestCase {
   }
 
   /**
+   * Test without ACLs.
    * Ensure that
    * <ol>
    *   <li>GETFILESTATUS and LISTSTATUS work happily</li>

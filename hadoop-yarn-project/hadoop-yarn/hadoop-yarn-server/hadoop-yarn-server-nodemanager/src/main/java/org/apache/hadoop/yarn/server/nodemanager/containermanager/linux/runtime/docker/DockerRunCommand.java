@@ -91,6 +91,12 @@ public class DockerRunCommand extends DockerCommand {
 
     return this;
   }
+
+  public DockerRunCommand setHostname(String hostname) {
+    super.addCommandArguments("--hostname=" + hostname);
+    return this;
+  }
+
   public DockerRunCommand addDevice(String sourceDevice, String
       destinationDevice) {
     super.addCommandArguments("--device=" + sourceDevice + ":" +

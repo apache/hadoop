@@ -178,8 +178,10 @@ public final class CodecUtil {
         }
       } catch (LinkageError | Exception e) {
         // Fallback to next coder if possible
-        LOG.warn("Failed to create raw erasure encoder " + rawCoderName +
-            ", fallback to next codec if possible", e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to create raw erasure encoder " + rawCoderName +
+              ", fallback to next codec if possible", e);
+        }
       }
     }
     throw new IllegalArgumentException("Fail to create raw erasure " +
@@ -198,12 +200,14 @@ public final class CodecUtil {
         }
       } catch (LinkageError | Exception e) {
         // Fallback to next coder if possible
-        LOG.warn("Failed to create raw erasure decoder " + rawCoderName +
-            ", fallback to next codec if possible", e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to create raw erasure decoder " + rawCoderName +
+                  ", fallback to next codec if possible", e);
+        }
       }
     }
     throw new IllegalArgumentException("Fail to create raw erasure " +
-        "encoder with given codec: " + codecName);
+        "decoder with given codec: " + codecName);
   }
 
   private static ErasureCodec createCodec(Configuration conf,

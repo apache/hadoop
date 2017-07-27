@@ -37,14 +37,18 @@ function hdfs_subcommand_httpfs
   # shellcheck disable=SC2034
 
   hadoop_add_param HADOOP_OPTS "-Dhttpfs.home.dir" \
-    "-Dhttpfs.home.dir=${HADOOP_HOME}"
+    "-Dhttpfs.home.dir=${HTTPFS_HOME:-${HADOOP_HDFS_HOME}}"
   hadoop_add_param HADOOP_OPTS "-Dhttpfs.config.dir" \
     "-Dhttpfs.config.dir=${HTTPFS_CONFIG:-${HADOOP_CONF_DIR}}"
   hadoop_add_param HADOOP_OPTS "-Dhttpfs.log.dir" \
     "-Dhttpfs.log.dir=${HTTPFS_LOG:-${HADOOP_LOG_DIR}}"
 
-  if [[ "${HADOOP_DAEMON_MODE}" == "default" ]] ||
-     [[ "${HADOOP_DAEMON_MODE}" == "start" ]]; then
-    hadoop_mkdir "${HTTPFS_TEMP:-${HADOOP_HOME}/temp}"
-  fi
+  local temp_dir=${HTTPFS_TEMP:-${HADOOP_HDFS_HOME}/temp}
+  hadoop_add_param HADOOP_OPTS "-Dhttpfs.temp.dir" \
+    "-Dhttpfs.temp.dir=${temp_dir}"
+  case ${HADOOP_DAEMON_MODE} in
+    start|default)
+      hadoop_mkdir "${temp_dir}"
+    ;;
+  esac
 }

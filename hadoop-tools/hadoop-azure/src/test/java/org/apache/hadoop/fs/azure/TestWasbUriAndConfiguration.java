@@ -566,4 +566,52 @@ public class TestWasbUriAndConfiguration {
         CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, null);
     assertEquals(newPath, effectivePath);
   }
+
+  @Test
+  public void testUserAgentConfig() throws Exception {
+    // Set the user agent
+    try {
+      testAccount = AzureBlobStorageTestAccount.createMock();
+      Configuration conf = testAccount.getFileSystem().getConf();
+      String authority = testAccount.getFileSystem().getUri().getAuthority();
+      URI defaultUri = new URI("wasbs", authority, null, null, null);
+      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+      conf.set("fs.AbstractFileSystem.wasbs.impl", "org.apache.hadoop.fs.azure.Wasbs");
+
+      conf.set(AzureNativeFileSystemStore.USER_AGENT_ID_KEY, "TestClient");
+
+      FileSystem fs = FileSystem.get(conf);
+      AbstractFileSystem afs = FileContext.getFileContext(conf).getDefaultFileSystem();
+
+      assertTrue(afs instanceof Wasbs);
+      assertEquals(-1, afs.getUri().getPort());
+      assertEquals("wasbs", afs.getUri().getScheme());
+
+    } finally {
+      testAccount.cleanup();
+      FileSystem.closeAll();
+    }
+
+    // Unset the user agent
+    try {
+      testAccount = AzureBlobStorageTestAccount.createMock();
+      Configuration conf = testAccount.getFileSystem().getConf();
+      String authority = testAccount.getFileSystem().getUri().getAuthority();
+      URI defaultUri = new URI("wasbs", authority, null, null, null);
+      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+      conf.set("fs.AbstractFileSystem.wasbs.impl", "org.apache.hadoop.fs.azure.Wasbs");
+
+      conf.unset(AzureNativeFileSystemStore.USER_AGENT_ID_KEY);
+
+      FileSystem fs = FileSystem.get(conf);
+      AbstractFileSystem afs = FileContext.getFileContext(conf).getDefaultFileSystem();
+      assertTrue(afs instanceof Wasbs);
+      assertEquals(-1, afs.getUri().getPort());
+      assertEquals("wasbs", afs.getUri().getScheme());
+
+    } finally {
+      testAccount.cleanup();
+      FileSystem.closeAll();
+    }
+  }
 }

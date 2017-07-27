@@ -192,6 +192,19 @@ The configuration option `fs.azure.page.blob.extension.size` is the page blob
 extension size.  This defines the amount to extend a page blob if it starts to
 get full.  It must be 128MB or greater, specified as an integer number of bytes.
 
+### Custom User-Agent
+WASB passes User-Agent header to the Azure back-end. The default value
+contains WASB version, Java Runtime version, Azure Client library version, and the
+value of the configuration option `fs.azure.user.agent.prefix`. Customized User-Agent
+header enables better troubleshooting and analysis by Azure service.
+
+```xml
+<property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>Identifier</value>
+</property>
+```
+
 ### Atomic Folder Rename
 
 Azure storage stores files as a flat key/value store without formal support

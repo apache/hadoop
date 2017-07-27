@@ -520,9 +520,13 @@ public class DFSAdmin extends FsShell {
         + " (" + StringUtils.byteDesc(remaining) + ")");
     System.out.println("DFS Used: " + used
                        + " (" + StringUtils.byteDesc(used) + ")");
+    double dfsUsedPercent = 0;
+    if (presentCapacity != 0) {
+      dfsUsedPercent = used/(double)presentCapacity;
+    }
     System.out.println("DFS Used%: "
-        + StringUtils.formatPercent(used/(double)presentCapacity, 2));
-    
+        + StringUtils.formatPercent(dfsUsedPercent, 2));
+
     /* These counts are not always upto date. They are updated after  
      * iteration of an internal list. Should be updated in a few seconds to 
      * minutes. Use "-metaSave" to list of all such blocks and accurate 

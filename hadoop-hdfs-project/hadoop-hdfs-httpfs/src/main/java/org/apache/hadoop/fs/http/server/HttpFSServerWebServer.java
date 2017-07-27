@@ -71,8 +71,6 @@ public class HttpFSServerWebServer {
   HttpFSServerWebServer(Configuration conf, Configuration sslConf) throws
       Exception {
     // Override configuration with deprecated environment variables.
-    deprecateEnv("HTTPFS_TEMP", conf, HttpServer2.HTTP_TEMP_DIR_KEY,
-        HTTPFS_SITE_XML);
     deprecateEnv("HTTPFS_HTTP_HOSTNAME", conf, HTTP_HOSTNAME_KEY,
         HTTPFS_SITE_XML);
     deprecateEnv("HTTPFS_HTTP_PORT", conf, HTTP_PORT_KEY,

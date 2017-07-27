@@ -73,6 +73,9 @@ import com.google.common.collect.Maps;
 import java.util.Properties;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
+/**
+ * Main test class for HttpFSServer.
+ */
 public class TestHttpFSServer extends HFSTestCase {
 
   @Test
@@ -82,15 +85,20 @@ public class TestHttpFSServer extends HFSTestCase {
     String dir = TestDirHelper.getTestDir().getAbsolutePath();
 
     Configuration httpfsConf = new Configuration(false);
-    HttpFSServerWebApp server = new HttpFSServerWebApp(dir, dir, dir, dir, httpfsConf);
+    HttpFSServerWebApp server = new HttpFSServerWebApp(dir, dir, dir, dir,
+                                                       httpfsConf);
     server.init();
     server.destroy();
   }
 
-  public static class MockGroups implements Service,Groups {
+  /**
+   * Mock groups.
+   */
+  public static class MockGroups implements Service, Groups {
 
     @Override
-    public void init(org.apache.hadoop.lib.server.Server server) throws ServiceException {
+    public void init(org.apache.hadoop.lib.server.Server server)
+        throws ServiceException {
     }
 
     @Override
@@ -112,8 +120,10 @@ public class TestHttpFSServer extends HFSTestCase {
     }
 
     @Override
-    public void serverStatusChange(org.apache.hadoop.lib.server.Server.Status oldStatus,
-                                   org.apache.hadoop.lib.server.Server.Status newStatus) throws ServiceException {
+    public void serverStatusChange(
+        org.apache.hadoop.lib.server.Server.Status oldStatus,
+        org.apache.hadoop.lib.server.Server.Status newStatus)
+        throws ServiceException {
     }
 
     @Override
@@ -300,25 +310,30 @@ public class TestHttpFSServer extends HFSTestCase {
     createHttpFSServer(false, false);
 
     URL url = new URL(TestJettyHelper.getJettyURL(),
-                      MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation", "nobody"));
+        MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
+                             "nobody"));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_UNAUTHORIZED);
+    Assert.assertEquals(conn.getResponseCode(),
+                        HttpURLConnection.HTTP_UNAUTHORIZED);
 
     url = new URL(TestJettyHelper.getJettyURL(),
-                  MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
-                                       HadoopUsersConfTestHelper.getHadoopUsers()[0]));
+        MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
+                             HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
-    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    BufferedReader reader = new BufferedReader(
+        new InputStreamReader(conn.getInputStream()));
     String line = reader.readLine();
     reader.close();
     Assert.assertTrue(line.contains("\"counters\":{"));
 
     url = new URL(TestJettyHelper.getJettyURL(),
-                  MessageFormat.format("/webhdfs/v1/foo?user.name={0}&op=instrumentation",
-                                       HadoopUsersConfTestHelper.getHadoopUsers()[0]));
+        MessageFormat.format(
+            "/webhdfs/v1/foo?user.name={0}&op=instrumentation",
+            HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
+    Assert.assertEquals(conn.getResponseCode(),
+                        HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
   @Test
@@ -330,10 +345,12 @@ public class TestHttpFSServer extends HFSTestCase {
 
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
-                      MessageFormat.format("/webhdfs/v1/?user.name={0}&op=liststatus", user));
+        MessageFormat.format("/webhdfs/v1/?user.name={0}&op=liststatus",
+                             user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
-    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    BufferedReader reader = new BufferedReader(
+        new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
   }
@@ -369,10 +386,12 @@ public class TestHttpFSServer extends HFSTestCase {
 
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
-                      MessageFormat.format("/webhdfs/v1/tmp?user.name={0}&op=liststatus&filter=f*", user));
+        MessageFormat.format(
+            "/webhdfs/v1/tmp?user.name={0}&op=liststatus&filter=f*", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
-    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    BufferedReader reader = new BufferedReader(
+        new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
   }
@@ -384,15 +403,14 @@ public class TestHttpFSServer extends HFSTestCase {
    * @param perms The permission field, if any (may be null)
    * @throws Exception
    */
-  private void createWithHttp ( String filename, String perms )
-          throws Exception {
+  private void createWithHttp(String filename, String perms) throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
-    if ( filename.charAt(0) == '/' ) {
+    if (filename.charAt(0) == '/') {
       filename = filename.substring(1);
     }
     String pathOps;
-    if ( perms == null ) {
+    if (perms == null) {
       pathOps = MessageFormat.format(
               "/webhdfs/v1/{0}?user.name={1}&op=CREATE",
               filename, user);
@@ -422,7 +440,7 @@ public class TestHttpFSServer extends HFSTestCase {
           throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
-    if ( filename.charAt(0) == '/' ) {
+    if (filename.charAt(0) == '/') {
       filename = filename.substring(1);
     }
     String pathOps = MessageFormat.format(
@@ -449,7 +467,7 @@ public class TestHttpFSServer extends HFSTestCase {
                       String params) throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
-    if ( filename.charAt(0) == '/' ) {
+    if (filename.charAt(0) == '/') {
       filename = filename.substring(1);
     }
     String pathOps = MessageFormat.format(
@@ -471,7 +489,7 @@ public class TestHttpFSServer extends HFSTestCase {
    * @return The value of 'permission' in statusJson
    * @throws Exception
    */
-  private String getPerms ( String statusJson ) throws Exception {
+  private String getPerms(String statusJson) throws Exception {
     JSONParser parser = new JSONParser();
     JSONObject jsonObject = (JSONObject) parser.parse(statusJson);
     JSONObject details = (JSONObject) jsonObject.get("FileStatus");
@@ -499,20 +517,20 @@ public class TestHttpFSServer extends HFSTestCase {
    * @return A List of Strings which are the elements of the ACL entries
    * @throws Exception
    */
-  private List<String> getAclEntries ( String statusJson ) throws Exception {
+  private List<String> getAclEntries(String statusJson) throws Exception {
     List<String> entries = new ArrayList<String>();
     JSONParser parser = new JSONParser();
     JSONObject jsonObject = (JSONObject) parser.parse(statusJson);
     JSONObject details = (JSONObject) jsonObject.get("AclStatus");
     JSONArray jsonEntries = (JSONArray) details.get("entries");
-    if ( jsonEntries != null ) {
+    if (jsonEntries != null) {
       for (Object e : jsonEntries) {
         entries.add(e.toString());
       }
     }
     return entries;
   }
-  
+
   /**
    * Parse xAttrs from JSON result of GETXATTRS call, return xAttrs Map.
    * @param statusJson JSON from GETXATTRS
@@ -533,8 +551,8 @@ public class TestHttpFSServer extends HFSTestCase {
     }
     return xAttrs;
   }
-  
-  /** Decode xattr value from string */
+
+  /** Decode xattr value from string. */
   private byte[] decodeXAttrValue(String value) throws IOException {
     if (value != null) {
       return XAttrCodec.decodeValue(value);
@@ -574,7 +592,7 @@ public class TestHttpFSServer extends HFSTestCase {
     statusJson = getStatus("/perm/p-321", "GETFILESTATUS");
     Assert.assertTrue("321".equals(getPerms(statusJson)));
   }
-  
+
   /**
    * Validate XAttr get/set/remove calls.
    */
@@ -594,12 +612,12 @@ public class TestHttpFSServer extends HFSTestCase {
 
     FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
     fs.mkdirs(new Path(dir));
-    
-    createWithHttp(path,null);
+
+    createWithHttp(path, null);
     String statusJson = getStatus(path, "GETXATTRS");
     Map<String, byte[]> xAttrs = getXAttrs(statusJson);
     Assert.assertEquals(0, xAttrs.size());
-    
+
     // Set two xattrs
     putCmd(path, "SETXATTR", setXAttrParam(name1, value1));
     putCmd(path, "SETXATTR", setXAttrParam(name2, value2));
@@ -608,25 +626,26 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(2, xAttrs.size());
     Assert.assertArrayEquals(value1, xAttrs.get(name1));
     Assert.assertArrayEquals(value2, xAttrs.get(name2));
-    
+
     // Remove one xattr
     putCmd(path, "REMOVEXATTR", "xattr.name=" + name1);
     statusJson = getStatus(path, "GETXATTRS");
     xAttrs = getXAttrs(statusJson);
     Assert.assertEquals(1, xAttrs.size());
     Assert.assertArrayEquals(value2, xAttrs.get(name2));
-    
+
     // Remove another xattr, then there is no xattr
     putCmd(path, "REMOVEXATTR", "xattr.name=" + name2);
     statusJson = getStatus(path, "GETXATTRS");
     xAttrs = getXAttrs(statusJson);
     Assert.assertEquals(0, xAttrs.size());
   }
-  
-  /** Params for setting an xAttr */
-  public static String setXAttrParam(String name, byte[] value) throws IOException {
+
+  /** Params for setting an xAttr. */
+  public static String setXAttrParam(String name, byte[] value)
+      throws IOException {
     return "xattr.name=" + name + "&xattr.value=" + XAttrCodec.encodeValue(
-        value, XAttrCodec.HEX) + "&encoding=hex&flag=create"; 
+        value, XAttrCodec.HEX) + "&encoding=hex&flag=create";
   }
 
   /**
@@ -791,7 +810,9 @@ public class TestHttpFSServer extends HFSTestCase {
 
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
-                      MessageFormat.format("/webhdfs/v1/tmp/foo?user.name={0}&op=open&offset=1&length=2", user));
+        MessageFormat.format(
+            "/webhdfs/v1/tmp/foo?user.name={0}&op=open&offset=1&length=2",
+            user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     InputStream is = conn.getInputStream();
@@ -809,12 +830,13 @@ public class TestHttpFSServer extends HFSTestCase {
 
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
-                      MessageFormat.format("/webhdfs/v1/foo?user.name={0}", user));
+        MessageFormat.format("/webhdfs/v1/foo?user.name={0}", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setDoInput(true);
     conn.setDoOutput(true);
     conn.setRequestMethod("PUT");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
+    Assert.assertEquals(conn.getResponseCode(),
+        HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
   @Test

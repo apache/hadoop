@@ -34,6 +34,11 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>MSFT</value>
+  </property>
+
   <!-- Save the above configuration properties in a separate file named -->
   <!-- azure-auth-keys.xml in the same directory as this file. -->
   <!-- DO NOT ADD azure-auth-keys.xml TO REVISION CONTROL.  The keys to your -->
