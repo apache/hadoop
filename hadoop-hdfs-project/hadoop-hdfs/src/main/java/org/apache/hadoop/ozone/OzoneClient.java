@@ -403,7 +403,7 @@ public interface OzoneClient {
    *
    * @throws IOException
    */
-  OzoneKey getkeyDetails(String volumeName, String bucketName,
+  OzoneKey getKeyDetails(String volumeName, String bucketName,
                         String keyName)
       throws IOException;
 
