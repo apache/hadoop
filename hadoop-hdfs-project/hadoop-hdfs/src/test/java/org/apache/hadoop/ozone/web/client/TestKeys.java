@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -28,6 +30,7 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Stat
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
@@ -122,17 +125,41 @@ public class TestKeys {
     return tmpFile;
   }
 
+  /**
+   * This function generates multi part key which are delimited by a certain
+   * delimiter. Different parts of key are random string of random length
+   * between 0 - 4. Number of parts of the keys are between 0 and 5.
+   *
+   * @param delimiter delimiter used to delimit parts of string
+   * @return Key composed of multiple parts delimited by "/"
+   */
+  static String getMultiPartKey(String delimiter) {
+    int numParts = RandomUtils.nextInt(5)  + 1;
+    String[] nameParts = new String[numParts];
+    for (int i = 0; i < numParts; i++) {
+      int stringLength = numParts == 1 ? 5 : RandomUtils.nextInt(5);
+      nameParts[i] = RandomStringUtils.randomAlphanumeric(stringLength);
+    }
+    return StringUtils.join(delimiter, nameParts);
+  }
+
   static class PutHelper {
     private final OzoneRestClient client;
     private final String dir;
+    private final String keyName;
 
     OzoneVolume vol;
     OzoneBucket bucket;
     File file;
 
     PutHelper(OzoneRestClient client, String dir) {
+      this(client, dir, OzoneUtils.getRequestID().toLowerCase());
+    }
+
+    PutHelper(OzoneRestClient client, String dir, String key) {
       this.client = client;
       this.dir = dir;
+      this.keyName = key;
     }
 
     public OzoneVolume getVol() {
@@ -163,8 +190,8 @@ public class TestKeys {
       String bucketName = OzoneUtils.getRequestID().toLowerCase();
       bucket = vol.createBucket(bucketName, acls, StorageType.DEFAULT);
 
-      String keyName = OzoneUtils.getRequestID().toLowerCase();
-      file = createRandomDataFile(dir, keyName, 1024);
+      String fileName = OzoneUtils.getRequestID().toLowerCase();
+      file = createRandomDataFile(dir, fileName, 1024);
 
       bucket.putKey(keyName, file);
       return keyName;
@@ -174,7 +201,12 @@ public class TestKeys {
 
   @Test
   public void testPutKey() throws OzoneException {
+    // Test non-delimited keys
     runTestPutKey(new PutHelper(ozoneRestClient, path));
+    // Test key delimited by a random delimiter
+    String delimiter = RandomStringUtils.randomAscii(1);
+    runTestPutKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   static void runTestPutKey(PutHelper helper) throws OzoneException {
@@ -229,6 +261,10 @@ public class TestKeys {
       throws OzoneException, IOException, URISyntaxException {
     runTestPutAndGetKeyWithDnRestart(
         new PutHelper(ozoneRestClient, path), ozoneCluster);
+    String delimiter = RandomStringUtils.randomAscii(1);
+    runTestPutAndGetKeyWithDnRestart(
+        new PutHelper(ozoneRestClient, path,
+            getMultiPartKey(delimiter)), ozoneCluster);
   }
 
   static void runTestPutAndGetKeyWithDnRestart(
@@ -263,6 +299,9 @@ public class TestKeys {
   @Test
   public void testPutAndGetKey() throws OzoneException, IOException {
     runTestPutAndGetKey(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAscii(1);
+    runTestPutAndGetKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   static void runTestPutAndGetKey(PutHelper helper)
@@ -326,6 +365,9 @@ public class TestKeys {
   @Test
   public void testPutAndDeleteKey() throws OzoneException, IOException {
     runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAscii(1);
+    runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   static void runTestPutAndDeleteKey(PutHelper helper)
@@ -347,6 +389,9 @@ public class TestKeys {
   @Test
   public void testPutAndListKey() throws OzoneException, IOException {
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAscii(1);
+    runTestPutAndListKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   static void runTestPutAndListKey(PutHelper helper)
@@ -378,9 +423,9 @@ public class TestKeys {
     Assert.assertEquals(keyList2.size(), 1);
 
     // test startKey parameter of list keys
-    keyList1 = helper.getBucket().listKeys("100", "list-key4", null);
+    keyList1 = helper.getBucket().listKeys("100", "list-key4", "list-key");
     keyList2 = client.listKeys(helper.getVol().getVolumeName(),
-        helper.getBucket().getBucketName(), "100", "list-key4", null);
+        helper.getBucket().getBucketName(), "100", "list-key4", "list-key");
     Assert.assertEquals(keyList1.size(), 5);
     Assert.assertEquals(keyList2.size(), 5);
 
@@ -416,6 +461,9 @@ public class TestKeys {
   @Test
   public void testGetKeyInfo() throws OzoneException, IOException {
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAscii(1);
+    runTestGetKeyInfo(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   static void runTestGetKeyInfo(PutHelper helper) throws OzoneException {

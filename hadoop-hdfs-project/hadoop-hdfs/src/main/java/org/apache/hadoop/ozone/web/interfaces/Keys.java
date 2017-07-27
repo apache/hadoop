@@ -40,7 +40,7 @@ import java.io.InputStream;
  * This interface defines operations permitted on a key.
  */
 
-@Path("/{volume}/{bucket}/{keys}")
+@Path("/{volume}/{bucket}/{keys:.*}")
 public interface Keys {
 
   /**
