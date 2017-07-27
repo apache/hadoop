@@ -29,18 +29,18 @@ import java.util.concurrent.Future;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcHandoffProto;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestProtoBufRpcServerHandoff {
 
-  public static final Log LOG =
-      LogFactory.getLog(TestProtoBufRpcServerHandoff.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestProtoBufRpcServerHandoff.class);
 
   @Test(timeout = 20000)
   public void test() throws Exception {
@@ -83,8 +83,8 @@ public class TestProtoBufRpcServerHandoff {
     ClientInvocationCallable callable1 = future1.get();
     ClientInvocationCallable callable2 = future2.get();
 
-    LOG.info(callable1);
-    LOG.info(callable2);
+    LOG.info(callable1.toString());
+    LOG.info(callable2.toString());
 
     // Ensure the 5 second sleep responses are within a reasonable time of each
     // other.

@@ -49,11 +49,17 @@ public class TestNativeAzureFileSystemAuthorization
   protected MockWasbAuthorizerImpl authorizer;
 
   @Override
-  protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
-    Configuration conf = new Configuration();
+  public Configuration getConfiguration() {
+    Configuration conf = super.getConfiguration();
     conf.set(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, "true");
     conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost/");
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1 , user2");
+    return conf;
+  }
+
+  @Override
+  protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
+    Configuration conf = getConfiguration();
     return AzureBlobStorageTestAccount.create(conf);
   }
 
@@ -66,7 +72,8 @@ public class TestNativeAzureFileSystemAuthorization
         useSecureMode && useAuthorization);
 
     authorizer = new MockWasbAuthorizerImpl(fs);
-    authorizer.init(null);
+    authorizer.init(fs.getConf());
+    fs.updateWasbAuthorizer(authorizer);
   }
 
 
@@ -109,7 +116,6 @@ public class TestNativeAzureFileSystemAuthorization
     Path testPath = new Path(parentDir, "test.dat");
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -135,7 +141,6 @@ public class TestNativeAzureFileSystemAuthorization
     Path testPath = new Path(parentDir, "test.dat");
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -163,18 +168,14 @@ public class TestNativeAzureFileSystemAuthorization
     setExpectedFailureMessage("create", testPath);
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
-    boolean initialCreateSucceeded = false;
     try {
       fs.create(testPath);
       ContractTestUtils.assertPathExists(fs, "testPath was not created", testPath);
-      initialCreateSucceeded = true;
       fs.create(testPath, true);
     }
     finally {
-      ContractTestUtils.assertTrue(initialCreateSucceeded);
       fs.delete(testPath, false);
     }
   }
@@ -191,19 +192,15 @@ public class TestNativeAzureFileSystemAuthorization
     Path testPath = new Path(parentDir, "test.dat");
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
-    boolean initialCreateSucceeded = false;
     try {
       fs.create(testPath);
       ContractTestUtils.assertPathExists(fs, "testPath was not created", testPath);
-      initialCreateSucceeded = true;
       fs.create(testPath, true);
     }
     finally {
-      ContractTestUtils.assertTrue(initialCreateSucceeded);
       fs.delete(testPath, false);
     }
   }
@@ -299,8 +296,6 @@ public class TestNativeAzureFileSystemAuthorization
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parentDir */
     authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true); /* for rename */
-    authorizer.addAuthRule(srcPath.toString(), WasbAuthorizationOperations.READ.toString(), true); /* for exists */
-    authorizer.addAuthRule(dstPath.toString(), WasbAuthorizationOperations.READ.toString(), true); /* for exists */
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -331,8 +326,6 @@ public class TestNativeAzureFileSystemAuthorization
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dir */
     authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), false);
-    authorizer.addAuthRule(srcPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(dstPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -365,8 +358,6 @@ public class TestNativeAzureFileSystemAuthorization
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dir */
     authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(parentDstDir.toString(), WasbAuthorizationOperations.WRITE.toString(), false);
-    authorizer.addAuthRule(srcPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(dstPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -396,8 +387,6 @@ public class TestNativeAzureFileSystemAuthorization
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dirs */
     authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
     authorizer.addAuthRule(parentDstDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(srcPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(dstPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -505,7 +494,6 @@ public class TestNativeAzureFileSystemAuthorization
     Path testPath = new Path(parentDir, "test.dat");
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
     try {
       fs.create(testPath);
@@ -530,7 +518,6 @@ public class TestNativeAzureFileSystemAuthorization
     setExpectedFailureMessage("delete", testPath);
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
     try {
       fs.create(testPath);
@@ -548,7 +535,6 @@ public class TestNativeAzureFileSystemAuthorization
       /* Restore permissions to force a successful delete */
       authorizer.deleteAllAuthRules();
       authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-      authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
       fs.updateWasbAuthorizer(authorizer);
 
       fs.delete(testPath, false);
@@ -570,7 +556,6 @@ public class TestNativeAzureFileSystemAuthorization
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); // for create and delete
     authorizer.addAuthRule("/testDeleteIntermediateFolder*",
         WasbAuthorizationOperations.WRITE.toString(), true); // for recursive delete
-    authorizer.addAuthRule("/*", WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -586,34 +571,13 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test for getFileStatus
+   * Positive test for getFileStatus. No permissions are required for getting filestatus.
    * @throws Throwable
    */
   @Test
   public void testGetFileStatusPositive() throws Throwable {
 
     Path testPath = new Path("/");
-
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.READ.toString(), true);
-    fs.updateWasbAuthorizer(authorizer);
-
-    ContractTestUtils.assertIsDirectory(fs, testPath);
-  }
-
-  /**
-   * Negative test for getFileStatus
-   * @throws Throwable
-   */
-  @Test //(expected=WasbAuthorizationException.class)
-  public void testGetFileStatusNegative() throws Throwable {
-
-    Path testPath = new Path("/");
-
-    setExpectedFailureMessage("getFileStatus", testPath);
-
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.READ.toString(), false);
-    fs.updateWasbAuthorizer(authorizer);
-
     ContractTestUtils.assertIsDirectory(fs, testPath);
   }
 
@@ -627,7 +591,6 @@ public class TestNativeAzureFileSystemAuthorization
     Path testPath = new Path("/testMkdirsAccessCheckPositive/1/2/3");
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -652,7 +615,6 @@ public class TestNativeAzureFileSystemAuthorization
     setExpectedFailureMessage("mkdirs", testPath);
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), false);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -686,13 +648,12 @@ public class TestNativeAzureFileSystemAuthorization
    */
   @Test
   public void testSetOwnerThrowsForUnauthorisedUsers() throws Throwable {
+
     expectedEx.expect(WasbAuthorizationException.class);
 
     Path testPath = new Path("/testSetOwnerNegative");
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
-    authorizer.init(null);
+
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     String owner = null;
@@ -723,11 +684,10 @@ public class TestNativeAzureFileSystemAuthorization
    * */
   @Test
   public void testSetOwnerSucceedsForAuthorisedUsers() throws Throwable {
-    Path testPath = new Path("/testsetownerpositive");
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
-    authorizer.init(null);
+
+    Path testPath = new Path("/testSetOwnerPositive");
+
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     String newOwner = "newowner";
@@ -765,14 +725,14 @@ public class TestNativeAzureFileSystemAuthorization
    * */
   @Test
   public void testSetOwnerSucceedsForAnyUserWhenWildCardIsSpecified() throws Throwable {
+
     Configuration conf = fs.getConf();
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "*");
-    Path testPath = new Path("/testsetownerpositivewildcard");
+    fs.setConf(conf);
+    Path testPath = new Path("/testSetOwnerPositiveWildcard");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
-    authorizer.init(null);
+    authorizer.init(conf);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     String newOwner = "newowner";
@@ -809,16 +769,16 @@ public class TestNativeAzureFileSystemAuthorization
    */
   @Test
   public void testSetOwnerFailsForIllegalSetup() throws Throwable {
+
     expectedEx.expect(IllegalArgumentException.class);
 
     Configuration conf = fs.getConf();
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1, *");
+    fs.setConf(conf);
     Path testPath = new Path("/testSetOwnerFailsForIllegalSetup");
 
-    MockWasbAuthorizerImpl authorizer = new MockWasbAuthorizerImpl(fs);
-    authorizer.init(null);
+    authorizer.init(conf);
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     String owner = null;

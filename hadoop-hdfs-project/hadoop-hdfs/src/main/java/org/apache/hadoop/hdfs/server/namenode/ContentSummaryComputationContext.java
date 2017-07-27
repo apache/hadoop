@@ -48,7 +48,8 @@ public class ContentSummaryComputationContext {
   private int sleepNanoSec = 0;
 
   public static final String REPLICATED = "Replicated";
-  public static final Log LOG = LogFactory.getLog(INode.class);
+  public static final Log LOG = LogFactory
+      .getLog(ContentSummaryComputationContext.class);
 
   private FSPermissionChecker pc;
   /**

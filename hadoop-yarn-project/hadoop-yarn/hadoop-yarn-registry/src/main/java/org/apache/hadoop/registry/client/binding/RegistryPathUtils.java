@@ -213,6 +213,6 @@ public class RegistryPathUtils {
    * @return a string suitable for use in registry paths.
    */
   public static String encodeYarnID(String yarnId) {
-    return yarnId.replace("_", "-");
+    return yarnId.replace("container", "ctr").replace("_", "-");
   }
 }

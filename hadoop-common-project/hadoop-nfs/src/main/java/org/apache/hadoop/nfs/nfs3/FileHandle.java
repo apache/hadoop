@@ -23,9 +23,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.XDR;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a file handle use by the NFS clients.
@@ -33,7 +33,7 @@ import org.apache.hadoop.oncrpc.XDR;
  * on subsequent operations to reference the file.
  */
 public class FileHandle {
-  private static final Log LOG = LogFactory.getLog(FileHandle.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileHandle.class);
   private static final String HEXES = "0123456789abcdef";
   private static final int HANDLE_LEN = 32;
   private byte[] handle; // Opaque handle

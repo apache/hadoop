@@ -355,9 +355,8 @@ final class FSDirErasureCodingOp {
     Preconditions.checkNotNull(iip, "INodes cannot be null");
     fsd.readLock();
     try {
-      List<INode> inodes = iip.getReadOnlyINodes();
-      for (int i = inodes.size() - 1; i >= 0; i--) {
-        final INode inode = inodes.get(i);
+      for (int i = iip.length() - 1; i >= 0; i--) {
+        final INode inode = iip.getINode(i);
         if (inode == null) {
           continue;
         }

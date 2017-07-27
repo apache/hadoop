@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -98,10 +99,12 @@ public class TestSystemMetricsPublisherForV2 {
           new Path(testRootDir.getAbsolutePath()), true);
     }
 
+    ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     rmAppsMapInContext = new ConcurrentHashMap<ApplicationId, RMApp>();
     when(rmContext.getRMApps()).thenReturn(rmAppsMapInContext);
-    rmTimelineCollectorManager = new RMTimelineCollectorManager(rmContext);
+    when(rm.getRMContext()).thenReturn(rmContext);
+    rmTimelineCollectorManager = new RMTimelineCollectorManager(rm);
     when(rmContext.getRMTimelineCollectorManager()).thenReturn(
         rmTimelineCollectorManager);
 
@@ -113,7 +116,8 @@ public class TestSystemMetricsPublisherForV2 {
 
     dispatcher.init(conf);
     dispatcher.start();
-    metricsPublisher = new TimelineServiceV2Publisher(rmContext) {
+    metricsPublisher =
+        new TimelineServiceV2Publisher(rmTimelineCollectorManager) {
       @Override
       protected Dispatcher getDispatcher() {
         return dispatcher;
@@ -162,7 +166,7 @@ public class TestSystemMetricsPublisherForV2 {
   public void testSystemMetricPublisherInitialization() {
     @SuppressWarnings("resource")
     TimelineServiceV2Publisher publisher =
-        new TimelineServiceV2Publisher(mock(RMContext.class));
+        new TimelineServiceV2Publisher(mock(RMTimelineCollectorManager.class));
     try {
       Configuration conf = getTimelineV2Conf();
       conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_EVENTS_ENABLED,
@@ -174,7 +178,8 @@ public class TestSystemMetricsPublisherForV2 {
 
       publisher.stop();
 
-      publisher = new TimelineServiceV2Publisher(mock(RMContext.class));
+      publisher = new TimelineServiceV2Publisher(
+          mock(RMTimelineCollectorManager.class));
       conf = getTimelineV2Conf();
       publisher.init(conf);
       assertTrue("Expected to have registered event handlers and set ready to "

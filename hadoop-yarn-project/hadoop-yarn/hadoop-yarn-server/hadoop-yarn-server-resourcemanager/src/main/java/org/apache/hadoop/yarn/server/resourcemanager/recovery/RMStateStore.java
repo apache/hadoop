@@ -221,8 +221,9 @@ public abstract class RMStateStore extends AbstractService {
       } catch (Exception e) {
         LOG.error("Error storing app: " + appId, e);
         if (e instanceof StoreLimitException) {
-          store.notifyApplication(new RMAppEvent(appId,
-              RMAppEventType.APP_REJECTED, e.getMessage(), false));
+          store.notifyApplication(
+              new RMAppEvent(appId, RMAppEventType.APP_SAVE_FAILED,
+                  e.getMessage()));
         } else {
           isFenced = store.notifyStoreOperationFailedInternal(e);
         }

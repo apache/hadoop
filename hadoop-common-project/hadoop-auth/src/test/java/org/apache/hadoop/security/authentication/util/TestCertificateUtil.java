@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -86,8 +88,8 @@ public class TestCertificateUtil {
         + "Mzc1xA==";
     try {
       RSAPublicKey pk = CertificateUtil.parseRSAPublicKey(pem);
-      assertTrue(pk != null);
-      assertTrue(pk.getAlgorithm().equals("RSA"));
+      assertNotNull(pk);
+      assertEquals("RSA", pk.getAlgorithm());
     } catch (ServletException se) {
       fail("Should not have thrown ServletException");
     }

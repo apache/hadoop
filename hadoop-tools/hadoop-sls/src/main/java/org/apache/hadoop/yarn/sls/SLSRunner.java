@@ -395,18 +395,28 @@ public class SLSRunner extends Configured implements Tool {
     String queue = jsonJob.get("job.queue.name").toString();
     increaseQueueAppNum(queue);
 
-    String oldAppId = (String)jsonJob.get("job.id");
-    if (oldAppId == null) {
-      oldAppId = Integer.toString(AM_ID);
-    }
-
     String amType = (String)jsonJob.get("am.type");
     if (amType == null) {
       amType = SLSUtils.DEFAULT_JOB_TYPE;
     }
 
-    runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
-        getTaskContainers(jsonJob), null, getAMContainerResource(jsonJob));
+    int jobCount = 1;
+    if (jsonJob.containsKey("job.count")) {
+      jobCount = Integer.parseInt(jsonJob.get("job.count").toString());
+    }
+    jobCount = Math.max(jobCount, 1);
+
+    String oldAppId = (String)jsonJob.get("job.id");
+    // Job id is generated automatically if this job configuration allows
+    // multiple job instances
+    if(jobCount > 1) {
+      oldAppId = null;
+    }
+
+    for (int i = 0; i < jobCount; i++) {
+      runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
+          getTaskContainers(jsonJob), null, getAMContainerResource(jsonJob));
+    }
   }
 
   private List<ContainerSimulator> getTaskContainers(Map jsonJob)
@@ -732,6 +742,10 @@ public class SLSRunner extends Configured implements Tool {
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS,
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS_DEFAULT);
       boolean isTracked = trackedApps.contains(oldJobId);
+
+      if (oldJobId == null) {
+        oldJobId = Integer.toString(AM_ID);
+      }
       AM_ID++;
 
       amSim.init(heartbeatInterval, containerList, rm, this, jobStartTimeMS,

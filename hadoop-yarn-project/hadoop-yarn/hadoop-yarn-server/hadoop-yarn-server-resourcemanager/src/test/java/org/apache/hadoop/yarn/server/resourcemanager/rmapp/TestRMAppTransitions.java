@@ -653,6 +653,23 @@ public class TestRMAppTransitions {
   }
 
   @Test (timeout = 30000)
+  public void testAppNewSavingSaveReject() throws IOException {
+    LOG.info("--- START: testAppNewSavingSaveReject ---");
+    RMApp application = testCreateAppNewSaving(null);
+    // NEW_SAVING => FAILED event RMAppEventType.APP_SAVE_FAILED
+    String rejectedText = "Test Application Rejected";
+    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_SAVE_FAILED, rejectedText);
+    application.handle(event);
+    rmDispatcher.await();
+    assertFailed(application, rejectedText);
+    verify(store, times(0)).updateApplicationState(
+        any(ApplicationStateData.class));
+    verifyApplicationFinished(RMAppState.FAILED);
+    assertTimesAtFinish(application);
+  }
+
+  @Test (timeout = 30000)
   public void testAppSubmittedRejected() throws IOException {
     LOG.info("--- START: testAppSubmittedRejected ---");
 

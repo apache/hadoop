@@ -499,7 +499,15 @@
     name to use for the service when the client wishes to make an RPC call.
   </description>
 </property>
-
+  <property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>unknown</value>
+    <description>
+      WASB passes User-Agent header to the Azure back-end. The default value
+      contains WASB version, Java Runtime version, Azure Client library version,
+      and the value of the configuration option fs.azure.user.agent.prefix.
+    </description>
+  </property>
 
 <property>
     <name>hadoop.security.uid.cache.secs</name>
@@ -790,6 +798,15 @@
   <value>org.apache.hadoop.fs.viewfs.ViewFs</value>
   <description>The AbstractFileSystem for view file system for viewfs: uris
   (ie client side mount table:).</description>
+</property>
+
+<property>
+  <name>fs.viewfs.rename.strategy</name>
+  <value>SAME_MOUNTPOINT</value>
+  <description>Allowed rename strategy to rename between multiple mountpoints.
+    Allowed values are SAME_MOUNTPOINT,SAME_TARGET_URI_ACROSS_MOUNTPOINT and
+    SAME_FILESYSTEM_ACROSS_MOUNTPOINT.
+  </description>
 </property>
 
 <property>
@@ -1343,7 +1360,14 @@
     configuration
   </description>
 </property>
-
+<property>
+  <name>fs.azure.authorization.caching.enable</name>
+  <value>true</value>
+  <description>
+    Config flag to enable caching of authorization results and saskeys in WASB.
+    This flag is relevant only when fs.azure.authorization is enabled.
+  </description>
+</property>
 
 <property>
   <name>io.seqfile.compress.blocksize</name>

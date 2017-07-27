@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -69,6 +70,7 @@ public class TestDockerContainerRuntime {
   private PrivilegedOperationExecutor mockExecutor;
   private CGroupsHandler mockCGroupsHandler;
   private String containerId;
+  private String defaultHostname;
   private Container container;
   private ContainerId cId;
   private ContainerLaunchContext context;
@@ -108,6 +110,7 @@ public class TestDockerContainerRuntime {
         .mock(PrivilegedOperationExecutor.class);
     mockCGroupsHandler = Mockito.mock(CGroupsHandler.class);
     containerId = "container_id";
+    defaultHostname = RegistryPathUtils.encodeYarnID(containerId);
     container = mock(Container.class);
     cId = mock(ContainerId.class);
     context = mock(ContainerLaunchContext.class);
@@ -287,6 +290,7 @@ public class TestDockerContainerRuntime {
         .append("--user=%2$s -d ")
         .append("--workdir=%3$s ")
         .append("--net=host ")
+        .append("--hostname=" + defaultHostname + " ")
         .append(getExpectedTestCapabilitiesArgumentString())
         .append(getExpectedCGroupsMountString())
         .append("-v %4$s:%4$s ")
@@ -365,7 +369,7 @@ public class TestDockerContainerRuntime {
     String disallowedNetwork = "sdn" + Integer.toString(randEngine.nextInt());
 
     try {
-      env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK",
+      env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_NETWORK,
           disallowedNetwork);
       runtime.launchContainer(builder.build());
       Assert.fail("Network was expected to be disallowed: " +
@@ -378,8 +382,11 @@ public class TestDockerContainerRuntime {
         .DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_NETWORKS.length;
     String allowedNetwork = YarnConfiguration
         .DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_NETWORKS[randEngine.nextInt(size)];
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK",
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_NETWORK,
         allowedNetwork);
+    String expectedHostname = "test.hostname";
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_HOSTNAME,
+        expectedHostname);
 
     //this should cause no failures.
 
@@ -393,6 +400,7 @@ public class TestDockerContainerRuntime {
         new StringBuffer("run --name=%1$s ").append("--user=%2$s -d ")
             .append("--workdir=%3$s ")
             .append("--net=" + allowedNetwork + " ")
+            .append("--hostname=" + expectedHostname + " ")
             .append(getExpectedTestCapabilitiesArgumentString())
             .append(getExpectedCGroupsMountString())
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
@@ -448,6 +456,7 @@ public class TestDockerContainerRuntime {
         new StringBuffer("run --name=%1$s ").append("--user=%2$s -d ")
             .append("--workdir=%3$s ")
             .append("--net=" + customNetwork1 + " ")
+            .append("--hostname=" + defaultHostname + " ")
             .append(getExpectedTestCapabilitiesArgumentString())
             .append(getExpectedCGroupsMountString())
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
@@ -471,7 +480,7 @@ public class TestDockerContainerRuntime {
     //now set an explicit (non-default) allowedNetwork and ensure that it is
     // used.
 
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK",
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_NETWORK,
         customNetwork2);
     runtime.launchContainer(builder.build());
 
@@ -485,6 +494,7 @@ public class TestDockerContainerRuntime {
         new StringBuffer("run --name=%1$s ").append("--user=%2$s -d ")
             .append("--workdir=%3$s ")
             .append("--net=" + customNetwork2 + " ")
+            .append("--hostname=" + defaultHostname + " ")
             .append(getExpectedTestCapabilitiesArgumentString())
             .append(getExpectedCGroupsMountString())
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
@@ -505,7 +515,7 @@ public class TestDockerContainerRuntime {
 
     //disallowed network should trigger a launch failure
 
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK",
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_NETWORK,
         customNetwork3);
     try {
       runtime.launchContainer(builder.build());
@@ -524,8 +534,8 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
-        "invalid-value");
+    env.put(DockerLinuxContainerRuntime
+            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "invalid-value");
     runtime.launchContainer(builder.build());
 
     PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
@@ -552,8 +562,8 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
-        "true");
+    env.put(DockerLinuxContainerRuntime
+            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     try {
       runtime.launchContainer(builder.build());
@@ -575,8 +585,8 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
-        "true");
+    env.put(DockerLinuxContainerRuntime
+            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     //By default
     // yarn.nodemanager.runtime.linux.docker.privileged-containers.acl
     // is empty. So we expect this launch to fail.
@@ -605,8 +615,8 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
-        "true");
+    env.put(DockerLinuxContainerRuntime
+            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     try {
       runtime.launchContainer(builder.build());
@@ -632,8 +642,8 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
-    env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
-        "true");
+    env.put(DockerLinuxContainerRuntime
+            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     runtime.launchContainer(builder.build());
     PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
@@ -922,6 +932,26 @@ public class TestDockerContainerRuntime {
       try {
         DockerLinuxContainerRuntime.validateImageName(name);
         Assert.fail(name + " is an invalid name and should fail the regex");
+      } catch (ContainerExecutionException ce) {
+        continue;
+      }
+    }
+  }
+
+  @Test
+  public void testDockerHostnamePattern() throws Exception {
+    String[] validNames = {"ab", "a.b.c.d", "a1-b.cd.ef", "0AB.", "C_D-"};
+
+    String[] invalidNames = {"a", "a#.b.c", "-a.b.c", "a@b.c", "a/b/c"};
+
+    for (String name : validNames) {
+      DockerLinuxContainerRuntime.validateHostname(name);
+    }
+
+    for (String name : invalidNames) {
+      try {
+        DockerLinuxContainerRuntime.validateHostname(name);
+        Assert.fail(name + " is an invalid hostname and should fail the regex");
       } catch (ContainerExecutionException ce) {
         continue;
       }

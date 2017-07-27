@@ -336,8 +336,9 @@ Here we provide an example format of the sls json file, which contains 2 jobs. T
       "job.start.ms" : 0,      // job start time
       "job.end.ms" : 95375,    // job finish time, optional, the default value is 0
       "job.queue.name" : "sls_queue_1", // the queue job will be submitted to
-      "job.id" : "job_1",      // the job id used to track the job, optional, the default value is an zero-based integer increasing with number of jobs
+      "job.id" : "job_1",      // the job id used to track the job, optional. The default value, an zero-based integer increasing with number of jobs, is used if this is not specified or job.count > 1
       "job.user" : "default",  // user, optional, the default value is "default"
+      "job.count" : 1,         // number of jobs, optional, the default value is 1
       "job.tasks" : [ {
         "count": 1,    // number of tasks, optional, the default value is 1
         "container.host" : "/default-rack/node1",  // host the container asks for

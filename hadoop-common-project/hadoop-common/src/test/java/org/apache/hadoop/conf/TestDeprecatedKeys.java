@@ -35,7 +35,7 @@ public class TestDeprecatedKeys extends TestCase {
     conf.set("topology.script.file.name", "xyz");
     conf.set("topology.script.file.name", "xyz");
     String scriptFile = conf.get(CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
-    assertTrue(scriptFile.equals("xyz")) ;
+    assertEquals("xyz", scriptFile) ;
   }
   
   //Tests reading / writing a conf file with deprecation after setting

@@ -335,25 +335,40 @@ public abstract class GenericTestUtils {
     }
   }  
 
+  /**
+   * Wait for the specified test to return true. The test will be performed
+   * initially and then every {@code checkEveryMillis} until at least
+   * {@code waitForMillis} time has expired. If {@code check} is null or
+   * {@code waitForMillis} is less than {@code checkEveryMillis} this method
+   * will throw an {@link IllegalArgumentException}.
+   *
+   * @param check the test to perform
+   * @param checkEveryMillis how often to perform the test
+   * @param waitForMillis the amount of time after which no more tests will be
+   * performed
+   * @throws TimeoutException if the test does not return true in the allotted
+   * time
+   * @throws InterruptedException if the method is interrupted while waiting
+   */
   public static void waitFor(Supplier<Boolean> check, int checkEveryMillis,
       int waitForMillis) throws TimeoutException, InterruptedException {
     Preconditions.checkNotNull(check, ERROR_MISSING_ARGUMENT);
-    Preconditions.checkArgument(waitForMillis > checkEveryMillis,
+    Preconditions.checkArgument(waitForMillis >= checkEveryMillis,
         ERROR_INVALID_ARGUMENT);
 
-    long st = Time.now();
-    do {
-      boolean result = check.get();
-      if (result) {
-        return;
-      }
-      
+    long st = Time.monotonicNow();
+    boolean result = check.get();
+
+    while (!result && (Time.monotonicNow() - st < waitForMillis)) {
       Thread.sleep(checkEveryMillis);
-    } while (Time.now() - st < waitForMillis);
-    
-    throw new TimeoutException("Timed out waiting for condition. " +
-        "Thread diagnostics:\n" +
-        TimedOutTestsListener.buildThreadDiagnosticString());
+      result = check.get();
+    }
+
+    if (!result) {
+      throw new TimeoutException("Timed out waiting for condition. " +
+          "Thread diagnostics:\n" +
+          TimedOutTestsListener.buildThreadDiagnosticString());
+    }
   }
 
   /**

@@ -23,22 +23,27 @@ package org.apache.hadoop.fs.azure.security;
  */
 public final class Constants {
 
-  private Constants() {
-  }
-
   /**
    * The configuration property to enable Kerberos support.
    */
 
-  public static final String AZURE_KERBEROS_SUPPORT_PROPERTY_NAME = "fs.azure.enable.kerberos.support";
-
+  public static final String AZURE_KERBEROS_SUPPORT_PROPERTY_NAME =
+      "fs.azure.enable.kerberos.support";
+  /**
+   * The configuration property to enable SPNEGO token cache.
+   */
+  public static final String AZURE_ENABLE_SPNEGO_TOKEN_CACHE =
+      "fs.azure.enable.spnego.token.cache";
   /**
    * Parameter to be used for impersonation.
    */
   public static final String DOAS_PARAM = "doas";
-
   /**
    * Error message for Authentication failures.
    */
-  public static final String AUTHENTICATION_FAILED_ERROR_MESSAGE = "Authentication Failed ";
+  public static final String AUTHENTICATION_FAILED_ERROR_MESSAGE =
+      "Authentication Failed ";
+
+  private Constants() {
+  }
 }

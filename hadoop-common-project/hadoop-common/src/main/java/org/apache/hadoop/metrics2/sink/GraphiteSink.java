@@ -19,8 +19,6 @@
 package org.apache.hadoop.metrics2.sink;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -28,6 +26,8 @@ import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,7 +42,8 @@ import java.nio.charset.StandardCharsets;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class GraphiteSink implements MetricsSink, Closeable {
-    private static final Log LOG = LogFactory.getLog(GraphiteSink.class);
+    private static final Logger LOG =
+        LoggerFactory.getLogger(GraphiteSink.class);
     private static final String SERVER_HOST_KEY = "server_host";
     private static final String SERVER_PORT_KEY = "server_port";
     private static final String METRICS_PREFIX = "metrics_prefix";

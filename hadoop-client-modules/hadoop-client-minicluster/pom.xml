@@ -395,6 +395,10 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-registry</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-server-common</artifactId>
         </exclusion>
         <exclusion>

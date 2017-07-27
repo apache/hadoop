@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.service;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service.STATE;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -36,7 +36,8 @@ public class TestCompositeService {
 
   private static final int FAILED_SERVICE_SEQ_NUMBER = 2;
 
-  private static final Log LOG  = LogFactory.getLog(TestCompositeService.class);
+  private static final Logger LOG  =
+      LoggerFactory.getLogger(TestCompositeService.class);
 
   /**
    * flag to state policy of CompositeService, and hence

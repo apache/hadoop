@@ -19,8 +19,6 @@ package org.apache.hadoop.oncrpc;
 
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -29,6 +27,8 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class RpcUtil {
   /**
@@ -63,7 +63,8 @@ public final class RpcUtil {
    * each RPC client.
    */
   static class RpcFrameDecoder extends FrameDecoder {
-    public static final Log LOG = LogFactory.getLog(RpcFrameDecoder.class);
+    public static final Logger LOG =
+        LoggerFactory.getLogger(RpcFrameDecoder.class);
     private ChannelBuffer currentFrame;
 
     @Override
@@ -107,8 +108,8 @@ public final class RpcUtil {
    * request into a RpcInfo instance.
    */
   static final class RpcMessageParserStage extends SimpleChannelUpstreamHandler {
-    private static final Log LOG = LogFactory
-        .getLog(RpcMessageParserStage.class);
+    private static final Logger LOG = LoggerFactory
+        .getLogger(RpcMessageParserStage.class);
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)

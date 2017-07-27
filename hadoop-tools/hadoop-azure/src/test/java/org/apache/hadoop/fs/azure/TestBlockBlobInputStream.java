@@ -43,8 +43,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeNotNull;
 
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
@@ -192,6 +195,49 @@ public class TestBlockBlobInputStream extends AbstractWasbTestBase {
   @Test
   public void test_0100_CreateHugeFile() throws IOException {
     createTestFileAndSetLength();
+  }
+
+  @Test
+  public void test_0200_BasicReadTestV2() throws Exception {
+    assumeHugeFileExists();
+
+    try (
+        FSDataInputStream inputStreamV1
+            = accountUsingInputStreamV1.getFileSystem().open(TEST_FILE_PATH);
+
+        FSDataInputStream inputStreamV2
+            = accountUsingInputStreamV2.getFileSystem().open(TEST_FILE_PATH);
+    ) {
+      byte[] bufferV1 = new byte[3 * MEGABYTE];
+      byte[] bufferV2 = new byte[bufferV1.length];
+
+      // v1 forward seek and read a kilobyte into first kilobyte of bufferV1
+      inputStreamV1.seek(5 * MEGABYTE);
+      int numBytesReadV1 = inputStreamV1.read(bufferV1, 0, KILOBYTE);
+      assertEquals(numBytesReadV1, KILOBYTE);
+
+      // v2 forward seek and read a kilobyte into first kilobyte of bufferV2
+      inputStreamV2.seek(5 * MEGABYTE);
+      int numBytesReadV2 = inputStreamV2.read(bufferV2, 0, KILOBYTE);
+      assertEquals(numBytesReadV2, KILOBYTE);
+
+      assertArrayEquals(bufferV1, bufferV2);
+
+      int len = MEGABYTE;
+      int offset = bufferV1.length - len;
+
+      // v1 reverse seek and read a megabyte into last megabyte of bufferV1
+      inputStreamV1.seek(3 * MEGABYTE);
+      numBytesReadV1 = inputStreamV1.read(bufferV1, offset, len);
+      assertEquals(numBytesReadV1, len);
+
+      // v2 reverse seek and read a megabyte into last megabyte of bufferV2
+      inputStreamV2.seek(3 * MEGABYTE);
+      numBytesReadV2 = inputStreamV2.read(bufferV2, offset, len);
+      assertEquals(numBytesReadV2, len);
+
+      assertArrayEquals(bufferV1, bufferV2);
+    }
   }
 
   /**

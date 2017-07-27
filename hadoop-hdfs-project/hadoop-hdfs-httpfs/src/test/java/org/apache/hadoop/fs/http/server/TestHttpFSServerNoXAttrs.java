@@ -111,7 +111,7 @@ public class TestHttpFSServerNoXAttrs extends HTestCase {
 
     // HDFS configuration
     File hadoopConfDir = new File(new File(homeDir, "conf"), "hadoop-conf");
-    if ( !hadoopConfDir.mkdirs() ) {
+    if (!hadoopConfDir.mkdirs()) {
       throw new IOException();
     }
 
@@ -147,7 +147,7 @@ public class TestHttpFSServerNoXAttrs extends HTestCase {
 
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     URL url = cl.getResource("webapp");
-    if ( url == null ) {
+    if (url == null) {
       throw new IOException();
     }
     WebAppContext context = new WebAppContext(url.getPath(), "/webhdfs");
@@ -168,7 +168,7 @@ public class TestHttpFSServerNoXAttrs extends HTestCase {
           throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
-    if ( filename.charAt(0) == '/' ) {
+    if (filename.charAt(0) == '/') {
       filename = filename.substring(1);
     }
     String pathOps = MessageFormat.format(
@@ -197,7 +197,7 @@ public class TestHttpFSServerNoXAttrs extends HTestCase {
                       String params) throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
-    if ( filename.charAt(0) == '/' ) {
+    if (filename.charAt(0) == '/') {
       filename = filename.substring(1);
     }
     String pathOps = MessageFormat.format(

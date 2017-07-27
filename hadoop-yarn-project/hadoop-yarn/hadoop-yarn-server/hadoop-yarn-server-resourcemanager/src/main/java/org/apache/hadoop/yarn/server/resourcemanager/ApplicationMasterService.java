@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -88,7 +89,7 @@ public class ApplicationMasterService extends AbstractService implements
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponseLock> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
   protected final RMContext rmContext;
-  private final ApplicationMasterServiceProcessor amsProcessor;
+  private final AMSProcessingChain amsProcessingChain;
 
   public ApplicationMasterService(RMContext rmContext,
       YarnScheduler scheduler) {
@@ -101,11 +102,7 @@ public class ApplicationMasterService extends AbstractService implements
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rScheduler = scheduler;
     this.rmContext = rmContext;
-    this.amsProcessor = createProcessor();
-  }
-
-  protected ApplicationMasterServiceProcessor createProcessor() {
-    return new DefaultAMSProcessor(rmContext, rScheduler);
+    this.amsProcessingChain = new AMSProcessingChain(new DefaultAMSProcessor());
   }
 
   @Override
@@ -115,6 +112,21 @@ public class ApplicationMasterService extends AbstractService implements
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+    amsProcessingChain.init(rmContext, null);
+    List<ApplicationMasterServiceProcessor> processors = getProcessorList(conf);
+    if (processors != null) {
+      Collections.reverse(processors);
+      for (ApplicationMasterServiceProcessor p : processors) {
+        this.amsProcessingChain.addProcessor(p);
+      }
+    }
+  }
+
+  protected List<ApplicationMasterServiceProcessor> getProcessorList(
+      Configuration conf) {
+    return conf.getInstances(
+        YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS,
+        ApplicationMasterServiceProcessor.class);
   }
 
   @Override
@@ -163,6 +175,10 @@ public class ApplicationMasterService extends AbstractService implements
         serverConf, secretManager,
         serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
+  }
+
+  protected AMSProcessingChain getProcessingChain() {
+    return this.amsProcessingChain;
   }
 
   @Private
@@ -214,8 +230,12 @@ public class ApplicationMasterService extends AbstractService implements
       lastResponse.setResponseId(0);
       lock.setAllocateResponse(lastResponse);
 
-      return this.amsProcessor.registerApplicationMaster(
-          amrmTokenIdentifier.getApplicationAttemptId(), request);
+      RegisterApplicationMasterResponse response =
+          recordFactory.newRecordInstance(
+              RegisterApplicationMasterResponse.class);
+      this.amsProcessingChain.registerApplicationMaster(
+          amrmTokenIdentifier.getApplicationAttemptId(), request, response);
+      return response;
     }
   }
 
@@ -265,8 +285,11 @@ public class ApplicationMasterService extends AbstractService implements
       }
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
-      return this.amsProcessor.finishApplicationMaster(
-          applicationAttemptId, request);
+      FinishApplicationMasterResponse response =
+          FinishApplicationMasterResponse.newInstance(false);
+      this.amsProcessingChain.finishApplicationMaster(
+          applicationAttemptId, request, response);
+      return response;
     }
   }
 
@@ -346,8 +369,10 @@ public class ApplicationMasterService extends AbstractService implements
         throw new InvalidApplicationMasterRequestException(message);
       }
 
-      AllocateResponse response = this.amsProcessor.allocate(
-          amrmTokenIdentifier.getApplicationAttemptId(), request);
+      AllocateResponse response =
+          recordFactory.newRecordInstance(AllocateResponse.class);
+      this.amsProcessingChain.allocate(
+          amrmTokenIdentifier.getApplicationAttemptId(), request, response);
 
       // update AMRMToken if the token is rolled-up
       MasterKeyData nextMasterKey =

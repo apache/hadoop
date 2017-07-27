@@ -23,8 +23,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
 import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
@@ -35,13 +33,15 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class for writing RPC server programs based on RFC 1050. Extend this class
  * and implement {@link #handleInternal} to handle the requests received.
  */
 public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
-  static final Log LOG = LogFactory.getLog(RpcProgram.class);
+  static final Logger LOG = LoggerFactory.getLogger(RpcProgram.class);
   public static final int RPCB_PORT = 111;
   private final String program;
   private final String host;

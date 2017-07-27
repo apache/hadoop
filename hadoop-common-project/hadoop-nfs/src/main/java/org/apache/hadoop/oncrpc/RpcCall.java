@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.security.Credentials;
 import org.apache.hadoop.oncrpc.security.Verifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents an RPC message of type RPC call as defined in RFC 1831
  */
 public class RpcCall extends RpcMessage {
   public static final int RPC_VERSION = 2;
-  private static final Log LOG = LogFactory.getLog(RpcCall.class);
-  
+  private static final Logger LOG = LoggerFactory.getLogger(RpcCall.class);
+
   public static RpcCall read(XDR xdr) {
     return new RpcCall(xdr.readInt(), RpcMessage.Type.fromValue(xdr.readInt()),
         xdr.readInt(), xdr.readInt(), xdr.readInt(), xdr.readInt(), 
@@ -60,7 +60,7 @@ public class RpcCall extends RpcMessage {
     this.credentials = credential;
     this.verifier = verifier;
     if (LOG.isTraceEnabled()) {
-      LOG.trace(this);
+      LOG.trace(this.toString());
     }
     validate();
   }

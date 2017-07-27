@@ -85,7 +85,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
 
-  private static final Version CURRENT_VERSION_INFO = Version.newInstance(3, 0);
+  /**
+   * Changes from 1.0 to 1.1: Save AMRMProxy state in NMSS.
+   * Changes from 1.2 to 1.2: Save queued container information.
+   */
+  private static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 2);
 
   private static final String DELETION_TASK_KEY_PREFIX =
       "DeletionService/deltask_";

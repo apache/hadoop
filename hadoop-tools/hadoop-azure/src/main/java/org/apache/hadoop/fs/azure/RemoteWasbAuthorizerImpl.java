@@ -33,6 +33,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.concurrent.TimeUnit;
 
 import java.io.IOException;
 
@@ -93,12 +94,20 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
    * Authorization Remote http client retry policy spec default value. {@value}
    */
   private static final String AUTHORIZER_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
-      "1000,3,10000,2";
+      "10,3,100,2";
+
+  /**
+   * Authorization caching period
+   */
+  private static final String AUTHORIZATION_CACHEENTRY_EXPIRY_PERIOD =
+      "fs.azure.authorization.cacheentry.expiry.period";
 
   private WasbRemoteCallHelper remoteCallHelper = null;
   private boolean isKerberosSupportEnabled;
+  private boolean isSpnegoTokenCacheEnabled;
   private RetryPolicy retryPolicy;
   private String[] commaSeparatedUrls = null;
+  private CachingAuthorizer<CachedAuthorizerEntry, Boolean> cache;
 
   @VisibleForTesting public void updateWasbRemoteCallHelper(
       WasbRemoteCallHelper helper) {
@@ -107,10 +116,12 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   @Override
   public void init(Configuration conf)
-      throws WasbAuthorizationException, IOException {
+      throws IOException {
     LOG.debug("Initializing RemoteWasbAuthorizerImpl instance");
     this.isKerberosSupportEnabled =
         conf.getBoolean(Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
+    this.isSpnegoTokenCacheEnabled =
+        conf.getBoolean(Constants.AZURE_ENABLE_SPNEGO_TOKEN_CACHE, true);
     this.commaSeparatedUrls =
         conf.getTrimmedStrings(KEY_REMOTE_AUTH_SERVICE_URLS);
     if (this.commaSeparatedUrls == null
@@ -123,18 +134,43 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
         AUTHORIZER_HTTP_CLIENT_RETRY_POLICY_SPEC_SPEC,
         AUTHORIZER_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT);
     if (isKerberosSupportEnabled && UserGroupInformation.isSecurityEnabled()) {
-      this.remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, false);
+      this.remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, false,
+          isSpnegoTokenCacheEnabled);
     } else {
       this.remoteCallHelper = new WasbRemoteCallHelper(retryPolicy);
     }
+
+    this.cache = new CachingAuthorizer<>(
+        conf.getTimeDuration(AUTHORIZATION_CACHEENTRY_EXPIRY_PERIOD, 5L, TimeUnit.MINUTES), "AUTHORIZATION"
+    );
+    this.cache.init(conf);
   }
 
   @Override
   public boolean authorize(String wasbAbsolutePath, String accessType, String resourceOwner)
-      throws WasbAuthorizationException, IOException {
+      throws IOException {
+
+    /* Make an exception for the internal -RenamePending files */
+    if (wasbAbsolutePath.endsWith(NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
+      return true;
+    }
+
+    CachedAuthorizerEntry cacheKey = new CachedAuthorizerEntry(wasbAbsolutePath, accessType, resourceOwner);
+    Boolean cacheresult = cache.get(cacheKey);
+    if (cacheresult != null) {
+      return cacheresult;
+    }
+
+    boolean authorizeresult = authorizeInternal(wasbAbsolutePath, accessType, resourceOwner);
+    cache.put(cacheKey, authorizeresult);
+
+    return authorizeresult;
+  }
+
+  private boolean authorizeInternal(String wasbAbsolutePath, String accessType, String resourceOwner)
+          throws IOException {
 
     try {
-        /* Make an exception for the internal -RenamePending files */
       final URIBuilder uriBuilder = new URIBuilder();
       uriBuilder.setPath("/" + CHECK_AUTHORIZATION_OP);
       uriBuilder

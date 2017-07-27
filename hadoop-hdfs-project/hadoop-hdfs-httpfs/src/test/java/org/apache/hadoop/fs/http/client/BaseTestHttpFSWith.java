@@ -364,8 +364,15 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     assertEquals(status2.getLen(), status1.getLen());
 
     FileStatus[] stati = fs.listStatus(path.getParent());
-    assertEquals(stati.length, 1);
+    assertEquals(1, stati.length);
     assertEquals(stati[0].getPath().getName(), path.getName());
+
+    // The full path should be the path to the file. See HDFS-12139
+    FileStatus[] statl = fs.listStatus(path);
+    Assert.assertEquals(1, statl.length);
+    Assert.assertEquals(status2.getPath(), statl[0].getPath());
+    Assert.assertEquals(statl[0].getPath().getName(), path.getName());
+    Assert.assertEquals(stati[0].getPath(), statl[0].getPath());
   }
 
   private static void assertSameListing(FileSystem expected, FileSystem
@@ -411,6 +418,23 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       proxyFs.create(new Path(dir, "file" + i)).close();
       assertSameListing(proxyFs, httpFs, dir);
     }
+
+    // Test for HDFS-12139
+    Path dir1 = new Path(getProxiedFSTestDir(), "dir1");
+    proxyFs.mkdirs(dir1);
+    Path file1 = new Path(dir1, "file1");
+    proxyFs.create(file1).close();
+
+    RemoteIterator<FileStatus> si = proxyFs.listStatusIterator(dir1);
+    FileStatus statusl = si.next();
+    FileStatus status = proxyFs.getFileStatus(file1);
+    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
+    Assert.assertEquals(status.getPath(), statusl.getPath());
+
+    si = proxyFs.listStatusIterator(file1);
+    statusl = si.next();
+    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
+    Assert.assertEquals(status.getPath(), statusl.getPath());
   }
 
   private void testWorkingdirectory() throws Exception {

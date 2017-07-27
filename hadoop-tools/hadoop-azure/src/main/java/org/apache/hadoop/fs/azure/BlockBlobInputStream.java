@@ -358,7 +358,7 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
      * Gets the current capacity of the stream.
      */
     public synchronized int capacity() {
-      return length - offset;
+      return length;
     }
 
     /**

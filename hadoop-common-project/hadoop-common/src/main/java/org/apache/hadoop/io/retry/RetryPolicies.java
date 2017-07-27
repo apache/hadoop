@@ -32,8 +32,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
@@ -41,6 +39,8 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -49,7 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class RetryPolicies {
   
-  public static final Log LOG = LogFactory.getLog(RetryPolicies.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RetryPolicies.class);
   
   /**
    * <p>

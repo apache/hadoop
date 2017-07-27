@@ -1424,13 +1424,27 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             minBytesRcvd + ", " + maxBytesRcvd + "].");
       }
 
+      long bytesOnDisk = rbw.getBytesOnDisk();
+      long blockDataLength = rbw.getReplicaInfo().getBlockDataLength();
+      if (bytesOnDisk != blockDataLength) {
+        LOG.info("Resetting bytesOnDisk to match blockDataLength (={}) for " +
+            "replica {}", blockDataLength, rbw);
+        bytesOnDisk = blockDataLength;
+        rbw.setLastChecksumAndDataLen(bytesOnDisk, null);
+      }
+
+      if (bytesOnDisk < bytesAcked) {
+        throw new ReplicaNotFoundException("Found fewer bytesOnDisk than " +
+            "bytesAcked for replica " + rbw);
+      }
+
       FsVolumeReference ref = rbw.getReplicaInfo()
           .getVolume().obtainReference();
       try {
         // Truncate the potentially corrupt portion.
         // If the source was client and the last node in the pipeline was lost,
         // any corrupt data written after the acked length can go unnoticed.
-        if (numBytes > bytesAcked) {
+        if (bytesOnDisk > bytesAcked) {
           rbw.getReplicaInfo().truncateBlock(bytesAcked);
           rbw.setNumBytes(bytesAcked);
           rbw.setLastChecksumAndDataLen(bytesAcked, null);
@@ -2460,8 +2474,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       //check replica bytes on disk.
       if (replica.getBytesOnDisk() < replica.getVisibleLength()) {
-        throw new IOException("THIS IS NOT SUPPOSED TO HAPPEN:"
-            + " getBytesOnDisk() < getVisibleLength(), rip=" + replica);
+        throw new IOException("getBytesOnDisk() < getVisibleLength(), rip="
+            + replica);
       }
 
       //check the replica's files

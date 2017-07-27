@@ -192,6 +192,19 @@ The configuration option `fs.azure.page.blob.extension.size` is the page blob
 extension size.  This defines the amount to extend a page blob if it starts to
 get full.  It must be 128MB or greater, specified as an integer number of bytes.
 
+### Custom User-Agent
+WASB passes User-Agent header to the Azure back-end. The default value
+contains WASB version, Java Runtime version, Azure Client library version, and the
+value of the configuration option `fs.azure.user.agent.prefix`. Customized User-Agent
+header enables better troubleshooting and analysis by Azure service.
+
+```xml
+<property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>Identifier</value>
+</property>
+```
+
 ### Atomic Folder Rename
 
 Azure storage stores files as a flat key/value store without formal support
@@ -423,6 +436,44 @@ value takes a comma seperated list of user names who are allowed to perform chow
   <name>fs.azure.chown.allowed.userlist</name>
   <value>user1,user2</value>
 </property>
+```
+
+Caching of both SAS keys and Authorization responses can be enabled using the following setting:
+The cache settings are applicable only when fs.azure.authorization is enabled.
+The cache is maintained at a filesystem object level.
+```
+    <property>
+      <name>fs.azure.authorization.caching.enable</name>
+      <value>true</value>
+    </property>
+```
+
+The maximum number of entries that that cache can hold can be customized using the following setting:
+```
+    <property>
+      <name>fs.azure.authorization.caching.maxentries</name>
+      <value>512</value>
+    </property>
+```
+
+ The validity of an authorization cache-entry can be controlled using the following setting:
+ Setting the value to zero disables authorization-caching.
+ If the key is not specified, a default expiry duration of 5m takes effect.
+ ```
+    <property>
+      <name>fs.azure.authorization.cacheentry.expiry.period</name>
+      <value>5m</value>
+    </property>
+```
+
+ The validity of a SASKey cache-entry can be controlled using the following setting.
+ Setting the value to zero disables SASKey-caching.
+ If the key is not specified, the default expiry duration specified in the sas-key request takes effect.
+ ```
+    <property>
+      <name>fs.azure.saskey.cacheentry.expiry.period</name>
+      <value>90d</value>
+    </property>
 ```
 
 ## Testing the hadoop-azure Module
