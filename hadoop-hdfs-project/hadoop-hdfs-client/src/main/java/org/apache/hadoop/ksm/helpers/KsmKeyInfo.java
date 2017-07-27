@@ -35,10 +35,13 @@ public final class KsmKeyInfo {
   private final String blockID;
   private final long dataSize;
   private final boolean shouldCreateContainer;
+  private final long creationTime;
+  private final long modificationTime;
 
   private KsmKeyInfo(String volumeName, String bucketName, String keyName,
       long dataSize, String blockID, String containerName,
-      boolean shouldCreateContainer) {
+      boolean shouldCreateContainer, long creationTime,
+      long modificationTime) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -46,6 +49,8 @@ public final class KsmKeyInfo {
     this.blockID = blockID;
     this.dataSize = dataSize;
     this.shouldCreateContainer = shouldCreateContainer;
+    this.creationTime = creationTime;
+    this.modificationTime = modificationTime;
   }
 
   public String getVolumeName() {
@@ -76,6 +81,14 @@ public final class KsmKeyInfo {
     return shouldCreateContainer;
   }
 
+  public long getCreationTime() {
+    return creationTime;
+  }
+
+  public long getModificationTime() {
+    return modificationTime;
+  }
+
   /**
    * Builder of KsmKeyInfo.
    */
@@ -87,6 +100,8 @@ public final class KsmKeyInfo {
     private String blockID;
     private long dataSize;
     private boolean shouldCreateContainer;
+    private long creationTime;
+    private long modificationTime;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -123,10 +138,20 @@ public final class KsmKeyInfo {
       return this;
     }
 
+    public Builder setCreationTime(long creationTime) {
+      this.creationTime = creationTime;
+      return this;
+    }
+
+    public Builder setModificationTime(long modificationTime) {
+      this.modificationTime = modificationTime;
+      return this;
+    }
+
     public KsmKeyInfo build() {
       return new KsmKeyInfo(
           volumeName, bucketName, keyName, dataSize, blockID, containerName,
-          shouldCreateContainer);
+          shouldCreateContainer, creationTime, modificationTime);
     }
   }
 
@@ -139,6 +164,8 @@ public final class KsmKeyInfo {
         .setBlockKey(blockID)
         .setContainerName(containerName)
         .setShouldCreateContainer(shouldCreateContainer)
+        .setCreationTime(creationTime)
+        .setModificationTime(modificationTime)
         .build();
   }
 
@@ -150,7 +177,9 @@ public final class KsmKeyInfo {
         keyInfo.getDataSize(),
         keyInfo.getBlockKey(),
         keyInfo.getContainerName(),
-        keyInfo.getShouldCreateContainer());
+        keyInfo.getShouldCreateContainer(),
+        keyInfo.getCreationTime(),
+        keyInfo.getModificationTime());
   }
 
 }

@@ -233,6 +233,8 @@ message KeyInfo {
     required string blockKey = 5;
     required string containerName = 6;
     required bool shouldCreateContainer = 7;
+    required uint64 creationTime = 8;
+    required uint64 modificationTime = 9;
 }
 
 message LocateKeyRequest {

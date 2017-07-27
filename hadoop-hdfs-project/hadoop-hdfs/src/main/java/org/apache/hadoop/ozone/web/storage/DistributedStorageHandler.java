@@ -66,6 +66,7 @@ import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.apache.hadoop.scm.storage.ChunkOutputStream;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -482,7 +483,8 @@ public final class DistributedStorageHandler implements StorageHandler {
     keyInfo.setVersion(0);
     keyInfo.setKeyName(ksmKeyInfo.getKeyName());
     keyInfo.setSize(ksmKeyInfo.getDataSize());
-
+    keyInfo.setCreatedOn(Time.formatTime(ksmKeyInfo.getCreationTime()));
+    keyInfo.setModifiedOn(Time.formatTime(ksmKeyInfo.getModificationTime()));
     return keyInfo;
   }
 

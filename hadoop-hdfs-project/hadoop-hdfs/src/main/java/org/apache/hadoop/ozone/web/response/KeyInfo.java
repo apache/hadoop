@@ -69,6 +69,7 @@ public class KeyInfo implements Comparable<KeyInfo> {
   private long version;
   private String md5hash;
   private String createdOn;
+  private String modifiedOn;
   private long size;
   private String keyName;
 
@@ -84,12 +85,30 @@ public class KeyInfo implements Comparable<KeyInfo> {
   }
 
   /**
+   * When this key was modified.
+   *
+   * @return Date String
+   */
+  public String getModifiedOn() {
+    return modifiedOn;
+  }
+
+  /**
    * When this key was created.
    *
    * @param createdOn - Date String
    */
   public void setCreatedOn(String createdOn) {
     this.createdOn = createdOn;
+  }
+
+  /**
+   * When this key was modified.
+   *
+   * @param modifiedOn - Date String
+   */
+  public void setModifiedOn(String modifiedOn) {
+    this.modifiedOn = modifiedOn;
   }
 
   /**

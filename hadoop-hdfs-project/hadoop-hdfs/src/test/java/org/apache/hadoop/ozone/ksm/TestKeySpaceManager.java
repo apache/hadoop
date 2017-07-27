@@ -44,6 +44,7 @@ import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
+import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -55,6 +56,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.ParseException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Random;
@@ -941,11 +943,13 @@ public class TestKeySpaceManager {
    * @throws OzoneException
    */
   @Test
-  public void testGetKeyInfo() throws IOException, OzoneException {
+  public void testGetKeyInfo() throws IOException,
+                          OzoneException, ParseException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    long currentTime = Time.monotonicNow();
 
     VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
     createVolumeArgs.setUserName(userName);
@@ -966,6 +970,8 @@ public class TestKeySpaceManager {
     stream.close();
 
     KeyInfo keyInfo = storageHandler.getKeyInfo(keyArgs);
+    Assert.assertTrue(Time.formatDate(keyInfo.getCreatedOn()) >= currentTime);
+    Assert.assertTrue(Time.formatDate(keyInfo.getModifiedOn()) >= currentTime);
     Assert.assertEquals(keyName, keyInfo.getKeyName());
     Assert.assertEquals(4096, keyInfo.getSize());
   }
