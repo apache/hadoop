@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -28,10 +29,18 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
+import org.apache.hadoop.yarn.server.router.webapp.RouterWebApp;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.WebApps.Builder;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The router is a stateless YARN component which is the entry point to the
@@ -56,6 +65,9 @@ public class Router extends CompositeService {
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private RouterClientRMService clientRMProxyService;
   private RouterRMAdminService rmAdminProxyService;
+  private WebApp webApp;
+  @VisibleForTesting
+  protected String webAppAddress;
 
   /**
    * Priority of the Router shutdown hook.
@@ -79,6 +91,10 @@ public class Router extends CompositeService {
     // RMAdmin Proxy
     rmAdminProxyService = createRMAdminProxyService();
     addService(rmAdminProxyService);
+    // WebService
+    webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
+        YarnConfiguration.ROUTER_BIND_HOST,
+        WebAppUtils.getRouterWebAppURLWithoutScheme(this.conf));
     super.serviceInit(conf);
   }
 
@@ -89,11 +105,15 @@ public class Router extends CompositeService {
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed Router login", e);
     }
+    startWepApp();
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
+    if (webApp != null) {
+      webApp.stop();
+    }
     if (isStopping.getAndSet(true)) {
       return;
     }
@@ -115,6 +135,21 @@ public class Router extends CompositeService {
 
   protected RouterRMAdminService createRMAdminProxyService() {
     return new RouterRMAdminService();
+  }
+
+  @Private
+  public WebApp getWebapp() {
+    return this.webApp;
+  }
+
+  @VisibleForTesting
+  public void startWepApp() {
+
+    RMWebAppUtil.setupSecurityAndFilters(conf, null);
+
+    Builder<Object> builder =
+        WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
+    webApp = builder.start(new RouterWebApp(this));
   }
 
   public static void main(String[] argv) {

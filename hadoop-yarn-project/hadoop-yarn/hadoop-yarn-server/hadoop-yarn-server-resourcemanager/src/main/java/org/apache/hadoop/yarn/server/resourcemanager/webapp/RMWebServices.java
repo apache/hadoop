@@ -435,7 +435,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.FINISHED_TIME_END) String finishEnd,
       @QueryParam(RMWSConsts.APPLICATION_TYPES) Set<String> applicationTypes,
       @QueryParam(RMWSConsts.APPLICATION_TAGS) Set<String> applicationTags,
-      @QueryParam("deSelects") Set<String> unselectedFields) {
+      @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
     boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
@@ -818,7 +818,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public AppInfo getApp(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId,
-      @QueryParam("deSelects") Set<String> unselectedFields) {
+      @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
     init();
     ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
