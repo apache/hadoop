@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.web.client;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -57,6 +58,9 @@ public class TestKeysRatis {
   @Test
   public void testPutKey() throws OzoneException {
     runTestPutKey(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAlphanumeric(1);
+    runTestPutKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   @Test
@@ -64,25 +68,41 @@ public class TestKeysRatis {
       throws OzoneException, IOException, URISyntaxException {
     runTestPutAndGetKeyWithDnRestart(
         new PutHelper(ozoneRestClient, path), suite.getCluster());
+    String delimiter = RandomStringUtils.randomAlphanumeric(1);
+    runTestPutAndGetKeyWithDnRestart(
+        new PutHelper(ozoneRestClient, path, getMultiPartKey(delimiter)),
+        suite.getCluster());
   }
 
   @Test
   public void testPutAndGetKey() throws OzoneException, IOException {
     runTestPutAndGetKey(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAlphanumeric(1);
+    runTestPutAndGetKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   @Test
   public void testPutAndDeleteKey() throws OzoneException, IOException {
     runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAlphanumeric(1);
+    runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   @Test
   public void testPutAndListKey() throws OzoneException, IOException {
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAlphanumeric(1);
+    runTestPutAndListKey(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 
   @Test
   public void testGetKeyInfo() throws OzoneException, IOException {
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path));
+    String delimiter = RandomStringUtils.randomAlphanumeric(1);
+    runTestGetKeyInfo(new PutHelper(ozoneRestClient, path,
+        getMultiPartKey(delimiter)));
   }
 }

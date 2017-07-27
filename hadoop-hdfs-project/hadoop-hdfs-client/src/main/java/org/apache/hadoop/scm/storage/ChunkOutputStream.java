@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import com.google.protobuf.ByteString;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.KeyValue;
@@ -209,7 +210,8 @@ public class ChunkOutputStream extends OutputStream {
     ChunkInfo chunk = ChunkInfo
         .newBuilder()
         .setChunkName(
-            key + "_stream_" + streamId + "_chunk_" + ++chunkIndex)
+            DigestUtils.md5Hex(key) + "_stream_"
+                + streamId + "_chunk_" + ++chunkIndex)
         .setOffset(0)
         .setLen(data.size())
         .build();
