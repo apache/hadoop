@@ -59,7 +59,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -382,10 +381,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   @Test(timeout = 10000)
   public void testReleasedContainerIfAppAttemptisNull() throws Exception {
     YarnConfiguration conf=getConf();
-    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    MockRM rm1 = new MockRM(conf, memStore);
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    MockRM rm1 = new MockRM(conf);
     try {
       rm1.start();
       MockNM nm1 =

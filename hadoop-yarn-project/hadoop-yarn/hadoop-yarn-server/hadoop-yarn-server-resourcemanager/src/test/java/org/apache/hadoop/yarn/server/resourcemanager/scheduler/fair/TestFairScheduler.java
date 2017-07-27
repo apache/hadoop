@@ -5114,12 +5114,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("</allocations>");
     out.close();
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     // 3. start a active RM
-    MockRM rm2 = new MockRM(conf, memStore);
-    rm2.init(conf);
+    MockRM rm2 = new MockRM(conf);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm2.getRMStateStore();
     rm2.start();
 
     MockNM nm =
