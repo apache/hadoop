@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -86,12 +87,8 @@ public class TestFederationRMStateStoreService {
     // Initially there should be no entry for the sub-cluster
     rm.init(conf);
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
-    try {
-      stateStore.getSubCluster(request);
-      Assert.fail("There should be no entry for the sub-cluster.");
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().endsWith("does not exist"));
-    }
+    GetSubClusterInfoResponse response = stateStore.getSubCluster(request);
+    Assert.assertNull(response);
 
     // Validate if sub-cluster is registered
     rm.start();

@@ -3214,4 +3214,34 @@
     <value>user-group</value>
   </property>
 
+  <property>
+    <description>
+      The comma separated list of class names that implement the
+      RequestInterceptor interface. This is used by the RouterWebServices
+      to create the request processing pipeline for users.
+    </description>
+    <name>yarn.router.webapp.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.router.webapp.DefaultRequestInterceptorREST</value>
+  </property>
+
+  <property>
+    <description>
+      The http address of the Router web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name>yarn.router.webapp.address</name>
+    <value>0.0.0.0:8089</value>
+  </property>
+
+  <property>
+    <description>
+      The https address of the Router web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name> yarn.router.webapp.https.address</name>
+    <value>0.0.0.0:8091</value>
+  </property>
+
 </configuration>

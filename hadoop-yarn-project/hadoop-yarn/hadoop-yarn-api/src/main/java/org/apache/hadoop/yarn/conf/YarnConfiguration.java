@@ -2682,6 +2682,30 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "submit.retry";
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
 
+  public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
+
+  /** The address of the Router web application. */
+  public static final String ROUTER_WEBAPP_ADDRESS =
+      ROUTER_WEBAPP_PREFIX + "address";
+
+  public static final int DEFAULT_ROUTER_WEBAPP_PORT = 8089;
+  public static final String DEFAULT_ROUTER_WEBAPP_ADDRESS =
+      "0.0.0.0:" + DEFAULT_ROUTER_WEBAPP_PORT;
+
+  /** The https address of the Router web application. */
+  public static final String ROUTER_WEBAPP_HTTPS_ADDRESS =
+      ROUTER_WEBAPP_PREFIX + "https.address";
+
+  public static final int DEFAULT_ROUTER_WEBAPP_HTTPS_PORT = 8091;
+  public static final String DEFAULT_ROUTER_WEBAPP_HTTPS_ADDRESS =
+      "0.0.0.0:" + DEFAULT_ROUTER_WEBAPP_HTTPS_PORT;
+
+  public static final String ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE =
+      ROUTER_WEBAPP_PREFIX + "interceptor-class.pipeline";
+  public static final String DEFAULT_ROUTER_WEBAPP_INTERCEPTOR_CLASS =
+      "org.apache.hadoop.yarn.server.router.webapp."
+          + "DefaultRequestInterceptorREST";
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
