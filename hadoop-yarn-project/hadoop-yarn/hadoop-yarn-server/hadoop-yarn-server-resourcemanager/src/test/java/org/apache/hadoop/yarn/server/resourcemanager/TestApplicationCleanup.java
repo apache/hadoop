@@ -153,7 +153,6 @@ public class TestApplicationCleanup {
     rm.stop();
   }
 
-  @SuppressWarnings("resource")
   @Test
   public void testContainerCleanup() throws Exception {
 
@@ -291,11 +290,8 @@ public class TestApplicationCleanup {
   @Test (timeout = 60000)
   public void testAppCleanupWhenRMRestartedAfterAppFinished() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-
     // start RM
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
@@ -308,7 +304,7 @@ public class TestApplicationCleanup {
     rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
 
     // start new RM
-    MockRM rm2 = new MockRM(conf, memStore);
+    MockRM rm2 = new MockRM(conf, rm1.getRMStateStore());
     rm2.start();
     
     // nm1 register to rm2, and do a heartbeat
@@ -327,11 +323,9 @@ public class TestApplicationCleanup {
   @Test(timeout = 60000)
   public void testAppCleanupWhenRMRestartedBeforeAppFinished() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
 
     // start RM
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 1024, rm1.getResourceTrackerService());
@@ -357,7 +351,7 @@ public class TestApplicationCleanup {
     }
 
     // start new RM
-    MockRM rm2 = new MockRM(conf, memStore);
+    MockRM rm2 = new MockRM(conf, rm1.getRMStateStore());
     rm2.start();
 
     // nm1/nm2 register to rm2, and do a heartbeat
@@ -383,16 +377,12 @@ public class TestApplicationCleanup {
     rm2.stop();
   }
 
-  @SuppressWarnings("resource")
   @Test (timeout = 60000)
   public void testContainerCleanupWhenRMRestartedAppNotRegistered() throws
       Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-
     // start RM
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
@@ -405,7 +395,7 @@ public class TestApplicationCleanup {
     rm1.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
 
     // start new RM
-    MockRM rm2 = new MockRM(conf, memStore);
+    MockRM rm2 = new MockRM(conf, rm1.getRMStateStore());
     rm2.start();
 
     // nm1 register to rm2, and do a heartbeat
@@ -426,11 +416,9 @@ public class TestApplicationCleanup {
   @Test (timeout = 60000)
   public void testAppCleanupWhenNMReconnects() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
 
     // start RM
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
@@ -466,11 +454,9 @@ public class TestApplicationCleanup {
   @Test(timeout = 60000)
   public void testProcessingNMContainerStatusesOnNMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
 
     // 1. Start the cluster-RM,NM,Submit app with 1024MB,Launch & register AM
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
     rm1.start();
     int nmMemory = 8192;
     int amMemory = 1024;
