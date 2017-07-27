@@ -41,9 +41,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
@@ -98,7 +98,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".reservedCpu", "Reserved CPU VCores").
             th(".reservedMemory", "Reserved Memory MB").
             th(".progress", "Progress").
-            th(".ui", "Tracking UI")._()._().
+            th(".ui", "Tracking UI").__().__().
         tbody();
     Collection<YarnApplicationState> reqAppStates = null;
     String reqStateString = $(APP_STATE);
@@ -168,8 +168,8 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
     }
     appsTableData.append("]");
     html.script().$type("text/javascript").
-    _("var appsTableData=" + appsTableData)._();
+        __("var appsTableData=" + appsTableData).__();
 
-    tbody._()._();
+    tbody.__().__();
   }
 }

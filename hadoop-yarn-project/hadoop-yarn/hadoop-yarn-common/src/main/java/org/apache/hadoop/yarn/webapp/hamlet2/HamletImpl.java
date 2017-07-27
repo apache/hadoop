@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.webapp.hamlet;
+package org.apache.hadoop.yarn.webapp.hamlet2;
 
 import com.google.common.base.Joiner;
 import static com.google.common.base.Preconditions.*;
@@ -29,7 +29,7 @@ import static java.util.EnumSet.*;
 import java.util.Iterator;
 
 import static org.apache.commons.lang.StringEscapeUtils.*;
-import static org.apache.hadoop.yarn.webapp.hamlet.HamletImpl.EOpt.*;
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletImpl.EOpt.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.SubView;
@@ -43,9 +43,7 @@ import org.apache.hadoop.yarn.webapp.WebAppException;
  * optimized to use a thread-local element pool.
  *
  * Prints HTML as it builds. So the order is important.
- * @deprecated Use org.apache.hadoop.yarn.webapp.hamlet2 package instead.
  */
-@Deprecated
 @InterfaceAudience.Private
 public class HamletImpl extends HamletSpec {
   private static final String INDENT_CHARS = "  ";
@@ -78,7 +76,7 @@ public class HamletImpl extends HamletSpec {
    * The base class for elements
    * @param <T> type of the parent (containing) element for the element
    */
-  public class EImp<T extends _> implements _Child {
+  public class EImp<T extends __> implements _Child {
     private final String name;
     private final T parent; // short cut for parent element
     private final EnumSet<EOpt> opts; // element options
@@ -93,9 +91,9 @@ public class HamletImpl extends HamletSpec {
     }
 
     @Override
-    public T _() {
+    public T __() {
       closeAttrs();
-      --nestLevel;  
+      --nestLevel;
       printEndTag(name, opts);
       return parent;
     }
@@ -183,7 +181,7 @@ public class HamletImpl extends HamletSpec {
     }
   }
 
-  public class Generic<T extends _> extends EImp<T> implements PCData {
+  public class Generic<T extends __> extends EImp<T> implements PCData {
     Generic(String name, T parent, EnumSet<EOpt> opts) {
       super(name, parent, opts);
     }
@@ -218,7 +216,7 @@ public class HamletImpl extends HamletSpec {
     }
 
     @Override
-    public Generic<T> _(Object... lines) {
+    public Generic<T> __(Object... lines) {
       _p(true, lines);
       return this;
     }
@@ -260,12 +258,12 @@ public class HamletImpl extends HamletSpec {
    * @param opts {@link EOpt element options}
    * @return the element
    */
-  public <T extends _>
+  public <T extends __>
   Generic<T> root(String name, EnumSet<EOpt> opts) {
     return new Generic<T>(name, null, opts);
   }
 
-  public <T extends _> Generic<T> root(String name) {
+  public <T extends __> Generic<T> root(String name) {
     return root(name, of(ENDTAG));
   }
 

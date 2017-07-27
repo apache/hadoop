@@ -43,7 +43,7 @@ import com.google.inject.Inject;
 @Unstable
 public class SCMOverviewPage extends TwoColumnLayout {
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
   }
@@ -60,9 +60,9 @@ public class SCMOverviewPage extends TwoColumnLayout {
   static private class SCMOverviewNavBlock extends HtmlBlock {
     @Override
     protected void render(Block html) {
-      html.div("#nav").h3("Tools").ul().li().a("/conf", "Configuration")._()
-          .li().a("/stacks", "Thread dump")._().li().a("/logs", "Logs")._()
-          .li().a("/metrics", "Metrics")._()._()._();
+      html.div("#nav").h3("Tools").ul().li().a("/conf", "Configuration").__()
+          .li().a("/stacks", "Thread dump").__().li().a("/logs", "Logs").__()
+          .li().a("/metrics", "Metrics").__().__().__();
     }
   }
 
@@ -81,15 +81,15 @@ public class SCMOverviewPage extends TwoColumnLayout {
           CleanerMetrics.getInstance(), ClientSCMMetrics.getInstance(),
               SharedCacheUploaderMetrics.getInstance());
       info("Shared Cache Manager overview").
-          _("Started on:", Times.format(scm.getStartTime())).
-          _("Cache hits: ", metricsInfo.getCacheHits()).
-          _("Cache misses: ", metricsInfo.getCacheMisses()).
-          _("Cache releases: ", metricsInfo.getCacheReleases()).
-          _("Accepted uploads: ", metricsInfo.getAcceptedUploads()).
-          _("Rejected uploads: ", metricsInfo.getRejectUploads()).
-          _("Deleted files by the cleaner: ", metricsInfo.getTotalDeletedFiles()).
-          _("Processed files by the cleaner: ", metricsInfo.getTotalProcessedFiles());
-      html._(InfoBlock.class);
+          __("Started on:", Times.format(scm.getStartTime())).
+          __("Cache hits: ", metricsInfo.getCacheHits()).
+          __("Cache misses: ", metricsInfo.getCacheMisses()).
+          __("Cache releases: ", metricsInfo.getCacheReleases()).
+          __("Accepted uploads: ", metricsInfo.getAcceptedUploads()).
+          __("Rejected uploads: ", metricsInfo.getRejectUploads()).
+          __("Deleted files by the cleaner: ", metricsInfo.getTotalDeletedFiles()).
+          __("Processed files by the cleaner: ", metricsInfo.getTotalProcessedFiles());
+      html.__(InfoBlock.class);
     }
   }
 }

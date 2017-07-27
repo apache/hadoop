@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.webapp.hamlet;
+package org.apache.hadoop.yarn.webapp.hamlet2;
 
 import java.lang.annotation.*;
 import java.util.EnumSet;
@@ -43,9 +43,7 @@ import org.apache.hadoop.yarn.webapp.SubView;
  * UPPERCASE, corresponding to an element definition in the DTD. $lowercase is
  * used as attribute builder methods to differentiate from element builder
  * methods.
- * @deprecated Use org.apache.hadoop.yarn.webapp.hamlet2 package instead.
  */
-@Deprecated
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class HamletSpec {
   // The enum values are lowercase for better compression,
@@ -303,17 +301,17 @@ public class HamletSpec {
   /**
    *
    */
-  public interface _ {}
+  public interface __ {}
 
   /**
    *
    */
-  public interface _Child extends _ {
+  public interface _Child extends __ {
     /**
      * Finish the current element.
      * @return the parent element
      */
-    _ _();
+    __ __();
   }
 
   /**
@@ -375,7 +373,7 @@ public class HamletSpec {
 
     /**
      * Add a meta element.
-     * Shortcut of <code>meta().$name(name).$content(content)._();</code>
+     * Shortcut of <code>meta().$name(name).$content(content).__();</code>
      * @param name of the meta element
      * @param content of the meta element
      * @return the current element builder
@@ -385,7 +383,7 @@ public class HamletSpec {
     /**
      * Add a meta element with http-equiv attribute.
      * Shortcut of <br>
-     * <code>meta().$http_equiv(header).$content(content)._();</code>
+     * <code>meta().$http_equiv(header).$content(content).__();</code>
      * @param header for the http-equiv attribute
      * @param content of the header
      * @return the current element builder
@@ -402,7 +400,7 @@ public class HamletSpec {
      * Add a link element.
      * Implementation should try to figure out type by the suffix of href.
      * So <code>link("style.css");</code> is a shortcut of
-     * <code>link().$rel("stylesheet").$type("text/css").$href("style.css")._();
+     * <code>link().$rel("stylesheet").$type("text/css").$href("style.css").__();
      * </code>
      * @param href of the link
      * @return the current element builder
@@ -708,7 +706,7 @@ public class HamletSpec {
 
     /**
      * Add a complete small (small print) element.
-     * Shortcut of: small()._(cdata)._();
+     * Shortcut of: small().__(cdata).__();
      * @param cdata the content of the element
      * @return the current element builder
      */
@@ -716,7 +714,7 @@ public class HamletSpec {
 
     /**
      * Add a complete small (small print) element.
-     * Shortcut of: small().$id(id).$class(class)._(cdata)._();
+     * Shortcut of: small().$id(id).$class(class).__(cdata).__();
      * @param selector css selector in the form of (#id)?(.class)*
      * @param cdata the content of the element
      * @return the current element builder
@@ -1051,14 +1049,14 @@ public class HamletSpec {
      */
     A a(String selector);
 
-    /** Shortcut for <code>a().$href(href)._(anchorText)._();</code>
+    /** Shortcut for <code>a().$href(href).__(anchorText).__();</code>
      * @param href the URI
      * @param anchorText for the URI
      * @return the current element builder
      */
     _Anchor a(String href, String anchorText);
 
-    /** Shortcut for <code>a(selector).$href(href)._(anchorText)._();</code>
+    /** Shortcut for <code>a(selector).$href(href).__(anchorText).__();</code>
      * @param selector in the form of (#id)?(.class)*
      * @param href the URI
      * @param anchorText for the URI
@@ -1206,7 +1204,7 @@ public class HamletSpec {
 
     /**
      * Add a LABEL element.
-     * Shortcut of <code>label().$for(forId)._(cdata)._();</code>
+     * Shortcut of <code>label().$for(forId).__(cdata).__();</code>
      * @param forId the for attribute
      * @param cdata the content
      * @return the current element builder
@@ -1301,7 +1299,7 @@ public class HamletSpec {
      * @param lines of content
      * @return the current element builder
      */
-    _Content _(Object... lines);
+    _Content __(Object... lines);
   }
 
   /**
@@ -1570,7 +1568,7 @@ public class HamletSpec {
      * @param cls the sub-view class
      * @return the current element builder
      */
-    _Block _(Class<? extends SubView> cls);
+    _Block __(Class<? extends SubView> cls);
   }
 
   /** %block */
@@ -1893,7 +1891,7 @@ public class HamletSpec {
 
     /**
      * Add a PARAM element.
-     * Shortcut of <code>param().$name(name).$value(value)._();</code>
+     * Shortcut of <code>param().$name(name).$value(value).__();</code>
      * @param name of the value
      * @param value the value
      * @return the current element builder
@@ -3073,7 +3071,7 @@ public class HamletSpec {
   /**
    *
    */
-  public interface _Html extends _Head, _Body, _ {
+  public interface _Html extends _Head, _Body, __ {
     /**
      * Add a HEAD element.
      * @return a new HEAD element builder

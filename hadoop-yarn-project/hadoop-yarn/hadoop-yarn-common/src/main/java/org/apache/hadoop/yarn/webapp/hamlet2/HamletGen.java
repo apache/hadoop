@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.webapp.hamlet;
+package org.apache.hadoop.yarn.webapp.hamlet2;
 
 import com.google.common.collect.Sets;
 
@@ -43,9 +43,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Generates a specific hamlet implementation class from a spec class
  * using a generic hamlet implementation class.
- * @deprecated Use org.apache.hadoop.yarn.webapp.hamlet2 package instead.
  */
-@Deprecated
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class HamletGen {
   static final Logger LOG = LoggerFactory.getLogger(HamletGen.class);
@@ -158,7 +156,7 @@ public class HamletGen {
       if (isElement(className)) {
         LOG.info("Generating class {}<T>", className);
         puts(indent, "\n",
-             "public class ", className, "<T extends _>",
+             "public class ", className, "<T extends __>",
              " extends EImp<T> implements ", specName, ".", className, " {\n",
              "  public ", className, "(String name, T parent,",
              " EnumSet<EOpt> opts) {\n",
@@ -199,7 +197,7 @@ public class HamletGen {
 
   void genAttributeMethod(String className, Method method, int indent) {
     String methodName = method.getName();
-    String attrName = methodName.substring(1).replace('_', '-');
+    String attrName = methodName.substring(1).replace("__", "-");
     Type[] params = method.getGenericParameterTypes();
     echo(indent, "\n",
          "@Override\n",
@@ -241,8 +239,8 @@ public class HamletGen {
 
   void genFactoryMethod(String retName, String methodName, int indent) {
     puts(indent, "\n",
-         "private <T extends _> ", retName, "<T> ", methodName,
-         "_(T e, boolean inline) {\n",
+         "private <T extends __> ", retName, "<T> ", methodName,
+         "__(T e, boolean inline) {\n",
          "  return new ", retName, "<T>(\"", StringUtils.toLowerCase(retName),
          "\", e, opt(", !endTagOptional.contains(retName), ", inline, ",
          retName.equals("PRE"), ")); }");
@@ -260,7 +258,7 @@ public class HamletGen {
       puts(0, ") {");
       puts(indent,
            topMode ? "" : "  closeAttrs();\n",
-           "  return ", StringUtils.toLowerCase(retName), "_" + "(this, ",
+           "  return ", StringUtils.toLowerCase(retName), "__" + "(this, ",
            isInline(className, retName), ");\n", "}");
     } else if (params.length == 1) {
       puts(0, "String selector) {");
@@ -298,29 +296,29 @@ public class HamletGen {
       if (methodName.equals("base")) {
         puts(0, "String href) {");
         puts(indent,
-             "  return base().$href(href)._();\n", "}");
+             "  return base().$href(href).__();\n", "}");
       } else if (methodName.equals("script")) {
         puts(0, "String src) {");
         puts(indent,
-             "  return setScriptSrc(script(), src)._();\n", "}");
+             "  return setScriptSrc(script(), src).__();\n", "}");
       } else if (methodName.equals("style")) {
         puts(0, "Object... lines) {");
         puts(indent,
-             "  return style().$type(\"text/css\")._(lines)._();\n", "}");
+             "  return style().$type(\"text/css\").__(lines).__();\n", "}");
       } else if (methodName.equals("img")) {
         puts(0, "String src) {");
         puts(indent,
-             "  return ", methodName, "().$src(src)._();\n", "}");
+             "  return ", methodName, "().$src(src).__();\n", "}");
       } else if (methodName.equals("br") || methodName.equals("hr") ||
                  methodName.equals("col")) {
         puts(0, "String selector) {");
         puts(indent,
-             "  return setSelector(", methodName, "(), selector)._();\n", "}");
+             "  return setSelector(", methodName, "(), selector).__();\n", "}");
       }  else if (methodName.equals("link")) {
         puts(0, "String href) {");
         puts(indent,
-             "  return setLinkHref(", methodName, "(), href)._();\n", "}");
-      } else if (methodName.equals("_")) {
+             "  return setLinkHref(", methodName, "(), href).__();\n", "}");
+      } else if (methodName.equals("__")) {
         if (params[0].getSimpleName().equals("Class")) {
           puts(0, "Class<? extends SubView> cls) {");
           puts(indent,
@@ -340,44 +338,44 @@ public class HamletGen {
       } else {
         puts(0, "String cdata) {");
         puts(indent,
-             "  return ", methodName, "()._(cdata)._();\n", "}");
+             "  return ", methodName, "().__(cdata).__();\n", "}");
       }
     } else if (params.length == 2) {
       if (methodName.equals("meta")) {
         puts(0, "String name, String content) {");
         puts(indent,
-             "  return meta().$name(name).$content(content)._();\n", "}");
+             "  return meta().$name(name).$content(content).__();\n", "}");
       } else if (methodName.equals("meta_http")) {
         puts(0, "String header, String content) {");
         puts(indent,
-             "  return meta().$http_equiv(header).$content(content)._();\n",
+             "  return meta().$http_equiv(header).$content(content).__();\n",
              "}");
       } else if (methodName.equals("a")) {
         puts(0, "String href, String anchorText) {");
         puts(indent,
-             "  return a().$href(href)._(anchorText)._();\n", "}");
+             "  return a().$href(href).__(anchorText).__();\n", "}");
       } else if (methodName.equals("bdo")) {
         puts(0, "Dir dir, String cdata) {");
-        puts(indent, "  return bdo().$dir(dir)._(cdata)._();\n", "}");
+        puts(indent, "  return bdo().$dir(dir).__(cdata).__();\n", "}");
       } else if (methodName.equals("label")) {
         puts(0, "String forId, String cdata) {");
-        puts(indent, "  return label().$for(forId)._(cdata)._();\n", "}");
+        puts(indent, "  return label().$for(forId).__(cdata).__();\n", "}");
       } else if (methodName.equals("param")) {
         puts(0, "String name, String value) {");
         puts(indent,
-             "  return param().$name(name).$value(value)._();\n", "}");
+             "  return param().$name(name).$value(value).__();\n", "}");
       } else {
         puts(0, "String selector, String cdata) {");
         puts(indent,
              "  return setSelector(", methodName,
-             "(), selector)._(cdata)._();\n", "}");
-      } 
+             "(), selector).__(cdata).__();\n", "}");
+      }
     } else if (params.length == 3) {
       if (methodName.equals("a")) {
         puts(0, "String selector, String href, String anchorText) {");
         puts(indent,
              "  return setSelector(a(), selector)",
-             ".$href(href)._(anchorText)._();\n", "}");
+             ".$href(href).__(anchorText).__();\n", "}");
       }
     } else {
       throwUnhandled(className, method);

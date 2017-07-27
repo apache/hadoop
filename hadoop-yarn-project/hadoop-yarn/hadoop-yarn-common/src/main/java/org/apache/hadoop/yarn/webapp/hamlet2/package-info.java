@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
+/**
+ * This package is the replacement for org.apache.hadoop.yarn.webapp.hamlet.
+ * The old package is using _ as a one-character identifier,
+ * which is banned from JDK9.
+ */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
+package org.apache.hadoop.yarn.webapp.hamlet2;
+import org.apache.hadoop.classification.InterfaceAudience;
 
-
-import org.apache.hadoop.yarn.webapp.SubView;
-
-public class AboutPage extends AHSView {
-  @Override protected void preHead(Page.HTML<__> html) {
-    commonPreHead(html);
-    set(TITLE, "Timeline Server - Generic History Service");
-  }
-
-  @Override protected Class<? extends SubView> content() {
-    return AboutBlock.class;
-  }
-}

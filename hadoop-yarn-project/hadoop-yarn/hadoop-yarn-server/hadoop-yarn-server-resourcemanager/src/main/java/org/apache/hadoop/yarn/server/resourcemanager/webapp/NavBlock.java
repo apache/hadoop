@@ -23,10 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.LI;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 public class NavBlock extends HtmlBlock {
@@ -45,29 +45,29 @@ public class NavBlock extends HtmlBlock {
       div("#nav").
         h3("Cluster").
         ul().
-          li().a(url("cluster"), "About")._().
-          li().a(url("nodes"), "Nodes")._().
-          li().a(url("nodelabels"), "Node Labels")._();
+          li().a(url("cluster"), "About").__().
+          li().a(url("nodes"), "Nodes").__().
+          li().a(url("nodelabels"), "Node Labels").__();
     UL<LI<UL<DIV<Hamlet>>>> subAppsList = mainList.
           li().a(url("apps"), "Applications").
             ul();
-    subAppsList.li()._();
+    subAppsList.li().__();
     for (YarnApplicationState state : YarnApplicationState.values()) {
       subAppsList.
-              li().a(url("apps", state.toString()), state.toString())._();
+              li().a(url("apps", state.toString()), state.toString()).__();
     }
-    subAppsList._()._();
+    subAppsList.__().__();
     UL<DIV<Hamlet>> tools = mainList.
-          li().a(url("scheduler"), "Scheduler")._()._().
+          li().a(url("scheduler"), "Scheduler").__().__().
         h3("Tools").ul();
-    tools.li().a("/conf", "Configuration")._().
-          li().a("/logs", "Local logs")._().
-          li().a("/stacks", "Server stacks")._().
-          li().a("/jmx?qry=Hadoop:*", "Server metrics")._();
+    tools.li().a("/conf", "Configuration").__().
+          li().a("/logs", "Local logs").__().
+          li().a("/stacks", "Server stacks").__().
+          li().a("/jmx?qry=Hadoop:*", "Server metrics").__();
 
     if (addErrorsAndWarningsLink) {
-      tools.li().a(url("errors-and-warnings"), "Errors/Warnings")._();
+      tools.li().a(url("errors-and-warnings"), "Errors/Warnings").__();
     }
-    tools._()._();
+    tools.__().__();
   }
 }
