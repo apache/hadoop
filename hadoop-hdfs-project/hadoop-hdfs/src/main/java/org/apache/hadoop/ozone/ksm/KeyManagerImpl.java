@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.Del
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.util.Time;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,6 +96,7 @@ public class KeyManagerImpl implements KeyManager {
       // metadata entry in case of 0 length key.
       AllocatedBlock allocatedBlock =
           scmBlockClient.allocateBlock(Math.max(args.getDataSize(), 1));
+      long currentTime = Time.now();
       KsmKeyInfo keyBlock = new KsmKeyInfo.Builder()
           .setVolumeName(args.getVolumeName())
           .setBucketName(args.getBucketName())
@@ -103,6 +105,8 @@ public class KeyManagerImpl implements KeyManager {
           .setBlockID(allocatedBlock.getKey())
           .setContainerName(allocatedBlock.getPipeline().getContainerName())
           .setShouldCreateContainer(allocatedBlock.getCreateContainer())
+          .setCreationTime(currentTime)
+          .setModificationTime(currentTime)
           .build();
       metadataManager.put(keyKey, keyBlock.getProtobuf().toByteArray());
       LOG.debug("Key {} allocated in volume {} bucket {}",
