@@ -1066,10 +1066,8 @@ public class DataNode extends ReconfigurableBase
     return bpos;
   }
 
-
-  
   // used only for testing
-  void setHeartbeatsDisabledForTests(
+  public void setHeartbeatsDisabledForTests(
       boolean heartbeatsDisabledForTests) {
     this.heartbeatsDisabledForTests = heartbeatsDisabledForTests;
   }

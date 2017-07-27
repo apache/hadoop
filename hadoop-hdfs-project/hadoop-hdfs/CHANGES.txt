@@ -396,6 +396,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11742. Improve balancer usability after HDFS-8818. (kihwal)
 
+    HDFS-11896. Non-dfsUsed will be doubled on dead node re-registration.
+    (Brahma Reddy Battula via shv)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
