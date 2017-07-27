@@ -20,9 +20,16 @@ package org.apache.hadoop.ozone;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.ozone.protocol.proto
+    .ContainerProtos.ChunkInfo;
+import org.apache.hadoop.hdfs.ozone.protocol.proto
+    .ContainerProtos.GetKeyResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto
+    .ContainerProtos.KeyData;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
@@ -45,6 +52,7 @@ import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolPB;
+import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.apache.hadoop.scm.storage.ChunkOutputStream;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -375,34 +383,65 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
   public void addBucketAcls(String volumeName, String bucketName,
                             List<OzoneAcl> addAcls)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(addAcls);
+    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    builder.setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setAddAcls(addAcls);
+    keySpaceManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void removeBucketAcls(String volumeName, String bucketName,
                                List<OzoneAcl> removeAcls)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(removeAcls);
+    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    builder.setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setRemoveAcls(removeAcls);
+    keySpaceManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void setBucketVersioning(String volumeName, String bucketName,
                                   Versioning versioning)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(versioning);
+    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    builder.setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setIsVersionEnabled(getBucketVersioningFlag(
+            versioning));
+    keySpaceManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void setBucketStorageType(String volumeName, String bucketName,
                                    StorageType storageType)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(storageType);
+    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    builder.setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setStorageType(storageType);
+    keySpaceManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void deleteBucket(String volumeName, String bucketName)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    keySpaceManagerClient.deleteBucket(volumeName, bucketName);
   }
 
   @Override
@@ -480,14 +519,54 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
   public OzoneInputStream getKey(String volumeName, String bucketName,
                                  String keyName)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(keyName);
+    String requestId = UUID.randomUUID().toString();
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+    KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
+    String containerKey = buildContainerKey(volumeName,
+        bucketName, keyName);
+    String containerName = keyInfo.getContainerName();
+    XceiverClientSpi xceiverClient = getContainer(containerName);
+    boolean success = false;
+    try {
+      LOG.debug("get key accessing {} {}",
+          xceiverClient.getPipeline().getContainerName(), containerKey);
+      KeyData containerKeyData = KeyData.newBuilder().setContainerName(
+          xceiverClient.getPipeline().getContainerName())
+          .setName(containerKey).build();
+      GetKeyResponseProto response = ContainerProtocolCalls
+          .getKey(xceiverClient, containerKeyData, requestId);
+      List<ChunkInfo> chunks = response.getKeyData().getChunksList();
+      success = true;
+      return new OzoneInputStream(new ChunkInputStream(
+          containerKey, xceiverClientManager, xceiverClient,
+          chunks, requestId));
+    } finally {
+      if (!success) {
+        xceiverClientManager.releaseClient(xceiverClient);
+      }
+    }
   }
 
   @Override
   public void deleteKey(String volumeName, String bucketName,
                         String keyName)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(keyName);
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+    keySpaceManagerClient.deleteKey(keyArgs);
   }
 
   @Override
@@ -498,7 +577,7 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
   }
 
   @Override
-  public OzoneKey getkeyDetails(String volumeName, String bucketName,
+  public OzoneKey getKeyDetails(String volumeName, String bucketName,
                                   String keyName)
       throws IOException {
     Preconditions.checkNotNull(volumeName);
@@ -512,6 +591,27 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
     KsmKeyInfo keyInfo =
         keySpaceManagerClient.lookupKey(keyArgs);
     return new OzoneKey(keyInfo);
+  }
+
+  /**
+   * Converts Versioning to boolean.
+   *
+   * @param version
+   * @return corresponding boolean value
+   */
+  private boolean getBucketVersioningFlag(
+      Versioning version) {
+    if(version != null) {
+      switch(version) {
+      case ENABLED:
+        return true;
+      case DISABLED:
+      case NOT_DEFINED:
+      default:
+        return false;
+      }
+    }
+    return false;
   }
 
   @Override
