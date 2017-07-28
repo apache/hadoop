@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
@@ -161,7 +163,8 @@ public class TestHBaseTimelineStorageApps {
       String flow = null;
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
-      hbi.write(cluster, user, flow, flowVersion, runid, appId, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appId), te, UserGroupInformation.createRemoteUser(user));
       hbi.stop();
 
       // retrieve the row
@@ -279,7 +282,8 @@ public class TestHBaseTimelineStorageApps {
       String flow = "s!ome_f\tlow  _n am!e";
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
-      hbi.write(cluster, user, flow, flowVersion, runid, appId, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appId), te, UserGroupInformation.createRemoteUser(user));
 
       // Write entity again, this time without created time.
       entity = new ApplicationEntity();
@@ -291,7 +295,8 @@ public class TestHBaseTimelineStorageApps {
       entity.addInfo(infoMap1);
       te = new TimelineEntities();
       te.addEntity(entity);
-      hbi.write(cluster, user, flow, flowVersion, runid, appId, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appId), te, UserGroupInformation.createRemoteUser(user));
       hbi.stop();
 
       infoMap.putAll(infoMap1);
@@ -512,7 +517,9 @@ public class TestHBaseTimelineStorageApps {
       String flowVersion = "1111F01C2287BA";
       long runid = 1009876543218L;
       String appName = "application_123465899910_1001";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, entities);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), entities,
+          UserGroupInformation.createRemoteUser(user));
       hbi.stop();
 
       // retrieve the row
@@ -627,14 +634,17 @@ public class TestHBaseTimelineStorageApps {
       hbi.init(c1);
       hbi.start();
       // Writing application entity.
+      TimelineCollectorContext context = new TimelineCollectorContext("c1",
+          "u1", "f1", "v1", 1002345678919L, appId);
+      UserGroupInformation user = UserGroupInformation.createRemoteUser("u1");
       try {
-        hbi.write("c1", "u1", "f1", "v1", 1002345678919L, appId, teApp);
+        hbi.write(context, teApp, user);
         Assert.fail("Expected an exception as metric values are non integral");
       } catch (IOException e) {}
 
       // Writing generic entity.
       try {
-        hbi.write("c1", "u1", "f1", "v1", 1002345678919L, appId, teEntity);
+        hbi.write(context, teEntity, user);
         Assert.fail("Expected an exception as metric values are non integral");
       } catch (IOException e) {}
       hbi.stop();

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
@@ -71,6 +73,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKeyPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTable;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -196,12 +203,15 @@ public class TestHBaseTimelineStorageEntities {
       hbi.start();
       String cluster = "cluster_test_write_entity";
       String user = "user1";
+      String subAppUser = "subAppUser1";
       String flow = "some_flow_name";
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
       String appName = ApplicationId.newInstance(System.currentTimeMillis() +
           9000000L, 1).toString();
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te,
+          UserGroupInformation.createRemoteUser(subAppUser));
       hbi.stop();
 
       // scan the table and see that entity exists
@@ -352,12 +362,109 @@ public class TestHBaseTimelineStorageEntities {
         assertEquals(metricValues.get(ts - 20000),
             metric.getValues().get(ts - 20000));
       }
+
+      // verify for sub application table entities.
+      verifySubApplicationTableEntities(cluster, user, flow, flowVersion, runid,
+          appName, subAppUser, c1, entity, id, type, infoMap, isRelatedTo,
+          relatesTo, conf, metricValues, metrics, cTime, m1);
     } finally {
       if (hbi != null) {
         hbi.stop();
         hbi.close();
       }
     }
+  }
+
+  private void verifySubApplicationTableEntities(String cluster, String user,
+      String flow, String flowVersion, Long runid, String appName,
+      String subAppUser, Configuration c1, TimelineEntity entity, String id,
+      String type, Map<String, Object> infoMap,
+      Map<String, Set<String>> isRelatedTo, Map<String, Set<String>> relatesTo,
+      Map<String, String> conf, Map<Long, Number> metricValues,
+      Set<TimelineMetric> metrics, Long cTime, TimelineMetric m1)
+      throws IOException {
+    Scan s = new Scan();
+    // read from SubApplicationTable
+    byte[] startRow = new SubApplicationRowKeyPrefix(cluster, subAppUser, null,
+        null, null, null).getRowKeyPrefix();
+    s.setStartRow(startRow);
+    s.setMaxVersions(Integer.MAX_VALUE);
+    Connection conn = ConnectionFactory.createConnection(c1);
+    ResultScanner scanner =
+        new SubApplicationTable().getResultScanner(c1, conn, s);
+
+    int rowCount = 0;
+    int colCount = 0;
+    KeyConverter<String> stringKeyConverter = new StringKeyConverter();
+    for (Result result : scanner) {
+      if (result != null && !result.isEmpty()) {
+        rowCount++;
+        colCount += result.size();
+        byte[] row1 = result.getRow();
+        assertTrue(verifyRowKeyForSubApplication(row1, subAppUser, cluster,
+            user, entity));
+
+        // check info column family
+        String id1 = SubApplicationColumn.ID.readResult(result).toString();
+        assertEquals(id, id1);
+
+        String type1 = SubApplicationColumn.TYPE.readResult(result).toString();
+        assertEquals(type, type1);
+
+        Long cTime1 =
+            (Long) SubApplicationColumn.CREATED_TIME.readResult(result);
+        assertEquals(cTime1, cTime);
+
+        Map<String, Object> infoColumns = SubApplicationColumnPrefix.INFO
+            .readResults(result, new StringKeyConverter());
+        assertEquals(infoMap, infoColumns);
+
+        // Remember isRelatedTo is of type Map<String, Set<String>>
+        for (Map.Entry<String, Set<String>> isRelatedToEntry : isRelatedTo
+            .entrySet()) {
+          Object isRelatedToValue = SubApplicationColumnPrefix.IS_RELATED_TO
+              .readResult(result, isRelatedToEntry.getKey());
+          String compoundValue = isRelatedToValue.toString();
+          // id7?id9?id6
+          Set<String> isRelatedToValues =
+              new HashSet<String>(Separator.VALUES.splitEncoded(compoundValue));
+          assertEquals(isRelatedTo.get(isRelatedToEntry.getKey()).size(),
+              isRelatedToValues.size());
+          for (String v : isRelatedToEntry.getValue()) {
+            assertTrue(isRelatedToValues.contains(v));
+          }
+        }
+
+        // RelatesTo
+        for (Map.Entry<String, Set<String>> relatesToEntry : relatesTo
+            .entrySet()) {
+          String compoundValue = SubApplicationColumnPrefix.RELATES_TO
+              .readResult(result, relatesToEntry.getKey()).toString();
+          // id3?id4?id5
+          Set<String> relatesToValues =
+              new HashSet<String>(Separator.VALUES.splitEncoded(compoundValue));
+          assertEquals(relatesTo.get(relatesToEntry.getKey()).size(),
+              relatesToValues.size());
+          for (String v : relatesToEntry.getValue()) {
+            assertTrue(relatesToValues.contains(v));
+          }
+        }
+
+        // Configuration
+        Map<String, Object> configColumns = SubApplicationColumnPrefix.CONFIG
+            .readResults(result, stringKeyConverter);
+        assertEquals(conf, configColumns);
+
+        NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
+            SubApplicationColumnPrefix.METRIC.readResultsWithTimestamps(result,
+                stringKeyConverter);
+
+        NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
+        matchMetrics(metricValues, metricMap);
+      }
+    }
+    assertEquals(1, rowCount);
+    assertEquals(16, colCount);
   }
 
   private boolean isRowKeyCorrect(byte[] rowKey, String cluster, String user,
@@ -407,7 +514,9 @@ public class TestHBaseTimelineStorageEntities {
       byte[] startRow =
           new EntityRowKeyPrefix(cluster, user, flow, runid, appName)
               .getRowKeyPrefix();
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, entities);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), entities,
+          UserGroupInformation.createRemoteUser(user));
       hbi.stop();
       // scan the table and see that entity exists
       Scan s = new Scan();
@@ -510,7 +619,9 @@ public class TestHBaseTimelineStorageEntities {
       String flowVersion = "1111F01C2287BA";
       long runid = 1009876543218L;
       String appName = "application_123465899910_2001";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, entities);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), entities,
+          UserGroupInformation.createRemoteUser(user));
       hbi.stop();
 
       // read the timeline entity using the reader this time
@@ -1757,5 +1868,16 @@ public class TestHBaseTimelineStorageEntities {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
+  }
+
+  private boolean verifyRowKeyForSubApplication(byte[] rowKey, String suAppUser,
+      String cluster, String user, TimelineEntity te) {
+    SubApplicationRowKey key = SubApplicationRowKey.parseRowKey(rowKey);
+    assertEquals(suAppUser, key.getSubAppUserId());
+    assertEquals(cluster, key.getClusterId());
+    assertEquals(te.getType(), key.getEntityType());
+    assertEquals(te.getId(), key.getEntityId());
+    assertEquals(user, key.getUserId());
+    return true;
   }
 }

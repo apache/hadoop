@@ -28,12 +28,14 @@ import java.io.PrintWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse.TimelineWriteError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -68,10 +70,17 @@ public class FileSystemTimelineWriterImpl extends AbstractService
   }
 
   @Override
-  public TimelineWriteResponse write(String clusterId, String userId,
-      String flowName, String flowVersion, long flowRunId, String appId,
-      TimelineEntities entities) throws IOException {
+  public TimelineWriteResponse write(TimelineCollectorContext context,
+      TimelineEntities entities, UserGroupInformation callerUgi)
+      throws IOException {
     TimelineWriteResponse response = new TimelineWriteResponse();
+    String clusterId = context.getClusterId();
+    String userId = context.getUserId();
+    String flowName = context.getFlowName();
+    String flowVersion = context.getFlowVersion();
+    long flowRunId = context.getFlowRunId();
+    String appId = context.getAppId();
+
     for (TimelineEntity entity : entities.getEntities()) {
       write(clusterId, userId, flowName, flowVersion, flowRunId, appId, entity,
           response);

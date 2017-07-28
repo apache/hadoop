@@ -56,26 +56,6 @@ public class SubApplicationRowKeyPrefix extends SubApplicationRowKey
         userId);
   }
 
-  /**
-   * Creates a prefix which generates the following rowKeyPrefixes for the sub
-   * application table:
-   * {@code subAppUserId!clusterId!entityType!entityPrefix!entityId!userId}.
-   *
-   * subAppUserId is usually the doAsUser.
-   * userId is the yarn user that the AM runs as.
-   *
-   * @param clusterId
-   *          identifying the cluster
-   * @param subAppUserId
-   *          identifying the sub app user
-   * @param userId
-   *          identifying the user who runs the AM
-   */
-  public SubApplicationRowKeyPrefix(String clusterId, String subAppUserId,
-      String userId) {
-    this(subAppUserId, clusterId, null, null, null, userId);
-  }
-
   /*
    * (non-Javadoc)
    *
