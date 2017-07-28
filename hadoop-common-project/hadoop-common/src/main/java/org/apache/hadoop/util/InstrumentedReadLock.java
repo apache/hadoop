@@ -19,11 +19,11 @@ package org.apache.hadoop.util;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
 
 /**
  * This is a wrap class of a <tt>ReadLock</tt>.
@@ -51,7 +51,7 @@ public class InstrumentedReadLock extends InstrumentedLock {
     };
   };
 
-  public InstrumentedReadLock(String name, Log logger,
+  public InstrumentedReadLock(String name, Logger logger,
       ReentrantReadWriteLock readWriteLock,
       long minLoggingGapMs, long lockWarningThresholdMs) {
     this(name, logger, readWriteLock, minLoggingGapMs, lockWarningThresholdMs,
@@ -59,7 +59,7 @@ public class InstrumentedReadLock extends InstrumentedLock {
   }
 
   @VisibleForTesting
-  InstrumentedReadLock(String name, Log logger,
+  InstrumentedReadLock(String name, Logger logger,
       ReentrantReadWriteLock readWriteLock,
       long minLoggingGapMs, long lockWarningThresholdMs, Timer clock) {
     super(name, logger, readWriteLock.readLock(), minLoggingGapMs,

@@ -51,6 +51,28 @@ public class TestErasureCodingPolicy {
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("cellSize", e);
     }
+    try {
+      new ErasureCodingPolicy(null, 1024, (byte) -1);
+      fail("Instantiated invalid ErasureCodingPolicy");
+    } catch (NullPointerException e) {
+    }
+    try {
+      new ErasureCodingPolicy(SCHEMA_1, -1, (byte) -1);
+      fail("Instantiated invalid ErasureCodingPolicy");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("cellSize", e);
+    }
+    try {
+      new ErasureCodingPolicy(null, 1024);
+      fail("Instantiated invalid ErasureCodingPolicy");
+    } catch (NullPointerException e) {
+    }
+    try {
+      new ErasureCodingPolicy(SCHEMA_1, -1);
+      fail("Instantiated invalid ErasureCodingPolicy");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("cellSize", e);
+    }
   }
 
   @Test

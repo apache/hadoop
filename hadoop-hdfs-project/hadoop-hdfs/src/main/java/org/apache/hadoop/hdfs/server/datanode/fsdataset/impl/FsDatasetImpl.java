@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 
 import javax.management.NotCompliantMBeanException;
@@ -46,8 +47,6 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -119,6 +118,8 @@ import org.apache.hadoop.util.Timer;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -127,7 +128,7 @@ import com.google.common.collect.Sets;
  ***************************************************/
 @InterfaceAudience.Private
 class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
-  static final Log LOG = LogFactory.getLog(FsDatasetImpl.class);
+  static final Logger LOG = LoggerFactory.getLogger(FsDatasetImpl.class);
   private final static boolean isNativeIOAvailable;
   private Timer timer;
   static {
@@ -270,6 +271,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
     this.datasetLock = new AutoCloseableLock(
         new InstrumentedLock(getClass().getName(), LOG,
+          new ReentrantLock(true),
           conf.getTimeDuration(
             DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY,
             DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT,
@@ -498,7 +500,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   /**
    * Removes a set of volumes from FsDataset.
-   * @param storageLocationsToRemove a set of
+   * @param storageLocsToRemove a set of
    * {@link StorageLocation}s for each volume.
    * @param clearFailure set true to clear failure information.
    */
@@ -1422,13 +1424,27 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             minBytesRcvd + ", " + maxBytesRcvd + "].");
       }
 
+      long bytesOnDisk = rbw.getBytesOnDisk();
+      long blockDataLength = rbw.getReplicaInfo().getBlockDataLength();
+      if (bytesOnDisk != blockDataLength) {
+        LOG.info("Resetting bytesOnDisk to match blockDataLength (={}) for " +
+            "replica {}", blockDataLength, rbw);
+        bytesOnDisk = blockDataLength;
+        rbw.setLastChecksumAndDataLen(bytesOnDisk, null);
+      }
+
+      if (bytesOnDisk < bytesAcked) {
+        throw new ReplicaNotFoundException("Found fewer bytesOnDisk than " +
+            "bytesAcked for replica " + rbw);
+      }
+
       FsVolumeReference ref = rbw.getReplicaInfo()
           .getVolume().obtainReference();
       try {
         // Truncate the potentially corrupt portion.
         // If the source was client and the last node in the pipeline was lost,
         // any corrupt data written after the acked length can go unnoticed.
-        if (numBytes > bytesAcked) {
+        if (bytesOnDisk > bytesAcked) {
           rbw.getReplicaInfo().truncateBlock(bytesAcked);
           rbw.setNumBytes(bytesAcked);
           rbw.setLastChecksumAndDataLen(bytesAcked, null);
@@ -2392,7 +2408,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         datanode.reportBadBlocks(new ExtendedBlock(bpid, corruptBlock),
             memBlockInfo.getVolume());
       } catch (IOException e) {
-        LOG.warn("Failed to repot bad block " + corruptBlock, e);
+        LOG.warn("Failed to report bad block " + corruptBlock, e);
       }
     }
   }
@@ -2458,8 +2474,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       //check replica bytes on disk.
       if (replica.getBytesOnDisk() < replica.getVisibleLength()) {
-        throw new IOException("THIS IS NOT SUPPOSED TO HAPPEN:"
-            + " getBytesOnDisk() < getVisibleLength(), rip=" + replica);
+        throw new IOException("getBytesOnDisk() < getVisibleLength(), rip="
+            + replica);
       }
 
       //check the replica's files

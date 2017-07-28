@@ -29,6 +29,7 @@ import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -68,6 +69,11 @@ public final class ErasureCodingPolicyManager {
   private Map<Byte, ErasureCodingPolicy> userPoliciesByID;
 
   /**
+   * All removed policies sorted by name.
+   */
+  private Map<String, ErasureCodingPolicy> removedPoliciesByName;
+
+  /**
    * All enabled policies maintained in NN memory for fast querying,
    * identified and sorted by its name.
    */
@@ -91,6 +97,7 @@ public final class ErasureCodingPolicyManager {
         DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
     this.userPoliciesByID = new TreeMap<>();
     this.userPoliciesByName = new TreeMap<>();
+    this.removedPoliciesByName = new TreeMap<>();
     this.enabledPoliciesByName = new TreeMap<>();
     for (String policyName : policyNames) {
       if (policyName.trim().isEmpty()) {
@@ -205,6 +212,10 @@ public final class ErasureCodingPolicyManager {
     // This is a placeholder for HDFS-7337.
   }
 
+  /**
+   * Add an erasure coding policy.
+   * @return the added policy
+   */
   public synchronized ErasureCodingPolicy addPolicy(ErasureCodingPolicy policy)
       throws IllegalECPolicyException {
     if (!CodecUtil.hasCodec(policy.getCodecName())) {
@@ -243,4 +254,74 @@ public final class ErasureCodingPolicyManager {
         .max(Byte::compareTo).orElse(USER_DEFINED_POLICY_START_ID);
     return (byte) (currentId + 1);
   }
+
+  /**
+   * Remove an User erasure coding policy by policyName.
+   */
+  public synchronized void removePolicy(String name) {
+    if (SystemErasureCodingPolicies.getByName(name) != null) {
+      throw new IllegalArgumentException("System erasure coding policy " +
+          name + " cannot be removed");
+    }
+    ErasureCodingPolicy policy = userPoliciesByName.get(name);
+    if (policy == null) {
+      throw new IllegalArgumentException("The policy name " +
+          name + " does not exists");
+    }
+    enabledPoliciesByName.remove(name);
+    removedPoliciesByName.put(name, policy);
+  }
+
+  public List<ErasureCodingPolicy> getRemovedPolicies() {
+    return removedPoliciesByName.values().stream().collect(Collectors.toList());
+  }
+
+  /**
+   * Disable an erasure coding policy by policyName.
+   */
+  public synchronized void disablePolicy(String name) {
+    ErasureCodingPolicy sysEcPolicy = SystemErasureCodingPolicies
+        .getByName(name);
+    ErasureCodingPolicy userEcPolicy = userPoliciesByName.get(name);
+    LOG.info("Disable the erasure coding policy " + name);
+    if (sysEcPolicy == null &&
+        userEcPolicy == null) {
+      throw new IllegalArgumentException("The policy name " +
+          name + " does not exists");
+    }
+
+    if(sysEcPolicy != null){
+      enabledPoliciesByName.remove(name);
+      removedPoliciesByName.put(name, sysEcPolicy);
+    }
+    if(userEcPolicy != null){
+      enabledPoliciesByName.remove(name);
+      removedPoliciesByName.put(name, userEcPolicy);
+    }
+  }
+
+  /**
+   * Enable an erasure coding policy by policyName.
+   */
+  public synchronized void enablePolicy(String name) {
+    ErasureCodingPolicy sysEcPolicy = SystemErasureCodingPolicies
+        .getByName(name);
+    ErasureCodingPolicy userEcPolicy = userPoliciesByName.get(name);
+    LOG.info("Enable the erasure coding policy " + name);
+    if (sysEcPolicy == null &&
+        userEcPolicy == null) {
+      throw new IllegalArgumentException("The policy name " +
+          name + " does not exists");
+    }
+
+    if(sysEcPolicy != null){
+      enabledPoliciesByName.put(name, sysEcPolicy);
+      removedPoliciesByName.remove(name);
+    }
+    if(userEcPolicy != null) {
+      enabledPoliciesByName.put(name, userEcPolicy);
+      removedPoliciesByName.remove(name);
+    }
+  }
+
 }

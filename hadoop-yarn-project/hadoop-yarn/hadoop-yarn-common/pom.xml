@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha4-SNAPSHOT</version>
+    <version>3.0.0-beta1-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-common</artifactId>
-  <version>3.0.0-alpha4-SNAPSHOT</version>
+  <version>3.0.0-beta1-SNAPSHOT</version>
   <name>Apache Hadoop YARN Common</name>
 
   <properties>
@@ -341,4 +341,26 @@
       </plugin>
     </plugins>
   </build>
+  <!-- TODO: Remove this profile when hamlet was removed. -->
+  <profiles>
+    <profile>
+      <id>java9</id>
+      <activation>
+        <jdk>9</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>src/main/java/org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
+                <exclude>src/main/test/org/apache/haodop/yarn/webapp/hamlet/**</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

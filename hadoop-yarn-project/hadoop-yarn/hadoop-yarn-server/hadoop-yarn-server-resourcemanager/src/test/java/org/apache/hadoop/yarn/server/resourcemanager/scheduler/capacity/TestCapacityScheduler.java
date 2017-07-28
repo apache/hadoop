@@ -33,9 +33,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
@@ -50,6 +52,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -90,7 +93,6 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
-import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -104,7 +106,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -156,8 +157,12 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -2384,8 +2389,10 @@ public class TestCapacityScheduler {
     sch.getApplicationAttempt(appAttemptId).getLiveContainersMap()
         .put(newContainerId, rmContainer);
     QueueMetrics queueA1M = queueA1.getMetrics();
-    queueA1M.incrPendingResources("user1", 1, resource);
-    queueA1M.allocateResources("user1", resource);
+    queueA1M.incrPendingResources(rmContainer.getNodeLabelExpression(),
+        "user1", 1, resource);
+    queueA1M.allocateResources(rmContainer.getNodeLabelExpression(),
+        "user1", resource);
     // remove attempt
     sch.handle(new AppAttemptRemovedSchedulerEvent(appAttemptId,
         RMAppAttemptState.KILLED, true));
@@ -2957,9 +2964,7 @@ public class TestCapacityScheduler {
         new YarnConfiguration(new CapacitySchedulerConfiguration());
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    MockRM rm = new MockRM(conf, memStore);
+    MockRM rm = new MockRM(conf);
     rm.start();
 
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
@@ -3121,10 +3126,7 @@ public class TestCapacityScheduler {
         new YarnConfiguration(
             setupQueueConfiguration(new CapacitySchedulerConfiguration()));
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
-
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 100 * GB, rm1.getResourceTrackerService());
@@ -3204,9 +3206,7 @@ public class TestCapacityScheduler {
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 24 * GB, rm1.getResourceTrackerService());
@@ -3251,9 +3251,7 @@ public class TestCapacityScheduler {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    MockRM rm = new MockRM(conf, memStore) {
+    MockRM rm = new MockRM(conf) {
       protected RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
       }
@@ -3490,6 +3488,7 @@ public class TestCapacityScheduler {
     rm.stop();
   }
 
+
   @Test
   public void testHeadRoomCalculationWithDRC() throws Exception {
     // test with total cluster resource of 20GB memory and 20 vcores.
@@ -3659,9 +3658,8 @@ public class TestCapacityScheduler {
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    MockRM rm = new MockRM(conf, memStore) {
+
+    MockRM rm = new MockRM(conf) {
       protected RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
       }
@@ -4072,6 +4070,143 @@ public class TestCapacityScheduler {
     rm.stop();
   }
 
+  @Test (timeout = 300000)
+  public void testUserLimitThroughput() throws Exception {
+    // Since this is more of a performance unit test, only run if
+    // RunUserLimitThroughput is set (-DRunUserLimitThroughput=true)
+    Assume.assumeTrue(Boolean.valueOf(
+        System.getProperty("RunUserLimitThroughput")));
+
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+        100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
+    csconf.setResourceComparator(DominantResourceCalculator.class);
+
+    YarnConfiguration conf = new YarnConfiguration(csconf);
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    LeafQueue qb = (LeafQueue)cs.getQueue("default");
+
+    // For now make user limit large so we can activate all applications
+    qb.setUserLimitFactor((float)100.0);
+    qb.setupConfigurableCapacities();
+
+    SchedulerEvent addAppEvent;
+    SchedulerEvent addAttemptEvent;
+    Container container = mock(Container.class);
+    ApplicationSubmissionContext submissionContext =
+        mock(ApplicationSubmissionContext.class);
+
+    final int appCount = 100;
+    ApplicationId[] appids = new ApplicationId[appCount];
+    RMAppAttemptImpl[] attempts = new RMAppAttemptImpl[appCount];
+    ApplicationAttemptId[] appAttemptIds = new ApplicationAttemptId[appCount];
+    RMAppImpl[] apps = new RMAppImpl[appCount];
+    RMAppAttemptMetrics[] attemptMetrics = new RMAppAttemptMetrics[appCount];
+    for (int i=0; i<appCount; i++) {
+      appids[i] = BuilderUtils.newApplicationId(100, i);
+      appAttemptIds[i] =
+      BuilderUtils.newApplicationAttemptId(appids[i], 1);
+
+      attemptMetrics[i] =
+          new RMAppAttemptMetrics(appAttemptIds[i], rm.getRMContext());
+      apps[i] = mock(RMAppImpl.class);
+      when(apps[i].getApplicationId()).thenReturn(appids[i]);
+      attempts[i] = mock(RMAppAttemptImpl.class);
+      when(attempts[i].getMasterContainer()).thenReturn(container);
+      when(attempts[i].getSubmissionContext()).thenReturn(submissionContext);
+      when(attempts[i].getAppAttemptId()).thenReturn(appAttemptIds[i]);
+      when(attempts[i].getRMAppAttemptMetrics()).thenReturn(attemptMetrics[i]);
+      when(apps[i].getCurrentAppAttempt()).thenReturn(attempts[i]);
+
+      rm.getRMContext().getRMApps().put(appids[i], apps[i]);
+      addAppEvent =
+          new AppAddedSchedulerEvent(appids[i], "default", "user1");
+      cs.handle(addAppEvent);
+      addAttemptEvent =
+          new AppAttemptAddedSchedulerEvent(appAttemptIds[i], false);
+      cs.handle(addAttemptEvent);
+    }
+
+    // add nodes  to cluster, so cluster has 20GB and 20 vcores
+    Resource newResource = Resource.newInstance(10 * GB, 10);
+    RMNode node = MockNodes.newNodeInfo(0, newResource, 1, "127.0.0.1");
+    cs.handle(new NodeAddedSchedulerEvent(node));
+
+    Resource newResource2 = Resource.newInstance(10 * GB, 10);
+    RMNode node2 = MockNodes.newNodeInfo(0, newResource2, 1, "127.0.0.2");
+    cs.handle(new NodeAddedSchedulerEvent(node2));
+
+    Priority u0Priority = TestUtils.createMockPriority(1);
+    RecordFactory recordFactory =
+        RecordFactoryProvider.getRecordFactory(null);
+
+    FiCaSchedulerApp[] fiCaApps = new FiCaSchedulerApp[appCount];
+    for (int i=0;i<appCount;i++) {
+      fiCaApps[i] =
+          cs.getSchedulerApplications().get(apps[i].getApplicationId())
+              .getCurrentAppAttempt();
+      // allocate container for app2 with 1GB memory and 1 vcore
+      fiCaApps[i].updateResourceRequests(Collections.singletonList(
+          TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true,
+              u0Priority, recordFactory)));
+    }
+    // Now force everything to be over user limit
+    qb.setUserLimitFactor((float)0.0);
+
+    // Quiet the loggers while measuring throughput
+    for (Enumeration<?> loggers=LogManager.getCurrentLoggers();
+        loggers.hasMoreElements(); )  {
+      Logger logger = (Logger) loggers.nextElement();
+      logger.setLevel(Level.WARN);
+    }
+    final int topn = 20;
+    final int iterations = 2000000;
+    final int printInterval = 20000;
+    final float numerator = 1000.0f * printInterval;
+    PriorityQueue<Long> queue = new PriorityQueue<>(topn,
+        Collections.reverseOrder());
+
+    long n = Time.monotonicNow();
+    long timespent = 0;
+    for (int i = 0; i < iterations; i+=2) {
+      if (i > 0  && i % printInterval == 0){
+        long ts = (Time.monotonicNow() - n);
+        if (queue.size() < topn) {
+          queue.offer(ts);
+        } else {
+          Long last = queue.peek();
+          if (last > ts) {
+            queue.poll();
+            queue.offer(ts);
+          }
+        }
+        System.out.println(i + " " + (numerator / ts));
+        n= Time.monotonicNow();
+      }
+    cs.handle(new NodeUpdateSchedulerEvent(node));
+    cs.handle(new NodeUpdateSchedulerEvent(node2));
+    }
+    timespent=0;
+    int entries = queue.size();
+    while(queue.size() > 0){
+      long l = queue.poll();
+      timespent += l;
+    }
+    System.out.println("Avg of fastest " + entries + ": "
+        + numerator / (timespent / entries));
+    rm.stop();
+  }
+
   @Test
   public void testCSQueueBlocked() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
@@ -4414,5 +4549,45 @@ public class TestCapacityScheduler {
     Assert.assertTrue(b1 instanceof ParentQueue);
     Assert.assertEquals(b1.getState(), QueueState.RUNNING);
     Assert.assertTrue(!b1.getChildQueues().isEmpty());
+  }
+
+  @Test(timeout = 30000)
+  public void testAMLimitDouble() throws Exception {
+    CapacitySchedulerConfiguration config =
+        new CapacitySchedulerConfiguration();
+    config.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class.getName());
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(config);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setInt("yarn.scheduler.minimum-allocation-mb", 512);
+    conf.setInt("yarn.scheduler.minimum-allocation-vcores", 1);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    rm.registerNode("127.0.0.1:1234", 10 * GB);
+    rm.registerNode("127.0.0.1:1235", 10 * GB);
+    rm.registerNode("127.0.0.1:1236", 10 * GB);
+    rm.registerNode("127.0.0.1:1237", 10 * GB);
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    waitforNMRegistered(scheduler, 4, 5);
+    LeafQueue queueA =
+        (LeafQueue) ((CapacityScheduler) scheduler).getQueue("default");
+    Resource amResourceLimit = queueA.getAMResourceLimit();
+    Assert.assertEquals(4096, amResourceLimit.getMemorySize());
+    Assert.assertEquals(4, amResourceLimit.getVirtualCores());
+    rm.stop();
+  }
+
+  private void waitforNMRegistered(ResourceScheduler scheduler, int nodecount,
+      int timesec) throws InterruptedException {
+    long start = System.currentTimeMillis();
+    while (System.currentTimeMillis() - start < timesec * 1000) {
+      if (scheduler.getNumClusterNodes() < nodecount) {
+        Thread.sleep(100);
+      } else {
+        break;
+      }
+    }
   }
 }

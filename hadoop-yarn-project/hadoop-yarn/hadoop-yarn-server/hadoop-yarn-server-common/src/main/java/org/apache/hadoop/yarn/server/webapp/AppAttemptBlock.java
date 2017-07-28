@@ -36,10 +36,9 @@ import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 import com.google.inject.Inject;
@@ -94,7 +93,7 @@ public class AppAttemptBlock extends HtmlBlock {
       String message =
           "Failed to read the application attempt " + appAttemptId + ".";
       LOG.error(message, e);
-      html.p()._(message)._();
+      html.p().__(message).__();
       return;
     }
 
@@ -140,14 +139,14 @@ public class AppAttemptBlock extends HtmlBlock {
     if (exceptionWhenGetContainerReports) {
       html
         .p()
-        ._(
+        .__(
           "Sorry, Failed to get containers for application attempt" + attemptid
-              + ".")._();
+              + ".").__();
       return;
     }
 
     createAttemptHeadRoomTable(html);
-    html._(InfoBlock.class);
+    html.__(InfoBlock.class);
 
     createTablesForAttemptMetrics(html);
 
@@ -155,7 +154,7 @@ public class AppAttemptBlock extends HtmlBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#containers").thead().tr().th(".id", "Container ID")
           .th(".node", "Node").th(".exitstatus", "Container Exit Status")
-          .th(".logs", "Logs")._()._().tbody();
+          .th(".logs", "Logs").__().__().tbody();
 
     StringBuilder containersTableData = new StringBuilder("[\n");
     for (ContainerReport containerReport : containers) {
@@ -186,9 +185,9 @@ public class AppAttemptBlock extends HtmlBlock {
     }
     containersTableData.append("]");
     html.script().$type("text/javascript")
-      ._("var containersTableData=" + containersTableData)._();
+      .__("var containersTableData=" + containersTableData).__();
 
-    tbody._()._();
+    tbody.__().__();
   }
 
   protected void generateOverview(ApplicationAttemptReport appAttemptReport,
@@ -196,18 +195,18 @@ public class AppAttemptBlock extends HtmlBlock {
       String node) {
     String amContainerId = appAttempt.getAmContainerId();
     info("Application Attempt Overview")
-      ._(
+      .__(
         "Application Attempt State:",
         appAttempt.getAppAttemptState() == null ? UNAVAILABLE : appAttempt
           .getAppAttemptState())
-      ._("AM Container:",
+      .__("AM Container:",
           amContainerId == null
               || containers == null
               || !hasAMContainer(appAttemptReport.getAMContainerId(),
                   containers) ? null : root_url("container", amContainerId),
           amContainerId == null ? "N/A" : amContainerId)
-      ._("Node:", node)
-      ._(
+      .__("Node:", node)
+      .__(
         "Tracking URL:",
         appAttempt.getTrackingUrl() == null
             || appAttempt.getTrackingUrl().equals(UNAVAILABLE) ? null
@@ -219,7 +218,7 @@ public class AppAttemptBlock extends HtmlBlock {
                 || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.FAILED
                 || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.KILLED
                 ? "History" : "ApplicationMaster")
-      ._(
+      .__(
         "Diagnostics Info:",
         appAttempt.getDiagnosticsInfo() == null ? "" : appAttempt
           .getDiagnosticsInfo());

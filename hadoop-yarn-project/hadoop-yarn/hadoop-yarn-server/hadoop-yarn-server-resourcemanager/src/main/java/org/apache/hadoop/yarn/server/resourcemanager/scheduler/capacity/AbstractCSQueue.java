@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -111,6 +112,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected ReentrantReadWriteLock.WriteLock writeLock;
 
   volatile Priority priority = Priority.newInstance(0);
+  private Map<String, Float> userWeights = new HashMap<String, Float>();
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -332,9 +334,26 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       this.priority = csContext.getConfiguration().getQueuePriority(
           getQueuePath());
+
+      this.userWeights = getUserWeightsFromHierarchy();
     } finally {
       writeLock.unlock();
     }
+  }
+
+  private Map<String, Float> getUserWeightsFromHierarchy() throws IOException {
+    Map<String, Float> unionInheritedWeights = new HashMap<String, Float>();
+    CSQueue parentQ = getParent();
+    if (parentQ != null) {
+      // Inherit all of parent's user's weights
+      unionInheritedWeights.putAll(parentQ.getUserWeights());
+    }
+    // Insert this queue's user's weights, overriding parent's user's weights if
+    // there is overlap.
+    CapacitySchedulerConfiguration csConf = csContext.getConfiguration();
+    unionInheritedWeights.putAll(
+        csConf.getAllUserWeightsForQueue(getQueuePath()));
+    return unionInheritedWeights;
   }
 
   private void initializeQueueState(QueueState previousState,
@@ -597,6 +616,11 @@ public abstract class AbstractCSQueue implements CSQueue {
         minimumAllocation);
   }
 
+  public boolean hasChildQueues() {
+    List<CSQueue> childQueues = getChildQueues();
+    return childQueues != null && !childQueues.isEmpty();
+  }
+
   boolean canAssignToThisQueue(Resource clusterResource,
       String nodePartition, ResourceLimits currentResourceLimits,
       Resource resourceCouldBeUnreserved, SchedulingMode schedulingMode) {
@@ -622,7 +646,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       // When queue is a parent queue: Headroom = limit - used + killable
       // When queue is a leaf queue: Headroom = limit - used (leaf queue cannot preempt itself)
       Resource usedExceptKillable = nowTotalUsed;
-      if (null != getChildQueues() && !getChildQueues().isEmpty()) {
+      if (hasChildQueues()) {
         usedExceptKillable = Resources.subtract(nowTotalUsed,
             getTotalKillableResource(nodePartition));
       }
@@ -955,5 +979,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public Priority getPriority() {
     return this.priority;
+  }
+
+  @Override
+  public Map<String, Float> getUserWeights() {
+    return userWeights;
   }
 }

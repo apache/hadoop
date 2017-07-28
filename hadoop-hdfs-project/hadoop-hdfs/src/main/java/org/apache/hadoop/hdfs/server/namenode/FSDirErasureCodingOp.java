@@ -218,6 +218,31 @@ final class FSDirErasureCodingOp {
     return fsn.getErasureCodingPolicyManager().addPolicy(policy);
   }
 
+  /**
+   * Remove an erasure coding policy.
+   *
+   * @param fsn namespace
+   * @param ecPolicyName the name of the policy to be removed
+   * @throws IOException
+   */
+  static void removeErasureCodePolicy(final FSNamesystem fsn,
+      String ecPolicyName) throws IOException {
+    Preconditions.checkNotNull(ecPolicyName);
+    fsn.getErasureCodingPolicyManager().removePolicy(ecPolicyName);
+  }
+
+  static void enableErasureCodePolicy(final FSNamesystem fsn,
+      String ecPolicyName) throws IOException {
+    Preconditions.checkNotNull(ecPolicyName);
+    fsn.getErasureCodingPolicyManager().enablePolicy(ecPolicyName);
+  }
+
+  static void disableErasureCodePolicy(final FSNamesystem fsn,
+      String ecPolicyName) throws IOException {
+    Preconditions.checkNotNull(ecPolicyName);
+    fsn.getErasureCodingPolicyManager().disablePolicy(ecPolicyName);
+  }
+
   private static List<XAttr> removeErasureCodingPolicyXAttr(
       final FSNamesystem fsn, final INodesInPath srcIIP) throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
@@ -330,9 +355,8 @@ final class FSDirErasureCodingOp {
     Preconditions.checkNotNull(iip, "INodes cannot be null");
     fsd.readLock();
     try {
-      List<INode> inodes = iip.getReadOnlyINodes();
-      for (int i = inodes.size() - 1; i >= 0; i--) {
-        final INode inode = inodes.get(i);
+      for (int i = iip.length() - 1; i >= 0; i--) {
+        final INode inode = iip.getINode(i);
         if (inode == null) {
           continue;
         }

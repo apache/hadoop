@@ -24,19 +24,21 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.UUID;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.State;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
-import org.apache.log4j.Level;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.junit.Test;
 import org.mockito.AdditionalMatchers;
 import org.mockito.Mockito;
 
 import com.google.common.primitives.Ints;
+import org.slf4j.event.Level;
 
 /**
  * Test for {@link ActiveStandbyElector} using real zookeeper.
@@ -45,8 +47,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
   static final int NUM_ELECTORS = 2;
   
   static {
-    ((Log4JLogger)ActiveStandbyElector.LOG).getLogger().setLevel(
-        Level.ALL);
+    GenericTestUtils.setLogLevel(ActiveStandbyElector.LOG, Level.TRACE);
   }
   
   static final String PARENT_DIR = "/" + UUID.randomUUID();
@@ -255,5 +256,31 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     Mockito.verify(cbs[0], Mockito.never()).becomeActive();
     Mockito.verify(cbs[1], Mockito.never()).becomeActive();
     checkFatalsAndReset();
+  }
+
+  /**
+   * Test to verify that proper ZooKeeper ACLs can be updated on
+   * ActiveStandbyElector's parent znode.
+   */
+  @Test(timeout = 15000)
+  public void testSetZooKeeperACLsOnParentZnodeName()
+      throws Exception {
+    ActiveStandbyElectorCallback cb =
+        Mockito.mock(ActiveStandbyElectorCallback.class);
+    ActiveStandbyElector elector =
+        new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
+            Ids.READ_ACL_UNSAFE, Collections.<ZKAuthInfo>emptyList(), cb,
+            CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+
+    // Simulate the case by pre-creating znode 'parentZnodeName'. Then updates
+    // znode's data so that data version will be increased to 1. Here znode's
+    // aversion is 0.
+    ZooKeeper otherClient = createClient();
+    otherClient.create(PARENT_DIR, "sample1".getBytes(), Ids.OPEN_ACL_UNSAFE,
+        CreateMode.PERSISTENT);
+    otherClient.setData(PARENT_DIR, "sample2".getBytes(), -1);
+    otherClient.close();
+
+    elector.ensureParentZNode();
   }
 }

@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -217,14 +216,21 @@ public abstract class RMStateStore extends AbstractService {
       LOG.info("Storing info for app: " + appId);
       try {
         store.storeApplicationStateInternal(appId, appState);
-        store.notifyApplication(new RMAppEvent(appId,
-               RMAppEventType.APP_NEW_SAVED));
+        store.notifyApplication(
+            new RMAppEvent(appId, RMAppEventType.APP_NEW_SAVED));
       } catch (Exception e) {
         LOG.error("Error storing app: " + appId, e);
-        isFenced = store.notifyStoreOperationFailedInternal(e);
+        if (e instanceof StoreLimitException) {
+          store.notifyApplication(
+              new RMAppEvent(appId, RMAppEventType.APP_SAVE_FAILED,
+                  e.getMessage()));
+        } else {
+          isFenced = store.notifyStoreOperationFailedInternal(e);
+        }
       }
       return finalState(isFenced);
     };
+
   }
 
   private static class UpdateAppTransition implements

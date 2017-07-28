@@ -1319,7 +1319,7 @@ public class DataNode extends ReconfigurableBase
 
   // used only for testing
   @VisibleForTesting
-  void setHeartbeatsDisabledForTests(
+  public void setHeartbeatsDisabledForTests(
       boolean heartbeatsDisabledForTests) {
     this.heartbeatsDisabledForTests = heartbeatsDisabledForTests;
   }
@@ -3061,6 +3061,14 @@ public class DataNode extends ReconfigurableBase
       }
     }
     return JSON.toString(info);
+  }
+
+ /**
+   * Return hostname of the datanode.
+   */
+  @Override // DataNodeMXBean
+  public String getDatanodeHostname() {
+    return this.hostName;
   }
 
   /**

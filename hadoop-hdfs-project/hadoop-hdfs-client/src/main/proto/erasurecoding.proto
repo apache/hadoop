@@ -61,6 +61,27 @@ message AddErasureCodingPoliciesResponseProto {
   repeated AddECPolicyResponseProto responses = 1;
 }
 
+message RemoveErasureCodingPolicyRequestProto {
+  required string ecPolicyName = 1;
+}
+
+message RemoveErasureCodingPolicyResponseProto {
+}
+
+message EnableErasureCodingPolicyRequestProto {
+  required string ecPolicyName = 1;
+}
+
+message EnableErasureCodingPolicyResponseProto {
+}
+
+message DisableErasureCodingPolicyRequestProto {
+  required string ecPolicyName = 1;
+}
+
+message DisableErasureCodingPolicyResponseProto {
+}
+
 message UnsetErasureCodingPolicyRequestProto {
   required string src = 1;
 }

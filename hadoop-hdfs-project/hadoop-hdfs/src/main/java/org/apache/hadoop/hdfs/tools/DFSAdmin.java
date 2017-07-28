@@ -195,7 +195,8 @@ public class DFSAdmin extends FsShell {
       super(conf);
       CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
-      this.quota = Long.parseLong(parameters.remove(0));
+      this.quota =
+          StringUtils.TraditionalBinaryPrefix.string2long(parameters.remove(0));
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
@@ -519,9 +520,13 @@ public class DFSAdmin extends FsShell {
         + " (" + StringUtils.byteDesc(remaining) + ")");
     System.out.println("DFS Used: " + used
                        + " (" + StringUtils.byteDesc(used) + ")");
+    double dfsUsedPercent = 0;
+    if (presentCapacity != 0) {
+      dfsUsedPercent = used/(double)presentCapacity;
+    }
     System.out.println("DFS Used%: "
-        + StringUtils.formatPercent(used/(double)presentCapacity, 2));
-    
+        + StringUtils.formatPercent(dfsUsedPercent, 2));
+
     /* These counts are not always upto date. They are updated after  
      * iteration of an internal list. Should be updated in a few seconds to 
      * minutes. Use "-metaSave" to list of all such blocks and accurate 
@@ -938,7 +943,7 @@ public class DFSAdmin extends FsShell {
     int exitCode = -1;
 
     try {
-      bandwidth = Long.parseLong(argv[idx]);
+      bandwidth = StringUtils.TraditionalBinaryPrefix.string2long(argv[idx]);
     } catch (NumberFormatException nfe) {
       System.err.println("NumberFormatException: " + nfe.getMessage());
       System.err.println("Usage: hdfs dfsadmin"
@@ -1112,29 +1117,39 @@ public class DFSAdmin extends FsShell {
         "\tor gets a list of reconfigurable properties.\n" +
 
         "\tThe second parameter specifies the node type\n";
-    String genericRefresh = "-refresh: Arguments are <hostname:port> <resource_identifier> [arg1..argn]\n" +
-      "\tTriggers a runtime-refresh of the resource specified by <resource_identifier>\n" +
-      "\ton <hostname:port>. All other args after are sent to the host.\n";
+    String genericRefresh = "-refresh: Arguments are <hostname:ipc_port>" +
+            " <resource_identifier> [arg1..argn]\n" +
+            "\tTriggers a runtime-refresh of the resource specified by " +
+            "<resource_identifier> on <hostname:ipc_port>.\n" +
+            "\tAll other args after are sent to the host.\n" +
+            "\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
 
     String printTopology = "-printTopology: Print a tree of the racks and their\n" +
                            "\t\tnodes as reported by the Namenode\n";
     
-    String refreshNamenodes = "-refreshNamenodes: Takes a datanodehost:port as argument,\n"+
-                              "\t\tFor the given datanode, reloads the configuration files,\n" +
-                              "\t\tstops serving the removed block-pools\n"+
-                              "\t\tand starts serving new block-pools\n";
+    String refreshNamenodes = "-refreshNamenodes: Takes a " +
+            "datanodehost:ipc_port as argument,For the given datanode\n" +
+            "\t\treloads the configuration files,stops serving the removed\n" +
+            "\t\tblock-pools and starts serving new block-pools.\n" +
+            "\t\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
     
-    String getVolumeReport = "-getVolumeReport: Takes a datanodehost:port as "
-        + "argument,\n\t\tFor the given datanode, get the volume report\n";
+    String getVolumeReport = "-getVolumeReport: Takes a datanodehost:ipc_port"+
+            " as argument,For the given datanode,get the volume report.\n" +
+            "\t\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
 
-    String deleteBlockPool = "-deleteBlockPool: Arguments are datanodehost:port, blockpool id\n"+
-                             "\t\t and an optional argument \"force\". If force is passed,\n"+
-                             "\t\t block pool directory for the given blockpool id on the given\n"+
-                             "\t\t datanode is deleted along with its contents, otherwise\n"+
-                             "\t\t the directory is deleted only if it is empty. The command\n" +
-                             "\t\t will fail if datanode is still serving the block pool.\n" +
-                             "\t\t   Refer to refreshNamenodes to shutdown a block pool\n" +
-                             "\t\t service on a datanode.\n";
+    String deleteBlockPool = "-deleteBlockPool: Arguments are " +
+            "datanodehost:ipc_port, blockpool id and an optional argument\n" +
+            "\t\t\"force\". If force is passed,block pool directory for\n" +
+            "\t\tthe given blockpool id on the given datanode is deleted\n" +
+            "\t\talong with its contents,otherwise the directory is deleted\n"+
+            "\t\tonly if it is empty.The command will fail if datanode is\n" +
+            "\t\tstill serving the block pool.Refer to refreshNamenodes to\n" +
+            "\t\tshutdown a block pool service on a datanode.\n" +
+            "\t\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
 
     String setBalancerBandwidth = "-setBalancerBandwidth <bandwidth>:\n" +
       "\tChanges the network bandwidth used by each datanode during\n" +
@@ -1892,23 +1907,24 @@ public class DFSAdmin extends FsShell {
                          + " [-refreshCallQueue]");
     } else if ("-reconfig".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-reconfig <namenode|datanode> <host:port> "
+          + " [-reconfig <namenode|datanode> <host:ipc_port> "
           + "<start|status|properties>]");
     } else if ("-refresh".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-                         + " [-refresh <hostname:port> <resource_identifier> [arg1..argn]");
+          + " [-refresh <hostname:ipc_port> "
+          + "<resource_identifier> [arg1..argn]");
     } else if ("-printTopology".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
                          + " [-printTopology]");
     } else if ("-refreshNamenodes".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-                         + " [-refreshNamenodes datanode-host:port]");
+                         + " [-refreshNamenodes datanode-host:ipc_port]");
     } else if ("-getVolumeReport".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-getVolumeReport datanode-host:port]");
+          + " [-getVolumeReport datanode-host:ipc_port]");
     } else if ("-deleteBlockPool".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-deleteBlockPool datanode-host:port blockpoolId [force]]");
+          + " [-deleteBlockPool datanode-host:ipc_port blockpoolId [force]]");
     } else if ("-setBalancerBandwidth".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
                   + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
@@ -1976,7 +1992,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-report".equals(cmd)) {
-      if (argv.length > 6) {
+      if (argv.length < 1) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2006,7 +2022,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if (RollingUpgradeCommand.matches(cmd)) {
-      if (argv.length > 2) {
+      if (argv.length < 1 || argv.length > 2) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2081,7 +2097,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-triggerBlockReport".equals(cmd)) {
-      if ((argv.length != 2) && (argv.length != 3)) {
+      if (argv.length < 1) {
         printUsage(cmd);
         return exitCode;
       }

@@ -243,6 +243,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.APP_REJECTED,
           new FinalSavingTransition(new AppRejectedTransition(),
             RMAppState.FAILED))
+      .addTransition(RMAppState.NEW_SAVING, RMAppState.FAILED,
+          RMAppEventType.APP_SAVE_FAILED, new AppRejectedTransition())
 
      // Transitions from SUBMITTED state
     .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
@@ -1308,7 +1310,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.rememberTargetTransitionsAndStoreState(event, transitionToDo,
-        targetedFinalState, stateToBeStored);
+          targetedFinalState, stateToBeStored);
     }
   }
 

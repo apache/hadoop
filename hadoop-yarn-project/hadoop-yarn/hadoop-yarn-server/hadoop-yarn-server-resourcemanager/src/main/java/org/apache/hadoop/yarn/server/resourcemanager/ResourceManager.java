@@ -115,7 +115,6 @@ import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -345,9 +344,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
             YarnConfiguration.DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED);
     if (curatorEnabled) {
       this.curator = createAndStartCurator(conf);
-      elector = new CuratorBasedElectorService(rmContext, this);
+      elector = new CuratorBasedElectorService(this);
     } else {
-      elector = new ActiveStandbyElectorBasedElectorService(rmContext);
+      elector = new ActiveStandbyElectorBasedElectorService(this);
     }
     return elector;
   }
@@ -497,7 +496,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   private RMTimelineCollectorManager createRMTimelineCollectorManager() {
-    return new RMTimelineCollectorManager(rmContext);
+    return new RMTimelineCollectorManager(this);
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
@@ -508,7 +507,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
         // we're dealing with the v.2.x publisher
         LOG.info("system metrics publisher with the timeline service V2 is " +
             "configured");
-        publisher = new TimelineServiceV2Publisher(rmContext);
+        publisher = new TimelineServiceV2Publisher(
+            rmContext.getRMTimelineCollectorManager());
       } else {
         // we're dealing with the v.1.x publisher
         LOG.info("system metrics publisher with the timeline service V1 is " +
@@ -560,7 +560,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private ApplicationMasterLauncher applicationMasterLauncher;
     private ContainerAllocationExpirer containerAllocationExpirer;
     private ResourceManager rm;
-    private RMActiveServiceContext activeServiceContext;
     private boolean fromActive = false;
     private StandByTransitionRunnable standByTransitionRunnable;
 
@@ -572,9 +571,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     @Override
     protected void serviceInit(Configuration configuration) throws Exception {
       standByTransitionRunnable = new StandByTransitionRunnable();
-
-      activeServiceContext = new RMActiveServiceContext();
-      rmContext.setActiveServiceContext(activeServiceContext);
 
       rmSecretManagerService = createRMSecretManagerService();
       addService(rmSecretManagerService);
@@ -1149,7 +1145,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     ClusterMetrics.destroy();
     QueueMetrics.clearQueueMetrics();
     if (initialize) {
-      resetDispatcher();
+      resetRMContext();
       createAndInitActiveServices(true);
     }
   }
@@ -1294,7 +1290,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected AdminService createAdminService() {
-    return new AdminService(this, rmContext);
+    return new AdminService(this);
   }
 
   protected RMSecretManagerService createRMSecretManagerService() {
@@ -1417,17 +1413,24 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return dispatcher;
   }
 
-  private void resetDispatcher() {
+  private void resetRMContext() {
+    RMContextImpl rmContextImpl = new RMContextImpl();
+    // transfer service context to new RM service Context
+    rmContextImpl.setServiceContext(rmContext.getServiceContext());
+
+    // reset dispatcher
     Dispatcher dispatcher = setupDispatcher();
-    ((Service)dispatcher).init(this.conf);
-    ((Service)dispatcher).start();
-    removeService((Service)rmDispatcher);
+    ((Service) dispatcher).init(this.conf);
+    ((Service) dispatcher).start();
+    removeService((Service) rmDispatcher);
     // Need to stop previous rmDispatcher before assigning new dispatcher
     // otherwise causes "AsyncDispatcher event handler" thread leak
     ((Service) rmDispatcher).stop();
     rmDispatcher = dispatcher;
     addIfService(rmDispatcher);
-    rmContext.setDispatcher(rmDispatcher);
+    rmContextImpl.setDispatcher(dispatcher);
+
+    rmContext = rmContextImpl;
   }
 
   private void setSchedulerRecoveryStartAndWaitTime(RMState state,

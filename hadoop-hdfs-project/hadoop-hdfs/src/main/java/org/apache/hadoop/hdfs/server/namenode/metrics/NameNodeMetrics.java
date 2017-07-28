@@ -58,6 +58,12 @@ public class NameNodeMetrics {
   @Metric MutableCounterLong createSymlinkOps;
   @Metric MutableCounterLong getLinkTargetOps;
   @Metric MutableCounterLong filesInGetListingOps;
+  @Metric ("Number of successful re-replications")
+  MutableCounterLong successfulReReplications;
+  @Metric ("Number of times we failed to schedule a block re-replication.")
+  MutableCounterLong numTimesReReplicationNotScheduled;
+  @Metric("Number of timed out block re-replications")
+  MutableCounterLong timeoutReReplications;
   @Metric("Number of allowSnapshot operations")
   MutableCounterLong allowSnapshotOps;
   @Metric("Number of disallowSnapshot operations")
@@ -74,8 +80,6 @@ public class NameNodeMetrics {
   MutableCounterLong snapshotDiffReportOps;
   @Metric("Number of blockReceivedAndDeleted calls")
   MutableCounterLong blockReceivedAndDeletedOps;
-  @Metric("Number of blockReports from individual storages")
-  MutableCounterLong storageBlockReportOps;
   @Metric("Number of blockReports and blockReceivedAndDeleted queued")
   MutableGaugeInt blockOpsQueued;
   @Metric("Number of blockReports and blockReceivedAndDeleted batch processed")
@@ -111,8 +115,9 @@ public class NameNodeMetrics {
   final MutableQuantiles[] syncsQuantiles;
   @Metric("Journal transactions batched in sync")
   MutableCounterLong transactionsBatchedInSync;
-  @Metric("Block report") MutableRate blockReport;
-  final MutableQuantiles[] blockReportQuantiles;
+  @Metric("Number of blockReports from individual storages")
+  MutableRate storageBlockReport;
+  final MutableQuantiles[] storageBlockReportQuantiles;
   @Metric("Cache report") MutableRate cacheReport;
   final MutableQuantiles[] cacheReportQuantiles;
   @Metric("Generate EDEK time") private MutableRate generateEDEKTime;
@@ -143,7 +148,7 @@ public class NameNodeMetrics {
     
     final int len = intervals.length;
     syncsQuantiles = new MutableQuantiles[len];
-    blockReportQuantiles = new MutableQuantiles[len];
+    storageBlockReportQuantiles = new MutableQuantiles[len];
     cacheReportQuantiles = new MutableQuantiles[len];
     generateEDEKTimeQuantiles = new MutableQuantiles[len];
     warmUpEDEKTimeQuantiles = new MutableQuantiles[len];
@@ -154,9 +159,9 @@ public class NameNodeMetrics {
       syncsQuantiles[i] = registry.newQuantiles(
           "syncs" + interval + "s",
           "Journal syncs", "ops", "latency", interval);
-      blockReportQuantiles[i] = registry.newQuantiles(
-          "blockReport" + interval + "s", 
-          "Block report", "ops", "latency", interval);
+      storageBlockReportQuantiles[i] = registry.newQuantiles(
+          "storageBlockReport" + interval + "s",
+          "Storage block report", "ops", "latency", interval);
       cacheReportQuantiles[i] = registry.newQuantiles(
           "cacheReport" + interval + "s",
           "Cache report", "ops", "latency", interval);
@@ -284,10 +289,6 @@ public class NameNodeMetrics {
   public void incrBlockReceivedAndDeletedOps() {
     blockReceivedAndDeletedOps.incr();
   }
-  
-  public void incrStorageBlockReportOps() {
-    storageBlockReportOps.incr();
-  }
 
   public void setBlockOpsQueued(int size) {
     blockOpsQueued.set(size);
@@ -305,6 +306,18 @@ public class NameNodeMetrics {
     transactionsBatchedInSync.incr(count);
   }
 
+  public void incSuccessfulReReplications() {
+    successfulReReplications.incr();
+  }
+
+  public void incNumTimesReReplicationNotScheduled() {
+    numTimesReReplicationNotScheduled.incr();
+  }
+
+  public void incTimeoutReReplications() {
+    timeoutReReplications.incr();
+  }
+
   public void addSync(long elapsed) {
     syncs.add(elapsed);
     for (MutableQuantiles q : syncsQuantiles) {
@@ -316,9 +329,9 @@ public class NameNodeMetrics {
     fsImageLoadTime.set((int) elapsed);
   }
 
-  public void addBlockReport(long latency) {
-    blockReport.add(latency);
-    for (MutableQuantiles q : blockReportQuantiles) {
+  public void addStorageBlockReport(long latency) {
+    storageBlockReport.add(latency);
+    for (MutableQuantiles q : storageBlockReportQuantiles) {
       q.add(latency);
     }
   }

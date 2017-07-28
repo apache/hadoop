@@ -199,7 +199,7 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
-  /** Command to get the erasure coding policy for a file or directory */
+  /** Command to get the erasure coding policy for a file or directory. */
   private static class GetECPolicyCommand implements AdminHelper.Command {
     @Override
     public String getName() {
@@ -254,7 +254,54 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
-  /** Command to set the erasure coding policy to a file/directory */
+  /** Command to remove an erasure coding policy. */
+  private static class RemoveECPolicyCommand implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-removePolicy";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -policy <policy>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<policy>", "The name of the erasure coding policy");
+      return getShortUsage() + "\n" +
+          "Remove an erasure coding policy.\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String ecPolicyName = StringUtils.popOptionWithArgument(
+          "-policy", args);
+      if (ecPolicyName == null) {
+        System.err.println("Please specify the policy name.\nUsage: " +
+            getLongUsage());
+        return 1;
+      }
+      if (args.size() > 0) {
+        System.err.println(getName() + ": Too many arguments");
+        return 1;
+      }
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        dfs.removeErasureCodingPolicy(ecPolicyName);
+        System.out.println("Erasure coding policy " + ecPolicyName +
+            "is removed");
+      } catch (IOException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
+  /** Command to set the erasure coding policy to a file/directory. */
   private static class SetECPolicyCommand implements AdminHelper.Command {
     @Override
     public String getName() {
@@ -313,7 +360,7 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
-  /** Command to unset the erasure coding policy set for a file/directory */
+  /** Command to unset the erasure coding policy set for a file/directory. */
   private static class UnsetECPolicyCommand
       implements AdminHelper.Command {
 
@@ -416,13 +463,111 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
+  /** Command to enable an existing erasure coding policy. */
+  private static class EnableECPolicyCommand implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-enablePolicy";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -policy <policy>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<policy>", "The name of the erasure coding policy");
+      return getShortUsage() + "\n" +
+          "Enable the erasure coding policy.\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String ecPolicyName = StringUtils.popOptionWithArgument("-policy",
+          args);
+      if (ecPolicyName == null) {
+        System.err.println("Please specify the policy name.\nUsage: " +
+            getLongUsage());
+        return 1;
+      }
+      if (args.size() > 0) {
+        System.err.println(getName() + ": Too many arguments");
+        return 1;
+      }
+
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        dfs.enableErasureCodingPolicy(ecPolicyName);
+        System.out.println("Erasure coding policy " + ecPolicyName +
+            " is enabled");
+      } catch (IOException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
+  /** Command to disable an existing erasure coding policy. */
+  private static class DisableECPolicyCommand implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-disablePolicy";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -policy <policy>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<policy>", "The name of the erasure coding policy");
+      return getShortUsage() + "\n" +
+          "Disable the erasure coding policy.\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String ecPolicyName = StringUtils.popOptionWithArgument("-policy",
+          args);
+      if (ecPolicyName == null) {
+        System.err.println("Please specify the policy name.\nUsage: " +
+            getLongUsage());
+        return 1;
+      }
+      if (args.size() > 0) {
+        System.err.println(getName() + ": Too many arguments");
+        return 1;
+      }
+
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        dfs.disableErasureCodingPolicy(ecPolicyName);
+        System.out.println("Erasure coding policy " + ecPolicyName +
+            " is disabled");
+      } catch (IOException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
 
   private static final AdminHelper.Command[] COMMANDS = {
       new ListECPoliciesCommand(),
       new AddECPoliciesCommand(),
       new GetECPolicyCommand(),
+      new RemoveECPolicyCommand(),
       new SetECPolicyCommand(),
       new UnsetECPolicyCommand(),
-      new ListECCodecsCommand()
+      new ListECCodecsCommand(),
+      new EnableECPolicyCommand(),
+      new DisableECPolicyCommand()
   };
 }

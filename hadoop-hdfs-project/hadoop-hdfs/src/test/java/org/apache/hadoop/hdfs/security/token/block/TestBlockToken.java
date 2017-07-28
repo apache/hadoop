@@ -774,4 +774,39 @@ public class TestBlockToken {
     testBlockTokenSerialization(false);
     testBlockTokenSerialization(true);
   }
+
+  private void testBadStorageIDCheckAccess(boolean enableProtobuf)
+      throws IOException {
+    BlockTokenSecretManager sm = new BlockTokenSecretManager(
+        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+        enableProtobuf);
+    StorageType[] storageTypes = new StorageType[] {StorageType.DISK};
+    String[] storageIds = new String[] {"fake-storage-id"};
+    String[] badStorageIds = new String[] {"BAD-STORAGE-ID"};
+    String[] emptyStorageIds = new String[] {};
+    BlockTokenIdentifier.AccessMode mode = BlockTokenIdentifier.AccessMode.READ;
+    BlockTokenIdentifier id = generateTokenId(sm, block3,
+        EnumSet.of(mode), storageTypes, storageIds);
+    sm.checkAccess(id, null, block3, mode, storageTypes, storageIds);
+
+    try {
+      sm.checkAccess(id, null, block3, mode, storageTypes, badStorageIds);
+      fail("Expected strict BlockTokenSecretManager to fail");
+    } catch(SecretManager.InvalidToken e) {
+    }
+    // We allow empty storageId tokens for backwards compatibility. i.e. old
+    // clients may not have known to pass the storageId parameter to the
+    // writeBlock api.
+    sm.checkAccess(id, null, block3, mode, storageTypes,
+        emptyStorageIds);
+    sm.checkAccess(id, null, block3, mode, storageTypes,
+        null);
+  }
+
+  @Test
+  public void testBadStorageIDCheckAccess() throws IOException {
+    testBadStorageIDCheckAccess(false);
+    testBadStorageIDCheckAccess(true);
+  }
+
 }

@@ -66,9 +66,7 @@ public class FloatWritable implements WritableComparable<FloatWritable> {
   /** Compares two FloatWritables. */
   @Override
   public int compareTo(FloatWritable o) {
-    float thisValue = this.value;
-    float thatValue = o.value;
-    return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+    return Float.compare(value, o.value);
   }
 
   @Override
@@ -86,7 +84,7 @@ public class FloatWritable implements WritableComparable<FloatWritable> {
                        byte[] b2, int s2, int l2) {
       float thisValue = readFloat(b1, s1);
       float thatValue = readFloat(b2, s2);
-      return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+      return Float.compare(thisValue, thatValue);
     }
   }
 

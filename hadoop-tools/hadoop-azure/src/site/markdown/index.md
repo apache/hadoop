@@ -192,6 +192,19 @@ The configuration option `fs.azure.page.blob.extension.size` is the page blob
 extension size.  This defines the amount to extend a page blob if it starts to
 get full.  It must be 128MB or greater, specified as an integer number of bytes.
 
+### Custom User-Agent
+WASB passes User-Agent header to the Azure back-end. The default value
+contains WASB version, Java Runtime version, Azure Client library version, and the
+value of the configuration option `fs.azure.user.agent.prefix`. Customized User-Agent
+header enables better troubleshooting and analysis by Azure service.
+
+```xml
+<property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>Identifier</value>
+</property>
+```
+
 ### Atomic Folder Rename
 
 Azure storage stores files as a flat key/value store without formal support
@@ -316,12 +329,12 @@ To enable SAS key generation locally following property needs to be set to true.
 </property>
 ```
 
-To use the remote SAS key generation mode, an external REST service is expected to provided required SAS keys.
+To use the remote SAS key generation mode, comma separated external REST services are expected to provided required SAS keys.
 Following property can used to provide the end point to use for remote SAS Key generation:
 
 ```xml
 <property>
-  <name>fs.azure.cred.service.url</name>
+  <name>fs.azure.cred.service.urls</name>
   <value>{URL}</value>
 </property>
 ```
@@ -354,11 +367,11 @@ Authorization support can be enabled in WASB using the following configuration:
 ```
 
 The current implementation of authorization relies on the presence of an external service that can enforce
-the authorization. The service is expected to be running on a URL provided by the following config.
+the authorization. The service is expected to be running on comma separated URLs provided by the following config.
 
 ```xml
 <property>
-  <name>fs.azure.authorization.remote.service.url</name>
+  <name>fs.azure.authorization.remote.service.urls</name>
   <value>{URL}</value>
 </property>
 ```
@@ -375,6 +388,92 @@ The service is expected to return a response in JSON format:
     "responseMessage" : relevant message on failure <String>,
     "authorizationResult" : true/false <boolean>
 }
+```
+
+### Delegation token support in WASB
+
+Delegation token support support can be enabled in WASB using the following configuration:
+
+```xml
+<property>
+  <name>fs.azure.enable.kerberos.support</name>
+  <value>true</value>
+</property>
+```
+
+The current implementation of delegation token implementation relies on the presence of an external service instances that can generate and manage delegation tokens. The service is expected to be running on comma separated URLs provided by the following config.
+
+```xml
+<property>
+  <name>fs.azure.delegation.token.service.urls</name>
+  <value>{URL}</value>
+</property>
+```
+
+The remote service is expected to provide support for the following REST call: ```{URL}?op=GETDELEGATIONTOKEN```, ```{URL}?op=RENEWDELEGATIONTOKEN``` and ```{URL}?op=CANCELDELEGATIONTOKEN```
+An example request:
+  ```{URL}?op=GETDELEGATIONTOKEN&renewer=<renewer>```
+  ```{URL}?op=RENEWDELEGATIONTOKEN&token=<delegation token>```
+  ```{URL}?op=CANCELDELEGATIONTOKEN&token=<delegation token>```
+
+The service is expected to return a response in JSON format for GETDELEGATIONTOKEN request:
+
+```json
+{
+    "Token" : {
+        "urlString": URL string of delegation token.
+    }
+}
+```
+### chown behaviour when authorization is enabled in WASB
+
+When authorization is enabled, only the users listed in the following configuration
+are allowed to change the owning user of files/folders in WASB. The configuration
+value takes a comma seperated list of user names who are allowed to perform chown.
+
+```xml
+<property>
+  <name>fs.azure.chown.allowed.userlist</name>
+  <value>user1,user2</value>
+</property>
+```
+
+Caching of both SAS keys and Authorization responses can be enabled using the following setting:
+The cache settings are applicable only when fs.azure.authorization is enabled.
+The cache is maintained at a filesystem object level.
+```
+    <property>
+      <name>fs.azure.authorization.caching.enable</name>
+      <value>true</value>
+    </property>
+```
+
+The maximum number of entries that that cache can hold can be customized using the following setting:
+```
+    <property>
+      <name>fs.azure.authorization.caching.maxentries</name>
+      <value>512</value>
+    </property>
+```
+
+ The validity of an authorization cache-entry can be controlled using the following setting:
+ Setting the value to zero disables authorization-caching.
+ If the key is not specified, a default expiry duration of 5m takes effect.
+ ```
+    <property>
+      <name>fs.azure.authorization.cacheentry.expiry.period</name>
+      <value>5m</value>
+    </property>
+```
+
+ The validity of a SASKey cache-entry can be controlled using the following setting.
+ Setting the value to zero disables SASKey-caching.
+ If the key is not specified, the default expiry duration specified in the sas-key request takes effect.
+ ```
+    <property>
+      <name>fs.azure.saskey.cacheentry.expiry.period</name>
+      <value>90d</value>
+    </property>
 ```
 
 ## Testing the hadoop-azure Module

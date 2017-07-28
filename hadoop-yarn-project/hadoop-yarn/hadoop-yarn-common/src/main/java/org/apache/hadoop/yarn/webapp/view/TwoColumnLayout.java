@@ -39,18 +39,18 @@ public class TwoColumnLayout extends HtmlPage {
    * (non-Javadoc)
    * @see org.apache.hadoop.yarn.webapp.view.HtmlPage#render(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
-  @Override protected void render(Page.HTML<_> html) {
+  @Override protected void render(Page.HTML<__> html) {
     preHead(html);
     html.
       title($(TITLE)).
-      link(root_url("static","yarn.css")).
+      link(root_url("static", "yarn.css")).
       style("#layout { height: 100%; }",
             "#layout thead td { height: 3em; }",
             "#layout #navcell { width: 11em; padding: 0 1em; }",
             "#layout td.content { padding-top: 0 }",
             "#layout tbody { vertical-align: top; }",
             "#layout tfoot td { height: 4em; }").
-      _(JQueryUI.class);
+        __(JQueryUI.class);
     postHead(html);
     JQueryUI.jsnotice(html);
     html.
@@ -58,17 +58,17 @@ public class TwoColumnLayout extends HtmlPage {
         thead().
           tr().
             td().$colspan(2).
-              _(header())._()._()._().
+        __(header()).__().__().__().
         tfoot().
           tr().
             td().$colspan(2).
-              _(footer())._()._()._().
+        __(footer()).__().__().__().
         tbody().
           tr().
             td().$id("navcell").
-              _(nav())._().
+        __(nav()).__().
             td().$class("content").
-              _(content())._()._()._()._()._();
+        __(content()).__().__().__().__().__();
   }
 
   /**
@@ -76,14 +76,14 @@ public class TwoColumnLayout extends HtmlPage {
    * involves setting page variables for Javascript and CSS rendering.
    * @param html the html to use to render. 
    */
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
   }
 
   /**
    * Do what needs to be done after the header is rendered.
    * @param html the html to use to render. 
    */
-  protected void postHead(Page.HTML<_> html) {
+  protected void postHead(Page.HTML<__> html) {
   }
 
   /**
@@ -120,7 +120,7 @@ public class TwoColumnLayout extends HtmlPage {
    * @param tableId the ID of the table to set styles on.
    * @param innerStyles any other styles to add to the table.
    */
-  protected void setTableStyles(Page.HTML<_> html, String tableId,
+  protected void setTableStyles(Page.HTML<__> html, String tableId,
                                 String... innerStyles) {
     List<String> styles = Lists.newArrayList();
     styles.add(join('#', tableId, "_paginate span {font-weight:normal}"));

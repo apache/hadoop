@@ -108,6 +108,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String USER_LIMIT_FACTOR = "user-limit-factor";
 
   @Private
+  public static final String USER_WEIGHT = "weight";
+
+  @Private
+  public static final String USER_SETTINGS = "user-settings";
+
+  @Private
+  public static final float DEFAULT_USER_WEIGHT = 1.0f;
+
+  @Private
   public static final String STATE = "state";
   
   @Private
@@ -1197,6 +1206,33 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       0.2f;
 
   /**
+   * By default, reserved resource will be excluded while balancing capacities
+   * of queues.
+   *
+   * Why doing this? In YARN-4390, we added preemption-based-on-reserved-container
+   * Support. To reduce unnecessary preemption for large containers. We will
+   * not include reserved resources while calculating ideal-allocation in
+   * FifoCandidatesSelector.
+   *
+   * Changes in YARN-4390 will significantly reduce number of containers preempted
+   * When cluster has heterogeneous container requests. (Please check test
+   * report: https://issues.apache.org/jira/secure/attachment/12796197/YARN-4390-test-results.pdf
+   *
+   * However, on the other hand, in some corner cases, especially for
+   * fragmented cluster. It could lead to preemption cannot kick in in some
+   * cases. Please see YARN-5731.
+   *
+   * So to solve the problem, make this change to be configurable, and please
+   * note that it is an experimental option.
+   */
+  public static final String
+      ADDITIONAL_RESOURCE_BALANCE_BASED_ON_RESERVED_CONTAINERS =
+      PREEMPTION_CONFIG_PREFIX
+          + "additional_res_balance_based_on_reserved_containers";
+  public static final boolean
+      DEFAULT_ADDITIONAL_RESOURCE_BALANCE_BASED_ON_RESERVED_CONTAINERS = false;
+
+  /**
    * When calculating which containers to be preempted, we will try to preempt
    * containers for reserved containers first. By default is false.
    */
@@ -1411,5 +1447,30 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(getOrderingPolicyGlobalConfigKey(
         QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
         UNDER_UTILIZED_PREEMPTION_MOVE_RESERVATION), allowMoveReservation);
+  }
+
+  /**
+   * Get the weights of all users at this queue level from the configuration.
+   * Used in computing user-specific user limit, relative to other users.
+   * @param queuePath full queue path
+   * @return map of user weights, if they exists. Otherwise, return empty map.
+   */
+  public Map<String, Float> getAllUserWeightsForQueue(String queuePath) {
+    Map <String, Float> userWeights = new HashMap <String, Float>();
+    String qPathPlusPrefix =
+        getQueuePrefix(queuePath).replaceAll("\\.", "\\\\.")
+        + USER_SETTINGS + "\\.";
+    String weightKeyRegex =
+        qPathPlusPrefix + "\\w+\\." + USER_WEIGHT;
+    Map<String, String> props = getValByRegex(weightKeyRegex);
+    for (Entry<String, String> e : props.entrySet()) {
+      String userName =
+          e.getKey().replaceFirst(qPathPlusPrefix, "")
+          .replaceFirst("\\." + USER_WEIGHT, "");
+      if (userName != null && !userName.isEmpty()) {
+        userWeights.put(userName, new Float(e.getValue()));
+      }
+    }
+    return userWeights;
   }
 }

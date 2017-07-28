@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
@@ -73,15 +75,17 @@ public class FSOperations {
 
   /**
    * @param fileStatuses list of FileStatus objects
+   * @param isFile is the fileStatuses from a file path
    * @return JSON map suitable for wire transport
    */
   @SuppressWarnings({"unchecked"})
-  private static Map<String, Object> toJson(FileStatus[] fileStatuses) {
+  private static Map<String, Object> toJson(FileStatus[] fileStatuses,
+      boolean isFile) {
     Map<String, Object> json = new LinkedHashMap<>();
     Map<String, Object> inner = new LinkedHashMap<>();
     JSONArray statuses = new JSONArray();
     for (FileStatus f : fileStatuses) {
-      statuses.add(toJsonInner(f, false));
+      statuses.add(toJsonInner(f, isFile));
     }
     inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
     json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
@@ -127,13 +131,14 @@ public class FSOperations {
    * These two classes are slightly different, due to the impedance
    * mismatches between the WebHDFS and FileSystem APIs.
    * @param entries
+   * @param isFile is the entries from a file path
    * @return json
    */
   private static Map<String, Object> toJson(FileSystem.DirectoryEntries
-      entries) {
+      entries, boolean isFile) {
     Map<String, Object> json = new LinkedHashMap<>();
     Map<String, Object> inner = new LinkedHashMap<>();
-    Map<String, Object> fileStatuses = toJson(entries.getEntries());
+    Map<String, Object> fileStatuses = toJson(entries.getEntries(), isFile);
     inner.put(HttpFSFileSystem.PARTIAL_LISTING_JSON, fileStatuses);
     inner.put(HttpFSFileSystem.REMAINING_ENTRIES_JSON, entries.hasMore() ? 1
         : 0);
@@ -688,7 +693,7 @@ public class FSOperations {
     @Override
     public Map execute(FileSystem fs) throws IOException {
       FileStatus[] fileStatuses = fs.listStatus(path, filter);
-      return toJson(fileStatuses);
+      return toJson(fileStatuses, fs.getFileStatus(path).isFile());
     }
 
     @Override
@@ -733,7 +738,7 @@ public class FSOperations {
       WrappedFileSystem wrappedFS = new WrappedFileSystem(fs);
       FileSystem.DirectoryEntries entries =
           wrappedFS.listStatusBatch(path, token);
-      return toJson(entries);
+      return toJson(entries, wrappedFS.getFileStatus(path).isFile());
     }
   }
 
@@ -1450,6 +1455,41 @@ public class FSOperations {
     public Void execute(FileSystem fs) throws IOException {
       fs.unsetStoragePolicy(path);
       return null;
+    }
+  }
+
+  /**
+   * Executor that performs a getFileBlockLocations FileSystemAccess
+   * file system operation.
+   */
+  @InterfaceAudience.Private
+  @SuppressWarnings("rawtypes")
+  public static class FSFileBlockLocations implements
+      FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+    private long offsetValue;
+    private long lengthValue;
+
+    /**
+     * Creates a file-block-locations executor.
+     *
+     * @param path the path to retrieve the location
+     * @param offsetValue offset into the given file
+     * @param lengthValue length for which to get locations for
+     */
+    public FSFileBlockLocations(String path, long offsetValue,
+        long lengthValue) {
+      this.path = new Path(path);
+      this.offsetValue = offsetValue;
+      this.lengthValue = lengthValue;
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      BlockLocation[] locations =
+          fs.getFileBlockLocations(this.path, this.offsetValue,
+              this.lengthValue);
+      return JsonUtil.toJsonMap(locations);
     }
   }
 }

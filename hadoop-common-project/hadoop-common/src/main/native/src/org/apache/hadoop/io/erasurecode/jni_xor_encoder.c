@@ -31,7 +31,7 @@
 typedef struct _XOREncoder {
   IsalCoder isalCoder;
   unsigned char* inputs[MMAX];
-  unsigned char* outputs[1];
+  unsigned char* outputs[KMAX];
 } XOREncoder;
 
 JNIEXPORT void JNICALL

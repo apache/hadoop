@@ -25,8 +25,6 @@ import java.net.URI;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
@@ -45,6 +43,8 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progressable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -56,8 +56,8 @@ import org.apache.hadoop.util.Progressable;
 @InterfaceStability.Stable
 public class FTPFileSystem extends FileSystem {
 
-  public static final Log LOG = LogFactory
-      .getLog(FTPFileSystem.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(FTPFileSystem.class);
 
   public static final int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 
@@ -415,16 +415,17 @@ public class FTPFileSystem extends FileSystem {
     return client.removeDirectory(pathName);
   }
 
-  private FsAction getFsAction(int accessGroup, FTPFile ftpFile) {
+  @VisibleForTesting
+  FsAction getFsAction(int accessGroup, FTPFile ftpFile) {
     FsAction action = FsAction.NONE;
     if (ftpFile.hasPermission(accessGroup, FTPFile.READ_PERMISSION)) {
-      action.or(FsAction.READ);
+      action = action.or(FsAction.READ);
     }
     if (ftpFile.hasPermission(accessGroup, FTPFile.WRITE_PERMISSION)) {
-      action.or(FsAction.WRITE);
+      action = action.or(FsAction.WRITE);
     }
     if (ftpFile.hasPermission(accessGroup, FTPFile.EXECUTE_PERMISSION)) {
-      action.or(FsAction.EXECUTE);
+      action = action.or(FsAction.EXECUTE);
     }
     return action;
   }

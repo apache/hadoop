@@ -228,6 +228,12 @@ import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodin
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.RemoveErasureCodingPolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.RemoveErasureCodingPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.EnableErasureCodingPolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.EnableErasureCodingPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.DisableErasureCodingPolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.DisableErasureCodingPolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodingPolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCodingPolicyRequestProto;
@@ -1688,6 +1694,42 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           AddErasureCodingPoliciesResponseProto.newBuilder()
             .addAllResponses(responseProtos).build();
       return response;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RemoveErasureCodingPolicyResponseProto removeErasureCodingPolicy(
+      RpcController controller, RemoveErasureCodingPolicyRequestProto request)
+      throws ServiceException {
+    try {
+      server.removeErasureCodingPolicy(request.getEcPolicyName());
+      return RemoveErasureCodingPolicyResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public EnableErasureCodingPolicyResponseProto enableErasureCodingPolicy(
+      RpcController controller, EnableErasureCodingPolicyRequestProto request)
+      throws ServiceException {
+    try {
+      server.enableErasureCodingPolicy(request.getEcPolicyName());
+      return EnableErasureCodingPolicyResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DisableErasureCodingPolicyResponseProto disableErasureCodingPolicy(
+      RpcController controller, DisableErasureCodingPolicyRequestProto request)
+      throws ServiceException {
+    try {
+      server.disableErasureCodingPolicy(request.getEcPolicyName());
+      return DisableErasureCodingPolicyResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

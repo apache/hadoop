@@ -102,8 +102,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-
-
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.log4j.Level;
@@ -120,7 +118,7 @@ public class MockRM extends ResourceManager {
   private static final int SECOND = 1000;
   private static final int TIMEOUT_MS_FOR_ATTEMPT = 40 * SECOND;
   private static final int TIMEOUT_MS_FOR_APP_REMOVED = 40 * SECOND;
-  private static final int TIMEOUT_MS_FOR_CONTAINER_AND_NODE = 10 * SECOND;
+  private static final int TIMEOUT_MS_FOR_CONTAINER_AND_NODE = 20 * SECOND;
   private static final int WAIT_MS_PER_LOOP = 10;
 
   private final boolean useNullRMNodeLabelsManager;
@@ -172,14 +170,6 @@ public class MockRM extends ResourceManager {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     disableDrainEventsImplicitly = false;
-  }
-
-  public class MockRMMemoryStateStore extends MemoryRMStateStore {
-    @SuppressWarnings("rawtypes")
-    @Override
-    protected EventHandler getRMStateStoreEventHandler() {
-      return rmStateStoreEventHandler;
-    }
   }
 
   public class MockRMNullStateStore extends NullRMStateStore {
@@ -853,9 +843,17 @@ public class MockRM extends ResourceManager {
     drainEventsImplicitly();
   }
 
+  private RMNode getRMNode(NodeId nodeId) {
+    RMNode node = getRMContext().getRMNodes().get(nodeId);
+    if (node == null) {
+      node = getRMContext().getInactiveRMNodes().get(nodeId);
+    }
+    return node;
+  }
+
   /**
    * Wait until a node has reached a specified state.
-   * The timeout is 10 seconds.
+   * The timeout is 20 seconds.
    * @param nodeId the id of a node
    * @param finalState the node state waited
    * @throws InterruptedException
@@ -864,12 +862,17 @@ public class MockRM extends ResourceManager {
   public void waitForState(NodeId nodeId, NodeState finalState)
       throws InterruptedException {
     drainEventsImplicitly();
-    RMNode node = getRMContext().getRMNodes().get(nodeId);
-    if (node == null) {
-      node = getRMContext().getInactiveRMNodes().get(nodeId);
-    }
-    Assert.assertNotNull("node shouldn't be null", node);
     int timeWaiting = 0;
+    RMNode node = getRMNode(nodeId);
+    while (node == null) {
+      if (timeWaiting >= TIMEOUT_MS_FOR_CONTAINER_AND_NODE) {
+        break;
+      }
+      node = getRMNode(nodeId);
+      Thread.sleep(WAIT_MS_PER_LOOP);
+      timeWaiting += WAIT_MS_PER_LOOP;
+    }
+    Assert.assertNotNull("node shouldn't be null (timedout)", node);
     while (!finalState.equals(node.getState())) {
       if (timeWaiting >= TIMEOUT_MS_FOR_CONTAINER_AND_NODE) {
         break;
@@ -1042,7 +1045,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected AdminService createAdminService() {
-    return new AdminService(this, getRMContext()) {
+    return new AdminService(this) {
       @Override
       protected void startServer() {
         // override to not start rpc handler
@@ -1280,5 +1283,9 @@ public class MockRM extends ResourceManager {
     if (getRmDispatcher() instanceof AsyncDispatcher) {
       ((AsyncDispatcher) getRmDispatcher()).disableExitOnDispatchException();
     }
+  }
+
+  public RMStateStore getRMStateStore() {
+    return getRMContext().getStateStore();
   }
 }

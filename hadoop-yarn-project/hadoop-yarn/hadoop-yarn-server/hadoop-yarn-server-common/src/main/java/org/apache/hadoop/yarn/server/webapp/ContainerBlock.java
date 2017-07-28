@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
@@ -86,7 +85,7 @@ public class ContainerBlock extends HtmlBlock {
     } catch (Exception e) {
       String message = "Failed to read the container " + containerid + ".";
       LOG.error(message, e);
-      html.p()._(message)._();
+      html.p().__(message).__();
       return;
     }
 
@@ -99,32 +98,32 @@ public class ContainerBlock extends HtmlBlock {
     setTitle(join("Container ", containerid));
 
     info("Container Overview")
-      ._(
+      .__(
         "Container State:",
         container.getContainerState() == null ? UNAVAILABLE : container
           .getContainerState())
-      ._("Exit Status:", container.getContainerExitStatus())
-      ._(
+      .__("Exit Status:", container.getContainerExitStatus())
+      .__(
         "Node:",
         container.getNodeHttpAddress() == null ? "#" : container
           .getNodeHttpAddress(),
         container.getNodeHttpAddress() == null ? "N/A" : container
           .getNodeHttpAddress())
-      ._("Priority:", container.getPriority())
-      ._("Started:", Times.format(container.getStartedTime()))
-      ._(
+      .__("Priority:", container.getPriority())
+      .__("Started:", Times.format(container.getStartedTime()))
+      .__(
         "Elapsed:",
         StringUtils.formatTime(Times.elapsed(container.getStartedTime(),
           container.getFinishedTime())))
-      ._(
+      .__(
         "Resource:",
         container.getAllocatedMB() + " Memory, "
             + container.getAllocatedVCores() + " VCores")
-      ._("Logs:", container.getLogUrl() == null ? "#" : container.getLogUrl(),
+      .__("Logs:", container.getLogUrl() == null ? "#" : container.getLogUrl(),
           container.getLogUrl() == null ? "N/A" : "Logs")
-      ._("Diagnostics:", container.getDiagnosticsInfo() == null ?
+      .__("Diagnostics:", container.getDiagnosticsInfo() == null ?
           "" : container.getDiagnosticsInfo());
 
-    html._(InfoBlock.class);
+    html.__(InfoBlock.class);
   }
 }

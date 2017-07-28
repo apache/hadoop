@@ -22,7 +22,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -85,7 +84,8 @@ import org.apache.hadoop.yarn.sls.synthetic.SynthTraceJobProducer;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -120,7 +120,7 @@ public class SLSRunner extends Configured implements Tool {
           new HashMap<String, Object>();
 
   // logger
-  public final static Logger LOG = Logger.getLogger(SLSRunner.class);
+  public final static Logger LOG = LoggerFactory.getLogger(SLSRunner.class);
 
   private final static int DEFAULT_MAPPER_PRIORITY = 20;
   private final static int DEFAULT_REDUCER_PRIORITY = 10;
@@ -322,14 +322,12 @@ public class SLSRunner extends Configured implements Tool {
       if (numRunningNodes == numNMs) {
         break;
       }
-      LOG.info(MessageFormat.format(
-          "SLSRunner is waiting for all "
-              + "nodes RUNNING. {0} of {1} NMs initialized.",
-          numRunningNodes, numNMs));
+      LOG.info("SLSRunner is waiting for all nodes RUNNING."
+          + " {} of {} NMs initialized.", numRunningNodes, numNMs);
       Thread.sleep(1000);
     }
-    LOG.info(MessageFormat.format("SLSRunner takes {0} ms to launch all nodes.",
-        (System.currentTimeMillis() - startTimeMS)));
+    LOG.info("SLSRunner takes {} ms to launch all nodes.",
+        System.currentTimeMillis() - startTimeMS);
   }
 
   @SuppressWarnings("unchecked")
@@ -375,7 +373,7 @@ public class SLSRunner extends Configured implements Tool {
         try {
           createAMForJob(jobIter.next());
         } catch (Exception e) {
-          LOG.error("Failed to create an AM: " + e.getMessage());
+          LOG.error("Failed to create an AM: {}", e.getMessage());
         }
       }
     }
@@ -397,18 +395,28 @@ public class SLSRunner extends Configured implements Tool {
     String queue = jsonJob.get("job.queue.name").toString();
     increaseQueueAppNum(queue);
 
-    String oldAppId = (String)jsonJob.get("job.id");
-    if (oldAppId == null) {
-      oldAppId = Integer.toString(AM_ID);
-    }
-
     String amType = (String)jsonJob.get("am.type");
     if (amType == null) {
       amType = SLSUtils.DEFAULT_JOB_TYPE;
     }
 
-    runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
-        getTaskContainers(jsonJob), null);
+    int jobCount = 1;
+    if (jsonJob.containsKey("job.count")) {
+      jobCount = Integer.parseInt(jsonJob.get("job.count").toString());
+    }
+    jobCount = Math.max(jobCount, 1);
+
+    String oldAppId = (String)jsonJob.get("job.id");
+    // Job id is generated automatically if this job configuration allows
+    // multiple job instances
+    if(jobCount > 1) {
+      oldAppId = null;
+    }
+
+    for (int i = 0; i < jobCount; i++) {
+      runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
+          getTaskContainers(jsonJob), null, getAMContainerResource(jsonJob));
+    }
   }
 
   private List<ContainerSimulator> getTaskContainers(Map jsonJob)
@@ -497,7 +505,7 @@ public class SLSRunner extends Configured implements Tool {
         try {
           createAMForJob(job, baselineTimeMS);
         } catch (Exception e) {
-          LOG.error("Failed to create an AM: " + e.getMessage());
+          LOG.error("Failed to create an AM: {}", e.getMessage());
         }
 
         job = reader.getNext();
@@ -519,7 +527,7 @@ public class SLSRunner extends Configured implements Tool {
     jobStartTimeMS -= baselineTimeMs;
     jobFinishTimeMS -= baselineTimeMs;
     if (jobStartTimeMS < 0) {
-      LOG.warn("Warning: reset job " + oldJobId + " start time to 0.");
+      LOG.warn("Warning: reset job {} start time to 0.", oldJobId);
       jobFinishTimeMS = jobFinishTimeMS - jobStartTimeMS;
       jobStartTimeMS = 0;
     }
@@ -560,7 +568,8 @@ public class SLSRunner extends Configured implements Tool {
 
     // Only supports the default job type currently
     runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-        jobStartTimeMS, jobFinishTimeMS, containerList, null);
+        jobStartTimeMS, jobFinishTimeMS, containerList, null,
+        getAMContainerResource(null));
   }
 
   private Resource getDefaultContainerResource() {
@@ -610,7 +619,7 @@ public class SLSRunner extends Configured implements Tool {
         jobStartTimeMS -= baselineTimeMS;
         jobFinishTimeMS -= baselineTimeMS;
         if (jobStartTimeMS < 0) {
-          LOG.warn("Warning: reset job " + oldJobId + " start time to 0.");
+          LOG.warn("Warning: reset job {} start time to 0.", oldJobId);
           jobFinishTimeMS = jobFinishTimeMS - jobStartTimeMS;
           jobStartTimeMS = 0;
         }
@@ -678,12 +687,33 @@ public class SLSRunner extends Configured implements Tool {
         }
 
         runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-            jobStartTimeMS, jobFinishTimeMS, containerList, rr);
+            jobStartTimeMS, jobFinishTimeMS, containerList, rr,
+            getAMContainerResource(null));
       }
     } finally {
       stjp.close();
     }
 
+  }
+
+  private Resource getAMContainerResource(Map jsonJob) {
+    Resource amContainerResource =
+        SLSConfiguration.getAMContainerResource(getConf());
+
+    if (jsonJob == null) {
+      return amContainerResource;
+    }
+
+    if (jsonJob.containsKey("am.memory")) {
+      amContainerResource.setMemorySize(
+          Long.parseLong(jsonJob.get("am.memory").toString()));
+    }
+
+    if (jsonJob.containsKey("am.vcores")) {
+      amContainerResource.setVirtualCores(
+          Integer.parseInt(jsonJob.get("am.vcores").toString()));
+    }
+    return amContainerResource;
   }
 
   private void increaseQueueAppNum(String queue) throws YarnException {
@@ -702,7 +732,7 @@ public class SLSRunner extends Configured implements Tool {
   private void runNewAM(String jobType, String user,
       String jobQueue, String oldJobId, long jobStartTimeMS,
       long jobFinishTimeMS, List<ContainerSimulator> containerList,
-      ReservationSubmissionRequest rr) {
+      ReservationSubmissionRequest rr, Resource amContainerResource) {
 
     AMSimulator amSim = (AMSimulator) ReflectionUtils.newInstance(
         amClassMap.get(jobType), new Configuration());
@@ -712,9 +742,15 @@ public class SLSRunner extends Configured implements Tool {
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS,
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS_DEFAULT);
       boolean isTracked = trackedApps.contains(oldJobId);
-      amSim.init(AM_ID++, heartbeatInterval, containerList,
-          rm, this, jobStartTimeMS, jobFinishTimeMS, user, jobQueue,
-          isTracked, oldJobId, rr, runner.getStartTimeMS());
+
+      if (oldJobId == null) {
+        oldJobId = Integer.toString(AM_ID);
+      }
+      AM_ID++;
+
+      amSim.init(heartbeatInterval, containerList, rm, this, jobStartTimeMS,
+          jobFinishTimeMS, user, jobQueue, isTracked, oldJobId, rr,
+          runner.getStartTimeMS(), amContainerResource);
       runner.schedule(amSim);
       maxRuntime = Math.max(maxRuntime, jobFinishTimeMS);
       numTasks += containerList.size();
@@ -726,16 +762,14 @@ public class SLSRunner extends Configured implements Tool {
     if (printSimulation) {
       // node
       LOG.info("------------------------------------");
-      LOG.info(MessageFormat.format(
-          "# nodes = {0}, # racks = {1}, capacity "
-              + "of each node {2} MB memory and {3} vcores.",
-          numNMs, numRacks, nmMemoryMB, nmVCores));
+      LOG.info("# nodes = {}, # racks = {}, capacity " +
+              "of each node {} MB memory and {} vcores.",
+              numNMs, numRacks, nmMemoryMB, nmVCores);
       LOG.info("------------------------------------");
       // job
-      LOG.info(MessageFormat.format(
-          "# applications = {0}, # total "
-              + "tasks = {1}, average # tasks per application = {2}",
-          numAMs, numTasks, (int) (Math.ceil((numTasks + 0.0) / numAMs))));
+      LOG.info("# applications = {}, # total " +
+              "tasks = {}, average # tasks per application = {}",
+              numAMs, numTasks, (int)(Math.ceil((numTasks + 0.0) / numAMs)));
       LOG.info("JobId\tQueue\tAMType\tDuration\t#Tasks");
       for (Map.Entry<String, AMSimulator> entry : amMap.entrySet()) {
         AMSimulator am = entry.getValue();
@@ -744,15 +778,13 @@ public class SLSRunner extends Configured implements Tool {
       }
       LOG.info("------------------------------------");
       // queue
-      LOG.info(MessageFormat.format(
-          "number of queues = {0}  average " + "number of apps = {1}",
+      LOG.info("number of queues = {}  average number of apps = {}",
           queueAppNumMap.size(),
-          (int) (Math.ceil((numAMs + 0.0) / queueAppNumMap.size()))));
+          (int)(Math.ceil((numAMs + 0.0) / queueAppNumMap.size())));
       LOG.info("------------------------------------");
       // runtime
-      LOG.info(
-          MessageFormat.format("estimated simulation time is {0}" + " seconds",
-              (long) (Math.ceil(maxRuntime / 1000.0))));
+      LOG.info("estimated simulation time is {} seconds",
+          (long)(Math.ceil(maxRuntime / 1000.0)));
       LOG.info("------------------------------------");
     }
     // package these information in the simulateInfoMap used by other places

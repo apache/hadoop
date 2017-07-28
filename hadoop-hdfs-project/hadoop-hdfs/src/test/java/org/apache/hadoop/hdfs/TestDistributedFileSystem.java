@@ -50,6 +50,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -84,7 +86,9 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ScriptBasedMapping;
@@ -1445,13 +1449,18 @@ public class TestDistributedFileSystem {
   }
 
   @Test
-  public void testDFSDataOutputStreamBuilder() throws Exception {
+  public void testDFSDataOutputStreamBuilderForCreation() throws Exception {
     Configuration conf = getTestConfiguration();
     String testFile = "/testDFSDataOutputStreamBuilder";
     Path testFilePath = new Path(testFile);
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build()) {
       DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Before calling build(), no change was made in the file system
+      HdfsDataOutputStreamBuilder builder = fs.createFile(testFilePath)
+          .blockSize(4096).replication((short)1);
+      assertFalse(fs.exists(testFilePath));
 
       // Test create an empty file
       try (FSDataOutputStream out =
@@ -1495,6 +1504,115 @@ public class TestDistributedFileSystem {
       }
       assertTrue("parent directory has not been created",
           fs.exists(new Path("/parent")));
+    }
+  }
+
+  @Test
+  public void testDFSDataOutputStreamBuilderForAppend() throws IOException {
+    Configuration conf = getTestConfiguration();
+    String testFile = "/testDFSDataOutputStreamBuilderForAppend";
+    Path path = new Path(testFile);
+    Random random = new Random();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      byte[] buf = new byte[16];
+      random.nextBytes(buf);
+
+      try (FSDataOutputStream out = fs.appendFile(path).build()) {
+        out.write(buf);
+        fail("should fail on appending to non-existent file");
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains("non-existent", e);
+      }
+
+      random.nextBytes(buf);
+      try (FSDataOutputStream out = fs.createFile(path).build()) {
+        out.write(buf);
+      }
+
+      random.nextBytes(buf);
+      try (FSDataOutputStream out = fs.appendFile(path).build()) {
+        out.write(buf);
+      }
+
+      FileStatus status = fs.getFileStatus(path);
+      assertEquals(16 * 2, status.getLen());
+    }
+  }
+
+  @Test
+  public void testRemoveErasureCodingPolicy() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      ECSchema toAddSchema = new ECSchema("rs", 3, 2);
+      ErasureCodingPolicy toAddPolicy =
+          new ErasureCodingPolicy(toAddSchema, 128 * 1024, (byte) 254);
+      String policyName = toAddPolicy.getName();
+      ErasureCodingPolicy[] policies = new ErasureCodingPolicy[]{toAddPolicy};
+      fs.addErasureCodingPolicies(policies);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getByName(policyName).getName());
+      fs.removeErasureCodingPolicy(policyName);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getRemovedPolicies().get(0).getName());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testEnableAndDisableErasureCodingPolicy() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      ECSchema toAddSchema = new ECSchema("rs", 3, 2);
+      ErasureCodingPolicy toAddPolicy =
+          new ErasureCodingPolicy(toAddSchema, 128 * 1024, (byte) 254);
+      String policyName = toAddPolicy.getName();
+      ErasureCodingPolicy[] policies =
+          new ErasureCodingPolicy[]{toAddPolicy};
+      fs.addErasureCodingPolicies(policies);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getByName(policyName).getName());
+      fs.disableErasureCodingPolicy(policyName);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getRemovedPolicies().get(0).getName());
+      fs.enableErasureCodingPolicy(policyName);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getByName(policyName).getName());
+
+      //test enable a policy that doesn't exist
+      try {
+        fs.enableErasureCodingPolicy("notExistECName");
+        Assert.fail("enable the policy that doesn't exist should fail");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains("does not exists", e);
+        // pass
+      }
+
+      //test disable a policy that doesn't exist
+      try {
+        fs.disableErasureCodingPolicy("notExistECName");
+        Assert.fail("disable the policy that doesn't exist should fail");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains("does not exists", e);
+        // pass
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }

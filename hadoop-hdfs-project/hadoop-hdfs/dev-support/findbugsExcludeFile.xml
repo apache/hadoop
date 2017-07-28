@@ -252,9 +252,4 @@
         <Class name="org.apache.hadoop.hdfs.server.datanode.checker.AbstractFuture" />
         <Bug pattern="NS_DANGEROUS_NON_SHORT_CIRCUIT" />
     </Match>
-    <Match>
-        <Class name="org.apache.hadoop.hdfs.server.namenode.NNUpgradeUtil$1" />
-        <Method name="visitFile" />
-        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
-    </Match>
  </FindBugsFilter>

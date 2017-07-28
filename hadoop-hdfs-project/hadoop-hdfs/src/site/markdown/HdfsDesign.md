@@ -201,38 +201,13 @@ A typical block size used by HDFS is 128 MB.
 Thus, an HDFS file is chopped up into 128 MB chunks, and if possible,
 each chunk will reside on a different DataNode.
 
-### Staging
-
-A client request to create a file does not reach the NameNode immediately.
-In fact, initially the HDFS client caches the file data into a local buffer.
-Application writes are transparently redirected to this local buffer.
-When the local file accumulates data worth over one chunk size, the client contacts the NameNode.
-The NameNode inserts the file name into the file system hierarchy and allocates a data block for it.
-The NameNode responds to the client request with the identity of the DataNode and the destination data block.
-Then the client flushes the chunk of data from the local buffer to the specified DataNode.
-When a file is closed, the remaining un-flushed data in the local buffer is transferred to the DataNode.
-The client then tells the NameNode that the file is closed. At this point,
-the NameNode commits the file creation operation into a persistent store.
-If the NameNode dies before the file is closed, the file is lost.
-
-The above approach has been adopted after careful consideration of target applications that run on HDFS.
-These applications need streaming writes to files.
-If a client writes to a remote file directly without any client side buffering,
-the network speed and the congestion in the network impacts throughput considerably.
-This approach is not without precedent.
-Earlier distributed file systems, e.g. AFS, have used client side caching to improve performance.
-A POSIX requirement has been relaxed to achieve higher performance of data uploads.
-
 ### Replication Pipelining
 
-When a client is writing data to an HDFS file,
-its data is first written to a local buffer as explained in the previous section.
-Suppose the HDFS file has a replication factor of three.
-When the local buffer accumulates a chunk of user data,
-the client retrieves a list of DataNodes from the NameNode.
+When a client is writing data to an HDFS file with a replication factor of three,
+the NameNode retrieves a list of DataNodes using a replication target choosing algorithm.
 This list contains the DataNodes that will host a replica of that block.
-The client then flushes the data chunk to the first DataNode.
-The first DataNode starts receiving the data in small portions,
+The client then writes to the first DataNode.
+The first DataNode starts receiving the data in portions,
 writes each portion to its local repository and transfers that portion to the second DataNode in the list.
 The second DataNode, in turn starts receiving each portion of the data block,
 writes that portion to its repository and then flushes that portion to the third DataNode.

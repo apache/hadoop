@@ -55,12 +55,14 @@ public class Count extends FsCommand {
   private static final String OPTION_EXCLUDE_SNAPSHOT = "x";
   //return the quota, namespace count and disk space usage.
   private static final String OPTION_QUOTA_AND_USAGE = "u";
+  private static final String OPTION_ECPOLICY = "e";
 
   public static final String NAME = "count";
   public static final String USAGE =
       "[-" + OPTION_QUOTA + "] [-" + OPTION_HUMAN + "] [-" + OPTION_HEADER
           + "] [-" + OPTION_TYPE + " [<storage type>]] [-" +
           OPTION_QUOTA_AND_USAGE + "] [-" + OPTION_EXCLUDE_SNAPSHOT
+          + "] [-" + OPTION_ECPOLICY
           + "] <path> ...";
   public static final String DESCRIPTION =
       "Count the number of directories, files and bytes under the paths\n" +
@@ -90,7 +92,8 @@ public class Count extends FsCommand {
           "It can also pass the value '', 'all' or 'ALL' to specify all " +
           "the storage types.\n" +
           "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and \n" +
-          "the usage against the quota without the detailed content summary.";
+          "the usage against the quota without the detailed content summary."+
+          "The -"+ OPTION_ECPOLICY +" option shows the erasure coding policy.";
 
   private boolean showQuotas;
   private boolean humanReadable;
@@ -98,6 +101,7 @@ public class Count extends FsCommand {
   private List<StorageType> storageTypes = null;
   private boolean showQuotasAndUsageOnly;
   private boolean excludeSnapshots;
+  private boolean displayECPolicy;
 
   /** Constructor */
   public Count() {}
@@ -118,7 +122,8 @@ public class Count extends FsCommand {
   protected void processOptions(LinkedList<String> args) {
     CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE,
         OPTION_QUOTA, OPTION_HUMAN, OPTION_HEADER, OPTION_QUOTA_AND_USAGE,
-        OPTION_EXCLUDE_SNAPSHOT);
+        OPTION_EXCLUDE_SNAPSHOT,
+        OPTION_ECPOLICY);
     cf.addOptionWithValue(OPTION_TYPE);
     cf.parse(args);
     if (args.isEmpty()) { // default path is the current working directory
@@ -128,6 +133,7 @@ public class Count extends FsCommand {
     humanReadable = cf.getOpt(OPTION_HUMAN);
     showQuotasAndUsageOnly = cf.getOpt(OPTION_QUOTA_AND_USAGE);
     excludeSnapshots = cf.getOpt(OPTION_EXCLUDE_SNAPSHOT);
+    displayECPolicy = cf.getOpt(OPTION_ECPOLICY);
 
     if (showQuotas || showQuotasAndUsageOnly) {
       String types = cf.getOptValue(OPTION_TYPE);
@@ -146,15 +152,21 @@ public class Count extends FsCommand {
     }
 
     if (cf.getOpt(OPTION_HEADER)) {
+      StringBuilder headString = new StringBuilder();
       if (showQuotabyType) {
-        out.println(QuotaUsage.getStorageTypeHeader(storageTypes) + "PATHNAME");
+        headString.append(QuotaUsage.getStorageTypeHeader(storageTypes));
       } else {
         if (showQuotasAndUsageOnly) {
-          out.println(QuotaUsage.getHeader() + "PATHNAME");
+          headString.append(QuotaUsage.getHeader());
         } else {
-          out.println(ContentSummary.getHeader(showQuotas) + "PATHNAME");
+          headString.append(ContentSummary.getHeader(showQuotas));
         }
       }
+      if(displayECPolicy){
+        headString.append("ERASURECODING_POLICY ");
+      }
+      headString.append("PATHNAME");
+      out.println(headString.toString());
     }
   }
 
@@ -175,15 +187,26 @@ public class Count extends FsCommand {
 
   @Override
   protected void processPath(PathData src) throws IOException {
+    StringBuilder outputString = new StringBuilder();
     if (showQuotasAndUsageOnly || showQuotabyType) {
       QuotaUsage usage = src.fs.getQuotaUsage(src.path);
-      out.println(usage.toString(isHumanReadable(), showQuotabyType,
-          storageTypes) + src);
+      outputString.append(usage.toString(
+          isHumanReadable(), showQuotabyType, storageTypes));
     } else {
       ContentSummary summary = src.fs.getContentSummary(src.path);
-      out.println(summary.
-          toString(showQuotas, isHumanReadable(), excludeSnapshots) + src);
+      outputString.append(summary.toString(
+          showQuotas, isHumanReadable(), excludeSnapshots));
     }
+    if(displayECPolicy){
+      ContentSummary summary = src.fs.getContentSummary(src.path);
+      if(!summary.getErasureCodingPolicy().equals("Replicated")){
+        outputString.append("EC:");
+      }
+      outputString.append(summary.getErasureCodingPolicy());
+      outputString.append(" ");
+    }
+    outputString.append(src);
+    out.println(outputString.toString());
   }
 
   /**

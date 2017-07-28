@@ -32,14 +32,14 @@ public class TestSubViews {
 
   static public class MainView extends HtmlPage {
     @Override
-    public void render(Page.HTML<_> html) {
+    public void render(Page.HTML<__> html) {
       html.
         body().
           div().
-            _(Sub1.class)._().
+          __(Sub1.class).__().
           div().
             i("inline text").
-            _(Sub2.class)._()._()._();
+          __(Sub2.class).__().__().__();
     }
   }
 
@@ -48,7 +48,7 @@ public class TestSubViews {
     public void render(Block html) {
       html.
         div("#sub1").
-          _("sub1 text")._();
+          __("sub1 text").__();
     }
   }
 
@@ -57,7 +57,7 @@ public class TestSubViews {
     public void render(Block html) {
       html.
         pre().
-          _("sub2 text")._();
+          __("sub2 text").__();
     }
   }
 

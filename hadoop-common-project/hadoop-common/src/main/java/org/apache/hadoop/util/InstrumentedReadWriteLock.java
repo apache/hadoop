@@ -21,9 +21,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
 
 /**
  * This is a wrap class of a {@link ReentrantReadWriteLock}.
@@ -37,7 +37,7 @@ public class InstrumentedReadWriteLock implements ReadWriteLock {
   private final Lock readLock;
   private final Lock writeLock;
 
-  InstrumentedReadWriteLock(boolean fair, String name, Log logger,
+  InstrumentedReadWriteLock(boolean fair, String name, Logger logger,
       long minLoggingGapMs, long lockWarningThresholdMs) {
     ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock(fair);
     readLock = new InstrumentedReadLock(name, logger, readWriteLock,

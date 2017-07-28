@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project-dist</artifactId>
-   <version>3.0.0-alpha4-SNAPSHOT</version>
+   <version>3.0.0-beta1-SNAPSHOT</version>
    <relativePath>../../hadoop-project-dist</relativePath>
 </parent>
   <artifactId>hadoop-client</artifactId>
-  <version>3.0.0-alpha4-SNAPSHOT</version>
+  <version>3.0.0-beta1-SNAPSHOT</version>
 
   <description>Apache Hadoop Client aggregation pom with dependencies exposed</description>
   <name>Apache Hadoop Client Aggregator</name>
@@ -161,10 +161,6 @@
         <exclusion>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>jline</groupId>
-          <artifactId>jline</artifactId>
         </exclusion>
         <exclusion>
           <groupId>io.netty</groupId>

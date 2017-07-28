@@ -7060,6 +7060,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   AddECPolicyResponse[] addECPolicies(ErasureCodingPolicy[] policies)
       throws IOException {
     final String operationName = "addECPolicies";
+    String addECPolicyName = "";
     checkOperation(OperationCategory.WRITE);
     List<AddECPolicyResponse> responses = new ArrayList<>();
     boolean success = false;
@@ -7070,6 +7071,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         try {
           ErasureCodingPolicy newPolicy =
               FSDirErasureCodingOp.addErasureCodePolicy(this, policy);
+          addECPolicyName = newPolicy.getName();
           responses.add(new AddECPolicyResponse(newPolicy));
         } catch (IllegalECPolicyException e) {
           responses.add(new AddECPolicyResponse(policy, e));
@@ -7082,7 +7084,81 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (success) {
         getEditLog().logSync();
       }
+      logAuditEvent(success, operationName, addECPolicyName, null, null);
+    }
+  }
+
+  /**
+   * Remove an erasure coding policy.
+   * @param ecPolicyName the name of the policy to be removed
+   * @throws IOException
+   */
+  void removeErasureCodingPolicy(String ecPolicyName) throws IOException {
+    final String operationName = "removeErasureCodingPolicy";
+    checkOperation(OperationCategory.WRITE);
+    boolean success = false;
+    writeLock();
+    try {
+      FSDirErasureCodingOp.removeErasureCodePolicy(this, ecPolicyName);
+      success = true;
+    } finally {
+      writeUnlock(operationName);
+      if (success) {
+        getEditLog().logSync();
+      }
       logAuditEvent(success, operationName, null, null, null);
+    }
+  }
+
+  /**
+   * Enable an erasure coding policy.
+   * @param ecPolicyName the name of the policy to be enabled
+   * @throws IOException
+   */
+  void enableErasureCodingPolicy(String ecPolicyName) throws IOException {
+    final String operationName = "enableErasureCodingPolicy";
+    checkOperation(OperationCategory.WRITE);
+    boolean success = false;
+    LOG.info("Enable the erasure coding policy " + ecPolicyName);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot enable erasure coding policy "
+          + ecPolicyName);
+      FSDirErasureCodingOp.enableErasureCodePolicy(this, ecPolicyName);
+      success = true;
+    } finally {
+      writeUnlock(operationName);
+      if (success) {
+        getEditLog().logSync();
+      }
+      logAuditEvent(success, operationName, ecPolicyName, null, null);
+    }
+  }
+
+  /**
+   * Disable an erasure coding policy.
+   * @param ecPolicyName the name of the policy to be disabled
+   * @throws IOException
+   */
+  void disableErasureCodingPolicy(String ecPolicyName) throws IOException {
+    final String operationName = "disableErasureCodingPolicy";
+    checkOperation(OperationCategory.WRITE);
+    boolean success = false;
+    LOG.info("Disable the erasure coding policy " + ecPolicyName);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot disable erasure coding policy "
+          + ecPolicyName);
+      FSDirErasureCodingOp.disableErasureCodePolicy(this, ecPolicyName);
+      success = true;
+    } finally {
+      writeUnlock(operationName);
+      if (success) {
+        getEditLog().logSync();
+      }
+      logAuditEvent(success, operationName, ecPolicyName, null, null);
     }
   }
 

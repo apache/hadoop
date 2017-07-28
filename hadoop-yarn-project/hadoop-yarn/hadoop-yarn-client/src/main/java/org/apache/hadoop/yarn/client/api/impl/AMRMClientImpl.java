@@ -772,10 +772,10 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       return;
     }
 
-    // Don't support specifying >= 2 node labels in a node label expression now
+    // Don't support specifying > 1 node labels in a node label expression now
     if (exp.contains("&&") || exp.contains("||")) {
       throw new InvalidContainerRequestException(
-          "Cannot specify more than two node labels"
+          "Cannot specify more than one node label"
               + " in a single node label expression");
     }
   }

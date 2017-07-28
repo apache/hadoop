@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.0.0-alpha4-SNAPSHOT</version>
+    <version>3.0.0-beta1-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-common</artifactId>
-  <version>3.0.0-alpha4-SNAPSHOT</version>
+  <version>3.0.0-beta1-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -262,10 +262,6 @@
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
       <exclusions>
-        <exclusion>
-          <groupId>jline</groupId>
-          <artifactId>jline</artifactId>
-        </exclusion>
         <exclusion>
           <groupId>org.jboss.netty</groupId>
           <artifactId>netty</artifactId>

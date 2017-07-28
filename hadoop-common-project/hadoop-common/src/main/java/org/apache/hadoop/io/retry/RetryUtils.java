@@ -19,17 +19,17 @@ package org.apache.hadoop.io.retry;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies.MultipleLinearRandomRetry;
 import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.ipc.RetriableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RetryUtils {
-  public static final Log LOG = LogFactory.getLog(RetryUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RetryUtils.class);
   
   /**
    * Return the default retry policy set in conf.

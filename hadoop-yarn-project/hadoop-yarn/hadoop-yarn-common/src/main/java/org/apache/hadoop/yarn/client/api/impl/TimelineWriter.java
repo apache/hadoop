@@ -152,16 +152,20 @@ public abstract class TimelineWriter implements Flushable {
       if (LOG.isDebugEnabled()) {
         LOG.debug("POST to " + resURI);
       }
-      return webResource.accept(MediaType.APPLICATION_JSON)
+      ClientResponse r = webResource.accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, object);
+      r.bufferEntity();
+      return r;
     } else if (path.equals("domain")) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("PUT to " + resURI +"/" + path);
       }
-      return webResource.path(path).accept(MediaType.APPLICATION_JSON)
+      ClientResponse r = webResource.path(path).accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .put(ClientResponse.class, object);
+      r.bufferEntity();
+      return r;
     } else {
       throw new YarnRuntimeException("Unknown resource type");
     }

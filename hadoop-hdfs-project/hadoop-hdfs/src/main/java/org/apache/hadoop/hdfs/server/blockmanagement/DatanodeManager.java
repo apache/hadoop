@@ -1661,6 +1661,7 @@ public class DatanodeManager {
     if (pendingList != null) {
       cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
           pendingList));
+      maxTransfers -= pendingList.size();
     }
     // check pending erasure coding tasks
     List<BlockECReconstructionInfo> pendingECList = nodeinfo

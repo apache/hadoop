@@ -100,7 +100,7 @@ public class TestWebApp {
 
   static class TablesView extends HtmlPage {
     @Override
-    public void render(Page.HTML<_> html) {
+    public void render(Page.HTML<__> html) {
       set(DATATABLES_ID, "t1 t2 t3 t4");
       set(initID(DATATABLES, "t1"), tableInit().append("}").toString());
       set(initID(DATATABLES, "t2"), join("{bJQueryUI:true, sDom:'t',",
@@ -110,7 +110,7 @@ public class TestWebApp {
       html.
         title("Test DataTables").
         link("/static/yarn.css").
-        _(JQueryUI.class).
+          __(JQueryUI.class).
         style(".wrapper { padding: 1em }",
               ".wrapper h2 { margin: 0.5em 0 }",
               ".dataTables_wrapper { min-height: 1em }").
@@ -118,33 +118,33 @@ public class TestWebApp {
           h2("Default table init").
           table("#t1").
             thead().
-              tr().th("Column1").th("Column2")._()._().
+              tr().th("Column1").th("Column2").__().__().
             tbody().
-              tr().td("c1r1").td("c2r1")._().
-              tr().td("c1r2").td("c2r2")._()._()._().
+              tr().td("c1r1").td("c2r1").__().
+              tr().td("c1r2").td("c2r2").__().__().__().
           h2("Nested tables").
           div(_INFO_WRAP).
             table("#t2").
               thead().
-                tr().th(_TH, "Column1").th(_TH, "Column2")._()._().
+                tr().th(_TH, "Column1").th(_TH, "Column2").__().__().
               tbody().
                 tr().td("r1"). // th wouldn't work as of dt 1.7.5
                   td().$class(C_TABLE).
                     table("#t3").
                       thead().
-                        tr().th("SubColumn1").th("SubColumn2")._()._().
+                        tr().th("SubColumn1").th("SubColumn2").__().__().
                       tbody().
-                        tr().td("subc1r1").td("subc2r1")._().
-                        tr().td("subc1r2").td("subc2r2")._()._()._()._()._().
+                        tr().td("subc1r1").td("subc2r1").__().
+                        tr().td("subc1r2").td("subc2r2").__().__().__().__().__().
                 tr().td("r2"). // ditto
                   td().$class(C_TABLE).
                     table("#t4").
                       thead().
-                        tr().th("SubColumn1").th("SubColumn2")._()._().
+                        tr().th("SubColumn1").th("SubColumn2").__().__().
                       tbody().
-                        tr().td("subc1r1").td("subc2r1")._().
-                        tr().td("subc1r2").td("subc2r2")._().
-                        _()._()._()._()._()._()._()._()._();
+                        tr().td("subc1r1").td("subc2r1").__().
+                        tr().td("subc1r2").td("subc2r2").__().
+          __().__().__().__().__().__().__().__().__();
     }
   }
 
@@ -358,7 +358,7 @@ public class TestWebApp {
       assertEquals("foo", getContent(baseUrl +"test/foo").trim());
       app1 = WebApps.$for("test", this).at(port).start();
       assertEquals(port, app1.getListenerAddress().getPort());
-      app2 = WebApps.$for("test", this).at("0.0.0.0",port, true).start();
+      app2 = WebApps.$for("test", this).at("0.0.0.0", port, true).start();
       assertTrue(app2.getListenerAddress().getPort() > port);
       Configuration conf = new Configuration();
       port =  ServerSocketUtil.waitForPort(47000, 60);

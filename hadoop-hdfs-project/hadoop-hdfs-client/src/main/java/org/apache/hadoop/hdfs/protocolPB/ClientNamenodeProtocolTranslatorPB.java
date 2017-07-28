@@ -185,6 +185,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodin
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.RemoveErasureCodingPolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.EnableErasureCodingPolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.DisableErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodingPolicyRequestProto;
@@ -1689,6 +1692,48 @@ public class ClientNamenodeProtocolTranslatorPB implements
           .toArray(AddECPolicyResponse[]::new);
       return responses;
     }  catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void removeErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    RemoveErasureCodingPolicyRequestProto.Builder builder =
+        RemoveErasureCodingPolicyRequestProto.newBuilder();
+    builder.setEcPolicyName(ecPolicyName);
+    RemoveErasureCodingPolicyRequestProto req = builder.build();
+    try {
+      rpcProxy.removeErasureCodingPolicy(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    EnableErasureCodingPolicyRequestProto.Builder builder =
+        EnableErasureCodingPolicyRequestProto.newBuilder();
+    builder.setEcPolicyName(ecPolicyName);
+    EnableErasureCodingPolicyRequestProto req = builder.build();
+    try {
+      rpcProxy.enableErasureCodingPolicy(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    DisableErasureCodingPolicyRequestProto.Builder builder =
+        DisableErasureCodingPolicyRequestProto.newBuilder();
+    builder.setEcPolicyName(ecPolicyName);
+    DisableErasureCodingPolicyRequestProto req = builder.build();
+    try {
+      rpcProxy.disableErasureCodingPolicy(null, req);
+    } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }

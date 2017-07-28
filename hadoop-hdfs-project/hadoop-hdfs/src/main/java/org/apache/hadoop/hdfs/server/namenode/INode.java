@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.Diff;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.StringUtils;
 
@@ -418,7 +419,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   public abstract void destroyAndCollectBlocks(ReclaimContext reclaimContext);
 
   /** Compute {@link ContentSummary}. Blocking call */
-  public final ContentSummary computeContentSummary(BlockStoragePolicySuite bsps) {
+  public final ContentSummary computeContentSummary(
+      BlockStoragePolicySuite bsps) throws AccessControlException {
     return computeAndConvertContentSummary(Snapshot.CURRENT_STATE_ID,
         new ContentSummaryComputationContext(bsps));
   }
@@ -427,7 +429,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * Compute {@link ContentSummary}. 
    */
   public final ContentSummary computeAndConvertContentSummary(int snapshotId,
-      ContentSummaryComputationContext summary) {
+      ContentSummaryComputationContext summary) throws AccessControlException {
     computeContentSummary(snapshotId, summary);
     final ContentCounts counts = summary.getCounts();
     final ContentCounts snapshotCounts = summary.getSnapshotCounts();
@@ -445,6 +447,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
         snapshotFileCount(snapshotCounts.getFileCount()).
         snapshotDirectoryCount(snapshotCounts.getDirectoryCount()).
         snapshotSpaceConsumed(snapshotCounts.getStoragespace()).
+        erasureCodingPolicy(summary.getErasureCodingPolicyName(this)).
         build();
   }
 
@@ -460,7 +463,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @return The same objects as summary.
    */
   public abstract ContentSummaryComputationContext computeContentSummary(
-      int snapshotId, ContentSummaryComputationContext summary);
+      int snapshotId, ContentSummaryComputationContext summary)
+      throws AccessControlException;
 
 
   /**

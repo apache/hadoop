@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -1167,7 +1168,7 @@ public class DistributedFileSystem extends FileSystem {
             needLocation);
         statistics.incrementReadOps(1);
         if (thisListing == null) {
-          return false;
+          throw new FileNotFoundException("File " + p + " does not exist.");
         }
         i = 0;
       }
@@ -2607,6 +2608,39 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Remove erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be removed.
+   * @throws IOException
+   */
+  public void removeErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.removeErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
+   * Enable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
+   * Disable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.disableErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
    * Unset the erasure coding policy from the source path.
    *
    * @param path     The directory to unset the policy
@@ -2734,7 +2768,7 @@ public class DistributedFileSystem extends FileSystem {
    */
   public static final class HdfsDataOutputStreamBuilder
       extends FSDataOutputStreamBuilder<
-      HdfsDataOutputStream, HdfsDataOutputStreamBuilder> {
+      FSDataOutputStream, HdfsDataOutputStreamBuilder> {
     private final DistributedFileSystem dfs;
     private InetSocketAddress[] favoredNodes = null;
     private String ecPolicyName = null;
@@ -2857,17 +2891,24 @@ public class DistributedFileSystem extends FileSystem {
      * @throws IOException on I/O errors.
      */
     @Override
-    public HdfsDataOutputStream build() throws IOException {
-      if (isRecursive()) {
-        return dfs.create(getPath(), getPermission(), getFlags(),
-            getBufferSize(), getReplication(), getBlockSize(),
-            getProgress(), getChecksumOpt(), getFavoredNodes(),
-            getEcPolicyName());
-      } else {
-        return dfs.createNonRecursive(getPath(), getPermission(), getFlags(),
-            getBufferSize(), getReplication(), getBlockSize(), getProgress(),
-            getChecksumOpt(), getFavoredNodes(), getEcPolicyName());
+    public FSDataOutputStream build() throws IOException {
+      if (getFlags().contains(CreateFlag.CREATE)) {
+        if (isRecursive()) {
+          return dfs.create(getPath(), getPermission(), getFlags(),
+              getBufferSize(), getReplication(), getBlockSize(),
+              getProgress(), getChecksumOpt(), getFavoredNodes(),
+              getEcPolicyName());
+        } else {
+          return dfs.createNonRecursive(getPath(), getPermission(), getFlags(),
+              getBufferSize(), getReplication(), getBlockSize(), getProgress(),
+              getChecksumOpt(), getFavoredNodes(), getEcPolicyName());
+        }
+      } else if (getFlags().contains(CreateFlag.APPEND)) {
+        return dfs.append(getPath(), getFlags(), getBufferSize(), getProgress(),
+            getFavoredNodes());
       }
+      throw new HadoopIllegalArgumentException(
+          "Must specify either create or append");
     }
   }
 
@@ -2895,5 +2936,16 @@ public class DistributedFileSystem extends FileSystem {
    */
   public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
     return dfs.listOpenFiles();
+  }
+
+  /**
+   * Create a {@link HdfsDataOutputStreamBuilder} to append a file on DFS.
+   *
+   * @param path file path.
+   * @return A {@link HdfsDataOutputStreamBuilder} for appending a file.
+   */
+  @Override
+  public HdfsDataOutputStreamBuilder appendFile(Path path) {
+    return new HdfsDataOutputStreamBuilder(this, path).append();
   }
 }

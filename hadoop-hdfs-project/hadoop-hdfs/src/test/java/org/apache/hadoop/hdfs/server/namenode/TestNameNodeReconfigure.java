@@ -182,6 +182,17 @@ public class TestNameNodeReconfigure {
         + " has wrong value", 10 * 60 * 1000,
         datanodeManager.getHeartbeatRecheckInterval());
 
+    // change to a value with time unit
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, "1m");
+
+    assertEquals(
+        DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value",
+        60,
+        nameNode.getConf().getLong(DFS_HEARTBEAT_INTERVAL_KEY,
+            DFS_HEARTBEAT_INTERVAL_DEFAULT));
+    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value", 60,
+        datanodeManager.getHeartbeatInterval());
+
     // revert to defaults
     nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, null);
     nameNode.reconfigureProperty(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,

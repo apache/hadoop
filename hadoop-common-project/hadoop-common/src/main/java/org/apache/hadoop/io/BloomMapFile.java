@@ -22,8 +22,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +34,8 @@ import org.apache.hadoop.util.bloom.DynamicBloomFilter;
 import org.apache.hadoop.util.bloom.Filter;
 import org.apache.hadoop.util.bloom.Key;
 import org.apache.hadoop.util.hash.Hash;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAPFILE_BLOOM_ERROR_RATE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAPFILE_BLOOM_ERROR_RATE_KEY;
@@ -52,7 +52,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAPFILE_BLOO
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class BloomMapFile {
-  private static final Log LOG = LogFactory.getLog(BloomMapFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BloomMapFile.class);
   public static final String BLOOM_FILE_NAME = "bloom";
   public static final int HASH_COUNT = 5;
   

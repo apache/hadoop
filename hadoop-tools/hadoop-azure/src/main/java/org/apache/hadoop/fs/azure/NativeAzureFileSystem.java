@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -27,9 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.PrivilegedExceptionAction;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -41,11 +38,14 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.List;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -61,18 +61,18 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
-import org.apache.hadoop.fs.azure.security.SecurityUtils;
+import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
+import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
-import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -109,6 +109,9 @@ public class NativeAzureFileSystem extends FileSystem {
     private static final int FORMATTING_BUFFER = 10000;
     private boolean committed;
     public static final String SUFFIX = "-RenamePending.json";
+    private static final ObjectReader READER = new ObjectMapper()
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
+        .readerFor(JsonNode.class);
 
     // Prepare in-memory information needed to do or redo a folder rename.
     public FolderRenamePending(String srcKey, String dstKey, SelfRenewingLease lease,
@@ -168,11 +171,9 @@ public class NativeAzureFileSystem extends FileSystem {
       String contents = new String(bytes, 0, l, Charset.forName("UTF-8"));
 
       // parse the JSON
-      ObjectMapper objMapper = new ObjectMapper();
-      objMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
       JsonNode json = null;
       try {
-        json = objMapper.readValue(contents, JsonNode.class);
+        json = READER.readValue(contents);
         this.committed = true;
       } catch (JsonMappingException e) {
 
@@ -688,6 +689,14 @@ public class NativeAzureFileSystem extends FileSystem {
    */
   static final String AZURE_DEFAULT_GROUP_DEFAULT = "supergroup";
 
+  /**
+   * Configuration property used to specify list of users that can perform
+   * chown operation when authorization is enabled in WASB.
+   */
+  public static final String AZURE_CHOWN_USERLIST_PROPERTY_NAME = "fs.azure.chown.allowed.userlist";
+
+  static final String AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
+
   static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME =
       "fs.azure.block.location.impersonatedhost";
   private static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT =
@@ -744,7 +753,7 @@ public class NativeAzureFileSystem extends FileSystem {
     // File length, valid only for streams over block blobs.
     private long fileLength;
 
-    public NativeAzureFsInputStream(DataInputStream in, String key, long fileLength) {
+    NativeAzureFsInputStream(InputStream in, String key, long fileLength) {
       this.in = in;
       this.key = key;
       this.isPageBlob = store.isPageBlobKey(key);
@@ -815,27 +824,6 @@ public class NativeAzureFileSystem extends FileSystem {
         }
 
        throw e;
-      }
-    }
-
-    @Override
-    public synchronized  void readFully(long position, byte[] buffer, int offset, int length)
-        throws IOException {
-      validatePositionedReadArgs(position, buffer, offset, length);
-
-      int nread = 0;
-      while (nread < length) {
-        // In case BlobInputStream is used, mark() can act as a hint to read ahead only this
-        // length instead of 4 MB boundary.
-        in.mark(length - nread);
-        int nbytes = read(position + nread,
-            buffer,
-            offset + nread,
-            length - nread);
-        if (nbytes < 0) {
-          throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
-        }
-        nread += nbytes;
       }
     }
 
@@ -910,9 +898,14 @@ public class NativeAzureFileSystem extends FileSystem {
           throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
         }
         if (this.pos > pos) {
-          IOUtils.closeStream(in);
-          in = store.retrieve(key);
-          this.pos = in.skip(pos);
+          if (in instanceof Seekable) {
+            ((Seekable) in).seek(pos);
+            this.pos = pos;
+          } else {
+            IOUtils.closeStream(in);
+            in = store.retrieve(key);
+            this.pos = in.skip(pos);
+          }
         } else {
           this.pos += in.skip(pos - this.pos);
         }
@@ -1175,7 +1168,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
   private UserGroupInformation ugi;
 
-  private String delegationToken = null;
+  private WasbDelegationTokenManager wasbDelegationTokenManager;
 
   public NativeAzureFileSystem() {
     // set store in initialize()
@@ -1325,9 +1318,7 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     if (UserGroupInformation.isSecurityEnabled() && kerberosSupportEnabled) {
-      DelegationTokenAuthenticator authenticator = new KerberosDelegationTokenAuthenticator();
-      authURL = new DelegationTokenAuthenticatedURL(authenticator);
-      credServiceUrl = SecurityUtils.getCredServiceUrls(conf);
+      this.wasbDelegationTokenManager = new RemoteWasbDelegationTokenManager(conf);
     }
   }
 
@@ -2122,9 +2113,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Capture the absolute path and the path to key.
     Path absolutePath = makeAbsolute(f);
-
-    performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "getFileStatus", absolutePath);
-
     String key = pathToKey(absolutePath);
     if (key.length() == 0) { // root always exists
       return newDirectory(null, absolutePath);
@@ -2541,7 +2529,7 @@ public class NativeAzureFileSystem extends FileSystem {
           + " is a directory not a file.");
     }
 
-    DataInputStream inputStream = null;
+    InputStream inputStream;
     try {
       inputStream = store.retrieve(key);
     } catch(Exception ex) {
@@ -2949,6 +2937,33 @@ public class NativeAzureFileSystem extends FileSystem {
       throw new FileNotFoundException("File doesn't exist: " + p);
     }
 
+    /* If authorization is enabled, check if the user has privileges
+    *  to change the ownership of file/folder
+    */
+    if (this.azureAuthorization && username != null) {
+      String[] listOfUsers = getConf().getTrimmedStrings(AZURE_CHOWN_USERLIST_PROPERTY_NAME,
+        AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE);
+      boolean shouldSkipUserCheck = listOfUsers.length == 1 && listOfUsers[0].equals("*");
+      // skip the check if the chown allowed users config value is set as '*'
+      if (!shouldSkipUserCheck) {
+        UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+        UserGroupInformation actualUgi = currentUgi.getRealUser();
+
+        if (actualUgi == null) {
+          actualUgi = currentUgi;
+        }
+
+        List<String> userList = Arrays.asList(listOfUsers);
+        if (userList.contains("*")) {
+          throw new IllegalArgumentException("User list must contain "
+          + "either '*' or list of user names, but not both.");
+        } else if (!userList.contains(actualUgi.getShortUserName())) {
+          throw new WasbAuthorizationException(String.format("user '%s' does not have the privilege to change the ownership of files/folders.",
+            actualUgi.getShortUserName()));
+        }
+      }
+    }
+
     PermissionStatus newPermissionStatus = new PermissionStatus(
         username == null ?
             metadata.getPermissionStatus().getUserName() : username,
@@ -3000,31 +3015,7 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
     if (kerberosSupportEnabled) {
-      try {
-        final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-        UserGroupInformation connectUgi = ugi.getRealUser();
-        final UserGroupInformation proxyUser = connectUgi;
-        if (connectUgi == null) {
-          connectUgi = ugi;
-        }
-        connectUgi.checkTGTAndReloginFromKeytab();
-        return connectUgi.doAs(new PrivilegedExceptionAction<Token<?>>() {
-          @Override
-          public Token<?> run() throws Exception {
-            return authURL.getDelegationToken(new URL(credServiceUrl
-                    + Constants.DEFAULT_DELEGATION_TOKEN_MANAGER_ENDPOINT),
-                authToken, renewer, (proxyUser != null)? ugi.getShortUserName(): null);
-          }
-        });
-      } catch (Exception ex) {
-        LOG.error("Error in fetching the delegation token from remote service",
-            ex);
-        if (ex instanceof IOException) {
-          throw (IOException) ex;
-        } else {
-          throw new IOException(ex);
-        }
-      }
+      return wasbDelegationTokenManager.getDelegationToken(renewer);
     } else {
       return super.getDelegationToken(renewer);
     }

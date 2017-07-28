@@ -103,7 +103,7 @@ public class YarnConfiguration extends Configuration {
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
   public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = false;
-  
+
   ////////////////////////////////
   // IPC Configs
   ////////////////////////////////
@@ -149,6 +149,9 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_PORT = 8032;
   public static final String DEFAULT_RM_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_PORT;
+
+  public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
+      RM_PREFIX + "application-master-service.processors";
 
   /** The actual bind address for the RM.*/
   public static final String RM_BIND_HOST =
@@ -209,6 +212,12 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "scheduler.include-port-in-node-name";
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
+
+  /** Configured scheduler queue placement rules. */
+  public static final String QUEUE_PLACEMENT_RULES = YARN_PREFIX
+      + "scheduler.queue-placement-rules";
+  /** UserGroupMappingPlacementRule configuration string. */
+  public static final String USER_GROUP_PLACEMENT_RULE = "user-group";
 
   /** Enable Resource Manager webapp ui actions */
   public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =
@@ -561,6 +570,11 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
   public static final int DEFAULT_ZK_RM_NUM_RETRIES = 1000;
 
+  /** Zookeeper znode limit */
+  public static final String RM_ZK_ZNODE_SIZE_LIMIT_BYTES =
+      RM_ZK_PREFIX + "max-znode-size.bytes";
+  public static final int DEFAULT_RM_ZK_ZNODE_SIZE_LIMIT_BYTES = 1024 * 1024;
+
   public static final String RM_ZK_RETRY_INTERVAL_MS =
       RM_ZK_PREFIX + "retry-interval-ms";
   public static final int DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 1000;
@@ -826,6 +840,10 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanager-graceful-decommission-timeout-secs";
   public static final int DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT = 3600;
 
+  /**
+   * Period in seconds of the poll timer task inside DecommissioningNodesWatcher
+   * to identify and take care of DECOMMISSIONING nodes missing regular heart beat.
+   */
   public static final String RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL =
       RM_PREFIX + "decommissioning-nodes-watcher.poll-interval-secs";
   public static final int

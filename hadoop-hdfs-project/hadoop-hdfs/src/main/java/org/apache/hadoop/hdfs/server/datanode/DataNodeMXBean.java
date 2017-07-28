@@ -75,6 +75,13 @@ public interface DataNodeMXBean {
   public String getNamenodeAddresses();
 
   /**
+   * Gets the datanode hostname.
+   *
+   * @return the datanode hostname for the datanode.
+   */
+  public String getDatanodeHostname();
+
+  /**
    * Gets information of the block pool service actors.
    *
    * @return block pool service actors info

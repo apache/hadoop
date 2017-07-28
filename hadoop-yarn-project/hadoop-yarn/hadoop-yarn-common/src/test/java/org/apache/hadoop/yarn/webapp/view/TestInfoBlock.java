@@ -45,7 +45,7 @@ public class TestInfoBlock {
 
     static {
       resInfo = new ResponseInfo();
-      resInfo._("User_Name", JAVASCRIPT);
+      resInfo.__("User_Name", JAVASCRIPT);
     }
 
     @Override
@@ -68,8 +68,8 @@ public class TestInfoBlock {
 
     static {
       resInfo = new ResponseInfo();
-      resInfo._("Multiple_line_value", "This is one line.");
-      resInfo._("Multiple_line_value", "This is first line.\nThis is second line.");	
+      resInfo.__("Multiple_line_value", "This is one line.");
+      resInfo.__("Multiple_line_value", "This is first line.\nThis is second line.");
     }
 
     @Override

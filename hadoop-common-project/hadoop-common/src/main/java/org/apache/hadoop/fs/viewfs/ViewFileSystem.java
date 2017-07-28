@@ -126,7 +126,8 @@ public class ViewFileSystem extends FileSystem {
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
   Path homeDir = null;
-  
+  // Default to rename within same mountpoint
+  private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**
    * Make the path Absolute and get the path-part of a pathname.
    * Checks that URI matches this file system 
@@ -207,6 +208,9 @@ public class ViewFileSystem extends FileSystem {
         }
       };
       workingDir = this.getHomeDirectory();
+      renameStrategy = RenameStrategy.valueOf(
+          conf.get(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+              RenameStrategy.SAME_MOUNTPOINT.toString()));
     } catch (URISyntaxException e) {
       throw new IOException("URISyntax exception: " + theUri);
     }
@@ -490,27 +494,55 @@ public class ViewFileSystem extends FileSystem {
     if (resDst.isInternalDir()) {
           throw readOnlyMountTable("rename", dst);
     }
-    /**
-    // Alternate 1: renames within same file system - valid but we disallow
-    // Alternate 2: (as described in next para - valid but we have disallowed it
-    //
-    // Note we compare the URIs. the URIs include the link targets. 
-    // hence we allow renames across mount links as long as the mount links
-    // point to the same target.
-    if (!resSrc.targetFileSystem.getUri().equals(
-              resDst.targetFileSystem.getUri())) {
-      throw new IOException("Renames across Mount points not supported");
+
+    URI srcUri = resSrc.targetFileSystem.getUri();
+    URI dstUri = resDst.targetFileSystem.getUri();
+
+    verifyRenameStrategy(srcUri, dstUri,
+        resSrc.targetFileSystem == resDst.targetFileSystem, renameStrategy);
+
+    ChRootedFileSystem srcFS = (ChRootedFileSystem) resSrc.targetFileSystem;
+    ChRootedFileSystem dstFS = (ChRootedFileSystem) resDst.targetFileSystem;
+    return srcFS.getMyFs().rename(srcFS.fullPath(resSrc.remainingPath),
+        dstFS.fullPath(resDst.remainingPath));
+  }
+
+  static void verifyRenameStrategy(URI srcUri, URI dstUri,
+      boolean isSrcDestSame, ViewFileSystem.RenameStrategy renameStrategy)
+      throws IOException {
+    switch (renameStrategy) {
+    case SAME_FILESYSTEM_ACROSS_MOUNTPOINT:
+      if (srcUri.getAuthority() != null) {
+        if (!(srcUri.getScheme().equals(dstUri.getScheme()) && srcUri
+            .getAuthority().equals(dstUri.getAuthority()))) {
+          throw new IOException("Renames across Mount points not supported");
+        }
+      }
+
+      break;
+    case SAME_TARGET_URI_ACROSS_MOUNTPOINT:
+      // Alternate 2: Rename across mountpoints with same target.
+      // i.e. Rename across alias mountpoints.
+      //
+      // Note we compare the URIs. the URIs include the link targets.
+      // hence we allow renames across mount links as long as the mount links
+      // point to the same target.
+      if (!srcUri.equals(dstUri)) {
+        throw new IOException("Renames across Mount points not supported");
+      }
+
+      break;
+    case SAME_MOUNTPOINT:
+      //
+      // Alternate 3 : renames ONLY within the the same mount links.
+      //
+      if (!isSrcDestSame) {
+        throw new IOException("Renames across Mount points not supported");
+      }
+      break;
+    default:
+      throw new IllegalArgumentException ("Unexpected rename strategy");
     }
-    */
-    
-    //
-    // Alternate 3 : renames ONLY within the the same mount links.
-    //
-    if (resSrc.targetFileSystem !=resDst.targetFileSystem) {
-      throw new IOException("Renames across Mount points not supported");
-    }
-    return resSrc.targetFileSystem.rename(resSrc.remainingPath,
-        resDst.remainingPath);
   }
 
   @Override
@@ -1240,5 +1272,10 @@ public class ViewFileSystem extends FileSystem {
       }
       return allPolicies;
     }
+  }
+
+  enum RenameStrategy {
+    SAME_MOUNTPOINT, SAME_TARGET_URI_ACROSS_MOUNTPOINT,
+    SAME_FILESYSTEM_ACROSS_MOUNTPOINT
   }
 }

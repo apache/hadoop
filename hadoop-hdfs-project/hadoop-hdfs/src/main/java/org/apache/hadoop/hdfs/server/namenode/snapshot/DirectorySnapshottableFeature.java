@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -234,7 +235,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
 
   @Override
   public void computeContentSummary4Snapshot(final BlockStoragePolicySuite bsps,
-      final ContentCounts counts) {
+      final ContentCounts counts) throws AccessControlException {
     counts.addContent(Content.SNAPSHOT, snapshotsByNames.size());
     counts.addContent(Content.SNAPSHOTTABLE_DIRECTORY, 1);
     super.computeContentSummary4Snapshot(bsps, counts);
