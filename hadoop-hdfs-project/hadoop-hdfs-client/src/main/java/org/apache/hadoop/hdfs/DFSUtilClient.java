@@ -83,6 +83,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -811,10 +812,30 @@ public class DFSUtilClient {
   public static ThreadPoolExecutor getThreadPoolExecutor(int corePoolSize,
       int maxPoolSize, long keepAliveTimeSecs, String threadNamePrefix,
       boolean runRejectedExec) {
+    return getThreadPoolExecutor(corePoolSize, maxPoolSize, keepAliveTimeSecs,
+        new SynchronousQueue<>(), threadNamePrefix, runRejectedExec);
+}
+
+  /**
+   * Utility to create a {@link ThreadPoolExecutor}.
+   *
+   * @param corePoolSize - min threads in the pool, even if idle
+   * @param maxPoolSize - max threads in the pool
+   * @param keepAliveTimeSecs - max seconds beyond which excess idle threads
+   *        will be terminated
+   * @param queue - the queue to use for holding tasks before they are executed.
+   * @param threadNamePrefix - name prefix for the pool threads
+   * @param runRejectedExec - when true, rejected tasks from
+   *        ThreadPoolExecutor are run in the context of calling thread
+   * @return ThreadPoolExecutor
+   */
+  public static ThreadPoolExecutor getThreadPoolExecutor(int corePoolSize,
+      int maxPoolSize, long keepAliveTimeSecs, BlockingQueue<Runnable> queue,
+      String threadNamePrefix, boolean runRejectedExec) {
     Preconditions.checkArgument(corePoolSize > 0);
     ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(corePoolSize,
         maxPoolSize, keepAliveTimeSecs, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), new Daemon.DaemonFactory() {
+        queue, new Daemon.DaemonFactory() {
           private final AtomicInteger threadIndex = new AtomicInteger(0);
 
           @Override

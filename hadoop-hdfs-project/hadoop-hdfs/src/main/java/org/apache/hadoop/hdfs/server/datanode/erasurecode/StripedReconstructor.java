@@ -133,7 +133,6 @@ abstract class StripedReconstructor {
     }
     blockGroup = stripedReconInfo.getBlockGroup();
     stripedReader = new StripedReader(this, datanode, conf, stripedReconInfo);
-
     cachingStrategy = CachingStrategy.newDefaultStrategy();
 
     positionInBlock = 0L;
@@ -231,6 +230,13 @@ abstract class StripedReconstructor {
 
   ExtendedBlock getBlockGroup() {
     return blockGroup;
+  }
+
+  /**
+   * Get the xmits that _will_ be used for this reconstruction task.
+   */
+  int getXmits() {
+    return stripedReader.getXmits();
   }
 
   BitSet getLiveBitSet() {

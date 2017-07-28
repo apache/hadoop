@@ -48,7 +48,6 @@ class StripedBlockReconstructor extends StripedReconstructor
 
   @Override
   public void run() {
-    getDatanode().incrementXmitsInProgress();
     try {
       initDecoderIfNecessary();
 
@@ -66,7 +65,7 @@ class StripedBlockReconstructor extends StripedReconstructor
       LOG.warn("Failed to reconstruct striped block: {}", getBlockGroup(), e);
       getDatanode().getMetrics().incrECFailedReconstructionTasks();
     } finally {
-      getDatanode().decrementXmitsInProgress();
+      getDatanode().decrementXmitsInProgress(getXmits());
       final DataNodeMetrics metrics = getDatanode().getMetrics();
       metrics.incrECReconstructionTasks();
       metrics.incrECReconstructionBytesRead(getBytesRead());

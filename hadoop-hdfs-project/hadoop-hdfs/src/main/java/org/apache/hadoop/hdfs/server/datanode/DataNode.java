@@ -2204,10 +2204,31 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
+   * Increments the xmitInProgress count by given value.
+   *
+   * @param delta the amount of xmitsInProgress to increase.
+   * @see #incrementXmitsInProgress()
+   */
+  public void incrementXmitsInProcess(int delta) {
+    Preconditions.checkArgument(delta >= 0);
+    xmitsInProgress.getAndAdd(delta);
+  }
+
+  /**
    * Decrements the xmitsInProgress count
    */
   public void decrementXmitsInProgress() {
     xmitsInProgress.getAndDecrement();
+  }
+
+  /**
+   * Decrements the xmitsInProgress count by given value.
+   *
+   * @see #decrementXmitsInProgress()
+   */
+  public void decrementXmitsInProgress(int delta) {
+    Preconditions.checkArgument(delta >= 0);
+    xmitsInProgress.getAndAdd(0 - delta);
   }
 
   private void reportBadBlock(final BPOfferService bpos,
