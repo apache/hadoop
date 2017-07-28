@@ -171,7 +171,8 @@
     <name>ozone.scm.block.client.address</name>
     <value></value>
     <description>
-      The address of the Ozone SCM block client service.
+      The address of the Ozone SCM block client service. If not defined
+      value of ozone.scm.client.address is used.
     </description>
   </property>
 
