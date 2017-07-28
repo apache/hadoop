@@ -21,10 +21,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 
 /**
  * This interface is for storing application timeline information.
@@ -34,25 +36,19 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
 public interface TimelineWriter extends Service {
 
   /**
-   * Stores the entire information in {@link TimelineEntities} to the
-   * timeline store. Any errors occurring for individual write request objects
-   * will be reported in the response.
+   * Stores the entire information in {@link TimelineEntities} to the timeline
+   * store. Any errors occurring for individual write request objects will be
+   * reported in the response.
    *
-   * @param clusterId context cluster ID
-   * @param userId context user ID
-   * @param flowName context flow name
-   * @param flowVersion context flow version
-   * @param flowRunId run id for the flow.
-   * @param appId context app ID.
-   * @param data
-   *          a {@link TimelineEntities} object.
+   * @param context a {@link TimelineCollectorContext}
+   * @param data a {@link TimelineEntities} object.
+   * @param callerUgi {@link UserGroupInformation}.
    * @return a {@link TimelineWriteResponse} object.
-   * @throws IOException if there is any exception encountered while storing
-   *     or writing entities to the backend storage.
+   * @throws IOException if there is any exception encountered while storing or
+   *           writing entities to the back end storage.
    */
-  TimelineWriteResponse write(String clusterId, String userId,
-      String flowName, String flowVersion, long flowRunId, String appId,
-      TimelineEntities data) throws IOException;
+  TimelineWriteResponse write(TimelineCollectorContext context,
+      TimelineEntities data, UserGroupInformation callerUgi) throws IOException;
 
   /**
    * Aggregates the entity information to the timeline store based on which

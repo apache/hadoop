@@ -48,8 +48,10 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
@@ -280,9 +282,12 @@ public class TestHBaseStorageFlowRunCompaction {
     Configuration c1 = util.getConfiguration();
     TimelineEntities te1 = null;
     TimelineEntity entityApp1 = null;
+    UserGroupInformation remoteUser =
+        UserGroupInformation.createRemoteUser(user);
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
+
       // now insert count * ( 100 + 100) metrics
       // each call to getEntityMetricsApp1 brings back 100 values
       // of metric1 and 100 of metric2
@@ -292,14 +297,16 @@ public class TestHBaseStorageFlowRunCompaction {
         te1 = new TimelineEntities();
         entityApp1 = TestFlowDataGenerator.getEntityMetricsApp1(insertTs, c1);
         te1.addEntity(entityApp1);
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1, remoteUser);
 
         appName = "application_2048000000000_7" + appIdSuffix;
         insertTs++;
         te1 = new TimelineEntities();
         entityApp1 = TestFlowDataGenerator.getEntityMetricsApp2(insertTs);
         te1.addEntity(entityApp1);
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1, remoteUser);
       }
     } finally {
       String appName = "application_10240000000000_" + appIdSuffix;
@@ -308,7 +315,8 @@ public class TestHBaseStorageFlowRunCompaction {
           insertTs + 1, c1);
       te1.addEntity(entityApp1);
       if (hbi != null) {
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1, remoteUser);
         hbi.flush();
         hbi.close();
       }
