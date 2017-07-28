@@ -16,47 +16,47 @@ Apache Hadoop ${project.version}
 ================================
 
 Apache Hadoop ${project.version} is a minor release in the 2.x.y release
-line, building upon the previous stable release 2.4.1.
+line, building upon the previous stable release 2.7.3.
 
-Here is a short overview of the major features and improvements.
+It includes bug fixes, improvements, and optimizations including:
 
 *   Common
 
-    *   Authentication improvements when using an HTTP proxy server. This is
-        useful when accessing WebHDFS via a proxy server.
+    *   Metrics improvements.
 
-    *   A new Hadoop metrics sink that allows writing directly to Graphite.
+    *   Exponential back off for RPC clients.
 
-    *   [Specification work](./hadoop-project-dist/hadoop-common/filesystem/index.html)
-        related to the Hadoop Compatible Filesystem (HCFS) effort.
+    *   Workaround for Jetty6 bugs.
+
+    *   Security fixes.
+
+    *   ViewFs improvements.
+
+    *   Fix unit tests failures.
 
 *   HDFS
 
-    *   Support for POSIX-style filesystem extended attributes. See the
-        [user documentation](./hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html)
-        for more details.
+    *   DataNode-space-aware block placement policy.
 
-    *   Using the OfflineImageViewer, clients can now browse an fsimage via
-        the WebHDFS API.
+    *   Balancer evolution and optimization.
 
-    *   The NFS gateway received a number of supportability improvements and
-        bug fixes. The Hadoop portmapper is no longer required to run the gateway,
-        and the gateway is now able to reject connections from unprivileged ports.
+    *   NameNode optimization.
 
-    *   The SecondaryNameNode, JournalNode, and DataNode web UIs have been
-        modernized with HTML5 and Javascript.
+    *   Incremental block reports batching.
 
-*   YARN
+    *   Block report processing optimization.
 
-    *   YARN's REST APIs now support write/modify operations. Users can submit and
-        kill applications through REST APIs.
+    *   NameNode Metrics for queue length and lock usage.
 
-    *   The timeline store in YARN, used for storing generic and
-        application-specific information for applications, supports authentication
-        through Kerberos.
+    *   NNThroughputBenchmark improvements.
 
-    *   The Fair Scheduler supports dynamic hierarchical user queues, user queues
-        are created dynamically at runtime under any specified parent-queue.
+*   MAPREDUCE, YARN
+
+    *   Selective display of job conf properties on Job History WebUI.
+
+    *   Support for node labeling.
+
+    *   Synthetic Load Generator improvements.
 
 Getting Started
 ===============
