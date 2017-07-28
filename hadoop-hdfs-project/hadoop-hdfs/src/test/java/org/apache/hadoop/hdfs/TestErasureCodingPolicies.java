@@ -693,5 +693,25 @@ public class TestErasureCodingPolicies {
     assertTrue(responses[0].isSucceed());
     assertEquals(SystemErasureCodingPolicies.getPolicies().size() + 1,
         ErasureCodingPolicyManager.getInstance().getPolicies().length);
+
+    // add erasure coding policy as a user without privilege
+    UserGroupInformation fakeUGI = UserGroupInformation.createUserForTesting(
+        "ProbablyNotARealUserName", new String[] {"ShangriLa"});
+    final ErasureCodingPolicy ecPolicy = newPolicy;
+    fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        DistributedFileSystem fs = cluster.getFileSystem();
+        try {
+          fs.addErasureCodingPolicies(new ErasureCodingPolicy[]{ecPolicy});
+          fail();
+        } catch (AccessControlException ace) {
+          GenericTestUtils.assertExceptionContains("Access denied for user " +
+                  "ProbablyNotARealUserName. Superuser privilege is required",
+              ace);
+        }
+        return null;
+      }
+    });
   }
 }
