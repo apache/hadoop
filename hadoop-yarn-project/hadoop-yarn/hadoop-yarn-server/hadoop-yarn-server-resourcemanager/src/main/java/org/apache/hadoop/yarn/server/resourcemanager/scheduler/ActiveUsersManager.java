@@ -43,6 +43,7 @@ public class ActiveUsersManager {
   private final QueueMetrics metrics;
   
   private int activeUsers = 0;
+  private boolean activeUsersChanged = false;
   private Map<String, Set<ApplicationId>> usersApplications = 
       new HashMap<String, Set<ApplicationId>>();
   
@@ -65,6 +66,7 @@ public class ActiveUsersManager {
       usersApplications.put(user, userApps);
       ++activeUsers;
       metrics.incrActiveUsers();
+      activeUsersChanged = true;
       LOG.debug("User " + user + " added to activeUsers, currently: " + 
           activeUsers);
     }
@@ -91,6 +93,7 @@ public class ActiveUsersManager {
         usersApplications.remove(user);
         --activeUsers;
         metrics.decrActiveUsers();
+        activeUsersChanged = true;
         LOG.debug("User " + user + " removed from activeUsers, currently: " + 
             activeUsers);
       }
@@ -105,5 +108,31 @@ public class ActiveUsersManager {
   @Lock({Queue.class, SchedulerApplicationAttempt.class})
   synchronized public int getNumActiveUsers() {
     return activeUsers;
+  }
+
+  /**
+   * Get list of active users
+   * @return a copy of the list of active users
+   */
+  @Lock({Queue.class, SchedulerApplicationAttempt.class})
+  synchronized public Set<String> getActiveUsersSet() {
+    return new HashSet<String>(usersApplications.keySet());
+  }
+
+  /**
+   * Get indicator of whether or not the active users list has changed.
+   * @return active users changed indicator
+   */
+  @Lock({Queue.class, SchedulerApplicationAttempt.class})
+  synchronized public boolean getActiveUsersChanged() {
+    return activeUsersChanged;
+  }
+
+  /**
+   * Clear active users changed indicator
+   */
+  @Lock({Queue.class, SchedulerApplicationAttempt.class})
+  synchronized public void clearActiveUsersChanged() {
+    activeUsersChanged = false;
   }
 }

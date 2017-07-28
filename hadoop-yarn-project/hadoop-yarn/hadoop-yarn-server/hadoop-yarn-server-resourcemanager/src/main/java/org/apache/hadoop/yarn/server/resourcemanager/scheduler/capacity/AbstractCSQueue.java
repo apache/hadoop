@@ -90,6 +90,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       RecordFactoryProvider.getRecordFactory(null);
   protected CapacitySchedulerContext csContext;
   protected YarnAuthorizationProvider authorizer = null;
+  private Map<String, Float> userWeights = new HashMap<String, Float>();
 
   public AbstractCSQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -302,6 +303,22 @@ public abstract class AbstractCSQueue implements CSQueue {
         .getReservationContinueLook();
 
     this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this);
+    this.userWeights = getUserWeightsFromHierarchy();
+  }
+
+  private Map<String, Float> getUserWeightsFromHierarchy() throws IOException {
+    Map<String, Float> unionInheritedWeights = new HashMap<String, Float>();
+    CSQueue parentQ = getParent();
+    if (parentQ != null) {
+      // Inherit all of parent's user's weights
+      unionInheritedWeights.putAll(parentQ.getUserWeights());
+    }
+    // Insert this queue's user's weights, overriding parent's user's weights if
+    // there is overlap.
+    CapacitySchedulerConfiguration csConf = csContext.getConfiguration();
+    unionInheritedWeights.putAll(
+        csConf.getAllUserWeightsForQueue(getQueuePath()));
+    return unionInheritedWeights;
   }
   
   protected QueueInfo getQueueInfo() {
@@ -696,5 +713,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Iterator<RMContainer> getKillableContainers(String partition) {
     return csContext.getPreemptionManager().getKillableContainers(queueName,
         partition);
+  }
+
+  @Override
+  public Map<String, Float> getUserWeights() {
+    return userWeights;
   }
 }

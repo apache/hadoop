@@ -559,8 +559,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         .append(queue.getAMResourceLimitPerPartition(appAMNodePartitionName));
     diagnosticMessage.append("; ");
     diagnosticMessage.append("User AM Resource Limit of the queue = ");
-    diagnosticMessage.append(
-        queue.getUserAMResourceLimitPerPartition(appAMNodePartitionName));
+    diagnosticMessage.append(queue.getUserAMResourceLimitPerPartition(
+        appAMNodePartitionName, getUser()));
     diagnosticMessage.append("; ");
     diagnosticMessage.append("Queue AM Resource Usage = ");
     diagnosticMessage.append(
