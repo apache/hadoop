@@ -169,22 +169,29 @@ public final class OzoneClientUtils {
 
   /**
    * Retrieve the socket address that should be used by clients to connect
-   * to the SCM for block service.
+   * to the SCM for block service. If
+   * {@link ScmConfigKeys#OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY} is not defined
+   * then {@link ScmConfigKeys#OZONE_SCM_CLIENT_ADDRESS_KEY} is used.
    *
    * @param conf
    * @return Target InetSocketAddress for the SCM block client endpoint.
+   * @throws IllegalArgumentException if configuration is not defined.
    */
   public static InetSocketAddress getScmAddressForBlockClients(
       Configuration conf) {
-    final Optional<String> host = getHostNameFromConfigKeys(conf,
+    Optional<String> host = getHostNameFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
 
     if (!host.isPresent()) {
-      throw new IllegalArgumentException(
-          ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY +
-          " must be defined. See" +
-          " https://wiki.apache.org/hadoop/Ozone#Configuration for details" +
-          " on configuring Ozone.");
+      host = getHostNameFromConfigKeys(conf,
+              ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
+      if (!host.isPresent()) {
+        throw new IllegalArgumentException(
+                ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY +
+                        " must be defined. See" +
+                        " https://wiki.apache.org/hadoop/Ozone#Configuration for details" +
+                        " on configuring Ozone.");
+      }
     }
 
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
