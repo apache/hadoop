@@ -67,6 +67,7 @@ class CapacitySchedulerPage extends RmView {
       "left:0%;background:none;border:1px dashed #BFBFBF";
   static final String Q_OVER = "background:#FFA333";
   static final String Q_UNDER = "background:#5BD75B";
+  static final String ACTIVE_USER = "background:#FFFF00"; // Yellow highlight
 
   @RequestScoped
   static class CSQInfo {
@@ -208,6 +209,7 @@ class CapacitySchedulerPage extends RmView {
           html.table("#userinfo").thead().$class("ui-widget-header").tr().th()
               .$class("ui-state-default")._("User Name")._().th()
               .$class("ui-state-default")._("Max Resource")._().th()
+              .$class("ui-state-default")._("Weight")._().th()
               .$class("ui-state-default")._("Used Resource")._().th()
               .$class("ui-state-default")._("Max AM Resource")._().th()
               .$class("ui-state-default")._("Used AM Resource")._().th()
@@ -228,8 +230,11 @@ class CapacitySchedulerPage extends RmView {
         ResourceInfo amUsed = (resourceUsages.getAmUsed() == null)
             ? new ResourceInfo(Resources.none())
             : resourceUsages.getAmUsed();
-        tbody.tr().td(userInfo.getUsername())
+        String highlightIfAsking =
+            userInfo.getIsActive() ? ACTIVE_USER : null;
+        tbody.tr().$style(highlightIfAsking).td(userInfo.getUsername())
             .td(userInfo.getUserResourceLimit().toString())
+            .td(String.valueOf(userInfo.getUserWeight()))
             .td(resourcesUsed.toString())
             .td(resourceUsages.getAMLimit().toString())
             .td(amUsed.toString())
@@ -397,6 +402,8 @@ class CapacitySchedulerPage extends RmView {
               _("Used (over capacity)")._().
             span().$class("qlegend ui-corner-all ui-state-default").
               _("Max Capacity")._().
+            span().$class("qlegend ui-corner-all").$style(ACTIVE_USER).
+            _("Users Requesting Resources")._().
           _();
 
         float used = 0;

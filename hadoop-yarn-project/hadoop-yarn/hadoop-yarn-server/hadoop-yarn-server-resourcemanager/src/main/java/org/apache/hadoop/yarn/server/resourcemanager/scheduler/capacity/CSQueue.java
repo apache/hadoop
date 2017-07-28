@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -338,4 +339,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return valid node labels
    */
   public Set<String> getNodeLabelsForQueue();
+
+  /**
+   * Get a map of usernames and weights
+   * @return map of usernames and corresponding weight
+   */
+  Map<String, Float> getUserWeights();
 }
