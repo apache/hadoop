@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -34,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 
 /**
  * Utility class that creates the schema and generates test data.
@@ -155,17 +157,20 @@ public final class DataGeneratorForTest {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(util.getConfiguration());
       hbi.start();
-      String cluster = "cluster1";
-      String user = "user1";
-      String flow = "some_flow_name";
-      String flowVersion = "AB7822C10F1111";
-      long runid = 1002345678919L;
-      String appName = "application_1111111111_2222";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
-      appName = "application_1111111111_3333";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
-      appName = "application_1111111111_4444";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te2);
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser("user1");
+      hbi.write(
+          new TimelineCollectorContext("cluster1", "user1", "some_flow_name",
+              "AB7822C10F1111", 1002345678919L, "application_1111111111_2222"),
+          te, remoteUser);
+      hbi.write(
+          new TimelineCollectorContext("cluster1", "user1", "some_flow_name",
+              "AB7822C10F1111", 1002345678919L, "application_1111111111_3333"),
+          te1, remoteUser);
+      hbi.write(
+          new TimelineCollectorContext("cluster1", "user1", "some_flow_name",
+              "AB7822C10F1111", 1002345678919L, "application_1111111111_4444"),
+          te2, remoteUser);
       hbi.stop();
     } finally {
       if (hbi != null) {
@@ -433,15 +438,19 @@ public final class DataGeneratorForTest {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(util.getConfiguration());
       hbi.start();
-      String cluster = "cluster1";
-      String user = "user1";
-      String flow = "some_flow_name";
-      String flowVersion = "AB7822C10F1111";
-      long runid = 1002345678919L;
-      hbi.write(cluster, user, flow, flowVersion, runid, appName1, te);
-      hbi.write(cluster, user, flow, flowVersion, runid, appName2, te);
-      hbi.write(cluster, user, flow, flowVersion, runid, appName1, appTe1);
-      hbi.write(cluster, user, flow, flowVersion, runid, appName2, appTe2);
+
+      UserGroupInformation user =
+          UserGroupInformation.createRemoteUser("user1");
+      TimelineCollectorContext context =
+          new TimelineCollectorContext("cluster1", "user1", "some_flow_name",
+              "AB7822C10F1111", 1002345678919L, appName1);
+      hbi.write(context, te, user);
+      hbi.write(context, appTe1, user);
+
+      context = new TimelineCollectorContext("cluster1", "user1",
+          "some_flow_name", "AB7822C10F1111", 1002345678919L, appName2);
+      hbi.write(context, te, user);
+      hbi.write(context, appTe2, user);
       hbi.stop();
     } finally {
       if (hbi != null) {

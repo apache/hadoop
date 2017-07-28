@@ -43,11 +43,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
@@ -181,13 +183,18 @@ public class TestHBaseStorageFlowRun {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // write another entity with the right min start time
       te = new TimelineEntities();
       te.addEntity(entityMinStartTime);
       appName = "application_100000000000_3333";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // writer another entity for max end time
       TimelineEntity entityMaxEndTime = TestFlowDataGenerator
@@ -195,7 +202,8 @@ public class TestHBaseStorageFlowRun {
       te = new TimelineEntities();
       te.addEntity(entityMaxEndTime);
       appName = "application_100000000000_4444";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // writer another entity with greater start time
       TimelineEntity entityGreaterStartTime = TestFlowDataGenerator
@@ -203,7 +211,8 @@ public class TestHBaseStorageFlowRun {
       te = new TimelineEntities();
       te.addEntity(entityGreaterStartTime);
       appName = "application_1000000000000000_2222";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // flush everything to hbase
       hbi.flush();
@@ -287,15 +296,19 @@ public class TestHBaseStorageFlowRun {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
       String appName = "application_11111111111111_1111";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
       // write another application with same metric to this flow
       te = new TimelineEntities();
       TimelineEntity entityApp2 = TestFlowDataGenerator
           .getEntityMetricsApp2(System.currentTimeMillis());
       te.addEntity(entityApp2);
       appName = "application_11111111111111_2222";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
       hbi.flush();
     } finally {
       if (hbi != null) {
@@ -556,15 +569,22 @@ public class TestHBaseStorageFlowRun {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
+
       String appName = "application_11111111111111_1111";
-      hbi.write(cluster, user, flow, flowVersion, 1002345678919L, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          1002345678919L, appName), te,
+          remoteUser);
       // write another application with same metric to this flow
       te = new TimelineEntities();
       TimelineEntity entityApp2 = TestFlowDataGenerator
           .getEntityMetricsApp2(System.currentTimeMillis());
       te.addEntity(entityApp2);
       appName = "application_11111111111111_2222";
-      hbi.write(cluster, user, flow, flowVersion, 1002345678918L, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          1002345678918L, appName), te,
+          remoteUser);
       hbi.flush();
     } finally {
       if (hbi != null) {
@@ -643,15 +663,20 @@ public class TestHBaseStorageFlowRun {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
+
       String appName = "application_11111111111111_1111";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
       // write another application with same metric to this flow
       te = new TimelineEntities();
       TimelineEntity entityApp2 = TestFlowDataGenerator
           .getEntityMetricsApp2(System.currentTimeMillis());
       te.addEntity(entityApp2);
       appName = "application_11111111111111_2222";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
       hbi.flush();
     } finally {
       if (hbi != null) {
@@ -737,6 +762,8 @@ public class TestHBaseStorageFlowRun {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
 
       for (int i = start; i < count; i++) {
         String appName = "application_1060350000000_" + appIdSuffix;
@@ -746,7 +773,8 @@ public class TestHBaseStorageFlowRun {
         te1.addEntity(entityApp1);
         entityApp2 = TestFlowDataGenerator.getMaxFlushEntity(insertTs);
         te1.addEntity(entityApp2);
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1, remoteUser);
         Thread.sleep(1);
 
         appName = "application_1001199480000_7" + appIdSuffix;
@@ -758,7 +786,9 @@ public class TestHBaseStorageFlowRun {
         entityApp2 = TestFlowDataGenerator.getMaxFlushEntity(insertTs);
         te1.addEntity(entityApp2);
 
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1,
+            remoteUser);
         if (i % 1000 == 0) {
           hbi.flush();
           checkMinMaxFlush(c1, minTS, startTs, count, cluster, user, flow,
@@ -826,16 +856,23 @@ public class TestHBaseStorageFlowRun {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
-      hbi.write(cluster, user, flow, "CF7022C10F1354", 1002345678919L,
-          "application_11111111111111_1111", te);
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
+
+      hbi.write(
+          new TimelineCollectorContext(cluster, user, flow, "CF7022C10F1354",
+              1002345678919L, "application_11111111111111_1111"),
+          te, remoteUser);
       // write another application with same metric to this flow
       te = new TimelineEntities();
       TimelineEntity entityApp2 = TestFlowDataGenerator.getEntityMetricsApp2(
           System.currentTimeMillis());
       entityApp2.setCreatedTime(1425016502000L);
       te.addEntity(entityApp2);
-      hbi.write(cluster, user, flow, "CF7022C10F1354", 1002345678918L,
-          "application_11111111111111_2222", te);
+      hbi.write(
+          new TimelineCollectorContext(cluster, user, flow, "CF7022C10F1354",
+              1002345678918L, "application_11111111111111_2222"),
+          te, remoteUser);
       hbi.flush();
     } finally {
       if (hbi != null) {
@@ -911,15 +948,22 @@ public class TestHBaseStorageFlowRun {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
-      hbi.write(cluster, user, flow, "CF7022C10F1354", 1002345678919L,
-          "application_11111111111111_1111", te);
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
+
+      hbi.write(
+          new TimelineCollectorContext(cluster, user, flow, "CF7022C10F1354",
+              1002345678919L, "application_11111111111111_1111"),
+          te, remoteUser);
       // write another application with same metric to this flow
       te = new TimelineEntities();
       TimelineEntity entityApp2 = TestFlowDataGenerator.getEntityMetricsApp2(
           System.currentTimeMillis());
       te.addEntity(entityApp2);
-      hbi.write(cluster, user, flow, "CF7022C10F1354", 1002345678918L,
-          "application_11111111111111_2222", te);
+      hbi.write(
+          new TimelineCollectorContext(cluster, user, flow, "CF7022C10F1354",
+              1002345678918L, "application_11111111111111_2222"),
+          te, remoteUser);
       hbi.flush();
     } finally {
       if (hbi != null) {
