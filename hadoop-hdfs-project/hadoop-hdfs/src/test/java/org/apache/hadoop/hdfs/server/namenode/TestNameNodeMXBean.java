@@ -809,10 +809,10 @@ public class TestNameNodeMXBean {
       long totalMissingBlocks = cluster.getNamesystem().getMissingBlocksCount();
       Long replicaMissingBlocks =
           (Long) mbs.getAttribute(replStateMBeanName,
-              "MissingBlocksStat");
+              "MissingReplicatedBlocks");
       Long ecMissingBlocks =
           (Long) mbs.getAttribute(ecBlkGrpStateMBeanName,
-              "MissingECBlockGroupsStat");
+              "MissingECBlockGroups");
       assertEquals("Unexpected total missing blocks!",
           expectedMissingBlockCount, totalMissingBlocks);
       assertEquals("Unexpected total missing blocks!",
@@ -826,10 +826,10 @@ public class TestNameNodeMXBean {
           cluster.getNamesystem().getCorruptReplicaBlocks();
       Long replicaCorruptBlocks =
           (Long) mbs.getAttribute(replStateMBeanName,
-              "CorruptBlocksStat");
+              "CorruptReplicatedBlocks");
       Long ecCorruptBlocks =
           (Long) mbs.getAttribute(ecBlkGrpStateMBeanName,
-              "CorruptECBlockGroupsStat");
+              "CorruptECBlockGroups");
       assertEquals("Unexpected total corrupt blocks!",
           expectedCorruptBlockCount, totalCorruptBlocks);
       assertEquals("Unexpected total corrupt blocks!",
