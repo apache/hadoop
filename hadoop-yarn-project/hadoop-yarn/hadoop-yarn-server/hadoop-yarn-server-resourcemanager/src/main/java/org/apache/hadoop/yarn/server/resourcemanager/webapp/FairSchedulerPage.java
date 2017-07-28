@@ -72,6 +72,8 @@ public class FairSchedulerPage extends RmView {
       ResponseInfo ri = info("\'" + qinfo.getQueueName() + "\' Queue Status").
           __("Used Resources:", qinfo.getUsedResources().toString()).
           __("Demand Resources:", qinfo.getDemandResources().toString()).
+          __("AM Used Resources:", qinfo.getAMUsedResources().toString()).
+          __("AM Max Resources:", qinfo.getAMMaxResources().toString()).
           __("Num Active Applications:", qinfo.getNumActiveApplications()).
           __("Num Pending Applications:", qinfo.getNumPendingApplications()).
           __("Min Resources:", qinfo.getMinResources().toString()).
