@@ -36,6 +36,7 @@ import java.util.Set;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -334,16 +336,21 @@ public class TestTimelineReaderWebServicesHBaseStorage
 
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = getHBaseTestingUtility().getConfiguration();
+    UserGroupInformation remoteUser =
+        UserGroupInformation.createRemoteUser(user);
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
-      hbi.write(cluster, user, flow, flowVersion, runid, entity.getId(), te);
-      hbi.write(cluster, user, flow, flowVersion, runid, entity1.getId(), te1);
-      hbi.write(cluster, user, flow, flowVersion, runid1, entity4.getId(), te4);
-      hbi.write(cluster, user, flow2,
-          flowVersion2, runid2, entity3.getId(), te3);
-      hbi.write(cluster, user, flow, flowVersion, runid,
-          "application_1111111111_1111", userEntities);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, entity.getId()), te, remoteUser);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, entity1.getId()), te1, remoteUser);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid1, entity4.getId()), te4, remoteUser);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow2, flowVersion2,
+          runid2, entity3.getId()), te3, remoteUser);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, "application_1111111111_1111"), userEntities, remoteUser);
       writeApplicationEntities(hbi, ts);
       hbi.flush();
     } finally {
@@ -375,8 +382,9 @@ public class TestTimelineReaderWebServicesHBaseStorage
 
         appEntity.addEvent(finished);
         te.addEntity(appEntity);
-        hbi.write("cluster1", "user1", "flow1", "CF7022C10F1354", i,
-            appEntity.getId(), te);
+        hbi.write(new TimelineCollectorContext("cluster1", "user1", "flow1",
+            "CF7022C10F1354", i, appEntity.getId()), te,
+            UserGroupInformation.createRemoteUser("user1"));
       }
     }
   }

@@ -38,12 +38,14 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
@@ -117,13 +119,18 @@ public class TestHBaseStorageFlowActivity {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // write another entity with the right min start time
       te = new TimelineEntities();
       te.addEntity(entityMinStartTime);
       appName = "application_100000000000_3333";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // writer another entity for max end time
       TimelineEntity entityMaxEndTime = TestFlowDataGenerator
@@ -131,7 +138,8 @@ public class TestHBaseStorageFlowActivity {
       te = new TimelineEntities();
       te.addEntity(entityMaxEndTime);
       appName = "application_100000000000_4444";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // writer another entity with greater start time
       TimelineEntity entityGreaterStartTime = TestFlowDataGenerator
@@ -139,7 +147,8 @@ public class TestHBaseStorageFlowActivity {
       te = new TimelineEntities();
       te.addEntity(entityGreaterStartTime);
       appName = "application_1000000000000000_2222";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, remoteUser);
 
       // flush everything to hbase
       hbi.flush();
@@ -227,7 +236,8 @@ public class TestHBaseStorageFlowActivity {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_1111999999_1234";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+          runid, appName), te, UserGroupInformation.createRemoteUser(user));
       hbi.flush();
     } finally {
       if (hbi != null) {
@@ -340,20 +350,27 @@ public class TestHBaseStorageFlowActivity {
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
+
+      UserGroupInformation remoteUser =
+          UserGroupInformation.createRemoteUser(user);
+
       String appName = "application_11888888888_1111";
-      hbi.write(cluster, user, flow, flowVersion1, runid1, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion1,
+          runid1, appName), te, remoteUser);
 
       // write an application with to this flow but a different runid/ version
       te = new TimelineEntities();
       te.addEntity(entityApp1);
       appName = "application_11888888888_2222";
-      hbi.write(cluster, user, flow, flowVersion2, runid2, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion2,
+          runid2, appName), te, remoteUser);
 
       // write an application with to this flow but a different runid/ version
       te = new TimelineEntities();
       te.addEntity(entityApp1);
       appName = "application_11888888888_3333";
-      hbi.write(cluster, user, flow, flowVersion3, runid3, appName, te);
+      hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion3,
+          runid3, appName), te, remoteUser);
 
       hbi.flush();
     } finally {

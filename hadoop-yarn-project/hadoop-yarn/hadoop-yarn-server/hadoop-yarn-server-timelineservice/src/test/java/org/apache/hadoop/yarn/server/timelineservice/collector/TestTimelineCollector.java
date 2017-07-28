@@ -41,8 +41,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -156,9 +154,8 @@ public class TestTimelineCollector {
     collector.putEntities(
         entities, UserGroupInformation.createRemoteUser("test-user"));
 
-    verify(writer, times(1)).write(
-        anyString(), anyString(), anyString(), anyString(), anyLong(),
-        anyString(), any(TimelineEntities.class));
+    verify(writer, times(1)).write(any(TimelineCollectorContext.class),
+        any(TimelineEntities.class), any(UserGroupInformation.class));
     verify(writer, times(1)).flush();
   }
 
@@ -175,9 +172,8 @@ public class TestTimelineCollector {
     collector.putEntitiesAsync(
         entities, UserGroupInformation.createRemoteUser("test-user"));
 
-    verify(writer, times(1)).write(
-        anyString(), anyString(), anyString(), anyString(), anyLong(),
-        anyString(), any(TimelineEntities.class));
+    verify(writer, times(1)).write(any(TimelineCollectorContext.class),
+        any(TimelineEntities.class), any(UserGroupInformation.class));
     verify(writer, never()).flush();
   }
 
