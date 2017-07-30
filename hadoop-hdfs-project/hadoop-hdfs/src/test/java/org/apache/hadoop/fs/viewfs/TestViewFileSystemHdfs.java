@@ -29,15 +29,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.*;
 
 public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
@@ -136,5 +134,25 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   @Override
   int getExpectedDelegationTokenCountWithCredentials() {
     return 2;
+  }
+
+  //Rename should fail on across different fileSystems
+  @Test
+  public void testRenameAccorssFilesystem() throws IOException {
+    //data is mountpoint in nn1
+    Path mountDataRootPath = new Path("/data");
+    //mountOnNn2 is nn2 mountpoint
+    Path fsTargetFilePath = new Path("/mountOnNn2");
+    Path filePath = new Path(mountDataRootPath + "/ttest");
+    Path hdfFilepath = new Path(fsTargetFilePath + "/ttest2");
+    fsView.create(filePath);
+    try {
+      fsView.rename(filePath, hdfFilepath);
+      ContractTestUtils.fail("Should thrown IOE on Renames across filesytems");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
   }
 }
