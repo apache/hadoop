@@ -142,12 +142,9 @@ In a typical cluster HDFS and YARN services will be launched as the system `hdfs
     <property>
       <name>hadoop.security.auth_to_local</name>
       <value>
-        RULE:[2:$1@$0](nn/.*@.*REALM.TLD)s/.*/hdfs/
-        RULE:[2:$1@$0](jn/.*@.*REALM.TLD)s/.*/hdfs/
-        RULE:[2:$1@$0](dn/.*@.*REALM.TLD)s/.*/hdfs/
-        RULE:[2:$1@$0](nm/.*@.*REALM.TLD)s/.*/yarn/
-        RULE:[2:$1@$0](rm/.*@.*REALM.TLD)s/.*/yarn/
-        RULE:[2:$1@$0](jhs/.*@.*REALM.TLD)s/.*/mapred/
+        RULE:[2:$1/$2@$0]([ndj]n/.*@REALM.TLD)s/.*/hdfs/
+        RULE:[2:$1/$2@$0]([rn]m/.*@REALM.TLD)s/.*/yarn/
+        RULE:[2:$1/$2@$0](jhs/.*@REALM.TLD)s/.*/mapred/
         DEFAULT
       </value>
     </property>

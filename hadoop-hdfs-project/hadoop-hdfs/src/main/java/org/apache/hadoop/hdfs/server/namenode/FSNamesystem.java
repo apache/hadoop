@@ -92,6 +92,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import org.apache.hadoop.hdfs.protocol.BlocksStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -243,10 +244,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
-import org.apache.hadoop.hdfs.server.namenode.metrics.ECBlockGroupsStatsMBean;
+import org.apache.hadoop.hdfs.server.namenode.metrics.ECBlockGroupsMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksStatsMBean;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
@@ -340,7 +340,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 @Metrics(context="dfs")
 public class FSNamesystem implements Namesystem, FSNamesystemMBean,
-    NameNodeMXBean, ReplicatedBlocksStatsMBean, ECBlockGroupsStatsMBean {
+    NameNodeMXBean, ReplicatedBlocksMBean, ECBlockGroupsMBean {
   public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
@@ -4076,10 +4076,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @see ClientProtocol#getBlocksStats()
    */
   BlocksStats getBlocksStats() {
-    return new BlocksStats(getLowRedundancyBlocksStat(),
-        getCorruptBlocksStat(), getMissingBlocksStat(),
-        getMissingReplicationOneBlocksStat(), getBlocksBytesInFutureStat(),
-        getPendingDeletionBlocksStat());
+    return new BlocksStats(getLowRedundancyReplicatedBlocks(),
+        getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
+        getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
+        getPendingDeletionReplicatedBlocks());
   }
 
   /**
@@ -4089,9 +4089,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @see ClientProtocol#getECBlockGroupsStats()
    */
   ECBlockGroupsStats getECBlockGroupsStats() {
-    return new ECBlockGroupsStats(getLowRedundancyECBlockGroupsStat(),
-        getCorruptECBlockGroupsStat(), getMissingECBlockGroupsStat(),
-        getECBlocksBytesInFutureStat(), getPendingDeletionECBlockGroupsStat());
+    return new ECBlockGroupsStats(getLowRedundancyECBlockGroups(),
+        getCorruptECBlockGroups(), getMissingECBlockGroups(),
+        getBytesInFutureECBlockGroups(), getPendingDeletionECBlockGroups());
   }
 
   @Override // FSNamesystemMBean
@@ -4638,76 +4638,76 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // ReplicatedBlocksMBean
   @Metric({"LowRedundancyReplicatedBlocks",
       "Number of low redundancy replicated blocks"})
-  public long getLowRedundancyBlocksStat() {
-    return blockManager.getLowRedundancyBlocksStat();
+  public long getLowRedundancyReplicatedBlocks() {
+    return blockManager.getLowRedundancyBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
   @Metric({"CorruptReplicatedBlocks", "Number of corrupted replicated blocks"})
-  public long getCorruptBlocksStat() {
-    return blockManager.getCorruptBlocksStat();
+  public long getCorruptReplicatedBlocks() {
+    return blockManager.getCorruptBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
   @Metric({"MissingReplicatedBlocks", "Number of missing replicated blocks"})
-  public long getMissingBlocksStat() {
-    return blockManager.getMissingBlocksStat();
+  public long getMissingReplicatedBlocks() {
+    return blockManager.getMissingBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
-  @Metric({"MissingReplicatedOneBlocks", "Number of missing replicated blocks" +
-      " with replication factor 1"})
-  public long getMissingReplicationOneBlocksStat() {
-    return blockManager.getMissingReplicationOneBlocksStat();
+  @Metric({"MissingReplicationOneBlocks", "Number of missing replicated " +
+      "blocks with replication factor 1"})
+  public long getMissingReplicationOneBlocks() {
+    return blockManager.getMissingReplicationOneBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
-  @Metric({"BytesReplicatedFutureBlocks", "Total bytes in replicated blocks " +
-      "with future generation stamp"})
-  public long getBlocksBytesInFutureStat() {
-    return blockManager.getBytesInFutureReplicatedBlocksStat();
+  @Metric({"BytesInFutureReplicatedBlocks", "Total bytes in replicated " +
+      "blocks with future generation stamp"})
+  public long getBytesInFutureReplicatedBlocks() {
+    return blockManager.getBytesInFutureReplicatedBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
   @Metric({"PendingDeletionReplicatedBlocks", "Number of replicated blocks " +
       "that are pending deletion"})
-  public long getPendingDeletionBlocksStat() {
-    return blockManager.getPendingDeletionBlocksStat();
+  public long getPendingDeletionReplicatedBlocks() {
+    return blockManager.getPendingDeletionReplicatedBlocks();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"LowRedundancyECBlockGroups", "Number of erasure coded block " +
       "groups with low redundancy"})
-  public long getLowRedundancyECBlockGroupsStat() {
-    return blockManager.getLowRedundancyECBlockGroupsStat();
+  public long getLowRedundancyECBlockGroups() {
+    return blockManager.getLowRedundancyECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"CorruptECBlockGroups", "Number of erasure coded block groups that" +
       " are corrupt"})
-  public long getCorruptECBlockGroupsStat() {
-    return blockManager.getCorruptECBlockGroupsStat();
+  public long getCorruptECBlockGroups() {
+    return blockManager.getCorruptECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"MissingECBlockGroups", "Number of erasure coded block groups that" +
       " are missing"})
-  public long getMissingECBlockGroupsStat() {
-    return blockManager.getMissingECBlockGroupsStat();
+  public long getMissingECBlockGroups() {
+    return blockManager.getMissingECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
-  @Metric({"BytesFutureECBlockGroups", "Total bytes in erasure coded block " +
+  @Override // ECBlockGroupsMBean
+  @Metric({"BytesInFutureECBlockGroups", "Total bytes in erasure coded block " +
       "groups with future generation stamp"})
-  public long getECBlocksBytesInFutureStat() {
-    return blockManager.getBytesInFutureStripedBlocksStat();
+  public long getBytesInFutureECBlockGroups() {
+    return blockManager.getBytesInFutureECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"PendingDeletionECBlockGroups", "Number of erasure coded block " +
       "groups that are pending deletion"})
-  public long getPendingDeletionECBlockGroupsStat() {
-    return blockManager.getPendingDeletionECBlockGroupsStat();
+  public long getPendingDeletionECBlockGroups() {
+    return blockManager.getPendingDeletionECBlockGroups();
   }
 
   @Override
@@ -4774,9 +4774,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Register following MBeans with their respective names.
    * FSNamesystemMBean:
    *        "hadoop:service=NameNode,name=FSNamesystemState"
-   * ReplicatedBlocksStatsMBean:
+   * ReplicatedBlocksMBean:
    *        "hadoop:service=NameNode,name=ReplicatedBlocksState"
-   * ECBlockGroupsStatsMBean:
+   * ECBlockGroupsMBean:
    *        "hadoop:service=NameNode,name=ECBlockGroupsState"
    */
   private void registerMBean() {
@@ -4785,9 +4785,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       StandardMBean namesystemBean = new StandardMBean(
           this, FSNamesystemMBean.class);
       StandardMBean replicaBean = new StandardMBean(
-          this, ReplicatedBlocksStatsMBean.class);
+          this, ReplicatedBlocksMBean.class);
       StandardMBean ecBean = new StandardMBean(
-          this, ECBlockGroupsStatsMBean.class);
+          this, ECBlockGroupsMBean.class);
       namesystemMBeanName = MBeans.register(
           "NameNode", "FSNamesystemState", namesystemBean);
       replicatedBlocksMBeanName = MBeans.register(

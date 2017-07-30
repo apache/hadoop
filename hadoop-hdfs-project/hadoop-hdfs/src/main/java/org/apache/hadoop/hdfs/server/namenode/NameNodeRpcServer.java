@@ -2304,6 +2304,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void removeErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
     namesystem.removeErasureCodingPolicy(ecPolicyName);
   }
 

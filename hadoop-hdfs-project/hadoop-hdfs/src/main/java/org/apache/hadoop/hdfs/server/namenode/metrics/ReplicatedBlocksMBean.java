@@ -21,39 +21,43 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * This interface defines the methods to get status pertaining to blocks of type
- * {@link org.apache.hadoop.hdfs.protocol.BlockType#STRIPED} in FSNamesystem
+ * {@link org.apache.hadoop.hdfs.protocol.BlockType#CONTIGUOUS} in FSNamesystem
  * of a NameNode. It is also used for publishing via JMX.
  * <p>
  * Aggregated status of all blocks is reported in
  * @see FSNamesystemMBean
  * Name Node runtime activity statistic info is reported in
  * @see org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics
- *
  */
 @InterfaceAudience.Private
-public interface ECBlockGroupsStatsMBean {
+public interface ReplicatedBlocksMBean {
   /**
-   * Return count of erasure coded block groups with low redundancy.
+   * Return low redundancy blocks count.
    */
-  long getLowRedundancyECBlockGroupsStat();
+  long getLowRedundancyReplicatedBlocks();
 
   /**
-   * Return count of erasure coded block groups that are corrupt.
+   * Return corrupt blocks count.
    */
-  long getCorruptECBlockGroupsStat();
+  long getCorruptReplicatedBlocks();
 
   /**
-   * Return count of erasure coded block groups that are missing.
+   * Return missing blocks count.
    */
-  long getMissingECBlockGroupsStat();
+  long getMissingReplicatedBlocks();
 
   /**
-   * Return total bytes of erasure coded future block groups.
+   * Return count of missing blocks with replication factor one.
    */
-  long getECBlocksBytesInFutureStat();
+  long getMissingReplicationOneBlocks();
 
   /**
-   * Return count of erasure coded block groups that are pending deletion.
+   * Return total bytes of future blocks.
    */
-  long getPendingDeletionECBlockGroupsStat();
+  long getBytesInFutureReplicatedBlocks();
+
+  /**
+   * Return count of blocks that are pending deletion.
+   */
+  long getPendingDeletionReplicatedBlocks();
 }

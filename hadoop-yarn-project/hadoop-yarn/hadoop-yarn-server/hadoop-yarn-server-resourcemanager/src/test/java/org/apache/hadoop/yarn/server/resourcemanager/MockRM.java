@@ -102,8 +102,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-
-
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.log4j.Level;
@@ -172,14 +170,6 @@ public class MockRM extends ResourceManager {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     disableDrainEventsImplicitly = false;
-  }
-
-  public class MockRMMemoryStateStore extends MemoryRMStateStore {
-    @SuppressWarnings("rawtypes")
-    @Override
-    protected EventHandler getRMStateStoreEventHandler() {
-      return rmStateStoreEventHandler;
-    }
   }
 
   public class MockRMNullStateStore extends NullRMStateStore {
@@ -1293,5 +1283,9 @@ public class MockRM extends ResourceManager {
     if (getRmDispatcher() instanceof AsyncDispatcher) {
       ((AsyncDispatcher) getRmDispatcher()).disableExitOnDispatchException();
     }
+  }
+
+  public RMStateStore getRMStateStore() {
+    return getRMContext().getStateStore();
   }
 }

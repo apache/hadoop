@@ -232,47 +232,47 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /** Used by metrics. */
-  public long getLowRedundancyBlocksStat() {
+  public long getLowRedundancyBlocks() {
     return neededReconstruction.getLowRedundancyBlocksStat();
   }
 
   /** Used by metrics. */
-  public long getCorruptBlocksStat() {
+  public long getCorruptBlocks() {
     return corruptReplicas.getCorruptBlocksStat();
   }
 
   /** Used by metrics. */
-  public long getMissingBlocksStat() {
+  public long getMissingBlocks() {
     return neededReconstruction.getCorruptBlocksStat();
   }
 
   /** Used by metrics. */
-  public long getMissingReplicationOneBlocksStat() {
+  public long getMissingReplicationOneBlocks() {
     return neededReconstruction.getCorruptReplicationOneBlocksStat();
   }
 
   /** Used by metrics. */
-  public long getPendingDeletionBlocksStat() {
+  public long getPendingDeletionReplicatedBlocks() {
     return invalidateBlocks.getBlocksStat();
   }
 
   /** Used by metrics. */
-  public long getLowRedundancyECBlockGroupsStat() {
+  public long getLowRedundancyECBlockGroups() {
     return neededReconstruction.getLowRedundancyECBlockGroupsStat();
   }
 
   /** Used by metrics. */
-  public long getCorruptECBlockGroupsStat() {
+  public long getCorruptECBlockGroups() {
     return corruptReplicas.getCorruptECBlockGroupsStat();
   }
 
   /** Used by metrics. */
-  public long getMissingECBlockGroupsStat() {
+  public long getMissingECBlockGroups() {
     return neededReconstruction.getCorruptECBlockGroupsStat();
   }
 
   /** Used by metrics. */
-  public long getPendingDeletionECBlockGroupsStat() {
+  public long getPendingDeletionECBlockGroups() {
     return invalidateBlocks.getECBlockGroupsStat();
   }
 
@@ -2292,11 +2292,11 @@ public class BlockManager implements BlockStatsMXBean {
     return bmSafeMode.getBytesInFuture();
   }
 
-  public long getBytesInFutureReplicatedBlocksStat() {
+  public long getBytesInFutureReplicatedBlocks() {
     return bmSafeMode.getBytesInFutureBlocks();
   }
 
-  public long getBytesInFutureStripedBlocksStat() {
+  public long getBytesInFutureECBlockGroups() {
     return bmSafeMode.getBytesInFutureECBlockGroups();
   }
 

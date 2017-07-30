@@ -20,12 +20,9 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
-
-import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 public class AboutPage extends AHSView {
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     set(TITLE, "Timeline Server - Generic History Service");
   }

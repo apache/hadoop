@@ -317,27 +317,27 @@ public class TestNameNodeMetrics {
         namesystem.getUnderReplicatedBlocks());
     assertEquals("Low redundancy metrics not matching!",
         namesystem.getLowRedundancyBlocks(),
-        namesystem.getLowRedundancyBlocksStat() +
-            namesystem.getLowRedundancyECBlockGroupsStat());
+        namesystem.getLowRedundancyReplicatedBlocks() +
+            namesystem.getLowRedundancyECBlockGroups());
     assertEquals("Corrupt blocks metrics not matching!",
         namesystem.getCorruptReplicaBlocks(),
-        namesystem.getCorruptBlocksStat() +
-            namesystem.getCorruptECBlockGroupsStat());
+        namesystem.getCorruptReplicatedBlocks() +
+            namesystem.getCorruptECBlockGroups());
     assertEquals("Missing blocks metrics not matching!",
         namesystem.getMissingBlocksCount(),
-        namesystem.getMissingBlocksStat() +
-            namesystem.getMissingECBlockGroupsStat());
+        namesystem.getMissingReplicatedBlocks() +
+            namesystem.getMissingECBlockGroups());
     assertEquals("Missing blocks with replication factor one not matching!",
         namesystem.getMissingReplOneBlocksCount(),
-        namesystem.getMissingReplicationOneBlocksStat());
+        namesystem.getMissingReplicationOneBlocks());
     assertEquals("Bytes in future blocks metrics not matching!",
         namesystem.getBytesInFuture(),
-        namesystem.getBlocksBytesInFutureStat() +
-            namesystem.getECBlocksBytesInFutureStat());
+        namesystem.getBytesInFutureReplicatedBlocks() +
+            namesystem.getBytesInFutureECBlockGroups());
     assertEquals("Pending deletion blocks metrics not matching!",
         namesystem.getPendingDeletionBlocks(),
-        namesystem.getPendingDeletionBlocksStat() +
-            namesystem.getPendingDeletionECBlockGroupsStat());
+        namesystem.getPendingDeletionReplicatedBlocks() +
+            namesystem.getPendingDeletionECBlockGroups());
   }
 
   /** Corrupt a block and ensure metrics reflects it */

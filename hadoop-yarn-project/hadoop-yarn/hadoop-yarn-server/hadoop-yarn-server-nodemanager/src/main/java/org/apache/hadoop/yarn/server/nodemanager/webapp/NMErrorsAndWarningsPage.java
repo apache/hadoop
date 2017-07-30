@@ -32,7 +32,7 @@ public class NMErrorsAndWarningsPage extends NMView {
   }
 
   @Override
-  protected void preHead(HtmlPage.Page.HTML<HtmlPage._> html) {
+  protected void preHead(HtmlPage.Page.HTML<__> html) {
     commonPreHead(html);
     String title = "Errors and Warnings in the NodeManager";
     setTitle(title);

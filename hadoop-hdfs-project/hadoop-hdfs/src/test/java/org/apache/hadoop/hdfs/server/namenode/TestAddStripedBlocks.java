@@ -424,9 +424,9 @@ public class TestAddStripedBlocks {
         cluster.getDataNodes().get(3).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
     // the total number of corrupted block info is still 1
-    Assert.assertEquals(1, ns.getCorruptECBlockGroupsStat());
+    Assert.assertEquals(1, ns.getCorruptECBlockGroups());
     Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
-    Assert.assertEquals(0, ns.getCorruptBlocksStat());
+    Assert.assertEquals(0, ns.getCorruptReplicatedBlocks());
     // 2 internal blocks corrupted
     Assert.assertEquals(2, bm.getCorruptReplicas(stored).size());
 

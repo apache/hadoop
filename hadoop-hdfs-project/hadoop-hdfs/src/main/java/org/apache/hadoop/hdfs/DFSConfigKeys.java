@@ -1031,7 +1031,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_PIPELINE_ECN_ENABLED_DEFAULT = false;
 
   // Key Provider Cache Expiry
-  public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED = 
+  public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED =
     "dfs.datanode.block-pinning.enabled";
   public static final boolean DFS_DATANODE_BLOCK_PINNING_ENABLED_DEFAULT =
     false;

@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import org.apache.hadoop.yarn.webapp.MimeType;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +41,7 @@ public class ProxyUtils {
       "This filter only works for HTTP/HTTPS";
   public static final String LOCATION = "Location";
 
-  public static class _ implements Hamlet._ {
+  public static class __ implements Hamlet.__ {
     //Empty
   }
 
@@ -50,7 +50,7 @@ public class ProxyUtils {
       super(out, 0, false);
     }
 
-    public HTML<ProxyUtils._> html() {
+    public HTML<ProxyUtils.__> html() {
       return new HTML<>("html", null, EnumSet.of(EOpt.ENDTAG));
     }
   }
@@ -86,13 +86,13 @@ public class ProxyUtils {
     PrintWriter writer = response.getWriter();
     Page p = new Page(writer);
     p.html()
-        .head().title("Moved")._()
+        .head().title("Moved").__()
         .body()
         .h1("Moved")
         .div()
-          ._("Content has moved ")
-          .a(location, "here")._()
-        ._()._();
+          .__("Content has moved ")
+          .a(location, "here").__()
+        .__().__();
     writer.close();
   }
 
@@ -110,7 +110,7 @@ public class ProxyUtils {
     Page p = new Page(resp.getWriter());
     p.html().
         h1(message).
-         _();
+        __();
   }
 
   /**

@@ -164,9 +164,8 @@ public class TestApplicationLifetimeMonitor {
         true);
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
     rm1.start();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8192, rm1.getResourceTrackerService());
@@ -235,8 +234,6 @@ public class TestApplicationLifetimeMonitor {
       throws Exception {
     MockRM rm1 = null;
     try {
-      conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
-
       MemoryRMStateStore memStore = new MemoryRMStateStore() {
         private int count = 0;
 

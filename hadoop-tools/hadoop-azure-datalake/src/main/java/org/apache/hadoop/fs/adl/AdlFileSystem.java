@@ -129,6 +129,8 @@ public class AdlFileSystem extends FileSystem {
       userName = UserGroupInformation.getCurrentUser().getShortUserName();
     } catch (IOException e) {
       userName = "hadoop";
+      LOG.warn("Got exception when getting Hadoop user name."
+          + " Set the user name to '" + userName + "'.", e);
     }
 
     this.setWorkingDirectory(getHomeDirectory());

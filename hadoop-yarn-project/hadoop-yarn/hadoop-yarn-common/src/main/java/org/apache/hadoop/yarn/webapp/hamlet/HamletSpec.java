@@ -43,7 +43,9 @@ import org.apache.hadoop.yarn.webapp.SubView;
  * UPPERCASE, corresponding to an element definition in the DTD. $lowercase is
  * used as attribute builder methods to differentiate from element builder
  * methods.
+ * @deprecated Use org.apache.hadoop.yarn.webapp.hamlet2 package instead.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class HamletSpec {
   // The enum values are lowercase for better compression,

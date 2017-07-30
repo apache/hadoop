@@ -26,7 +26,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.split;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.HTML;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.HTML;
 
 import com.google.common.collect.Lists;
 
@@ -82,19 +82,19 @@ public class JQueryUI extends HtmlBlock {
     initProgressBars(list);
 
     if (!list.isEmpty()) {
-      html.script().$type("text/javascript")._("$(function() {")
-          ._(list.toArray())._("});")._();
+      html.script().$type("text/javascript").__("$(function() {")
+          .__(list.toArray()).__("});").__();
     }
   }
 
   public static void jsnotice(HTML html) {
     html.
       div("#jsnotice.ui-state-error").
-          _("This page will not function without javascript enabled."
-            + " Please enable javascript on your browser.")._();
+        __("This page will not function without javascript enabled."
+            + " Please enable javascript on your browser.").__();
     html.
       script().$type("text/javascript").
-        _("$('#jsnotice').hide();")._();
+        __("$('#jsnotice').hide();").__();
   }
 
   protected void initAccordions(List<String> list) {
@@ -130,7 +130,7 @@ public class JQueryUI extends HtmlBlock {
         // for inserting stateSaveInit
         int pos = init.indexOf('{') + 1;  
         init = new StringBuffer(init).insert(pos, stateSaveInit).toString(); 
-        list.add(join(id,"DataTable =  $('#", id, "').dataTable(", init,
+        list.add(join(id, "DataTable =  $('#", id, "').dataTable(", init,
                       ").fnSetFilteringDelay(188);"));
         String postInit = $(postInitID(DATATABLES, id));
         if(!postInit.isEmpty()) {
