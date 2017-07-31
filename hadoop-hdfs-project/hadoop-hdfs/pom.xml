@@ -419,6 +419,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/static/dataTables.bootstrap.js</exclude>
             <exclude>src/main/webapps/static/d3-v4.1.1.min.js</exclude>
             <exclude>src/test/resources/diskBalancer/data-cluster-3node-3disk.json</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css.map</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js</exclude>
+            <exclude>src/main/webapps/static/angular-route-1.6.4.min.js</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css</exclude>
+            <exclude>src/main/webapps/static/angular-nvd3-1.0.9.min.js</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js.map</exclude>
+            <exclude>src/main/webapps/static/angular-1.6.4.min.js</exclude>
+            <exclude>src/main/webapps/static/d3-3.5.17.min.js</exclude>
           </excludes>
         </configuration>
       </plugin>

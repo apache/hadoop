@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.jmx.ServiceRuntimeInfo;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
@@ -30,6 +31,8 @@ import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
@@ -46,6 +49,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -65,7 +69,8 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
  * Ozone Keyspace manager is the metadata manager of ozone.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
-public class KeySpaceManager implements KeySpaceManagerProtocol {
+public class KeySpaceManager extends ServiceRuntimeInfo
+    implements KeySpaceManagerProtocol, KSMMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(KeySpaceManager.class);
 
@@ -77,6 +82,7 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   private final KeyManager keyManager;
   private final KSMMetrics metrics;
   private final KeySpaceManagerHttpServer httpServer;
+  private ObjectName ksmInfoBeanName;
 
   public KeySpaceManager(OzoneConfiguration conf) throws IOException {
     final int handlerCount = conf.getInt(OZONE_KSM_HANDLER_COUNT_KEY,
@@ -207,9 +213,12 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
   public void start() throws IOException {
     LOG.info(buildRpcServerStartMessage("KeyspaceManager RPC server",
         ksmRpcAddress));
+    DefaultMetricsSystem.initialize("KeySpaceManager");
     metadataManager.start();
     ksmRpcServer.start();
     httpServer.start();
+    registerMXBean();
+    setStartTime();
   }
 
   /**
@@ -220,6 +229,7 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
       ksmRpcServer.stop();
       metadataManager.stop();
       httpServer.stop();
+      unregisterMXBean();
     } catch (Exception e) {
       LOG.error("Key Space Manager stop failed.", e);
     }
@@ -543,5 +553,22 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
       metrics.incNumBucketDeleteFails();
       throw ex;
     }
+  }
+
+  private void registerMXBean() {
+    this.ksmInfoBeanName =
+        MBeans.register("KeySpaceManager", "KeySpaceManagerInfo", this);
+  }
+
+  private void unregisterMXBean() {
+    if (this.ksmInfoBeanName != null) {
+      MBeans.unregister(this.ksmInfoBeanName);
+      this.ksmInfoBeanName = null;
+    }
+  }
+
+  @Override
+  public String getRpcPort() {
+    return "" + ksmRpcAddress.getPort();
   }
 }
