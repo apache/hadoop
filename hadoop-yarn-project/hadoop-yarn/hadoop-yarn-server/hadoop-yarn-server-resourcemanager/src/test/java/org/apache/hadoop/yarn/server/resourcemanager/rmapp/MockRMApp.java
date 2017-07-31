@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -324,5 +325,10 @@ public class MockRMApp implements RMApp {
   @Override
   public boolean isAppInCompletedStates() {
     return false;
+  }
+
+  @Override
+  public CollectorInfo getCollectorInfo() {
+    throw new UnsupportedOperationException("Not supported yet.");
   }
 }

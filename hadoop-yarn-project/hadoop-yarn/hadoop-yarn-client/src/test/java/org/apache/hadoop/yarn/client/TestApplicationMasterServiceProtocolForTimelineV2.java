@@ -21,56 +21,41 @@ package org.apache.hadoop.yarn.client;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-
-public class TestApplicationMasterServiceProtocolOnHA
+/**
+ * Tests Application Master Protocol with timeline service v2 enabled.
+ */
+public class TestApplicationMasterServiceProtocolForTimelineV2
     extends ApplicationMasterServiceProtoTestBase {
+
   @Before
   public void initialize() throws Exception {
+    HATestUtil.setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE + 200, conf);
+    HATestUtil.setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE + 200, conf);
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
+        FileSystemTimelineWriterImpl.class, TimelineWriter.class);
     startHACluster(0, false, false, true);
     super.startupHAAndSetupClient();
   }
 
   @Test(timeout = 15000)
-  public void testRegisterApplicationMasterOnHA() throws YarnException,
-      IOException {
-    RegisterApplicationMasterRequest request =
-        RegisterApplicationMasterRequest.newInstance("localhost", 0, "");
-    RegisterApplicationMasterResponse response =
-        getAMClient().registerApplicationMaster(request);
-    Assert.assertEquals(response,
-        this.cluster.createFakeRegisterApplicationMasterResponse());
-  }
-
-  @Test(timeout = 15000)
-  public void testFinishApplicationMasterOnHA() throws YarnException,
-      IOException {
-    FinishApplicationMasterRequest request =
-        FinishApplicationMasterRequest.newInstance(
-            FinalApplicationStatus.SUCCEEDED, "", "");
-    FinishApplicationMasterResponse response =
-        getAMClient().finishApplicationMaster(request);
-    Assert.assertEquals(response,
-        this.cluster.createFakeFinishApplicationMasterResponse());
-  }
-
-  @Test(timeout = 15000)
-  public void testAllocateOnHA() throws YarnException, IOException {
+  public void testAllocateForTimelineV2OnHA()
+      throws YarnException, IOException {
     AllocateRequest request = AllocateRequest.newInstance(0, 50f,
         new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>(),
@@ -78,5 +63,9 @@ public class TestApplicationMasterServiceProtocolOnHA
             new ArrayList<String>()));
     AllocateResponse response = getAMClient().allocate(request);
     Assert.assertEquals(response, this.cluster.createFakeAllocateResponse());
+    Assert.assertNotNull(response.getCollectorInfo());
+    Assert.assertEquals("host:port",
+        response.getCollectorInfo().getCollectorAddr());
+    Assert.assertNotNull(response.getCollectorInfo().getCollectorToken());
   }
 }
