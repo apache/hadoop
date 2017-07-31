@@ -215,6 +215,8 @@
       <!-- Exclude hadoop artifacts. They will be found via HADOOP* env -->
       <excludes>
         <exclude>org.apache.hadoop:*</exclude>
+        <!-- Exclude shaded jackson jars to avoid leaking new dependencies -->
+        <exclude>com.fasterxml.jackson.core:*</exclude>
         <!-- use slf4j from common to avoid multiple binding warnings -->
         <exclude>org.slf4j:slf4j-api</exclude>
         <exclude>org.slf4j:slf4j-log4j12</exclude>
