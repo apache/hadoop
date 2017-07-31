@@ -19,23 +19,54 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.lang.reflect.Constructor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilities for managing HDFS federation.
  */
 public final class FederationUtil {
 
-  private static final Log LOG = LogFactory.getLog(FederationUtil.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FederationUtil.class);
 
   private FederationUtil() {
     // Utility Class
+  }
+
+  /**
+   * Create an instance of an interface with a constructor using a context.
+   *
+   * @param conf Configuration for the class names.
+   * @param context Context object to pass to the instance.
+   * @param contextClass Type of the context passed to the constructor.
+   * @param clazz Class of the object to return.
+   * @return New instance of the specified class that implements the desired
+   *         interface and a single parameter constructor containing a
+   *         StateStore reference.
+   */
+  private static <T, R> T newInstance(final Configuration conf,
+      final R context, final Class<R> contextClass, final Class<T> clazz) {
+    try {
+      if (contextClass == null) {
+        // Default constructor if no context
+        Constructor<T> constructor = clazz.getConstructor();
+        return constructor.newInstance();
+      } else {
+        // Constructor with context
+        Constructor<T> constructor = clazz.getConstructor(
+            Configuration.class, contextClass);
+        return constructor.newInstance(conf, context);
+      }
+    } catch (ReflectiveOperationException e) {
+      LOG.error("Could not instantiate: {}", clazz.getSimpleName(), e);
+      return null;
+    }
   }
 
   /**
@@ -105,13 +136,14 @@ public final class FederationUtil {
    *
    * @param conf Configuration that defines the namenode resolver class.
    * @param obj Context object passed to class constructor.
-   * @return ActiveNamenodeResolver
+   * @return New active namenode resolver.
    */
   public static ActiveNamenodeResolver newActiveNamenodeResolver(
       Configuration conf, StateStoreService stateStore) {
-    return newInstance(conf, stateStore, StateStoreService.class,
+    Class<? extends ActiveNamenodeResolver> clazz = conf.getClass(
         DFSConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS,
         DFSConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS_DEFAULT,
         ActiveNamenodeResolver.class);
+    return newInstance(conf, stateStore, StateStoreService.class, clazz);
   }
 }

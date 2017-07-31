@@ -4459,7 +4459,7 @@
 
   <property>
     <name>dfs.federation.router.namenode.resolver.client.class</name>
-    <value>org.apache.hadoop.hdfs.server.federation.MockResolver</value>
+    <value>org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver</value>
     <description>
       Class to resolve the namenode for a subcluster.
     </description>
@@ -4486,6 +4486,22 @@
     <value>60000</value>
     <description>
       How often to check for the connection to the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.cache.ttl</name>
+    <value>60000</value>
+    <description>
+      How often to refresh the State Store caches in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.membership.expiration</name>
+    <value>300000</value>
+    <description>
+      Expiration time in milliseconds for a membership record.
     </description>
   </property>
 
