@@ -225,16 +225,23 @@ message KeyArgs {
     optional uint64 dataSize = 4;
 }
 
+message KeyLocation {
+    required string blockID = 1;
+    required string containerName = 2;
+    required bool shouldCreateContainer = 3;
+    required uint64 offset = 4;
+    required uint64 length = 5;
+    required uint32 index = 6;
+}
+
 message KeyInfo {
     required string volumeName = 1;
     required string bucketName = 2;
     required string keyName = 3;
     required uint64 dataSize = 4;
-    required string blockKey = 5;
-    required string containerName = 6;
-    required bool shouldCreateContainer = 7;
-    required uint64 creationTime = 8;
-    required uint64 modificationTime = 9;
+    repeated KeyLocation keyLocationList = 5;
+    required uint64 creationTime = 6;
+    required uint64 modificationTime = 7;
 }
 
 message LocateKeyRequest {

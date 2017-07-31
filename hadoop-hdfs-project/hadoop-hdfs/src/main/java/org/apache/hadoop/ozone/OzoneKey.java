@@ -19,6 +19,9 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ksm.helpers.KsmKeyLocationInfo;
+
+import java.util.List;
 
 /**
  * A class that encapsulates OzoneKey.
@@ -38,18 +41,14 @@ public class OzoneKey {
    */
   private final String keyName;
   /**
-   * Name of the Container the Key resides in.
-   */
-  private final String containerName;
-  /**
-   * Name of the block id SCM assigned for the key.
-   */
-  private final String blockID;
-  /**
    * Size of the data.
    */
   private final long dataSize;
 
+  /**
+   * All the locations of this key, in an ordered list.
+   */
+  private final List<KsmKeyLocationInfo> keyLocations;
   /**
    * Constructs OzoneKey from KsmKeyInfo.
    *
@@ -59,9 +58,8 @@ public class OzoneKey {
     this.volumeName = ksmKeyInfo.getVolumeName();
     this.bucketName = ksmKeyInfo.getBucketName();
     this.keyName = ksmKeyInfo.getKeyName();
-    this.containerName = ksmKeyInfo.getContainerName();
-    this.blockID = ksmKeyInfo.getBlockID();
     this.dataSize = ksmKeyInfo.getDataSize();
+    this.keyLocations = ksmKeyInfo.getKeyLocationList();
   }
 
   /**
@@ -92,29 +90,20 @@ public class OzoneKey {
   }
 
   /**
-   * Returns Container Name associated with the Key.
-   *
-   * @return containerName
-   */
-  public String getContainerName() {
-    return containerName;
-  }
-
-  /**
-   * Returns BlockID associated with the Key.
-   *
-   * @return blockID
-   */
-  public String getBlockID() {
-    return blockID;
-  }
-
-  /**
    * Returns the size of the data.
    *
    * @return dataSize
    */
   public long getDataSize() {
     return dataSize;
+  }
+
+  /**
+   * Retruns the list of the key locations.
+   *
+   * @return key locations
+   */
+  public List<KsmKeyLocationInfo> getKeyLocations() {
+    return keyLocations;
   }
 }

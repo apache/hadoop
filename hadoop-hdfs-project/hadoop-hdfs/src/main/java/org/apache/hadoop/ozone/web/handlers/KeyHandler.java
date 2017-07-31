@@ -166,6 +166,7 @@ public class KeyHandler implements Keys {
         String contentLenString = getContentLength(headers, args);
         String newLen = contentLenString.replaceAll("\"", "");
         int contentLen = Integer.parseInt(newLen);
+        args.setSize(contentLen);
 
         MessageDigest md5 = MessageDigest.getInstance("MD5");
         int bytesRead = 0;

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.ksm.helpers;
 
-
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Args for key block. The block instance for the key requested in putKey.
@@ -30,25 +32,19 @@ public final class KsmKeyInfo {
   private final String bucketName;
   // name of key client specified
   private final String keyName;
-  private final String containerName;
-  // name of the block id SCM assigned for the key
-  private final String blockID;
   private final long dataSize;
-  private final boolean shouldCreateContainer;
+  private List<KsmKeyLocationInfo> keyLocationList;
   private final long creationTime;
   private final long modificationTime;
 
   private KsmKeyInfo(String volumeName, String bucketName, String keyName,
-      long dataSize, String blockID, String containerName,
-      boolean shouldCreateContainer, long creationTime,
+      List<KsmKeyLocationInfo> locationInfos, long dataSize, long creationTime,
       long modificationTime) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
-    this.containerName = containerName;
-    this.blockID = blockID;
     this.dataSize = dataSize;
-    this.shouldCreateContainer = shouldCreateContainer;
+    this.keyLocationList = locationInfos;
     this.creationTime = creationTime;
     this.modificationTime = modificationTime;
   }
@@ -65,20 +61,12 @@ public final class KsmKeyInfo {
     return keyName;
   }
 
-  public String getBlockID() {
-    return blockID;
-  }
-
-  public String getContainerName() {
-    return containerName;
-  }
-
   public long getDataSize() {
     return dataSize;
   }
 
-  public boolean getShouldCreateContainer() {
-    return shouldCreateContainer;
+  public List<KsmKeyLocationInfo> getKeyLocationList() {
+    return keyLocationList;
   }
 
   public long getCreationTime() {
@@ -96,10 +84,8 @@ public final class KsmKeyInfo {
     private String volumeName;
     private String bucketName;
     private String keyName;
-    private String containerName;
-    private String blockID;
     private long dataSize;
-    private boolean shouldCreateContainer;
+    private List<KsmKeyLocationInfo> ksmKeyLocationInfos;
     private long creationTime;
     private long modificationTime;
 
@@ -118,23 +104,14 @@ public final class KsmKeyInfo {
       return this;
     }
 
-    public Builder setBlockID(String block) {
-      this.blockID = block;
-      return this;
-    }
-
-    public Builder setContainerName(String container) {
-      this.containerName = container;
+    public Builder setKsmKeyLocationInfos(
+        List<KsmKeyLocationInfo> ksmKeyLocationInfoList) {
+      this.ksmKeyLocationInfos = ksmKeyLocationInfoList;
       return this;
     }
 
     public Builder setDataSize(long size) {
       this.dataSize = size;
-      return this;
-    }
-
-    public Builder setShouldCreateContainer(boolean create) {
-      this.shouldCreateContainer = create;
       return this;
     }
 
@@ -150,8 +127,8 @@ public final class KsmKeyInfo {
 
     public KsmKeyInfo build() {
       return new KsmKeyInfo(
-          volumeName, bucketName, keyName, dataSize, blockID, containerName,
-          shouldCreateContainer, creationTime, modificationTime);
+          volumeName, bucketName, keyName, ksmKeyLocationInfos,
+          dataSize, creationTime, modificationTime);
     }
   }
 
@@ -161,9 +138,8 @@ public final class KsmKeyInfo {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(dataSize)
-        .setBlockKey(blockID)
-        .setContainerName(containerName)
-        .setShouldCreateContainer(shouldCreateContainer)
+        .addAllKeyLocationList(keyLocationList.stream()
+            .map(KsmKeyLocationInfo::getProtobuf).collect(Collectors.toList()))
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
         .build();
@@ -174,10 +150,10 @@ public final class KsmKeyInfo {
         keyInfo.getVolumeName(),
         keyInfo.getBucketName(),
         keyInfo.getKeyName(),
+        keyInfo.getKeyLocationListList().stream()
+            .map(KsmKeyLocationInfo::getFromProtobuf)
+            .collect(Collectors.toList()),
         keyInfo.getDataSize(),
-        keyInfo.getBlockKey(),
-        keyInfo.getContainerName(),
-        keyInfo.getShouldCreateContainer(),
         keyInfo.getCreationTime(),
         keyInfo.getModificationTime());
   }

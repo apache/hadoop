@@ -73,6 +73,10 @@ public final class OzoneConfigKeys {
   public static final String OZONE_KEY_CACHE = "ozone.key.cache.size";
   public static final int OZONE_KEY_CACHE_DEFAULT = 1024;
 
+  public static final String OZONE_SCM_BLOCK_SIZE_KEY =
+      "ozone.scm.block.size";
+  public static final long OZONE_SCM_BLOCK_SIZE_DEFAULT = 256 * OzoneConsts.MB;
+
   /**
    * Ozone administrator users delimited by comma.
    * If not set, only the user who launches an ozone service will be the

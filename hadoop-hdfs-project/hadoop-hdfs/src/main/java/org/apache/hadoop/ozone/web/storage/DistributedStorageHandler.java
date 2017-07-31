@@ -19,12 +19,6 @@
 package org.apache.hadoop.ozone.web.storage;
 
 import com.google.common.base.Strings;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.ChunkInfo;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.GetKeyResponseProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.KeyData;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset
     .LengthInputStream;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
@@ -37,12 +31,12 @@ import org.apache.hadoop.ksm.protocolPB
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
+import org.apache.hadoop.ozone.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.protocolPB
@@ -61,21 +55,12 @@ import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;
-import org.apache.hadoop.scm.XceiverClientSpi;
-import org.apache.hadoop.scm.storage.ChunkInputStream;
-import org.apache.hadoop.scm.storage.ChunkOutputStream;
-import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
-import java.util.Locale;
 import java.util.List;
 
 /**
@@ -104,9 +89,9 @@ public final class DistributedStorageHandler implements StorageHandler {
    */
   public DistributedStorageHandler(OzoneConfiguration conf,
       StorageContainerLocationProtocolClientSideTranslatorPB
-                                       storageContainerLocation,
+          storageContainerLocation,
       KeySpaceManagerProtocolClientSideTranslatorPB
-                                       keySpaceManagerClient) {
+          keySpaceManagerClient) {
     this.keySpaceManagerClient = keySpaceManagerClient;
     this.storageContainerLocationClient = storageContainerLocation;
     this.xceiverClientManager = new XceiverClientManager(conf);
@@ -119,8 +104,8 @@ public final class DistributedStorageHandler implements StorageHandler {
         KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS_DEFAULT);
     if(chunkSize > ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE) {
       LOG.warn("The chunk size ({}) is not allowed to be more than"
-          + " the maximum size ({}),"
-          + " resetting to the maximum size.",
+              + " the maximum size ({}),"
+              + " resetting to the maximum size.",
           chunkSize, ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE);
       chunkSize = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
     }
@@ -159,7 +144,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   public void setVolumeQuota(VolumeArgs args, boolean remove)
       throws IOException, OzoneException {
     long quota = remove ? OzoneConsts.MAX_QUOTA_IN_BYTES :
-                                   args.getQuota().sizeInBytes();
+        args.getQuota().sizeInBytes();
     keySpaceManagerClient.setQuota(args.getVolumeName(), quota);
   }
 
@@ -397,22 +382,11 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setDataSize(args.getSize())
         .build();
     // contact KSM to allocate a block for key.
-    String containerKey = buildContainerKey(args.getVolumeName(),
-        args.getBucketName(), args.getKeyName());
     KsmKeyInfo keyInfo = keySpaceManagerClient.allocateKey(keyArgs);
-    // TODO the following createContainer and key writes may fail, in which
-    // case we should revert the above allocateKey to KSM.
-    String containerName = keyInfo.getContainerName();
-    XceiverClientSpi xceiverClient = getContainer(containerName);
-    if (keyInfo.getShouldCreateContainer()) {
-      LOG.debug("Need to create container {} for key: {}/{}/{}", containerName,
-          args.getVolumeName(), args.getBucketName(), args.getKeyName());
-      ContainerProtocolCalls.createContainer(
-          xceiverClient, args.getRequestID());
-    }
-    // establish a connection to the container to write the key
-    return new ChunkOutputStream(containerKey, args.getKeyName(),
-        xceiverClientManager, xceiverClient, args.getRequestID(), chunkSize);
+    ChunkGroupOutputStream groupOutputStream =
+        ChunkGroupOutputStream.getFromKsmKeyInfo(keyInfo, xceiverClientManager,
+            storageContainerLocationClient, chunkSize, args.getRequestID());
+    return new OzoneOutputStream(groupOutputStream);
   }
 
   @Override
@@ -431,33 +405,9 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setDataSize(args.getSize())
         .build();
     KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
-    String containerKey = buildContainerKey(args.getVolumeName(),
-        args.getBucketName(), args.getKeyName());
-    String containerName = keyInfo.getContainerName();
-    XceiverClientSpi xceiverClient = getContainer(containerName);
-    boolean success = false;
-    try {
-      LOG.debug("get key accessing {} {}",
-          xceiverClient.getPipeline().getContainerName(), containerKey);
-      KeyData containerKeyData = OzoneContainerTranslation
-          .containerKeyDataForRead(
-              xceiverClient.getPipeline().getContainerName(), containerKey);
-      GetKeyResponseProto response = ContainerProtocolCalls
-          .getKey(xceiverClient, containerKeyData, args.getRequestID());
-      long length = 0;
-      List<ChunkInfo> chunks = response.getKeyData().getChunksList();
-      for (ChunkInfo chunk : chunks) {
-        length += chunk.getLen();
-      }
-      success = true;
-      return new LengthInputStream(new ChunkInputStream(
-          containerKey, xceiverClientManager, xceiverClient,
-          chunks, args.getRequestID()), length);
-    } finally {
-      if (!success) {
-        xceiverClientManager.releaseClient(xceiverClient);
-      }
-    }
+    return ChunkGroupInputStream.getFromKsmKeyInfo(
+        keyInfo, xceiverClientManager, storageContainerLocationClient,
+        args.getRequestID());
   }
 
   @Override
@@ -533,37 +483,6 @@ public final class DistributedStorageHandler implements StorageHandler {
           + " expecting BucketArgs type but met "
           + userArgs.getClass().getSimpleName());
     }
-  }
-
-  private XceiverClientSpi getContainer(String containerName)
-      throws IOException {
-    Pipeline pipeline =
-        storageContainerLocationClient.getContainer(containerName);
-    return xceiverClientManager.acquireClient(pipeline);
-  }
-
-  /**
-   * Creates a container key from any number of components by combining all
-   * components with a delimiter.
-   *
-   * @param parts container key components
-   * @return container key
-   */
-  private static String buildContainerKey(String... parts) {
-    return '/' + StringUtils.join('/', parts);
-  }
-
-  /**
-   * Formats a date in the expected string format.
-   *
-   * @param date the date to format
-   * @return formatted string representation of date
-   */
-  private static String dateToString(Date date) {
-    SimpleDateFormat sdf =
-        new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
-    sdf.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
-    return sdf.format(date);
   }
 
   /**

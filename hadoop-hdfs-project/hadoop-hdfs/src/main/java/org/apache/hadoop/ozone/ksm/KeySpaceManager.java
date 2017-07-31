@@ -98,7 +98,8 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     volumeManager = new VolumeManagerImpl(metadataManager, conf);
     bucketManager = new BucketManagerImpl(metadataManager);
     metrics = KSMMetrics.create();
-    keyManager = new KeyManagerImpl(getScmBlockClient(conf), metadataManager);
+    keyManager = new KeyManagerImpl(
+        getScmBlockClient(conf), metadataManager, conf);
     httpServer = new KeySpaceManagerHttpServer(conf);
   }
 

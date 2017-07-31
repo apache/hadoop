@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.io;
 
+import org.apache.hadoop.ozone.web.storage.ChunkGroupInputStream;
 import org.apache.hadoop.scm.storage.ChunkInputStream;
 
 import java.io.IOException;
@@ -28,14 +29,14 @@ import java.io.InputStream;
  */
 public class OzoneInputStream extends InputStream {
 
-  private final ChunkInputStream inputStream;
+  private final ChunkGroupInputStream inputStream;
 
   /**
    * Constructs OzoneInputStream with ChunkInputStream.
    *
    * @param inputStream
    */
-  public OzoneInputStream(ChunkInputStream inputStream) {
+  public OzoneInputStream(ChunkGroupInputStream inputStream) {
     this.inputStream = inputStream;
   }
 

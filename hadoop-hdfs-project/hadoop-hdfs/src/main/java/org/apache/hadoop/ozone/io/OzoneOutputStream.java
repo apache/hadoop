@@ -17,25 +17,25 @@
 
 package org.apache.hadoop.ozone.io;
 
-import org.apache.hadoop.scm.storage.ChunkOutputStream;
+import org.apache.hadoop.ozone.web.storage.ChunkGroupOutputStream;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
  * OzoneOutputStream is used to write data into Ozone.
- * It uses SCM's {@link ChunkOutputStream} for writing the data.
+ * It uses SCM's {@link ChunkGroupOutputStream} for writing the data.
  */
 public class OzoneOutputStream extends OutputStream {
 
-  private final ChunkOutputStream outputStream;
+  private final ChunkGroupOutputStream outputStream;
 
   /**
-   * Constructs OzoneOutputStream with ChunkOutputStream.
+   * Constructs OzoneOutputStream with ChunkGroupOutputStream.
    *
    * @param outputStream
    */
-  public OzoneOutputStream(ChunkOutputStream outputStream) {
+  public OzoneOutputStream(ChunkGroupOutputStream outputStream) {
     this.outputStream = outputStream;
   }
 
