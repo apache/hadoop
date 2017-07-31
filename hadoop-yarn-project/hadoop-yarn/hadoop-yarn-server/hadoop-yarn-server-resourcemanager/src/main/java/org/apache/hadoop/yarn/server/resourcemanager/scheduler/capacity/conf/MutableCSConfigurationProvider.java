@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import com.google.common.base.Joiner;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -49,6 +51,9 @@ import java.util.Map;
 public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     MutableConfigurationProvider {
 
+  public static final Log LOG =
+      LogFactory.getLog(MutableCSConfigurationProvider.class);
+
   private Configuration schedConf;
   private YarnConfigurationStore confStore;
   private ConfigurationMutationACLPolicy aclMutationPolicy;
@@ -68,6 +73,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
       this.confStore = new InMemoryConfigurationStore();
       break;
+    case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
+      this.confStore = new LeveldbConfigurationStore();
+      break;
     default:
       this.confStore = YarnConfigurationStoreFactory.getStore(config);
       break;
@@ -82,6 +90,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
       schedConf.set(kv.getKey(), kv.getValue());
     }
     confStore.initialize(config, schedConf);
+    // After initializing confStore, the store may already have an existing
+    // configuration. Use this one.
+    schedConf = confStore.retrieve();
     this.aclMutationPolicy = ConfigurationMutationACLPolicyFactory
         .getPolicy(config);
     aclMutationPolicy.init(config, rmContext);
@@ -97,7 +108,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
-  public void mutateConfiguration(UserGroupInformation user,
+  public synchronized void mutateConfiguration(UserGroupInformation user,
       SchedConfUpdateInfo confUpdate) throws IOException {
     if (!aclMutationPolicy.isMutationAllowed(user, confUpdate)) {
       throw new AccessControlException("User is not admin of all modified" +
@@ -124,6 +135,31 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     confStore.confirmMutation(id, true);
   }
 
+  @Override
+  public void recoverConf() throws IOException {
+    List<LogMutation> uncommittedLogs = confStore.getPendingMutations();
+    Configuration oldConf = new Configuration(schedConf);
+    for (LogMutation mutation : uncommittedLogs) {
+      for (Map.Entry<String, String> kv : mutation.getUpdates().entrySet()) {
+        if (kv.getValue() == null) {
+          schedConf.unset(kv.getKey());
+        } else {
+          schedConf.set(kv.getKey(), kv.getValue());
+        }
+      }
+      try {
+        rmContext.getScheduler().reinitialize(conf, rmContext);
+      } catch (IOException e) {
+        schedConf = oldConf;
+        confStore.confirmMutation(mutation.getId(), false);
+        LOG.info("Configuration mutation " + mutation.getId()
+            + " was rejected", e);
+        continue;
+      }
+      confStore.confirmMutation(mutation.getId(), true);
+      LOG.info("Configuration mutation " + mutation.getId()+ " was accepted");
+    }
+  }
 
   private Map<String, String> constructKeyValueConfUpdate(
       SchedConfUpdateInfo mutationInfo) throws IOException {

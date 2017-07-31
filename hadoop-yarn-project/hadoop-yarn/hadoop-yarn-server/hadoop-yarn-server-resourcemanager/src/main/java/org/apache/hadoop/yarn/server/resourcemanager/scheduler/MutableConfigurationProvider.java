@@ -29,6 +29,12 @@ import java.io.IOException;
 public interface MutableConfigurationProvider {
 
   /**
+   * Apply transactions which were not committed.
+   * @throws IOException if recovery fails
+   */
+  void recoverConf() throws IOException;
+
+  /**
    * Update the scheduler configuration with the provided key value pairs.
    * @param user User issuing the request
    * @param confUpdate Key-value pairs for configurations to be updated.
