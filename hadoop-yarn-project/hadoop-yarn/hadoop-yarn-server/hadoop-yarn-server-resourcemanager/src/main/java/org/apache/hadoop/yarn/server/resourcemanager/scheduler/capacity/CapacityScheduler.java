@@ -394,6 +394,9 @@ public class CapacityScheduler extends
   @Override
   public void serviceStart() throws Exception {
     startSchedulerThreads();
+    if (this.csConfProvider instanceof MutableConfigurationProvider) {
+      ((MutableConfigurationProvider) csConfProvider).recoverConf();
+    }
     super.serviceStart();
   }
 

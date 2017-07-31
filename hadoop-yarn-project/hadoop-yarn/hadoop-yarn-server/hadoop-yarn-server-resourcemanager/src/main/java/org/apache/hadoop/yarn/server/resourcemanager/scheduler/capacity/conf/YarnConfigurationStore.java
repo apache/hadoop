@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +45,7 @@ public interface YarnConfigurationStore {
    * LogMutation encapsulates the fields needed for configuration mutation
    * audit logging and recovery.
    */
-  class LogMutation {
+  class LogMutation implements Serializable {
     private Map<String, String> updates;
     private String user;
     private long id;
@@ -106,16 +108,19 @@ public interface YarnConfigurationStore {
    * Initialize the configuration store.
    * @param conf configuration to initialize store with
    * @param schedConf Initial key-value configuration to persist
+   * @throws IOException if initialization fails
    */
-  void initialize(Configuration conf, Configuration schedConf);
+  void initialize(Configuration conf, Configuration schedConf)
+      throws IOException;
 
   /**
    * Logs the configuration change to backing store. Generates an id associated
    * with this mutation, sets it in {@code logMutation}, and returns it.
    * @param logMutation configuration change to be persisted in write ahead log
    * @return id which configuration store associates with this mutation
+   * @throws IOException if logging fails
    */
-  long logMutation(LogMutation logMutation);
+  long logMutation(LogMutation logMutation) throws IOException;
 
   /**
    * Should be called after {@code logMutation}. Gets the pending mutation
@@ -130,8 +135,9 @@ public interface YarnConfigurationStore {
    * @param isValid if true, update persisted configuration with mutation
    *                associated with {@code id}.
    * @return true on success
+   * @throws IOException if mutation confirmation fails
    */
-  boolean confirmMutation(long id, boolean isValid);
+  boolean confirmMutation(long id, boolean isValid) throws IOException;
 
   /**
    * Retrieve the persisted configuration.
