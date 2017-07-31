@@ -34,9 +34,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileBaseImpl;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -96,7 +99,7 @@ public final class FederationStateStoreTestUtils {
    * @throws IOException If it cannot create the State Store.
    * @throws InterruptedException If we cannot wait for the store to start.
    */
-  public static StateStoreService getStateStore(
+  public static StateStoreService newStateStore(
       Configuration configuration) throws IOException, InterruptedException {
 
     StateStoreService stateStore = new StateStoreService();
@@ -205,6 +208,7 @@ public final class FederationStateStoreTestUtils {
     if (!synchronizeRecords(store, emptyList, recordClass)) {
       return false;
     }
+    store.refreshCaches(true);
     return true;
   }
 
@@ -228,5 +232,22 @@ public final class FederationStateStoreTestUtils {
       }
     }
     return false;
+  }
+
+  public static MembershipState createMockRegistrationForNamenode(
+      String nameserviceId, String namenodeId,
+      FederationNamenodeServiceState state) throws IOException {
+    MembershipState entry = MembershipState.newInstance(
+        "routerId", nameserviceId, namenodeId, "clusterId", "test",
+        "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", "0.0.0.0:0", state, false);
+    MembershipStats stats = MembershipStats.newInstance();
+    stats.setNumOfActiveDatanodes(100);
+    stats.setNumOfDeadDatanodes(10);
+    stats.setNumOfDecommissioningDatanodes(20);
+    stats.setNumOfDecomActiveDatanodes(15);
+    stats.setNumOfDecomDeadDatanodes(5);
+    stats.setNumOfBlocks(10);
+    entry.setStats(stats);
+    return entry;
   }
 }

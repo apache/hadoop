@@ -31,11 +31,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.junit.AfterClass;
@@ -53,6 +56,8 @@ public class TestStateStoreDriverBase {
 
   private static StateStoreService stateStore;
   private static Configuration conf;
+
+  private static final Random RANDOM = new Random();
 
 
   /**
@@ -78,29 +83,47 @@ public class TestStateStoreDriverBase {
    */
   public static void getStateStore(Configuration config) throws Exception {
     conf = config;
-    stateStore = FederationStateStoreTestUtils.getStateStore(conf);
+    stateStore = FederationStateStoreTestUtils.newStateStore(conf);
   }
 
+  private String generateRandomString() {
+    String randomString = "/randomString-" + RANDOM.nextInt();
+    return randomString;
+  }
+
+  @SuppressWarnings("rawtypes")
+  private <T extends Enum> T generateRandomEnum(Class<T> enumClass) {
+    int x = RANDOM.nextInt(enumClass.getEnumConstants().length);
+    T data = enumClass.getEnumConstants()[x];
+    return data;
+  }
+
+  @SuppressWarnings("unchecked")
   private <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
       throws IllegalArgumentException, IllegalAccessException, IOException {
 
-    // TODO add record
+    if (recordClass == MembershipState.class) {
+      return (T) MembershipState.newInstance(generateRandomString(),
+          generateRandomString(), generateRandomString(),
+          generateRandomString(), generateRandomString(),
+          generateRandomString(), generateRandomString(),
+          generateRandomString(), generateRandomString(),
+          generateRandomEnum(FederationNamenodeServiceState.class), false);
+    }
+
     return null;
   }
 
   /**
    * Validate if a record is the same.
    *
-   * @param original
-   * @param committed
+   * @param original Original record.
+   * @param committed Committed record.
    * @param assertEquals Assert if the records are equal or just return.
-   * @return
-   * @throws IllegalArgumentException
-   * @throws IllegalAccessException
+   * @return If the record is successfully validated.
    */
   private boolean validateRecord(
-      BaseRecord original, BaseRecord committed, boolean assertEquals)
-          throws IllegalArgumentException, IllegalAccessException {
+      BaseRecord original, BaseRecord committed, boolean assertEquals) {
 
     boolean ret = true;
 
@@ -131,7 +154,7 @@ public class TestStateStoreDriverBase {
   }
 
   public static void removeAll(StateStoreDriver driver) throws IOException {
-    // TODO add records to remove
+    driver.removeAll(MembershipState.class);
   }
 
   public <T extends BaseRecord> void testInsert(
@@ -139,17 +162,20 @@ public class TestStateStoreDriverBase {
           throws IllegalArgumentException, IllegalAccessException, IOException {
 
     assertTrue(driver.removeAll(recordClass));
-    QueryResult<T> records = driver.get(recordClass);
-    assertTrue(records.getRecords().isEmpty());
+    QueryResult<T> queryResult0 = driver.get(recordClass);
+    List<T> records0 = queryResult0.getRecords();
+    assertTrue(records0.isEmpty());
 
     // Insert single
     BaseRecord record = generateFakeRecord(recordClass);
     driver.put(record, true, false);
 
     // Verify
-    records = driver.get(recordClass);
-    assertEquals(1, records.getRecords().size());
-    validateRecord(record, records.getRecords().get(0), true);
+    QueryResult<T> queryResult1 = driver.get(recordClass);
+    List<T> records1 = queryResult1.getRecords();
+    assertEquals(1, records1.size());
+    T record0 = records1.get(0);
+    validateRecord(record, record0, true);
 
     // Insert multiple
     List<T> insertList = new ArrayList<>();
@@ -160,8 +186,9 @@ public class TestStateStoreDriverBase {
     driver.putAll(insertList, true, false);
 
     // Verify
-    records = driver.get(recordClass);
-    assertEquals(11, records.getRecords().size());
+    QueryResult<T> queryResult2 = driver.get(recordClass);
+    List<T> records2 = queryResult2.getRecords();
+    assertEquals(11, records2.size());
   }
 
   public <T extends BaseRecord> void testFetchErrors(StateStoreDriver driver,
@@ -319,23 +346,23 @@ public class TestStateStoreDriverBase {
 
   public void testInsert(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    // TODO add records
+    testInsert(driver, MembershipState.class);
   }
 
   public void testPut(StateStoreDriver driver)
       throws IllegalArgumentException, ReflectiveOperationException,
       IOException, SecurityException {
-    // TODO add records
+    testPut(driver, MembershipState.class);
   }
 
   public void testRemove(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    // TODO add records
+    testRemove(driver, MembershipState.class);
   }
 
   public void testFetchErrors(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    // TODO add records
+    testFetchErrors(driver, MembershipState.class);
   }
 
   /**
