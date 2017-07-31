@@ -269,12 +269,19 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval
         + 10 * 1000 * heartbeatIntervalSeconds;
-    final int blockInvalidateLimit = Math.max(20*(int)(heartbeatIntervalSeconds),
+
+    // Effected block invalidate limit is the bigger value between
+    // value configured in hdfs-site.xml, and 20 * HB interval.
+    final int configuredBlockInvalidateLimit = conf.getInt(
+        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY,
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
-    this.blockInvalidateLimit = conf.getInt(
-        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY, blockInvalidateLimit);
+    final int countedBlockInvalidateLimit = 20*(int)(heartbeatIntervalSeconds);
+    this.blockInvalidateLimit = Math.max(countedBlockInvalidateLimit,
+        configuredBlockInvalidateLimit);
     LOG.info(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY
-        + "=" + this.blockInvalidateLimit);
+        + ": configured=" + configuredBlockInvalidateLimit
+        + ", counted=" + countedBlockInvalidateLimit
+        + ", effected=" + blockInvalidateLimit);
 
     this.checkIpHostnameInRegistration = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY,
@@ -382,7 +389,8 @@ public class DatanodeManager {
     return fsClusterStats;
   }
 
-  int getBlockInvalidateLimit() {
+  @VisibleForTesting
+  public int getBlockInvalidateLimit() {
     return blockInvalidateLimit;
   }
 
@@ -1812,7 +1820,7 @@ public class DatanodeManager {
     this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
         * intervalSeconds;
     this.blockInvalidateLimit = Math.max(20 * (int) (intervalSeconds),
-        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
+        blockInvalidateLimit);
   }
 
   /**

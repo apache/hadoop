@@ -40,6 +40,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT;
 
 public class TestNameNodeReconfigure {
@@ -48,10 +49,13 @@ public class TestNameNodeReconfigure {
       .getLog(TestNameNodeReconfigure.class);
 
   private MiniDFSCluster cluster;
+  private final int customizedBlockInvalidateLimit = 500;
 
   @Before
   public void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFS_BLOCK_INVALIDATE_LIMIT_KEY,
+        customizedBlockInvalidateLimit);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
   }
@@ -199,6 +203,38 @@ public class TestNameNodeReconfigure {
     assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
         + " has wrong value", DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT,
         datanodeManager.getHeartbeatRecheckInterval());
+  }
+
+  @Test
+  public void testBlockInvalidateLimitAfterReconfigured()
+      throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem
+        .getBlockManager().getDatanodeManager();
+
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not correctly set",
+        customizedBlockInvalidateLimit,
+        datanodeManager.getBlockInvalidateLimit());
+
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY,
+        Integer.toString(6));
+
+    // 20 * 6 = 120 < 500
+    // Invalid block limit should stay same as before after reconfiguration.
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY
+            + " is not honored after reconfiguration",
+        customizedBlockInvalidateLimit,
+        datanodeManager.getBlockInvalidateLimit());
+
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY,
+        Integer.toString(50));
+
+    // 20 * 50 = 1000 > 500
+    // Invalid block limit should be reset to 1000
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY
+            + " is not reconfigured correctly",
+        1000,
+        datanodeManager.getBlockInvalidateLimit());
   }
 
   @After
