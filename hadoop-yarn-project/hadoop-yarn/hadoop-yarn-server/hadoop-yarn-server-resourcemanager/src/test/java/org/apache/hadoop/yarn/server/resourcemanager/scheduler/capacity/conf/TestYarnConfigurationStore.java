@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.Yar
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,7 +44,7 @@ public class TestYarnConfigurationStore {
   }
 
   @Test
-  public void testInMemoryConfigurationStore() {
+  public void testInMemoryConfigurationStore() throws IOException {
     confStore = new InMemoryConfigurationStore();
     confStore.initialize(new Configuration(), schedConf);
     assertEquals("val1", confStore.retrieve().get("key1"));
