@@ -16,10 +16,12 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.utils.BatchOperation;
+import org.apache.hadoop.utils.MetadataStore;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,6 +40,13 @@ public interface MetadataManager {
    * Stop metadata manager.
    */
   void stop() throws IOException;
+
+  /**
+   * Get metadata store.
+   * @return metadata store.
+   */
+  @VisibleForTesting
+  MetadataStore getStore();
 
   /**
    * Returns the read lock used on Metadata DB.
@@ -105,6 +114,15 @@ public interface MetadataManager {
    * @return bytes of DB key.
    */
   byte[] getDBKeyForKey(String volume, String bucket, String key);
+
+  /**
+   * Returns the DB key name of a deleted key in KSM metadata store.
+   * The name for a deleted key has prefix #deleting# followed by
+   * the actual key name.
+   * @param keyName - key name
+   * @return bytes of DB key.
+   */
+  byte[] getDeletedKeyName(byte[] keyName);
 
   /**
    * Deletes the key from DB.

@@ -45,6 +45,8 @@ import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.MetadataKeyFilters;
+import org.apache.hadoop.utils.MetadataStore;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -59,11 +61,13 @@ import java.io.OutputStream;
 import java.text.ParseException;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
 /**
  * Test Key Space Manager operation in distributed handler scenario.
  */
@@ -72,6 +76,7 @@ public class TestKeySpaceManager {
   private static StorageHandler storageHandler;
   private static UserArgs userArgs;
   private static KSMMetrics ksmMetrics;
+  private static OzoneConfiguration conf;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -86,7 +91,7 @@ public class TestKeySpaceManager {
    */
   @BeforeClass
   public static void init() throws Exception {
-    OzoneConfiguration conf = new OzoneConfiguration();
+    conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = new MiniOzoneCluster.Builder(conf)
@@ -596,6 +601,13 @@ public class TestKeySpaceManager {
 
     storageHandler.deleteKey(keyArgs);
     Assert.assertEquals(1 + numKeyDeletes, ksmMetrics.getNumKeyDeletes());
+
+    // Make sure the deleted key has been renamed.
+    MetadataStore store = cluster.getKeySpaceManager().
+        getMetadataManager().getStore();
+    List<Map.Entry<byte[], byte[]>> list = store.getRangeKVs(null, 10,
+        new MetadataKeyFilters.KeyPrefixFilter(DELETING_KEY_PREFIX));
+    Assert.assertEquals(1, list.size());
 
     // Check the block key in SCM, make sure it's deleted.
     Set<String> keys = new HashSet<>();

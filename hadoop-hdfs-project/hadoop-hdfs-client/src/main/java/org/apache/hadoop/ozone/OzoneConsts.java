@@ -93,6 +93,8 @@ public final class OzoneConsts {
   public static final String OZONE_HANDLER_DISTRIBUTED = "distributed";
   public static final String OZONE_HANDLER_LOCAL = "local";
 
+  public static final String DELETING_KEY_PREFIX = "#deleting#";
+
   /**
    * KSM LevelDB prefixes.
    */

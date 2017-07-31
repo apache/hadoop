@@ -22,17 +22,15 @@ import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.BatchOperation;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -154,29 +152,24 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public void deleteKey(KsmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
-    KsmKeyInfo keyInfo = lookupKey(args);
 
     metadataManager.writeLock().lock();
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
     try {
-      List<DeleteBlockResult> resultList =
-          scmBlockClient.deleteBlocks(
-              Collections.singleton(keyInfo.getBlockID()));
-      if (resultList.size() != 1) {
-        throw new KSMException("Delete result size from SCM is wrong",
-            ResultCodes.FAILED_KEY_DELETION);
+      byte[] objectKey = metadataManager.getDBKeyForKey(
+          volumeName, bucketName, keyName);
+      byte[] objectValue = metadataManager.get(objectKey);
+      if (objectValue == null) {
+        throw new KSMException("Key not found",
+            KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
       }
-
-      if (resultList.get(0).getResult() == Result.success) {
-        byte[] objectKey = metadataManager.getDBKeyForKey(
-            volumeName, bucketName, keyName);
-        metadataManager.deleteKey(objectKey);
-      } else {
-        throw new KSMException("Cannot delete key from SCM",
-                ResultCodes.FAILED_KEY_DELETION);
-      }
+      byte[] deletingKey = metadataManager.getDeletedKeyName(objectKey);
+      BatchOperation batch = new BatchOperation();
+      batch.put(deletingKey, objectValue);
+      batch.delete(objectKey);
+      metadataManager.writeBatch(batch);
     } catch (DBException ex) {
       LOG.error(String.format("Delete key failed for volume:%s "
           + "bucket:%s key:%s", volumeName, bucketName, keyName), ex);
