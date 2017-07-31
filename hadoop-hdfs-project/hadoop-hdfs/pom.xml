@@ -331,6 +331,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>QJournalProtocol.proto</include>
                   <include>editlog.proto</include>
                   <include>fsimage.proto</include>
+                  <include>FederationProtocol.proto</include>
                 </includes>
               </source>
             </configuration>
