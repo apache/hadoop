@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
@@ -54,7 +55,6 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
@@ -294,9 +294,9 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // add collector address for this application
     if (YarnConfiguration.timelineServiceV2Enabled(
         getRmContext().getYarnConfiguration())) {
-      AppCollectorData data = app.getCollectorData();
-      if (data != null) {
-        response.setCollectorAddr(data.getCollectorAddr());
+      CollectorInfo collectorInfo = app.getCollectorInfo();
+      if (collectorInfo != null) {
+        response.setCollectorInfo(collectorInfo);
       }
     }
 
