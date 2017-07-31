@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -47,6 +48,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_DB_CACHE_SIZE_DEFAULT;
@@ -91,6 +93,16 @@ public class MetadataManagerImpl implements MetadataManager {
     if (store != null) {
       store.close();
     }
+  }
+
+  /**
+   * Get metadata store.
+   * @return store - metadata store.
+   */
+  @VisibleForTesting
+  @Override
+  public MetadataStore getStore() {
+    return store;
   }
 
   /**
@@ -146,6 +158,12 @@ public class MetadataManagerImpl implements MetadataManager {
         + OzoneConsts.KSM_BUCKET_PREFIX + bucket + OzoneConsts.KSM_KEY_PREFIX
         + key;
     return DFSUtil.string2Bytes(keyKeyString);
+  }
+
+  @Override
+  public byte[] getDeletedKeyName(byte[] keyName) {
+    return DFSUtil.string2Bytes(
+        DELETING_KEY_PREFIX + DFSUtil.bytes2String(keyName));
   }
 
   /**

@@ -155,6 +155,14 @@ public class KeySpaceManager implements KeySpaceManagerProtocol {
     return rpcServer;
   }
 
+  /**
+   * Get metadata manager.
+   * @return metadata manager.
+   */
+  public MetadataManager getMetadataManager() {
+    return metadataManager;
+  }
+
   public KSMMetrics getMetrics() {
     return metrics;
   }
