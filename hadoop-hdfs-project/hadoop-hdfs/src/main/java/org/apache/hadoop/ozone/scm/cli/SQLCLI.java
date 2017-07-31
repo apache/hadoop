@@ -400,11 +400,13 @@ public class SQLCLI  extends Configured implements Tool {
       break;
     case KEY:
       KeyInfo keyInfo = KeyInfo.parseFrom(value);
+      // TODO : the two fields container name and block id are no longer used,
+      // need to revisit this later.
       String insertKeyInfo =
           String.format(INSERT_KEY_INFO, keyInfo.getVolumeName(),
               keyInfo.getBucketName(), keyInfo.getKeyName(),
-              keyInfo.getDataSize(), keyInfo.getBlockKey(),
-              keyInfo.getContainerName());
+              keyInfo.getDataSize(), "EMPTY",
+              "EMPTY");
       executeSQL(conn, insertKeyInfo);
       break;
     default:

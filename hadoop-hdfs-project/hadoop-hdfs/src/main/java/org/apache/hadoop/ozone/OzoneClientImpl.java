@@ -20,12 +20,7 @@ package org.apache.hadoop.ozone;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.ChunkInfo;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.GetKeyResponseProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.KeyData;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -39,24 +34,20 @@ import org.apache.hadoop.ksm.protocolPB
 import org.apache.hadoop.ksm.protocolPB
     .KeySpaceManagerProtocolPB;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.web.storage.ChunkGroupInputStream;
 import org.apache.hadoop.ozone.io.OzoneInputStream;
 import org.apache.hadoop.ozone.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
+import org.apache.hadoop.ozone.web.storage.ChunkGroupOutputStream;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.XceiverClientSpi;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolPB;
-import org.apache.hadoop.scm.storage.ChunkInputStream;
-import org.apache.hadoop.scm.storage.ChunkOutputStream;
-import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -480,39 +471,11 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
         .setDataSize(size)
         .build();
 
-    String containerKey = buildContainerKey(volumeName, bucketName, keyName);
     KsmKeyInfo keyInfo = keySpaceManagerClient.allocateKey(keyArgs);
-    // TODO: the following createContainer and key writes may fail, in which
-    // case we should revert the above allocateKey to KSM.
-    String containerName = keyInfo.getContainerName();
-    XceiverClientSpi xceiverClient = getContainer(containerName);
-    if (keyInfo.getShouldCreateContainer()) {
-      LOG.debug("Need to create container {} for key: {}/{}/{}", containerName,
-          volumeName, bucketName, keyName);
-      ContainerProtocolCalls.createContainer(xceiverClient, requestId);
-    }
-    // establish a connection to the container to write the key
-    ChunkOutputStream outputStream = new ChunkOutputStream(containerKey,
-        keyName, xceiverClientManager, xceiverClient, requestId, chunkSize);
-    return new OzoneOutputStream(outputStream);
-  }
-
-  /**
-   * Creates a container key from any number of components by combining all
-   * components with a delimiter.
-   *
-   * @param parts container key components
-   * @return container key
-   */
-  private static String buildContainerKey(String... parts) {
-    return '/' + StringUtils.join('/', parts);
-  }
-
-  private XceiverClientSpi getContainer(String containerName)
-      throws IOException {
-    Pipeline pipeline =
-        storageContainerLocationClient.getContainer(containerName);
-    return xceiverClientManager.acquireClient(pipeline);
+    ChunkGroupOutputStream  groupOutputStream =
+        ChunkGroupOutputStream.getFromKsmKeyInfo(keyInfo, xceiverClientManager,
+        storageContainerLocationClient, chunkSize, requestId);
+    return new OzoneOutputStream(groupOutputStream);
   }
 
   @Override
@@ -529,29 +492,12 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
         .setKeyName(keyName)
         .build();
     KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
-    String containerKey = buildContainerKey(volumeName,
-        bucketName, keyName);
-    String containerName = keyInfo.getContainerName();
-    XceiverClientSpi xceiverClient = getContainer(containerName);
-    boolean success = false;
-    try {
-      LOG.debug("get key accessing {} {}",
-          xceiverClient.getPipeline().getContainerName(), containerKey);
-      KeyData containerKeyData = KeyData.newBuilder().setContainerName(
-          xceiverClient.getPipeline().getContainerName())
-          .setName(containerKey).build();
-      GetKeyResponseProto response = ContainerProtocolCalls
-          .getKey(xceiverClient, containerKeyData, requestId);
-      List<ChunkInfo> chunks = response.getKeyData().getChunksList();
-      success = true;
-      return new OzoneInputStream(new ChunkInputStream(
-          containerKey, xceiverClientManager, xceiverClient,
-          chunks, requestId));
-    } finally {
-      if (!success) {
-        xceiverClientManager.releaseClient(xceiverClient);
-      }
-    }
+    LengthInputStream lengthInputStream =
+        ChunkGroupInputStream.getFromKsmKeyInfo(
+        keyInfo, xceiverClientManager, storageContainerLocationClient,
+        requestId);
+    return new OzoneInputStream(
+        (ChunkGroupInputStream)lengthInputStream.getWrappedStream());
   }
 
   @Override

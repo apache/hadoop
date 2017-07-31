@@ -813,4 +813,12 @@
       Port used by cblock to connect to SCM.
     </description>
   </property>
+
+  <property>
+    <name>ozone.scm.block.size</name>
+    <value>268435456</value>
+    <description>
+      The default size of a scm block in bytes.
+    </description>
+  </property>
 </configuration>

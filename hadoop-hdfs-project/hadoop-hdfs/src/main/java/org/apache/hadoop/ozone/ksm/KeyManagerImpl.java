@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.ksm;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
@@ -31,7 +33,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_KEY;
 
 /**
  * Implementation of keyManager.
@@ -45,11 +51,14 @@ public class KeyManagerImpl implements KeyManager {
    */
   private final ScmBlockLocationProtocol scmBlockClient;
   private final MetadataManager metadataManager;
+  private final long scmBlockSize;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
-      MetadataManager metadataManager) {
+      MetadataManager metadataManager, OzoneConfiguration conf) {
     this.scmBlockClient = scmBlockClient;
     this.metadataManager = metadataManager;
+    this.scmBlockSize = conf.getLong(OZONE_SCM_BLOCK_SIZE_KEY,
+        OZONE_SCM_BLOCK_SIZE_DEFAULT);
   }
 
   @Override
@@ -92,17 +101,37 @@ public class KeyManagerImpl implements KeyManager {
       // with a actual SCM block.
       // TODO : Review this decision later. We can get away with only a
       // metadata entry in case of 0 length key.
-      AllocatedBlock allocatedBlock =
-          scmBlockClient.allocateBlock(Math.max(args.getDataSize(), 1));
+      long targetSize = args.getDataSize();
+      List<KsmKeyLocationInfo> subKeyInfos = new ArrayList<>();
+      int idx = 0;
+      long offset = 0;
+
+      // in case targetSize == 0, subKeyInfos will be an empty list
+      while (targetSize > 0) {
+        long allocateSize = Math.min(targetSize, scmBlockSize);
+        AllocatedBlock allocatedBlock =
+            scmBlockClient.allocateBlock(allocateSize);
+        KsmKeyLocationInfo subKeyInfo = new KsmKeyLocationInfo.Builder()
+            .setContainerName(allocatedBlock.getPipeline().getContainerName())
+            .setBlockID(allocatedBlock.getKey())
+            .setShouldCreateContainer(allocatedBlock.getCreateContainer())
+            .setIndex(idx)
+            .setLength(allocateSize)
+            .setOffset(offset)
+            .build();
+        idx += 1;
+        offset += allocateSize;
+        targetSize -= allocateSize;
+        subKeyInfos.add(subKeyInfo);
+      }
+
       long currentTime = Time.now();
       KsmKeyInfo keyBlock = new KsmKeyInfo.Builder()
           .setVolumeName(args.getVolumeName())
           .setBucketName(args.getBucketName())
           .setKeyName(args.getKeyName())
           .setDataSize(args.getDataSize())
-          .setBlockID(allocatedBlock.getKey())
-          .setContainerName(allocatedBlock.getPipeline().getContainerName())
-          .setShouldCreateContainer(allocatedBlock.getCreateContainer())
+          .setKsmKeyLocationInfos(subKeyInfos)
           .setCreationTime(currentTime)
           .setModificationTime(currentTime)
           .build();
