@@ -56,9 +56,16 @@ public class MockResolver
   private Set<FederationNamespaceInfo> namespaces = new HashSet<>();
   private String defaultNamespace = null;
 
+  public MockResolver() {
+    this.cleanRegistrations();
+  }
+
+  public MockResolver(Configuration conf) {
+    this();
+  }
 
   public MockResolver(Configuration conf, StateStoreService store) {
-    this.cleanRegistrations();
+    this();
   }
 
   public void addLocation(String mount, String nsId, String location) {
