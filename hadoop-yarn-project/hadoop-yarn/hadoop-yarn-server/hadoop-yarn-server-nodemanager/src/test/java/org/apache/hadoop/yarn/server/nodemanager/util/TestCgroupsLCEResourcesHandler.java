@@ -76,7 +76,7 @@ public class TestCgroupsLCEResourcesHandler {
 
     // Test 1, tasks file is empty
     // tasks file has no data, should return true
-    Mockito.stub(fspy.delete()).toReturn(true);
+    Mockito.when(fspy.delete()).thenReturn(true);
     Assert.assertTrue(handler.checkAndDeleteCgroup(fspy));
 
     // Test 2, tasks file has data
