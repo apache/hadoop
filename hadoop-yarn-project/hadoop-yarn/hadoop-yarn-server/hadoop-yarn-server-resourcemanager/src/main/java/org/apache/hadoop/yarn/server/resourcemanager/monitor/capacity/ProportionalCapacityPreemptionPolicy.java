@@ -222,8 +222,13 @@ public class ProportionalCapacityPreemptionPolicy
           .add(new ReservedContainerCandidatesSelector(this));
     }
 
+    boolean additionalPreemptionBasedOnReservedResource = csConfig.getBoolean(
+        CapacitySchedulerConfiguration.ADDITIONAL_RESOURCE_BALANCE_BASED_ON_RESERVED_CONTAINERS,
+        CapacitySchedulerConfiguration.DEFAULT_ADDITIONAL_RESOURCE_BALANCE_BASED_ON_RESERVED_CONTAINERS);
+
     // initialize candidates preemption selection policies
-    candidatesSelectionPolicies.add(new FifoCandidatesSelector(this));
+    candidatesSelectionPolicies.add(new FifoCandidatesSelector(this,
+        additionalPreemptionBasedOnReservedResource));
 
     // Do we need to specially consider intra queue
     boolean isIntraQueuePreemptionEnabled = csConfig.getBoolean(
