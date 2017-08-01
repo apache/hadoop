@@ -98,6 +98,9 @@ public class TestRouter {
     // Rpc only
     testRouterStartup(new RouterConfigBuilder(conf).rpc().build());
 
+    // Heartbeat only
+    testRouterStartup(new RouterConfigBuilder(conf).heartbeat().build());
+
     // Run with all services
     testRouterStartup(new RouterConfigBuilder(conf).all().build());
   }

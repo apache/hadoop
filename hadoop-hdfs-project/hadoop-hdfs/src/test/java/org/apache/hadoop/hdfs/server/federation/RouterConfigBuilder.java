@@ -28,6 +28,8 @@ public class RouterConfigBuilder {
   private Configuration conf;
 
   private boolean enableRpcServer = false;
+  private boolean enableHeartbeat = false;
+  private boolean enableLocalHeartbeat = false;
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -39,6 +41,13 @@ public class RouterConfigBuilder {
 
   public RouterConfigBuilder all() {
     this.enableRpcServer = true;
+    this.enableHeartbeat = true;
+    this.enableLocalHeartbeat = true;
+    return this;
+  }
+
+  public RouterConfigBuilder enableLocalHeartbeat(boolean enable) {
+    this.enableLocalHeartbeat = enable;
     return this;
   }
 
@@ -47,12 +56,25 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder heartbeat(boolean enable) {
+    this.enableHeartbeat = enable;
+    return this;
+  }
+
   public RouterConfigBuilder rpc() {
     return this.rpc(true);
   }
 
+  public RouterConfigBuilder heartbeat() {
+    return this.heartbeat(true);
+  }
+
   public Configuration build() {
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_RPC_ENABLE, this.enableRpcServer);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
+        this.enableHeartbeat);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,
+        this.enableLocalHeartbeat);
     return conf;
   }
 }
