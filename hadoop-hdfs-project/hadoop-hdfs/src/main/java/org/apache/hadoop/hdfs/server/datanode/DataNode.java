@@ -46,6 +46,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -109,8 +111,10 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -189,6 +193,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SecurityUtil;
@@ -370,6 +375,7 @@ public class DataNode extends ReconfigurableBase
   private final String confVersion;
   private final long maxNumberOfBlocksToLog;
   private final boolean pipelineSupportECN;
+  private final boolean ozoneEnabled;
 
   private final List<String> usersWithLocalPathAccess;
   private final boolean connectToDnViaHostname;
@@ -398,6 +404,8 @@ public class DataNode extends ReconfigurableBase
 
   private final SocketFactory socketFactory;
 
+  private DatanodeStateMachine datanodeStateMachine;
+
   private static Tracer createTracer(Configuration conf) {
     return new Tracer.Builder("DataNode").
         conf(TraceUtils.wrapHadoopConf(DATANODE_HTRACE_PREFIX , conf)).
@@ -407,6 +415,8 @@ public class DataNode extends ReconfigurableBase
   private long[] oobTimeouts; /** timeout value of each OOB type */
 
   private ScheduledThreadPoolExecutor metricsLoggerTimer;
+
+  private ObjectStoreHandler objectStoreHandler = null;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -426,6 +436,7 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = false;
     this.blockScanner = new BlockScanner(this, this.getConf());
     this.pipelineSupportECN = false;
+    this.ozoneEnabled = false;
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
     this.dnConf = new DNConf(this);
     initOOBTimeout();
@@ -464,6 +475,8 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportECN = conf.getBoolean(
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED,
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED_DEFAULT);
+    this.ozoneEnabled = conf.getBoolean(OZONE_ENABLED,
+        OZONE_ENABLED_DEFAULT);
 
     confVersion = "core-" +
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
@@ -520,7 +533,7 @@ public class DataNode extends ReconfigurableBase
 
   @Override  // ReconfigurableBase
   protected Configuration getNewConf() {
-    return new HdfsConfiguration();
+    return new OzoneConfiguration();
   }
 
   /**
@@ -913,7 +926,7 @@ public class DataNode extends ReconfigurableBase
    * @throws UnknownHostException if the dfs.datanode.dns.interface
    *    option is used and the hostname can not be determined
    */
-  private static String getHostName(Configuration config)
+  public static String getHostName(Configuration config)
       throws UnknownHostException {
     String name = config.get(DFS_DATANODE_HOST_NAME_KEY);
     if (name == null) {
@@ -950,8 +963,8 @@ public class DataNode extends ReconfigurableBase
     // the DN is started by JSVC, pass it along.
     ServerSocketChannel httpServerChannel = secureResources != null ?
         secureResources.getHttpServerChannel() : null;
-
-    httpServer = new DatanodeHttpServer(getConf(), this, httpServerChannel);
+    this.httpServer = new DatanodeHttpServer(getConf(), this, httpServerChannel,
+        this.objectStoreHandler);
     httpServer.start();
     if (httpServer.getHttpAddress() != null) {
       infoPort = httpServer.getHttpAddress().getPort();
@@ -1256,7 +1269,7 @@ public class DataNode extends ReconfigurableBase
   public void reportBadBlocks(ExtendedBlock block, FsVolumeSpi volume)
       throws IOException {
     BPOfferService bpos = getBPOSForBlock(block);
-    bpos.reportBadBlocks(
+     bpos.reportBadBlocks(
         block, volume.getStorageID(), volume.getStorageType());
   }
 
@@ -1398,7 +1411,9 @@ public class DataNode extends ReconfigurableBase
     
     // global DN settings
     registerMXBean();
+
     initDataXceiver();
+    initObjectStoreHandler();
     startInfoServer();
     pauseMonitor = new JvmPauseMonitor();
     pauseMonitor.init(getConf());
@@ -1435,6 +1450,19 @@ public class DataNode extends ReconfigurableBase
     if (dnConf.diskStatsEnabled) {
       diskMetrics = new DataNodeDiskMetrics(this,
           dnConf.outliersReportIntervalMs);
+    }
+  }
+
+  /**
+   * Initializes the object store handler.  This must be called before
+   * initialization of the HTTP server.
+   *
+   * @throws IOException if there is an I/O error
+   */
+  private void initObjectStoreHandler() throws IOException {
+    if (this.ozoneEnabled) {
+      this.objectStoreHandler = new ObjectStoreHandler(getConf());
+      LOG.info("ozone is enabled.");
     }
   }
 
@@ -1556,10 +1584,23 @@ public class DataNode extends ReconfigurableBase
           + bpRegistration.getDatanodeUuid()
           + ". Expecting " + storage.getDatanodeUuid());
     }
-    
+
+    if (isOzoneEnabled()) {
+      if (datanodeStateMachine == null) {
+        datanodeStateMachine = new DatanodeStateMachine(
+            getDatanodeId(),
+            getConf());
+        datanodeStateMachine.startDaemon();
+      }
+    }
     registerBlockPoolWithSecretManager(bpRegistration, blockPoolId);
   }
-  
+
+  @VisibleForTesting
+  public OzoneContainer getOzoneContainerManager() {
+    return this.datanodeStateMachine.getContainer();
+  }
+
   /**
    * After the block pool has contacted the NN, registers that block pool
    * with the secret manager, updating it with the secrets provided by the NN.
@@ -1666,11 +1707,11 @@ public class DataNode extends ReconfigurableBase
   BPOfferService getBPOfferService(String bpid){
     return blockPoolManager.get(bpid);
   }
-  
+
   int getBpOsCount() {
     return blockPoolManager.getAllNamenodeThreads().size();
   }
-  
+
   /**
    * Initializes the {@link #data}. The initialization is done only once, when
    * handshake with the the first namenode is completed.
@@ -1965,7 +2006,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    
+
     List<BPOfferService> bposArray = (this.blockPoolManager == null)
         ? new ArrayList<BPOfferService>()
         : this.blockPoolManager.getAllNamenodeThreads();
@@ -1998,7 +2039,6 @@ public class DataNode extends ReconfigurableBase
 
     // Terminate directory scanner and block scanner
     shutdownPeriodicScanners();
-    shutdownDiskBalancer();
 
     // Stop the web server
     if (httpServer != null) {
@@ -2006,6 +2046,17 @@ public class DataNode extends ReconfigurableBase
         httpServer.close();
       } catch (Exception e) {
         LOG.warn("Exception shutting down DataNode HttpServer", e);
+      }
+    }
+
+    // Stop the object store handler
+    if (isOzoneEnabled()) {
+      if (this.objectStoreHandler != null) {
+        this.objectStoreHandler.close();
+        if(datanodeStateMachine != null &&
+            !datanodeStateMachine.isDaemonStopped()) {
+          datanodeStateMachine.stopDaemon();
+        }
       }
     }
 
@@ -2022,7 +2073,7 @@ public class DataNode extends ReconfigurableBase
     // shouldRun is set to false here to prevent certain threads from exiting
     // before the restart prep is done.
     this.shouldRun = false;
-    
+
     // wait reconfiguration thread, if any, to exit
     shutdownReconfigurationTask();
 
@@ -2032,20 +2083,20 @@ public class DataNode extends ReconfigurableBase
       while (true) {
         // When shutting down for restart, wait 2.5 seconds before forcing
         // termination of receiver threads.
-        if (!this.shutdownForUpgrade ||
-            (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified
-                > 1000))) {
+        if (!this.shutdownForUpgrade || (this.shutdownForUpgrade && (
+            Time.monotonicNow() - timeNotified > 1000))) {
           this.threadGroup.interrupt();
           break;
         }
-        LOG.info("Waiting for threadgroup to exit, active threads is " +
-                 this.threadGroup.activeCount());
+        LOG.info("Waiting for threadgroup to exit, active threads is "
+            + this.threadGroup.activeCount());
         if (this.threadGroup.activeCount() == 0) {
           break;
         }
         try {
           Thread.sleep(sleepMs);
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException e) {
+        }
         sleepMs = sleepMs * 3 / 2; // exponential backoff
         if (sleepMs > 200) {
           sleepMs = 200;
@@ -2071,20 +2122,20 @@ public class DataNode extends ReconfigurableBase
       metrics.setDataNodeActiveXceiversCount(0);
     }
 
-   // IPC server needs to be shutdown late in the process, otherwise
-   // shutdown command response won't get sent.
-   if (ipcServer != null) {
+    // IPC server needs to be shutdown late in the process, otherwise
+    // shutdown command response won't get sent.
+    if (ipcServer != null) {
       ipcServer.stop();
     }
 
-    if(blockPoolManager != null) {
+    if (blockPoolManager != null) {
       try {
         this.blockPoolManager.shutDownAll(bposArray);
       } catch (InterruptedException ie) {
         LOG.warn("Received exception in BlockPoolManager#shutDownAll: ", ie);
       }
     }
-    
+
     if (storage != null) {
       try {
         this.storage.unlockAll();
@@ -2105,9 +2156,11 @@ public class DataNode extends ReconfigurableBase
       MBeans.unregister(dataNodeInfoBeanName);
       dataNodeInfoBeanName = null;
     }
-    if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
+    if (shortCircuitRegistry != null) {
+      shortCircuitRegistry.shutdown();
+    }
     LOG.info("Shutdown complete.");
-    synchronized(this) {
+    synchronized (this) {
       // it is already false, but setting it again to avoid a findbug warning.
       this.shouldRun = false;
       // Notify the main thread.
@@ -2656,8 +2709,9 @@ public class DataNode extends ReconfigurableBase
    */
   public static DataNode instantiateDataNode(String args [], Configuration conf,
       SecureResources resources) throws IOException {
-    if (conf == null)
-      conf = new HdfsConfiguration();
+    if (conf == null) {
+      conf = new OzoneConfiguration();
+    }
     
     if (args != null) {
       // parse generic hadoop options
@@ -3189,6 +3243,12 @@ public class DataNode extends ReconfigurableBase
           } catch (InterruptedException ie) { }
         }
         shutdown();
+
+        if (isOzoneEnabled()) {
+          if(datanodeStateMachine != null) {
+            datanodeStateMachine.stopDaemon();
+          }
+        }
       }
     };
 
@@ -3486,10 +3546,13 @@ public class DataNode extends ReconfigurableBase
     return metricsLoggerTimer;
   }
 
+  public boolean isOzoneEnabled() {
+    return ozoneEnabled;
+  }
+
   public Tracer getTracer() {
     return tracer;
   }
-
   /**
    * Allows submission of a disk balancer Job.
    * @param planID  - Hash value of the plan.

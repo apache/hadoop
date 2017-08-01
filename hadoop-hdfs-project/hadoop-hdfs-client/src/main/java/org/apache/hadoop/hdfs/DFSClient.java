@@ -2901,9 +2901,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     synchronized (DFSClient.class) {
       if (STRIPED_READ_THREAD_POOL == null) {
-        STRIPED_READ_THREAD_POOL = DFSUtilClient.getThreadPoolExecutor(1,
+        // Only after thread pool is fully constructed then save it to
+        // volatile field.
+        ThreadPoolExecutor threadPool = DFSUtilClient.getThreadPoolExecutor(1,
             numThreads, 60, "StripedRead-", true);
-        STRIPED_READ_THREAD_POOL.allowCoreThreadTimeOut(true);
+        threadPool.allowCoreThreadTimeOut(true);
+        STRIPED_READ_THREAD_POOL = threadPool;
       }
     }
   }

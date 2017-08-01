@@ -948,7 +948,7 @@ public class TestDataNodeHotSwapVolumes {
 
     DataNode dn = cluster.getDataNodes().get(0);
     final String oldDataDir = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY);
-    File dirToFail = new File(cluster.getDataDirectory(), "data1");
+    File dirToFail = cluster.getInstanceStorageDir(0, 0);
 
     FsVolumeImpl failedVolume = DataNodeTestUtils.getVolume(dn, dirToFail);
     assertTrue("No FsVolume was found for " + dirToFail,

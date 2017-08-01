@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.util.concurrent;
 
+import org.slf4j.Logger;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -38,6 +40,14 @@ public final class HadoopExecutors {
     return new HadoopThreadPoolExecutor(0, Integer.MAX_VALUE,
         60L, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(),
+        threadFactory);
+  }
+
+  public static ExecutorService newCachedThreadPool(ThreadFactory
+      threadFactory, int maxThreads) {
+    return new HadoopThreadPoolExecutor(0, maxThreads,
+        60L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(),
         threadFactory);
   }
 
@@ -89,6 +99,37 @@ public final class HadoopExecutors {
   public static ScheduledExecutorService newSingleThreadScheduledExecutor(
       ThreadFactory threadFactory) {
     return Executors.newSingleThreadScheduledExecutor(threadFactory);
+  }
+
+  /**
+   * Helper routine to shutdown a executorService.
+   * @param executorService - executorService
+   * @param logger - Logger
+   * @param timeout - Timeout
+   * @param unit - TimeUnits, generally seconds.
+   */
+  public static void shutdown(ExecutorService executorService, Logger logger,
+      long timeout, TimeUnit unit) {
+    try {
+      if (executorService != null) {
+        executorService.shutdown();
+        try {
+          if (!executorService.awaitTermination(timeout, unit)) {
+            executorService.shutdownNow();
+          }
+
+          if (!executorService.awaitTermination(timeout, unit)) {
+            logger.error("Unable to shutdown properly.");
+          }
+        } catch (InterruptedException e) {
+          logger.error("Error attempting to shutdown.", e);
+          executorService.shutdownNow();
+        }
+      }
+    } catch (Exception e) {
+      logger.error("Error during shutdown: ", e);
+      throw e;
+    }
   }
 
   //disable instantiation

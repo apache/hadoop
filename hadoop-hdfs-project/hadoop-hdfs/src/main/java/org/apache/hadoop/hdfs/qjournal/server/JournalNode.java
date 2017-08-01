@@ -299,14 +299,18 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
         return file.isDirectory();
       }
     });
-    for (File journalDir : journalDirs) {
-      String jid = journalDir.getName();
-      if (!status.containsKey(jid)) {
-        Map<String, String> jMap = new HashMap<String, String>();
-        jMap.put("Formatted", "true");
-        status.put(jid, jMap);
+
+    if (journalDirs != null) {
+      for (File journalDir : journalDirs) {
+        String jid = journalDir.getName();
+        if (!status.containsKey(jid)) {
+          Map<String, String> jMap = new HashMap<String, String>();
+          jMap.put("Formatted", "true");
+          status.put(jid, jMap);
+        }
       }
     }
+
     return JSON.toString(status);
   }
   

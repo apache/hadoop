@@ -256,4 +256,8 @@ public class StorageInfo {
     }
     return props;
   }
+
+  public NodeType getNodeType() {
+    return storageType;
+  }
 }

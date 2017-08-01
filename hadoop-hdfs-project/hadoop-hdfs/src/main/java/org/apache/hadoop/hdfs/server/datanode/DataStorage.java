@@ -1336,10 +1336,14 @@ public class DataStorage extends Storage {
           return name.startsWith(BLOCK_SUBDIR_PREFIX);
         }
       });
-    for(int i = 0; i < otherNames.length; i++)
-      linkBlocksHelper(new File(from, otherNames[i]),
-          new File(to, otherNames[i]), oldLV, hl, upgradeToIdBasedLayout,
-          blockRoot, idBasedLayoutSingleLinks);
+
+    if (otherNames != null) {
+      for (int i = 0; i < otherNames.length; i++) {
+        linkBlocksHelper(new File(from, otherNames[i]),
+            new File(to, otherNames[i]), oldLV, hl, upgradeToIdBasedLayout,
+            blockRoot, idBasedLayoutSingleLinks);
+      }
+    }
   }
 
   /**

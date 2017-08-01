@@ -1,0 +1,824 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into ozone-site.xml and change them -->
+<!-- there.  If ozone-site.xml does not already exist, create it.      -->
+
+<configuration>
+  <property>
+    <name>ozone.enabled</name>
+    <value>false</value>
+    <description>
+      Status of the Ozone Object Storage service is enabled.
+      Set to true to enable Ozone.
+      Set to false to disable Ozone.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.handler.type</name>
+    <value>local</value>
+    <description>
+      The second key dfs.storage.handler.type tells ozone which storage
+      handler to use. The possible values are:
+      distributed - The Ozone distributed storage handler.
+      local - Local Storage handler strictly for testing.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.localstorage.root</name>
+    <value>/tmp/ozone</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.trace.enabled</name>
+    <value>false</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.container.metadata.dirs</name>
+    <value></value>
+    <description>
+      Ozone metadata dir path.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.key.cache.size</name>
+    <value>1024</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.administrators</name>
+    <value></value>
+    <description>
+      Ozone administrator users delimited by comma.
+      If not set, only the user who launches an ozone service will be the
+      admin user. This property must be set if ozone services are started by
+      different users. Otherwise the RPC layer will reject calls from
+      other servers which are started by users not in the list.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.socket.timeout.ms</name>
+    <value>5000</value>
+    <description>
+      Socket timeout for Ozone client in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.connection.timeout.ms</name>
+    <value>5000</value>
+    <description>
+      Connection timeout for Ozone client in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.client.address</name>
+    <value></value>
+    <description>
+      The address of the Ozone SCM client service. This is a required
+      setting.
+
+      It is a string in the host:port format. The port number is optional
+      and defaults to 9860.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.client.port</name>
+    <value>9860</value>
+    <description>
+      The port number of the Ozone SCM client service.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.address</name>
+    <value></value>
+    <description>
+      The address of the Ozone SCM service used for internal communication
+      between the DataNodes and the SCM.
+
+      It is a string in the host:port format. The port number is optional
+      and defaults to 9861.
+
+      This setting is optional. If unspecified then the hostname portion
+      is picked from the ozone.scm.client.address setting and the
+      default service port of 9861 is chosen.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.bind.host</name>
+    <value></value>
+    <description>
+      The hostname or IP address used by the SCM service endpoint to bind.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.port</name>
+    <value>9861</value>
+    <description>
+      The port number of the Ozone SCM service.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.client.bind.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The hostname or IP address used by the SCM client endpoint to bind.
+      This setting is used by the SCM only and never used by clients.
+
+      The setting can be useful in multi-homed setups to restrict the
+      availability of the SCM client service to a specific interface.
+
+      The default is appropriate for most clusters.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.block.client.address</name>
+    <value></value>
+    <description>
+      The address of the Ozone SCM block client service. If not defined
+      value of ozone.scm.client.address is used.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.block.client.bind.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The hostname or IP address used by the SCM block client
+      endpoint to bind.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.block.client.port</name>
+    <value>9863</value>
+    <description>
+      The port number of the Ozone SCM block client service.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.handler.count.key</name>
+    <value>20</value>
+    <description>
+      The number of RPC handler threads for each SCM service endpoint.
+
+      The default is appropriate for small clusters (tens of nodes).
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.chunk.size</name>
+    <value>1048576</value>
+    <description>
+      The chunk size for read/write chunk operations in bytes.
+
+      The chunk size defaults to 1MB. If the value configured is more
+      than the maximum size (1MB), it will be reset to the maximum
+      size.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.interval.seconds</name>
+    <value>30</value>
+    <description>
+      The heartbeat interval from a datanode to SCM in seconds.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.stale.node.interval.ms</name>
+    <value>90000</value>
+    <description>
+      The interval in milliseconds for stale node flagging.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.dead.node.interval.ms</name>
+    <value>600000</value>
+    <description>
+      The interval in milliseconds for dead node flagging.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.max.hb.count.to.process</name>
+    <value>5000</value>
+    <description>
+      The maximum number of heartbeat to process per loop of the process
+      thread.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.thread.interval.ms</name>
+    <value>3000</value>
+    <description>
+      The interval in milliseconds that the heartbeat processor thread runs.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.rpc-timeout</name>
+    <value>1000</value>
+    <description>
+      Timeout value for the RPC from Datanode to SCM in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.heartbeat.log.warn.interval.count</name>
+    <value>10</value>
+    <description>
+      Defines how frequently we will log the missing of heartbeat to SCM.
+      For example in the default case, we will write a warning message for each 10
+      sequential heartbeats that we miss to SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.names</name>
+    <value></value>
+    <description>
+      The value of this property is a set of DNS | DNS:PORT | IP Address | IP:PORT.
+      Written as a comma separated string. e.g. scm1, scm2:8020, 7.7.7.7:7777.
+      This property allows datanodes to discover where SCM is, so that
+      datanodes can send heartbeat to SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.id</name>
+    <value></value>
+    <description>
+      The path that datanodes will created to store the datanode ID.
+      If this value is not set, datanodes will fail to come up.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.db.cache.size.mb</name>
+    <value>128</value>
+    <description>
+      The cache size for SCM level db store in MB.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.size.gb</name>
+    <value>5</value>
+    <description>
+      Storage container size in GB for block allocations.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.placement.impl</name>
+    <value>org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom</value>
+    <description>
+      Placement policy class for containers.
+      Defaults to SCMContainerPlacementRandom.class
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.provision_batch_size</name>
+    <value>1</value>
+    <description>
+      Pre-provision specified number of containers to creare for
+      block creation.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.max.container.report.threads</name>
+    <value>100</value>
+    <description>
+      Maximum number of threads to process container reports in scm.
+      Each container report from a datanode is processed by scm in
+      a worker thread, fetched from a thread pool. This property is
+      used to control the maximum size of the thread pool.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.reports.wait.timeout.seconds</name>
+    <value>300</value>
+    <description>
+      Maximum time to wait in seconds for processing all container
+      reports from a node pool. It determines the timeout for a
+      node pool reports.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.report.processing.interval.seconds</name>
+    <value>60</value>
+    <description>
+      Time interval in seconds for scm to process container reports
+      for a node pool. Scm handles node pool reports in a cyclic clock
+      manner, it fetches pools periodically with this time interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ipc</name>
+    <value>50011</value>
+    <description>
+      The ipc port number of container.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ipc.random.port</name>
+    <value>false</value>
+    <description>
+      Whether allocates a random free port for ozone container.
+    </description>
+  </property>
+
+  <property>
+    <name>scm.container.client.idle.threshold</name>
+    <value>10000</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>scm.container.client.max.size</name>
+    <value>256</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.enabled</name>
+    <value>false</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.rpc.type</name>
+    <value>GRPC</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.server.id</name>
+    <value></value>
+    <description>
+      The unique ID to identify a Ratis server.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.datanode.storage.dir</name>
+    <value></value>
+    <description>
+    </description>
+  </property>
+
+  <!--KSM properties-->
+
+  <property>
+    <name>ozone.ksm.handler.count.key</name>
+    <value>200</value>
+    <description>
+      The number of RPC handler threads for each KSM service endpoint.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.address</name>
+    <value>0.0.0.0</value>
+    <description>
+      The address of the Ozone KSM service.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.leveldb.cache.size.mb</name>
+    <value>128</value>
+    <description>
+      The size of KSM LevelDB cache in MB that used for caching files.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.user.max.volume</name>
+    <value>1024</value>
+    <description>
+      The maximum number of volumes that each user can create.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.user.rights</name>
+    <value>READ_WRITE</value>
+    <description>
+      Default user permissions in Ozone KSM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.group.rights</name>
+    <value>READ_WRITE</value>
+    <description>
+      Default group permissions in Ozone KSM.
+    </description>
+  </property>
+
+
+  <property>
+    <name>ozone.scm.http.enabled</name>
+    <value>true</value>
+    <description>
+      Property to enable or disable SCM web ui.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.http-address</name>
+    <value>0.0.0.0:9876</value>
+    <description>
+      The address and the base port where the SCM web ui will listen on.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the SCM web server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      ozone.scm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.https-address</name>
+    <value>0.0.0.0:9877</value>
+    <description>
+      The address and the base port where the SCM web ui will listen on
+      using HTTPS.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the SCM web server will bind to using HTTPS. If this
+      optional address is set, it overrides only the hostname portion of
+      ozone.scm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.http.enabled</name>
+    <value>true</value>
+    <description>
+      Property to enable or disable KSM web ui.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.http-address</name>
+    <value>0.0.0.0:9874</value>
+    <description>
+      The address and the base port where the KSM web ui will listen on.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the KSM web server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      ozone.ksm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.https-address</name>
+    <value>0.0.0.0:9875</value>
+    <description>
+      The address and the base port where the KSM web ui will listen on
+      using HTTPS.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the KSM web server will bind to using HTTPS. If this
+      optional address is set, it overrides only the hostname portion of
+      ozone.ksm.http-address.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.web.authentication.kerberos.principal</name>
+    <value></value>
+    <description>
+      The server principal used by the SCM and KSM for web UI SPNEGO
+      authentication when Kerberos security is enabled. This is
+      typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+      begins with the prefix HTTP/ by convention.
+
+      If the value is '*', the web server will attempt to login with
+      every principal specified in the keytab file.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file for Kerberos authentication in SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.ksm.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file for Kerberos authentication in KSM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.metastore.impl</name>
+    <value>RocksDB</value>
+    <description>
+      Ozone metadata store implementation. Ozone metadata are well distributed
+      to multiple services such as ksm, scm. They are stored in some local
+      key-value databases. This property determines which database library to
+      use. Supported value is either LevelDB or RocksDB.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.servicerpc-address</name>
+    <value></value>
+    <description>
+      The address that cblock will be bind to, should be a host:port format,
+      this setting is required for cblock server to start.
+      This address is used for cblock management operations like create,
+      delete, info and list volumes
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.service.rpc-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the cblock service rpc server will bind to. If this
+      optional address is set, it overrides only the hostname portion of
+      dfs.cblock.servicerpc-address.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi-address</name>
+    <value></value>
+    <description>
+      The address that cblock will be bind to, should be a host:port format,
+      this setting is required for cblock server to start.
+      This address to be used by jscsi to mount volume.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi.rpc-bind-host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The actual address the cblock jscsi rpc server will bind to. If this
+      optional address is set, it overrides only the hostname portion of
+      dfs.cblock.jscsi-address.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi.port</name>
+    <value>9811</value>
+    <description>
+      The port on CBlockManager node for jSCSI to talk to.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.storage.service.handler.count</name>
+    <value>10</value>
+    <description>
+      Default number of handlers for CBlock service rpc.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.service.leveldb.path</name>
+    <value>/tmp/cblock_levelDB.dat</value>
+    <description>
+      Default path for the cblock meta data disk store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.disk.cache.path</name>
+    <value>/tmp/cblockCacheDB</value>
+    <description>
+      Default path for the cblock local cache.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.trace.io</name>
+    <value>false</value>
+    <description>
+      Default flag for enabling trace io.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.short.circuit.io</name>
+    <value>false</value>
+    <description>
+      Default flag to enable cblock local cache.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.cache.size.in.kb</name>
+    <value>256</value>
+    <description>
+      Default cblock cache queue size, in number of kb.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.core.min.pool.size</name>
+    <value>16</value>
+    <description>
+      Minimum number of thread pool thread that cBlock cache will use for background I/O.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.max.pool.size</name>
+    <value>256</value>
+    <description>
+      Maximum number of thread pool thread that cBlcok cache will use for background I/O.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.keep.alive.seconds</name>
+    <value>60</value>
+    <description>
+      Number of seconds to keep the Thread alive when it is idle.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.thread.priority</name>
+    <value>5</value>
+    <description>
+      Priority of cache flusher thread, affecting the relative
+      performance of write and read.upported values are 1, 5, 10.
+      Use 10 for high priority and 1 for low priority.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.block.buffer.size</name>
+    <value>512</value>
+    <description>
+      Block Buffer size in terms of blockID entries, in number of blockIDs.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.block.buffer.flush.interval.seconds</name>
+    <value>60</value>
+    <description>
+      The interval to flush cblock buffer in seconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi.server.address</name>
+    <value>127.0.0.1</value>
+    <description>
+      The address that jscsi server will be running, should have one
+      local jscsi server for each client that tries to mount cblock.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.jscsi.cblock.server.address</name>
+    <value>127.0.0.1</value>
+    <description>
+      The address local jscsi server will use to talk to cblock manager.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.container.size</name>
+    <value>5</value>
+    <description>
+      The size of ozone container in number of GBs. Note that this is
+      not setting container size for ozone, but rather, this is setting
+      that assumption that cblock manager will make about ozone.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.leveldb.cache.size.mb</name>
+    <value>256</value>
+    <description>
+      The size of LevelDB cache file which uses an off-heap cache in LevelDB.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.cache.max.retry</name>
+    <value>65536</value>
+    <description>
+      The maximum number of retries when writing a block to container.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.scm.ipaddress</name>
+    <value>127.0.0.1</value>
+    <description>
+      IP address used by cblock to connect to SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.scm.port</name>
+    <value>9860</value>
+    <description>
+      Port used by cblock to connect to SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.block.size</name>
+    <value>268435456</value>
+    <description>
+      The default size of a scm block in bytes.
+    </description>
+  </property>
+</configuration>

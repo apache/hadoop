@@ -3,6 +3,9 @@
        <Package name="org.apache.hadoop.record.compiler.generated" />
      </Match>
      <Match>
+       <Package name="org.apache.hadoop.hdfs.ozone.protocol.proto" />
+     </Match>
+     <Match>
        <Package name="org.apache.hadoop.hdfs.protocol.proto" />
      </Match>
      <Match>
@@ -13,6 +16,12 @@
      </Match>
      <Match>
        <Package name="org.apache.hadoop.hdfs.qjournal.protocol" />
+     </Match>
+     <Match>
+       <Package name="org.apache.hadoop.ozone.protocol.proto" />
+     </Match>
+     <Match>
+       <Package name ="org.apache.hadoop.cblock.protocol.proto" />
      </Match>
      <Match>
        <Bug pattern="EI_EXPOSE_REP" />
@@ -251,5 +260,10 @@
     <Match>
         <Class name="org.apache.hadoop.hdfs.server.datanode.checker.AbstractFuture" />
         <Bug pattern="NS_DANGEROUS_NON_SHORT_CIRCUIT" />
+    </Match>
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.server.namenode.NNUpgradeUtil$1" />
+        <Method name="visitFile" />
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
     </Match>
  </FindBugsFilter>

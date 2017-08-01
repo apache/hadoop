@@ -1,0 +1,142 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.ozone.protocol.proto";
+option java_outer_classname = "StorageContainerLocationProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdfs;
+
+import "hdfs.proto";
+import "Ozone.proto";
+
+/**
+* Request send to SCM asking where the container should be created.
+*/
+message ContainerRequestProto {
+  required string containerName = 1;
+  // Ozone only support replciation of either 1 or 3.
+  enum ReplicationFactor {
+    ONE = 1;
+    THREE = 3;
+  }
+  required ReplicationFactor replicationFactor = 2;
+}
+
+/**
+ * Reply from SCM indicating that the container.
+ */
+message ContainerResponseProto {
+  enum Error {
+    success = 1;
+    errorContainerAlreadyExists = 2;
+    errorContainerMissing = 3;
+  }
+  required Error errorCode = 1;
+  required hadoop.hdfs.ozone.Pipeline pipeline = 2;
+  optional string errorMessage = 3;
+}
+
+message GetContainerRequestProto {
+  required string containerName = 1;
+}
+
+message GetContainerResponseProto {
+  required hadoop.hdfs.ozone.Pipeline pipeline = 1;
+}
+
+message ListContainerRequestProto {
+  required uint32 count = 1;
+  optional string startName = 2;
+  optional string prefixName = 3;
+}
+
+message ListContainerResponseProto {
+  repeated hadoop.hdfs.ozone.Pipeline pipeline = 1;
+}
+
+message DeleteContainerRequestProto {
+  required string containerName = 1;
+}
+
+message DeleteContainerResponseProto {
+  // Empty response
+}
+
+/*
+ NodeQueryRequest sends a request to SCM asking to send a list of nodes that
+ match the NodeState that we are requesting.
+*/
+message NodeQueryRequestProto {
+
+
+  // Repeated, So we can specify more than one status type.
+  // These NodeState types are additive for now, in the sense that
+  // if you specify HEALTHY and FREE_NODE members --
+  // Then you get all healthy node which are not raft members.
+  //
+  // if you specify all healthy and dead nodes, you will get nothing
+  // back. Server is not going to dictate what combinations make sense,
+  // it is entirely up to the caller.
+  // TODO: Support operators like OR and NOT. Currently it is always an
+  // implied AND.
+
+  repeated hadoop.hdfs.ozone.NodeState query = 1;
+  required hadoop.hdfs.ozone.QueryScope scope = 2;
+  optional string poolName = 3; // if scope is pool, then pool name is needed.
+}
+
+message NodeQueryResponseProto {
+  required hadoop.hdfs.ozone.NodePool datanodes = 1;
+}
+
+
+/**
+ * Protocol used from an HDFS node to StorageContainerManager.  See the request
+ * and response messages for details of the RPC calls.
+ */
+service StorageContainerLocationProtocolService {
+
+  /**
+   * Creates a container entry in SCM.
+   */
+  rpc allocateContainer(ContainerRequestProto) returns (ContainerResponseProto);
+
+  /**
+   * Returns the pipeline for a given container.
+   */
+  rpc getContainer(GetContainerRequestProto) returns (GetContainerResponseProto);
+
+  rpc listContainer(ListContainerRequestProto) returns (ListContainerResponseProto);
+
+  /**
+   * Deletes a container in SCM.
+   */
+  rpc deleteContainer(DeleteContainerRequestProto) returns (DeleteContainerResponseProto);
+
+  /**
+  * Returns a set of Nodes that meet a criteria.
+  */
+  rpc queryNode(NodeQueryRequestProto)  returns (NodeQueryResponseProto);
+}
