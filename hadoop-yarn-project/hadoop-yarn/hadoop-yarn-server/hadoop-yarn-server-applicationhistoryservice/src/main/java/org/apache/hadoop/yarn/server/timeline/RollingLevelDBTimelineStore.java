@@ -38,6 +38,8 @@ import java.util.TreeMap;
 
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -74,8 +76,6 @@ import org.iq80.leveldb.ReadOptions;
 import org.iq80.leveldb.WriteBatch;
 import org.nustaq.serialization.FSTConfiguration;
 import org.nustaq.serialization.FSTClazzNameRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -168,8 +168,8 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 @InterfaceStability.Unstable
 public class RollingLevelDBTimelineStore extends AbstractService implements
     TimelineStore {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(RollingLevelDBTimelineStore.class);
+  private static final Log LOG = LogFactory
+      .getLog(RollingLevelDBTimelineStore.class);
   private static FSTConfiguration fstConf =
       FSTConfiguration.createDefaultConfiguration();
   // Fall back to 2.24 parsing if 2.50 parsing fails
@@ -368,9 +368,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
             + " closing db now", e);
       }
     }
-    IOUtils.cleanupWithLogger(LOG, domaindb);
-    IOUtils.cleanupWithLogger(LOG, starttimedb);
-    IOUtils.cleanupWithLogger(LOG, ownerdb);
+    IOUtils.cleanup(LOG, domaindb);
+    IOUtils.cleanup(LOG, starttimedb);
+    IOUtils.cleanup(LOG, ownerdb);
     entitydb.stop();
     indexdb.stop();
     super.serviceStop();
@@ -399,7 +399,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           discardOldEntities(timestamp);
           Thread.sleep(ttlInterval);
         } catch (IOException e) {
-          LOG.error(e.toString());
+          LOG.error(e);
         } catch (InterruptedException e) {
           LOG.info("Deletion thread received interrupt, exiting");
           break;
@@ -1525,7 +1525,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
                   + ". Total start times deleted so far this cycle: "
                   + startTimesCount);
             }
-            IOUtils.cleanupWithLogger(LOG, writeBatch);
+            IOUtils.cleanup(LOG, writeBatch);
             writeBatch = starttimedb.createWriteBatch();
             batchSize = 0;
           }
@@ -1545,7 +1545,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       LOG.info("Deleted " + startTimesCount + "/" + totalCount
           + " start time entities earlier than " + minStartTime);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, writeBatch);
+      IOUtils.cleanup(LOG, writeBatch);
     }
     return startTimesCount;
   }
@@ -1622,7 +1622,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       String incompatibleMessage = "Incompatible version for timeline store: "
           + "expecting version " + getCurrentVersion()
           + ", but loading version " + loadedVersion;
-      LOG.error(incompatibleMessage);
+      LOG.fatal(incompatibleMessage);
       throw new IOException(incompatibleMessage);
     }
   }

@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -59,13 +61,11 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.timeline.security.authorize.TimelinePolicyProvider;
 
 import com.google.common.base.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ApplicationHistoryClientService extends AbstractService implements
     ApplicationHistoryProtocol {
-  private static final Logger LOG =
-          LoggerFactory.getLogger(ApplicationHistoryClientService.class);
+  private static final Log LOG = LogFactory
+    .getLog(ApplicationHistoryClientService.class);
   private ApplicationHistoryManager history;
   private Server server;
   private InetSocketAddress bindAddress;

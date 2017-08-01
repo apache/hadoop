@@ -160,7 +160,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     } catch(DBException e) {
       throw new IOException(e);
     } finally {
-      IOUtils.cleanupWithLogger(null, iterator, pfIterator);
+      IOUtils.cleanup(null, iterator, pfIterator);
     }
   }
 

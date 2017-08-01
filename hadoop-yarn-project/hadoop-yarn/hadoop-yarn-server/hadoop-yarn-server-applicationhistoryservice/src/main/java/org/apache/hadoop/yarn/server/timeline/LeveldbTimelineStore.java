@@ -22,6 +22,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -46,7 +48,6 @@ import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyParser;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.*;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -117,8 +118,8 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 @InterfaceStability.Unstable
 public class LeveldbTimelineStore extends AbstractService
     implements TimelineStore {
-  private static final org.slf4j.Logger LOG = LoggerFactory
-      .getLogger(LeveldbTimelineStore.class);
+  private static final Log LOG = LogFactory
+      .getLog(LeveldbTimelineStore.class);
 
   @Private
   @VisibleForTesting
@@ -239,7 +240,7 @@ public class LeveldbTimelineStore extends AbstractService
         localFS.setPermission(dbPath, LEVELDB_DIR_UMASK);
       }
     } finally {
-      IOUtils.cleanupWithLogger(LOG, localFS);
+      IOUtils.cleanup(LOG, localFS);
     }
     LOG.info("Using leveldb path " + dbPath);
     try {
@@ -283,7 +284,7 @@ public class LeveldbTimelineStore extends AbstractService
             " closing db now", e);
       }
     }
-    IOUtils.cleanupWithLogger(LOG, db);
+    IOUtils.cleanup(LOG, db);
     super.serviceStop();
   }
 
@@ -319,7 +320,7 @@ public class LeveldbTimelineStore extends AbstractService
           discardOldEntities(timestamp);
           Thread.sleep(ttlInterval);
         } catch (IOException e) {
-          LOG.error(e.toString());
+          LOG.error(e);
         } catch (InterruptedException e) {
           LOG.info("Deletion thread received interrupt, exiting");
           break;
@@ -393,7 +394,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);            	
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
   }
 
@@ -569,7 +570,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);            	
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
     return events;
   }
@@ -752,7 +753,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);   	
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
   }
   
@@ -924,7 +925,7 @@ public class LeveldbTimelineStore extends AbstractService
     } finally {
       lock.unlock();
       writeLocks.returnLock(lock);
-      IOUtils.cleanupWithLogger(LOG, writeBatch);
+      IOUtils.cleanup(LOG, writeBatch);
     }
 
     for (EntityIdentifier relatedEntity : relatedEntitiesWithoutStartTimes) {
@@ -1375,7 +1376,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);            	
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
   }
 
@@ -1505,7 +1506,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, writeBatch);
+      IOUtils.cleanup(LOG, writeBatch);
     }
   }
 
@@ -1547,7 +1548,7 @@ public class LeveldbTimelineStore extends AbstractService
           LOG.error("Got IOException while deleting entities for type " +
               entityType + ", continuing to next type", e);
         } finally {
-          IOUtils.cleanupWithLogger(LOG, iterator, pfIterator);
+          IOUtils.cleanup(LOG, iterator, pfIterator);
           deleteLock.writeLock().unlock();
           if (typeCount > 0) {
             LOG.info("Deleted " + typeCount + " entities of type " +
@@ -1628,7 +1629,7 @@ public class LeveldbTimelineStore extends AbstractService
       String incompatibleMessage = 
           "Incompatible version for timeline store: expecting version " 
               + getCurrentVersion() + ", but loading version " + loadedVersion;
-      LOG.error(incompatibleMessage);
+      LOG.fatal(incompatibleMessage);
       throw new IOException(incompatibleMessage);
     }
   }
@@ -1717,7 +1718,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);            	
     } finally {
-      IOUtils.cleanupWithLogger(LOG, writeBatch);
+      IOUtils.cleanup(LOG, writeBatch);
     }
   }
 
@@ -1754,7 +1755,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);            	
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
   }
 
@@ -1804,7 +1805,7 @@ public class LeveldbTimelineStore extends AbstractService
     } catch(DBException e) {
       throw new IOException(e);            	
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
   }
 

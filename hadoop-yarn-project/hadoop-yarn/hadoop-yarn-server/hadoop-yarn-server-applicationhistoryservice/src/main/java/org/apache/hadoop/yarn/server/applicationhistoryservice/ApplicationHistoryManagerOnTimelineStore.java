@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -67,14 +69,12 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     implements
     ApplicationHistoryManager {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(ApplicationHistoryManagerOnTimelineStore.class);
+  private static final Log LOG = LogFactory
+      .getLog(ApplicationHistoryManagerOnTimelineStore.class);
 
   @VisibleForTesting
   static final String UNAVAILABLE = "N/A";

@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -48,8 +50,6 @@ import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
@@ -60,8 +60,8 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 public class LeveldbTimelineStateStore extends
     TimelineStateStore {
 
-  public static final Logger LOG =
-      LoggerFactory.getLogger(LeveldbTimelineStateStore.class);
+  public static final Log LOG =
+      LogFactory.getLog(LeveldbTimelineStateStore.class);
 
   private static final String DB_NAME = "timeline-state-store.ldb";
   private static final FsPermission LEVELDB_DIR_UMASK = FsPermission
@@ -103,7 +103,7 @@ public class LeveldbTimelineStateStore extends
         localFS.setPermission(dbPath, LEVELDB_DIR_UMASK);
       }
     } finally {
-      IOUtils.cleanupWithLogger(LOG, localFS);
+      IOUtils.cleanup(LOG, localFS);
     }
     JniDBFactory factory = new JniDBFactory();
     try {
@@ -131,7 +131,7 @@ public class LeveldbTimelineStateStore extends
 
   @Override
   protected void closeStorage() throws IOException {
-    IOUtils.cleanupWithLogger(LOG, db);
+    IOUtils.cleanup(LOG, db);
   }
 
   @Override
@@ -168,8 +168,8 @@ public class LeveldbTimelineStateStore extends
     } catch (DBException e) {
       throw new IOException(e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, ds);
-      IOUtils.cleanupWithLogger(LOG, batch);
+      IOUtils.cleanup(LOG, ds);
+      IOUtils.cleanup(LOG, batch);
     }
   }
 
@@ -239,7 +239,7 @@ public class LeveldbTimelineStateStore extends
       key.write(dataStream);
       dataStream.close();
     } finally {
-      IOUtils.cleanupWithLogger(LOG, dataStream);
+      IOUtils.cleanup(LOG, dataStream);
     }
     return memStream.toByteArray();
   }
@@ -253,7 +253,7 @@ public class LeveldbTimelineStateStore extends
     try {
       key.readFields(in);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, in);
+      IOUtils.cleanup(LOG, in);
     }
     state.tokenMasterKeyState.add(key);
   }
@@ -267,7 +267,7 @@ public class LeveldbTimelineStateStore extends
     try {
       data.readFields(in);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, in);
+      IOUtils.cleanup(LOG, in);
     }
     state.tokenState.put(data.getTokenIdentifier(), data.getRenewDate());
   }
@@ -290,7 +290,7 @@ public class LeveldbTimelineStateStore extends
         ++numKeys;
       }
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
     return numKeys;
   }
@@ -314,7 +314,7 @@ public class LeveldbTimelineStateStore extends
     } catch (DBException e) {
       throw new IOException(e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, iterator);
+      IOUtils.cleanup(LOG, iterator);
     }
     return numTokens;
   }
@@ -332,7 +332,7 @@ public class LeveldbTimelineStateStore extends
       try {
         state.latestSequenceNumber = in.readInt();
       } finally {
-        IOUtils.cleanupWithLogger(LOG, in);
+        IOUtils.cleanup(LOG, in);
       }
     }
   }
@@ -412,7 +412,7 @@ public class LeveldbTimelineStateStore extends
       String incompatibleMessage =
           "Incompatible version for timeline state store: expecting version "
               + getCurrentVersion() + ", but loading version " + loadedVersion;
-      LOG.error(incompatibleMessage);
+      LOG.fatal(incompatibleMessage);
       throw new IOException(incompatibleMessage);
     }
   }

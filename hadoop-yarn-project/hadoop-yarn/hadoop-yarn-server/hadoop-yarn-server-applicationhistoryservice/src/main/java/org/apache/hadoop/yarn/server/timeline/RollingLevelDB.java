@@ -33,6 +33,8 @@ import java.util.Map.Entry;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,8 +45,6 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Contains the logic to lookup a leveldb by timestamp so that multiple smaller
@@ -54,8 +54,7 @@ import org.slf4j.LoggerFactory;
 class RollingLevelDB {
 
   /** Logger for this class. */
-  private static final Logger LOG = LoggerFactory.
-      getLogger(RollingLevelDB.class);
+  private static final Log LOG = LogFactory.getLog(RollingLevelDB.class);
   /** Factory to open and create new leveldb instances. */
   private static JniDBFactory factory = new JniDBFactory();
   /** Thread safe date formatter. */
@@ -152,7 +151,7 @@ class RollingLevelDB {
     }
 
     public void close() {
-      IOUtils.cleanupWithLogger(LOG, writeBatch);
+      IOUtils.cleanup(LOG, writeBatch);
     }
   }
 
@@ -347,7 +346,7 @@ class RollingLevelDB {
         .iterator();
     while (iterator.hasNext()) {
       Entry<Long, DB> entry = iterator.next();
-      IOUtils.cleanupWithLogger(LOG, entry.getValue());
+      IOUtils.cleanup(LOG, entry.getValue());
       String dbName = fdf.format(entry.getKey());
       Path path = new Path(rollingDBPath, getName() + "." + dbName);
       try {
@@ -362,9 +361,9 @@ class RollingLevelDB {
 
   public void stop() throws Exception {
     for (DB db : rollingdbs.values()) {
-      IOUtils.cleanupWithLogger(LOG, db);
+      IOUtils.cleanup(LOG, db);
     }
-    IOUtils.cleanupWithLogger(LOG, lfs);
+    IOUtils.cleanup(LOG, lfs);
   }
 
   private long computeNextCheckMillis(long now) {
