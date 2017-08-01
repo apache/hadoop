@@ -19,7 +19,11 @@
 package org.apache.hadoop.yarn.server;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.junit.AfterClass;
@@ -35,7 +39,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.kerby.util.IOUtil;
 import org.junit.Test;
 
 public class TestRMNMSecretKeys {
@@ -59,8 +62,18 @@ public class TestRMNMSecretKeys {
         "        kdc = localhost:88\n}\n" +
         "[domain_realm]\n" +
         "    localhost = APACHE.ORG";
-    IOUtil.writeFile(content, krb5ConfFile);
+    writeFile(content, krb5ConfFile);
     System.setProperty(KRB5_CONF, krb5ConfFile.getAbsolutePath());
+  }
+
+  private static void writeFile(String content, File file) throws IOException {
+      FileOutputStream outputStream = new FileOutputStream(file);
+      FileChannel fc = outputStream.getChannel();
+
+      ByteBuffer buffer =
+          ByteBuffer.wrap(content.getBytes(StandardCharsets.UTF_8));
+      fc.write(buffer);
+      outputStream.close();
   }
 
   @AfterClass

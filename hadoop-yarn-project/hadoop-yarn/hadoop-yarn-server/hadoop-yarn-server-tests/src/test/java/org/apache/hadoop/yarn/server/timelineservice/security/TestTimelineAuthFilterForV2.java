@@ -243,10 +243,10 @@ public class TestTimelineAuthFilterForV2 {
 
   @Test
   public void testPutTimelineEntities() throws Exception {
-    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    final ApplicationId appId = ApplicationId.newInstance(0, 1);
     auxService.addApplication(appId);
     final String entityType = "dummy_type";
-    File entityTypeDir = new File(TEST_ROOT_DIR.getAbsolutePath() +
+    final File entityTypeDir = new File(TEST_ROOT_DIR.getAbsolutePath() +
         File.separator + "entities" + File.separator +
         YarnConfiguration.DEFAULT_RM_CLUSTER_ID + File.separator + "test_user" +
         File.separator + "test_flow_name" + File.separator +
