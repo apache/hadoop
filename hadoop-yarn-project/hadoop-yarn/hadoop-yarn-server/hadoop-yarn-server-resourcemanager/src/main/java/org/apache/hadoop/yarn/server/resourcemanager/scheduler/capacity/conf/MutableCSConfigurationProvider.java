@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ConfigurationMutationACLPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ConfigurationMutationACLPolicyFactory;
@@ -58,7 +59,6 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   private YarnConfigurationStore confStore;
   private ConfigurationMutationACLPolicy aclMutationPolicy;
   private RMContext rmContext;
-  private Configuration conf;
 
   public MutableCSConfigurationProvider(RMContext rmContext) {
     this.rmContext = rmContext;
@@ -96,7 +96,6 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     this.aclMutationPolicy = ConfigurationMutationACLPolicyFactory
         .getPolicy(config);
     aclMutationPolicy.init(config, rmContext);
-    this.conf = config;
   }
 
   @Override
@@ -109,7 +108,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
 
   @Override
   public synchronized void mutateConfiguration(UserGroupInformation user,
-      SchedConfUpdateInfo confUpdate) throws IOException {
+      SchedConfUpdateInfo confUpdate) throws IOException, YarnException {
     if (!aclMutationPolicy.isMutationAllowed(user, confUpdate)) {
       throw new AccessControlException("User is not admin of all modified" +
           " queues.");
@@ -126,8 +125,8 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
       }
     }
     try {
-      rmContext.getScheduler().reinitialize(conf, rmContext);
-    } catch (IOException e) {
+      rmContext.getRMAdminService().refreshQueues();
+    } catch (IOException | YarnException e) {
       schedConf = oldConf;
       confStore.confirmMutation(id, false);
       throw e;
@@ -148,7 +147,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
         }
       }
       try {
-        rmContext.getScheduler().reinitialize(conf, rmContext);
+        rmContext.getScheduler().reinitialize(schedConf, rmContext);
       } catch (IOException e) {
         schedConf = oldConf;
         confStore.confirmMutation(mutation.getId(), false);

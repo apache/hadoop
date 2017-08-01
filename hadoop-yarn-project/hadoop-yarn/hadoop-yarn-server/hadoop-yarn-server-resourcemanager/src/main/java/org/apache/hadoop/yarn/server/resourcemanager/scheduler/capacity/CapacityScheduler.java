@@ -2621,13 +2621,18 @@ public class CapacityScheduler extends
 
   @Override
   public void updateConfiguration(UserGroupInformation user,
-      SchedConfUpdateInfo confUpdate) throws IOException {
-    if (csConfProvider instanceof MutableConfigurationProvider) {
+      SchedConfUpdateInfo confUpdate) throws IOException, YarnException {
+    if (isConfigurationMutable()) {
       ((MutableConfigurationProvider) csConfProvider).mutateConfiguration(
           user, confUpdate);
     } else {
       throw new UnsupportedOperationException("Configured CS configuration " +
           "provider does not support updating configuration.");
     }
+  }
+
+  @Override
+  public boolean isConfigurationMutable() {
+    return csConfProvider instanceof MutableConfigurationProvider;
   }
 }
