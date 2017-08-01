@@ -248,6 +248,17 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
+  public RMTimelineCollectorManager getRMTimelineCollectorManager() {
+    return serviceContext.getRMTimelineCollectorManager();
+  }
+
+  @Override
+  public void setRMTimelineCollectorManager(
+      RMTimelineCollectorManager timelineCollectorManager) {
+    serviceContext.setRMTimelineCollectorManager(timelineCollectorManager);
+  }
+
+  @Override
   public ConfigurationProvider getConfigurationProvider() {
     return serviceContext.getConfigurationProvider();
   }
@@ -467,18 +478,6 @@ public class RMContextImpl implements RMContext {
   @Override
   public boolean isWorkPreservingRecoveryEnabled() {
     return activeServiceContext.isWorkPreservingRecoveryEnabled();
-  }
-
-  @Override
-  public void setRMTimelineCollectorManager(
-      RMTimelineCollectorManager timelineCollectorManager) {
-    activeServiceContext.setRMTimelineCollectorManager(
-        timelineCollectorManager);
-  }
-
-  @Override
-  public RMTimelineCollectorManager getRMTimelineCollectorManager() {
-    return activeServiceContext.getRMTimelineCollectorManager();
   }
 
   @Override
