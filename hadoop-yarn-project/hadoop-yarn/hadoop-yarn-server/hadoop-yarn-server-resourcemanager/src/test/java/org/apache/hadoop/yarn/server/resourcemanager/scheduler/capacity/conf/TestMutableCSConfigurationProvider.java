@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -34,7 +36,6 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -50,6 +51,7 @@ public class TestMutableCSConfigurationProvider {
   private SchedConfUpdateInfo goodUpdate;
   private SchedConfUpdateInfo badUpdate;
   private CapacityScheduler cs;
+  private AdminService adminService;
 
   private static final UserGroupInformation TEST_USER = UserGroupInformation
       .createUserForTesting("testUser", new String[] {});
@@ -61,6 +63,8 @@ public class TestMutableCSConfigurationProvider {
     when(rmContext.getScheduler()).thenReturn(cs);
     when(cs.getConfiguration()).thenReturn(
         new CapacitySchedulerConfiguration());
+    adminService = mock(AdminService.class);
+    when(rmContext.getRMAdminService()).thenReturn(adminService);
     confProvider = new MutableCSConfigurationProvider(rmContext);
     goodUpdate = new SchedConfUpdateInfo();
     Map<String, String> goodUpdateMap = new HashMap<>();
@@ -78,22 +82,20 @@ public class TestMutableCSConfigurationProvider {
   }
 
   @Test
-  public void testInMemoryBackedProvider() throws IOException {
+  public void testInMemoryBackedProvider() throws IOException, YarnException {
     Configuration conf = new Configuration();
     confProvider.init(conf);
     assertNull(confProvider.loadConfiguration(conf)
         .get("yarn.scheduler.capacity.root.a.goodKey"));
 
-    doNothing().when(cs).reinitialize(any(Configuration.class),
-        any(RMContext.class));
+    doNothing().when(adminService).refreshQueues();
     confProvider.mutateConfiguration(TEST_USER, goodUpdate);
     assertEquals("goodVal", confProvider.loadConfiguration(conf)
         .get("yarn.scheduler.capacity.root.a.goodKey"));
 
     assertNull(confProvider.loadConfiguration(conf).get(
         "yarn.scheduler.capacity.root.a.badKey"));
-    doThrow(new IOException()).when(cs).reinitialize(any(Configuration.class),
-        any(RMContext.class));
+    doThrow(new IOException()).when(adminService).refreshQueues();
     try {
       confProvider.mutateConfiguration(TEST_USER, badUpdate);
     } catch (IOException e) {

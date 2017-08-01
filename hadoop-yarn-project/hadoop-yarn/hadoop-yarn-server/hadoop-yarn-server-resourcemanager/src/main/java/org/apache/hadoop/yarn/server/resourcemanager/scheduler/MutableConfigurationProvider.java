@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 import java.io.IOException;
@@ -39,8 +40,9 @@ public interface MutableConfigurationProvider {
    * @param user User issuing the request
    * @param confUpdate Key-value pairs for configurations to be updated.
    * @throws IOException if scheduler could not be reinitialized
+   * @throws YarnException if reservation system could not be reinitialized
    */
   void mutateConfiguration(UserGroupInformation user, SchedConfUpdateInfo
-      confUpdate) throws IOException;
+      confUpdate) throws IOException, YarnException;
 
 }
