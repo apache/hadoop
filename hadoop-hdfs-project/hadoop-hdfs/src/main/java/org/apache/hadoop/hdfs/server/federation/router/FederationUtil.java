@@ -17,13 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
+import java.net.URL;
+import java.net.URLConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +46,63 @@ public final class FederationUtil {
 
   private FederationUtil() {
     // Utility Class
+  }
+
+  /**
+   * Get a JMX data from a web endpoint.
+   *
+   * @param beanQuery JMX bean.
+   * @param webAddress Web address of the JMX endpoint.
+   * @return JSON with the JMX data
+   */
+  public static JSONArray getJmx(String beanQuery, String webAddress) {
+    JSONArray ret = null;
+    BufferedReader reader = null;
+    try {
+      String host = webAddress;
+      int port = -1;
+      if (webAddress.indexOf(":") > 0) {
+        String[] webAddressSplit = webAddress.split(":");
+        host = webAddressSplit[0];
+        port = Integer.parseInt(webAddressSplit[1]);
+      }
+      URL jmxURL = new URL("http", host, port, "/jmx?qry=" + beanQuery);
+      URLConnection conn = jmxURL.openConnection();
+      conn.setConnectTimeout(5 * 1000);
+      conn.setReadTimeout(5 * 1000);
+      InputStream in = conn.getInputStream();
+      InputStreamReader isr = new InputStreamReader(in, "UTF-8");
+      reader = new BufferedReader(isr);
+
+      StringBuilder sb = new StringBuilder();
+      String line = null;
+      while ((line = reader.readLine()) != null) {
+        sb.append(line);
+      }
+      String jmxOutput = sb.toString();
+
+      // Parse JSON
+      JSONObject json = new JSONObject(jmxOutput);
+      ret = json.getJSONArray("beans");
+    } catch (IOException e) {
+      LOG.error("Cannot read JMX bean {} from server {}: {}",
+          beanQuery, webAddress, e.getMessage());
+    } catch (JSONException e) {
+      LOG.error("Cannot parse JMX output for {} from server {}: {}",
+          beanQuery, webAddress, e.getMessage());
+    } catch (Exception e) {
+      LOG.error("Cannot parse JMX output for {} from server {}: {}",
+          beanQuery, webAddress, e);
+    } finally {
+      if (reader != null) {
+        try {
+          reader.close();
+        } catch (IOException e) {
+          LOG.error("Problem closing {}", webAddress, e);
+        }
+      }
+    }
+    return ret;
   }
 
   /**
