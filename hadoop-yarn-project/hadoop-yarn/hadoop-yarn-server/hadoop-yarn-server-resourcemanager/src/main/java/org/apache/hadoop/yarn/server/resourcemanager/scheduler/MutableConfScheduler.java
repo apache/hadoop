@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 import java.io.IOException;
@@ -33,10 +34,11 @@ public interface MutableConfScheduler extends ResourceScheduler {
    * Update the scheduler's configuration.
    * @param user Caller of this update
    * @param confUpdate configuration update
-   * @throws IOException if update is invalid
+   * @throws IOException if scheduler could not be reinitialized
+   * @throws YarnException if reservation system could not be reinitialized
    */
   void updateConfiguration(UserGroupInformation user,
-      SchedConfUpdateInfo confUpdate) throws IOException;
+      SchedConfUpdateInfo confUpdate) throws IOException, YarnException;
 
   /**
    * Get the scheduler configuration.
@@ -50,4 +52,10 @@ public interface MutableConfScheduler extends ResourceScheduler {
    * @return the queue object
    */
   Queue getQueue(String queueName);
+
+  /**
+   * Return whether the scheduler configuration is mutable.
+   * @return whether scheduler configuration is mutable or not.
+   */
+  boolean isConfigurationMutable();
 }
