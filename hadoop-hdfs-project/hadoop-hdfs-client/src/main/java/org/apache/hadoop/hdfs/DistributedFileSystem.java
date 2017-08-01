@@ -2742,7 +2742,8 @@ public class DistributedFileSystem extends FileSystem {
      */
     @Override
     public FSDataOutputStream build() throws IOException {
-      if (getFlags().contains(CreateFlag.CREATE)) {
+      if (getFlags().contains(CreateFlag.CREATE) ||
+          getFlags().contains(CreateFlag.OVERWRITE)) {
         if (isRecursive()) {
           return dfs.create(getPath(), getPermission(), getFlags(),
               getBufferSize(), getReplication(), getBlockSize(),

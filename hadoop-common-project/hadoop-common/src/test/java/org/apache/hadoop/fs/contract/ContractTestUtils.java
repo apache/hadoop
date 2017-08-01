@@ -146,16 +146,45 @@ public class ContractTestUtils extends Assert {
                                    int len,
                                    int buffersize,
                                    boolean overwrite) throws IOException {
+    writeDataset(fs, path, src, len, buffersize, overwrite, false);
+  }
+
+  /**
+   * Write a file.
+   * Optional flags control
+   * whether file overwrite operations should be enabled
+   * Optional using {@link org.apache.hadoop.fs.FSDataOutputStreamBuilder}
+   *
+   * @param fs filesystem
+   * @param path path to write to
+   * @param len length of data
+   * @param overwrite should the create option allow overwrites?
+   * @param useBuilder should use builder API to create file?
+   * @throws IOException IO problems
+   */
+  public static void writeDataset(FileSystem fs, Path path, byte[] src,
+      int len, int buffersize, boolean overwrite, boolean useBuilder)
+      throws IOException {
     assertTrue(
       "Not enough data in source array to write " + len + " bytes",
       src.length >= len);
-    FSDataOutputStream out = fs.create(path,
-                                       overwrite,
-                                       fs.getConf()
-                                         .getInt(IO_FILE_BUFFER_SIZE_KEY,
-                                             IO_FILE_BUFFER_SIZE_DEFAULT),
-                                       (short) 1,
-                                       buffersize);
+    FSDataOutputStream out;
+    if (useBuilder) {
+      out = fs.createFile(path)
+          .overwrite(overwrite)
+          .replication((short) 1)
+          .bufferSize(buffersize)
+          .blockSize(buffersize)
+          .build();
+    } else {
+      out = fs.create(path,
+          overwrite,
+          fs.getConf()
+              .getInt(IO_FILE_BUFFER_SIZE_KEY,
+                  IO_FILE_BUFFER_SIZE_DEFAULT),
+          (short) 1,
+          buffersize);
+    }
     out.write(src, 0, len);
     out.close();
     assertFileHasLength(fs, path, len);
