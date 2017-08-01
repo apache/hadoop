@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.headers.Header;
+import org.apache.hadoop.util.Time;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
@@ -57,6 +58,21 @@ public final class OzoneUtils {
   private OzoneUtils() {
     // Never constructed
   }
+
+  /**
+   * Date format that used in ozone. Here the format is thread safe to use.
+   */
+  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
+      new ThreadLocal<SimpleDateFormat>() {
+    @Override
+    protected SimpleDateFormat initialValue() {
+      SimpleDateFormat format = new SimpleDateFormat(
+          OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
+      format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
+
+      return format;
+    }
+  };
 
   /**
    * verifies that bucket name / volume name is a valid DNS name.
@@ -242,12 +258,8 @@ public final class OzoneUtils {
   public static synchronized Date parseDate(String dateString, String reqID,
                                             String resource, String hostname)
       throws OzoneException {
-    SimpleDateFormat format =
-        new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
-    format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
-
     try {
-      return format.parse(dateString);
+      return DATE_FORMAT.get().parse(dateString);
     } catch (ParseException ex) {
       OzoneException exp =
           ErrorTable.newError(ErrorTable.BAD_DATE, reqID, resource, hostname);
@@ -267,10 +279,7 @@ public final class OzoneUtils {
    */
   public static Response getResponse(UserArgs args, int statusCode,
                                      String payload) {
-    SimpleDateFormat format =
-        new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
-    format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
-    String date = format.format(new Date(System.currentTimeMillis()));
+    String date = DATE_FORMAT.get().format(new Date(Time.now()));
     return Response.ok(payload)
         .header(Header.OZONE_SERVER_NAME, args.getHostName())
         .header(Header.OZONE_REQUEST_ID, args.getRequestID())
@@ -288,10 +297,7 @@ public final class OzoneUtils {
    */
   public static Response getResponse(UserArgs args, int statusCode,
                                      LengthInputStream stream) {
-    SimpleDateFormat format =
-        new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
-    format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
-    String date = format.format(new Date(System.currentTimeMillis()));
+    String date = DATE_FORMAT.get().format(new Date(Time.now()));
     return Response.ok(stream, MediaType.APPLICATION_OCTET_STREAM)
         .header(Header.OZONE_SERVER_NAME, args.getHostName())
         .header(Header.OZONE_REQUEST_ID, args.getRequestID())
@@ -318,5 +324,22 @@ public final class OzoneUtils {
           dirPath);
     }
     return dirPath;
+  }
+
+  /**
+   * Convert time in millisecond to a human readable format required in ozone.
+   * @return a human readable string for the input time
+   */
+  public static String formatTime(long millis) {
+    return DATE_FORMAT.get().format(millis);
+  }
+
+  /**
+   * Convert time in ozone date format to millisecond.
+   * @return time in milliseconds
+   */
+  public static long formatDate(String date) throws ParseException {
+    Preconditions.checkNotNull(date, "Date string should not be null.");
+    return DATE_FORMAT.get().parse(date).getTime();
   }
 }

@@ -626,7 +626,11 @@ public class TestOzoneShell {
 
     // verify the response output
     assertEquals(0, ToolRunner.run(shell, args));
-    assertTrue(out.toString().contains(keyName));
+
+    String output = out.toString();
+    assertTrue(output.contains(keyName));
+    assertTrue(output.contains("createdOn") && output.contains("modifiedOn")
+        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
 
     // reset stream
     out.reset();
@@ -665,12 +669,23 @@ public class TestOzoneShell {
 
     List<String> keys = getValueLines("keyName", out.toString());
     assertEquals(11, keys.size());
+
+    List<String> creationTime = getValueLines("createdOn", out.toString());
+    List<String> modificationTime = getValueLines("modifiedOn", out.toString());
+    assertEquals(11, creationTime.size());
+    assertEquals(11, modificationTime.size());
+
     // sort key names since the return keys isn't in created order
     Collections.sort(keyNames);
     // return key names should be [test-key0, test-key1,
     // test-key10, test-key2, ,..., test-key9]
     for (int i = 0; i < keys.size(); i++) {
       assertTrue(keys.get(i).contains(keyNames.get(i)));
+
+      // verify the creation/modification time of key
+      assertTrue(creationTime.get(i).contains(OzoneConsts.OZONE_TIME_ZONE));
+      assertTrue(
+          modificationTime.get(i).contains(OzoneConsts.OZONE_TIME_ZONE));
     }
 
     out.reset();

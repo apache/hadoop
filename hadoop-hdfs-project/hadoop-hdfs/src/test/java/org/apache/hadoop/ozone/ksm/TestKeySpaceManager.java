@@ -961,7 +961,7 @@ public class TestKeySpaceManager {
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    long currentTime = Time.monotonicNow();
+    long currentTime = Time.now();
 
     VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
     createVolumeArgs.setUserName(userName);
@@ -982,8 +982,12 @@ public class TestKeySpaceManager {
     stream.close();
 
     KeyInfo keyInfo = storageHandler.getKeyInfo(keyArgs);
-    Assert.assertTrue(Time.formatDate(keyInfo.getCreatedOn()) >= currentTime);
-    Assert.assertTrue(Time.formatDate(keyInfo.getModifiedOn()) >= currentTime);
+    // Compare the time in second unit since the date string reparsed to
+    // millisecond will lose precision.
+    Assert.assertTrue((OzoneUtils.formatDate(keyInfo.getCreatedOn())
+        / 1000) >= (currentTime / 1000));
+    Assert.assertTrue((OzoneUtils.formatDate(keyInfo.getModifiedOn())
+        / 1000) >= (currentTime / 1000));
     Assert.assertEquals(keyName, keyInfo.getKeyName());
     Assert.assertEquals(4096, keyInfo.getSize());
   }

@@ -29,6 +29,7 @@ import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.text.ParseException;
 
 import static org.apache.hadoop.ozone.web.client.TestKeys.*;
 
@@ -91,7 +92,8 @@ public class TestKeysRatis {
   }
 
   @Test
-  public void testPutAndListKey() throws OzoneException, IOException {
+  public void testPutAndListKey()
+      throws OzoneException, IOException, ParseException {
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path,
@@ -99,7 +101,8 @@ public class TestKeysRatis {
   }
 
   @Test
-  public void testGetKeyInfo() throws OzoneException, IOException {
+  public void testGetKeyInfo()
+      throws OzoneException, IOException, ParseException {
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path,
