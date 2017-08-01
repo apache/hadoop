@@ -49,14 +49,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
- * The RMActiveServiceContext is the class that maintains all the
- * RMActiveService contexts.This is expected to be used only by ResourceManager
- * and RMContext.
+ * The RMActiveServiceContext is the class that maintains <b>Active</b> service
+ * context. Services that need to run only on the Active RM. This is expected to
+ * be used only by RMContext.
  */
 @Private
 @Unstable
@@ -95,7 +94,6 @@ public class RMActiveServiceContext {
   private NodesListManager nodesListManager;
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
-  private RMTimelineCollectorManager timelineCollectorManager;
 
   private RMNodeLabelsManager nodeLabelManager;
   private RMDelegatedNodeLabelsUpdater rmDelegatedNodeLabelsUpdater;
@@ -372,19 +370,6 @@ public class RMActiveServiceContext {
   @Unstable
   public boolean isWorkPreservingRecoveryEnabled() {
     return this.isWorkPreservingRecoveryEnabled;
-  }
-
-  @Private
-  @Unstable
-  public RMTimelineCollectorManager getRMTimelineCollectorManager() {
-    return timelineCollectorManager;
-  }
-
-  @Private
-  @Unstable
-  public void setRMTimelineCollectorManager(
-      RMTimelineCollectorManager collectorManager) {
-    this.timelineCollectorManager = collectorManager;
   }
 
   @Private
