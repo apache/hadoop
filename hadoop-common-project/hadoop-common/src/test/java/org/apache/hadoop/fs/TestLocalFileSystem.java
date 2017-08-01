@@ -659,7 +659,7 @@ public class TestLocalFileSystem {
 
     try {
       FSDataOutputStreamBuilder builder =
-          fileSys.createFile(path);
+          fileSys.createFile(path).recursive();
       FSDataOutputStream out = builder.build();
       String content = "Create with a generic type of createFile!";
       byte[] contentOrigin = content.getBytes("UTF8");

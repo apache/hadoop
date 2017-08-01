@@ -44,8 +44,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
  *
  * To create missing parent directory, use {@link #recursive()}.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class FSDataOutputStreamBuilder
     <S extends FSDataOutputStream, B extends FSDataOutputStreamBuilder<S, B>> {
   private final FileSystem fs;
