@@ -129,9 +129,10 @@ public class CapacitySchedulerPreemptionTestBase {
   public void waitNumberOfLiveContainersOnNodeFromApp(FiCaSchedulerNode node,
       ApplicationAttemptId appId, int expected) throws InterruptedException {
     int waitNum = 0;
+    int total = 0;
 
     while (waitNum < 500) {
-      int total = 0;
+      total = 0;
       for (RMContainer c : node.getCopiedListOfRunningContainers()) {
         if (c.getApplicationAttemptId().equals(appId)) {
           total++;
@@ -144,6 +145,8 @@ public class CapacitySchedulerPreemptionTestBase {
       waitNum++;
     }
 
-    Assert.fail();
+    Assert.fail(
+        "Check #live-container-on-node-from-app, actual=" + total + " expected="
+            + expected);
   }
 }
