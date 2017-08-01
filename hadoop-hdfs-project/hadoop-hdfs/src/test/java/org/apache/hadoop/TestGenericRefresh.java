@@ -72,16 +72,16 @@ public class TestGenericRefresh {
   public void setUp() throws Exception {
     // Register Handlers, first one just sends an ok response
     firstHandler = Mockito.mock(RefreshHandler.class);
-    Mockito.stub(firstHandler.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
-      .toReturn(RefreshResponse.successResponse());
+    Mockito.when(firstHandler.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
+      .thenReturn(RefreshResponse.successResponse());
     RefreshRegistry.defaultRegistry().register("firstHandler", firstHandler);
 
     // Second handler has conditional response for testing args
     secondHandler = Mockito.mock(RefreshHandler.class);
-    Mockito.stub(secondHandler.handleRefresh("secondHandler", new String[]{"one", "two"}))
-      .toReturn(new RefreshResponse(3, "three"));
-    Mockito.stub(secondHandler.handleRefresh("secondHandler", new String[]{"one"}))
-      .toReturn(new RefreshResponse(2, "two"));
+    Mockito.when(secondHandler.handleRefresh("secondHandler", new String[]{"one", "two"}))
+      .thenReturn(new RefreshResponse(3, "three"));
+    Mockito.when(secondHandler.handleRefresh("secondHandler", new String[]{"one"}))
+      .thenReturn(new RefreshResponse(2, "two"));
     RefreshRegistry.defaultRegistry().register("secondHandler", secondHandler);
   }
 
@@ -181,12 +181,12 @@ public class TestGenericRefresh {
   public void testMultipleReturnCodeMerging() throws Exception {
     // Two handlers which return two non-zero values
     RefreshHandler handlerOne = Mockito.mock(RefreshHandler.class);
-    Mockito.stub(handlerOne.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
-      .toReturn(new RefreshResponse(23, "Twenty Three"));
+    Mockito.when(handlerOne.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
+      .thenReturn(new RefreshResponse(23, "Twenty Three"));
 
     RefreshHandler handlerTwo = Mockito.mock(RefreshHandler.class);
-    Mockito.stub(handlerTwo.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
-      .toReturn(new RefreshResponse(10, "Ten"));
+    Mockito.when(handlerTwo.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
+      .thenReturn(new RefreshResponse(10, "Ten"));
 
     // Then registered to the same ID
     RefreshRegistry.defaultRegistry().register("shared", handlerOne);
@@ -210,12 +210,12 @@ public class TestGenericRefresh {
   public void testExceptionResultsInNormalError() throws Exception {
     // In this test, we ensure that all handlers are called even if we throw an exception in one
     RefreshHandler exceptionalHandler = Mockito.mock(RefreshHandler.class);
-    Mockito.stub(exceptionalHandler.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
-      .toThrow(new RuntimeException("Exceptional Handler Throws Exception"));
+    Mockito.when(exceptionalHandler.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
+      .thenThrow(new RuntimeException("Exceptional Handler Throws Exception"));
 
     RefreshHandler otherExceptionalHandler = Mockito.mock(RefreshHandler.class);
-    Mockito.stub(otherExceptionalHandler.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
-      .toThrow(new RuntimeException("More Exceptions"));
+    Mockito.when(otherExceptionalHandler.handleRefresh(Mockito.anyString(), Mockito.any(String[].class)))
+      .thenThrow(new RuntimeException("More Exceptions"));
 
     RefreshRegistry.defaultRegistry().register("exceptional", exceptionalHandler);
     RefreshRegistry.defaultRegistry().register("exceptional", otherExceptionalHandler);
