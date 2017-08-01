@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
@@ -47,11 +48,13 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestKeys {
@@ -387,7 +390,8 @@ public class TestKeys {
   }
 
   @Test
-  public void testPutAndListKey() throws OzoneException, IOException {
+  public void testPutAndListKey()
+      throws OzoneException, IOException, ParseException {
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAscii(1);
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path,
@@ -395,12 +399,13 @@ public class TestKeys {
   }
 
   static void runTestPutAndListKey(PutHelper helper)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     final OzoneRestClient client = helper.client;
     helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
+    long currentTime = Time.now();
     // add keys [list-key0, list-key1, ..., list-key9]
     for (int x = 0; x < 10; x++) {
       String newkeyName = "list-key" + x;
@@ -414,6 +419,22 @@ public class TestKeys {
 
     Assert.assertEquals(keyList1.size(), 11);
     Assert.assertEquals(keyList2.size(), 11);
+    // Verify the key creation/modification time. Here we compare the time in
+    // second unit since the date string reparsed to millisecond will
+    // lose precision.
+    for (OzoneKey key : keyList1) {
+      assertTrue((OzoneUtils.formatDate(key.getObjectInfo().getCreatedOn())
+          / 1000) >= (currentTime / 1000));
+      assertTrue((OzoneUtils.formatDate(key.getObjectInfo().getModifiedOn())
+          / 1000) >= (currentTime / 1000));
+    }
+
+    for (OzoneKey key : keyList2) {
+      assertTrue((OzoneUtils.formatDate(key.getObjectInfo().getCreatedOn())
+          / 1000) >= (currentTime / 1000));
+      assertTrue((OzoneUtils.formatDate(key.getObjectInfo().getModifiedOn())
+          / 1000) >= (currentTime / 1000));
+    }
 
     // test maxLength parameter of list keys
     keyList1 = helper.getBucket().listKeys("1", null, null);
@@ -459,14 +480,17 @@ public class TestKeys {
   }
 
   @Test
-  public void testGetKeyInfo() throws OzoneException, IOException {
+  public void testGetKeyInfo()
+      throws OzoneException, IOException, ParseException {
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAscii(1);
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path,
         getMultiPartKey(delimiter)));
   }
 
-  static void runTestGetKeyInfo(PutHelper helper) throws OzoneException {
+  static void runTestGetKeyInfo(PutHelper helper)
+      throws OzoneException, ParseException {
+    long currentTime = Time.now();
     String keyName = helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
@@ -474,5 +498,14 @@ public class TestKeys {
     OzoneKey keyInfo = helper.getBucket().getKeyInfo(keyName);
     assertNotNull(keyInfo.getObjectInfo());
     assertEquals(keyName, keyInfo.getObjectInfo().getKeyName());
+
+    // Compare the time in second unit since the date string reparsed to
+    // millisecond will lose precision.
+    Assert.assertTrue(
+        (OzoneUtils.formatDate(keyInfo.getObjectInfo().getCreatedOn())
+            / 1000) >= (currentTime / 1000));
+    Assert.assertTrue(
+        (OzoneUtils.formatDate(keyInfo.getObjectInfo().getModifiedOn())
+            / 1000) >= (currentTime / 1000));
   }
 }

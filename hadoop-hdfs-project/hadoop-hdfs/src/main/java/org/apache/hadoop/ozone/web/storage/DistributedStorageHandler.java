@@ -51,11 +51,11 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.response.VolumeOwner;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -433,8 +433,10 @@ public final class DistributedStorageHandler implements StorageHandler {
     keyInfo.setVersion(0);
     keyInfo.setKeyName(ksmKeyInfo.getKeyName());
     keyInfo.setSize(ksmKeyInfo.getDataSize());
-    keyInfo.setCreatedOn(Time.formatTime(ksmKeyInfo.getCreationTime()));
-    keyInfo.setModifiedOn(Time.formatTime(ksmKeyInfo.getModificationTime()));
+    keyInfo.setCreatedOn(
+        OzoneUtils.formatTime(ksmKeyInfo.getCreationTime()));
+    keyInfo.setModifiedOn(
+        OzoneUtils.formatTime(ksmKeyInfo.getModificationTime()));
     return keyInfo;
   }
 
@@ -474,6 +476,10 @@ public final class DistributedStorageHandler implements StorageHandler {
         tempInfo.setVersion(0);
         tempInfo.setKeyName(info.getKeyName());
         tempInfo.setSize(info.getDataSize());
+        tempInfo.setCreatedOn(
+            OzoneUtils.formatTime(info.getCreationTime()));
+        tempInfo.setModifiedOn(
+            OzoneUtils.formatTime(info.getModificationTime()));
 
         result.addKey(tempInfo);
       }
