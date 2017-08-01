@@ -195,11 +195,17 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 
     if (captureOpenFiles) {
-      Set<INodesInPath> openFilesIIP =
-          leaseManager.getINodeWithLeases(snapshotRoot);
-      for (INodesInPath openFileIIP : openFilesIIP)  {
-        INodeFile openFile = openFileIIP.getLastINode().asFile();
-        openFile.recordModification(openFileIIP.getLatestSnapshotId());
+      try {
+        Set<INodesInPath> openFilesIIP =
+            leaseManager.getINodeWithLeases(snapshotRoot);
+        for (INodesInPath openFileIIP : openFilesIIP) {
+          INodeFile openFile = openFileIIP.getLastINode().asFile();
+          openFile.recordModification(openFileIIP.getLatestSnapshotId());
+        }
+      } catch (Exception e) {
+        throw new SnapshotException("Failed to add snapshot: Unable to " +
+            "capture all open files under the snapshot dir " +
+            snapshotRoot.getFullPathName() + " for snapshot '" + name + "'", e);
       }
     }
     return s;
