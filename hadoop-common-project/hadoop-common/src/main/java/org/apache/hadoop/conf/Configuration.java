@@ -2911,13 +2911,28 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         if(source != null) {
           updatingResource.put(attr, source);
         }
-      } else if (!value.equals(properties.getProperty(attr))) {
-        LOG.warn(name+":an attempt to override final parameter: "+attr
-            +";  Ignoring.");
+      } else {
+        // This is a final parameter so check for overrides.
+        checkForOverride(this.properties, name, attr, value);
+        if (this.properties != properties) {
+          checkForOverride(properties, name, attr, value);
+        }
       }
     }
     if (finalParameter && attr != null) {
       finalParameters.add(attr);
+    }
+  }
+
+  /**
+   * Print a warning if a property with a given name already exists with a
+   * different value
+   */
+  private void checkForOverride(Properties properties, String name, String attr, String value) {
+    String propertyValue = properties.getProperty(attr);
+    if (propertyValue != null && !propertyValue.equals(value)) {
+      LOG.warn(name + ":an attempt to override final parameter: " + attr
+          + ";  Ignoring.");
     }
   }
 
