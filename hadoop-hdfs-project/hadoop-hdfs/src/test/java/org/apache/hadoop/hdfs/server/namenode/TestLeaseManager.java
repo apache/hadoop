@@ -42,6 +42,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -277,7 +278,7 @@ public class TestLeaseManager {
 
   private void testInodeWithLeasesAtScaleImpl(final LeaseManager leaseManager,
       final FSDirectory fsDirectory, INodeDirectory ancestorDirectory,
-      int scale) {
+      int scale) throws IOException {
     verifyINodeLeaseCounts(leaseManager, ancestorDirectory, 0, 0, 0);
 
     Set<Long> iNodeIds = new HashSet<>();
@@ -388,7 +389,8 @@ public class TestLeaseManager {
 
   private void verifyINodeLeaseCounts(final LeaseManager leaseManager,
       INodeDirectory ancestorDirectory, int iNodeIdWithLeaseCount,
-      int iNodeWithLeaseCount, int iNodeUnderAncestorLeaseCount) {
+      int iNodeWithLeaseCount, int iNodeUnderAncestorLeaseCount)
+      throws IOException {
     assertEquals(iNodeIdWithLeaseCount,
         leaseManager.getINodeIdWithLeases().size());
     assertEquals(iNodeWithLeaseCount,
