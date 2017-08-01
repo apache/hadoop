@@ -1873,11 +1873,9 @@ function hadoop_start_secure_daemon_wrapper
     (( counter++ ))
   done
 
-  # this is for the daemon pid creation
   #shellcheck disable=SC2086
-  echo $! > "${jsvcpidfile}" 2>/dev/null
-  if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${daemonpidfile}."
+  if ! echo $! > "${jsvcpidfile}"; then
+    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${jsvcpidfile}."
   fi
 
   sleep 1
