@@ -20,6 +20,7 @@ package org.apache.hadoop.scm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.ratis.RatisHelper;
@@ -34,6 +35,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -102,5 +105,19 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     Preconditions.checkState(reply.isSuccess());
     return ContainerCommandResponseProto.parseFrom(
         ShadedProtoUtil.asByteString(reply.getMessage().getContent()));
+  }
+
+  /**
+   * Sends a given command to server gets a waitable future back.
+   *
+   * @param request Request
+   * @return Response to the command
+   * @throws IOException
+   */
+  @Override
+  public CompletableFuture<ContainerCommandResponseProto>
+    sendCommandAsync(ContainerCommandRequestProto request)
+      throws IOException, ExecutionException, InterruptedException {
+    throw new IOException("Not implemented");
   }
 }

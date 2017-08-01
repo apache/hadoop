@@ -59,7 +59,7 @@ import org.apache.hadoop.scm.XceiverClientSpi;
  * Implementation of all container protocol calls performed by Container
  * clients.
  */
-public final class ContainerProtocolCalls {
+public final class ContainerProtocolCalls  {
 
   /**
    * There is no need to instantiate this class.

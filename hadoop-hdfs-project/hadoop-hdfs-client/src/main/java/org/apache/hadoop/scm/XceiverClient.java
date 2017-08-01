@@ -35,6 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -51,6 +53,7 @@ public class XceiverClient extends XceiverClientSpi {
   /**
    * Constructs a client that can communicate with the Container framework on
    * data nodes.
+   *
    * @param pipeline - Pipeline that defines the machines.
    * @param config -- Ozone Config
    */
@@ -91,6 +94,7 @@ public class XceiverClient extends XceiverClientSpi {
 
   /**
    * Returns if the exceiver client connects to a server.
+   *
    * @return True if the connection is alive, false otherwise.
    */
   @VisibleForTesting
@@ -100,7 +104,7 @@ public class XceiverClient extends XceiverClientSpi {
 
   @Override
   public void close() {
-    if(group != null) {
+    if (group != null) {
       group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
     }
 
@@ -118,12 +122,35 @@ public class XceiverClient extends XceiverClientSpi {
   public ContainerProtos.ContainerCommandResponseProto sendCommand(
       ContainerProtos.ContainerCommandRequestProto request)
       throws IOException {
-    if((channelFuture == null) || (!channelFuture.channel().isActive())) {
+    try {
+    if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
       throw new IOException("This channel is not connected.");
     }
     XceiverClientHandler handler =
         channelFuture.channel().pipeline().get(XceiverClientHandler.class);
 
-    return handler.sendCommand(request);
+      return handler.sendCommand(request);
+    } catch (ExecutionException | InterruptedException e) {
+      throw new IOException("Unexpected exception during execution", e);
+    }
+  }
+
+  /**
+   * Sends a given command to server gets a waitable future back.
+   *
+   * @param request Request
+   * @return Response to the command
+   * @throws IOException
+   */
+  @Override
+  public CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
+    sendCommandAsync(ContainerProtos.ContainerCommandRequestProto request)
+      throws IOException, ExecutionException, InterruptedException {
+      if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
+        throw new IOException("This channel is not connected.");
+      }
+      XceiverClientHandler handler =
+          channelFuture.channel().pipeline().get(XceiverClientHandler.class);
+      return handler.sendCommandAsync(request);
   }
 }

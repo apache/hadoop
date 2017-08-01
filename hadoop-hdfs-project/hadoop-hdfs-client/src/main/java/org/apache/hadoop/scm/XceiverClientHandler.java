@@ -17,26 +17,36 @@
  */
 package org.apache.hadoop.scm;
 
+import com.google.common.base.Preconditions;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandResponseProto;
+
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
 
 /**
  * Netty client handler.
  */
 public class XceiverClientHandler extends
-    SimpleChannelInboundHandler<ContainerProtos.ContainerCommandResponseProto> {
+    SimpleChannelInboundHandler<ContainerCommandResponseProto> {
 
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientHandler.class);
-  private final BlockingQueue<ContainerProtos.ContainerCommandResponseProto>
-      responses = new LinkedBlockingQueue<>();
+  private final ConcurrentMap<String,
+      CompletableFuture<ContainerCommandResponseProto>> responses =
+      new ConcurrentHashMap<>();
+
   private final Pipeline pipeline;
   private volatile Channel channel;
 
@@ -56,15 +66,24 @@ public class XceiverClientHandler extends
    * .ContainerCommandResponseProto}.
    *
    * @param ctx the {@link ChannelHandlerContext} which this {@link
-   *            SimpleChannelInboundHandler} belongs to
+   * SimpleChannelInboundHandler} belongs to
    * @param msg the message to handle
    * @throws Exception is thrown if an error occurred
    */
   @Override
   public void channelRead0(ChannelHandlerContext ctx,
-                           ContainerProtos.ContainerCommandResponseProto msg)
+      ContainerProtos.ContainerCommandResponseProto msg)
       throws Exception {
-    responses.add(msg);
+    Preconditions.checkNotNull(msg);
+    String key = msg.getTraceID();
+    CompletableFuture<ContainerCommandResponseProto> future =
+        responses.remove(key);
+    if (future != null) {
+      future.complete(msg);
+    } else {
+      LOG.error("A reply received for message that was not queued. trace " +
+          "ID: {}", msg.getTraceID());
+    }
   }
 
   @Override
@@ -88,25 +107,39 @@ public class XceiverClientHandler extends
    * @param request - request.
    * @return -- response
    */
-  public ContainerProtos.ContainerCommandResponseProto
-      sendCommand(ContainerProtos.ContainerCommandRequestProto request) {
 
-    ContainerProtos.ContainerCommandResponseProto response;
-    channel.writeAndFlush(request);
-    boolean interrupted = false;
-    for (;;) {
-      try {
-        response = responses.take();
-        break;
-      } catch (InterruptedException ignore) {
-        interrupted = true;
-      }
-    }
-
-    if (interrupted) {
-      Thread.currentThread().interrupt();
-    }
-    return response;
+  public ContainerCommandResponseProto
+    sendCommand(ContainerProtos.ContainerCommandRequestProto request)
+      throws ExecutionException, InterruptedException {
+    Future<ContainerCommandResponseProto> future = sendCommandAsync(request);
+    return future.get();
   }
 
+  /**
+   * SendCommandAsyc queues a command to the Netty Subsystem and returns a
+   * CompletableFuture. This Future is marked compeleted in the channelRead0
+   * when the call comes back.
+   * @param request - Request to execute
+   * @return CompletableFuture
+   */
+  public CompletableFuture<ContainerCommandResponseProto>
+    sendCommandAsync(ContainerProtos.ContainerCommandRequestProto request) {
+    CompletableFuture<ContainerCommandResponseProto> response =
+        new CompletableFuture<>();
+
+    CompletableFuture<ContainerCommandResponseProto> previous =
+        responses.putIfAbsent(request.getTraceID(), response);
+
+    if (previous != null) {
+      LOG.error("Command with Trace already exists. Ignoring this command. " +
+              "{}. Previous Command: {}", request.getTraceID(),
+          previous.toString());
+      throw new IllegalStateException("Duplicate trace ID. Command with this " +
+          "trace ID is already executing. Please ensure that " +
+          "trace IDs are not reused. ID: " + request.getTraceID());
+    }
+
+    channel.writeAndFlush(request);
+    return response;
+  }
 }

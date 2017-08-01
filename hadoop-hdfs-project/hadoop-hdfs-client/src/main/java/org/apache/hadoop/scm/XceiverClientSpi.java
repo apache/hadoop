@@ -27,6 +27,8 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -94,4 +96,15 @@ public abstract class XceiverClientSpi implements Closeable {
    */
   public abstract ContainerCommandResponseProto sendCommand(
       ContainerCommandRequestProto request) throws IOException;
+
+  /**
+   * Sends a given command to server gets a waitable future back.
+   * @param request Request
+   * @return Response to the command
+   * @throws IOException
+   */
+  public abstract CompletableFuture<ContainerCommandResponseProto>
+    sendCommandAsync(ContainerCommandRequestProto request) throws IOException,
+      ExecutionException, InterruptedException;
+
 }
