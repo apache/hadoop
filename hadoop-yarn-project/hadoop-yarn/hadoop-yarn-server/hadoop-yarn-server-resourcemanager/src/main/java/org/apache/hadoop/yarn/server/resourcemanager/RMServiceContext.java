@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 
 /**
  * RMServiceContext class maintains "Always On" services. Services that need to
@@ -52,6 +53,7 @@ public class RMServiceContext {
   private EmbeddedElector elector;
   private final Object haServiceStateLock = new Object();
   private ResourceManager resourceManager;
+  private RMTimelineCollectorManager timelineCollectorManager;
 
   public ResourceManager getResourceManager() {
     return resourceManager;
@@ -138,6 +140,15 @@ public class RMServiceContext {
 
   public void setYarnConfiguration(Configuration yarnConfiguration) {
     this.yarnConfiguration = yarnConfiguration;
+  }
+
+  public RMTimelineCollectorManager getRMTimelineCollectorManager() {
+    return timelineCollectorManager;
+  }
+
+  public void setRMTimelineCollectorManager(
+      RMTimelineCollectorManager collectorManager) {
+    this.timelineCollectorManager = collectorManager;
   }
 
   public String getHAZookeeperConnectionState() {
