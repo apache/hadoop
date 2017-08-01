@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -518,12 +519,20 @@ public abstract class AbstractYarnScheduler
     container.setVersion(status.getVersion());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
+    String labelExpression = status.getNodeLabelExpression();
+    // If NodeLabel is disabled but recovered container has label expression
+    // its better to suppress that and considered as default label.
+    if (!status.getNodeLabelExpression().isEmpty() && !YarnConfiguration
+        .areNodeLabelsEnabled(rmContext.getYarnConfiguration())) {
+      labelExpression = RMNodeLabelsManager.NO_LABEL;
+    }
+
     RMContainer rmContainer =
         new RMContainerImpl(container,
             SchedulerRequestKey.extractFrom(container), attemptId,
             node.getNodeID(), applications.get(
             attemptId.getApplicationId()).getUser(), rmContext,
-            status.getCreationTime(), status.getNodeLabelExpression());
+            status.getCreationTime(), labelExpression);
     return rmContainer;
   }
 
