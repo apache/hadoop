@@ -203,8 +203,8 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
         .put(ClientResponse.class, obj);
   }
 
-  protected void putObjects(URI base, String path,
-      MultivaluedMap<String, String> params, Object obj)
+  protected void putObjects(final URI base, final String path,
+      final MultivaluedMap<String, String> params, final Object obj)
       throws IOException, YarnException {
     ClientResponse resp = null;
     try {
