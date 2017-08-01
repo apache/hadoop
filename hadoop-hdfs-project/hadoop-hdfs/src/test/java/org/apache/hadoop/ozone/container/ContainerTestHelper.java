@@ -248,6 +248,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.PutSmallFile);
     request.setPutSmallFile(smallFileRequest);
+    request.setTraceID(UUID.randomUUID().toString());
     return request.build();
   }
 
@@ -517,7 +518,8 @@ public final class ContainerTestHelper {
             pipeline.getProtobufMessage()).build();
     ContainerProtos.ContainerCommandRequestProto cmd =
         ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
-            .Type.CloseContainer).setCloseContainer(closeReqeuest).build();
+            .Type.CloseContainer).setCloseContainer(closeReqeuest)
+            .build();
     return cmd;
   }
 
@@ -533,7 +535,9 @@ public final class ContainerTestHelper {
         ContainerProtos.DeleteContainerRequestProto.newBuilder().setName(
             pipeline.getContainerName()).setPipeline(
             pipeline.getProtobufMessage()).setForceDelete(forceDelete).build();
-    return ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
-        .Type.DeleteContainer).setDeleteContainer(deleteRequest).build();
+    return ContainerCommandRequestProto.newBuilder()
+        .setCmdType(ContainerProtos.Type.DeleteContainer)
+        .setDeleteContainer(deleteRequest)
+        .build();
   }
 }

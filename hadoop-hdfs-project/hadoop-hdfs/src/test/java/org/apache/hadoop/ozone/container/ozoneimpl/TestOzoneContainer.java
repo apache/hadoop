@@ -28,14 +28,17 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Tests ozone containers.
@@ -226,7 +229,6 @@ public class TestOzoneContainer {
       final ContainerProtos.ContainerCommandRequestProto smallFileRequest
           = ContainerTestHelper.getWriteSmallFileRequest(
           client.getPipeline(), containerName, keyName, 1024);
-
       ContainerProtos.ContainerCommandResponseProto response
           = client.sendCommand(smallFileRequest);
       Assert.assertNotNull(response);
@@ -246,6 +248,8 @@ public class TestOzoneContainer {
       }
     }
   }
+
+
 
   @Test
   public void testCloseContainer() throws Exception {
@@ -414,6 +418,66 @@ public class TestOzoneContainer {
       }
     }
   }
+
+
+  // Runs a set of commands as Async calls and verifies that calls indeed worked
+  // as expected.
+  static void runAsyncTests(
+      String containerName, XceiverClientSpi client) throws Exception {
+    try {
+      client.connect();
+
+      createContainerForTesting(client, containerName);
+      final List<CompletableFuture> computeResults = new LinkedList<>();
+      int requestCount = 1000;
+      // Create a bunch of Async calls from this test.
+      for(int x = 0; x <requestCount; x++) {
+        String keyName = OzoneUtils.getRequestID();
+        final ContainerProtos.ContainerCommandRequestProto smallFileRequest
+            = ContainerTestHelper.getWriteSmallFileRequest(
+            client.getPipeline(), containerName, keyName, 1024);
+
+        CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
+            response = client.sendCommandAsync(smallFileRequest);
+        computeResults.add(response);
+      }
+
+      CompletableFuture<Void> combinedFuture =
+          CompletableFuture.allOf(computeResults.toArray(
+              new CompletableFuture[computeResults.size()]));
+      // Wait for all futures to complete.
+      combinedFuture.get();
+      // Assert that all futures are indeed done.
+      for (CompletableFuture future : computeResults) {
+        Assert.assertTrue(future.isDone());
+      }
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+    }
+  }
+
+  @Test
+  public void testXcieverClientAsync() throws Exception {
+    MiniOzoneCluster cluster = null;
+    XceiverClient client = null;
+    try {
+      OzoneConfiguration conf = newOzoneConfiguration();
+
+      client = createClientForTesting(conf);
+      cluster = new MiniOzoneCluster.Builder(conf)
+          .setRandomContainerPort(false)
+          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+      String containerName = client.getPipeline().getContainerName();
+      runAsyncTests(containerName, client);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
 
   private static XceiverClient createClientForTesting(OzoneConfiguration conf)
       throws Exception {
