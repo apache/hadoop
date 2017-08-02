@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.LinkedList;
-import java.util.Map;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +33,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
-import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
@@ -56,11 +51,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.LinkedList;
+import java.util.Map;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -324,34 +321,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
             appState.getUser(), true);
 
-    // If null amReq has been returned, check if it is the case that
-    // application has specified node label expression while node label
-    // has been disabled. Reject the recovery of this application if it
-    // is true and give clear message so that user can react properly.
-    if (!appContext.getUnmanagedAM() &&
-        application.getAMResourceRequest() == null &&
-        !YarnConfiguration.areNodeLabelsEnabled(this.conf)) {
-      // check application submission context and see if am resource request
-      // or application itself contains any node label expression.
-      ResourceRequest amReqFromAppContext =
-          appContext.getAMContainerResourceRequest();
-      String labelExp = (amReqFromAppContext != null) ?
-          amReqFromAppContext.getNodeLabelExpression() : null;
-      if (labelExp == null) {
-        labelExp = appContext.getNodeLabelExpression();
-      }
-      if (labelExp != null &&
-          !labelExp.equals(RMNodeLabelsManager.NO_LABEL)) {
-        String message = "Failed to recover application " + appId
-            + ". NodeLabel is not enabled in cluster, but AM resource request "
-            + "contains a label expression.";
-        LOG.warn(message);
-        application.handle(
-            new RMAppEvent(appId, RMAppEventType.APP_REJECTED, message));
-        return;
-      }
-    }
-
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
@@ -368,28 +337,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
     
     ApplicationId applicationId = submissionContext.getApplicationId();
-    ResourceRequest amReq = null;
-    try {
-      amReq = validateAndCreateResourceRequest(submissionContext, isRecovery);
-    } catch (InvalidLabelResourceRequestException e) {
-      // This can happen if the application had been submitted and run
-      // with Node Label enabled but recover with Node Label disabled.
-      // Thus there might be node label expression in the application's
-      // resource requests. If this is the case, create RmAppImpl with
-      // null amReq and reject the application later with clear error
-      // message. So that the application can still be tracked by RM
-      // after recovery and user can see what's going on and react accordingly.
-      if (isRecovery &&
-          !YarnConfiguration.areNodeLabelsEnabled(this.conf)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("AMResourceRequest is not created for " + applicationId
-              + ". NodeLabel is not enabled in cluster, but AM resource "
-              + "request contains a label expression.");
-        }
-      } else {
-        throw e;
-      }
-    }
+
+    ResourceRequest amReq = validateAndCreateResourceRequest(
+        submissionContext, isRecovery);
 
     // Verify and get the update application priority and set back to
     // submissionContext

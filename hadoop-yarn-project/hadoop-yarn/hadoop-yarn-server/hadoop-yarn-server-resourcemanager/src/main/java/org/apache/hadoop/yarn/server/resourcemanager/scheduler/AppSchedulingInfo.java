@@ -815,7 +815,8 @@ public class AppSchedulingInfo {
     this.placesBlacklistedByApp = appInfo.getBlackList();
   }
 
-  public synchronized void recoverContainer(RMContainer rmContainer) {
+  public synchronized void recoverContainer(RMContainer rmContainer,
+      String partition) {
     QueueMetrics metrics = queue.getMetrics();
     if (pending) {
       // If there was any container to recover, the application was
@@ -828,9 +829,8 @@ public class AppSchedulingInfo {
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
       return;
     }
-    metrics.allocateResources(rmContainer.getNodeLabelExpression(),
-        user, 1, rmContainer.getAllocatedResource(),
-      false);
+    metrics.allocateResources(partition, user, 1,
+        rmContainer.getAllocatedResource(), false);
   }
   
   public ResourceRequest cloneResourceRequest(ResourceRequest request) {

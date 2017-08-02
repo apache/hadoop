@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +53,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public class SchedulerUtils {
-  
+
+  private static final Log LOG = LogFactory.getLog(SchedulerUtils.class);
+
   private static final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
@@ -230,9 +234,14 @@ public class SchedulerUtils {
       String labelExp = resReq.getNodeLabelExpression();
       if (!(RMNodeLabelsManager.NO_LABEL.equals(labelExp)
           || null == labelExp)) {
-        throw new InvalidLabelResourceRequestException(
-            "Invalid resource request, node label not enabled "
-                + "but request contains label expression");
+        String message = "NodeLabel is not enabled in cluster, but resource"
+            + " request contains a label expression.";
+        LOG.warn(message);
+        if (!isRecovery) {
+          throw new InvalidLabelResourceRequestException(
+              "Invalid resource request, node label not enabled "
+                  + "but request contains label expression");
+        }
       }
     }
     if (null == queueInfo) {
