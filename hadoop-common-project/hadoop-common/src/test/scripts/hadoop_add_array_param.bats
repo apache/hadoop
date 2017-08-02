@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -15,23 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if ! declare -f mapred_subcommand_archive-logs >/dev/null 2>/dev/null; then
+load hadoop-functions_test_helper
 
-  if [[ "${HADOOP_SHELL_EXECNAME}" = mapred ]]; then
-    hadoop_add_subcommand "archive-logs" client "combine aggregated logs into hadoop archives"
-  fi
-
-  # this can't be indented otherwise shelldocs won't get it
-
-## @description  archive-logs command for mapred
-## @audience     public
-## @stability    stable
-## @replaceable  yes
-function mapred_subcommand_archive-logs
-{
-  # shellcheck disable=SC2034
-  HADOOP_CLASSNAME=org.apache.hadoop.tools.HadoopArchiveLogs
-  hadoop_add_to_classpath_tools hadoop-archive-logs
+@test "hadoop_add_array_param (empty)" {
+  hadoop_add_array_param ARRAY value
+  [ "${ARRAY[0]}" = value ]
 }
 
-fi
+@test "hadoop_add_array_param (exist)" {
+  ARRAY=("val2")
+  hadoop_add_array_param ARRAY val1
+  [ "${ARRAY[0]}" = val2 ]
+  [ "${ARRAY[1]}" = val1 ]
+}
+
+@test "hadoop_add_array_param (double exist)" {
+  ARRAY=("val2" "val1")
+  hadoop_add_array_param ARRAY val3
+  [ "${ARRAY[0]}" = val2 ]
+  [ "${ARRAY[1]}" = val1 ]
+  [ "${ARRAY[2]}" = val3 ]
+}
+

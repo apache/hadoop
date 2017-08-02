@@ -18,7 +18,7 @@
 if ! declare -f hadoop_subcommand_distcp >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "distcp" "copy file or directories recursively"
+    hadoop_add_subcommand "distcp" client "copy file or directories recursively"
   fi
 
   # this can't be indented otherwise shelldocs won't get it
@@ -39,7 +39,7 @@ fi
 if ! declare -f mapred_subcommand_distcp >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = mapred ]]; then
-    hadoop_add_subcommand "distcp" "copy file or directories recursively"
+    hadoop_add_subcommand "distcp" client "copy file or directories recursively"
   fi
 
   # this can't be indented otherwise shelldocs won't get it

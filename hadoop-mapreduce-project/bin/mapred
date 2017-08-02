@@ -24,15 +24,15 @@ HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 ## @replaceable  no
 function hadoop_usage
 {
-  hadoop_add_subcommand "classpath" "prints the class path needed for running mapreduce subcommands"
-  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
-  hadoop_add_subcommand "historyserver" "run job history servers as a standalone daemon"
-  hadoop_add_subcommand "hsadmin" "job history server admin interface"
-  hadoop_add_subcommand "job" "manipulate MapReduce jobs"
-  hadoop_add_subcommand "pipes" "run a Pipes job"
-  hadoop_add_subcommand "queue" "get information regarding JobQueues"
-  hadoop_add_subcommand "sampler" "sampler"
-  hadoop_add_subcommand "version" "print the version"
+  hadoop_add_subcommand "classpath" client "prints the class path needed for running mapreduce subcommands"
+  hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "historyserver" daemon "run job history servers as a standalone daemon"
+  hadoop_add_subcommand "hsadmin" admin "job history server admin interface"
+  hadoop_add_subcommand "job" client "manipulate MapReduce jobs"
+  hadoop_add_subcommand "pipes" client "run a Pipes job"
+  hadoop_add_subcommand "queue" client "get information regarding JobQueues"
+  hadoop_add_subcommand "sampler" client "sampler"
+  hadoop_add_subcommand "version" client "print the version"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
