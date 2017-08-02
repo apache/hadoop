@@ -1837,7 +1837,7 @@ static int rmdir_as_nm(const char* path) {
   int user_gid = getegid();
   int ret = change_effective_user(nm_uid, nm_gid);
   if (ret == 0) {
-    if (rmdir(path) != 0) {
+    if (rmdir(path) != 0 && errno != ENOENT) {
       fprintf(LOGFILE, "rmdir of %s failed - %s\n", path, strerror(errno));
       ret = -1;
     }
@@ -1882,7 +1882,7 @@ static int unlink_helper(int dirfd, const char *name, int flags) {
   } else {
     ret = unlink(name);
   }
-  if (ret >= 0) {
+  if (ret >= 0 || errno == ENOENT) {
     return 0;
   }
   return errno;
@@ -1919,7 +1919,7 @@ static int is_symlink_helper(int dirfd, const char *name)
 static int recursive_unlink_helper(int dirfd, const char *name,
                                    const char* fullpath)
 {
-  int fd = -1, ret = 0;
+  int fd = -1, ret = 0, unlink_err = 0;
   DIR *dfd = NULL;
   struct stat stat;
 
@@ -1928,6 +1928,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   ret = is_symlink_helper(dirfd, name);
   if (ret < 0) {
     // is_symlink_helper failed.
+    if (ret == -ENOENT) {
+      ret = 0;
+      goto done;
+    }
     ret = -ret;
     fprintf(LOGFILE, "is_symlink_helper(%s) failed: %s\n",
             fullpath, strerror(ret));
@@ -1949,6 +1953,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   if (fd == -EACCES) {
     ret = chmod_helper(dirfd, name, 0700);
     if (ret) {
+      if (ret == ENOENT) {
+        ret = 0;
+        goto done;
+      }
       fprintf(LOGFILE, "chmod(%s) failed: %s\n", fullpath, strerror(ret));
       goto done;
     }
@@ -1956,11 +1964,19 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   }
   if (fd < 0) {
     ret = -fd;
+    if (ret == ENOENT) {
+      ret = 0;
+      goto done;
+    }
     fprintf(LOGFILE, "error opening %s: %s\n", fullpath, strerror(ret));
     goto done;
   }
   if (fstat(fd, &stat) < 0) {
     ret = errno;
+    if (ret == ENOENT) {
+      ret = 0;
+      goto done;
+    }
     fprintf(LOGFILE, "failed to stat %s: %s\n", fullpath, strerror(ret));
     goto done;
   }
@@ -1974,6 +1990,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
     dfd = fdopendir(fd);
     if (!dfd) {
       ret = errno;
+      if (ret == ENOENT) {
+        ret = 0;
+        goto done;
+      }
       fprintf(LOGFILE, "fopendir(%s) failed: %s\n", fullpath, strerror(ret));
       goto done;
     }
@@ -1985,7 +2005,7 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       de = readdir(dfd);
       if (!de) {
         ret = errno;
-        if (ret) {
+        if (ret && ret != ENOENT) {
           fprintf(LOGFILE, "readdir(%s) failed: %s\n", fullpath, strerror(ret));
           goto done;
         }
@@ -2003,10 +2023,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
         ret = ENOMEM;
         goto done;
       }
-      ret = recursive_unlink_helper(fd, de->d_name, new_fullpath);
+      int rc = recursive_unlink_helper(fd, de->d_name, new_fullpath);
       free(new_fullpath);
-      if (ret) {
-        goto done;
+      if (rc && !unlink_err) {
+        unlink_err = rc;
       }
     }
     if (dirfd != -1) {
@@ -2017,7 +2037,7 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       }
     }
   }
-  ret = 0;
+  ret = unlink_err;
 done:
   if (fd >= 0) {
     close(fd);
@@ -2048,9 +2068,6 @@ static int delete_path(const char *full_path,
     return PATH_TO_DELETE_IS_NULL;
   }
   ret = recursive_unlink_children(full_path);
-  if (ret == ENOENT) {
-    return 0;
-  }
   if (ret != 0) {
     fprintf(LOGFILE, "Error while deleting %s: %d (%s)\n",
             full_path, ret, strerror(ret));
