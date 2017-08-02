@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,24 +33,15 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HdfsFileStatus {
+public class HdfsFileStatus extends FileStatus {
+
+  private static final long serialVersionUID = 0x126eb82a;
 
   // local name of the inode that's encoded in java UTF8
-  private final byte[] path;
-  private final byte[] symlink; // symlink target encoded in java UTF8 or null
-  private final long length;
-  private final boolean isdir;
-  private final short block_replication;
-  private final long blocksize;
-  private final long modification_time;
-  private final long access_time;
-  private final FsPermission permission;
-  private final String owner;
-  private final String group;
+  private byte[] uPath;
+  private byte[] uSymlink; // symlink target encoded in java UTF8/null
   private final long fileId;
-
   private final FileEncryptionInfo feInfo;
-
   private final ErasureCodingPolicy ecPolicy;
 
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
@@ -58,11 +51,21 @@ public class HdfsFileStatus {
   public static final byte[] EMPTY_NAME = new byte[0];
 
   /**
+   * Set of features potentially active on an instance.
+   */
+  public enum Flags {
+    HAS_ACL,
+    HAS_CRYPT,
+    HAS_EC;
+  }
+  private final EnumSet<Flags> flags;
+
+  /**
    * Constructor.
-   * @param length the number of bytes the file has
-   * @param isdir if the path is a directory
+   * @param length            the number of bytes the file has
+   * @param isdir             if the path is a directory
    * @param block_replication the replication factor
-   * @param blocksize the block size
+   * @param blocksize         the block size
    * @param modification_time modification time
    * @param access_time access time
    * @param permission permission
@@ -77,25 +80,18 @@ public class HdfsFileStatus {
    * @param ecPolicy the erasure coding policy
    */
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
-      long blocksize, long modification_time, long access_time,
-      FsPermission permission, String owner, String group, byte[] symlink,
-      byte[] path, long fileId, int childrenNum, FileEncryptionInfo feInfo,
-      byte storagePolicy, ErasureCodingPolicy ecPolicy) {
-    this.length = length;
-    this.isdir = isdir;
-    this.block_replication = (short) block_replication;
-    this.blocksize = blocksize;
-    this.modification_time = modification_time;
-    this.access_time = access_time;
-    this.permission = (permission == null) ?
-        ((isdir || symlink!=null) ?
-            FsPermission.getDefault() :
-            FsPermission.getFileDefault()) :
-        permission;
-    this.owner = (owner == null) ? "" : owner;
-    this.group = (group == null) ? "" : group;
-    this.symlink = symlink;
-    this.path = path;
+                        long blocksize, long modification_time,
+                        long access_time, FsPermission permission,
+                        EnumSet<Flags> flags, String owner, String group,
+                        byte[] symlink, byte[] path, long fileId,
+                        int childrenNum, FileEncryptionInfo feInfo,
+                        byte storagePolicy, ErasureCodingPolicy ecPolicy) {
+    super(length, isdir, block_replication, blocksize, modification_time,
+        access_time, convert(isdir, symlink != null, permission, flags),
+        owner, group, null, null);
+    this.flags = flags;
+    this.uSymlink = symlink;
+    this.uPath = path;
     this.fileId = fileId;
     this.childrenNum = childrenNum;
     this.feInfo = feInfo;
@@ -104,83 +100,48 @@ public class HdfsFileStatus {
   }
 
   /**
-   * Get the length of this file, in bytes.
-   * @return the length of this file, in bytes.
+   * Set redundant flags for compatibility with existing applications.
    */
-  public final long getLen() {
-    return length;
+  protected static FsPermission convert(boolean isdir, boolean symlink,
+      FsPermission p, EnumSet<Flags> f) {
+    if (p instanceof FsPermissionExtension) {
+      // verify flags are set consistently
+      assert p.getAclBit() == f.contains(HdfsFileStatus.Flags.HAS_ACL);
+      assert p.getEncryptedBit() == f.contains(HdfsFileStatus.Flags.HAS_CRYPT);
+      assert p.getErasureCodedBit() == f.contains(HdfsFileStatus.Flags.HAS_EC);
+      return p;
+    }
+    if (null == p) {
+      if (isdir) {
+        p = FsPermission.getDirDefault();
+      } else if (symlink) {
+        p = FsPermission.getDefault();
+      } else {
+        p = FsPermission.getFileDefault();
+      }
+    }
+    return new FsPermissionExtension(p, f.contains(Flags.HAS_ACL),
+        f.contains(Flags.HAS_CRYPT), f.contains(Flags.HAS_EC));
   }
 
-  /**
-   * Is this a directory?
-   * @return true if this is a directory
-   */
-  public final boolean isDir() {
-    return isdir;
-  }
-
-  /**
-   * Is this a symbolic link?
-   * @return true if this is a symbolic link
-   */
+  @Override
   public boolean isSymlink() {
-    return symlink != null;
+    return uSymlink != null;
   }
 
-  /**
-   * Get the block size of the file.
-   * @return the number of bytes
-   */
-  public final long getBlockSize() {
-    return blocksize;
+  @Override
+  public boolean hasAcl() {
+    return flags.contains(Flags.HAS_ACL);
   }
 
-  /**
-   * Get the replication factor of a file.
-   * @return the replication factor of a file.
-   */
-  public final short getReplication() {
-    return block_replication;
+  @Override
+  public boolean isEncrypted() {
+    return flags.contains(Flags.HAS_CRYPT);
   }
 
-  /**
-   * Get the modification time of the file.
-   * @return the modification time of file in milliseconds since January 1, 1970 UTC.
-   */
-  public final long getModificationTime() {
-    return modification_time;
-  }
-
-  /**
-   * Get the access time of the file.
-   * @return the access time of file in milliseconds since January 1, 1970 UTC.
-   */
-  public final long getAccessTime() {
-    return access_time;
-  }
-
-  /**
-   * Get FsPermission associated with the file.
-   * @return permission
-   */
-  public final FsPermission getPermission() {
-    return permission;
-  }
-
-  /**
-   * Get the owner of the file.
-   * @return owner of the file
-   */
-  public final String getOwner() {
-    return owner;
-  }
-
-  /**
-   * Get the group associated with the file.
-   * @return group for the file.
-   */
-  public final String getGroup() {
-    return group;
+  @Override
+  public boolean isErasureCoded() {
+    return flags.contains(Flags.HAS_EC);
   }
 
   /**
@@ -188,7 +149,7 @@ public class HdfsFileStatus {
    * @return true if the name is empty
    */
   public final boolean isEmptyLocalName() {
-    return path.length == 0;
+    return uPath.length == 0;
   }
 
   /**
@@ -196,7 +157,7 @@ public class HdfsFileStatus {
    * @return the local name in string
    */
   public final String getLocalName() {
-    return DFSUtilClient.bytes2String(path);
+    return DFSUtilClient.bytes2String(uPath);
   }
 
   /**
@@ -204,7 +165,7 @@ public class HdfsFileStatus {
    * @return the local name in java UTF8
    */
   public final byte[] getLocalNameInBytes() {
-    return path;
+    return uPath;
   }
 
   /**
@@ -238,16 +199,24 @@ public class HdfsFileStatus {
     return new Path(parent, getLocalName());
   }
 
-  /**
-   * Get the string representation of the symlink.
-   * @return the symlink as a string.
-   */
-  public final String getSymlink() {
-    return DFSUtilClient.bytes2String(symlink);
+  @Override
+  public Path getSymlink() throws IOException {
+    if (isSymlink()) {
+      return new Path(DFSUtilClient.bytes2String(uSymlink));
+    }
+    throw new IOException("Path " + getPath() + " is not a symbolic link");
   }
 
+  @Override
+  public void setSymlink(Path sym) {
+    uSymlink = DFSUtilClient.string2Bytes(sym.toString());
+  }
+
+  /**
+   * Opaque referant for the symlink, to be resolved at the client.
+   */
   public final byte[] getSymlinkInBytes() {
-    return symlink;
+    return uSymlink;
   }
 
   public final long getFileId() {
@@ -275,13 +244,30 @@ public class HdfsFileStatus {
     return storagePolicy;
   }
 
-  public final FileStatus makeQualified(URI defaultUri, Path path) {
-    return new FileStatus(getLen(), isDir(), getReplication(),
-        getBlockSize(), getModificationTime(),
-        getAccessTime(),
-        getPermission(), getOwner(), getGroup(),
-        isSymlink() ? new Path(getSymlink()) : null,
-        (getFullPath(path)).makeQualified(
-            defaultUri, null)); // fully-qualify path
+  @Override
+  public boolean equals(Object o) {
+    // satisfy findbugs
+    return super.equals(o);
   }
+
+  @Override
+  public int hashCode() {
+    // satisfy findbugs
+    return super.hashCode();
+  }
+
+  /**
+   * Resolve the short name of the Path given the URI, parent provided. This
+   * FileStatus reference will not contain a valid Path until it is resolved
+   * by this method.
+   * @param defaultUri FileSystem to fully qualify HDFS path.
+   * @param parent Parent path of this element.
+   * @return Reference to this instance.
+   */
+  public final FileStatus makeQualified(URI defaultUri, Path parent) {
+    // fully-qualify path
+    setPath(getFullPath(parent).makeQualified(defaultUri, null));
+    return this; // API compatibility
+  }
+
 }

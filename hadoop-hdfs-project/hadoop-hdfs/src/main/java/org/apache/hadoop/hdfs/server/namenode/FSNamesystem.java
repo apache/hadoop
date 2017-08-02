@@ -177,6 +177,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.UnknownCryptoProtocolVersionException;
@@ -371,9 +372,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     FileStatus status = null;
     if (stat != null) {
-      Path symlink = stat.isSymlink() ? new Path(stat.getSymlink()) : null;
+      Path symlink = stat.isSymlink()
+          ? new Path(DFSUtilClient.bytes2String(stat.getSymlinkInBytes()))
+          : null;
       Path path = new Path(src);
-      status = new FileStatus(stat.getLen(), stat.isDir(),
+      status = new FileStatus(stat.getLen(), stat.isDirectory(),
           stat.getReplication(), stat.getBlockSize(),
           stat.getModificationTime(),
           stat.getAccessTime(), stat.getPermission(), stat.getOwner(),

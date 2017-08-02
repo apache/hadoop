@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +32,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class ECSchema {
+public final class ECSchema implements Serializable {
+
+  private static final long serialVersionUID = 0x10953aa0;
+
   public static final String NUM_DATA_UNITS_KEY = "numDataUnits";
   public static final String NUM_PARITY_UNITS_KEY = "numParityUnits";
   public static final String CODEC_NAME_KEY = "codec";

@@ -323,6 +323,10 @@
       <!-- protobuf generated code -->
       <Class name="~org\.apache\.hadoop\.tracing\.TraceAdminPB.*"/>
     </Match>
+    <Match>
+      <!-- protobuf generated code -->
+      <Class name="~org\.apache\.hadoop\.fs\.FSProto.*"/>
+    </Match>
 
     <!--
        Manually checked, misses child thread manually syncing on parent's intrinsic lock.

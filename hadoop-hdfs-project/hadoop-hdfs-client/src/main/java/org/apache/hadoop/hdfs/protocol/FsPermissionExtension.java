@@ -27,6 +27,11 @@ import org.apache.hadoop.fs.permission.FsPermission;
  * done for backwards compatibility in case any existing clients assume the
  * value of FsPermission is in a particular range.
  */
+
+/**
+ * @deprecated ACLs, encryption, and erasure coding are managed on FileStatus.
+ */
+@Deprecated
 @InterfaceAudience.Private
 public class FsPermissionExtension extends FsPermission {
   private static final long serialVersionUID = 0x13c298a4;

@@ -23,11 +23,15 @@ import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputValidation;
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 
+import org.apache.hadoop.fs.FSProtos.FileStatusProto;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.fs.protocolPB.PBHelper;
 import org.apache.hadoop.io.Writable;
 
 /** Interface that represents the client side information for a file.
@@ -50,7 +54,31 @@ public class FileStatus implements Writable, Comparable<Object>,
   private String owner;
   private String group;
   private Path symlink;
-  
+  private Set<AttrFlags> attr;
+
+  private enum AttrFlags {
+    HAS_ACL,
+    HAS_CRYPT,
+    HAS_EC,
+  };
+  private static final Set<AttrFlags> NONE = Collections.<AttrFlags>emptySet();
+  private static Set<AttrFlags> flags(boolean acl, boolean crypt, boolean ec) {
+    if (!(acl || crypt || ec)) {
+      return NONE;
+    }
+    EnumSet<AttrFlags> ret = EnumSet.noneOf(AttrFlags.class);
+    if (acl) {
+      ret.add(AttrFlags.HAS_ACL);
+    }
+    if (crypt) {
+      ret.add(AttrFlags.HAS_CRYPT);
+    }
+    if (ec) {
+      ret.add(AttrFlags.HAS_EC);
+    }
+    return ret;
+  }
+
   public FileStatus() { this(0, false, 0, 0, 0, 0, null, null, null, null); }
   
   //We should deprecate this soon?
@@ -79,6 +107,15 @@ public class FileStatus implements Writable, Comparable<Object>,
                     FsPermission permission, String owner, String group, 
                     Path symlink,
                     Path path) {
+    this(length, isdir, block_replication, blocksize, modification_time,
+        access_time, permission, owner, group, symlink, path,
+        false, false, false);
+  }
+
+  public FileStatus(long length, boolean isdir, int block_replication,
+      long blocksize, long modification_time, long access_time,
+      FsPermission permission, String owner, String group, Path symlink,
+      Path path, boolean hasAcl, boolean isEncrypted, boolean isErasureCoded) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -89,7 +126,7 @@ public class FileStatus implements Writable, Comparable<Object>,
       this.permission = permission;
     } else if (isdir) {
       this.permission = FsPermission.getDirDefault();
-    } else if (symlink!=null) {
+    } else if (symlink != null) {
       this.permission = FsPermission.getDefault();
     } else {
       this.permission = FsPermission.getFileDefault();
@@ -98,6 +135,8 @@ public class FileStatus implements Writable, Comparable<Object>,
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;
     this.path = path;
+    attr = flags(hasAcl, isEncrypted, isErasureCoded);
+
     // The variables isdir and symlink indicate the type:
     // 1. isdir implies directory, in which case symlink must be null.
     // 2. !isdir implies a file or symlink, symlink != null implies a
@@ -213,7 +252,7 @@ public class FileStatus implements Writable, Comparable<Object>,
    * @return true if the underlying file or directory has ACLs set.
    */
   public boolean hasAcl() {
-    return permission.getAclBit();
+    return attr.contains(AttrFlags.HAS_ACL);
   }
 
   /**
@@ -222,7 +261,7 @@ public class FileStatus implements Writable, Comparable<Object>,
    * @return true if the underlying file is encrypted.
    */
   public boolean isEncrypted() {
-    return permission.getEncryptedBit();
+    return attr.contains(AttrFlags.HAS_CRYPT);
   }
 
   /**
@@ -231,7 +270,7 @@ public class FileStatus implements Writable, Comparable<Object>,
    * @return true if the underlying file or directory is erasure coded.
    */
   public boolean isErasureCoded() {
-    return permission.getErasureCodedBit();
+    return attr.contains(AttrFlags.HAS_EC);
   }
 
   /**
@@ -304,47 +343,6 @@ public class FileStatus implements Writable, Comparable<Object>,
   public void setSymlink(final Path p) {
     symlink = p;
   }
-  
-  //////////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////////
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Text.writeString(out, getPath().toString(), Text.DEFAULT_MAX_LEN);
-    out.writeLong(getLen());
-    out.writeBoolean(isDirectory());
-    out.writeShort(getReplication());
-    out.writeLong(getBlockSize());
-    out.writeLong(getModificationTime());
-    out.writeLong(getAccessTime());
-    getPermission().write(out);
-    Text.writeString(out, getOwner(), Text.DEFAULT_MAX_LEN);
-    Text.writeString(out, getGroup(), Text.DEFAULT_MAX_LEN);
-    out.writeBoolean(isSymlink());
-    if (isSymlink()) {
-      Text.writeString(out, getSymlink().toString(), Text.DEFAULT_MAX_LEN);
-    }
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    String strPath = Text.readString(in, Text.DEFAULT_MAX_LEN);
-    this.path = new Path(strPath);
-    this.length = in.readLong();
-    this.isdir = in.readBoolean();
-    this.block_replication = in.readShort();
-    blocksize = in.readLong();
-    modification_time = in.readLong();
-    access_time = in.readLong();
-    permission.readFields(in);
-    owner = Text.readString(in, Text.DEFAULT_MAX_LEN);
-    group = Text.readString(in, Text.DEFAULT_MAX_LEN);
-    if (in.readBoolean()) {
-      this.symlink = new Path(Text.readString(in, Text.DEFAULT_MAX_LEN));
-    } else {
-      this.symlink = null;
-    }
-  }
 
   /**
    * Compare this FileStatus to another FileStatus
@@ -377,14 +375,11 @@ public class FileStatus implements Writable, Comparable<Object>,
    */
   @Override
   public boolean equals(Object o) {
-    if (o == null) {
+    if (!(o instanceof FileStatus)) {
       return false;
     }
     if (this == o) {
       return true;
-    }
-    if (!(o instanceof FileStatus)) {
-      return false;
     }
     FileStatus other = (FileStatus)o;
     return this.getPath().equals(other.getPath());
@@ -420,13 +415,66 @@ public class FileStatus implements Writable, Comparable<Object>,
     sb.append("; permission=" + permission);
     sb.append("; isSymlink=" + isSymlink());
     if(isSymlink()) {
-      sb.append("; symlink=" + symlink);
+      try {
+        sb.append("; symlink=" + getSymlink());
+      } catch (IOException e) {
+        throw new RuntimeException("Unexpected exception", e);
+      }
     }
     sb.append("; hasAcl=" + hasAcl());
     sb.append("; isEncrypted=" + isEncrypted());
     sb.append("; isErasureCoded=" + isErasureCoded());
     sb.append("}");
     return sb.toString();
+  }
+
+  /**
+   * Read instance encoded as protobuf from stream.
+   * @param in Input stream
+   * @see PBHelper#convert(FileStatus)
+   * @deprecated Use the {@link PBHelper} and protobuf serialization directly.
+   */
+  @Override
+  @Deprecated
+  public void readFields(DataInput in) throws IOException {
+    int size = in.readInt();
+    if (size < 0) {
+      throw new IOException("Can't read FileStatusProto with negative " +
+          "size of " + size);
+    }
+    byte[] buf = new byte[size];
+    in.readFully(buf);
+    FileStatusProto proto = FileStatusProto.parseFrom(buf);
+    FileStatus other = PBHelper.convert(proto);
+    isdir = other.isDirectory();
+    length = other.getLen();
+    isdir = other.isDirectory();
+    block_replication = other.getReplication();
+    blocksize = other.getBlockSize();
+    modification_time = other.getModificationTime();
+    access_time = other.getAccessTime();
+    setPermission(other.getPermission());
+    setOwner(other.getOwner());
+    setGroup(other.getGroup());
+    setSymlink((other.isSymlink() ? other.getSymlink() : null));
+    setPath(other.getPath());
+    attr = flags(other.hasAcl(), other.isEncrypted(), other.isErasureCoded());
+    assert (isDirectory() && getSymlink() == null) || !isDirectory();
+  }
+
+  /**
+   * Write instance encoded as protobuf to stream.
+   * @param out Output stream
+   * @see PBHelper#convert(FileStatus)
+   * @deprecated Use the {@link PBHelper} and protobuf serialization directly.
+   */
+  @Override
+  @Deprecated
+  public void write(DataOutput out) throws IOException {
+    FileStatusProto proto = PBHelper.convert(this);
+    int size = proto.getSerializedSize();
+    out.writeInt(size);
+    out.write(proto.toByteArray());
   }
 
   @Override

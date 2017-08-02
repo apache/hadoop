@@ -48,6 +48,7 @@ import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1355,7 +1356,8 @@ public class TestFsck {
     byte storagePolicy = 0;
 
     HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
-        blockSize, modTime, accessTime, perms, owner, group, symlink,
+        blockSize, modTime, accessTime, perms,
+        EnumSet.noneOf(HdfsFileStatus.Flags.class), owner, group, symlink,
         path, fileId, numChildren, null, storagePolicy, null);
     Result replRes = new ReplicationResult(conf);
     Result ecRes = new ErasureCodingResult(conf);

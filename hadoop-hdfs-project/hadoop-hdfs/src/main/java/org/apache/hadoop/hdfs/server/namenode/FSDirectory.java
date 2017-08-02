@@ -72,12 +72,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
@@ -135,11 +136,13 @@ public class FSDirectory implements Closeable {
 
   public final static HdfsFileStatus DOT_RESERVED_STATUS =
       new HdfsFileStatus(0, true, 0, 0, 0, 0, new FsPermission((short) 01770),
-          null, null, null, HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
+          EnumSet.noneOf(HdfsFileStatus.Flags.class), null, null, null,
+          HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
           HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
 
   public final static HdfsFileStatus DOT_SNAPSHOT_DIR_STATUS =
-      new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
+      new HdfsFileStatus(0, true, 0, 0, 0, 0, null,
+          EnumSet.noneOf(HdfsFileStatus.Flags.class), null, null, null,
           HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
           HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
 
@@ -383,12 +386,15 @@ public class FSDirectory implements Closeable {
    */
   void createReservedStatuses(long cTime) {
     HdfsFileStatus inodes = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
-        new FsPermission((short) 0770), null, supergroup, null,
+        new FsPermission((short) 0770),
+        EnumSet.noneOf(HdfsFileStatus.Flags.class), null, supergroup, null,
         DOT_INODES, -1L, 0, null,
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
     HdfsFileStatus raw = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
-        new FsPermission((short) 0770), null, supergroup, null, RAW, -1L,
-        0, null, HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+        new FsPermission((short) 0770),
+        EnumSet.noneOf(HdfsFileStatus.Flags.class), null, supergroup, null,
+        RAW, -1L, 0, null,
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
     reservedStatuses = new HdfsFileStatus[] {inodes, raw};
   }
 
