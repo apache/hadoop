@@ -31,7 +31,7 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileStatus implements Writable, Comparable<FileStatus> {
+public class FileStatus implements Writable, Comparable<Object> {
 
   private Path path;
   private long length;
@@ -328,11 +328,25 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
    * @return  a negative integer, zero, or a positive integer as this object
    *   is less than, equal to, or greater than the specified object.
    */
-  @Override
   public int compareTo(FileStatus o) {
     return this.getPath().compareTo(o.getPath());
   }
-  
+
+  /**
+   * Compare this FileStatus to another FileStatus.
+   * This method was added back by HADOOP-14683 to keep binary compatibility.
+   *
+   * @param   o the FileStatus to be compared.
+   * @return  a negative integer, zero, or a positive integer as this object
+   *   is less than, equal to, or greater than the specified object.
+   * @throws ClassCastException if the specified object is not FileStatus
+   */
+  @Override
+  public int compareTo(Object o) {
+    FileStatus other = (FileStatus) o;
+    return compareTo(other);
+  }
+
   /** Compare if this object is equal to another object
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.
