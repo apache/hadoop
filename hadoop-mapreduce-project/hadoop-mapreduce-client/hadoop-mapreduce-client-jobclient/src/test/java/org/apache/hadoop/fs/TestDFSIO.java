@@ -855,7 +855,7 @@ public class TestDFSIO implements Tool {
       long tStart = System.currentTimeMillis();
       sequentialTest(fs, testType, nrBytes, nrFiles);
       long execTime = System.currentTimeMillis() - tStart;
-      String resultLine = "Seq Test exec time sec: " + (float)execTime / 1000;
+      String resultLine = "Seq Test exec time sec: " + msToSecs(execTime);
       LOG.info(resultLine);
       return 0;
     }
@@ -917,6 +917,10 @@ public class TestDFSIO implements Tool {
 
   static float toMB(long bytes) {
     return ((float)bytes)/MEGA;
+  }
+
+  static float msToSecs(long timeMillis) {
+    return timeMillis / 1000.0f;
   }
 
   private boolean checkErasureCodePolicy(String erasureCodePolicyName,
@@ -1051,11 +1055,10 @@ public class TestDFSIO implements Tool {
         "            Date & time: " + new Date(System.currentTimeMillis()),
         "        Number of files: " + tasks,
         " Total MBytes processed: " + df.format(toMB(size)),
-        "      Throughput mb/sec: " + df.format(size * 1000.0 / (time * MEGA)),
-        "Total Throughput mb/sec: " + df.format(toMB(size) / ((float)execTime)),
+        "      Throughput mb/sec: " + df.format(toMB(size) / msToSecs(time)),
         " Average IO rate mb/sec: " + df.format(med),
         "  IO rate std deviation: " + df.format(stdDev),
-        "     Test exec time sec: " + df.format((float)execTime / 1000),
+        "     Test exec time sec: " + df.format(msToSecs(execTime)),
         "" };
 
     PrintStream res = null;
