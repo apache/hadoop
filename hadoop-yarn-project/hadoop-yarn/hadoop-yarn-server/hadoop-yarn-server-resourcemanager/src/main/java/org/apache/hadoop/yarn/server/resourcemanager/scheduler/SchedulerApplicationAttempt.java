@@ -1103,7 +1103,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     try {
       writeLock.lock();
       // recover app scheduling info
-      appSchedulingInfo.recoverContainer(rmContainer);
+      appSchedulingInfo.recoverContainer(rmContainer, node.getPartition());
 
       if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
         return;

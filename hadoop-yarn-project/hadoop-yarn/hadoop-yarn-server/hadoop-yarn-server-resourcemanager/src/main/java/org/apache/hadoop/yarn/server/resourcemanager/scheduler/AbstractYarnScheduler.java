@@ -519,20 +519,10 @@ public abstract class AbstractYarnScheduler
     container.setVersion(status.getVersion());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
-    String labelExpression = status.getNodeLabelExpression();
-    // If NodeLabel is disabled but recovered container has label expression
-    // its better to suppress that and considered as default label.
-    if (!status.getNodeLabelExpression().isEmpty() && !YarnConfiguration
-        .areNodeLabelsEnabled(rmContext.getYarnConfiguration())) {
-      labelExpression = RMNodeLabelsManager.NO_LABEL;
-    }
-
-    RMContainer rmContainer =
-        new RMContainerImpl(container,
-            SchedulerRequestKey.extractFrom(container), attemptId,
-            node.getNodeID(), applications.get(
-            attemptId.getApplicationId()).getUser(), rmContext,
-            status.getCreationTime(), labelExpression);
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), attemptId, node.getNodeID(),
+        applications.get(attemptId.getApplicationId()).getUser(), rmContext,
+        status.getCreationTime(), status.getNodeLabelExpression());
     return rmContainer;
   }
 
