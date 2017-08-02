@@ -352,6 +352,7 @@ Usage:
               [-getDatanodeInfo <datanode_host:ipc_port>]
               [-evictWriters <datanode_host:ipc_port>]
               [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
+              [-listOpenFiles]
               [-help [cmd]]
 
 | COMMAND\_OPTION | Description |
@@ -387,6 +388,7 @@ Usage:
 | `-evictWriters` \<datanode\_host:ipc\_port\> | Make the datanode evict all clients that are writing a block. This is useful if decommissioning is hung due to slow writers. |
 | `-getDatanodeInfo` \<datanode\_host:ipc\_port\> | Get the information about the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo) for the detail. |
 | `-triggerBlockReport` `[-incremental]` \<datanode\_host:ipc\_port\> | Trigger a block report for the given datanode. If 'incremental' is specified, it will be otherwise, it will be a full block report. |
+| `-listOpenFiles` | List all open files currently managed by the NameNode along with client name and client machine accessing them. |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 Runs a HDFS dfsadmin client.

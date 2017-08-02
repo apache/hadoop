@@ -23,9 +23,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.text.StrBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationUtil;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -54,6 +57,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 
@@ -74,6 +79,7 @@ import static org.mockito.Mockito.when;
  * set/clrSpaceQuote are tested in {@link org.apache.hadoop.hdfs.TestQuota}.
  */
 public class TestDFSAdmin {
+  private static final Log LOG = LogFactory.getLog(TestDFSAdmin.class);
   private Configuration conf = null;
   private MiniDFSCluster cluster;
   private DFSAdmin admin;
@@ -475,6 +481,75 @@ public class TestDFSAdmin {
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
       verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, client);
+    }
+  }
+
+  @Test(timeout = 300000L)
+  public void testListOpenFiles() throws Exception {
+    redirectStream();
+
+    final Configuration dfsConf = new HdfsConfiguration();
+    dfsConf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
+    dfsConf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    dfsConf.setLong(DFSConfigKeys.DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES, 5);
+    final Path baseDir = new Path(
+        PathUtils.getTestDir(getClass()).getAbsolutePath(),
+        GenericTestUtils.getMethodName());
+    dfsConf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, baseDir.toString());
+
+    final int numDataNodes = 3;
+    final int numClosedFiles = 25;
+    final int numOpenFiles = 15;
+
+    try(MiniDFSCluster miniCluster = new MiniDFSCluster
+        .Builder(dfsConf)
+        .numDataNodes(numDataNodes).build()) {
+      final short replFactor = 1;
+      final long fileLength = 512L;
+      final FileSystem fs = miniCluster.getFileSystem();
+      final Path parentDir = new Path("/tmp/files/");
+
+      fs.mkdirs(parentDir);
+      HashSet<Path> closedFileSet = new HashSet<>();
+      for (int i = 0; i < numClosedFiles; i++) {
+        Path file = new Path(parentDir, "closed-file-" + i);
+        DFSTestUtil.createFile(fs, file, fileLength, replFactor, 12345L);
+        closedFileSet.add(file);
+      }
+
+      HashMap<Path, FSDataOutputStream> openFilesMap = new HashMap<>();
+      for (int i = 0; i < numOpenFiles; i++) {
+        Path file = new Path(parentDir, "open-file-" + i);
+        DFSTestUtil.createFile(fs, file, fileLength, replFactor, 12345L);
+        FSDataOutputStream outputStream = fs.append(file);
+        openFilesMap.put(file, outputStream);
+      }
+
+      final DFSAdmin dfsAdmin = new DFSAdmin(dfsConf);
+      assertEquals(0, ToolRunner.run(dfsAdmin,
+          new String[]{"-listOpenFiles"}));
+      verifyOpenFilesListing(closedFileSet, openFilesMap);
+
+      for (int count = 0; count < numOpenFiles; count++) {
+        closedFileSet.addAll(DFSTestUtil.closeOpenFiles(openFilesMap, 1));
+        resetStream();
+        assertEquals(0, ToolRunner.run(dfsAdmin,
+            new String[]{"-listOpenFiles"}));
+        verifyOpenFilesListing(closedFileSet, openFilesMap);
+      }
+    }
+  }
+
+  private void verifyOpenFilesListing(HashSet<Path> closedFileSet,
+      HashMap<Path, FSDataOutputStream> openFilesMap) {
+    final String outStr = scanIntoString(out);
+    LOG.info("dfsadmin -listOpenFiles output: \n" + out);
+    for (Path closedFilePath : closedFileSet) {
+      assertThat(outStr, not(containsString(closedFilePath.toString() + "\n")));
+    }
+    for (Path openFilePath : openFilesMap.keySet()) {
+      assertThat(outStr, is(containsString(openFilePath.toString() + "\n")));
     }
   }
 

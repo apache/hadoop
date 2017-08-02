@@ -134,6 +134,8 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
@@ -3084,5 +3086,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   Tracer getTracer() {
     return tracer;
+  }
+
+  /**
+   * Get a remote iterator to the open files list managed by NameNode.
+   *
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
+    checkOpen();
+    return new OpenFilesIterator(namenode, tracer);
   }
 }

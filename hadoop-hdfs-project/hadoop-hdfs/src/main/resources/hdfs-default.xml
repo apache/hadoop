@@ -2683,6 +2683,16 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.namenode.list.openfiles.num.responses</name>
+    <value>1000</value>
+    <description>
+      When listing open files, the maximum number of open files that will be
+      returned in a single batch. Fetching the list incrementally in batches
+      improves namenode performance.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.edekcacheloader.interval.ms</name>
   <value>1000</value>

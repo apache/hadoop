@@ -743,6 +743,22 @@ message GetEditsFromTxidResponseProto {
   required EventsListProto eventsList = 1;
 }
 
+message ListOpenFilesRequestProto {
+  required int64 id = 1;
+}
+
+message OpenFilesBatchResponseProto {
+  required int64 id = 1;
+  required string path = 2;
+  required string clientName = 3;
+  required string clientMachine = 4;
+}
+
+message ListOpenFilesResponseProto {
+  repeated OpenFilesBatchResponseProto entries = 1;
+  required bool hasMore = 2;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -895,4 +911,6 @@ service ClientNamenodeProtocol {
       returns(GetEditsFromTxidResponseProto);
   rpc getQuotaUsage(GetQuotaUsageRequestProto)
       returns(GetQuotaUsageResponseProto);
+  rpc listOpenFiles(ListOpenFilesRequestProto)
+      returns(ListOpenFilesResponseProto);
 }

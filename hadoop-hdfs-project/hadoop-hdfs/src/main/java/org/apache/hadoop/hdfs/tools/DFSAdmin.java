@@ -48,7 +48,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.PathData;
@@ -71,6 +73,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -449,6 +453,7 @@ public class DFSAdmin extends FsShell {
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
     "\t[-metasave filename]\n" +
     "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port>]\n" +
+    "\t[-listOpenFiles]\n" +
     "\t[-help [cmd]]\n";
 
   /**
@@ -848,6 +853,45 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Command to list all the open files currently managed by NameNode.
+   * Usage: hdfs dfsadmin -listOpenFiles
+   *
+   * @throws IOException
+   */
+  public int listOpenFiles() throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
+
+    RemoteIterator<OpenFileEntry> openFilesRemoteIterator;
+    if (isHaEnabled) {
+      ProxyAndInfo<ClientProtocol> proxy = NameNodeProxies.createNonHAProxy(
+          dfsConf, HAUtil.getAddressOfActive(getDFS()), ClientProtocol.class,
+          UserGroupInformation.getCurrentUser(), false);
+      openFilesRemoteIterator = new OpenFilesIterator(proxy.getProxy(),
+          FsTracer.get(dfsConf));
+    } else {
+      openFilesRemoteIterator = dfs.listOpenFiles();
+    }
+    printOpenFiles(openFilesRemoteIterator);
+    return 0;
+  }
+
+  private void printOpenFiles(RemoteIterator<OpenFileEntry> openFilesIterator)
+      throws IOException {
+    System.out.println(String.format("%-20s\t%-20s\t%s", "Client Host",
+          "Client Name", "Open File Path"));
+    while (openFilesIterator.hasNext()) {
+      OpenFileEntry openFileEntry = openFilesIterator.next();
+      System.out.println(String.format("%-20s\t%-20s\t%20s",
+          openFileEntry.getClientMachine(),
+          openFileEntry.getClientName(),
+          openFileEntry.getFilePath()));
+    }
+  }
+
+  /**
    * Command to ask the namenode to set the balancer bandwidth for all of the
    * datanodes.
    * Usage: hdfs dfsadmin -setBalancerBandwidth bandwidth
@@ -1095,6 +1139,10 @@ public class DFSAdmin extends FsShell {
         + "\tIf 'incremental' is specified, it will be an incremental\n"
         + "\tblock report; otherwise, it will be a full block report.\n";
 
+    String listOpenFiles = "-listOpenFiles\n"
+        + "\tList all open files currently managed by the NameNode along\n"
+        + "\twith client name and client machine accessing them.\n";
+
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -1158,6 +1206,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(evictWriters);
     } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
       System.out.println(getDatanodeInfo);
+    } else if ("listOpenFiles".equalsIgnoreCase(cmd)) {
+      System.out.println(listOpenFiles);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1193,6 +1243,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(evictWriters);
       System.out.println(getDatanodeInfo);
       System.out.println(triggerBlockReport);
+      System.out.println(listOpenFiles);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -1748,6 +1799,8 @@ public class DFSAdmin extends FsShell {
     } else if ("-triggerBlockReport".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
+    } else if ("-listOpenFiles".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin [-listOpenFiles]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -1896,6 +1949,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-listOpenFiles".equals(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1975,6 +2033,8 @@ public class DFSAdmin extends FsShell {
         exitCode = reconfig(argv, i);
       } else if ("-triggerBlockReport".equals(cmd)) {
         exitCode = triggerBlockReport(argv);
+      } else if ("-listOpenFiles".equals(cmd)) {
+        exitCode = listOpenFiles();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
