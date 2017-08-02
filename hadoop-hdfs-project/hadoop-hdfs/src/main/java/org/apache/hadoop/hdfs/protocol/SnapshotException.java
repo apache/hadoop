@@ -30,8 +30,4 @@ public class SnapshotException extends IOException {
   public SnapshotException(final Throwable cause) {
     super(cause);
   }
-
-  public SnapshotException(final String message, final Throwable cause) {
-    super(message, cause);
-  }
 }

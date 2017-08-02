@@ -213,25 +213,18 @@ public class LeaseManager {
    *
    * @return Set<INodesInPath>
    */
-  @VisibleForTesting
-  Set<INodesInPath> getINodeWithLeases() throws IOException {
+  public Set<INodesInPath> getINodeWithLeases() {
     return getINodeWithLeases(null);
   }
 
   private synchronized INode[] getINodesWithLease() {
-    List<INode> inodes = new ArrayList<>(leasesById.size());
-    INode currentINode;
+    int inodeCount = 0;
+    INode[] inodes = new INode[leasesById.size()];
     for (long inodeId : leasesById.keySet()) {
-      currentINode = fsnamesystem.getFSDirectory().getInode(inodeId);
-      // A file with an active lease could get deleted, or its
-      // parent directories could get recursively deleted.
-      if (currentINode != null &&
-          currentINode.isFile() &&
-          !fsnamesystem.isFileDeleted(currentINode.asFile())) {
-        inodes.add(currentINode);
-      }
+      inodes[inodeCount] = fsnamesystem.getFSDirectory().getInode(inodeId);
+      inodeCount++;
     }
-    return inodes.toArray(new INode[0]);
+    return inodes;
   }
 
   /**
@@ -244,7 +237,7 @@ public class LeaseManager {
    * @return Set<INodesInPath>
    */
   public Set<INodesInPath> getINodeWithLeases(final INodeDirectory
-      ancestorDir) throws IOException {
+      ancestorDir) {
     assert fsnamesystem.hasReadLock();
     final long startTimeMs = Time.monotonicNow();
     Set<INodesInPath> iipSet = new HashSet<>();
@@ -291,7 +284,7 @@ public class LeaseManager {
       try {
         iipSet.addAll(f.get());
       } catch (Exception e) {
-        throw new IOException("Failed to get files with active leases", e);
+        LOG.warn("INode filter task encountered exception: ", e);
       }
     }
     final long endTimeMs = Time.monotonicNow();
