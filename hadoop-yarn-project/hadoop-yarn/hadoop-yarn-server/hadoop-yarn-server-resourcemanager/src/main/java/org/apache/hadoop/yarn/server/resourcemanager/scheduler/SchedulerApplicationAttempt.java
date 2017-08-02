@@ -779,7 +779,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public synchronized void recoverContainer(SchedulerNode node,
       RMContainer rmContainer) {
     // recover app scheduling info
-    appSchedulingInfo.recoverContainer(rmContainer);
+    appSchedulingInfo.recoverContainer(rmContainer,  node.getPartition());
 
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
       return;
