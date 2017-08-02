@@ -97,12 +97,13 @@ class FSDirSnapshotOp {
       throw new InvalidPathException("Invalid snapshot name: " + snapshotName);
     }
 
-    String snapshotPath = null;
+    String snapshotPath;
     verifySnapshotName(fsd, snapshotName, snapshotRoot);
     fsd.writeLock();
     try {
-      snapshotPath = snapshotManager.createSnapshot(iip, snapshotRoot,
-          snapshotName);
+      snapshotPath = snapshotManager.createSnapshot(
+          fsd.getFSNamesystem().getLeaseManager(),
+          iip, snapshotRoot, snapshotName);
     } finally {
       fsd.writeUnlock();
     }
