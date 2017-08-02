@@ -78,13 +78,27 @@ A special value of `*` implies that all users are allowed to access the service.
 
 If access control list is not defined for a service, the value of `security.service.authorization.default.acl` is applied. If `security.service.authorization.default.acl` is not defined, `*` is applied.
 
-* Blocked Access Control ListsIn some cases, it is required to specify blocked access control list for a service. This specifies the list of users and groups who are not authorized to access the service. The format of the blocked access control list is same as that of access control list. The blocked access control list can be specified via `$HADOOP_CONF_DIR/hadoop-policy.xml`. The property name is derived by suffixing with ".blocked".
+### Blocked Access Control Lists
 
-    Example: The property name of blocked access control list for `security.client.protocol.acl>> will be <<<security.client.protocol.acl.blocked`
+In some cases, it is required to specify blocked access control list for a service. This specifies the list of users and groups who are not authorized to access the service. The format of the blocked access control list is same as that of access control list. The blocked access control list can be specified via `$HADOOP_CONF_DIR/hadoop-policy.xml`. The property name is derived by suffixing with ".blocked".
 
-    For a service, it is possible to specify both an access control list and a blocked control list. A user is authorized to access the service if the user is in the access control and not in the blocked access control list.
+Example: The property name of blocked access control list for `security.client.protocol.acl` will be `security.client.protocol.acl.blocked`
 
-    If blocked access control list is not defined for a service, the value of `security.service.authorization.default.acl.blocked` is applied. If `security.service.authorization.default.acl.blocked` is not defined, empty blocked access control list is applied.
+For a service, it is possible to specify both an access control list and a blocked control list. A user is authorized to access the service if the user is in the access control and not in the blocked access control list.
+
+If blocked access control list is not defined for a service, the value of `security.service.authorization.default.acl.blocked` is applied. If `security.service.authorization.default.acl.blocked` is not defined, empty blocked access control list is applied.
+
+### Access Control using Lists of IP Addresses, Host Names and IP Ranges
+
+Access to a service can be controlled based on the ip address of the client accessing the service. It is possible to restrict access to a service from a set of machines by specifying a list of ip addresses, host names and ip ranges. The property name for each service is derived from the corresponding acl's property name. If the property name of acl is security.client.protocol.acl, property name for the hosts list will be security.client.protocol.hosts.
+
+If hosts list is not defined for a service, the value of `security.service.authorization.default.hosts` is applied. If `security.service.authorization.default.hosts` is not defined, `*` is applied.
+
+It is possible to specify a blocked list of hosts. Only those machines which are in the hosts list, but not in the blocked hosts list will be granted access to the service. The property name is derived by suffixing with ".blocked".
+
+Example: The property name of blocked hosts list for `security.client.protocol.hosts` will be `security.client.protocol.hosts.blocked`
+
+If blocked hosts list is not defined for a service, the value of `security.service.authorization.default.hosts.blocked` is applied. If `security.service.authorization.default.hosts.blocked` is not defined, empty blocked hosts list is applied.
 
 ### Refreshing Service Level Authorization Configuration
 
@@ -99,16 +113,6 @@ Refresh the service-level authorization configuration for the ResourceManager:
        $ bin/yarn rmadmin -refreshServiceAcl
 
 Of course, one can use the `security.refresh.policy.protocol.acl` property in `$HADOOP_CONF_DIR/hadoop-policy.xml` to restrict access to the ability to refresh the service-level authorization configuration to certain users/groups.
-
-* Access Control using list of ip addresses, host names and ip rangesAccess to a service can be controlled based on the ip address of the client accessing the service. It is possible to restrict access to a service from a set of machines by specifying a list of ip addresses, host names and ip ranges. The property name for each service is derived from the corresponding acl's property name. If the property name of acl is security.client.protocol.acl, property name for the hosts list will be security.client.protocol.hosts.
-
-    If hosts list is not defined for a service, the value of `security.service.authorization.default.hosts` is applied. If `security.service.authorization.default.hosts` is not defined, `*` is applied.
-
-    It is possible to specify a blocked list of hosts. Only those machines which are in the hosts list, but not in the blocked hosts list will be granted access to the service. The property name is derived by suffixing with ".blocked".
-
-    Example: The property name of blocked hosts list for `security.client.protocol.hosts` will be `security.client.protocol.hosts.blocked`
-
-    If blocked hosts list is not defined for a service, the value of `security.service.authorization.default.hosts.blocked` is applied. If `security.service.authorization.default.hosts.blocked` is not defined, empty blocked hosts list is applied.
 
 ### Examples
 
