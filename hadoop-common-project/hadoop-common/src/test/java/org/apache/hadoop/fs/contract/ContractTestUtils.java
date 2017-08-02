@@ -70,7 +70,8 @@ public class ContractTestUtils extends Assert {
    * Assert that a property in the property set matches the expected value.
    * @param props property set
    * @param key property name
-   * @param expected expected value. If null, the property must not be in the set
+   * @param expected expected value. If null, the property must not be in the
+   *                 set
    */
   public static void assertPropertyEquals(Properties props,
                                           String key,
@@ -232,7 +233,7 @@ public class ContractTestUtils extends Assert {
     assertTrue("not a file " + statText, stat.isFile());
     assertEquals("wrong length " + statText, original.length, stat.getLen());
     byte[] bytes = readDataset(fs, path, original.length);
-    compareByteArrays(original,bytes,original.length);
+    compareByteArrays(original, bytes, original.length);
   }
 
   /**
@@ -251,7 +252,7 @@ public class ContractTestUtils extends Assert {
     stm.readFully(out);
     byte[] expected = Arrays.copyOfRange(fileContents, seekOff,
                                          seekOff + toRead);
-    compareByteArrays(expected, out,toRead);
+    compareByteArrays(expected, out, toRead);
   }
 
   /**
@@ -268,11 +269,11 @@ public class ContractTestUtils extends Assert {
     assertEquals("Number of bytes read != number written",
                         len, received.length);
     int errors = 0;
-    int first_error_byte = -1;
+    int firstErrorByte = -1;
     for (int i = 0; i < len; i++) {
       if (original[i] != received[i]) {
         if (errors == 0) {
-          first_error_byte = i;
+          firstErrorByte = i;
         }
         errors++;
       }
@@ -285,8 +286,8 @@ public class ContractTestUtils extends Assert {
       // the range either side of the first error to print
       // this is a purely arbitrary number, to aid user debugging
       final int overlap = 10;
-      for (int i = Math.max(0, first_error_byte - overlap);
-           i < Math.min(first_error_byte + overlap, len);
+      for (int i = Math.max(0, firstErrorByte - overlap);
+           i < Math.min(firstErrorByte + overlap, len);
            i++) {
         byte actual = received[i];
         byte expected = original[i];
@@ -479,7 +480,7 @@ public class ContractTestUtils extends Assert {
   public static void downgrade(String message, Throwable failure) {
     LOG.warn("Downgrading test " + message, failure);
     AssumptionViolatedException ave =
-      new AssumptionViolatedException(failure, null);
+        new AssumptionViolatedException(failure, null);
     throw ave;
   }
 
@@ -523,9 +524,9 @@ public class ContractTestUtils extends Assert {
                                          int expected) throws IOException {
     FileStatus status = fs.getFileStatus(path);
     assertEquals(
-      "Wrong file length of file " + path + " status: " + status,
-      expected,
-      status.getLen());
+        "Wrong file length of file " + path + " status: " + status,
+        expected,
+        status.getLen());
   }
 
   /**
@@ -711,7 +712,8 @@ public class ContractTestUtils extends Assert {
    */
   public static String ls(FileSystem fileSystem, Path path) throws IOException {
     if (path == null) {
-      //surfaces when someone calls getParent() on something at the top of the path
+      // surfaces when someone calls getParent() on something at the top of the
+      // path
       return "/";
     }
     FileStatus[] stats;
@@ -893,7 +895,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Test for the host being an OSX machine
+   * Test for the host being an OSX machine.
    * @return true if the JVM thinks that is running on OSX
    */
   public static boolean isOSX() {
@@ -916,8 +918,9 @@ public class ContractTestUtils extends Assert {
           break;
         }
       }
-      if (mismatch)
+      if (mismatch) {
         break;
+      }
     }
     assertFalse("File content of file is not as expected at offset " + idx,
                 mismatch);
@@ -1027,7 +1030,9 @@ public class ContractTestUtils extends Assert {
    * @throws IOException
    *    thrown if an I/O error occurs while writing or reading the test file
    */
-  public static void createAndVerifyFile(FileSystem fs, Path parent, final long fileSize)
+  public static void createAndVerifyFile(FileSystem fs,
+                                         Path parent,
+                                         final long fileSize)
       throws IOException {
     int testBufferSize = fs.getConf()
         .getInt(IO_CHUNK_BUFFER_SIZE, DEFAULT_IO_CHUNK_BUFFER_SIZE);
