@@ -1629,7 +1629,8 @@ public class BlockManager implements BlockStatsMXBean {
         (pendingReplicaNum > 0 || isPlacementPolicySatisfied(block));
   }
 
-  private ReplicationWork scheduleReplication(BlockInfo block, int priority) {
+  @VisibleForTesting
+  ReplicationWork scheduleReplication(BlockInfo block, int priority) {
     // skip abandoned block or block reopened for append
     if (block.isDeleted() || !block.isCompleteOrCommitted()) {
       // remove from neededReplications
@@ -1647,6 +1648,7 @@ public class BlockManager implements BlockStatsMXBean {
         numReplicas);
     if (srcNode == null) { // block can not be replicated from any node
       LOG.debug("Block " + block + " cannot be repl from any node");
+      NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
       return null;
     }
 
@@ -1659,6 +1661,7 @@ public class BlockManager implements BlockStatsMXBean {
       neededReplications.remove(block, priority);
       blockLog.debug("BLOCK* Removing {} from neededReplications as" +
           " it has enough replicas", block);
+      NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
       return null;
     }
 
@@ -3356,7 +3359,9 @@ public class BlockManager implements BlockStatsMXBean {
     BlockInfo storedBlock = getStoredBlock(block);
     if (storedBlock != null &&
         block.getGenerationStamp() == storedBlock.getGenerationStamp()) {
-      pendingReplications.decrement(storedBlock, node);
+      if(pendingReplications.decrement(storedBlock, node)) {
+        NameNode.getNameNodeMetrics().incSuccessfulReReplications();
+      }
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);

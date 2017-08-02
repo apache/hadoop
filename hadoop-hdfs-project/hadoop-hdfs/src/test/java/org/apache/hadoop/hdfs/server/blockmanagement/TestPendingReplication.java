@@ -17,13 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.TimeoutException;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -44,6 +52,8 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -470,6 +480,82 @@ public class TestPendingReplication {
       assertEquals(pendingNum, 0L);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test the metric counters of the re-replication process.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  @Test (timeout = 300000)
+  public void testReplicationCounter() throws IOException,
+      InterruptedException, TimeoutException {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
+    MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf).numDataNodes(
+        DATANODE_COUNT).build();
+    tmpCluster.waitActive();
+    FSNamesystem fsn = tmpCluster.getNamesystem(0);
+    fsn.writeLock();
+
+    try {
+      BlockManager bm = fsn.getBlockManager();
+      BlocksMap blocksMap = bm.blocksMap;
+
+      // create three blockInfo below, blockInfo0 will success, blockInfo1 will
+      // time out, blockInfo2 will fail the replication.
+      BlockCollection bc0 = Mockito.mock(BlockCollection.class);
+      BlockInfo blockInfo0 = new BlockInfoContiguous((short) 3);
+      blockInfo0.setBlockId(0);
+
+      BlockCollection bc1 = Mockito.mock(BlockCollection.class);
+      BlockInfo blockInfo1 = new BlockInfoContiguous((short) 3);
+      blockInfo1.setBlockId(1);
+
+      BlockCollection bc2 = Mockito.mock(BlockCollection.class);
+      BlockInfo blockInfo2 = new BlockInfoContiguous((short) 3);
+      blockInfo2.setBlockId(2);
+
+      blocksMap.addBlockCollection(blockInfo0, bc0);
+      blocksMap.addBlockCollection(blockInfo1, bc1);
+      blocksMap.addBlockCollection(blockInfo2, bc2);
+
+      PendingReplicationBlocks pending = bm.pendingReplications;
+
+      MetricsRecordBuilder rb = getMetrics("NameNodeActivity");
+      assertCounter("SuccessfulReReplications", 0L, rb);
+      assertCounter("NumTimesReReplicationNotScheduled", 0L, rb);
+      assertCounter("TimeoutReReplications", 0L, rb);
+
+      // add block0 and block1 to pending queue.
+      pending.increment(blockInfo0);
+      pending.increment(blockInfo1);
+
+      // call addBlock on block0 will make it successfully replicated.
+      // not calling addBlock on block1 will make it timeout later.
+      DatanodeStorageInfo[] storageInfos =
+          DFSTestUtil.createDatanodeStorageInfos(1);
+      bm.addBlock(storageInfos[0], blockInfo0, null);
+
+      // call schedule replication on blockInfo2 will fail the re-replication.
+      // because there is no source data to replicate from.
+      bm.scheduleReplication(blockInfo2, 0);
+
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          MetricsRecordBuilder rb = getMetrics("NameNodeActivity");
+          return getLongCounter("SuccessfulReReplications", rb) == 1 &&
+              getLongCounter("NumTimesReReplicationNotScheduled", rb) == 1 &&
+              getLongCounter("TimeoutReReplications", rb) == 1;
+        }
+      }, 100, 60000);
+    } finally {
+      tmpCluster.shutdown();
+      fsn.writeUnlock();
     }
   }
 }
