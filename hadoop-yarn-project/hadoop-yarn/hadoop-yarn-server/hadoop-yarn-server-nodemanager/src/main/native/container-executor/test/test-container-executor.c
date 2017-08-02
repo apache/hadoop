@@ -368,7 +368,7 @@ void test_delete_app() {
   sprintf(buffer, "chmod 000 %s/who/let", container_dir);
   run(buffer);
 
-  // delete container directory
+  // delete application directory
   int ret = delete_as_user(yarn_username, app_dir, NULL);
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
@@ -390,6 +390,13 @@ void test_delete_app() {
     printf("FAIL: accidently deleted file %s\n", dont_touch);
     exit(1);
   }
+  // verify attempt to delete a nonexistent directory does not fail
+  ret = delete_as_user(yarn_username, app_dir, NULL);
+  if (ret != 0) {
+    printf("FAIL: return code from delete_as_user is %d\n", ret);
+    exit(1);
+  }
+
   free(app_dir);
   free(container_dir);
   free(dont_touch);
@@ -770,6 +777,83 @@ static void expect_type(const char *path, int mode) {
   }
 }
 
+static void test_delete_race_internal() {
+  char* app_dir = get_app_directory(TEST_ROOT "/local-2", yarn_username, "app_1");
+  char* container_dir = get_container_work_directory(TEST_ROOT "/local-2",
+                          yarn_username, "app_1", "container_1");
+  char buffer[100000];
+
+  sprintf(buffer, "mkdir -p %s/a/b/c/d", container_dir);
+  run(buffer);
+  int i;
+  for (i = 0; i < 100; ++i) {
+    sprintf(buffer, "%s/a/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/c/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/c/d/f%d", container_dir, i);
+    touch_or_die(buffer);
+  }
+
+  pid_t child = fork();
+  if (child == -1) {
+    printf("FAIL: fork failed\n");
+    exit(1);
+  } else if (child == 0) {
+    // delete container directory
+    char * dirs[] = {app_dir, 0};
+    int ret = delete_as_user(yarn_username, "container_1" , dirs);
+    if (ret != 0) {
+      printf("FAIL: return code from delete_as_user is %d\n", ret);
+      exit(1);
+    }
+    exit(0);
+  } else {
+    // delete application directory
+    int ret = delete_as_user(yarn_username, app_dir, NULL);
+    int status = 0;
+    if (waitpid(child, &status, 0) == -1) {
+      printf("FAIL: waitpid %" PRId64 " failed - %s\n", (int64_t)child, strerror(errno));
+      exit(1);
+    }
+    if (!WIFEXITED(status)) {
+      printf("FAIL: child %" PRId64 " didn't exit - %d\n", (int64_t)child, status);
+      exit(1);
+    }
+    if (WEXITSTATUS(status) != 0) {
+      printf("FAIL: child %" PRId64 " exited with bad status %d\n",
+             (int64_t)child, WEXITSTATUS(status));
+      exit(1);
+    }
+    if (ret != 0) {
+      printf("FAIL: return code from delete_as_user is %d\n", ret);
+      exit(1);
+    }
+  }
+
+  // check to make sure the app directory is gone
+  if (access(app_dir, R_OK) == 0) {
+    printf("FAIL: didn't delete the directory - %s\n", app_dir);
+    exit(1);
+  }
+
+  free(app_dir);
+  free(container_dir);
+}
+
+void test_delete_race() {
+  if (initialize_user(yarn_username, local_dirs)) {
+    printf("FAIL: failed to initialize user %s\n", yarn_username);
+    exit(1);
+  }
+  int i;
+  for (i = 0; i < 100; ++i) {
+    test_delete_race_internal();
+  }
+}
+
 int recursive_unlink_children(const char *name);
 
 void test_recursive_unlink_children() {
@@ -926,6 +1010,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting delete_app()\n");
   test_delete_app();
+
+  printf("\nTesting delete race\n");
+  test_delete_race();
 
   printf("\nTesting sanitize docker commands()\n");
   test_sanitize_docker_command();
