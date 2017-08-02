@@ -161,8 +161,8 @@ These are common configurations that should appear in the **conf/yarn-site.xml**
 |:---- |:---- |
 |`yarn.federation.enabled` | `true` | Whether federation is enabled or not |
 |`yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore` | The type of state-store to use. |
-|`yarn.federation.state-store.sql.url` | `jdbc:sqlserver://<host>:<port>;databaseName=FederationStateStore` | For SQLFederationStateStore the name of the DB where the state is stored. |
-|`yarn.federation.state-store.sql.jdbc-class` | `com.microsoft.sqlserver.jdbc.SQLServerDataSource` | For SQLFederationStateStore the jdbc class to use. |
+|`yarn.federation.state-store.sql.url` | `jdbc:mysql://<host>:<port>/FederationStateStore` | For SQLFederationStateStore the name of the DB where the state is stored. |
+|`yarn.federation.state-store.sql.jdbc-class` | `com.mysql.jdbc.jdbc2.optional.MysqlDataSource` | For SQLFederationStateStore the jdbc class to use. |
 |`yarn.federation.state-store.sql.username` | `<dbuser>` | For SQLFederationStateStore the username for the DB connection. |
 |`yarn.federation.state-store.sql.password` | `<dbpass>` | For SQLFederationStateStore the password for the DB connection. |
 |`yarn.resourcemanager.cluster-id` | `<unique-subcluster-id>` | The unique subcluster identifier for this RM (same as the one used for HA). |
@@ -238,7 +238,19 @@ Optional:
 
 ###State-Store:
 
-Currently, the only supported implementation of the state-store is Microsoft SQL Server. After [setting up](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) such an instance of SQL Server, set up the database for use by the federation system. This can be done by running the following SQL files in the database: **sbin/FederationStateStore/SQLServer/FederationStateStoreStoreProcs.sql** and **sbin/FederationStateStore/SQLServer/FederationStateStoreStoreTables.sql**
+Currently, we support only SQL based implementation of state-store (ZooKeeper is in the works), i.e. either MySQL or Microsoft SQL Server.
+
+For MySQL, one must download the latest jar version 5.x from [MVN Repository](https://mvnrepository.com/artifact/mysql/mysql-connector-java) and add it to the CLASSPATH.
+Then the DB schema is created by executing the following SQL scripts in the database:
+1. **sbin/FederationStateStore/MySQL/FederationStateStoreDatabase.sql**.
+2. **sbin/FederationStateStore/MySQL/FederationStateStoreUser.sql**.
+3. **sbin/FederationStateStore/MySQL/FederationStateStoreTables.sql**.
+4. **sbin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql**.
+In the same directory we provide scripts to drop the Stored Procedures, the Tables, the User and the Database.
+**Note:** the FederationStateStoreUser.sql defines a default user/password for the DB that you are **highly encouraged** to set this to a proper strong password.
+
+For SQL-Server, the process is similar, but the jdbc driver is already included in the pom (license allows it).
+SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 
 Running a Sample Job
 --------------------
