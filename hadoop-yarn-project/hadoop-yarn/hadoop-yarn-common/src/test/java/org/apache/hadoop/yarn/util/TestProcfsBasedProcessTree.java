@@ -236,7 +236,7 @@ public class TestProcfsBasedProcessTree {
       "vmem for the gone-process is " + p.getVirtualMemorySize()
           + " . It should be UNAVAILABLE(-1).",
           p.getVirtualMemorySize() == UNAVAILABLE);
-    Assert.assertTrue(p.toString().equals("[ ]"));
+    Assert.assertEquals("[ ]", p.toString());
   }
 
   protected ProcfsBasedProcessTree createProcessTree(String pid) {
