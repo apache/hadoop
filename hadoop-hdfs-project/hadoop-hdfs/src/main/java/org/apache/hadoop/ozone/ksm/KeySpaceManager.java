@@ -229,6 +229,7 @@ public class KeySpaceManager extends ServiceRuntimeInfo
       ksmRpcServer.stop();
       metadataManager.stop();
       httpServer.stop();
+      metrics.unRegister();
       unregisterMXBean();
     } catch (Exception e) {
       LOG.error("Key Space Manager stop failed.", e);
