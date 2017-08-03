@@ -214,7 +214,15 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `PendingDataNodeMessageCount` | (HA-only) Current number of pending block-related messages for later processing in the standby NameNode |
 | `MillisSinceLastLoadedEdits` | (HA-only) Time in milliseconds since the last time standby NameNode load edit log. In active NameNode, set to 0 |
 | `BlockCapacity` | Current number of block capacity |
+| `NumLiveDataNodes` | Number of datanodes which are currently live |
+| `NumDeadDataNodes` | Number of datanodes which are currently dead |
+| `NumDecomLiveDataNodes` | Number of datanodes which have been decommissioned and are now live |
+| `NumDecomDeadDataNodes` | Number of datanodes which have been decommissioned and are now dead |
+| `NumDecommissioningDataNodes` | Number of datanodes in decommissioning state |
+| `VolumeFailuresTotal` | Total number of volume failures across all Datanodes |
+| `EstimatedCapacityLostTotal` | An estimate of the total capacity lost due to volume failures |
 | `StaleDataNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
+| `NumStaleStorages` | Number of storages marked as content stale (after NameNode restart/failover before first block report is received) |
 | `TotalFiles` | Deprecated: Use FilesTotal instead |
 | `MissingReplOneBlocks` | Current number of missing blocks with replication factor 1 |
 | `NumFilesUnderConstruction` | Current number of files under construction |
