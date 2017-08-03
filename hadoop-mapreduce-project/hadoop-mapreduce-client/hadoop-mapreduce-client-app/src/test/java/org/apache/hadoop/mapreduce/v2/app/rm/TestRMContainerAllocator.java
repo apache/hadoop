@@ -327,8 +327,7 @@ public class TestRMContainerAllocator {
     for(TaskAttemptContainerAssignedEvent event : assigned) {
       if(event.getTaskAttemptID().equals(event3.getAttemptID())) {
         assigned.remove(event);
-        Assert.assertTrue(
-                    event.getContainer().getNodeId().getHost().equals("h3"));
+        Assert.assertEquals("h3", event.getContainer().getNodeId().getHost());
         break;
       }
     }
