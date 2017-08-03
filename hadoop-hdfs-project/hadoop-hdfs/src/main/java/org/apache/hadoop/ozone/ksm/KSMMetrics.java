@@ -32,6 +32,9 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 @InterfaceAudience.Private
 @Metrics(about="Key Space Manager Metrics", context="dfs")
 public class KSMMetrics {
+  private static final String SOURCE_NAME =
+      KSMMetrics.class.getSimpleName();
+
   // KSM request type op metrics
   private @Metric MutableCounterLong numVolumeOps;
   private @Metric MutableCounterLong numBucketOps;
@@ -76,7 +79,7 @@ public class KSMMetrics {
 
   public static KSMMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register("KSMMetrics",
+    return ms.register(SOURCE_NAME,
         "Key Space Manager Metrics",
         new KSMMetrics());
   }
@@ -364,5 +367,10 @@ public class KSMMetrics {
   @VisibleForTesting
   public long getNumVolumeListFails() {
     return numVolumeListFails.value();
+  }
+
+  public void unRegister() {
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    ms.unregisterSource(SOURCE_NAME);
   }
 }
