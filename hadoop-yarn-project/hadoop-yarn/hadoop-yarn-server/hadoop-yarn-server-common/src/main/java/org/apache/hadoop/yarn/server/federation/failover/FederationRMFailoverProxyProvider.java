@@ -72,8 +72,7 @@ public class FederationRMFailoverProxyProvider<T>
     this.rmProxy = proxy;
     this.protocol = proto;
     this.rmProxy.checkAllowedProtocols(this.protocol);
-    String clusterId =
-        configuration.get(YarnConfiguration.RM_CLUSTER_ID);
+    String clusterId = configuration.get(YarnConfiguration.RM_CLUSTER_ID);
     Preconditions.checkNotNull(clusterId, "Missing RM ClusterId");
     this.subClusterId = SubClusterId.newInstance(clusterId);
     this.facade = facade.getInstance();
@@ -197,16 +196,17 @@ public class FederationRMFailoverProxyProvider<T>
   }
 
   private void closeInternal(T currentProxy) {
-    if ((currentProxy != null) && (currentProxy instanceof Closeable)) {
-      try {
-        ((Closeable) currentProxy).close();
-      } catch (IOException e) {
-        LOG.warn("Exception while trying to close proxy", e);
+    if (currentProxy != null) {
+      if (currentProxy instanceof Closeable) {
+        try {
+          ((Closeable) currentProxy).close();
+        } catch (IOException e) {
+          LOG.warn("Exception while trying to close proxy", e);
+        }
+      } else {
+        RPC.stopProxy(currentProxy);
       }
-    } else {
-      RPC.stopProxy(currentProxy);
     }
-
   }
 
   /**
