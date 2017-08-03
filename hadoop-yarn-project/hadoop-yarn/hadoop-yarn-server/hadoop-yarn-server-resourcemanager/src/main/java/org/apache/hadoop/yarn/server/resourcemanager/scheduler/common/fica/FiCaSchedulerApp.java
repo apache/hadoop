@@ -426,6 +426,19 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           // accepted & confirmed, it will become RESERVED state
           if (schedulerContainer.getRmContainer().getState()
               == RMContainerState.RESERVED) {
+            // Check if node currently reserved by other application, there may
+            // be some outdated proposals in async-scheduling environment
+            if (schedulerContainer.getRmContainer() != schedulerContainer
+                .getSchedulerNode().getReservedContainer()) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Try to re-reserve a container, but node "
+                    + schedulerContainer.getSchedulerNode()
+                    + " is already reserved by another container"
+                    + schedulerContainer.getSchedulerNode()
+                    .getReservedContainer().getContainerId());
+              }
+              return false;
+            }
             // Set reReservation == true
             reReservation = true;
           } else {
