@@ -1344,8 +1344,8 @@ public class TestClientRMService {
     ReservationRequests reservationRequests =
         response.getReservationAllocationState().get(0)
             .getReservationDefinition().getReservationRequests();
-    Assert.assertTrue(
-        reservationRequests.getInterpreter().toString().equals("R_ALL"));
+    Assert.assertEquals("R_ALL",
+        reservationRequests.getInterpreter().toString());
     Assert.assertTrue(reservationRequests.getReservationResources().get(0)
         .getDuration() == duration);
 

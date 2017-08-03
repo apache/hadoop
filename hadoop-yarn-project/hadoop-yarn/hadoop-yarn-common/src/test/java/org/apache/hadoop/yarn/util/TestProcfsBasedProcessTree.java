@@ -240,7 +240,7 @@ public class TestProcfsBasedProcessTree {
       "vmem (old API) for the gone-process is " + p.getCumulativeVmem()
           + " . It should be UNAVAILABLE(-1).",
           p.getCumulativeVmem() == UNAVAILABLE);
-    Assert.assertTrue(p.toString().equals("[ ]"));
+    Assert.assertEquals("[ ]", p.toString());
   }
 
   protected ProcfsBasedProcessTree createProcessTree(String pid) {

@@ -489,9 +489,8 @@ public class TestYarnClient {
     }
 
     reports = client.getApplications(appTypes, appStates);
-    Assert.assertEquals(reports.size(), 1);
-    Assert
-    .assertTrue((reports.get(0).getApplicationType().equals("NON-YARN")));
+    Assert.assertEquals(1, reports.size());
+    Assert.assertEquals("NON-YARN", reports.get(0).getApplicationType());
     for (ApplicationReport report : reports) {
       Assert.assertTrue(expectedReports.contains(report));
     }
@@ -1501,8 +1500,8 @@ public class TestYarnClient {
       ReservationRequests reservationRequests =
           response.getReservationAllocationState().get(0)
               .getReservationDefinition().getReservationRequests();
-      Assert.assertTrue(
-          reservationRequests.getInterpreter().toString().equals("R_ALL"));
+      Assert.assertEquals("R_ALL",
+          reservationRequests.getInterpreter().toString());
       Assert.assertTrue(reservationRequests.getReservationResources().get(0)
           .getDuration() == duration);
     } finally {
