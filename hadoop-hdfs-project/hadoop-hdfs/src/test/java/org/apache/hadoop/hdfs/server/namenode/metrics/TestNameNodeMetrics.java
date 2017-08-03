@@ -24,10 +24,15 @@ import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.base.Joiner;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -46,6 +51,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
@@ -84,6 +91,13 @@ public class TestNameNodeMetrics {
         DFS_REPLICATION_INTERVAL);
     CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
         DFS_REPLICATION_INTERVAL);
+    // Set it long enough to essentially disable unless we manually call it
+    // Used for decommissioning DataNode metrics
+    CONF.setInt(MiniDFSCluster.DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY,
+        9999999);
+    // For checking failed volume metrics
+    CONF.setInt(DFSConfigKeys.DFS_DF_INTERVAL_KEY, 1000);
+    CONF.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
     CONF.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, 
         "" + PERCENTILES_INTERVAL);
     // Enable stale DataNodes checking
@@ -97,6 +111,8 @@ public class TestNameNodeMetrics {
   private final Random rand = new Random();
   private FSNamesystem namesystem;
   private BlockManager bm;
+  // List of temporary files on local FileSystem to be cleaned up
+  private List<Path> tempFiles;
 
   private static Path getTestPath(String fileName) {
     return new Path(TEST_ROOT_DIR_PATH, fileName);
@@ -109,6 +125,7 @@ public class TestNameNodeMetrics {
     namesystem = cluster.getNamesystem();
     bm = namesystem.getBlockManager();
     fs = cluster.getFileSystem();
+    tempFiles = new ArrayList<>();
   }
   
   @After
@@ -120,6 +137,9 @@ public class TestNameNodeMetrics {
       assertQuantileGauges("GetGroups1s", rb);
     }
     cluster.shutdown();
+    for (Path p : tempFiles) {
+      FileUtils.deleteQuietly(new File(p.toUri().getPath()));
+    }
   }
   
   /** create a file with a length of <code>fileLen</code> */
@@ -196,7 +216,113 @@ public class TestNameNodeMetrics {
         .getBlockManager());
     assertGauge("StaleDataNodes", 0, getMetrics(NS_METRICS));
   }
-  
+
+  /**
+   * Test metrics associated with volume failures.
+   */
+  @Test
+  public void testVolumeFailures() throws Exception {
+    assertGauge("VolumeFailuresTotal", 0, getMetrics(NS_METRICS));
+    assertGauge("EstimatedCapacityLostTotal", 0L, getMetrics(NS_METRICS));
+    DataNode dn = cluster.getDataNodes().get(0);
+    FsVolumeSpi fsVolume =
+        DataNodeTestUtils.getFSDataset(dn).getVolumes().get(0);
+    File dataDir = new File(fsVolume.getBasePath());
+    long capacity = ((FsVolumeImpl) fsVolume).getCapacity();
+    DataNodeTestUtils.injectDataDirFailure(dataDir);
+    long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
+    dn.checkDiskErrorAsync();
+    while (dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
+      Thread.sleep(100);
+    }
+    DataNodeTestUtils.triggerHeartbeat(dn);
+    BlockManagerTestUtil.checkHeartbeat(bm);
+    assertGauge("VolumeFailuresTotal", 1, getMetrics(NS_METRICS));
+    assertGauge("EstimatedCapacityLostTotal", capacity, getMetrics(NS_METRICS));
+  }
+
+  /**
+   * Test metrics associated with liveness and decommission status of DataNodes.
+   */
+  @Test
+  public void testDataNodeLivenessAndDecom() throws Exception {
+    Path hostFileDir = new Path(MiniDFSCluster.getBaseDirectory(), "hosts");
+    FileSystem localFs = FileSystem.getLocal(CONF);
+    localFs.mkdirs(hostFileDir);
+    Path includeFile = new Path(hostFileDir, "include");
+    Path excludeFile = new Path(hostFileDir, "exclude");
+    tempFiles.add(includeFile);
+    tempFiles.add(excludeFile);
+    CONF.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+    CONF.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
+
+    List<DataNode> dataNodes = cluster.getDataNodes();
+    DatanodeDescriptor[] dnDescriptors = new DatanodeDescriptor[DATANODE_COUNT];
+    String[] dnAddresses = new String[DATANODE_COUNT];
+    for (int i = 0; i < DATANODE_COUNT; i++) {
+      dnDescriptors[i] = bm.getDatanodeManager()
+          .getDatanode(dataNodes.get(i).getDatanodeId());
+      dnAddresses[i] = dnDescriptors[i].getXferAddr();
+    }
+    // First put all DNs into include
+    DFSTestUtil.writeFile(localFs, includeFile,
+        Joiner.on("\n").join(dnAddresses));
+    DFSTestUtil.writeFile(localFs, excludeFile, "");
+    bm.getDatanodeManager().refreshNodes(CONF);
+    assertGauge("NumDecomLiveDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge("NumLiveDataNodes", DATANODE_COUNT, getMetrics(NS_METRICS));
+
+    // Now decommission one DN
+    DFSTestUtil.writeFile(localFs, excludeFile, dnAddresses[0]);
+    bm.getDatanodeManager().refreshNodes(CONF);
+    assertGauge("NumDecommissioningDataNodes", 1, getMetrics(NS_METRICS));
+    BlockManagerTestUtil.recheckDecommissionState(bm.getDatanodeManager());
+    assertGauge("NumDecommissioningDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge("NumDecomLiveDataNodes", 1, getMetrics(NS_METRICS));
+    assertGauge("NumLiveDataNodes", DATANODE_COUNT, getMetrics(NS_METRICS));
+
+    // Now kill all DNs by expiring their heartbeats
+    for (int i = 0; i < DATANODE_COUNT; i++) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dataNodes.get(i), true);
+      long expireInterval = CONF.getLong(
+          DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+          DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT) * 2L
+          + CONF.getLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+          DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 10 * 1000L;
+      DFSTestUtil.resetLastUpdatesWithOffset(dnDescriptors[i],
+          -(expireInterval + 1));
+    }
+    BlockManagerTestUtil.checkHeartbeat(bm);
+    assertGauge("NumDecomLiveDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge("NumDecomDeadDataNodes", 1, getMetrics(NS_METRICS));
+    assertGauge("NumLiveDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge("NumDeadDataNodes", DATANODE_COUNT, getMetrics(NS_METRICS));
+
+    // Now remove the decommissioned DN altogether
+    String[] includeHosts = new String[dnAddresses.length - 1];
+    for (int i = 0; i < includeHosts.length; i++) {
+      includeHosts[i] = dnAddresses[i + 1];
+    }
+    DFSTestUtil.writeFile(localFs, includeFile,
+        Joiner.on("\n").join(includeHosts));
+    // Just init to a nonexistent host to clear out the previous exclusion
+    DFSTestUtil.writeFile(localFs, excludeFile, "");
+    bm.getDatanodeManager().refreshNodes(CONF);
+    assertGauge("NumDecomLiveDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge("NumDecomDeadDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge("NumLiveDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge("NumDeadDataNodes", DATANODE_COUNT - 1, getMetrics(NS_METRICS));
+
+    // Finally mark the remaining DNs as live again
+    for (int i = 1; i < dataNodes.size(); i++) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dataNodes.get(i), false);
+      DFSTestUtil.resetLastUpdatesWithOffset(dnDescriptors[i], 0);
+    }
+    BlockManagerTestUtil.checkHeartbeat(bm);
+    assertGauge("NumLiveDataNodes", DATANODE_COUNT - 1, getMetrics(NS_METRICS));
+    assertGauge("NumDeadDataNodes", 0, getMetrics(NS_METRICS));
+  }
+
   /** Test metrics associated with addition of a file */
   @Test
   public void testFileAdd() throws Exception {

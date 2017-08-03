@@ -12,6 +12,9 @@ Release 2.7.5 - UNRELEASED
 
     HDFS-8797. WebHdfsFileSystem creates too many connections for pread. (jing9)
 
+    HDFS-12131. Add some of the FSNamesystem JMX values as metrics.
+    (Erik Krogen via wang, shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
