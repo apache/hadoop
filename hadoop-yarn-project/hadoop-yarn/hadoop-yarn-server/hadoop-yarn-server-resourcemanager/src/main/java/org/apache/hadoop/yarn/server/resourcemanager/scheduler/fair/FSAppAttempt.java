@@ -554,6 +554,15 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     this.minshareStarvation = Resources.none();
   }
 
+  /**
+   * Get last computed minshare starvation.
+   *
+   * @return last computed minshare starvation
+   */
+  Resource getMinshareStarvation() {
+    return minshareStarvation;
+  }
+
   void trackContainerForPreemption(RMContainer container) {
     synchronized (preemptionVariablesLock) {
       if (containersToPreempt.add(container)) {
@@ -842,7 +851,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
 
     // The desired container won't fit here, so reserve
+    // Reserve only, if app does not wait for preempted resources on the node,
+    // otherwise we may end up with duplicate reservations
     if (isReservable(capability) &&
+        !node.isPreemptedForApp(this) &&
         reserve(pendingAsk.getPerAllocationResource(), node, reservedContainer, type, schedulerKey)) {
       updateAMDiagnosticMsg(capability, " exceeds the available resources of "
           + "the node and the request is reserved)");
@@ -1108,7 +1120,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
 
     if (!starved ||
-        now - lastTimeAtFairShare < getQueue().getFairSharePreemptionTimeout()) {
+        now - lastTimeAtFairShare <
+            getQueue().getFairSharePreemptionTimeout()) {
       fairshareStarvation = Resources.none();
     } else {
       // The app has been starved for longer than preemption-timeout.
@@ -1136,7 +1149,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   /**
-   * Is application starved for fairshare or minshare
+   * Is application starved for fairshare or minshare.
    */
   boolean isStarved() {
     return isStarvedForFairShare() || !Resources.isNone(minshareStarvation);
