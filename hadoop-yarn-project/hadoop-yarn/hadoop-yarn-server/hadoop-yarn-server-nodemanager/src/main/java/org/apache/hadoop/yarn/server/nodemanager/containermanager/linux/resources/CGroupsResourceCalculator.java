@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.SysInfoLinux;
@@ -48,6 +50,8 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     Continue,
     Exit
   }
+  protected static final Log LOG = LogFactory
+      .getLog(CGroupsResourceCalculator.class);
   private static final String PROCFS = "/proc";
   static final String CGROUP = "cgroup";
   static final String CPU_STAT = "cpuacct.stat";
@@ -67,7 +71,6 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
   private File memswStat;
 
   private final long jiffyLengthMs;
-  private BigInteger processTotalJiffies = BigInteger.ZERO;
   private final CpuTimeTracker cpuTimeTracker;
   private Clock clock;
 
@@ -119,10 +122,13 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
 
   @Override
   public float getCpuUsagePercent() {
-    readTotalProcessJiffies();
-    cpuTimeTracker.updateElapsedJiffies(
-        processTotalJiffies,
-        clock.getTime());
+    try {
+      cpuTimeTracker.updateElapsedJiffies(
+          readTotalProcessJiffies(),
+          clock.getTime());
+    } catch (YarnException e) {
+      LOG.debug(e.getMessage());
+    }
     return cpuTimeTracker.getCpuTrackerUsagePercent();
   }
 
@@ -131,9 +137,11 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     if (jiffyLengthMs < 0) {
       return UNAVAILABLE;
     }
-    readTotalProcessJiffies();
-    return
-        processTotalJiffies.longValue() * jiffyLengthMs;
+    try {
+      return readTotalProcessJiffies().longValue() * jiffyLengthMs;
+    } catch (YarnException e) {
+      return UNAVAILABLE;
+    }
   }
 
   @Override
@@ -180,8 +188,11 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
             + "Linux.");
         return false;
       }
-      if (ResourceHandlerModule.getCGroupsHandler() == null) {
-        LOG.info("CGroupsResourceCalculator requires enabling CGroups");
+      if (ResourceHandlerModule.getCGroupsHandler() == null ||
+          ResourceHandlerModule.getCpuResourceHandler() == null ||
+          ResourceHandlerModule.getMemoryResourceHandler() == null) {
+        LOG.info("CGroupsResourceCalculator requires enabling CGroups" +
+            "cpu and memory");
         return false;
       }
     } catch (SecurityException se) {
@@ -210,7 +221,7 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     return UNAVAILABLE;
   }
 
-  private void readTotalProcessJiffies() {
+  private BigInteger readTotalProcessJiffies() throws YarnException{
     try {
       final BigInteger[] totalCPUTimeJiffies = new BigInteger[1];
       totalCPUTimeJiffies[0] = BigInteger.ZERO;
@@ -225,7 +236,7 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
         }
         return Result.Continue;
       });
-      processTotalJiffies = totalCPUTimeJiffies[0];
+      return totalCPUTimeJiffies[0];
     } catch (YarnException e) {
       synchronized (LOCK) {
         if (firstError) {
@@ -233,6 +244,7 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
           firstError = false;
         }
       }
+      throw new YarnException("Cannot read process jiffies", e);
     }
   }
 
@@ -291,39 +303,23 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
   private void processFile(File file, Function<String, Result> processLine)
       throws YarnException {
     // Read "procfsDir/<pid>/stat" file - typically /proc/<pid>/stat
-    BufferedReader in;
-    InputStreamReader fReader;
-    try {
-      fReader = new InputStreamReader(
-          new FileInputStream(
-              file), Charset.forName("UTF-8"));
-      in = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
-      throw new YarnException("The process vanished in the interim " + pid, f);
-    }
-
-    try {
-      String str;
-      while ((str = in.readLine()) != null) {
-        Result result = processLine.apply(str);
-        if (result == Result.Exit) {
-          return;
-        }
-      }
-    } catch (IOException io) {
-      throw new YarnException("Error reading the stream " + io, io);
-    } finally {
-      // Close the streams
-      try {
-        fReader.close();
+    try (InputStreamReader fReader = new InputStreamReader(
+        new FileInputStream(file), Charset.forName("UTF-8"))) {
+      try (BufferedReader in = new BufferedReader(fReader)) {
         try {
-          in.close();
-        } catch (IOException i) {
-          LOG.warn("Error closing the stream " + in, i);
+          String str;
+          while ((str = in.readLine()) != null) {
+            Result result = processLine.apply(str);
+            if (result == Result.Exit) {
+              return;
+            }
+          }
+        } catch (IOException io) {
+          throw new YarnException("Error reading the stream " + io, io);
         }
-      } catch (IOException i) {
-        LOG.warn("Error closing the stream " + fReader, i);
       }
+    } catch (IOException f) {
+      throw new YarnException("The process vanished in the interim " + pid, f);
     }
   }
 

@@ -52,12 +52,12 @@ public class TestResourceHandlerModule {
       //This resourceHandler should be non-null only if network as a resource
       //is explicitly enabled
       OutboundBandwidthResourceHandler resourceHandler = ResourceHandlerModule
-          .getOutboundBandwidthResourceHandler(emptyConf);
+          .initOutboundBandwidthResourceHandler(emptyConf);
       Assert.assertNull(resourceHandler);
 
       //When network as a resource is enabled this should be non-null
       resourceHandler = ResourceHandlerModule
-          .getOutboundBandwidthResourceHandler(networkEnabledConf);
+          .initOutboundBandwidthResourceHandler(networkEnabledConf);
       Assert.assertNotNull(resourceHandler);
 
       //Ensure that outbound bandwidth resource handler is present in the chain
@@ -78,13 +78,13 @@ public class TestResourceHandlerModule {
   public void testDiskResourceHandler() throws Exception {
 
     DiskResourceHandler handler =
-        ResourceHandlerModule.getDiskResourceHandler(emptyConf);
+        ResourceHandlerModule.initDiskResourceHandler(emptyConf);
     Assert.assertNull(handler);
 
     Configuration diskConf = new YarnConfiguration();
     diskConf.setBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED, true);
 
-    handler = ResourceHandlerModule.getDiskResourceHandler(diskConf);
+    handler = ResourceHandlerModule.initDiskResourceHandler(diskConf);
     Assert.assertNotNull(handler);
 
     ResourceHandlerChain resourceHandlerChain =
