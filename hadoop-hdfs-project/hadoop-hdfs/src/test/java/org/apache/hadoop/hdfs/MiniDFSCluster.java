@@ -148,6 +148,8 @@ public class MiniDFSCluster implements AutoCloseable {
   public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
+  public static final String  DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY
+      = DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY + ".testing";
 
   // Changing this default may break some tests that assume it is 2.
   private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
@@ -818,7 +820,9 @@ public class MiniDFSCluster implements AutoCloseable {
       int safemodeExtension = conf.getInt(
           DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
       conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
-      conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
+      int decommissionInterval = conf.getInt(
+          DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY, 3);
+      conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, decommissionInterval);
       if (!useConfiguredTopologyMappingClass) {
         conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
             StaticMapping.class, DNSToSwitchMapping.class);
