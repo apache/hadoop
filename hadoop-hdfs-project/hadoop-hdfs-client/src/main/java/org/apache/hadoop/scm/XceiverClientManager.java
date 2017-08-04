@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.scm;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Callable;
@@ -53,7 +54,7 @@ import static org.apache.hadoop.scm.ScmConfigKeys
  * without reestablishing connection. But the connection will be closed if
  * not being used for a period of time.
  */
-public class XceiverClientManager {
+public class XceiverClientManager implements Closeable {
 
   //TODO : change this to SCM configuration class
   private final Configuration conf;
@@ -89,6 +90,7 @@ public class XceiverClientManager {
                 // Mark the entry as evicted
                 XceiverClientSpi info = removalNotification.getValue();
                 info.setEvicted();
+                info.close();
               }
             }
           }).build();

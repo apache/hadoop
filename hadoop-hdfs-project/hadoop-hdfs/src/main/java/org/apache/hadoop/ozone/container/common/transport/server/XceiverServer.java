@@ -97,6 +97,9 @@ public final class XceiverServer implements XceiverServerSpi {
 
   @Override
   public void stop() {
+    if (storageContainer != null) {
+      storageContainer.shutdown();
+    }
     if (bossGroup != null) {
       bossGroup.shutdownGracefully();
     }

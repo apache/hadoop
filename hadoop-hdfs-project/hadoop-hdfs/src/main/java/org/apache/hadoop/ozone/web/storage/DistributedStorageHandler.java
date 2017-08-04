@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.web.storage;
 import com.google.common.base.Strings;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset
     .LengthInputStream;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
@@ -496,8 +497,8 @@ public final class DistributedStorageHandler implements StorageHandler {
    */
   @Override
   public void close() {
-    if(xceiverClientManager != null) {
-      xceiverClientManager.close();
-    }
+    IOUtils.cleanupWithLogger(LOG, xceiverClientManager);
+    IOUtils.cleanupWithLogger(LOG, keySpaceManagerClient);
+    IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
   }
 }

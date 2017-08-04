@@ -21,10 +21,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -610,8 +610,9 @@ public class StorageContainerManager
     }
 
     unregisterMXBean();
-    IOUtils.closeQuietly(scmContainerManager);
-    IOUtils.closeQuietly(scmBlockManager);
+    IOUtils.cleanupWithLogger(LOG, scmContainerManager);
+    IOUtils.cleanupWithLogger(LOG, scmBlockManager);
+    IOUtils.cleanupWithLogger(LOG, scmNodeManager);
   }
 
   /**
