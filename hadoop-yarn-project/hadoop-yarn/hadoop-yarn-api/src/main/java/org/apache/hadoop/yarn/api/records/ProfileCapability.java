@@ -162,10 +162,10 @@ public abstract class ProfileCapability {
 
     if (capability.getProfileCapabilityOverride() != null &&
         !capability.getProfileCapabilityOverride().equals(none)) {
-      for (Map.Entry<String, ResourceInformation> entry : capability
-          .getProfileCapabilityOverride().getResources().entrySet()) {
-        if (entry.getValue() != null && entry.getValue().getValue() >= 0) {
-          resource.setResourceInformation(entry.getKey(), entry.getValue());
+      for (ResourceInformation entry : capability
+          .getProfileCapabilityOverride().getResources()) {
+        if (entry != null && entry.getValue() >= 0) {
+          resource.setResourceInformation(entry.getName(), entry);
         }
       }
     }
