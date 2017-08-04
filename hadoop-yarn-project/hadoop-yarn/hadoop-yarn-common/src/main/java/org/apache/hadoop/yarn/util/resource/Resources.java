@@ -18,30 +18,31 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.impl.BaseResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
 
 @InterfaceAudience.LimitedPrivate({ "YARN", "MapReduce" })
 @Unstable
 public class Resources {
 
+  private static final Log LOG =
+      LogFactory.getLog(Resources.class);
+
   /**
    * Helper class to create a resource with a fixed value for all resource
    * types. For example, a NONE resource which returns 0 for any resource type.
    */
-  static class FixedValueResource extends Resource {
+  static class FixedValueResource extends BaseResource {
 
-    private Map<String, ResourceInformation> resources;
     private long resourceValue;
     private String name;
 
@@ -53,7 +54,7 @@ public class Resources {
     FixedValueResource(String rName, long value) {
       this.resourceValue = value;
       this.name = rName;
-      resources = initResourceMap();
+      initResourceMap();
     }
 
     private int resourceValueToInt() {
@@ -96,31 +97,6 @@ public class Resources {
     }
 
     @Override
-    public Map<String, ResourceInformation> getResources() {
-      return Collections.unmodifiableMap(this.resources);
-    }
-
-    @Override
-    public ResourceInformation getResourceInformation(String resource)
-        throws YarnException {
-      if (resources.containsKey(resource)) {
-        ResourceInformation value = this.resources.get(resource);
-        ResourceInformation ret = ResourceInformation.newInstance(value);
-        ret.setValue(resourceValue);
-        return ret;
-      }
-      throw new YarnException("" + resource + " not found");
-    }
-
-    @Override
-    public Long getResourceValue(String resource) throws YarnException {
-      if (resources.containsKey(resource)) {
-        return resourceValue;
-      }
-      throw new YarnException("" + resource + " not found");
-    }
-
-    @Override
     public void setResourceInformation(String resource,
         ResourceInformation resourceInformation)
         throws ResourceNotFoundException {
@@ -133,24 +109,24 @@ public class Resources {
       throw new RuntimeException(name + " cannot be modified!");
     }
 
-    private Map<String, ResourceInformation> initResourceMap() {
-      Map<String, ResourceInformation> tmp = new HashMap<>();
-      Map<String, ResourceInformation> types = ResourceUtils.getResourceTypes();
+    private void initResourceMap() {
+      ResourceInformation[] types = ResourceUtils.getResourceTypesArray();
       if (types != null) {
-        for (Map.Entry<String, ResourceInformation> entry : types.entrySet()) {
-          tmp.put(entry.getKey(),
-              ResourceInformation.newInstance(entry.getValue()));
-          tmp.get(entry.getKey()).setValue(resourceValue);
+        resources = new ResourceInformation[types.length];
+        readOnlyResources = new ResourceInformation[types.length];
+        for (int index = 0; index < types.length; index++) {
+          resources[index] = ResourceInformation.newInstance(types[index]);
+          resources[index].setValue(resourceValue);
+
+          // this is a fix for getVirtualCores returning an int
+          if (resourceValue > Integer.MAX_VALUE && ResourceInformation.VCORES
+              .getName().equals(resources[index].getName())) {
+            resources[index].setValue((long) Integer.MAX_VALUE);
+          }
         }
       }
-      // this is a fix for getVirtualCores returning an int
-      if (resourceValue > Integer.MAX_VALUE) {
-        tmp.get(ResourceInformation.VCORES.getName())
-            .setValue((long) Integer.MAX_VALUE);
-      }
-      return tmp;
+      readOnlyResources = Arrays.copyOf(resources, resources.length);
     }
-
   }
 
   public static Resource createResource(int memory) {
@@ -197,17 +173,19 @@ public class Resources {
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
-    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : lhs.getResources()) {
+      String name = entry.getName();
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry.getValue();
-        long convertedRhs = UnitsConversionUtil
-            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
-                rhsValue.getValue());
+        ResourceInformation lhsValue = entry;
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
         lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
       }
     }
@@ -219,17 +197,19 @@ public class Resources {
   }
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
-    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : lhs.getResources()) {
+      String name = entry.getName();
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry.getValue();
-        long convertedRhs = UnitsConversionUtil
-            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
-                rhsValue.getValue());
+        ResourceInformation lhsValue = entry;
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
         lhs.setResourceValue(name, lhsValue.getValue() - convertedRhs);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
       }
     }
@@ -263,10 +243,9 @@ public class Resources {
   }
 
   public static Resource multiplyTo(Resource lhs, double by) {
-    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
-      ResourceInformation lhsValue = entry.getValue();
+    for (ResourceInformation entry : lhs.getResources()) {
+      String name = entry.getName();
+      ResourceInformation lhsValue = entry;
       lhs.setResourceValue(name, (long) (lhsValue.getValue() * by));
     }
     return lhs;
@@ -282,17 +261,21 @@ public class Resources {
    */
   public static Resource multiplyAndAddTo(
       Resource lhs, Resource rhs, double by) {
-    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : lhs.getResources()) {
+      String name = entry.getName();
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry.getValue();
-        long convertedRhs = (long) (UnitsConversionUtil
-            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
-                rhsValue.getValue()) * by);
+        ResourceInformation lhsValue = entry;
+
+        long convertedRhs = (long) (((rhsValue.getUnits()
+            .equals(lhsValue.getUnits()))
+                ? rhsValue.getValue()
+                : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                    lhsValue.getUnits(), rhsValue.getValue()))
+            * by);
         lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
       }
     }
@@ -311,10 +294,9 @@ public class Resources {
   
   public static Resource multiplyAndRoundDown(Resource lhs, double by) {
     Resource out = clone(lhs);
-    for (Map.Entry<String, ResourceInformation> entry : out.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
-      ResourceInformation lhsValue = entry.getValue();
+    for (ResourceInformation entry : out.getResources()) {
+      String name = entry.getName();
+      ResourceInformation lhsValue = entry;
       out.setResourceValue(name, (long) (lhsValue.getValue() * by));
     }
     return out;
@@ -416,19 +398,21 @@ public class Resources {
   }
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
-    for (Map.Entry<String, ResourceInformation> entry : smaller.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : smaller.getResources()) {
+      String name = entry.getName();
       try {
         ResourceInformation rhsValue = bigger.getResourceInformation(name);
-        ResourceInformation lhsValue = entry.getValue();
-        long convertedRhs = UnitsConversionUtil
-            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
-                rhsValue.getValue());
+        ResourceInformation lhsValue = entry;
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
         if(lhsValue.getValue() > convertedRhs) {
           return false;
         }
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
         return false;
       }
     }
@@ -442,19 +426,21 @@ public class Resources {
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     Resource ret = createResource(0);
-    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : lhs.getResources()) {
+      String name = entry.getName();
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry.getValue();
-        long convertedRhs = UnitsConversionUtil
-            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
-                rhsValue.getValue());
+        ResourceInformation lhsValue = entry;
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
         ResourceInformation outInfo =
             lhsValue.getValue() < convertedRhs ? lhsValue : rhsValue;
         ret.setResourceInformation(name, outInfo);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
       }
     }
@@ -463,19 +449,21 @@ public class Resources {
   
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
     Resource ret = createResource(0);
-    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : lhs.getResources()) {
+      String name = entry.getName();
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry.getValue();
-        long convertedRhs = UnitsConversionUtil
-            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
-                rhsValue.getValue());
+        ResourceInformation lhsValue = entry;
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
         ResourceInformation outInfo =
             lhsValue.getValue() > convertedRhs ? lhsValue : rhsValue;
         ret.setResourceInformation(name, outInfo);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
       }
     }

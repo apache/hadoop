@@ -276,13 +276,17 @@ public class TestResourceUtils {
       String resourceFile = entry.getKey();
       ResourceUtils.resetNodeResources();
       File dest;
-      File source =
-          new File(conf.getClassLoader().getResource(resourceFile).getFile());
+      File source = new File(
+          conf.getClassLoader().getResource(resourceFile).getFile());
       dest = new File(source.getParent(), "node-resources.xml");
       FileUtils.copyFile(source, dest);
-      Map<String, ResourceInformation> actual =
-          ResourceUtils.getNodeResourceInformation(conf);
-      Assert.assertEquals(entry.getValue().getResources(), actual);
+      Map<String, ResourceInformation> actual = ResourceUtils
+          .getNodeResourceInformation(conf);
+      Assert.assertEquals(actual.size(),
+          entry.getValue().getResources().length);
+      for (ResourceInformation resInfo : entry.getValue().getResources()) {
+        Assert.assertEquals(resInfo, actual.get(resInfo.getName()));
+      }
       dest.delete();
     }
   }
