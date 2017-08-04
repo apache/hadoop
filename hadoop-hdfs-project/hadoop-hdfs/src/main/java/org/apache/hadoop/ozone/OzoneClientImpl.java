@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -562,8 +563,8 @@ public class OzoneClientImpl implements OzoneClient, Closeable {
 
   @Override
   public void close() throws IOException {
-    if(xceiverClientManager != null) {
-      xceiverClientManager.close();
-    }
+    IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
+    IOUtils.cleanupWithLogger(LOG, keySpaceManagerClient);
+    IOUtils.cleanupWithLogger(LOG, xceiverClientManager);
   }
 }

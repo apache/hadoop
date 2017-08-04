@@ -30,6 +30,7 @@ import java.util.Map;
 import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
@@ -179,11 +180,8 @@ public final class ObjectStoreHandler implements Closeable {
   public void close() {
     LOG.info("Closing ObjectStoreHandler.");
     storageHandler.close();
-    if (this.storageContainerLocationClient != null) {
-      this.storageContainerLocationClient.close();
-    }
-    if (this.scmBlockLocationClient != null) {
-      this.scmBlockLocationClient.close();
-    }
+    IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
+    IOUtils.cleanupWithLogger(LOG, scmBlockLocationClient);
+    IOUtils.cleanupWithLogger(LOG, keySpaceManagerClient);
   }
 }
