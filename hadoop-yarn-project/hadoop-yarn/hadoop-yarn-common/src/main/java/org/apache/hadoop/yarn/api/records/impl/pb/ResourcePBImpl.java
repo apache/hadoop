@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.impl.BaseResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
@@ -33,24 +34,19 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceInformationProto;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.Collections;
 
 
 @Private
 @Unstable
-public class ResourcePBImpl extends Resource {
+public class ResourcePBImpl extends BaseResource {
 
   private static final Log LOG = LogFactory.getLog(ResourcePBImpl.class);
 
   ResourceProto proto = ResourceProto.getDefaultInstance();
   ResourceProto.Builder builder = null;
   boolean viaProto = false;
-
-  private Map<String, ResourceInformation> resources;
-  private Map<String, ResourceInformation> readOnlyResources;
-
 
   // call via ProtoUtils.convertToProtoFormat(Resource)
   static ResourceProto getProto(Resource r) {
@@ -72,8 +68,6 @@ public class ResourcePBImpl extends Resource {
   public ResourcePBImpl(ResourceProto proto) {
     this.proto = proto;
     viaProto = true;
-    this.readOnlyResources = null;
-    this.resources = null;
     initResources();
   }
 
@@ -101,11 +95,13 @@ public class ResourcePBImpl extends Resource {
   public long getMemorySize() {
     // memory should always be present
     initResources();
-    ResourceInformation ri =
-        this.getResourceInformation(ResourceInformation.MEMORY_MB.getName());
-    return UnitsConversionUtil
-        .convert(ri.getUnits(), ResourceInformation.MEMORY_MB.getUnits(),
-            ri.getValue());
+    ResourceInformation ri = resources[MandatoryResources.MEMORY.getId()];
+
+    if (ri.getUnits().isEmpty()) {
+      return ri.getValue();
+    }
+    return UnitsConversionUtil.convert(ri.getUnits(),
+        ResourceInformation.MEMORY_MB.getUnits(), ri.getValue());
   }
 
   @Override
@@ -117,23 +113,20 @@ public class ResourcePBImpl extends Resource {
   @Override
   public void setMemorySize(long memory) {
     maybeInitBuilder();
-    getResourceInformation(ResourceInformation.MEMORY_MB.getName())
-        .setValue(memory);
+    getResourceInformation(MEMORY).setValue(memory);
   }
 
   @Override
   public int getVirtualCores() {
     // vcores should always be present
     initResources();
-    return this.getResourceValue(ResourceInformation.VCORES.getName())
-        .intValue();
+    return (int) resources[MandatoryResources.VCORES.getId()].getValue();
   }
 
   @Override
   public void setVirtualCores(int vCores) {
     maybeInitBuilder();
-    getResourceInformation(ResourceInformation.VCORES.getName())
-        .setValue(vCores);
+    getResourceInformation(VCORES).setValue(vCores);
   }
 
   private void initResources() {
@@ -142,6 +135,7 @@ public class ResourcePBImpl extends Resource {
     }
     ResourceProtoOrBuilder p = viaProto ? proto : builder;
     initResourcesMap();
+    Map<String, Integer> indexMap = ResourceUtils.getResourceTypeIndex();
     for (ResourceInformationProto entry : p.getResourceValueMapList()) {
       ResourceTypes type =
           entry.hasType() ? ProtoUtils.convertFromProtoFormat(entry.getType()) :
@@ -150,14 +144,16 @@ public class ResourcePBImpl extends Resource {
       long value = entry.hasValue() ? entry.getValue() : 0L;
       ResourceInformation ri = ResourceInformation
           .newInstance(entry.getKey(), units, value, type, 0L, Long.MAX_VALUE);
-      if (resources.containsKey(ri.getName())) {
-        resources.get(ri.getName()).setResourceType(ri.getResourceType());
-        resources.get(ri.getName()).setUnits(ri.getUnits());
-        resources.get(ri.getName()).setValue(value);
-      } else {
+      Integer index = indexMap.get(entry.getKey());
+      if (index == null) {
         LOG.warn("Got unknown resource type: " + ri.getName() + "; skipping");
+      } else {
+        resources[index].setResourceType(ri.getResourceType());
+        resources[index].setUnits(ri.getUnits());
+        resources[index].setValue(value);
       }
     }
+    readOnlyResources = Arrays.copyOf(resources, resources.length);
     this.setMemorySize(p.getMemory());
     this.setVirtualCores(p.getVirtualCores());
   }
@@ -173,79 +169,67 @@ public class ResourcePBImpl extends Resource {
     if (!resource.equals(resourceInformation.getName())) {
       resourceInformation.setName(resource);
     }
-    initResources();
-    if (resources.containsKey(resource)) {
-      ResourceInformation.copy(resourceInformation, resources.get(resource));
-    }
+    ResourceInformation storedResourceInfo = getResourceInformation(resource);
+    ResourceInformation.copy(resourceInformation, storedResourceInfo);
   }
 
   @Override
   public void setResourceValue(String resource, Long value)
       throws ResourceNotFoundException {
     maybeInitBuilder();
-    initResources();
     if (resource == null) {
       throw new IllegalArgumentException("resource type object cannot be null");
     }
-    if (resources == null || (!resources.containsKey(resource))) {
-      throw new ResourceNotFoundException(
-          "Resource " + resource + " not found");
-    }
-    resources.get(resource).setValue(value);
+    getResourceInformation(resource).setValue(value);
   }
 
   @Override
-  public Map<String, ResourceInformation> getResources() {
+  public ResourceInformation[] getResources() {
     initResources();
-    return readOnlyResources;
+    return super.getResources();
   }
 
   @Override
-  public ResourceInformation getResourceInformation(String resource) {
+  public ResourceInformation getResourceInformation(String resource)
+      throws ResourceNotFoundException {
     initResources();
-    if (this.resources.containsKey(resource)) {
-      return this.resources.get(resource);
-    }
-    throw new ResourceNotFoundException("Could not find entry for " + resource);
+    return super.getResourceInformation(resource);
   }
 
   @Override
-  public Long getResourceValue(String resource) {
+  public long getResourceValue(String resource)
+      throws ResourceNotFoundException {
     initResources();
-    if (this.resources.containsKey(resource)) {
-      return this.resources.get(resource).getValue();
-    }
-    throw new ResourceNotFoundException("Could not find entry for " + resource);
+    return super.getResourceValue(resource);
   }
 
   private void initResourcesMap() {
     if (resources == null) {
-      resources = new HashMap<>();
-      Map<String, ResourceInformation> types = ResourceUtils.getResourceTypes();
+      ResourceInformation[] types = ResourceUtils.getResourceTypesArray();
       if (types == null) {
         throw new YarnRuntimeException(
             "Got null return value from ResourceUtils.getResourceTypes()");
       }
-      for (Map.Entry<String, ResourceInformation> entry : types.entrySet()) {
-        resources.put(entry.getKey(),
-            ResourceInformation.newInstance(entry.getValue()));
+
+      resources = new ResourceInformation[types.length];
+      readOnlyResources = new ResourceInformation[types.length];
+      for (ResourceInformation entry : types) {
+        int index = ResourceUtils.getResourceTypeIndex().get(entry.getName());
+        resources[index] = ResourceInformation.newInstance(entry);
       }
-      readOnlyResources = Collections.unmodifiableMap(resources);
     }
   }
 
   synchronized private void mergeLocalToBuilder() {
     builder.clearResourceValueMap();
-    if (resources != null && !resources.isEmpty()) {
-      for (Map.Entry<String, ResourceInformation> entry :
-          resources.entrySet()) {
-        ResourceInformationProto.Builder e =
-            ResourceInformationProto.newBuilder();
-        e.setKey(entry.getKey());
-        e.setUnits(entry.getValue().getUnits());
-        e.setType(
-            ProtoUtils.converToProtoFormat(entry.getValue().getResourceType()));
-        e.setValue(entry.getValue().getValue());
+    if(resources != null && resources.length != 0) {
+      for (ResourceInformation resInfo : resources) {
+        ResourceInformationProto.Builder e = ResourceInformationProto
+            .newBuilder();
+        e.setKey(resInfo.getName());
+        e.setUnits(resInfo.getUnits());
+        e.setType(ProtoUtils.converToProtoFormat(resInfo.getResourceType()));
+        e.setValue(resInfo.getValue());
         builder.addResourceValueMap(e);
       }
     }
