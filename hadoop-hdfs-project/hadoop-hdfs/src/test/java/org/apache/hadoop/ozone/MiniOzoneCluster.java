@@ -293,6 +293,9 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     private Boolean ozoneEnabled = true;
     private Boolean waitForChillModeFinish = true;
     private Boolean randomContainerPort = true;
+    // Use relative smaller number of handlers for testing
+    private int numOfKsmHandlers = 20;
+    private int numOfScmHandlers = 20;
 
     /**
      * Creates a new Builder.
@@ -361,6 +364,16 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       return this;
     }
 
+    public Builder setNumOfKSMHandlers(int numOfHandlers) {
+      numOfKsmHandlers = numOfHandlers;
+      return this;
+    }
+
+    public Builder setNumOfSCMHandlers(int numOfHandlers) {
+      numOfScmHandlers = numOfHandlers;
+      return this;
+    }
+
     public String getPath() {
       return path;
     }
@@ -384,6 +397,10 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+
+      // Configure KSM and SCM handlers
+      conf.setInt(ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY, numOfScmHandlers);
+      conf.setInt(KSMConfigKeys.OZONE_KSM_HANDLER_COUNT_KEY, numOfKsmHandlers);
 
       // Use random ports for ozone containers in mini cluster,
       // in order to launch multiple container servers per node.
