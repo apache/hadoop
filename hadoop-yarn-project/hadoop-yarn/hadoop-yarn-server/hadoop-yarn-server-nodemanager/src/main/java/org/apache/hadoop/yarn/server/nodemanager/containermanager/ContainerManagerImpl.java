@@ -39,6 +39,8 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
@@ -1072,13 +1074,26 @@ public class ContainerManagerImpl extends CompositeService implements
    * Increase resource of a list of containers on this NodeManager.
    */
   @Override
+  @Deprecated
   public IncreaseContainersResourceResponse increaseContainersResource(
       IncreaseContainersResourceRequest requests)
           throws YarnException, IOException {
+    ContainerUpdateResponse resp = updateContainer(
+        ContainerUpdateRequest.newInstance(requests.getContainersToIncrease()));
+    return IncreaseContainersResourceResponse.newInstance(
+        resp.getSuccessfullyUpdatedContainers(), resp.getFailedRequests());
+  }
+
+  /**
+   * Update resource of a list of containers on this NodeManager.
+   */
+  @Override
+  public ContainerUpdateResponse updateContainer(ContainerUpdateRequest
+      request) throws YarnException, IOException {
     UserGroupInformation remoteUgi = getRemoteUgi();
     NMTokenIdentifier nmTokenIdentifier = selectNMTokenIdentifier(remoteUgi);
     authorizeUser(remoteUgi, nmTokenIdentifier);
-    List<ContainerId> successfullyIncreasedContainers
+    List<ContainerId> successfullyUpdatedContainers
         = new ArrayList<ContainerId>();
     Map<ContainerId, SerializedException> failedContainers =
         new HashMap<ContainerId, SerializedException>();
@@ -1090,7 +1105,7 @@ public class ContainerManagerImpl extends CompositeService implements
     synchronized (this.context) {
       // Process container resource increase requests
       for (org.apache.hadoop.yarn.api.records.Token token :
-          requests.getContainersToIncrease()) {
+          request.getContainersToUpdate()) {
         ContainerId containerId = null;
         try {
           if (token.getIdentifier() == null) {
@@ -1110,7 +1125,7 @@ public class ContainerManagerImpl extends CompositeService implements
           Resource resource = containerTokenIdentifier.getResource();
           changeContainerResourceInternal(containerId,
               containerTokenIdentifier.getVersion(), resource, true);
-          successfullyIncreasedContainers.add(containerId);
+          successfullyUpdatedContainers.add(containerId);
         } catch (YarnException | InvalidToken e) {
           failedContainers.put(containerId, SerializedException.newInstance(e));
         } catch (IOException e) {
@@ -1118,8 +1133,8 @@ public class ContainerManagerImpl extends CompositeService implements
         }
       }
     }
-    return IncreaseContainersResourceResponse.newInstance(
-        successfullyIncreasedContainers, failedContainers);
+    return ContainerUpdateResponse.newInstance(
+        successfullyUpdatedContainers, failedContainers);
   }
 
   @SuppressWarnings("unchecked")

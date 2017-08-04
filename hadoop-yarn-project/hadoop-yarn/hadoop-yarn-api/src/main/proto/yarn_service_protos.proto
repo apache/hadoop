@@ -369,6 +369,15 @@ message IncreaseContainersResourceResponseProto {
   repeated ContainerExceptionMapProto failed_requests = 2;
 }
 
+message ContainerUpdateRequestProto {
+  repeated hadoop.common.TokenProto update_container_token = 1;
+}
+
+message ContainerUpdateResponseProto {
+  repeated ContainerIdProto succeeded_requests = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
 //////////////////////////////////////////////////////
 /////// Application_History_Protocol /////////////////
 //////////////////////////////////////////////////////

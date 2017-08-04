@@ -49,10 +49,9 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
@@ -448,9 +447,9 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         org.apache.hadoop.yarn.server.nodemanager
             .containermanager.container.ContainerState.RUNNING);
     Resource targetResource = Resource.newInstance(2048, 2);
-    IncreaseContainersResourceResponse increaseResponse =
-        increaseContainersResource(context, cm, cid, targetResource);
-    assertTrue(increaseResponse.getFailedRequests().isEmpty());
+    ContainerUpdateResponse updateResponse =
+        updateContainers(context, cm, cid, targetResource);
+    assertTrue(updateResponse.getFailedRequests().isEmpty());
     // check status
     ContainerStatus containerStatus = getContainerStatus(context, cm, cid);
     assertEquals(targetResource, containerStatus.getCapability());
@@ -630,7 +629,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     });
   }
 
-  private IncreaseContainersResourceResponse increaseContainersResource(
+  private ContainerUpdateResponse updateContainers(
       Context context, final ContainerManagerImpl cm, ContainerId cid,
       Resource capability) throws Exception {
     UserGroupInformation user = UserGroupInformation.createRemoteUser(
@@ -642,18 +641,18 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         cid, 0, context.getNodeId(), user.getShortUserName(),
         capability, context.getContainerTokenSecretManager(), null);
     increaseTokens.add(containerToken);
-    final IncreaseContainersResourceRequest increaseRequest =
-        IncreaseContainersResourceRequest.newInstance(increaseTokens);
+    final ContainerUpdateRequest updateRequest =
+        ContainerUpdateRequest.newInstance(increaseTokens);
     NMTokenIdentifier nmToken = new NMTokenIdentifier(
         cid.getApplicationAttemptId(), context.getNodeId(),
         user.getShortUserName(),
         context.getNMTokenSecretManager().getCurrentKey().getKeyId());
     user.addTokenIdentifier(nmToken);
     return user.doAs(
-        new PrivilegedExceptionAction<IncreaseContainersResourceResponse>() {
+        new PrivilegedExceptionAction<ContainerUpdateResponse>() {
           @Override
-          public IncreaseContainersResourceResponse run() throws Exception {
-            return cm.increaseContainersResource(increaseRequest);
+          public ContainerUpdateResponse run() throws Exception {
+            return cm.updateContainer(updateRequest);
           }
         });
   }

@@ -42,6 +42,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -156,10 +158,17 @@ public class TestAMAuthorization {
       return GetContainerStatusesResponse.newInstance(null, null);
     }
 
+    @Deprecated
     @Override
     public IncreaseContainersResourceResponse increaseContainersResource(IncreaseContainersResourceRequest request)
         throws YarnException {
       return IncreaseContainersResourceResponse.newInstance(null, null);
+    }
+
+    @Override
+    public ContainerUpdateResponse updateContainer(ContainerUpdateRequest
+        request) throws YarnException, IOException {
+      return ContainerUpdateResponse.newInstance(null, null);
     }
 
     public Credentials getContainerCredentials() throws IOException {
