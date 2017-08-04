@@ -119,13 +119,13 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   private Resource parseResource(String key, Map value) throws IOException {
     Resource resource = Resource.newInstance(0, 0);
     Iterator iterator = value.entrySet().iterator();
-    Map<String, ResourceInformation> resourceTypes =
-        ResourceUtils.getResourceTypes();
+    Map<String, ResourceInformation> resourceTypes = ResourceUtils
+        .getResourceTypes();
     while (iterator.hasNext()) {
       Map.Entry resourceEntry = (Map.Entry) iterator.next();
       String resourceName = resourceEntry.getKey().toString();
-      ResourceInformation resourceValue =
-          fromString(resourceName, resourceEntry.getValue().toString());
+      ResourceInformation resourceValue = fromString(resourceName,
+          resourceEntry.getValue().toString());
       if (resourceName.equals(MEMORY)) {
         resource.setMemorySize(resourceValue.getValue());
         continue;

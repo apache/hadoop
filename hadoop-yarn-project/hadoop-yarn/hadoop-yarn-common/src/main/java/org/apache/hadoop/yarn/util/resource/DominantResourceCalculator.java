@@ -23,10 +23,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
-import java.util.Set;
 
 /**
  * A {@link ResourceCalculator} which uses the concept of
@@ -56,10 +55,10 @@ public class DominantResourceCalculator extends ResourceCalculator {
       LogFactory.getLog(DominantResourceCalculator.class);
 
 
-  private Set<String> resourceNames;
+  private String[] resourceNames;
 
   public DominantResourceCalculator() {
-    resourceNames = ResourceUtils.getResourceTypes().keySet();
+    resourceNames = ResourceUtils.getResourceNamesArray();
   }
 
   /**
@@ -88,7 +87,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         } else if (diff <= -1) {
           rhsGreater = true;
         }
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + rName, ye);
       }
@@ -163,7 +162,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
                 .getValue();
         min = min < tmp ? min : tmp;
         max = max > tmp ? max : tmp;
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
       }
@@ -187,7 +186,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
           long tmp = availableResource.getValue() / requiredResourceValue;
           min = min < tmp ? min : tmp;
         }
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
       }
@@ -206,14 +205,9 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public boolean isInvalidDivisor(Resource r) {
-    for (String resource : resourceNames) {
-      try {
-        if (r.getResourceValue(resource).equals(0L)) {
-          return true;
-        }
-      } catch (YarnException ye) {
-        throw new IllegalArgumentException(
-            "Error getting resource value for " + resource, ye);
+    for (ResourceInformation res : r.getResources()) {
+      if (res.getValue() == 0L) {
+        return true;
       }
     }
     return false;
@@ -235,7 +229,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         float tmp =
             (float) aResourceInformation.getValue() / (float) bResourceValue;
         ratio = ratio > tmp ? ratio : tmp;
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
       }
@@ -256,7 +250,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
             ret.getResourceInformation(resource);
         resourceInformation.setValue(
             divideAndCeil(resourceInformation.getValue(), denominator));
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
       }
@@ -307,7 +301,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         }
         tmp.setValue(Math.min(value, maximumValue));
         ret.setResourceInformation(resource, tmp);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
       }
@@ -347,7 +341,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         ResourceInformation
             .copy(rResourceInformation, ret.getResourceInformation(resource));
         ret.getResourceInformation(resource).setValue(value);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
       }
@@ -372,28 +366,29 @@ public class DominantResourceCalculator extends ResourceCalculator {
     Resource ret = Resource.newInstance(r);
     for (String resource : resourceNames) {
       try {
-        ResourceInformation rResourceInformation =
-            r.getResourceInformation(resource);
-        ResourceInformation stepFactorResourceInformation =
-            stepFactor.getResourceInformation(resource);
+        ResourceInformation rResourceInformation = r
+            .getResourceInformation(resource);
+        ResourceInformation stepFactorResourceInformation = stepFactor
+            .getResourceInformation(resource);
         ResourceInformation tmp = ret.getResourceInformation(resource);
 
-        Long rValue = rResourceInformation.getValue();
-        Long stepFactorValue = UnitsConversionUtil
-            .convert(stepFactorResourceInformation.getUnits(),
-                rResourceInformation.getUnits(),
-                stepFactorResourceInformation.getValue());
-        Long value;
+        long rValue = rResourceInformation.getValue();
+        long stepFactorValue = UnitsConversionUtil.convert(
+            stepFactorResourceInformation.getUnits(),
+            rResourceInformation.getUnits(),
+            stepFactorResourceInformation.getValue());
+        long value;
         if (stepFactorValue != 0) {
-          value = roundUp ?
-              roundUp((long) Math.ceil(rValue * by), stepFactorValue) :
-              roundDown((long) (rValue * by), stepFactorValue);
+          value = roundUp
+              ? roundUp((long) Math.ceil(rValue * by), stepFactorValue)
+              : roundDown((long) (rValue * by), stepFactorValue);
         } else {
-          value =
-              roundUp ? (long) Math.ceil(rValue * by) : (long) (rValue * by);
+          value = roundUp
+              ? (long) Math.ceil(rValue * by)
+              : (long) (rValue * by);
         }
         tmp.setValue(value);
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
       }
@@ -416,7 +411,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         if(sResourceValue > bResourceInformation.getValue()) {
           return false;
         }
-      } catch (YarnException ye) {
+      } catch (ResourceNotFoundException ye) {
         return false;
       }
     }

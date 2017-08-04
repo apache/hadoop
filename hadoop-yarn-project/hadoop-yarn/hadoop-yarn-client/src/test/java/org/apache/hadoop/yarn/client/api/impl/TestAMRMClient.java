@@ -1190,9 +1190,11 @@ public class TestAMRMClient {
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.OPPORTUNISTIC, true)));
 
+    ProfileCapability profileCapability =
+          ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
+            ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -1329,9 +1331,11 @@ public class TestAMRMClient {
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.GUARANTEED, true)));
 
+    ProfileCapability profileCapability =
+        ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.GUARANTEED, capability).remoteRequest
+            ExecutionType.GUARANTEED, profileCapability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
