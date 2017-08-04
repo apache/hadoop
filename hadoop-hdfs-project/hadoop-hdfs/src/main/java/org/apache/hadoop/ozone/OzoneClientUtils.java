@@ -651,7 +651,7 @@ public final class OzoneClientUtils {
     InetSocketAddress updatedAddr = new InetSocketAddress(addr.getHostString(),
         listenAddr.getPort());
     conf.set(addressKey,
-        listenAddr.getHostString() + ":" + listenAddr.getPort());
+        addr.getHostString() + ":" + listenAddr.getPort());
     return updatedAddr;
   }
 
