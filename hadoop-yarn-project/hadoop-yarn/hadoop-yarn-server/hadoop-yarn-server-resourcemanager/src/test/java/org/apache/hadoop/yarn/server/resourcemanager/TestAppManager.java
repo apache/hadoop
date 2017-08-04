@@ -249,6 +249,7 @@ public class TestAppManager{
     ResourceScheduler scheduler = mockResourceScheduler();
     ((RMContextImpl)rmContext).setScheduler(scheduler);
     Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     ((RMContextImpl) rmContext).setYarnConfiguration(conf);
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);

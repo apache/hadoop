@@ -178,16 +178,15 @@ public class RMAppAttemptMetrics {
 
   private void updateUsageMap(Resource allocated, long deltaUsedMillis,
       Map<String, AtomicLong> targetMap) {
-    for (Map.Entry<String, ResourceInformation> entry : allocated.getResources()
-        .entrySet()) {
+    for (ResourceInformation entry : allocated.getResources()) {
       AtomicLong resourceUsed;
-      if (!targetMap.containsKey(entry.getKey())) {
+      if (!targetMap.containsKey(entry.getName())) {
         resourceUsed = new AtomicLong(0);
-        targetMap.put(entry.getKey(), resourceUsed);
+        targetMap.put(entry.getName(), resourceUsed);
 
       }
-      resourceUsed = targetMap.get(entry.getKey());
-      resourceUsed.addAndGet((entry.getValue().getValue() * deltaUsedMillis)
+      resourceUsed = targetMap.get(entry.getName());
+      resourceUsed.addAndGet((entry.getValue() * deltaUsedMillis)
           / DateUtils.MILLIS_PER_SECOND);
     }
   }

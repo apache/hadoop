@@ -242,10 +242,15 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
       return false;
     }
     ResourceInformation r = (ResourceInformation) obj;
-    int cmp =
-        UnitsConversionUtil.compare(this.units, this.value, r.units, r.value);
-    return this.name.equals(r.getName()) && this.resourceType
-        .equals(r.getResourceType()) && (cmp == 0);
+    if (!this.name.equals(r.getName())
+        || !this.resourceType.equals(r.getResourceType())) {
+      return false;
+    }
+    if (this.units.equals(r.units)) {
+      return this.value == r.value;
+    }
+    return (UnitsConversionUtil.compare(this.units, this.value, r.units,
+        r.value) == 0);
   }
 
   @Override

@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Helper class to read the resource-types to be supported by the system.
@@ -65,11 +66,14 @@ public class ResourceUtils {
     DISALLOWED_NAMES.add(VCORES);
   }
 
-  private static volatile Object lock;
-  private static Map<String, ResourceInformation> readOnlyResources;
-  private static volatile Object nodeLock;
-  private static Map<String, ResourceInformation> readOnlyNodeResources;
-
+  private static volatile boolean initializedResources = false;
+  private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
+      new ConcurrentHashMap<String, Integer>();
+  private static volatile Map<String, ResourceInformation> resourceTypes;
+  private static volatile String[] resourceNamesArray;
+  private static volatile ResourceInformation[] resourceTypesArray;
+  private static volatile boolean initializedNodeResources = false;
+  private static volatile Map<String, ResourceInformation> readOnlyNodeResources;
 
   static final Log LOG = LogFactory.getLog(ResourceUtils.class);
 
@@ -127,21 +131,17 @@ public class ResourceUtils {
 
   private static void setMinimumAllocationForMandatoryResources(
       Map<String, ResourceInformation> res, Configuration conf) {
-    String[][] resourceTypesKeys =
-        {
-          { ResourceInformation.MEMORY_MB.getName(),
+    String[][] resourceTypesKeys = {
+        {ResourceInformation.MEMORY_MB.getName(),
             YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
             String.valueOf(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
-            ResourceInformation.MEMORY_MB.getName()
-          },
-          { ResourceInformation.VCORES.getName(),
+                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
+            ResourceInformation.MEMORY_MB.getName()},
+        {ResourceInformation.VCORES.getName(),
             YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
             String.valueOf(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES),
-            ResourceInformation.VCORES.getName()
-          }
-        };
+                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES),
+            ResourceInformation.VCORES.getName()}};
     for (String[] arr : resourceTypesKeys) {
       String resourceTypesKey =
           YarnConfiguration.RESOURCE_TYPES + "." + arr[0] + MINIMUM_ALLOCATION;
@@ -166,23 +166,17 @@ public class ResourceUtils {
 
   private static void setMaximumAllocationForMandatoryResources(
       Map<String, ResourceInformation> res, Configuration conf) {
-    String[][] resourceTypesKeys =
-        {
-          {
-            ResourceInformation.MEMORY_MB.getName(),
+    String[][] resourceTypesKeys = {
+        {ResourceInformation.MEMORY_MB.getName(),
             YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             String.valueOf(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB),
-            ResourceInformation.MEMORY_MB.getName()
-          },
-          {
-            ResourceInformation.VCORES.getName(),
+                YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB),
+            ResourceInformation.MEMORY_MB.getName()},
+        {ResourceInformation.VCORES.getName(),
             YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
             String.valueOf(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES),
-             ResourceInformation.VCORES.getName()
-          }
-        };
+                YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES),
+            ResourceInformation.VCORES.getName()}};
     for (String[] arr : resourceTypesKeys) {
       String resourceTypesKey =
           YarnConfiguration.RESOURCE_TYPES + "." + arr[0] + MAXIMUM_ALLOCATION;
@@ -251,7 +245,50 @@ public class ResourceUtils {
     addManadtoryResources(resourceInformationMap);
     setMinimumAllocationForMandatoryResources(resourceInformationMap, conf);
     setMaximumAllocationForMandatoryResources(resourceInformationMap, conf);
-    readOnlyResources = Collections.unmodifiableMap(resourceInformationMap);
+    resourceTypes = Collections.unmodifiableMap(resourceInformationMap);
+    updateKnownResources();
+    updateResourceTypeIndex();
+  }
+
+  private static void updateKnownResources() {
+    // Update resource names.
+    resourceNamesArray = new String[resourceTypes.size()];
+    resourceTypesArray = new ResourceInformation[resourceTypes.size()];
+
+    int index = 2;
+    for (ResourceInformation resInfo : resourceTypes.values()) {
+      if (resInfo.getName().equals(MEMORY)) {
+        resourceTypesArray[0] = ResourceInformation
+            .newInstance(resourceTypes.get(MEMORY));
+        resourceNamesArray[0] = MEMORY;
+      } else if (resInfo.getName().equals(VCORES)) {
+        resourceTypesArray[1] = ResourceInformation
+            .newInstance(resourceTypes.get(VCORES));
+        resourceNamesArray[1] = VCORES;
+      } else {
+        resourceTypesArray[index] = ResourceInformation.newInstance(resInfo);
+        resourceNamesArray[index] = resInfo.getName();
+        index++;
+      }
+    }
+  }
+
+  private static void updateResourceTypeIndex() {
+    RESOURCE_NAME_TO_INDEX.clear();
+
+    for (int index = 0; index < resourceTypesArray.length; index++) {
+      ResourceInformation resInfo = resourceTypesArray[index];
+      RESOURCE_NAME_TO_INDEX.put(resInfo.getName(), index);
+    }
+  }
+
+  /**
+   * Get associate index of resource types such memory, cpu etc.
+   * This could help to access each resource types in a resource faster.
+   * @return Index map for all Resource Types.
+   */
+  public static Map<String, Integer> getResourceTypeIndex() {
+    return RESOURCE_NAME_TO_INDEX;
   }
 
   /**
@@ -264,6 +301,22 @@ public class ResourceUtils {
         YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
   }
 
+  /**
+   * Get resource names array, this is mostly for performance perspective. Never
+   * modify returned array.
+   *
+   * @return resourceNamesArray
+   */
+  public static String[] getResourceNamesArray() {
+    getResourceTypes(null, YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    return resourceNamesArray;
+  }
+
+  public static ResourceInformation[] getResourceTypesArray() {
+    getResourceTypes(null, YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    return resourceTypesArray;
+  }
+
   private static Map<String, ResourceInformation> getResourceTypes(
       Configuration conf) {
     return getResourceTypes(conf,
@@ -272,30 +325,28 @@ public class ResourceUtils {
 
   private static Map<String, ResourceInformation> getResourceTypes(
       Configuration conf, String resourceFile) {
-    if (lock == null) {
+    if (!initializedResources) {
       synchronized (ResourceUtils.class) {
-        if (lock == null) {
-          synchronized (ResourceUtils.class) {
-            Map<String, ResourceInformation> resources = new HashMap<>();
-            if (conf == null) {
-              conf = new YarnConfiguration();
-            }
-            try {
-              addResourcesFileToConf(resourceFile, conf);
-              LOG.debug("Found " + resourceFile + ", adding to configuration");
-              initializeResourcesMap(conf, resources);
-              lock = new Object();
-            } catch (FileNotFoundException fe) {
-              LOG.info("Unable to find '" + resourceFile
-                  + "'. Falling back to memory and vcores as resources", fe);
-              initializeResourcesMap(conf, resources);
-              lock = new Object();
-            }
+        if (!initializedResources) {
+          Map<String, ResourceInformation> resources = new HashMap<>();
+          if (conf == null) {
+            conf = new YarnConfiguration();
+          }
+          try {
+            addResourcesFileToConf(resourceFile, conf);
+            LOG.debug("Found " + resourceFile + ", adding to configuration");
+            initializeResourcesMap(conf, resources);
+            initializedResources = true;
+          } catch (FileNotFoundException fe) {
+            LOG.info("Unable to find '" + resourceFile
+                + "'. Falling back to memory and vcores as resources", fe);
+            initializeResourcesMap(conf, resources);
+            initializedResources = true;
           }
         }
       }
     }
-    return readOnlyResources;
+    return resourceTypes;
   }
 
   private static InputStream getConfInputStream(String resourceFile,
@@ -341,13 +392,15 @@ public class ResourceUtils {
   }
 
   @VisibleForTesting
-  static void resetResourceTypes() {
-    lock = null;
+  synchronized static void resetResourceTypes() {
+    initializedResources = false;
   }
 
   @VisibleForTesting
   public static void resetResourceTypes(Configuration conf) {
-    lock = null;
+    synchronized (ResourceUtils.class) {
+      initializedResources = false;
+    }
     getResourceTypes(conf);
   }
 
@@ -375,17 +428,17 @@ public class ResourceUtils {
    */
   public static Map<String, ResourceInformation> getNodeResourceInformation(
       Configuration conf) {
-    if (nodeLock == null) {
+    if (!initializedNodeResources) {
       synchronized (ResourceUtils.class) {
-        if (nodeLock == null) {
-          synchronized (ResourceUtils.class) {
-            Map<String, ResourceInformation> nodeResources =
-                initializeNodeResourceInformation(conf);
-            addManadtoryResources(nodeResources);
-            checkMandatatoryResources(nodeResources);
-            readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
-            nodeLock = new Object();
-          }
+        if (!initializedNodeResources) {
+          Map<String, ResourceInformation> nodeResources = initializeNodeResourceInformation(
+              conf);
+          addManadtoryResources(nodeResources);
+          checkMandatatoryResources(nodeResources);
+          setMinimumAllocationForMandatoryResources(nodeResources, conf);
+          setMaximumAllocationForMandatoryResources(nodeResources, conf);
+          readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
+          initializedNodeResources = true;
         }
       }
     }
@@ -433,28 +486,24 @@ public class ResourceUtils {
 
   @VisibleForTesting
   synchronized public static void resetNodeResources() {
-    nodeLock = null;
+    initializedNodeResources = false;
   }
 
   public static Resource getResourceTypesMinimumAllocation() {
-    Map<String, ResourceInformation> resourceTypes = getResourceTypes();
     Resource ret = Resource.newInstance(0, 0);
-    for (Map.Entry<String, ResourceInformation> entry : resourceTypes
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : resourceTypesArray) {
+      String name = entry.getName();
       if (name.equals(ResourceInformation.MEMORY_MB.getName())) {
-        ret.setMemorySize(entry.getValue().getMinimumAllocation());
-        continue;
-      }
-      if (name.equals(ResourceInformation.VCORES.getName())) {
-        Long tmp = entry.getValue().getMinimumAllocation();
+        ret.setMemorySize(entry.getMinimumAllocation());
+      } else if (name.equals(ResourceInformation.VCORES.getName())) {
+        Long tmp = entry.getMinimumAllocation();
         if (tmp > Integer.MAX_VALUE) {
           tmp = (long) Integer.MAX_VALUE;
         }
         ret.setVirtualCores(tmp.intValue());
-        continue;
+      } else {
+        ret.setResourceValue(name, entry.getMinimumAllocation());
       }
-      ret.setResourceValue(name, entry.getValue().getMinimumAllocation());
     }
     return ret;
   }
@@ -464,24 +513,21 @@ public class ResourceUtils {
    * @return a Resource object with the maximum allocation for the scheduler
    */
   public static Resource getResourceTypesMaximumAllocation() {
-    Map<String, ResourceInformation> resourceTypes = getResourceTypes();
     Resource ret = Resource.newInstance(0, 0);
-    for (Map.Entry<String, ResourceInformation> entry : resourceTypes
-        .entrySet()) {
-      String name = entry.getKey();
+    for (ResourceInformation entry : resourceTypesArray) {
+      String name = entry.getName();
       if (name.equals(ResourceInformation.MEMORY_MB.getName())) {
-        ret.setMemorySize(entry.getValue().getMaximumAllocation());
-        continue;
-      }
-      if (name.equals(ResourceInformation.VCORES.getName())) {
-        Long tmp = entry.getValue().getMaximumAllocation();
+        ret.setMemorySize(entry.getMaximumAllocation());
+      } else if (name.equals(ResourceInformation.VCORES.getName())) {
+        Long tmp = entry.getMaximumAllocation();
         if (tmp > Integer.MAX_VALUE) {
           tmp = (long) Integer.MAX_VALUE;
         }
         ret.setVirtualCores(tmp.intValue());
         continue;
+      } else {
+        ret.setResourceValue(name, entry.getMaximumAllocation());
       }
-      ret.setResourceValue(name, entry.getValue().getMaximumAllocation());
     }
     return ret;
   }
