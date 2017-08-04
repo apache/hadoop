@@ -186,11 +186,11 @@ public class UnitsConversionUtil {
     if (!KNOWN_UNITS.contains(unitB)) {
       throw new IllegalArgumentException("Unknown unit '" + unitB + "'");
     }
+    if (unitA.equals(unitB)) {
+      return Long.compare(valueA, valueB);
+    }
     Converter unitAC = getConverter(unitA);
     Converter unitBC = getConverter(unitB);
-    if (unitA.equals(unitB)) {
-      return Long.valueOf(valueA).compareTo(valueB);
-    }
     int unitAPos = SORTED_UNITS.indexOf(unitA);
     int unitBPos = SORTED_UNITS.indexOf(unitB);
     try {
@@ -201,7 +201,7 @@ public class UnitsConversionUtil {
       } else {
         tmpA = convert(unitA, unitB, valueA);
       }
-      return Long.valueOf(tmpA).compareTo(tmpB);
+      return Long.compare(tmpA, tmpB);
     } catch (IllegalArgumentException ie) {
       BigInteger tmpA = BigInteger.valueOf(valueA);
       BigInteger tmpB = BigInteger.valueOf(valueB);

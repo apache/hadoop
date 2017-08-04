@@ -472,9 +472,8 @@ public class ProtoUtils {
       List<YarnProtos.StringLongMapProto> pList) {
     Resource tmp = Resource.newInstance(0, 0);
     Map<String, Long> ret = new HashMap<>();
-    for (Map.Entry<String, ResourceInformation> entry : tmp.getResources()
-        .entrySet()) {
-      ret.put(entry.getKey(), 0L);
+    for (ResourceInformation entry : tmp.getResources()) {
+      ret.put(entry.getName(), 0L);
     }
     if (pList != null) {
       for (YarnProtos.StringLongMapProto p : pList) {

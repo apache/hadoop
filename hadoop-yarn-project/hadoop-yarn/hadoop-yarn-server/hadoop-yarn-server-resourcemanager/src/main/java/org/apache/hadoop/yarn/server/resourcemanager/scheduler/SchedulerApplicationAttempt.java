@@ -1006,13 +1006,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       for (RMContainer rmContainer : this.liveContainers.values()) {
         long usedMillis = currentTimeMillis - rmContainer.getCreationTime();
         Resource resource = rmContainer.getContainer().getResource();
-        for (Map.Entry<String, ResourceInformation> entry : resource
-            .getResources().entrySet()) {
+        for (ResourceInformation entry : resource.getResources()) {
           long value = RMServerUtils
-              .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
-          value += entry.getValue().getValue() * usedMillis
+              .getOrDefault(resourceSecondsMap, entry.getName(), 0L);
+          value += entry.getValue() * usedMillis
               / DateUtils.MILLIS_PER_SECOND;
-          resourceSecondsMap.put(entry.getKey(), value);
+          resourceSecondsMap.put(entry.getName(), value);
         }
       }
 

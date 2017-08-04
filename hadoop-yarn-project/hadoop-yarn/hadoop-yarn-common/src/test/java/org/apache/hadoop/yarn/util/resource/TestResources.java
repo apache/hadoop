@@ -105,7 +105,7 @@ public class TestResources {
         unboundedClone.compareTo(createResource(0, Integer.MAX_VALUE)) > 0);
   }
 
-  @Test(timeout=10000)
+  @Test(timeout = 10000)
   public void testCompareToWithNoneResource() {
     assertTrue(Resources.none().compareTo(createResource(0, 0)) == 0);
     assertTrue(Resources.none().compareTo(createResource(1, 0)) < 0);
@@ -113,7 +113,6 @@ public class TestResources {
     assertTrue(Resources.none().compareTo(createResource(0, 0, 0)) == 0);
     assertTrue(Resources.none().compareTo(createResource(1, 0, 0)) < 0);
     assertTrue(Resources.none().compareTo(createResource(0, 1, 0)) < 0);
-    assertTrue(Resources.none().compareTo(createResource(0, 0, 1)) < 0);
     assertTrue(Resources.none().compareTo(createResource(0, 0, 1)) < 0);
   }
 
@@ -246,7 +245,9 @@ public class TestResources {
   }
 
   @Test
-  public void testMultiplyAndAddTo() {
+  public void testMultiplyAndAddTo() throws Exception {
+    unsetExtraResourceType();
+    setupExtraResourceType();
     assertEquals(createResource(6, 4),
         multiplyAndAddTo(createResource(3, 1), createResource(2, 2), 1.5));
     assertEquals(createResource(6, 4, 0),
