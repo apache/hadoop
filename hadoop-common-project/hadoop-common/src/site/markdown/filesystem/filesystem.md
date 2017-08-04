@@ -1199,3 +1199,27 @@ try {
 It is notable that this is *not* done in the Hadoop codebase. This does not imply
 that robust loops are not recommended —more that the concurrency
 problems were not considered during the implementation of these loops.
+
+
+## <a name="StreamCapability"></a> interface `StreamCapabilities`
+
+The `StreamCapabilities` provides a way to programmatically query the
+capabilities that an `OutputStream` supports.
+
+```java
+public interface StreamCapabilities {
+  boolean hasCapability(String capability);
+}
+```
+
+### `boolean hasCapability(capability)`
+
+Return true if the `OutputStream` has the desired capability.
+
+The caller can query the capabilities of a stream using a string value.
+It currently supports to query:
+
+ * `StreamCapabilties.HFLUSH` ("*hflush*"): the capability to flush out the data
+ in client's buffer.
+ * `StreamCapabilities.HSYNC` ("*hsync*"): capability to flush out the data in
+ client's buffer and the disk device.
