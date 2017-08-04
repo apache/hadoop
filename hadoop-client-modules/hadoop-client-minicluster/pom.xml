@@ -634,6 +634,13 @@
                         <exclude>**/*</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>org.apache.hadoop:hadoop-mapreduce-client-jobclient:*</artifact>
+                      <excludes>
+                        <exclude>testjar/*</exclude>
+                        <exclude>testshell/*</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
                   <relocations>
                     <relocation>
