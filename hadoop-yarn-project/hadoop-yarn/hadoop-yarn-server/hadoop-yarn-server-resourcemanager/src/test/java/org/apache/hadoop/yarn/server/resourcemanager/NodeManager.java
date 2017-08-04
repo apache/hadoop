@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
@@ -306,9 +308,16 @@ public class NodeManager implements ContainerManagementProtocol {
   }
 
   @Override
+  @Deprecated
   public IncreaseContainersResourceResponse increaseContainersResource(
       IncreaseContainersResourceRequest request)
           throws YarnException, IOException {
+    return null;
+  }
+
+  @Override
+  public ContainerUpdateResponse updateContainer(ContainerUpdateRequest
+      request) throws YarnException, IOException {
     return null;
   }
 

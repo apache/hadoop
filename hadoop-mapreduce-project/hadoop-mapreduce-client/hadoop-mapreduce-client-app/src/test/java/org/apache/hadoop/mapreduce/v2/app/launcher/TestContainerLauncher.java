@@ -31,6 +31,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
@@ -462,6 +464,7 @@ public class TestContainerLauncher {
     }
 
     @Override
+    @Deprecated
     public IncreaseContainersResourceResponse increaseContainersResource(
         IncreaseContainersResourceRequest request) throws IOException,
         IOException {
@@ -504,6 +507,12 @@ public class TestContainerLauncher {
     @Override
     public CommitResponse commitLastReInitialization(ContainerId containerId)
         throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ContainerUpdateResponse updateContainer(ContainerUpdateRequest
+        request) throws YarnException, IOException {
       return null;
     }
   }
