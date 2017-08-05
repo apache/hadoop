@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.NamenodePriorityCompara
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.util.Time;
 
@@ -65,6 +66,10 @@ public class MockResolver
   }
 
   public MockResolver(Configuration conf, StateStoreService store) {
+    this();
+  }
+
+  public MockResolver(Configuration conf, Router router) {
     this();
   }
 
@@ -258,7 +263,6 @@ public class MockResolver
 
   @Override
   public PathLocation getDestinationForPath(String path) throws IOException {
-    Set<String> namespaceSet = new HashSet<>();
     List<RemoteLocation> remoteLocations = new LinkedList<>();
     for (String key : this.locations.keySet()) {
       if (path.startsWith(key)) {
@@ -268,7 +272,6 @@ public class MockResolver
           RemoteLocation remoteLocation =
               new RemoteLocation(nameservice, finalPath);
           remoteLocations.add(remoteLocation);
-          namespaceSet.add(nameservice);
         }
         break;
       }
@@ -277,7 +280,7 @@ public class MockResolver
       // Path isn't supported, mimic resolver behavior.
       return null;
     }
-    return new PathLocation(path, remoteLocations, namespaceSet);
+    return new PathLocation(path, remoteLocations);
   }
 
   @Override

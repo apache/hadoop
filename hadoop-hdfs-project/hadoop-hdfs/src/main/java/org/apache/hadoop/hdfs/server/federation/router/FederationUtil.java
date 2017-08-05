@@ -136,65 +136,19 @@ public final class FederationUtil {
   }
 
   /**
-   * Create an instance of an interface with a constructor using a state store
-   * constructor.
-   *
-   * @param conf Configuration
-   * @param context Context object to pass to the instance.
-   * @param contextType Type of the context passed to the constructor.
-   * @param configurationKeyName Configuration key to retrieve the class to load
-   * @param defaultClassName Default class to load if the configuration key is
-   *          not set
-   * @param clazz Class/interface that must be implemented by the instance.
-   * @return New instance of the specified class that implements the desired
-   *         interface and a single parameter constructor containing a
-   *         StateStore reference.
-   */
-  private static <T, R> T newInstance(final Configuration conf,
-      final R context, final Class<R> contextClass,
-      final String configKeyName, final String defaultClassName,
-      final Class<T> clazz) {
-
-    String className = conf.get(configKeyName, defaultClassName);
-    try {
-      Class<?> instance = conf.getClassByName(className);
-      if (clazz.isAssignableFrom(instance)) {
-        if (contextClass == null) {
-          // Default constructor if no context
-          @SuppressWarnings("unchecked")
-          Constructor<T> constructor =
-              (Constructor<T>) instance.getConstructor();
-          return constructor.newInstance();
-        } else {
-          // Constructor with context
-          @SuppressWarnings("unchecked")
-          Constructor<T> constructor = (Constructor<T>) instance.getConstructor(
-              Configuration.class, contextClass);
-          return constructor.newInstance(conf, context);
-        }
-      } else {
-        throw new RuntimeException("Class " + className + " not instance of "
-            + clazz.getCanonicalName());
-      }
-    } catch (ReflectiveOperationException e) {
-      LOG.error("Could not instantiate: " + className, e);
-      return null;
-    }
-  }
-
-  /**
    * Creates an instance of a FileSubclusterResolver from the configuration.
    *
    * @param conf Configuration that defines the file resolver class.
-   * @param obj Context object passed to class constructor.
-   * @return FileSubclusterResolver
+   * @param router Router service.
+   * @return New file subcluster resolver.
    */
   public static FileSubclusterResolver newFileSubclusterResolver(
-      Configuration conf, StateStoreService stateStore) {
-    return newInstance(conf, stateStore, StateStoreService.class,
+      Configuration conf, Router router) {
+    Class<? extends FileSubclusterResolver> clazz = conf.getClass(
         DFSConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS,
         DFSConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS_DEFAULT,
         FileSubclusterResolver.class);
+    return newInstance(conf, router, Router.class, clazz);
   }
 
   /**
