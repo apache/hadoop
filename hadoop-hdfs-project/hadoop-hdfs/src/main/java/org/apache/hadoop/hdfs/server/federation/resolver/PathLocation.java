@@ -23,21 +23,27 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A map of the properties and target destinations (name space + path) for
- * a path in the global/federated namespace.
+ * a path in the global/federated name space.
  * This data is generated from the @see MountTable records.
  */
 public class PathLocation {
 
+  private static final Logger LOG = LoggerFactory.getLogger(PathLocation.class);
+
+
   /** Source path in global namespace. */
   private final String sourcePath;
 
-  /** Remote paths in the target namespaces. */
+  /** Remote paths in the target name spaces. */
   private final List<RemoteLocation> destinations;
-
-  /** List of name spaces present. */
-  private final Set<String> namespaces;
+  /** Order for the destinations. */
+  private final DestinationOrder destOrder;
 
 
   /**
@@ -45,14 +51,23 @@ public class PathLocation {
    *
    * @param source Source path in the global name space.
    * @param dest Destinations of the mount table entry.
-   * @param namespaces Unique identifier representing the combination of
-   *          name spaces present in the destination list.
+   * @param order Order of the locations.
    */
   public PathLocation(
-      String source, List<RemoteLocation> dest, Set<String> nss) {
+      String source, List<RemoteLocation> dest, DestinationOrder order) {
     this.sourcePath = source;
-    this.destinations = dest;
-    this.namespaces = nss;
+    this.destinations = Collections.unmodifiableList(dest);
+    this.destOrder = order;
+  }
+
+  /**
+   * Create a new PathLocation with default HASH order.
+   *
+   * @param source Source path in the global name space.
+   * @param dest Destinations of the mount table entry.
+   */
+  public PathLocation(String source, List<RemoteLocation> dest) {
+    this(source, dest, DestinationOrder.HASH);
   }
 
   /**
@@ -60,10 +75,55 @@ public class PathLocation {
    *
    * @param other Other path location to copy from.
    */
-  public PathLocation(PathLocation other) {
+  public PathLocation(final PathLocation other) {
     this.sourcePath = other.sourcePath;
-    this.destinations = new LinkedList<RemoteLocation>(other.destinations);
-    this.namespaces = new HashSet<String>(other.namespaces);
+    this.destinations = Collections.unmodifiableList(other.destinations);
+    this.destOrder = other.destOrder;
+  }
+
+  /**
+   * Create a path location from another path with the destinations sorted.
+   *
+   * @param other Other path location to copy from.
+   * @param firstNsId Identifier of the namespace to place first.
+   */
+  public PathLocation(PathLocation other, String firstNsId) {
+    this.sourcePath = other.sourcePath;
+    this.destOrder = other.destOrder;
+    this.destinations = orderedNamespaces(other.destinations, firstNsId);
+  }
+
+  /**
+   * Prioritize a location/destination by its name space/nameserviceId.
+   * This destination might be used by other threads, so the source is not
+   * modifiable.
+   *
+   * @param original List of destinations to order.
+   * @param nsId The name space/nameserviceID to prioritize.
+   * @return Prioritized list of detinations that cannot be modified.
+   */
+  private static List<RemoteLocation> orderedNamespaces(
+      final List<RemoteLocation> original, final String nsId) {
+    if (original.size() <= 1) {
+      return original;
+    }
+
+    LinkedList<RemoteLocation> newDestinations = new LinkedList<>();
+    boolean found = false;
+    for (RemoteLocation dest : original) {
+      if (dest.getNameserviceId().equals(nsId)) {
+        found = true;
+        newDestinations.addFirst(dest);
+      } else {
+        newDestinations.add(dest);
+      }
+    }
+
+    if (!found) {
+      LOG.debug("Cannot find location with namespace {} in {}",
+          nsId, original);
+    }
+    return Collections.unmodifiableList(newDestinations);
   }
 
   /**
@@ -76,16 +136,37 @@ public class PathLocation {
   }
 
   /**
-   * Get the list of subclusters defined for the destinations.
+   * Get the subclusters defined for the destinations.
+   *
+   * @return Set containing the subclusters.
    */
   public Set<String> getNamespaces() {
-    return Collections.unmodifiableSet(this.namespaces);
+    Set<String> namespaces = new HashSet<>();
+    List<RemoteLocation> locations = this.getDestinations();
+    for (RemoteLocation location : locations) {
+      String nsId = location.getNameserviceId();
+      namespaces.add(nsId);
+    }
+    return namespaces;
   }
 
   @Override
   public String toString() {
-    RemoteLocation loc = getDefaultLocation();
-    return loc.getNameserviceId() + "->" + loc.getDest();
+    StringBuilder sb = new StringBuilder();
+    for (RemoteLocation destination : this.destinations) {
+      String nsId = destination.getNameserviceId();
+      String path = destination.getDest();
+      if (sb.length() > 0) {
+        sb.append(",");
+      }
+      sb.append(nsId + "->" + path);
+    }
+    if (this.destinations.size() > 1) {
+      sb.append(" [");
+      sb.append(this.destOrder.toString());
+      sb.append("]");
+    }
+    return sb.toString();
   }
 
   /**
@@ -105,6 +186,15 @@ public class PathLocation {
    */
   public List<RemoteLocation> getDestinations() {
     return Collections.unmodifiableList(this.destinations);
+  }
+
+  /**
+   * Get the order for the destinations.
+   *
+   * @return Order for the destinations.
+   */
+  public DestinationOrder getDestinationOrder() {
+    return this.destOrder;
   }
 
   /**

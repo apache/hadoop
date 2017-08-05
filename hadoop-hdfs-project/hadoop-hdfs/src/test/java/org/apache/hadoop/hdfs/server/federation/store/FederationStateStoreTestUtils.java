@@ -25,7 +25,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +42,7 @@ import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFile
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -232,6 +235,19 @@ public final class FederationStateStoreTestUtils {
       }
     }
     return false;
+  }
+
+  public static List<MountTable> createMockMountTable(
+      List<String> nameservices) throws IOException {
+    // create table entries
+    List<MountTable> entries = new ArrayList<>();
+    for (String ns : nameservices) {
+      Map<String, String> destMap = new HashMap<>();
+      destMap.put(ns, "/target-" + ns);
+      MountTable entry = MountTable.newInstance("/" + ns, destMap);
+      entries.add(entry);
+    }
+    return entries;
   }
 
   public static MembershipState createMockRegistrationForNamenode(
