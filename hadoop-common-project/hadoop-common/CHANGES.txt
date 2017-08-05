@@ -15,7 +15,7 @@ Release 2.7.5 - UNRELEASED
     HADOOP-14702. Fix formatting issue and regression caused by conversion from
     APT to Markdown. (Doris Gu via iwasakims)
 
-Release 2.7.4 - UNRELEASED
+Release 2.7.4 - 2017-08-04
 
   INCOMPATIBLE CHANGES
 
