@@ -39,6 +39,7 @@ public final class KsmVolumeArgs {
   private final String adminName;
   private final String ownerName;
   private final String volume;
+  private final long creationTime;
   private final long quotaInBytes;
   private final Map<String, String> keyValueMap;
   private final KsmOzoneAclMap aclMap;
@@ -51,16 +52,18 @@ public final class KsmVolumeArgs {
    * @param quotaInBytes - Volume Quota in bytes.
    * @param keyValueMap - keyValue map.
    * @param aclMap - User to access rights map.
+   * @param creationTime - Volume creation time.
    */
   private KsmVolumeArgs(String adminName, String ownerName, String volume,
                         long quotaInBytes, Map<String, String> keyValueMap,
-                        KsmOzoneAclMap aclMap) {
+                        KsmOzoneAclMap aclMap, long creationTime) {
     this.adminName = adminName;
     this.ownerName = ownerName;
     this.volume = volume;
     this.quotaInBytes = quotaInBytes;
     this.keyValueMap = keyValueMap;
     this.aclMap = aclMap;
+    this.creationTime = creationTime;
   }
 
   /**
@@ -85,6 +88,14 @@ public final class KsmVolumeArgs {
    */
   public String getVolume() {
     return volume;
+  }
+
+  /**
+   * Returns creation time.
+   * @return long
+   */
+  public long getCreationTime() {
+    return creationTime;
   }
 
   /**
@@ -118,6 +129,7 @@ public final class KsmVolumeArgs {
     private String adminName;
     private String ownerName;
     private String volume;
+    private long creationTime;
     private long quotaInBytes;
     private Map<String, String> keyValueMap;
     private KsmOzoneAclMap aclMap;
@@ -145,6 +157,11 @@ public final class KsmVolumeArgs {
       return this;
     }
 
+    public Builder setCreationTime(long createdOn) {
+      this.creationTime = createdOn;
+      return this;
+    }
+
     public Builder setQuotaInBytes(long quotaInBytes) {
       this.quotaInBytes = quotaInBytes;
       return this;
@@ -169,7 +186,7 @@ public final class KsmVolumeArgs {
       Preconditions.checkNotNull(ownerName);
       Preconditions.checkNotNull(volume);
       return new KsmVolumeArgs(adminName, ownerName, volume, quotaInBytes,
-          keyValueMap, aclMap);
+          keyValueMap, aclMap, creationTime);
     }
   }
 
@@ -188,6 +205,7 @@ public final class KsmVolumeArgs {
         .setQuotaInBytes(quotaInBytes)
         .addAllMetadata(metadataList)
         .addAllVolumeAcls(aclList)
+        .setCreationTime(creationTime)
         .build();
   }
 
@@ -199,6 +217,7 @@ public final class KsmVolumeArgs {
         KsmOzoneAclMap.ozoneAclGetFromProtobuf(volInfo.getVolumeAclsList());
 
     return new KsmVolumeArgs(volInfo.getAdminName(), volInfo.getOwnerName(),
-        volInfo.getVolume(), volInfo.getQuotaInBytes(), kvMap, aclMap);
+        volInfo.getVolume(), volInfo.getQuotaInBytes(), kvMap, aclMap,
+        volInfo.getCreationTime());
   }
 }

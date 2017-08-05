@@ -132,6 +132,15 @@ public class OzoneVolume {
   }
 
   /**
+   * Returns creation time of Volume.
+   *
+   * @return String
+   */
+  public String getCreatedOn() {
+    return volumeInfo.getCreatedOn();
+  }
+
+  /**
    * Returns a Http header from the Last Volume related call.
    *
    * @param headerName - Name of the header
