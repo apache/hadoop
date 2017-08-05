@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUt
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.junit.AfterClass;
@@ -109,6 +111,11 @@ public class TestStateStoreDriverBase {
           generateRandomString(), generateRandomString(),
           generateRandomString(), generateRandomString(),
           generateRandomEnum(FederationNamenodeServiceState.class), false);
+    } else if (recordClass == MountTable.class) {
+      String src = "/" + generateRandomString();
+      Map<String, String> destMap = Collections.singletonMap(
+          generateRandomString(), "/" + generateRandomString());
+      return (T) MountTable.newInstance(src, destMap);
     }
 
     return null;
@@ -155,6 +162,7 @@ public class TestStateStoreDriverBase {
 
   public static void removeAll(StateStoreDriver driver) throws IOException {
     driver.removeAll(MembershipState.class);
+    driver.removeAll(MountTable.class);
   }
 
   public <T extends BaseRecord> void testInsert(
@@ -347,22 +355,26 @@ public class TestStateStoreDriverBase {
   public void testInsert(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testInsert(driver, MembershipState.class);
+    testInsert(driver, MountTable.class);
   }
 
   public void testPut(StateStoreDriver driver)
       throws IllegalArgumentException, ReflectiveOperationException,
       IOException, SecurityException {
     testPut(driver, MembershipState.class);
+    testPut(driver, MountTable.class);
   }
 
   public void testRemove(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testRemove(driver, MembershipState.class);
+    testRemove(driver, MountTable.class);
   }
 
   public void testFetchErrors(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testFetchErrors(driver, MembershipState.class);
+    testFetchErrors(driver, MountTable.class);
   }
 
   /**

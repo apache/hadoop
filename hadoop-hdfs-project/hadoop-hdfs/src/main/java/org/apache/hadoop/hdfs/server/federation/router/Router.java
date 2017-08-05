@@ -124,8 +124,7 @@ public class Router extends CompositeService {
     }
 
     // Lookup interface to map between the global and subcluster name spaces
-    this.subclusterResolver = newFileSubclusterResolver(
-        this.conf, this.stateStore);
+    this.subclusterResolver = newFileSubclusterResolver(this.conf, this);
     if (this.subclusterResolver == null) {
       throw new IOException("Cannot find subcluster resolver");
     }
