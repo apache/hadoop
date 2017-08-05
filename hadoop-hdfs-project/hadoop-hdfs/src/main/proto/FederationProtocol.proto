@@ -105,3 +105,62 @@ message NamenodeHeartbeatRequestProto {
 message NamenodeHeartbeatResponseProto {
   optional bool status = 1;
 }
+
+
+/////////////////////////////////////////////////
+// Mount table
+/////////////////////////////////////////////////
+
+message RemoteLocationProto {
+  optional string nameserviceId = 1;
+  optional string path = 2;
+}
+
+message MountTableRecordProto {
+  optional string srcPath = 1;
+  repeated RemoteLocationProto destinations = 2;
+  optional uint64 dateCreated = 3;
+  optional uint64 dateModified = 4;
+  optional bool readOnly = 5 [default = false];
+
+  enum DestOrder {
+    HASH = 0;
+    LOCAL = 1;
+    RANDOM = 2;
+  }
+  optional DestOrder destOrder = 6 [default = HASH];
+}
+
+message AddMountTableEntryRequestProto {
+  optional MountTableRecordProto entry = 1;
+}
+
+message AddMountTableEntryResponseProto {
+  optional bool status = 1;
+}
+
+message UpdateMountTableEntryRequestProto {
+  optional MountTableRecordProto entry = 1;
+}
+
+message UpdateMountTableEntryResponseProto {
+  optional bool status = 1;
+}
+
+message RemoveMountTableEntryRequestProto {
+  optional string srcPath = 1;
+}
+
+message RemoveMountTableEntryResponseProto{
+  optional bool status = 1;
+}
+
+message GetMountTableEntriesRequestProto {
+  optional string srcPath = 1;
+}
+
+message GetMountTableEntriesResponseProto {
+  repeated MountTableRecordProto entries = 1;
+  optional uint64 timestamp = 2;
+}
+
