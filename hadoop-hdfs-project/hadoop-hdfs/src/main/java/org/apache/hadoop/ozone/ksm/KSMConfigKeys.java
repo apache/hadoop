@@ -31,7 +31,7 @@ public final class KSMConfigKeys {
 
   public static final String OZONE_KSM_HANDLER_COUNT_KEY =
       "ozone.ksm.handler.count.key";
-  public static final int OZONE_KSM_HANDLER_COUNT_DEFAULT = 200;
+  public static final int OZONE_KSM_HANDLER_COUNT_DEFAULT = 20;
 
   public static final String OZONE_KSM_ADDRESS_KEY =
       "ozone.ksm.address";
