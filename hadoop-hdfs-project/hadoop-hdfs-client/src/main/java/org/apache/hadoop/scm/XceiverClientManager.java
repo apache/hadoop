@@ -90,7 +90,6 @@ public class XceiverClientManager implements Closeable {
                 // Mark the entry as evicted
                 XceiverClientSpi info = removalNotification.getValue();
                 info.setEvicted();
-                info.close();
               }
             }
           }).build();
