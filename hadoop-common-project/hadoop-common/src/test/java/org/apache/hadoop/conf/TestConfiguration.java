@@ -156,11 +156,13 @@ public class TestConfiguration extends TestCase {
     startConfig();
     declareProperty("prop", "A", "A");
     endConfig();
-    
-    InputStream in1 = new ByteArrayInputStream(writer.toString().getBytes());
+
+    InputStream in1 = Mockito.spy(new ByteArrayInputStream(
+          writer.toString().getBytes()));
     Configuration conf = new Configuration(false);
     conf.addResource(in1);
     assertEquals("A", conf.get("prop"));
+    Mockito.verify(in1, Mockito.times(1)).close();
     InputStream in2 = new ByteArrayInputStream(writer.toString().getBytes());
     conf.addResource(in2);
     assertEquals("A", conf.get("prop"));

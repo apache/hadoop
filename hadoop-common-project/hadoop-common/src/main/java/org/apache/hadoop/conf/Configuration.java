@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.conf;
 
+import com.ctc.wstx.io.StreamBootstrapper;
+import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.google.common.annotations.VisibleForTesting;
 
@@ -94,7 +96,6 @@ import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.stax2.XMLInputFactory2;
 import org.codehaus.stax2.XMLStreamReader2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -275,7 +276,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Specify exact input factory to avoid time finding correct one.
    * Factory is reusable across un-synchronized threads once initialized
    */
-  private static final XMLInputFactory2 XML_INPUT_FACTORY = new WstxInputFactory();
+  private static final WstxInputFactory XML_INPUT_FACTORY =
+      new WstxInputFactory();
 
   /**
    * Class to keep the information about the keys which replace the deprecated
@@ -2562,15 +2564,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return parse(connection.getInputStream(), url.toString());
   }
 
-  private XMLStreamReader parse(InputStream is,
-      String systemId) throws IOException, XMLStreamException {
+  private XMLStreamReader parse(InputStream is, String systemIdStr)
+      throws IOException, XMLStreamException {
     if (!quietmode) {
       LOG.debug("parsing input stream " + is);
     }
     if (is == null) {
       return null;
     }
-    return XML_INPUT_FACTORY.createXMLStreamReader(systemId, is);
+    SystemId systemId = SystemId.construct(systemIdStr);
+    return XML_INPUT_FACTORY.createSR(XML_INPUT_FACTORY.createPrivateConfig(),
+        systemId, StreamBootstrapper.getInstance(null, systemId, is), false,
+        true);
   }
 
   private void loadResources(Properties properties,
