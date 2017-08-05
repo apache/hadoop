@@ -62,6 +62,7 @@ message VolumeInfo {
     optional uint64 quotaInBytes = 4;
     repeated KeyValue metadata = 5;
     repeated OzoneAclInfo volumeAcls = 6;
+    required uint64 creationTime = 7;
 }
 
 /**

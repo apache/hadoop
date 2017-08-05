@@ -47,7 +47,7 @@ public class TestVolumeRatis {
   }
 
   @Test
-  public void testCreateVolume() throws OzoneException, IOException {
+  public void testCreateVolume() throws Exception {
     TestVolume.runTestCreateVolume(ozoneClient);
   }
 
@@ -88,12 +88,12 @@ public class TestVolumeRatis {
   // TODO: remove @Ignore below once the problem has been resolved.
   @Ignore("See TestVolume.testListAllVolumes()")
   @Test
-  public void testListAllVolumes() throws OzoneException, IOException {
+  public void testListAllVolumes() throws Exception {
     TestVolume.runTestListAllVolumes(ozoneClient);
   }
 
   @Test
-  public void testListVolumes() throws OzoneException, IOException {
+  public void testListVolumes() throws Exception {
     TestVolume.runTestListVolumes(ozoneClient);
   }
 }

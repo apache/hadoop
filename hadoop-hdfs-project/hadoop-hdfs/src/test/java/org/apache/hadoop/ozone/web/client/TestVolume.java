@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.log4j.Level;
@@ -41,10 +42,10 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -99,15 +100,16 @@ public class TestVolume {
   }
 
   @Test
-  public void testCreateVolume() throws OzoneException, IOException {
+  public void testCreateVolume() throws Exception {
     runTestCreateVolume(ozoneRestClient);
   }
 
   static void runTestCreateVolume(OzoneRestClient client)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
 
+    long currentTime = Time.now();
     OzoneRestClient mockClient = Mockito.spy(client);
     List<CloseableHttpClient> mockedClients = mockHttpClients(mockClient);
     OzoneVolume vol = mockClient.createVolume(volumeName, "bilbo", "100TB");
@@ -119,6 +121,10 @@ public class TestVolume {
     assertEquals(vol.getOwnerName(), "bilbo");
     assertEquals(vol.getQuota().getUnit(), OzoneQuota.Units.TB);
     assertEquals(vol.getQuota().getSize(), 100);
+
+    // verify the key creation time
+    assertTrue((OzoneUtils.formatDate(vol.getCreatedOn())
+        / 1000) >= (currentTime / 1000));
   }
 
   @Test
@@ -270,16 +276,17 @@ public class TestVolume {
   }
 
   @Test
-  public void testListVolumes() throws OzoneException, IOException {
+  public void testListVolumes() throws Exception {
     runTestListVolumes(ozoneRestClient);
   }
 
   static void runTestListVolumes(OzoneRestClient client)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     final int volCount = 20;
     final String user1 = "test-user-a";
     final String user2 = "test-user-b";
 
+    long currentTime = Time.now();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     // Create 20 volumes, 10 for user1 and another 10 for user2.
     for (int x = 0; x < volCount; x++) {
@@ -303,9 +310,12 @@ public class TestVolume {
     List<OzoneVolume> volumeList = client.listVolumes(user1,
         null, 100, StringUtils.EMPTY);
     assertEquals(10, volumeList.size());
-    volumeList.stream()
-        .filter(item -> item.getOwnerName().equals(user1))
-        .collect(Collectors.toList());
+    // verify the owner name and creation time of volume
+    for (OzoneVolume vol : volumeList) {
+      assertTrue(vol.getOwnerName().equals(user1));
+      assertTrue((OzoneUtils.formatDate(vol.getCreatedOn())
+          / 1000) >= (currentTime / 1000));
+    }
 
     // test max key parameter of listing volumes
     volumeList = client.listVolumes(user1, null, 2, StringUtils.EMPTY);

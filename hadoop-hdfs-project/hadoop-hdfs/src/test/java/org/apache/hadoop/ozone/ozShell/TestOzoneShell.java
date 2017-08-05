@@ -191,7 +191,11 @@ public class TestOzoneShell {
     String[] args = new String[] {"-infoVolume", url + "/" + volumeName,
         "-root"};
     assertEquals(0, ToolRunner.run(shell, args));
-    assertTrue(out.toString().contains(volumeName));
+
+    String output = out.toString();
+    assertTrue(output.contains(volumeName));
+    assertTrue(output.contains("createdOn")
+        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
 
     // get info for non-exist volume
     args = new String[] {"-infoVolume", url + "/invalid-volume", "-root"};
@@ -270,10 +274,17 @@ public class TestOzoneShell {
 
     List<String> names = getValueLines("name", out.toString());
     List<String> volumes = getValueLines("volumeName", out.toString());
+    List<String> creationTimes = getValueLines("createdOn", out.toString());
     assertEquals(10, volumes.size());
     assertEquals(10, names.size());
+    assertEquals(10, creationTimes.size());
+
     for (String user : names) {
       assertTrue(user.contains(user1));
+    }
+
+    for (String time : creationTimes) {
+      assertTrue(time.contains(OzoneConsts.OZONE_TIME_ZONE));
     }
 
     out.reset();

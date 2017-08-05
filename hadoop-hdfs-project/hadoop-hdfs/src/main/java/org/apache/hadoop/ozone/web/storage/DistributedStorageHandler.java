@@ -42,6 +42,7 @@ import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
@@ -124,7 +125,8 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setOwnerName(args.getUserName())
         .setVolume(args.getVolumeName())
         .setQuotaInBytes(quota)
-        .addOzoneAcls(KSMPBHelper.convertOzoneAcl(userAcl));
+        .addOzoneAcls(KSMPBHelper.convertOzoneAcl(userAcl))
+        .setCreationTime(Time.now());
     if (args.getGroups() != null) {
       for (String group : args.getGroups()) {
         OzoneAcl groupAcl =
@@ -183,7 +185,7 @@ public final class DistributedStorageHandler implements StorageHandler {
           args.getMaxKeys());
     }
 
-    // TODO Add missing fields createdOn, createdBy, bucketCount and bytesUsed
+    // TODO Add missing fields createdBy, bucketCount and bytesUsed
     ListVolumes result = new ListVolumes();
     for (KsmVolumeArgs volumeArgs : listResult) {
       VolumeInfo info = new VolumeInfo();
@@ -192,6 +194,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       info.setOwner(new VolumeOwner(infoProto.getOwnerName()));
       info.setQuota(OzoneQuota.getOzoneQuota(infoProto.getQuotaInBytes()));
       info.setVolumeName(infoProto.getVolume());
+      info.setCreatedOn(OzoneUtils.formatTime(infoProto.getCreationTime()));
       result.addVolume(info);
     }
 
@@ -215,6 +218,7 @@ public final class DistributedStorageHandler implements StorageHandler {
             volumeArgs.getAdminName());
     volInfo.setOwner(new VolumeOwner(volumeArgs.getOwnerName()));
     volInfo.setQuota(OzoneQuota.getOzoneQuota(volumeArgs.getQuotaInBytes()));
+    volInfo.setCreatedOn(OzoneUtils.formatTime(volumeArgs.getCreationTime()));
     return volInfo;
   }
 
