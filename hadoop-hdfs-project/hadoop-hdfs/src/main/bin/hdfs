@@ -62,6 +62,7 @@ function hadoop_usage
   hadoop_add_subcommand "oiv" "apply the offline fsimage viewer to an fsimage"
   hadoop_add_subcommand "oiv_legacy" "apply the offline fsimage viewer to a legacy fsimage"
   hadoop_add_subcommand "oz" "command line interface for ozone"
+  hadoop_add_subcommand "oz_debug" "ozone debug tool, convert ozone meta data db into sqlite db"
   hadoop_add_subcommand "portmap" "run a portmap service"
   hadoop_add_subcommand "scm" "run the Storage Container Manager service"
   hadoop_add_subcommand "secondarynamenode" "run the DFS secondary namenode"
@@ -206,6 +207,9 @@ function hdfscmd_case
     ;;
     oz)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
+    ;;
+    oz_debug)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SQLCLI
     ;;
     portmap)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
