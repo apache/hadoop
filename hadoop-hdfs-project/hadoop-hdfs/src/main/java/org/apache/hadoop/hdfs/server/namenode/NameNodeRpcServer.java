@@ -2298,7 +2298,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       ErasureCodingPolicy[] policies) throws IOException {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
-    return namesystem.addECPolicies(policies);
+    return namesystem.addErasureCodingPolicies(policies);
   }
 
   @Override

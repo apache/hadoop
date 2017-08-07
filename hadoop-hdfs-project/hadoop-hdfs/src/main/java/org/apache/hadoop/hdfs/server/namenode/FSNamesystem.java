@@ -7055,18 +7055,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       resultingStat = FSDirErasureCodingOp.setErasureCodingPolicy(this,
           srcArg, ecPolicyName, pc, logRetryCache);
       success = true;
-    } catch (AccessControlException ace) {
-      logAuditEvent(success, operationName, srcArg, null,
-          resultingStat);
-      throw ace;
     } finally {
       writeUnlock(operationName);
       if (success) {
         getEditLog().logSync();
       }
+      logAuditEvent(success, operationName, srcArg, null, resultingStat);
     }
-    logAuditEvent(success, operationName, srcArg, null,
-        resultingStat);
   }
 
   /**
@@ -7074,9 +7069,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param policies The policies to add.
    * @return The according result of add operation.
    */
-  AddECPolicyResponse[] addECPolicies(ErasureCodingPolicy[] policies)
+  AddECPolicyResponse[] addErasureCodingPolicies(ErasureCodingPolicy[] policies)
       throws IOException {
-    final String operationName = "addECPolicies";
+    final String operationName = "addErasureCodingPolicies";
     String addECPolicyName = "";
     checkOperation(OperationCategory.WRITE);
     List<AddECPolicyResponse> responses = new ArrayList<>();
@@ -7201,18 +7196,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       resultingStat = FSDirErasureCodingOp.unsetErasureCodingPolicy(this,
           srcArg, pc, logRetryCache);
       success = true;
-    } catch (AccessControlException ace) {
-      logAuditEvent(success, operationName, srcArg, null,
-          resultingStat);
-      throw ace;
     } finally {
       writeUnlock(operationName);
       if (success) {
         getEditLog().logSync();
       }
+      logAuditEvent(success, operationName, srcArg, null, resultingStat);
     }
-    logAuditEvent(success, operationName, srcArg, null,
-        resultingStat);
   }
 
   /**
@@ -7220,14 +7210,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   ErasureCodingPolicy getErasureCodingPolicy(String src)
       throws AccessControlException, UnresolvedLinkException, IOException {
+    final String operationName = "getErasureCodingPolicy";
+    boolean success = false;
     checkOperation(OperationCategory.READ);
     FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingPolicy(this, src, pc);
+      final ErasureCodingPolicy ret =
+          FSDirErasureCodingOp.getErasureCodingPolicy(this, src, pc);
+      success = true;
+      return ret;
     } finally {
-      readUnlock("getErasureCodingPolicy");
+      readUnlock(operationName);
+      logAuditEvent(success, operationName, null);
     }
   }
 
@@ -7235,13 +7231,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get available erasure coding polices
    */
   ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+    final String operationName = "getErasureCodingPolicies";
+    boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingPolicies(this);
+      final ErasureCodingPolicy[] ret =
+          FSDirErasureCodingOp.getErasureCodingPolicies(this);
+      success = true;
+      return ret;
     } finally {
-      readUnlock("getErasureCodingPolicies");
+      readUnlock(operationName);
+      logAuditEvent(success, operationName, null);
     }
   }
 
@@ -7249,13 +7251,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get available erasure coding codecs and corresponding coders.
    */
   HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    final String operationName = "getErasureCodingCodecs";
+    boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingCodecs(this);
+      final HashMap<String, String> ret =
+          FSDirErasureCodingOp.getErasureCodingCodecs(this);
+      success = true;
+      return ret;
     } finally {
-      readUnlock("getErasureCodingCodecs");
+      readUnlock(operationName);
+      logAuditEvent(success, operationName, null);
     }
   }
 
