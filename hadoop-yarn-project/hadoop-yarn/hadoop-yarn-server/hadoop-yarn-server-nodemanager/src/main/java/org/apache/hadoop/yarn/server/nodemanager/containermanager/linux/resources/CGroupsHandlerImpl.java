@@ -124,6 +124,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     initializeControllerPaths();
   }
 
+  @Override
   public String getControllerPath(CGroupController controller) {
     try {
       rwLock.readLock().lock();

@@ -597,7 +597,7 @@ public class ContainersMonitorImpl extends AbstractService implements
         getResourceCalculatorProcessTree(String pId) {
       ResourceCalculatorProcessTree pt = null;
 
-      // CGroups is best in perforance, so try to use it, if it is enabled
+      // CGroups is best in performance, so try to use it, if it is enabled
       if (processTreeClass == null &&
           CGroupsResourceCalculator.isAvailable()) {
         try {

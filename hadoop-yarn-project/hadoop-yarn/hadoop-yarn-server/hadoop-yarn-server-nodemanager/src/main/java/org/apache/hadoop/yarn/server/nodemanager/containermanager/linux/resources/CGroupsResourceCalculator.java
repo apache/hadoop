@@ -32,7 +32,6 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
@@ -112,11 +111,11 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     this.procfsDir = procfsDir;
     this.cGroupsHandler = cGroupsHandler;
     this.pid = pid;
-    this.cpuTimeTracker =
-        new CpuTimeTracker(SysInfoLinux.JIFFY_LENGTH_IN_MILLIS);
-    this.clock = clock;
     this.jiffyLengthMs = (clock == SystemClock.getInstance()) ?
-      SysInfoLinux.JIFFY_LENGTH_IN_MILLIS : 10;
+        SysInfoLinux.JIFFY_LENGTH_IN_MILLIS : 10;
+    this.cpuTimeTracker =
+        new CpuTimeTracker(this.jiffyLengthMs);
+    this.clock = clock;
     setCGroupFilePaths();
   }
 
@@ -178,6 +177,7 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
 
   /**
    * Checks if the CGroupsResourceCalculator is available on this system.
+   * This assumes that Linux container executor is already initialized.
    *
    * @return true if CGroupsResourceCalculator is available. False otherwise.
    */
