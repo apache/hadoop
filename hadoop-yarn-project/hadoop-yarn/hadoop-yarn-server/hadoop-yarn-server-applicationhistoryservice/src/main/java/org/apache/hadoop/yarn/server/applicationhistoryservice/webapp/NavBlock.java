@@ -18,21 +18,19 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+
+import static org.apache.hadoop.util.GenericsUtil.isLog4jLogger;
 
 public class NavBlock extends HtmlBlock {
 
   @Override
   public void render(Block html) {
     boolean addErrorsAndWarningsLink = false;
-    Log log = LogFactory.getLog(NavBlock.class);
-    if (log instanceof Log4JLogger) {
+    if (isLog4jLogger(NavBlock.class)) {
       Log4jWarningErrorMetricsAppender appender =
           Log4jWarningErrorMetricsAppender.findAppender();
       if (appender != null) {
