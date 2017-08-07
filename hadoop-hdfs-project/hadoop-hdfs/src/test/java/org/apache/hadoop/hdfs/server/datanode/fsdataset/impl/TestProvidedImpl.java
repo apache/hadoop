@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -174,15 +176,26 @@ public class TestProvidedImpl {
     private Configuration conf;
     private int minId;
     private int numBlocks;
+    private Iterator<FileRegion> suppliedIterator;
 
     TestFileRegionProvider() {
-      minId = MIN_BLK_ID;
-      numBlocks = NUM_PROVIDED_BLKS;
+      this(null, MIN_BLK_ID, NUM_PROVIDED_BLKS);
+    }
+
+    TestFileRegionProvider(Iterator<FileRegion> iterator, int minId,
+        int numBlocks) {
+      this.suppliedIterator = iterator;
+      this.minId = minId;
+      this.numBlocks = numBlocks;
     }
 
     @Override
     public Iterator<FileRegion> iterator() {
-      return new TestFileRegionIterator(providedBasePath, minId, numBlocks);
+      if (suppliedIterator == null) {
+        return new TestFileRegionIterator(providedBasePath, minId, numBlocks);
+      } else {
+        return suppliedIterator;
+      }
     }
 
     @Override
@@ -502,5 +515,91 @@ public class TestProvidedImpl {
         LOG.info("Exception expected: " + ex);
       }
     }
+  }
+
+  private int getBlocksInProvidedVolumes(String basePath, int numBlocks,
+      int minBlockId) throws IOException {
+    TestFileRegionIterator fileRegionIterator =
+        new TestFileRegionIterator(basePath, minBlockId, numBlocks);
+    int totalBlocks = 0;
+    for (int i = 0; i < providedVolumes.size(); i++) {
+      ProvidedVolumeImpl vol = (ProvidedVolumeImpl) providedVolumes.get(i);
+      vol.setFileRegionProvider(BLOCK_POOL_IDS[CHOSEN_BP_ID],
+          new TestFileRegionProvider(fileRegionIterator, minBlockId,
+              numBlocks));
+      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
+      vol.getVolumeMap(BLOCK_POOL_IDS[CHOSEN_BP_ID], volumeMap, null);
+      totalBlocks += volumeMap.size(BLOCK_POOL_IDS[CHOSEN_BP_ID]);
+    }
+    return totalBlocks;
+  }
+
+  /**
+   * Tests if the FileRegions provided by the FileRegionProvider
+   * can belong to the Providevolume.
+   * @throws IOException
+   */
+  @Test
+  public void testProvidedVolumeContents() throws IOException {
+    int expectedBlocks = 5;
+    int minId = 0;
+    //use a path which has the same prefix as providedBasePath
+    //all these blocks can belong to the provided volume
+    int blocksFound = getBlocksInProvidedVolumes(providedBasePath + "/test1/",
+        expectedBlocks, minId);
+    assertEquals(
+        "Number of blocks in provided volumes should be " + expectedBlocks,
+        expectedBlocks, blocksFound);
+    blocksFound = getBlocksInProvidedVolumes(
+        "file:/" + providedBasePath + "/test1/", expectedBlocks, minId);
+    assertEquals(
+        "Number of blocks in provided volumes should be " + expectedBlocks,
+        expectedBlocks, blocksFound);
+    //use a path that is entirely different from the providedBasePath
+    //none of these blocks can belong to the volume
+    blocksFound =
+        getBlocksInProvidedVolumes("randomtest1/", expectedBlocks, minId);
+    assertEquals("Number of blocks in provided volumes should be 0", 0,
+        blocksFound);
+  }
+
+  @Test
+  public void testProvidedVolumeContainsBlock() throws URISyntaxException {
+    assertEquals(true, ProvidedVolumeImpl.containsBlock(null, null));
+    assertEquals(false,
+        ProvidedVolumeImpl.containsBlock(new URI("file:/a"), null));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/c/"),
+            new URI("file:/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c/"),
+            new URI("file:/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c"),
+            new URI("file:/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c/"),
+            new URI("/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/c/"),
+            new URI("/a/b/c/d/e.file")));
+    assertEquals(false,
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/e"),
+            new URI("file:/a/b/c/d/e.file")));
+    assertEquals(false,
+        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/e"),
+            new URI("file:/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("s3a:/bucket1/dir1/"),
+            new URI("s3a:/bucket1/dir1/temp.txt")));
+    assertEquals(false,
+        ProvidedVolumeImpl.containsBlock(new URI("s3a:/bucket2/dir1/"),
+            new URI("s3a:/bucket1/dir1/temp.txt")));
+    assertEquals(false,
+        ProvidedVolumeImpl.containsBlock(new URI("s3a:/bucket1/dir1/"),
+            new URI("s3a:/bucket1/temp.txt")));
+    assertEquals(false,
+        ProvidedVolumeImpl.containsBlock(new URI("/bucket1/dir1/"),
+            new URI("s3a:/bucket1/dir1/temp.txt")));
   }
 }

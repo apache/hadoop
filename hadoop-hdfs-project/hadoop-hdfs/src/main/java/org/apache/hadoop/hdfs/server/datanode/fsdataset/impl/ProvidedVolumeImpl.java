@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
@@ -64,7 +65,7 @@ import org.apache.hadoop.util.Time;
 public class ProvidedVolumeImpl extends FsVolumeImpl {
 
   static class ProvidedBlockPoolSlice {
-    private FsVolumeImpl providedVolume;
+    private ProvidedVolumeImpl providedVolume;
 
     private FileRegionProvider provider;
     private Configuration conf;
@@ -89,13 +90,20 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
       return provider;
     }
 
+    @VisibleForTesting
+    void setFileRegionProvider(FileRegionProvider newProvider) {
+      this.provider = newProvider;
+    }
+
     public void getVolumeMap(ReplicaMap volumeMap,
         RamDiskReplicaTracker ramDiskReplicaMap) throws IOException {
       Iterator<FileRegion> iter = provider.iterator();
-      while(iter.hasNext()) {
+      while (iter.hasNext()) {
         FileRegion region = iter.next();
-        if (region.getBlockPoolId() != null &&
-            region.getBlockPoolId().equals(bpid)) {
+        if (region.getBlockPoolId() != null
+            && region.getBlockPoolId().equals(bpid)
+            && containsBlock(providedVolume.baseURI,
+                region.getPath().toUri())) {
           ReplicaInfo newReplica = new ReplicaBuilder(ReplicaState.FINALIZED)
               .setBlockId(region.getBlock().getBlockId())
               .setURI(region.getPath().toUri())
@@ -103,17 +111,16 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
               .setLength(region.getBlock().getNumBytes())
               .setGenerationStamp(region.getBlock().getGenerationStamp())
               .setFsVolume(providedVolume)
-              .setConf(conf).build();
-
-          ReplicaInfo oldReplica =
-              volumeMap.get(bpid, newReplica.getBlockId());
+              .setConf(conf)
+              .build();
+          // check if the replica already exists
+          ReplicaInfo oldReplica = volumeMap.get(bpid, newReplica.getBlockId());
           if (oldReplica == null) {
             volumeMap.add(bpid, newReplica);
             bpVolumeMap.add(bpid, newReplica);
           } else {
-            throw new IOException(
-                "A block with id " + newReplica.getBlockId() +
-                " already exists in the volumeMap");
+            throw new IOException("A block with id " + newReplica.getBlockId()
+                + " already exists in the volumeMap");
           }
         }
       }
@@ -526,5 +533,43 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
       Configuration conf) throws IOException {
     throw new UnsupportedOperationException(
         "ProvidedVolume does not yet support writes");
+  }
+
+  private static URI getAbsoluteURI(URI uri) {
+    if (!uri.isAbsolute()) {
+      // URI is not absolute implies it is for a local file
+      // normalize the URI
+      return StorageLocation.normalizeFileURI(uri);
+    } else {
+      return uri;
+    }
+  }
+  /**
+   * @param volumeURI URI of the volume
+   * @param blockURI URI of the block
+   * @return true if the {@code blockURI} can belong to the volume or both URIs
+   * are null.
+   */
+  @VisibleForTesting
+  public static boolean containsBlock(URI volumeURI, URI blockURI) {
+    if (volumeURI == null && blockURI == null){
+      return true;
+    }
+    if (volumeURI == null || blockURI == null) {
+      return false;
+    }
+    volumeURI = getAbsoluteURI(volumeURI);
+    blockURI = getAbsoluteURI(blockURI);
+    return !volumeURI.relativize(blockURI).equals(blockURI);
+  }
+
+  @VisibleForTesting
+  void setFileRegionProvider(String bpid, FileRegionProvider provider)
+      throws IOException {
+    ProvidedBlockPoolSlice bp = bpSlices.get(bpid);
+    if (bp == null) {
+      throw new IOException("block pool " + bpid + " is not found");
+    }
+    bp.setFileRegionProvider(provider);
   }
 }
