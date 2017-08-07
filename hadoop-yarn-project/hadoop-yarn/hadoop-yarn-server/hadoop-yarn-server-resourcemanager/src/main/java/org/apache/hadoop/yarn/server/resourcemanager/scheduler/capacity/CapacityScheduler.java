@@ -162,6 +162,9 @@ public class CapacityScheduler extends
 
   private int offswitchPerHeartbeatLimit;
 
+  private boolean assignMultipleEnabled;
+
+  private int maxAssignPerHeartbeat;
 
   @Override
   public void setConf(Configuration conf) {
@@ -306,6 +309,9 @@ public class CapacityScheduler extends
       scheduleAsynchronously = this.conf.getScheduleAynschronously();
       asyncScheduleInterval = this.conf.getLong(ASYNC_SCHEDULER_INTERVAL,
           DEFAULT_ASYNC_SCHEDULER_INTERVAL);
+
+      this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
+      this.maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
 
       // number of threads for async scheduling
       int maxAsyncSchedulingThreads = this.conf.getInt(
@@ -1108,17 +1114,29 @@ public class CapacityScheduler extends
       .getAssignmentInformation().getReserved());
   }
 
-  private boolean canAllocateMore(CSAssignment assignment, int offswitchCount) {
-    if (null != assignment && Resources.greaterThan(getResourceCalculator(),
-        getClusterResource(), assignment.getResource(), Resources.none())
-        && offswitchCount < offswitchPerHeartbeatLimit) {
-      // And it should not be a reserved container
-      if (assignment.getAssignmentInformation().getNumReservations() == 0) {
-        return true;
-      }
+  private boolean canAllocateMore(CSAssignment assignment, int offswitchCount,
+      int assignedContainers) {
+    // Current assignment shouldn't be empty
+    if (assignment == null
+            || Resources.equals(assignment.getResource(), Resources.none())) {
+      return false;
     }
 
-    return false;
+    // offswitch assignment should be under threshold
+    if (offswitchCount >= offswitchPerHeartbeatLimit) {
+      return false;
+    }
+
+    // And it should not be a reserved container
+    if (assignment.getAssignmentInformation().getNumReservations() > 0) {
+      return false;
+    }
+
+    // assignMultipleEnabled should be ON,
+    // and assignedContainers should be under threshold
+    return assignMultipleEnabled
+        && (maxAssignPerHeartbeat == -1
+            || assignedContainers < maxAssignPerHeartbeat);
   }
 
   /**
@@ -1130,6 +1148,7 @@ public class CapacityScheduler extends
     FiCaSchedulerNode node = getNode(nodeId);
     if (null != node) {
       int offswitchCount = 0;
+      int assignedContainers = 0;
 
       PlacementSet<FiCaSchedulerNode> ps = new SimplePlacementSet<>(node);
       CSAssignment assignment = allocateContainersToNode(ps, withNodeHeartbeat);
@@ -1140,7 +1159,13 @@ public class CapacityScheduler extends
           offswitchCount++;
         }
 
-        while (canAllocateMore(assignment, offswitchCount)) {
+        if (Resources.greaterThan(calculator, getClusterResource(),
+            assignment.getResource(), Resources.none())) {
+          assignedContainers++;
+        }
+
+        while (canAllocateMore(assignment, offswitchCount,
+            assignedContainers)) {
           // Try to see if it is possible to allocate multiple container for
           // the same node heartbeat
           assignment = allocateContainersToNode(ps, true);
@@ -1148,6 +1173,12 @@ public class CapacityScheduler extends
           if (null != assignment
               && assignment.getType() == NodeType.OFF_SWITCH) {
             offswitchCount++;
+          }
+
+          if (null != assignment
+              && Resources.greaterThan(calculator, getClusterResource(),
+                  assignment.getResource(), Resources.none())) {
+            assignedContainers++;
           }
         }
 
