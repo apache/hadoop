@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
@@ -340,5 +343,31 @@ public final class RMWebAppUtil {
         logAggregationContextInfo.getRolledLogsExcludePattern(),
         logAggregationContextInfo.getLogAggregationPolicyClassName(),
         logAggregationContextInfo.getLogAggregationPolicyParameters());
+  }
+
+ /**
+   * Helper method to retrieve the UserGroupInformation from the
+   * HttpServletRequest.
+   *
+   * @param hsr the servlet request
+   * @param usePrincipal true if we need to use the principal user, remote
+   *          otherwise.
+   * @return the user group information of the caller.
+   **/
+  public static UserGroupInformation getCallerUserGroupInformation(
+      HttpServletRequest hsr, boolean usePrincipal) {
+
+    String remoteUser = hsr.getRemoteUser();
+    if (usePrincipal) {
+      Principal princ = hsr.getUserPrincipal();
+      remoteUser = princ == null ? null : princ.getName();
+    }
+
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+
+    return callerUGI;
   }
 }

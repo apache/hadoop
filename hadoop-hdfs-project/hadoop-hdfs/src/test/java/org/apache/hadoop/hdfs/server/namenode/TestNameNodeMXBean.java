@@ -370,7 +370,7 @@ public class TestNameNodeMXBean {
           cluster.getDataNodes().get(0).getDisplayName());
       fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
 
-      // Wait for the DecommissionManager to complete refresh nodes
+      // Wait for the DatanodeAdminManager to complete refresh nodes
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
         public Boolean get() {
@@ -399,7 +399,7 @@ public class TestNameNodeMXBean {
       assertEquals(0, fsn.getNumDecomLiveDataNodes());
       assertEquals(0, fsn.getNumDecomDeadDataNodes());
 
-      // Wait for the DecommissionManager to complete check
+      // Wait for the DatanodeAdminManager to complete check
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
         public Boolean get() {
@@ -501,7 +501,7 @@ public class TestNameNodeMXBean {
         assertEquals(0, fsn.getNumInMaintenanceDeadDataNodes());
       }
 
-      // Wait for the DecommissionManager to complete check
+      // Wait for the DatanodeAdminManager to complete check
       // and perform state transition
       while (fsn.getNumInMaintenanceLiveDataNodes() != 1) {
         Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);

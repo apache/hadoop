@@ -108,7 +108,7 @@ public interface RMWebServiceProtocol {
    * This method dumps the scheduler logs for the time got in input, and it is
    * reachable by using {@link RMWSConsts#SCHEDULER_LOGS}.
    *
-   * @param time the period of time
+   * @param time the period of time. It is a FormParam.
    * @param hsr the servlet request
    * @return the result of the operation
    * @throws IOException when it cannot create dump log file
@@ -121,7 +121,7 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#NODES}.
    *
    * @see ApplicationClientProtocol#getClusterNodes
-   * @param states the states we want to filter
+   * @param states the states we want to filter. It is a QueryParam.
    * @return all nodes in the cluster. If the states param is given, returns all
    *         nodes that are in the comma-separated list of states
    */
@@ -131,7 +131,8 @@ public interface RMWebServiceProtocol {
    * This method retrieves a specific node information, and it is reachable by
    * using {@link RMWSConsts#NODES_NODEID}.
    *
-   * @param nodeId the node we want to retrieve the information
+   * @param nodeId the node we want to retrieve the information. It is a
+   *          PathParam.
    * @return the information about the node in input
    */
   NodeInfo getNode(String nodeId);
@@ -142,19 +143,25 @@ public interface RMWebServiceProtocol {
    *
    * @see ApplicationClientProtocol#getApplications
    * @param hsr the servlet request
-   * @param stateQuery right now the stateQuery is deprecated
-   * @param statesQuery filter the result by states
-   * @param finalStatusQuery filter the result by final states
-   * @param userQuery filter the result by user
-   * @param queueQuery filter the result by queue
-   * @param count set a limit of the result
-   * @param startedBegin filter the result by started begin time
-   * @param startedEnd filter the result by started end time
-   * @param finishBegin filter the result by finish begin time
-   * @param finishEnd filter the result by finish end time
-   * @param applicationTypes filter the result by types
-   * @param applicationTags filter the result by tags
-   * @param unselectedFields De-selected params to avoid from report
+   * @param stateQuery right now the stateQuery is deprecated. It is a
+   *          QueryParam.
+   * @param statesQuery filter the result by states. It is a QueryParam.
+   * @param finalStatusQuery filter the result by final states. It is a
+   *          QueryParam.
+   * @param userQuery filter the result by user. It is a QueryParam.
+   * @param queueQuery filter the result by queue. It is a QueryParam.
+   * @param count set a limit of the result. It is a QueryParam.
+   * @param startedBegin filter the result by started begin time. It is a
+   *          QueryParam.
+   * @param startedEnd filter the result by started end time. It is a
+   *          QueryParam.
+   * @param finishBegin filter the result by finish begin time. It is a
+   *          QueryParam.
+   * @param finishEnd filter the result by finish end time. It is a QueryParam.
+   * @param applicationTypes filter the result by types. It is a QueryParam.
+   * @param applicationTags filter the result by tags. It is a QueryParam.
+   * @param unselectedFields De-selected params to avoid from report. It is a
+   *          QueryParam.
    * @return all apps in the cluster
    */
   @SuppressWarnings("checkstyle:parameternumber")
@@ -169,7 +176,8 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#SCHEDULER_ACTIVITIES}.
    *
    * @param hsr the servlet request
-   * @param nodeId the node we want to retrieve the activities
+   * @param nodeId the node we want to retrieve the activities. It is a
+   *          QueryParam.
    * @return all the activities in the specific node
    */
   ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId);
@@ -180,8 +188,10 @@ public interface RMWebServiceProtocol {
    * {@link RMWSConsts#SCHEDULER_APP_ACTIVITIES}.
    *
    * @param hsr the servlet request
-   * @param appId the applicationId we want to retrieve the activities
-   * @param time for how long we want to retrieve the activities
+   * @param appId the applicationId we want to retrieve the activities. It is a
+   *          QueryParam.
+   * @param time for how long we want to retrieve the activities. It is a
+   *          QueryParam.
    * @return all the activities about a specific app for a specific time
    */
   AppActivitiesInfo getAppActivities(HttpServletRequest hsr, String appId,
@@ -192,8 +202,8 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#APP_STATISTICS}.
    *
    * @param hsr the servlet request
-   * @param stateQueries filter the result by states
-   * @param typeQueries filter the result by type names
+   * @param stateQueries filter the result by states. It is a QueryParam.
+   * @param typeQueries filter the result by type names. It is a QueryParam.
    * @return the application's statistics for specific states and types
    */
   ApplicationStatisticsInfo getAppStatistics(HttpServletRequest hsr,
@@ -205,8 +215,10 @@ public interface RMWebServiceProtocol {
    *
    * @see ApplicationClientProtocol#getApplicationReport
    * @param hsr the servlet request
-   * @param appId the Id of the application we want the report
-   * @param unselectedFields De-selected param list to avoid from report
+   * @param appId the Id of the application we want the report. It is a
+   *          PathParam.
+   * @param unselectedFields De-selected param list to avoid from report. It is
+   *          a QueryParam.
    * @return the app report for a specific application
    */
   AppInfo getApp(HttpServletRequest hsr, String appId,
@@ -217,7 +229,8 @@ public interface RMWebServiceProtocol {
    * using {@link RMWSConsts#APPS_APPID_STATE}.
    *
    * @param hsr the servlet request
-   * @param appId the Id of the application we want the state
+   * @param appId the Id of the application we want the state. It is a
+   *          PathParam.
    * @return the state for a specific application
    * @throws AuthorizationException if the user is not authorized
    */
@@ -228,9 +241,10 @@ public interface RMWebServiceProtocol {
    * This method updates the state of the app in input, and it is reachable by
    * using {@link RMWSConsts#APPS_APPID_STATE}.
    *
-   * @param targetState the target state for the app
+   * @param targetState the target state for the app. It is a content param.
    * @param hsr the servlet request
-   * @param appId the Id of the application we want to update the state
+   * @param appId the Id of the application we want to update the state. It is a
+   *          PathParam.
    * @return Response containing the status code
    * @throws AuthorizationException if the user is not authorized to invoke this
    *           method
@@ -259,7 +273,7 @@ public interface RMWebServiceProtocol {
    * cluster, and it is reachable by using {@link RMWSConsts#LABEL_MAPPINGS}.
    *
    * @see ApplicationClientProtocol#getLabelsToNodes
-   * @param labels filter the result by node labels
+   * @param labels filter the result by node labels. It is a QueryParam.
    * @return all the nodes within multiple node labels
    * @throws IOException if an IOException happened
    */
@@ -270,7 +284,7 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#REPLACE_NODE_TO_LABELS}.
    *
    * @see ResourceManagerAdministrationProtocol#replaceLabelsOnNode
-   * @param newNodeToLabels the list of new labels
+   * @param newNodeToLabels the list of new labels. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws Exception if an exception happened
@@ -283,9 +297,10 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#NODES_NODEID_REPLACE_LABELS}.
    *
    * @see ResourceManagerAdministrationProtocol#replaceLabelsOnNode
-   * @param newNodeLabelsName the list of new labels
+   * @param newNodeLabelsName the list of new labels. It is a QueryParam.
    * @param hsr the servlet request
-   * @param nodeId the node we want to replace the node labels
+   * @param nodeId the node we want to replace the node labels. It is a
+   *          PathParam.
    * @return Response containing the status code
    * @throws Exception if an exception happened
    */
@@ -309,7 +324,7 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#ADD_NODE_LABELS}.
    *
    * @see ResourceManagerAdministrationProtocol#addToClusterNodeLabels
-   * @param newNodeLabels the node labels to add
+   * @param newNodeLabels the node labels to add. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws Exception in case of bad request
@@ -322,7 +337,7 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#REMOVE_NODE_LABELS}.
    *
    * @see ResourceManagerAdministrationProtocol#removeFromClusterNodeLabels
-   * @param oldNodeLabels the node labels to remove
+   * @param oldNodeLabels the node labels to remove. It is a QueryParam.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws Exception in case of bad request
@@ -335,7 +350,8 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#NODES_NODEID_GETLABELS}.
    *
    * @param hsr the servlet request
-   * @param nodeId the node we want to get all the node labels
+   * @param nodeId the node we want to get all the node labels. It is a
+   *          PathParam.
    * @return all the labels for a specific node.
    * @throws IOException if an IOException happened
    */
@@ -347,7 +363,7 @@ public interface RMWebServiceProtocol {
    * by using {@link RMWSConsts#APPS_APPID_PRIORITY}.
    *
    * @param hsr the servlet request
-   * @param appId the app we want to get the priority
+   * @param appId the app we want to get the priority. It is a PathParam.
    * @return the priority for a specific application
    * @throws AuthorizationException in case of the user is not authorized
    */
@@ -358,9 +374,11 @@ public interface RMWebServiceProtocol {
    * This method updates the priority for a specific application, and it is
    * reachable by using {@link RMWSConsts#APPS_APPID_PRIORITY}.
    *
-   * @param targetPriority the priority we want to set for the app
+   * @param targetPriority the priority we want to set for the app. It is a
+   *          content param.
    * @param hsr the servlet request
-   * @param appId the application we want to update its priority
+   * @param appId the application we want to update its priority. It is a
+   *          PathParam.
    * @return Response containing the status code
    * @throws AuthorizationException if the user is not authenticated
    * @throws YarnException if the target is null
@@ -376,7 +394,8 @@ public interface RMWebServiceProtocol {
    * using {@link RMWSConsts#APPS_APPID_QUEUE}.
    *
    * @param hsr the servlet request
-   * @param appId the application we want to retrieve its queue
+   * @param appId the application we want to retrieve its queue. It is a
+   *          PathParam.
    * @return the Queue for a specific application.
    * @throws AuthorizationException if the user is not authenticated
    */
@@ -387,9 +406,10 @@ public interface RMWebServiceProtocol {
    * This method updates the queue for a specific application, and it is
    * reachable by using {@link RMWSConsts#APPS_APPID_QUEUE}.
    *
-   * @param targetQueue the queue we want to set
+   * @param targetQueue the queue we want to set. It is a content param.
    * @param hsr the servlet request
-   * @param appId the application we want to change its queue
+   * @param appId the application we want to change its queue. It is a
+   *          PathParam.
    * @return Response containing the status code
    * @throws AuthorizationException if the user is not authenticated
    * @throws YarnException if the app is not found
@@ -424,7 +444,7 @@ public interface RMWebServiceProtocol {
    * @see ApplicationClientProtocol#submitApplication
    *
    * @param newApp structure containing information to construct the
-   *          ApplicationSubmissionContext
+   *          ApplicationSubmissionContext. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws AuthorizationException if the user is not authorized to invoke this
@@ -441,7 +461,7 @@ public interface RMWebServiceProtocol {
    * by using {@link RMWSConsts#DELEGATION_TOKEN}.
    *
    * @see ApplicationBaseProtocol#getDelegationToken
-   * @param tokenData the token to delegate
+   * @param tokenData the token to delegate. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws AuthorizationException if Kerberos auth failed
@@ -508,7 +528,7 @@ public interface RMWebServiceProtocol {
    * @see ApplicationClientProtocol#submitReservation
    *
    * @param resContext provides information to construct the
-   *          ReservationSubmissionRequest
+   *          ReservationSubmissionRequest. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws AuthorizationException if the user is not authorized to invoke this
@@ -527,7 +547,7 @@ public interface RMWebServiceProtocol {
    * @see ApplicationClientProtocol#updateReservation
    *
    * @param resContext provides information to construct the
-   *          ReservationUpdateRequest
+   *          ReservationUpdateRequest. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws AuthorizationException if the user is not authorized to invoke this
@@ -546,7 +566,7 @@ public interface RMWebServiceProtocol {
    * @see ApplicationClientProtocol#deleteReservation
    *
    * @param resContext provides information to construct the
-   *          ReservationDeleteRequest
+   *          ReservationDeleteRequest. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws AuthorizationException when the user group information cannot be
@@ -566,12 +586,13 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#RESERVATION_LIST}.
    *
    * @see ApplicationClientProtocol#listReservations
-   * @param queue filter the result by queue
-   * @param reservationId filter the result by reservationId
-   * @param startTime filter the result by start time
-   * @param endTime filter the result by end time
+   * @param queue filter the result by queue. It is a QueryParam.
+   * @param reservationId filter the result by reservationId. It is a
+   *          QueryParam.
+   * @param startTime filter the result by start time. It is a QueryParam.
+   * @param endTime filter the result by end time. It is a QueryParam.
    * @param includeResourceAllocations true if the resource allocation should be
-   *          in the result, false otherwise
+   *          in the result, false otherwise. It is a QueryParam.
    * @param hsr the servlet request
    * @return Response containing the status code
    * @throws Exception in case of bad request
@@ -586,8 +607,8 @@ public interface RMWebServiceProtocol {
    * {@link RMWSConsts#APPS_TIMEOUTS_TYPE}.
    *
    * @param hsr the servlet request
-   * @param appId the application we want to get the timeout
-   * @param type the type of the timeouts
+   * @param appId the application we want to get the timeout. It is a PathParam.
+   * @param type the type of the timeouts. It is a PathParam.
    * @return the timeout for a specific application with a specific type.
    * @throws AuthorizationException if the user is not authorized
    */
@@ -599,7 +620,8 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#APPS_TIMEOUTS}.
    *
    * @param hsr the servlet request
-   * @param appId the application we want to get the timeouts
+   * @param appId the application we want to get the timeouts. It is a
+   *          PathParam.
    * @return the timeouts for a specific application
    * @throws AuthorizationException if the user is not authorized
    */
@@ -611,9 +633,9 @@ public interface RMWebServiceProtocol {
    * reachable by using {@link RMWSConsts#APPS_TIMEOUT}.
    *
    * @see ApplicationClientProtocol#updateApplicationTimeouts
-   * @param appTimeout the appTimeoutInfo
+   * @param appTimeout the appTimeoutInfo. It is a content param.
    * @param hsr the servlet request
-   * @param appId the application we want to update
+   * @param appId the application we want to update. It is a PathParam.
    * @return Response containing the status code
    * @throws AuthorizationException if the user is not authorized to invoke this
    *           method
@@ -631,7 +653,8 @@ public interface RMWebServiceProtocol {
    *
    * @see ApplicationBaseProtocol#getApplicationAttempts
    * @param hsr the servlet request
-   * @param appId the application we want to get the attempts
+   * @param appId the application we want to get the attempts. It is a
+   *          PathParam.
    * @return all the attempts info for a specific application
    */
   AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId);

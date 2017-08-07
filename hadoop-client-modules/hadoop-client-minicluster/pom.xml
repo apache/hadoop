@@ -127,6 +127,10 @@
           <artifactId>jaxb-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>xml-apis</groupId>
+          <artifactId>xml-apis</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro</artifactId>
         </exclusion>
@@ -624,6 +628,19 @@
                         <exclude>**/*.class</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>xerces:xercesImpl</artifact>
+                      <excludes>
+                        <exclude>**/*</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.apache.hadoop:hadoop-mapreduce-client-jobclient:*</artifact>
+                      <excludes>
+                        <exclude>testjar/*</exclude>
+                        <exclude>testshell/*</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
                   <relocations>
                     <relocation>
@@ -646,12 +663,20 @@
                         <exclude>org/junit/*</exclude>
                         <exclude>org/junit/**/*</exclude>
                         <!-- Not the org/ packages that are a part of the jdk -->
+
                         <exclude>org/ietf/jgss/*</exclude>
                         <exclude>org/omg/**/*</exclude>
                         <exclude>org/w3c/dom/*</exclude>
                         <exclude>org/w3c/dom/**/*</exclude>
                         <exclude>org/xml/sax/*</exclude>
                         <exclude>org/xml/sax/**/*</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>contribs/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.contribs.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -692,6 +717,13 @@
                       </excludes>
                     </relocation>
                     <relocation>
+                      <pattern>javassist/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javassist.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
                       <pattern>javax/el/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.el.</shadedPattern>
                       <excludes>
@@ -708,6 +740,13 @@
                     <relocation>
                       <pattern>javax/servlet/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jersey/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jersey.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>

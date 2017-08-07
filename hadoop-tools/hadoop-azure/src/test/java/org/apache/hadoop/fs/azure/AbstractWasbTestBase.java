@@ -67,4 +67,8 @@ public abstract class AbstractWasbTestBase {
 
   protected abstract AzureBlobStorageTestAccount createTestAccount()
       throws Exception;
+
+  protected AzureBlobStorageTestAccount getTestAccount() {
+    return testAccount;
+  }
 }

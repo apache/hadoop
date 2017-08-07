@@ -102,7 +102,7 @@ public class TestJournalNode {
   @Test(timeout=100000)
   public void testJournal() throws Exception {
     MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(
-        journal.getMetricsForTests().getName());
+        journal.getMetrics().getName());
     MetricsAsserts.assertCounter("BatchesWritten", 0L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
     MetricsAsserts.assertGauge("CurrentLagTxns", 0L, metrics);
@@ -117,7 +117,7 @@ public class TestJournalNode {
     ch.sendEdits(1L, 1, 1, "hello".getBytes(Charsets.UTF_8)).get();
     
     metrics = MetricsAsserts.getMetrics(
-        journal.getMetricsForTests().getName());
+        journal.getMetrics().getName());
     MetricsAsserts.assertCounter("BatchesWritten", 1L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
     MetricsAsserts.assertGauge("CurrentLagTxns", 0L, metrics);
@@ -130,7 +130,7 @@ public class TestJournalNode {
     ch.sendEdits(1L, 2, 1, "goodbye".getBytes(Charsets.UTF_8)).get();
 
     metrics = MetricsAsserts.getMetrics(
-        journal.getMetricsForTests().getName());
+        journal.getMetrics().getName());
     MetricsAsserts.assertCounter("BatchesWritten", 2L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 1L, metrics);
     MetricsAsserts.assertGauge("CurrentLagTxns", 98L, metrics);

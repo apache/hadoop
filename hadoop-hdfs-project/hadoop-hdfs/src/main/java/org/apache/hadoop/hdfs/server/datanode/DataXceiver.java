@@ -811,20 +811,25 @@ class DataXceiver extends Receiver implements Runnable {
               smallBufferSize));
           mirrorIn = new DataInputStream(unbufMirrorIn);
 
+          String targetStorageId = null;
+          if (targetStorageIds.length > 0) {
+            // Older clients may not have provided any targetStorageIds
+            targetStorageId = targetStorageIds[0];
+          }
           if (targetPinnings != null && targetPinnings.length > 0) {
             new Sender(mirrorOut).writeBlock(originalBlock, targetStorageTypes[0],
                 blockToken, clientname, targets, targetStorageTypes,
                 srcDataNode, stage, pipelineSize, minBytesRcvd, maxBytesRcvd,
                 latestGenerationStamp, requestedChecksum, cachingStrategy,
                 allowLazyPersist, targetPinnings[0], targetPinnings,
-                targetStorageIds[0], targetStorageIds);
+                targetStorageId, targetStorageIds);
           } else {
             new Sender(mirrorOut).writeBlock(originalBlock, targetStorageTypes[0],
                 blockToken, clientname, targets, targetStorageTypes,
                 srcDataNode, stage, pipelineSize, minBytesRcvd, maxBytesRcvd,
                 latestGenerationStamp, requestedChecksum, cachingStrategy,
                 allowLazyPersist, false, targetPinnings,
-                targetStorageIds[0], targetStorageIds);
+                targetStorageId, targetStorageIds);
           }
 
           mirrorOut.flush();

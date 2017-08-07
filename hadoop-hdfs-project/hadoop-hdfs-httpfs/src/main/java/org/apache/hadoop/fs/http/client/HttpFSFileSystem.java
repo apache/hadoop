@@ -1047,18 +1047,7 @@ public class HttpFSFileSystem extends FileSystem
   /** Convert a string to a FsPermission object. */
   static FsPermission toFsPermission(JSONObject json) {
     final String s = (String) json.get(PERMISSION_JSON);
-    final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
-    final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
-    final Boolean erasureBit = (Boolean) json.get(EC_BIT_JSON);
-    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
-    final boolean aBit = (aclBit != null) ? aclBit : false;
-    final boolean eBit = (encBit != null) ? encBit : false;
-    final boolean ecBit = (erasureBit != null) ? erasureBit : false;
-    if (aBit || eBit || ecBit) {
-      return new FsPermissionExtension(perm, aBit, eBit, ecBit);
-    } else {
-      return perm;
-    }
+    return new FsPermission(Short.parseShort(s, 8));
   }
 
   private FileStatus createFileStatus(Path parent, JSONObject json) {
@@ -1073,23 +1062,23 @@ public class HttpFSFileSystem extends FileSystem
     long mTime = (Long) json.get(MODIFICATION_TIME_JSON);
     long blockSize = (Long) json.get(BLOCK_SIZE_JSON);
     short replication = ((Long) json.get(REPLICATION_JSON)).shortValue();
-    FileStatus fileStatus = null;
 
-    switch (type) {
-      case FILE:
-      case DIRECTORY:
-        fileStatus = new FileStatus(len, (type == FILE_TYPE.DIRECTORY),
-                                    replication, blockSize, mTime, aTime,
-                                    permission, owner, group, path);
-        break;
-      case SYMLINK:
-        Path symLink = null;
-        fileStatus = new FileStatus(len, false,
-                                    replication, blockSize, mTime, aTime,
-                                    permission, owner, group, symLink,
-                                    path);
+    final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
+    final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
+    final Boolean erasureBit = (Boolean) json.get(EC_BIT_JSON);
+    final boolean aBit = (aclBit != null) ? aclBit : false;
+    final boolean eBit = (encBit != null) ? encBit : false;
+    final boolean ecBit = (erasureBit != null) ? erasureBit : false;
+    if (aBit || eBit || ecBit) {
+      // include this for compatibility with 2.x
+      FsPermissionExtension deprecatedPerm =
+          new FsPermissionExtension(permission, aBit, eBit, ecBit);
+      return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+          replication, blockSize, mTime, aTime, deprecatedPerm, owner, group,
+          null, path, aBit, eBit, ecBit);
     }
-    return fileStatus;
+    return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+        replication, blockSize, mTime, aTime, permission, owner, group, path);
   }
 
   /**

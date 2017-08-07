@@ -2551,14 +2551,14 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       }
     };
 
-    // rm should successfully start with app1 loaded back in FAILED state
-    // due to node label not enabled but am resource request contains
-    // node label expression.
+    // rm should successfully start with app1 loaded back in SUCCESS state
+    // by pushing app to run default label for am container and let other
+    // containers to run normally.
+
     try {
       rm2.start();
       Assert.assertTrue("RM start successfully", true);
       Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
-      rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
     } catch (Exception e) {
       LOG.debug("Exception on start", e);
       Assert.fail("RM should start without any issue");

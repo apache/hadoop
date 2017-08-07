@@ -199,3 +199,22 @@ Below are the details about each command.
 *  `[-disablePolicy -policy <policyName>]`
 
      Disable an erasure coding policy.
+
+Limitations
+-----------
+
+Certain HDFS file write operations, i.e., `hflush`, `hsync` and `append`,
+are not supported on erasure coded files due to substantial technical
+challenges.
+
+* `append()` on an erasure coded file will throw `IOException`.
+* `hflush()` and `hsync()` on `DFSStripedOutputStream` are no-op. Thus calling
+`hflush()` or `hsync()` on an erasure coded file can not guarantee data
+being persistent.
+
+A client can use [`StreamCapabilities`](../hadoop-common/filesystem/filesystem.html#interface_StreamCapabilities)
+API to query whether a `OutputStream` supports `hflush()` and `hsync()`.
+If the client desires data persistence via `hflush()` and `hsync()`, the current
+remedy is creating such files as regular 3x replication files in a
+non-erasure-coded directory, or using `FSDataOutputStreamBuilder#replicate()`
+API to create 3x replication files in an erasure-coded directory.

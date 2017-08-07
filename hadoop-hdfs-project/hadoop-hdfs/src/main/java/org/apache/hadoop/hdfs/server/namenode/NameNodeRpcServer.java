@@ -80,6 +80,7 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
@@ -1430,7 +1431,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     } else if (!stat.isSymlink()) {
       throw new IOException("Path " + path + " is not a symbolic link");
     }
-    return stat.getSymlink();
+    return DFSUtilClient.bytes2String(stat.getSymlinkInBytes());
   }
 
 
@@ -2297,7 +2298,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       ErasureCodingPolicy[] policies) throws IOException {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
-    return namesystem.addECPolicies(policies);
+    return namesystem.addErasureCodingPolicies(policies);
   }
 
   @Override

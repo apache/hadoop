@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 
 public class MockRequestInterceptor extends AbstractRequestInterceptor {
 
@@ -38,22 +39,21 @@ public class MockRequestInterceptor extends AbstractRequestInterceptor {
 
   public void init(AMRMProxyApplicationContext appContext) {
     super.init(appContext);
-    mockRM =
-        new MockResourceManagerFacade(new YarnConfiguration(
-            super.getConf()), 0);
+    mockRM = new MockResourceManagerFacade(
+        new YarnConfiguration(super.getConf()), 0);
   }
 
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
-      RegisterApplicationMasterRequest request) throws YarnException,
-      IOException {
+      RegisterApplicationMasterRequest request)
+      throws YarnException, IOException {
     return mockRM.registerApplicationMaster(request);
   }
 
   @Override
   public FinishApplicationMasterResponse finishApplicationMaster(
-      FinishApplicationMasterRequest request) throws YarnException,
-      IOException {
+      FinishApplicationMasterRequest request)
+      throws YarnException, IOException {
     return mockRM.finishApplicationMaster(request);
   }
 

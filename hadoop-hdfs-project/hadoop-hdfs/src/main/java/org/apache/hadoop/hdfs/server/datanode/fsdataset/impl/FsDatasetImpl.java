@@ -536,7 +536,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               ReplicaInfo block = it.next();
               final StorageLocation blockStorageLocation =
                   block.getVolume().getStorageLocation();
-              LOG.info("checking for block " + block.getBlockId() +
+              LOG.trace("checking for block " + block.getBlockId() +
                   " with storageLocation " + blockStorageLocation);
               if (blockStorageLocation.equals(sdLocation)) {
                 blocks.add(block);

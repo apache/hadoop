@@ -39,9 +39,6 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class DF extends Shell {
 
-  /** Default DF refresh interval. */
-  public static final long DF_INTERVAL_DEFAULT = 3 * 1000;
-
   private final String dirPath;
   private final File dirFile;
   private String filesystem;
@@ -50,7 +47,8 @@ public class DF extends Shell {
   private ArrayList<String> output;
 
   public DF(File path, Configuration conf) throws IOException {
-    this(path, conf.getLong(CommonConfigurationKeys.FS_DF_INTERVAL_KEY, DF.DF_INTERVAL_DEFAULT));
+    this(path, conf.getLong(CommonConfigurationKeys.FS_DF_INTERVAL_KEY,
+        CommonConfigurationKeysPublic.FS_DF_INTERVAL_DEFAULT));
   }
 
   public DF(File path, long dfInterval) throws IOException {
@@ -214,6 +212,7 @@ public class DF extends Shell {
     if (args.length > 0)
       path = args[0];
 
-    System.out.println(new DF(new File(path), DF_INTERVAL_DEFAULT).toString());
+    System.out.println(new DF(new File(path),
+        CommonConfigurationKeysPublic.FS_DF_INTERVAL_DEFAULT).toString());
   }
 }

@@ -852,10 +852,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
   }
 
-  private static void assertSameAclBit(FileSystem expected, FileSystem actual,
+  private static void assertSameAcls(FileSystem expected, FileSystem actual,
       Path path) throws IOException {
     FileStatus expectedFileStatus = expected.getFileStatus(path);
     FileStatus actualFileStatus = actual.getFileStatus(path);
+    assertEquals(actualFileStatus.hasAcl(), expectedFileStatus.hasAcl());
     assertEquals(actualFileStatus.getPermission().getAclBit(),
         expectedFileStatus.getPermission().getAclBit());
   }
@@ -888,31 +889,31 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     AclStatus proxyAclStat = proxyFs.getAclStatus(path);
     AclStatus httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.setAcl(path, AclEntry.parseAclSpec(aclSet,true));
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.modifyAclEntries(path, AclEntry.parseAclSpec(aclUser2, true));
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.removeAclEntries(path, AclEntry.parseAclSpec(rmAclUser1, false));
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.removeAcl(path);
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
   }
 
   /**
@@ -935,21 +936,21 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     AclStatus proxyAclStat = proxyFs.getAclStatus(dir);
     AclStatus httpfsAclStat = httpfs.getAclStatus(dir);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, dir);
+    assertSameAcls(httpfs, proxyFs, dir);
 
     /* Set a default ACL on the directory */
     httpfs.setAcl(dir, (AclEntry.parseAclSpec(defUser1,true)));
     proxyAclStat = proxyFs.getAclStatus(dir);
     httpfsAclStat = httpfs.getAclStatus(dir);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, dir);
+    assertSameAcls(httpfs, proxyFs, dir);
 
     /* Remove the default ACL */
     httpfs.removeDefaultAcl(dir);
     proxyAclStat = proxyFs.getAclStatus(dir);
     httpfsAclStat = httpfs.getAclStatus(dir);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, dir);
+    assertSameAcls(httpfs, proxyFs, dir);
   }
 
   private void testEncryption() throws Exception {

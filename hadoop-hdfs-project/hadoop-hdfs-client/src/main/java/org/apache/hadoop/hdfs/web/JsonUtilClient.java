@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -61,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -97,17 +97,8 @@ class JsonUtilClient {
   }
 
   /** Convert a string to a FsPermission object. */
-  static FsPermission toFsPermission(
-      final String s, Boolean aclBit, Boolean encBit, Boolean erasureBit) {
-    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
-    final boolean aBit = (aclBit != null) ? aclBit : false;
-    final boolean eBit = (encBit != null) ? encBit : false;
-    final boolean ecBit = (erasureBit != null) ? erasureBit : false;
-    if (aBit || eBit || ecBit) {
-      return new FsPermissionExtension(perm, aBit, eBit, ecBit);
-    } else {
-      return perm;
-    }
+  static FsPermission toFsPermission(final String s) {
+    return null == s ? null : new FsPermission(Short.parseShort(s, 8));
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
@@ -128,10 +119,23 @@ class JsonUtilClient {
     final long len = ((Number) m.get("length")).longValue();
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
-    final FsPermission permission = toFsPermission((String) m.get("permission"),
-        (Boolean) m.get("aclBit"),
-        (Boolean) m.get("encBit"),
-        (Boolean) m.get("ecBit"));
+    final FsPermission permission = toFsPermission((String)m.get("permission"));
+
+    Boolean aclBit = (Boolean) m.get("aclBit");
+    Boolean encBit = (Boolean) m.get("encBit");
+    Boolean erasureBit  = (Boolean) m.get("ecBit");
+    EnumSet<HdfsFileStatus.Flags> f =
+        EnumSet.noneOf(HdfsFileStatus.Flags.class);
+    if (aclBit != null && aclBit) {
+      f.add(HdfsFileStatus.Flags.HAS_ACL);
+    }
+    if (encBit != null && encBit) {
+      f.add(HdfsFileStatus.Flags.HAS_CRYPT);
+    }
+    if (erasureBit != null && erasureBit) {
+      f.add(HdfsFileStatus.Flags.HAS_EC);
+    }
+
     final long aTime = ((Number) m.get("accessTime")).longValue();
     final long mTime = ((Number) m.get("modificationTime")).longValue();
     final long blockSize = ((Number) m.get("blockSize")).longValue();
@@ -143,11 +147,11 @@ class JsonUtilClient {
     final byte storagePolicy = m.containsKey("storagePolicy") ?
         (byte) ((Number) m.get("storagePolicy")).longValue() :
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-    return new HdfsFileStatus(len, type == WebHdfsConstants.PathType.DIRECTORY,
-        replication, blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtilClient.string2Bytes(localName),
-        fileId, childrenNum, null,
-        storagePolicy, null);
+    return new HdfsFileStatus(len,
+        type == WebHdfsConstants.PathType.DIRECTORY, replication, blockSize,
+        mTime, aTime, permission, f, owner, group, symlink,
+        DFSUtilClient.string2Bytes(localName), fileId, childrenNum,
+        null, storagePolicy, null);
   }
 
   static HdfsFileStatus[] toHdfsFileStatusArray(final Map<?, ?> json) {
@@ -465,9 +469,7 @@ class JsonUtilClient {
     aclStatusBuilder.stickyBit((Boolean) m.get("stickyBit"));
     String permString = (String) m.get("permission");
     if (permString != null) {
-      final FsPermission permission = toFsPermission(permString,
-          (Boolean) m.get("aclBit"), (Boolean) m.get("encBit"),
-          (Boolean) m.get("ecBit"));
+      final FsPermission permission = toFsPermission(permString);
       aclStatusBuilder.setPermission(permission);
     }
     final List<?> entries = (List<?>) m.get("entries");

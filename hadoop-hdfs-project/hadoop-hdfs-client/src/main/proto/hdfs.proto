@@ -32,6 +32,7 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
 import "Security.proto";
+import "acl.proto";
 
 /**
  * Extended block idenfies a block
@@ -194,13 +195,6 @@ message StorageTypeQuotaInfoProto {
 message CorruptFileBlocksProto {
  repeated string files = 1;
  required string   cookie = 2;
-}
-
-/**
- * File or Directory permision - same spec as posix
- */
-message FsPermissionProto {
-  required uint32 perm = 1;       // Actually a short - only 16bits used
 }
 
 /**
@@ -388,6 +382,11 @@ message HdfsFileStatusProto {
     IS_FILE = 2;
     IS_SYMLINK = 3;
   }
+  enum Flags {
+    HAS_ACL   = 0x01; // has ACLs
+    HAS_CRYPT = 0x02; // encrypted
+    HAS_EC    = 0x04; // erasure coded
+  }
   required FileType fileType = 1;
   required bytes path = 2;          // local name of inode encoded java UTF8
   required uint64 length = 3;
@@ -415,6 +414,9 @@ message HdfsFileStatusProto {
 
   // Optional field for erasure coding
   optional ErasureCodingPolicyProto ecPolicy = 17;
+
+  // Set of flags
+  optional uint32 flags = 18 [default = 0];
 }
 
 /**

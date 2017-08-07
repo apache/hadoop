@@ -2686,8 +2686,47 @@
     <description>The arguments to pass to the Node label script.</description>
     <name>yarn.nodemanager.node-labels.provider.script.opts</name>
   </property>
-  <!-- Other Configuration -->
 
+  <!-- Federation Configuration -->
+  <property>
+    <description>
+      Flag to indicate whether the RM is participating in Federation or not.
+    </description>
+    <name>yarn.federation.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <description>
+      Machine list file to be loaded by the FederationSubCluster Resolver
+    </description>
+    <name>yarn.federation.machine-list</name>
+  </property>
+  <property>
+    <description>
+      Class name for SubClusterResolver
+    </description>
+    <name>yarn.federation.subcluster-resolver.class</name>
+    <value>org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl</value>
+  </property>
+
+  <property>
+    <description>
+      Store class name for federation state store
+    </description>
+    <name>yarn.federation.state-store.class</name>
+    <value>org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore</value>
+  </property>
+
+  <property>
+   <description>
+    The time in seconds after which the federation state store local cache
+    will be refreshed periodically
+   </description>
+   <name>yarn.federation.cache-ttl.secs</name>
+   <value>300</value>
+  </property>
+
+  <!-- Other Configuration -->
   <property>
     <description>The interval that the yarn client library uses to poll the
     completion status of the asynchronous API of application client protocol.
@@ -3128,12 +3167,91 @@
 
   <property>
     <description>
+      The comma separated list of class names that implement the
+      RequestInterceptor interface. This is used by the RouterClientRMService
+      to create the request processing pipeline for users.
+    </description>
+    <name>yarn.router.clientrm.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.router.clientrm.DefaultClientRequestInterceptor</value>
+  </property>
+
+  <property>
+    <description>
+      Size of LRU cache for Router ClientRM Service and RMAdmin Service.
+    </description>
+    <name>yarn.router.pipeline.cache-max-size</name>
+    <value>25</value>
+  </property>
+
+  <property>
+    <description>
+      The comma separated list of class names that implement the
+      RequestInterceptor interface. This is used by the RouterRMAdminService
+      to create the request processing pipeline for users.
+    </description>
+    <name>yarn.router.rmadmin.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.router.rmadmin.DefaultRMAdminRequestInterceptor</value>
+  </property>
+
+  <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.router.address and yarn.router.webapp.address, respectively. This is
+      most useful for making Router listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.router.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
       Comma-separated list of PlacementRules to determine how applications
       submitted by certain users get mapped to certain queues. Default is
       user-group, which corresponds to UserGroupMappingPlacementRule.
     </description>
     <name>yarn.scheduler.queue-placement-rules</name>
     <value>user-group</value>
+  </property>
+
+  <property>
+    <description>
+      The comma separated list of class names that implement the
+      RequestInterceptor interface. This is used by the RouterWebServices
+      to create the request processing pipeline for users.
+    </description>
+    <name>yarn.router.webapp.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.router.webapp.DefaultRequestInterceptorREST</value>
+  </property>
+
+  <property>
+    <description>
+      The http address of the Router web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name>yarn.router.webapp.address</name>
+    <value>0.0.0.0:8089</value>
+  </property>
+
+  <property>
+    <description>
+      The https address of the Router web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name> yarn.router.webapp.https.address</name>
+    <value>0.0.0.0:8091</value>
+  </property>
+
+  <property>
+    <description>
+       It is TimelineClient 1.5 configuration whether to store active
+       application’s timeline data with in user directory i.e
+       ${yarn.timeline-service.entity-group-fs-store.active-dir}/${user.name}
+    </description>
+    <name>yarn.timeline-service.entity-group-fs-store.with-user-dir</name>
+    <value>false</value>
   </property>
 
 </configuration>
