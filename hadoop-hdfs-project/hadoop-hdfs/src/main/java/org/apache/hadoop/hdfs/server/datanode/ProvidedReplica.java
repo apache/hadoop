@@ -65,16 +65,23 @@ public abstract class ProvidedReplica extends ReplicaInfo {
    * @param volume the volume this block belongs to
    */
   public ProvidedReplica(long blockId, URI fileURI, long fileOffset,
-      long blockLen, long genStamp, FsVolumeSpi volume, Configuration conf) {
+      long blockLen, long genStamp, FsVolumeSpi volume, Configuration conf,
+      FileSystem remoteFS) {
     super(volume, blockId, blockLen, genStamp);
     this.fileURI = fileURI;
     this.fileOffset = fileOffset;
     this.conf = conf;
-    try {
-      this.remoteFS = FileSystem.get(fileURI, this.conf);
-    } catch (IOException e) {
-      LOG.warn("Failed to obtain filesystem for " + fileURI);
-      this.remoteFS = null;
+    if (remoteFS != null) {
+      this.remoteFS = remoteFS;
+    } else {
+      LOG.warn(
+          "Creating an reference to the remote FS for provided block " + this);
+      try {
+        this.remoteFS = FileSystem.get(fileURI, this.conf);
+      } catch (IOException e) {
+        LOG.warn("Failed to obtain filesystem for " + fileURI);
+        this.remoteFS = null;
+      }
     }
   }
 
@@ -83,11 +90,7 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     this.fileURI = r.fileURI;
     this.fileOffset = r.fileOffset;
     this.conf = r.conf;
-    try {
-      this.remoteFS = FileSystem.newInstance(fileURI, this.conf);
-    } catch (IOException e) {
-      this.remoteFS = null;
-    }
+    this.remoteFS = r.remoteFS;
   }
 
   @Override

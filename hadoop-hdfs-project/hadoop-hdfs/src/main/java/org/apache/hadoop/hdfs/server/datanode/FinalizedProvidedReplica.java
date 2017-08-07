@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
@@ -31,8 +32,9 @@ public class FinalizedProvidedReplica extends ProvidedReplica {
 
   public FinalizedProvidedReplica(long blockId, URI fileURI,
       long fileOffset, long blockLen, long genStamp,
-      FsVolumeSpi volume, Configuration conf) {
-    super(blockId, fileURI, fileOffset, blockLen, genStamp, volume, conf);
+      FsVolumeSpi volume, Configuration conf, FileSystem remoteFS) {
+    super(blockId, fileURI, fileOffset, blockLen, genStamp, volume, conf,
+        remoteFS);
   }
 
   @Override

@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -96,7 +97,8 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
     }
 
     public void getVolumeMap(ReplicaMap volumeMap,
-        RamDiskReplicaTracker ramDiskReplicaMap) throws IOException {
+        RamDiskReplicaTracker ramDiskReplicaMap, FileSystem remoteFS)
+        throws IOException {
       Iterator<FileRegion> iter = provider.iterator();
       while (iter.hasNext()) {
         FileRegion region = iter.next();
@@ -112,9 +114,10 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
               .setGenerationStamp(region.getBlock().getGenerationStamp())
               .setFsVolume(providedVolume)
               .setConf(conf)
+              .setRemoteFS(remoteFS)
               .build();
-          // check if the replica already exists
-          ReplicaInfo oldReplica = volumeMap.get(bpid, newReplica.getBlockId());
+          ReplicaInfo oldReplica =
+              volumeMap.get(bpid, newReplica.getBlockId());
           if (oldReplica == null) {
             volumeMap.add(bpid, newReplica);
             bpVolumeMap.add(bpid, newReplica);
@@ -163,6 +166,8 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
       new ConcurrentHashMap<String, ProvidedBlockPoolSlice>();
 
   private ProvidedVolumeDF df;
+  //the remote FileSystem to which this ProvidedVolume points to.
+  private FileSystem remoteFS;
 
   ProvidedVolumeImpl(FsDatasetImpl dataset, String storageID,
       StorageDirectory sd, FileIoProvider fileIoProvider,
@@ -176,6 +181,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
         conf.getClass(DFSConfigKeys.DFS_PROVIDER_DF_CLASS,
             DefaultProvidedVolumeDF.class, ProvidedVolumeDF.class);
     df = ReflectionUtils.newInstance(dfClass, conf);
+    remoteFS = FileSystem.get(baseURI, conf);
   }
 
   @Override
@@ -397,7 +403,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
           throws IOException {
     LOG.info("Creating volumemap for provided volume " + this);
     for(ProvidedBlockPoolSlice s : bpSlices.values()) {
-      s.getVolumeMap(volumeMap, ramDiskReplicaMap);
+      s.getVolumeMap(volumeMap, ramDiskReplicaMap, remoteFS);
     }
   }
 
@@ -414,7 +420,8 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
   void getVolumeMap(String bpid, ReplicaMap volumeMap,
       final RamDiskReplicaTracker ramDiskReplicaMap)
           throws IOException {
-    getProvidedBlockPoolSlice(bpid).getVolumeMap(volumeMap, ramDiskReplicaMap);
+    getProvidedBlockPoolSlice(bpid).getVolumeMap(volumeMap, ramDiskReplicaMap,
+        remoteFS);
   }
 
   @VisibleForTesting
