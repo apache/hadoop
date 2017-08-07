@@ -116,6 +116,9 @@ add_executable(hdfs_ioservice_test hdfs_ioservice_test.cc)
 target_link_libraries(hdfs_ioservice_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(hdfs_ioservice hdfs_ioservice_test)
 
+add_executable(user_lock_test user_lock_test.cc)
+target_link_libraries(user_lock_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+add_memcheck_test(user_lock user_lock_test)
 
 #
 #

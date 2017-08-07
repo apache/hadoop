@@ -177,7 +177,16 @@ std::string Status::ToString() const {
 }
 
 bool Status::notWorthRetry() const {
-    return noRetryExceptions.find(code_) != noRetryExceptions.end();
+  return noRetryExceptions.find(code_) != noRetryExceptions.end();
+}
+
+Status Status::MutexError(const char *msg) {
+  std::string formatted = "MutexError";
+  if(msg) {
+    formatted += ": ";
+    formatted += msg;
+  }
+  return Status(kBusy/*try_lock failure errno*/, msg);
 }
 
 }

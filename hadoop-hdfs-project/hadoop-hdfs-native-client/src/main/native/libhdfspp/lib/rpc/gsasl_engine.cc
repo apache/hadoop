@@ -16,17 +16,25 @@
  * limitations under the License.
  */
 
+#include "hdfspp/locks.h"
+
 #include <sstream>
 #include <gsasl.h>
 #include  "sasl_engine.h"
 #include "gsasl_engine.h"
 #include "common/logging.h"
 
+
 namespace hdfs {
+
 
 /*****************************************************************************
  *               GSASL UTILITY FUNCTIONS
  */
+
+static Mutex *getSaslMutex() {
+  return LockManager::getGssapiMutex();
+}
 
 static Status rc_to_status(int rc)
 {
@@ -70,32 +78,45 @@ std::pair<Status, std::string> base64_encode(const std::string & in) {
 
 GSaslEngine::~GSaslEngine()
 {
-  if (session_ != nullptr) {
+  // These should already be called in this->Finish
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    if (session_ != nullptr) {
       gsasl_finish(session_);
-  }
+    }
 
-  if (ctx_ != nullptr) {
+    if (ctx_ != nullptr) {
       gsasl_done(ctx_);
+    }
+  } catch (const LockFailure& e) {
+    if(session_ || ctx_) {
+      LOG_ERROR(kRPC, << "GSaslEngine::~GSaslEngine@" << this << " unable to dispose of gsasl state: " << e.what());
+    }
   }
 }
 
 Status GSaslEngine::gsasl_new() {
-   int status = GSASL_OK;
+  int status = GSASL_OK;
 
-   if (ctx_) return Status::OK();
+  if (ctx_) return Status::OK();
 
-   status = gsasl_init( & ctx_);
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    status = gsasl_init( & ctx_);
+  } catch (const LockFailure& e) {
+    return Status::MutexError("Mutex that guards gsasl_init unable to lock");
+  }
 
-   switch ( status) {
-   case GSASL_OK:
-      return Status::OK();
-   case GSASL_MALLOC_ERROR:
-      LOG_WARN(kRPC, <<   "GSaslEngine: Out of memory.");
-      return Status::Error("SaslEngine: Out of memory.");
-   default:
-      LOG_WARN(kRPC, <<   "GSaslEngine: Unexpected error." << status);
-      return Status::Error("SaslEngine: Unexpected error.");
-   }
+  switch ( status) {
+  case GSASL_OK:
+    return Status::OK();
+  case GSASL_MALLOC_ERROR:
+    LOG_WARN(kRPC, <<   "GSaslEngine: Out of memory.");
+    return Status::Error("SaslEngine: Out of memory.");
+  default:
+    LOG_WARN(kRPC, <<   "GSaslEngine: Unexpected error." << status);
+    return Status::Error("SaslEngine: Unexpected error.");
+  }
 } // gsasl_new()
 
 std::pair<Status, std::string>
@@ -107,12 +128,22 @@ GSaslEngine::Start()
   this->gsasl_new();
 
   /* Create new authentication session. */
-  rc = gsasl_client_start(ctx_, chosen_mech_.mechanism.c_str(), &session_);
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    rc = gsasl_client_start(ctx_, chosen_mech_.mechanism.c_str(), &session_);
+  } catch (const LockFailure& e) {
+    state_ = kErrorState;
+    return std::make_pair(Status::MutexError("Mutex that guards gsasl_client_start unable to lock"), "");
+  }
   if (rc != GSASL_OK) {
     state_ = kErrorState;
     return std::make_pair( rc_to_status( rc), std::string(""));
   }
-  init_kerberos();
+  Status init_status = init_kerberos();
+  if(!init_status.ok()) {
+    state_ = kErrorState;
+    return std::make_pair(init_status, "");
+  }
 
   state_ = kWaitingForData;
 
@@ -124,12 +155,17 @@ GSaslEngine::Start()
 Status GSaslEngine::init_kerberos() {
 
   //TODO: check that we have a principal
-
-  gsasl_property_set(session_, GSASL_AUTHID, principal_.value().c_str());
-  gsasl_property_set(session_, GSASL_HOSTNAME,   chosen_mech_.serverid.c_str());
-  gsasl_property_set(session_, GSASL_SERVICE,    chosen_mech_.protocol.c_str());
-  return Status::OK();
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    // these don't return anything that indicates failure
+    gsasl_property_set(session_, GSASL_AUTHID, principal_.value().c_str());
+    gsasl_property_set(session_, GSASL_HOSTNAME,   chosen_mech_.serverid.c_str());
+    gsasl_property_set(session_, GSASL_SERVICE,    chosen_mech_.protocol.c_str());
+  } catch (const LockFailure& e) {
+    return Status::MutexError("Mutex that guards gsasl_property_set in GSaslEngine::init_kerberos unable to lock");
   }
+  return Status::OK();
+}
 
 std::pair<Status, std::string> GSaslEngine::Step(const std::string data) {
   if (state_ != kWaitingForData)
@@ -137,8 +173,16 @@ std::pair<Status, std::string> GSaslEngine::Step(const std::string data) {
 
   char * output = NULL;
   size_t outputSize;
-  int rc = gsasl_step(session_, data.c_str(), data.size(), &output,
+
+  int rc = 0;
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    rc = gsasl_step(session_, data.c_str(), data.size(), &output,
           &outputSize);
+  } catch (const LockFailure& e) {
+    state_ = kFailure;
+    return std::make_pair(Status::MutexError("Mutex that guards gsasl_client_start unable to lock"), "");
+  }
 
   if (rc == GSASL_NEEDS_MORE || rc == GSASL_OK) {
     std::string retval(output, output ? outputSize : 0);
@@ -166,16 +210,20 @@ Status GSaslEngine::Finish()
   if (state_ != kSuccess && state_ != kFailure && state_ != kErrorState )
     LOG_WARN(kRPC, << "GSaslEngine::finish when state is " << state_);
 
-  if (session_ != nullptr) {
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    if (session_ != nullptr) {
       gsasl_finish(session_);
       session_ = NULL;
-  }
+    }
 
-  if (ctx_ != nullptr) {
+    if (ctx_ != nullptr) {
       gsasl_done(ctx_);
       ctx_ = nullptr;
+    }
+  } catch (const LockFailure& e) {
+    return Status::MutexError("Mutex that guards sasl state cleanup in GSaslEngine::Finish unable to lock");
   }
-
   return Status::OK();
 } // finish() method
 

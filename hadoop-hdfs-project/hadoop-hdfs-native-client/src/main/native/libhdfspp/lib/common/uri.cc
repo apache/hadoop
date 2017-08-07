@@ -244,6 +244,7 @@ URI URI::parse_from_string(const std::string &str)
 ///////////////////////////////////////////////////////////////////////////////
 
 URI::URI() : _port(-1) {}
+
 URI::Query::Query(const std::string& k, const std::string& v) : key(k), value(v) {}
 
 std::string URI::str(bool encoded_output) const

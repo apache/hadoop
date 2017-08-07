@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include "hdfspp/locks.h"
+
 #include <sys/types.h>
 #include "sasl/sasl.h"
 #include "sasl/saslutil.h"
@@ -31,6 +33,9 @@
 
 namespace hdfs {
 
+static Mutex *getSaslMutex() {
+  return LockManager::getGssapiMutex();
+}
 
 // Forward decls of sasl callback functions
 typedef int (*sasl_callback_ft)(void);
@@ -111,23 +116,30 @@ Status CySaslEngine::SaslError( int rc) {
 *                     Cyrus SASL ENGINE
 */
 
-  CySaslEngine::CySaslEngine() : SaslEngine(), conn_(nullptr)
-  {
-    // Create an array of callbacks that embed a pointer to this
-    //   so we can call methods of the engine
-    per_connection_callbacks_ = {
-      { SASL_CB_USER,     (sasl_callback_ft) & get_name, this}, // userid for authZ
-      { SASL_CB_AUTHNAME, (sasl_callback_ft) & get_name, this}, // authid for authT
-      { SASL_CB_GETREALM, (sasl_callback_ft) & getrealm, this}, // krb/gssapi realm
-      //  { SASL_CB_PASS,        (sasl_callback_ft)&getsecret,  this
-      { SASL_CB_LIST_END, (sasl_callback_ft) NULL, NULL}
-    };
-  }
+CySaslEngine::CySaslEngine() : SaslEngine(), conn_(nullptr)
+{
+  // Create an array of callbacks that embed a pointer to this
+  //   so we can call methods of the engine
+  per_connection_callbacks_ = {
+    { SASL_CB_USER,     (sasl_callback_ft) & get_name, this}, // userid for authZ
+    { SASL_CB_AUTHNAME, (sasl_callback_ft) & get_name, this}, // authid for authT
+    { SASL_CB_GETREALM, (sasl_callback_ft) & getrealm, this}, // krb/gssapi realm
+    //  { SASL_CB_PASS,        (sasl_callback_ft)&getsecret,  this
+    { SASL_CB_LIST_END, (sasl_callback_ft) NULL, NULL}
+  };
+}
 
+// Cleanup of last resort.  Call Finish to allow a safer check on disposal
 CySaslEngine::~CySaslEngine()
 {
+
   if (conn_) {
+    try {
+      LockGuard saslGuard(getSaslMutex());
       sasl_dispose( &conn_); // undo sasl_client_new()
+    } catch (const LockFailure& e) {
+      LOG_ERROR(kRPC, << "Unable to dispose of SASL context due to " << e.what());
+    }
   }
 } // destructor
 
@@ -146,8 +158,15 @@ Status CySaslEngine::InitCyrusSasl()
   const char * fqdn = chosen_mech_.serverid.c_str();
   const char * proto = chosen_mech_.protocol.c_str();
 
-  rc = sasl_client_new(proto, fqdn, NULL, NULL, &per_connection_callbacks_[0], 0, &conn_);
-  if (rc != SASL_OK) return SaslError(rc);
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    rc = sasl_client_new(proto, fqdn, NULL, NULL, &per_connection_callbacks_[0], 0, &conn_);
+    if (rc != SASL_OK) {
+      return SaslError(rc);
+    }
+  } catch (const LockFailure& e) {
+    return Status::MutexError("mutex that guards sasl_client_new unable to lock");
+  }
 
   return Status::OK();
 } // cysasl_new()
@@ -176,8 +195,15 @@ CySaslEngine::Start()
   const char      * chosen_mech;
   std::string       token;
 
-  rc = sasl_client_start(conn_, chosen_mech_.mechanism.c_str(), &client_interact,
-            (const char **) &buf, &buflen, &chosen_mech);
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    rc = sasl_client_start(conn_, chosen_mech_.mechanism.c_str(), &client_interact,
+              (const char **) &buf, &buflen, &chosen_mech);
+  } catch (const LockFailure& e) {
+    state_ = kFailure;
+    return std::make_pair( Status::MutexError("mutex that guards sasl_client_new unable to lock"), "" );
+  }
+
 
   switch (rc) {
   case SASL_OK:        state_ = kSuccess;
@@ -192,6 +218,7 @@ CySaslEngine::Start()
   // Cyrus will free this buffer when the connection is shut down
   token = std::string( buf, buflen);
   return std::make_pair( Status::OK(), token);
+
 } // start() method
 
 std::pair<Status, std::string> CySaslEngine::Step(const std::string data)
@@ -203,9 +230,15 @@ std::pair<Status, std::string> CySaslEngine::Step(const std::string data)
   if (state_ != kWaitingForData)
     LOG_WARN(kRPC, << "CySaslEngine::step when state is " << state_);
 
-  int rc = sasl_client_step(conn_, data.c_str(), data.size(), &client_interact,
-                        (const char **) &output, &outlen);
-
+  int rc = 0;
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    rc = sasl_client_step(conn_, data.c_str(), data.size(), &client_interact,
+                     (const char **) &output, &outlen);
+  } catch (const LockFailure& e) {
+    state_ = kFailure;
+    return std::make_pair( Status::MutexError("mutex that guards sasl_client_new unable to lock"), "" );
+  }
   // right now, state_ == kWaitingForData,
   // so update  state_, to reflect _step()'s result:
   switch (rc) {
@@ -224,8 +257,13 @@ Status CySaslEngine::Finish()
     LOG_WARN(kRPC, << "CySaslEngine::finish when state is " << state_);
 
   if (conn_ != nullptr) {
+    try {
+      LockGuard saslGuard(getSaslMutex());
       sasl_dispose( &conn_);
       conn_ = NULL;
+    } catch (const LockFailure& e) {
+      return Status::MutexError("mutex that guards sasl_dispose unable to lock");
+    }
   }
 
   return Status::OK();
@@ -234,6 +272,8 @@ Status CySaslEngine::Finish()
 //////////////////////////////////////////////////
 // Internal callbacks, for sasl_init_client().  //
 // Mostly lifted from cyrus' sample_client.c .  //
+// Implicitly called in a context that already  //
+// holds the SASL/GSSAPI lock.                  //
 //////////////////////////////////////////////////
 
 static int
@@ -388,14 +428,26 @@ const sasl_callback_t per_process_callbacks[] = {
 
 CyrusPerProcessData::CyrusPerProcessData()
 {
-  int init_rc = sasl_client_init(per_process_callbacks);
-  init_status_ = make_status(init_rc);
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    int init_rc = sasl_client_init(per_process_callbacks);
+    init_status_ = make_status(init_rc);
+  } catch (const LockFailure& e) {
+    init_status_ = Status::MutexError("mutex protecting process-wide sasl_client_init unable to lock");
+  }
 }
 
 CyrusPerProcessData::~CyrusPerProcessData()
 {
   // Undo sasl_client_init())
-  sasl_done();
+  try {
+    LockGuard saslGuard(getSaslMutex());
+    sasl_done();
+  } catch (const LockFailure& e) {
+    // Not can be done at this point, but the process is most likely shutting down anyway.
+    LOG_ERROR(kRPC, << "mutex protecting process-wide sasl_done unable to lock");
+  }
+
 }
 
 Status CyrusPerProcessData::Init()
@@ -405,6 +457,10 @@ Status CyrusPerProcessData::Init()
 
 CyrusPerProcessData & CyrusPerProcessData::GetInstance()
 {
+  // Meyer's singleton, thread safe and lazily initialized in C++11
+  //
+  // Must be lazily initialized to allow client code to plug in a GSSAPI mutex
+  // implementation.
   static CyrusPerProcessData per_process_data;
   return per_process_data;
 }

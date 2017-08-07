@@ -50,6 +50,7 @@ class Status {
   static Status PathNotFound(const char *msg);
   static Status InvalidOffset(const char *msg);
   static Status PathIsNotDirectory(const char *msg);
+  static Status MutexError(const char *msg);
 
   // success
   bool ok() const { return code_ == 0; }
@@ -79,6 +80,7 @@ class Status {
     kNotADirectory = static_cast<unsigned>(std::errc::not_a_directory),
     kFileAlreadyExists = static_cast<unsigned>(std::errc::file_exists),
     kPathIsNotEmptyDirectory = static_cast<unsigned>(std::errc::directory_not_empty),
+    kBusy = static_cast<unsigned>(std::errc::device_or_resource_busy),
 
     // non-errc codes start at 256
     kException = 256,

@@ -23,7 +23,6 @@ using ::testing::_;
 
 using namespace hdfs;
 
-
 URI expect_uri_throw(const char *uri) {
   bool threw = false;
   std::string what_msg;
