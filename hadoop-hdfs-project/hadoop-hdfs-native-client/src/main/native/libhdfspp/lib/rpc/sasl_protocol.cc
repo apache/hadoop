@@ -38,8 +38,6 @@ namespace hdfs {
 
 using namespace hadoop::common;
 using namespace google::protobuf;
-template <class T>
-using optional = std::experimental::optional<T>;
 
 /*****
  * Threading model: all entry points need to acquire the sasl_lock before accessing
