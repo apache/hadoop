@@ -87,7 +87,7 @@ public class TestProvidedReplicaImpl {
           FILE_LEN >= (i+1)*BLK_LEN ? BLK_LEN : FILE_LEN - i*BLK_LEN;
       replicas.add(
           new FinalizedProvidedReplica(i, providedFile.toURI(), i*BLK_LEN,
-          currentReplicaLength, 0, null, conf));
+          currentReplicaLength, 0, null, conf, null));
     }
   }
 

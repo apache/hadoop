@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 import java.net.URI;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -50,6 +51,7 @@ public class ReplicaBuilder {
   private long offset;
   private Configuration conf;
   private FileRegion fileRegion;
+  private FileSystem remoteFS;
 
   public ReplicaBuilder(ReplicaState state) {
     volume = null;
@@ -135,6 +137,11 @@ public class ReplicaBuilder {
 
   public ReplicaBuilder setFileRegion(FileRegion fileRegion) {
     this.fileRegion = fileRegion;
+    return this;
+  }
+
+  public ReplicaBuilder setRemoteFS(FileSystem remoteFS) {
+    this.remoteFS = remoteFS;
     return this;
   }
 
@@ -275,14 +282,14 @@ public class ReplicaBuilder {
     }
     if (fileRegion == null) {
       info = new FinalizedProvidedReplica(blockId, uri, offset,
-          length, genStamp, volume, conf);
+          length, genStamp, volume, conf, remoteFS);
     } else {
       info = new FinalizedProvidedReplica(fileRegion.getBlock().getBlockId(),
           fileRegion.getPath().toUri(),
           fileRegion.getOffset(),
           fileRegion.getBlock().getNumBytes(),
           fileRegion.getBlock().getGenerationStamp(),
-          volume, conf);
+          volume, conf, remoteFS);
     }
     return info;
   }
