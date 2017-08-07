@@ -208,21 +208,24 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    * requests from AM because of timeout between AM and AMRMProxy, which is
    * shorter than the timeout + failOver between FederationInterceptor
    * (AMRMProxy) and RM.
+   *
+   * For the same reason, this method needs to be synchronized.
    */
   @Override
-  public RegisterApplicationMasterResponse registerApplicationMaster(
-      RegisterApplicationMasterRequest request)
-      throws YarnException, IOException {
+  public synchronized RegisterApplicationMasterResponse
+      registerApplicationMaster(RegisterApplicationMasterRequest request)
+          throws YarnException, IOException {
     // If AM is calling with a different request, complain
-    if (this.amRegistrationRequest != null
-        && !this.amRegistrationRequest.equals(request)) {
-      throw new YarnException("A different request body recieved. AM should"
-          + " not call registerApplicationMaster with different request body");
+    if (this.amRegistrationRequest != null) {
+      if (!this.amRegistrationRequest.equals(request)) {
+        throw new YarnException("AM should not call "
+            + "registerApplicationMaster with a different request body");
+      }
+    } else {
+      // Save the registration request. This will be used for registering with
+      // secondary sub-clusters using UAMs, as well as re-register later
+      this.amRegistrationRequest = request;
     }
-
-    // Save the registration request. This will be used for registering with
-    // secondary sub-clusters using UAMs, as well as re-register later
-    this.amRegistrationRequest = request;
 
     /*
      * Present to AM as if we are the RM that never fails over. When actual RM
@@ -245,22 +248,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
      * is running and will breaks the elasticity feature. The registration with
      * the other sub-cluster RM will be done lazily as needed later.
      */
-    try {
-      this.amRegistrationResponse =
-          this.homeRM.registerApplicationMaster(request);
-    } catch (InvalidApplicationMasterRequestException e) {
-      if (e.getMessage()
-          .contains(AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE)) {
-        // Some other register thread might have succeeded in the meantime
-        if (this.amRegistrationResponse != null) {
-          LOG.info("Other concurrent thread registered successfully, "
-              + "simply return the same success register response");
-          return this.amRegistrationResponse;
-        }
-      }
-      // This is a real issue, throw back to AM
-      throw e;
-    }
+    this.amRegistrationResponse =
+        this.homeRM.registerApplicationMaster(request);
 
     // the queue this application belongs will be used for getting
     // AMRMProxy policy from state store.
