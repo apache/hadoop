@@ -18,6 +18,7 @@
 
 #include "configuration.h"
 #include "container-executor.h"
+#include "utils/string-utils.h"
 
 #include <inttypes.h>
 #include <libgen.h>
@@ -40,6 +41,7 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <getopt.h>
+#include <regex.h>
 
 #include "config.h"
 
@@ -78,6 +80,11 @@ static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
 
 //struct to store the user details
 struct passwd *user_detail = NULL;
+
+//Docker container related constants.
+static const char* DOCKER_CONTAINER_NAME_PREFIX = "container_";
+static const char* DOCKER_CLIENT_CONFIG_ARG = "--config=";
+static const char* DOCKER_PULL_COMMAND = "pull";
 
 FILE* LOGFILE = NULL;
 FILE* ERRORFILE = NULL;
@@ -1208,6 +1215,27 @@ char** tokenize_docker_command(const char *input, int *split_counter) {
   return linesplit;
 }
 
+int execute_regex_match(const char *regex_str, const char *input) {
+  regex_t regex;
+  int regex_match;
+  if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
+    fprintf(LOGFILE, "Unable to compile regex.");
+    fflush(LOGFILE);
+    exit(ERROR_COMPILING_REGEX);
+  }
+  regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);
+  regfree(&regex);
+  if(0 == regex_match) {
+    return 0;
+  }
+  return 1;
+}
+
+int validate_docker_image_name(const char *image_name) {
+  char *regex_str = "^(([a-zA-Z0-9.-]+)(:[0-9]+)?/)?([a-z0-9_./-]+)(:[a-zA-Z0-9_.-]+)?$";
+  return execute_regex_match(regex_str, image_name);
+}
+
 char* sanitize_docker_command(const char *line) {
   static struct option long_options[] = {
     {"name", required_argument, 0, 'n' },
@@ -1222,6 +1250,7 @@ char* sanitize_docker_command(const char *line) {
     {"cap-drop", required_argument, 0, 'o' },
     {"device", required_argument, 0, 'i' },
     {"detach", required_argument, 0, 't' },
+    {"format", required_argument, 0, 'f' },
     {0, 0, 0, 0}
   };
 
@@ -1240,6 +1269,35 @@ char* sanitize_docker_command(const char *line) {
   if(output == NULL) {
     exit(OUT_OF_MEMORY);
   }
+
+  // Handle docker client config option.
+  if(0 == strncmp(linesplit[0], DOCKER_CLIENT_CONFIG_ARG, strlen(DOCKER_CLIENT_CONFIG_ARG))) {
+    strcat(output, linesplit[0]);
+    strcat(output, " ");
+    long index = 0;
+    while(index < split_counter) {
+      linesplit[index] = linesplit[index + 1];
+      if (linesplit[index] == NULL) {
+        split_counter--;
+        break;
+      }
+      index++;
+    }
+  }
+
+  // Handle docker pull and image name validation.
+  if (0 == strncmp(linesplit[0], DOCKER_PULL_COMMAND, strlen(DOCKER_PULL_COMMAND))) {
+    if (0 != validate_docker_image_name(linesplit[1])) {
+      fprintf(ERRORFILE, "Invalid Docker image name, exiting.");
+      fflush(ERRORFILE);
+      exit(DOCKER_IMAGE_INVALID);
+    }
+    strcat(output, linesplit[0]);
+    strcat(output, " ");
+    strcat(output, linesplit[1]);
+    return output;
+  }
+
   strcat(output, linesplit[0]);
   strcat(output, " ");
   optind = 1;
@@ -1287,6 +1345,11 @@ char* sanitize_docker_command(const char *line) {
       case 't':
         quote_and_append_arg(&output, &output_size, "--detach=", optarg);
         break;
+      case 'f':
+        strcat(output, "--format=");
+        strcat(output, optarg);
+        strcat(output, " ");
+        break;
       default:
         fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);
         fflush(LOGFILE);
@@ -1297,7 +1360,16 @@ char* sanitize_docker_command(const char *line) {
 
   if(optind < split_counter) {
     while(optind < split_counter) {
-      quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+      if (0 == strncmp(linesplit[optind], DOCKER_CONTAINER_NAME_PREFIX, strlen(DOCKER_CONTAINER_NAME_PREFIX))) {
+        if (1 != validate_container_id(linesplit[optind])) {
+          fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", linesplit[optind]);
+          fflush(ERRORFILE);
+          exit(DOCKER_CONTAINER_NAME_INVALID);
+        }
+        strcat(output, linesplit[optind++]);
+      } else {
+        quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+      }
     }
   }
 
@@ -1328,8 +1400,8 @@ char* parse_docker_command_file(const char* command_file) {
   if(ret == NULL) {
     exit(ERROR_SANITIZING_DOCKER_COMMAND);
   }
-  fprintf(LOGFILE, "Using command %s\n", ret);
-  fflush(LOGFILE);
+  fprintf(ERRORFILE, "Using command %s\n", ret);
+  fflush(ERRORFILE);
 
   return ret;
 }
