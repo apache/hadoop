@@ -1046,6 +1046,7 @@ public class MRAppMaster extends CompositeService {
     private final Configuration conf;
     private final ClusterInfo clusterInfo = new ClusterInfo();
     private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
+    private String historyUrl = null;
 
     private final TaskAttemptFinishingMonitor taskAttemptFinishingMonitor;
 
@@ -1145,6 +1146,15 @@ public class MRAppMaster extends CompositeService {
       return taskAttemptFinishingMonitor;
     }
 
+    @Override
+    public String getHistoryUrl() {
+      return historyUrl;
+    }
+
+    @Override
+    public void setHistoryUrl(String historyUrl) {
+      this.historyUrl = historyUrl;
+    }
   }
 
   @SuppressWarnings("unchecked")

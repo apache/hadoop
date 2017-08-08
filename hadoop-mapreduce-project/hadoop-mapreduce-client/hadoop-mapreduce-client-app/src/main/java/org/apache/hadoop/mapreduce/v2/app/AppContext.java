@@ -69,4 +69,8 @@ public interface AppContext {
   String getNMHostname();
 
   TaskAttemptFinishingMonitor getTaskAttemptFinishingMonitor();
+
+  String getHistoryUrl();
+
+  void setHistoryUrl(String historyUrl);
 }
