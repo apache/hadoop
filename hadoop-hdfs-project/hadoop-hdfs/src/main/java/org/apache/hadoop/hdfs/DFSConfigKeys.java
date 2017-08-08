@@ -1196,6 +1196,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String FEDERATION_STORE_PREFIX =
       FEDERATION_ROUTER_PREFIX + "store.";
 
+  public static final String DFS_ROUTER_STORE_ENABLE =
+      FEDERATION_STORE_PREFIX + "enable";
+  public static final boolean DFS_ROUTER_STORE_ENABLE_DEFAULT = true;
+
   public static final String FEDERATION_STORE_SERIALIZER_CLASS =
       DFSConfigKeys.FEDERATION_STORE_PREFIX + "serializer";
   public static final Class<StateStoreSerializerPBImpl>
@@ -1221,6 +1225,21 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       FEDERATION_STORE_PREFIX + "membership.expiration";
   public static final long FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+
+  // HDFS Router-based federation admin
+  public static final String DFS_ROUTER_ADMIN_HANDLER_COUNT_KEY =
+      FEDERATION_ROUTER_PREFIX + "admin.handler.count";
+  public static final int DFS_ROUTER_ADMIN_HANDLER_COUNT_DEFAULT = 1;
+  public static final int    DFS_ROUTER_ADMIN_PORT_DEFAULT = 8111;
+  public static final String DFS_ROUTER_ADMIN_ADDRESS_KEY =
+      FEDERATION_ROUTER_PREFIX + "admin-address";
+  public static final String DFS_ROUTER_ADMIN_ADDRESS_DEFAULT =
+      "0.0.0.0:" + DFS_ROUTER_ADMIN_PORT_DEFAULT;
+  public static final String DFS_ROUTER_ADMIN_BIND_HOST_KEY =
+      FEDERATION_ROUTER_PREFIX + "admin-bind-host";
+  public static final String DFS_ROUTER_ADMIN_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "admin.enable";
+  public static final boolean DFS_ROUTER_ADMIN_ENABLE_DEFAULT = true;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated

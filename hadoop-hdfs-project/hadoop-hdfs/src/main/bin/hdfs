@@ -31,6 +31,7 @@ function hadoop_usage
   hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
   hadoop_add_option "--workers" "turn on worker mode"
 
+<<<<<<< HEAD
   hadoop_add_subcommand "balancer" daemon "run a cluster balancing utility"
   hadoop_add_subcommand "cacheadmin" admin "configure the HDFS cache"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
@@ -42,6 +43,7 @@ function hadoop_usage
   hadoop_add_subcommand "diskbalancer" daemon "Distributes data evenly among disks on a given node"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
+  hadoop_add_subcommand "federation" admin "manage Router-based federation"
   hadoop_add_subcommand "fetchdt" client "fetch a delegation token from the NameNode"
   hadoop_add_subcommand "fsck" admin "run a DFS filesystem checking utility"
   hadoop_add_subcommand "getconf" client "get config values from configuration"
@@ -180,6 +182,9 @@ function hdfscmd_case
     router)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.federation.router.Router'
+    ;;
+    federation)
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.federation.RouterAdmin'
     ;;
     secondarynamenode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
