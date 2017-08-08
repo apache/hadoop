@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.util.StringUtils;
@@ -69,6 +70,8 @@ public class AppBlock extends HtmlBlock {
   protected ApplicationBaseProtocol appBaseProt;
   protected Configuration conf;
   protected ApplicationId appID = null;
+  private boolean unsecuredUI = true;
+
 
   @Inject
   protected AppBlock(ApplicationBaseProtocol appBaseProt, ViewContext ctx,
@@ -76,6 +79,9 @@ public class AppBlock extends HtmlBlock {
     super(ctx);
     this.appBaseProt = appBaseProt;
     this.conf = conf;
+    // check if UI is unsecured.
+    String httpAuth = conf.get(CommonConfigurationKeys.HADOOP_HTTP_AUTHENTICATION_TYPE);
+    this.unsecuredUI = (httpAuth != null) && httpAuth.equals("simple");
   }
 
   @Override
@@ -128,10 +134,16 @@ public class AppBlock extends HtmlBlock {
 
     setTitle(join("Application ", aid));
 
+    // YARN-6890. for secured cluster allow anonymous UI access, application kill
+    // shouldn't be there.
+    boolean unsecuredUIForSecuredCluster = UserGroupInformation.isSecurityEnabled()
+        && this.unsecuredUI;
+
     if (webUiType != null
         && webUiType.equals(YarnWebParams.RM_WEB_UI)
         && conf.getBoolean(YarnConfiguration.RM_WEBAPP_UI_ACTIONS_ENABLED,
-          YarnConfiguration.DEFAULT_RM_WEBAPP_UI_ACTIONS_ENABLED)) {
+          YarnConfiguration.DEFAULT_RM_WEBAPP_UI_ACTIONS_ENABLED)
+            && !unsecuredUIForSecuredCluster) {
       // Application Kill
       html.div()
         .button()
