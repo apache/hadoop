@@ -26,7 +26,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.ozone.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientFactory;
+import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -132,7 +134,7 @@ public final class Corona extends Configured implements Tool {
     numberOfBucketsCreated = new AtomicInteger();
     numberOfKeysAdded = new AtomicLong();
     OzoneClientFactory.setConfiguration(conf);
-    ozoneClient = OzoneClientFactory.getRpcClient();
+    ozoneClient = OzoneClientFactory.getClient();
   }
 
   @Override

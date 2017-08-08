@@ -17,9 +17,9 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
-import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataStore;
 

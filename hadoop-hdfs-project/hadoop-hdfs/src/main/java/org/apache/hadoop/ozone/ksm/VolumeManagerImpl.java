@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.protocol.proto
@@ -34,10 +34,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.apache.hadoop.ozone.ksm
-    .KSMConfigKeys.OZONE_KSM_USER_MAX_VOLUME_DEFAULT;
-import static org.apache.hadoop.ozone.ksm
-    .KSMConfigKeys.OZONE_KSM_USER_MAX_VOLUME;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_USER_MAX_VOLUME_DEFAULT;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_USER_MAX_VOLUME;
 import static org.apache.hadoop.ozone.ksm.exceptions
     .KSMException.ResultCodes;
 

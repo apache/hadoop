@@ -19,13 +19,13 @@ package org.apache.hadoop.ozone.protocolPB;
 import com.google.common.collect.Lists;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
-import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
-import org.apache.hadoop.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ksm.protocol.KeySpaceManagerProtocol;
-import org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.protocol.KeySpaceManagerProtocol;
+import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateBucketRequest;
@@ -89,8 +89,8 @@ import java.util.List;
 
 /**
  * This class is the server-side translator that forwards requests received on
- * {@link org.apache.hadoop.ksm.protocolPB.KeySpaceManagerProtocolPB} to the
- * KeySpaceManagerService server implementation.
+ * {@link org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB}
+ * to the KeySpaceManagerService server implementation.
  */
 public class KeySpaceManagerProtocolServerSideTranslatorPB implements
     KeySpaceManagerProtocolPB {

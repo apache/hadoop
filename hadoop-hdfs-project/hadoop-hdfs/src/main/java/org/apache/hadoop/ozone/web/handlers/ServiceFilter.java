@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.web.handlers;
 
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
-import org.apache.hadoop.ozone.web.headers.Header;
+import org.apache.hadoop.ozone.client.rest.headers.Header;
 
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.ext.Provider;

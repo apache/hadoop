@@ -18,8 +18,8 @@ package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
-import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.BucketInfo;

@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.container.common.statemachine;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocolPB
     .StorageContainerDatanodeProtocolClientSideTranslatorPB;
