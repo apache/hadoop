@@ -60,6 +60,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
@@ -1151,7 +1152,12 @@ public class JobHistoryEventHandler extends AbstractService
         qualifiedDoneFile =
             doneDirFS.makeQualified(new Path(doneDirPrefixPath,
                 doneJobHistoryFileName));
-        moveToDoneNow(qualifiedLogFile, qualifiedDoneFile);
+        if(moveToDoneNow(qualifiedLogFile, qualifiedDoneFile)) {
+          String historyUrl = MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(
+              getConfig(), context.getApplicationID());
+          context.setHistoryUrl(historyUrl);
+          LOG.info("Set historyUrl to " + historyUrl);
+        }
       }
 
       // Move confFile to Done Folder
@@ -1357,7 +1363,7 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
-  private void moveTmpToDone(Path tmpPath) throws IOException {
+  protected void moveTmpToDone(Path tmpPath) throws IOException {
     if (tmpPath != null) {
       String tmpFileName = tmpPath.getName();
       String fileName = getFileNameFromTmpFN(tmpFileName);
@@ -1369,7 +1375,9 @@ public class JobHistoryEventHandler extends AbstractService
   
   // TODO If the FS objects are the same, this should be a rename instead of a
   // copy.
-  private void moveToDoneNow(Path fromPath, Path toPath) throws IOException {
+  protected boolean moveToDoneNow(Path fromPath, Path toPath)
+      throws IOException {
+    boolean success = false;
     // check if path exists, in case of retries it may not exist
     if (stagingDirFS.exists(fromPath)) {
       LOG.info("Copying " + fromPath.toString() + " to " + toPath.toString());
@@ -1378,13 +1386,18 @@ public class JobHistoryEventHandler extends AbstractService
       boolean copied = FileUtil.copy(stagingDirFS, fromPath, doneDirFS, toPath,
           false, getConfig());
 
-      if (copied)
-        LOG.info("Copied to done location: " + toPath);
-      else 
-        LOG.info("copy failed");
       doneDirFS.setPermission(toPath, new FsPermission(
           JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
+      if (copied) {
+        LOG.info("Copied from: " + fromPath.toString()
+            + " to done location: " + toPath.toString());
+        success = true;
+      } else {
+        LOG.info("Copy failed from: " + fromPath.toString()
+            + " to done location: " + toPath.toString());
+      }
     }
+    return success;
   }
 
   private String getTempFileName(String srcFile) {
