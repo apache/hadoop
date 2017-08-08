@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Assert;
@@ -31,10 +29,8 @@ import org.junit.Test;
 import java.util.List;
 
 public class TestResourceHandlerModule {
-  private static final Log LOG = LogFactory.
-      getLog(TestResourceHandlerModule.class);
-  Configuration emptyConf;
-  Configuration networkEnabledConf;
+  private Configuration emptyConf;
+  private Configuration networkEnabledConf;
 
   @Before
   public void setup() throws Exception {
@@ -63,12 +59,16 @@ public class TestResourceHandlerModule {
       //Ensure that outbound bandwidth resource handler is present in the chain
       ResourceHandlerChain resourceHandlerChain = ResourceHandlerModule
           .getConfiguredResourceHandlerChain(networkEnabledConf);
-      List<ResourceHandler> resourceHandlers = resourceHandlerChain
-          .getResourceHandlerList();
-      //Exactly one resource handler in chain
-      Assert.assertEquals(resourceHandlers.size(), 1);
-      //Same instance is expected to be in the chain.
-      Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
+      if (resourceHandlerChain != null) {
+        List<ResourceHandler> resourceHandlers = resourceHandlerChain
+            .getResourceHandlerList();
+        //Exactly one resource handler in chain
+        Assert.assertEquals(resourceHandlers.size(), 1);
+        //Same instance is expected to be in the chain.
+        Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
+      } else {
+        Assert.fail("Null returned");
+      }
     } catch (ResourceHandlerException e) {
       Assert.fail("Unexpected ResourceHandlerException: " + e);
     }
@@ -89,11 +89,15 @@ public class TestResourceHandlerModule {
 
     ResourceHandlerChain resourceHandlerChain =
         ResourceHandlerModule.getConfiguredResourceHandlerChain(diskConf);
-    List<ResourceHandler> resourceHandlers =
-        resourceHandlerChain.getResourceHandlerList();
-    // Exactly one resource handler in chain
-    Assert.assertEquals(resourceHandlers.size(), 1);
-    // Same instance is expected to be in the chain.
-    Assert.assertTrue(resourceHandlers.get(0) == handler);
+    if (resourceHandlerChain != null) {
+      List<ResourceHandler> resourceHandlers =
+          resourceHandlerChain.getResourceHandlerList();
+      // Exactly one resource handler in chain
+      Assert.assertEquals(resourceHandlers.size(), 1);
+      // Same instance is expected to be in the chain.
+      Assert.assertTrue(resourceHandlers.get(0) == handler);
+    } else {
+      Assert.fail("Null returned");
+    }
   }
 }

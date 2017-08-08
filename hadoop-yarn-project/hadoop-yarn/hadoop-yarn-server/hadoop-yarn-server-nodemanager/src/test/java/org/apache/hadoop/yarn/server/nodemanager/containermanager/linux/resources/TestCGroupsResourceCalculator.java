@@ -37,8 +37,6 @@ import static org.mockito.Mockito.*;
  */
 public class TestCGroupsResourceCalculator {
 
-  @Rule
-  public ExpectedException thrown= ExpectedException.none();
   private ControlledClock clock = new ControlledClock();
   private CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
   private String basePath = "/tmp/" + this.getClass().getName();
@@ -49,17 +47,16 @@ public class TestCGroupsResourceCalculator {
     when(cGroupsHandler.getRelativePathForCGroup("")).thenReturn("/yarn/");
   }
 
-  @Test
+  @Test(expected = YarnException.class)
   public void testPidNotFound() throws Exception {
-    thrown.expect(YarnException.class);
     CGroupsResourceCalculator calculator =
         new CGroupsResourceCalculator(
             "1234", ".", cGroupsHandler, clock);
+    Assert.assertEquals("Expected exception", null, calculator);
   }
 
-  @Test
+  @Test(expected = YarnException.class)
   public void testNoMemoryCGgroupMount() throws Exception {
-    thrown.expect(YarnException.class);
     File procfs = new File(basePath + "/1234");
     Assert.assertTrue("Setup error", procfs.mkdirs());
     try {
@@ -72,8 +69,9 @@ public class TestCGroupsResourceCalculator {
           new CGroupsResourceCalculator(
               "1234", basePath,
               cGroupsHandler, clock);
+      Assert.assertEquals("Expected exception", null, calculator);
     } finally {
-      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+      FileUtils.deleteDirectory(new File(basePath));
     }
   }
 
@@ -97,7 +95,7 @@ public class TestCGroupsResourceCalculator {
           (long)ResourceCalculatorProcessTree.UNAVAILABLE,
           calculator.getRssMemorySize(0));
     } finally {
-      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+      FileUtils.deleteDirectory(new File(basePath));
     }
   }
 
@@ -133,7 +131,7 @@ public class TestCGroupsResourceCalculator {
           90470,
           calculator.getCumulativeCpuTime());
     } finally {
-      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+      FileUtils.deleteDirectory(new File(basePath));
     }
   }
 
@@ -184,7 +182,7 @@ public class TestCGroupsResourceCalculator {
           418496513,
           calculator.getVirtualMemorySize());
     } finally {
-      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+      FileUtils.deleteDirectory(new File(basePath));
     }
   }
 
@@ -211,7 +209,7 @@ public class TestCGroupsResourceCalculator {
           90470,
           calculator.getCumulativeCpuTime());
     } finally {
-      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+      FileUtils.deleteDirectory(new File(basePath));
     }
   }
 
@@ -258,7 +256,7 @@ public class TestCGroupsResourceCalculator {
           418496513,
           calculator.getVirtualMemorySize());
     } finally {
-      FileUtils.deleteDirectory(new File("/tmp/" + this.getClass().getName()));
+      FileUtils.deleteDirectory(new File(basePath));
     }
   }
 }

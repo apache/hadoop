@@ -133,7 +133,7 @@ public class ResourceHandlerModule {
   }
 
   private static TrafficControlBandwidthHandlerImpl
-    getTrafficControlBandwidthHandler(Configuration conf)
+      getTrafficControlBandwidthHandler(Configuration conf)
       throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_NETWORK_RESOURCE_ENABLED)) {
@@ -157,7 +157,7 @@ public class ResourceHandlerModule {
   }
 
   public static OutboundBandwidthResourceHandler
-  initOutboundBandwidthResourceHandler(Configuration conf)
+      initOutboundBandwidthResourceHandler(Configuration conf)
       throws ResourceHandlerException {
     return getTrafficControlBandwidthHandler(conf);
   }
@@ -196,7 +196,7 @@ public class ResourceHandlerModule {
   }
 
   private static CGroupsMemoryResourceHandlerImpl
-    getCgroupsMemoryResourceHandler(
+      getCgroupsMemoryResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     if (cGroupsMemoryResourceHandler == null) {
       synchronized (MemoryResourceHandler.class) {
@@ -221,10 +221,14 @@ public class ResourceHandlerModule {
       Configuration conf) throws ResourceHandlerException {
     ArrayList<ResourceHandler> handlerList = new ArrayList<>();
 
-    addHandlerIfNotNull(handlerList, initOutboundBandwidthResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, initDiskResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, initMemoryResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, initCGroupsCpuResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initOutboundBandwidthResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initDiskResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initMemoryResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initCGroupsCpuResourceHandler(conf));
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 

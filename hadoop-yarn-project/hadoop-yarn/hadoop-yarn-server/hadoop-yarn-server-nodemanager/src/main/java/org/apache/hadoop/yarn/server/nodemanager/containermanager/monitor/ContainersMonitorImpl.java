@@ -225,8 +225,8 @@ public class ContainersMonitorImpl extends AbstractService implements
         YarnConfiguration.DEFAULT_NM_CONTAINER_MONITOR_ENABLED);
   }
 
-  private void initializeOverAllocation(Configuration conf) {
-    float overAllocationTreshold = conf.getFloat(
+  private void initializeOverAllocation(Configuration confParam) {
+    float overAllocationTreshold = confParam.getFloat(
         YarnConfiguration.NM_OVERALLOCATION_ALLOCATION_THRESHOLD,
         YarnConfiguration.DEFAULT_NM_OVERALLOCATION_ALLOCATION_THRESHOLD);
     overAllocationTreshold = Math.min(overAllocationTreshold,
@@ -238,7 +238,7 @@ public class ContainersMonitorImpl extends AbstractService implements
           OverAllocationInfo.newInstance(
               ResourceThresholds.newInstance(overAllocationTreshold)));
 
-      float preemptionThreshold = conf.getFloat(
+      float preemptionThreshold = confParam.getFloat(
           YarnConfiguration.NM_OVERALLOCATION_PREEMPTION_THRESHOLD,
           YarnConfiguration.DEFAULT_NM_OVERALLOCATION_PREEMPTION_THRESHOLD);
 
