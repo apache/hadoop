@@ -2086,6 +2086,10 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS =
       "0.0.0.0:" + DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT;
 
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "with-user-dir";
+
   /**
    * Defines the max number of applications could be fetched using
    * REST API or application history protocol and shown in timeline

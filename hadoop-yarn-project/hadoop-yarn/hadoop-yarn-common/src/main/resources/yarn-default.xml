@@ -3049,4 +3049,14 @@
     <value>user-group</value>
   </property>
 
+  <property>
+    <description>
+       It is TimelineClient 1.5 configuration whether to store active
+       application’s timeline data with in user directory i.e
+       ${yarn.timeline-service.entity-group-fs-store.active-dir}/${user.name}
+    </description>
+    <name>yarn.timeline-service.entity-group-fs-store.with-user-dir</name>
+    <value>false</value>
+  </property>
+
 </configuration>

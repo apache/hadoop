@@ -59,25 +59,30 @@ public class TestTimelineClientForATS1_5 {
   private static FileContext localFS;
   private static File localActiveDir;
   private TimelineWriter spyTimelineWriter;
+  private UserGroupInformation authUgi;
 
   @Before
   public void setup() throws Exception {
     localFS = FileContext.getLocalFSFileContext();
     localActiveDir =
         new File("target", this.getClass().getSimpleName() + "-activeDir")
-          .getAbsoluteFile();
+            .getAbsoluteFile();
     localFS.delete(new Path(localActiveDir.getAbsolutePath()), true);
     localActiveDir.mkdir();
     LOG.info("Created activeDir in " + localActiveDir.getAbsolutePath());
+    authUgi = UserGroupInformation.getCurrentUser();
+  }
+
+  private YarnConfiguration getConfigurations() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.5f);
     conf.set(YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR,
-      localActiveDir.getAbsolutePath());
+        localActiveDir.getAbsolutePath());
     conf.set(
-      YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_ENTITY_TYPES,
-      "summary_type");
-    client = createTimelineClient(conf);
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_ENTITY_TYPES,
+        "summary_type");
+    return conf;
   }
 
   @After
@@ -90,6 +95,21 @@ public class TestTimelineClientForATS1_5 {
 
   @Test
   public void testPostEntities() throws Exception {
+    client = createTimelineClient(getConfigurations());
+    verifyForPostEntities(false);
+  }
+
+  @Test
+  public void testPostEntitiesToKeepUnderUserDir() throws Exception {
+    YarnConfiguration conf = getConfigurations();
+    conf.setBoolean(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR,
+        true);
+    client = createTimelineClient(conf);
+    verifyForPostEntities(true);
+  }
+
+  private void verifyForPostEntities(boolean storeInsideUserDir) {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     TimelineEntityGroupId groupId =
@@ -118,7 +138,8 @@ public class TestTimelineClientForATS1_5 {
       entityTDB[0] = entities[0];
       verify(spyTimelineWriter, times(1)).putEntities(entityTDB);
       Assert.assertTrue(localFS.util().exists(
-        new Path(getAppAttemptDir(attemptId1), "summarylog-"
+          new Path(getAppAttemptDir(attemptId1, storeInsideUserDir),
+              "summarylog-"
             + attemptId1.toString())));
       reset(spyTimelineWriter);
 
@@ -132,13 +153,16 @@ public class TestTimelineClientForATS1_5 {
       verify(spyTimelineWriter, times(0)).putEntities(
         any(TimelineEntity[].class));
       Assert.assertTrue(localFS.util().exists(
-        new Path(getAppAttemptDir(attemptId2), "summarylog-"
+          new Path(getAppAttemptDir(attemptId2, storeInsideUserDir),
+              "summarylog-"
             + attemptId2.toString())));
       Assert.assertTrue(localFS.util().exists(
-        new Path(getAppAttemptDir(attemptId2), "entitylog-"
+          new Path(getAppAttemptDir(attemptId2, storeInsideUserDir),
+              "entitylog-"
             + groupId.toString())));
       Assert.assertTrue(localFS.util().exists(
-        new Path(getAppAttemptDir(attemptId2), "entitylog-"
+          new Path(getAppAttemptDir(attemptId2, storeInsideUserDir),
+              "entitylog-"
             + groupId2.toString())));
       reset(spyTimelineWriter);
     } catch (Exception e) {
@@ -148,6 +172,21 @@ public class TestTimelineClientForATS1_5 {
 
   @Test
   public void testPutDomain() {
+    client = createTimelineClient(getConfigurations());
+    verifyForPutDomain(false);
+  }
+
+  @Test
+  public void testPutDomainToKeepUnderUserDir() {
+    YarnConfiguration conf = getConfigurations();
+    conf.setBoolean(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR,
+        true);
+    client = createTimelineClient(conf);
+    verifyForPutDomain(true);
+  }
+
+  private void verifyForPutDomain(boolean storeInsideUserDir) {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationAttemptId attemptId1 =
@@ -161,21 +200,31 @@ public class TestTimelineClientForATS1_5 {
 
       client.putDomain(attemptId1, domain);
       verify(spyTimelineWriter, times(0)).putDomain(domain);
-      Assert.assertTrue(localFS.util().exists(
-        new Path(getAppAttemptDir(attemptId1), "domainlog-"
-            + attemptId1.toString())));
+      Assert.assertTrue(localFS.util()
+          .exists(new Path(getAppAttemptDir(attemptId1, storeInsideUserDir),
+              "domainlog-" + attemptId1.toString())));
       reset(spyTimelineWriter);
     } catch (Exception e) {
       Assert.fail("Exception is not expected." + e);
     }
   }
 
-  private Path getAppAttemptDir(ApplicationAttemptId appAttemptId) {
-    Path appDir =
-        new Path(localActiveDir.getAbsolutePath(), appAttemptId
-          .getApplicationId().toString());
+  private Path getAppAttemptDir(ApplicationAttemptId appAttemptId,
+      boolean storeInsideUserDir) {
+    Path userDir = getUserDir(appAttemptId, storeInsideUserDir);
+    Path appDir = new Path(userDir, appAttemptId.getApplicationId().toString());
     Path attemptDir = new Path(appDir, appAttemptId.toString());
     return attemptDir;
+  }
+
+  private Path getUserDir(ApplicationAttemptId appAttemptId,
+      boolean storeInsideUserDir) {
+    if (!storeInsideUserDir) {
+      return new Path(localActiveDir.getAbsolutePath());
+    }
+    Path userDir =
+        new Path(localActiveDir.getAbsolutePath(), authUgi.getShortUserName());
+    return userDir;
   }
 
   private static TimelineEntity generateEntity(String type) {
