@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -437,7 +438,15 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     File newStartFile = new File(tmpDir, "start_file_n.txt").getAbsoluteFile();
 
+    ResourceUtilization beforeUpgrade =
+        ResourceUtilization.newInstance(
+            containerManager.getContainerScheduler().getCurrentUtilization());
     prepareContainerUpgrade(autoCommit, false, false, cId, newStartFile);
+    ResourceUtilization afterUpgrade =
+        ResourceUtilization.newInstance(
+            containerManager.getContainerScheduler().getCurrentUtilization());
+    Assert.assertEquals("Possible resource leak detected !!",
+        beforeUpgrade, afterUpgrade);
 
     // Assert that the First process is not alive anymore
     Assert.assertFalse("Process is still alive!",
