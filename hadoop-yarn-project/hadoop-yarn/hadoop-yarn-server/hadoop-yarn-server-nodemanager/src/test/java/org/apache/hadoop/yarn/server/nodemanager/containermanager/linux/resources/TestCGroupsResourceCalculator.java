@@ -23,12 +23,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 
 import static org.mockito.Mockito.*;
 
