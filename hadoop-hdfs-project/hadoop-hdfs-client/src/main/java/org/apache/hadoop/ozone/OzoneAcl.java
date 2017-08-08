@@ -84,6 +84,11 @@ public class OzoneAcl {
     return new OzoneAcl(aclType, parts[1], rights);
   }
 
+  @Override
+  public String toString() {
+    return type+":" + name + ":" + rights;
+  }
+
   /**
    * Returns a hash code value for the object. This method is
    * supported for the benefit of hash tables.

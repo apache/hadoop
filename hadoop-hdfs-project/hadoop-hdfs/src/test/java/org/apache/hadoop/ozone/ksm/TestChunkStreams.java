@@ -17,8 +17,8 @@
 package org.apache.hadoop.ozone.ksm;
 
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.hadoop.ozone.web.storage.ChunkGroupInputStream;
-import org.apache.hadoop.ozone.web.storage.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
+import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

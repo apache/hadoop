@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
-import org.apache.hadoop.ksm.helpers.KsmBucketArgs;
-import org.apache.hadoop.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 
 import java.io.IOException;
 import java.util.List;

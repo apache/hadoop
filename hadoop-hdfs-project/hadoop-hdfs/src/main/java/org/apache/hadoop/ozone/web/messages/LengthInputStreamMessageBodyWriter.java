@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.ozone.web.messages;
 
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.client.io.LengthInputStream;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;

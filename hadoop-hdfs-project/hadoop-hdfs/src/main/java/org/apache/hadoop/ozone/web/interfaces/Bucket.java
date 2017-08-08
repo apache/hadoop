@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web.interfaces;
 
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
-import org.apache.hadoop.ozone.web.headers.Header;
+import org.apache.hadoop.ozone.client.rest.headers.Header;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;

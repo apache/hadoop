@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.web.request;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.web.headers.Header;
+import org.apache.hadoop.ozone.client.rest.headers.Header;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
