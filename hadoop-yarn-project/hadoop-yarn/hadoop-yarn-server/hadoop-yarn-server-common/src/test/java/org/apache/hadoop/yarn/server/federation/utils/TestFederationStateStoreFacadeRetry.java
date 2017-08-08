@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateS
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
+
 /**
  * Test class to validate FederationStateStoreFacade retry policy.
  */
@@ -117,6 +119,28 @@ public class TestFederationStateStoreFacadeRetry {
     // After maxRetries we stop to retry
     action =
         policy.shouldRetry(new CacheLoaderException(""), maxRetries, 0, false);
+    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+  }
+
+  /*
+   * Test to validate that PoolInitializationException is a retriable exception.
+   */
+  @Test
+  public void testFacadePoolInitRetriableException() throws Exception {
+    // PoolInitializationException is a retriable exception
+    conf = new Configuration();
+    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
+    RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
+    RetryAction action = policy.shouldRetry(
+        new PoolInitializationException(new YarnException()), 0, 0, false);
+    // We compare only the action, delay and the reason are random value
+    // during this test
+    Assert.assertEquals(RetryAction.RETRY.action, action.action);
+
+    // After maxRetries we stop to retry
+    action =
+        policy.shouldRetry(new PoolInitializationException(new YarnException()),
+            maxRetries, 0, false);
     Assert.assertEquals(RetryAction.FAIL.action, action.action);
   }
 }
