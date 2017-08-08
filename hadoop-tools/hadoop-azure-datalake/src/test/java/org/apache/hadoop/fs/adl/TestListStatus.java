@@ -102,7 +102,7 @@ public class TestListStatus extends AdlMockWebServer {
   }
 
   @Test
-  public void listStatusAclBit()
+  public void listStatusAcl()
           throws URISyntaxException, IOException {
     // With ACLBIT set to true
     getMockServer().enqueue(new MockResponse().setResponseCode(200)
@@ -115,7 +115,8 @@ public class TestListStatus extends AdlMockWebServer {
     LOG.debug("Time : " + (endTime - startTime));
     for (int i = 0; i < ls.length; i++) {
       Assert.assertTrue(ls[i].isDirectory());
-      Assert.assertEquals(true, ls[i].getPermission().getAclBit());
+      Assert.assertTrue(ls[i].hasAcl());
+      Assert.assertTrue(ls[i].getPermission().getAclBit());
     }
 
     // With ACLBIT set to false
@@ -129,7 +130,8 @@ public class TestListStatus extends AdlMockWebServer {
     LOG.debug("Time : " + (endTime - startTime));
     for (int i = 0; i < ls.length; i++) {
       Assert.assertTrue(ls[i].isDirectory());
-      Assert.assertEquals(false, ls[i].getPermission().getAclBit());
+      Assert.assertFalse(ls[i].hasAcl());
+      Assert.assertFalse(ls[i].getPermission().getAclBit());
     }
   }
 }

@@ -29,7 +29,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
 import com.microsoft.azure.datalake.store.ADLStoreOptions;
 import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.DirectoryEntryType;
 import com.microsoft.azure.datalake.store.IfExists;
 import com.microsoft.azure.datalake.store.LatencyTracker;
 import com.microsoft.azure.datalake.store.UserGroupRepresentation;
@@ -606,30 +605,12 @@ public class AdlFileSystem extends FileSystem {
   }
 
   private FileStatus toFileStatus(final DirectoryEntry entry, final Path f) {
-    boolean isDirectory = entry.type == DirectoryEntryType.DIRECTORY;
-    long lastModificationData = entry.lastModifiedTime.getTime();
-    long lastAccessTime = entry.lastAccessTime.getTime();
-    // set aclBit from ADLS backend response if
-    // ADL_SUPPORT_ACL_BIT_IN_FSPERMISSION is true.
-    final boolean aclBit = aclBitStatus ? entry.aclBit : false;
-
-    FsPermission permission = new AdlPermission(aclBit,
-        Short.valueOf(entry.permission, 8));
-    String user = entry.user;
-    String group = entry.group;
-
-    FileStatus status;
+    Path p = makeQualified(f);
+    boolean aclBit = aclBitStatus ? entry.aclBit : false;
     if (overrideOwner) {
-      status = new FileStatus(entry.length, isDirectory, ADL_REPLICATION_FACTOR,
-          ADL_BLOCK_SIZE, lastModificationData, lastAccessTime, permission,
-          userName, "hdfs", this.makeQualified(f));
-    } else {
-      status = new FileStatus(entry.length, isDirectory, ADL_REPLICATION_FACTOR,
-          ADL_BLOCK_SIZE, lastModificationData, lastAccessTime, permission,
-          user, group, this.makeQualified(f));
+      return new AdlFileStatus(entry, p, userName, "hdfs", aclBit);
     }
-
-    return status;
+    return new AdlFileStatus(entry, p, aclBit);
   }
 
   /**
