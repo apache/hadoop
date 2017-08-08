@@ -25,8 +25,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_ADMIN_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS;
@@ -46,6 +50,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -67,6 +72,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServi
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -101,6 +107,15 @@ public class RouterDFSCluster {
   /** Mini cluster. */
   private MiniDFSCluster cluster;
 
+  protected static final long DEFAULT_HEARTBEAT_INTERVAL_MS =
+      TimeUnit.SECONDS.toMillis(5);
+  protected static final long DEFAULT_CACHE_INTERVAL_MS =
+      TimeUnit.SECONDS.toMillis(5);
+  /** Heartbeat interval in milliseconds. */
+  private long heartbeatInterval;
+  /** Cache flush interval in milliseconds. */
+  private long cacheFlushInterval;
+
   /** Router configuration overrides. */
   private Configuration routerOverrides;
   /** Namenode configuration overrides. */
@@ -118,6 +133,7 @@ public class RouterDFSCluster {
     private int rpcPort;
     private DFSClient client;
     private Configuration conf;
+    private RouterClient adminClient;
     private URI fileSystemUri;
 
     public RouterContext(Configuration conf, String nsId, String nnId)
@@ -181,6 +197,15 @@ public class RouterDFSCluster {
           return new DFSClient(fileSystemUri, conf);
         }
       });
+    }
+
+    public RouterClient getAdminClient() throws IOException {
+      if (adminClient == null) {
+        InetSocketAddress routerSocket = router.getAdminServerAddress();
+        LOG.info("Connecting to router admin at {}", routerSocket);
+        adminClient = new RouterClient(routerSocket, conf);
+      }
+      return adminClient;
     }
 
     public DFSClient getClient() throws IOException, URISyntaxException {
@@ -304,13 +329,22 @@ public class RouterDFSCluster {
     }
   }
 
-  public RouterDFSCluster(boolean ha, int numNameservices, int numNamenodes) {
+  public RouterDFSCluster(boolean ha, int numNameservices, int numNamenodes,
+      long heartbeatInterval, long cacheFlushInterval) {
     this.highAvailability = ha;
+    this.heartbeatInterval = heartbeatInterval;
+    this.cacheFlushInterval = cacheFlushInterval;
     configureNameservices(numNameservices, numNamenodes);
   }
 
   public RouterDFSCluster(boolean ha, int numNameservices) {
-    this(ha, numNameservices, 2);
+    this(ha, numNameservices, 2,
+        DEFAULT_HEARTBEAT_INTERVAL_MS, DEFAULT_CACHE_INTERVAL_MS);
+  }
+
+  public RouterDFSCluster(boolean ha, int numNameservices, int numNamnodes) {
+    this(ha, numNameservices, numNamnodes,
+        DEFAULT_HEARTBEAT_INTERVAL_MS, DEFAULT_CACHE_INTERVAL_MS);
   }
 
   /**
@@ -404,7 +438,12 @@ public class RouterDFSCluster {
     conf.set(DFS_ROUTER_RPC_ADDRESS_KEY, "127.0.0.1:0");
     conf.set(DFS_ROUTER_RPC_BIND_HOST_KEY, "0.0.0.0");
 
+    conf.set(DFS_ROUTER_ADMIN_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFS_ROUTER_ADMIN_BIND_HOST_KEY, "0.0.0.0");
+
     conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, nameservices.get(0));
+    conf.setLong(DFS_ROUTER_HEARTBEAT_INTERVAL_MS, heartbeatInterval);
+    conf.setLong(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS, cacheFlushInterval);
 
     // Use mock resolver classes
     conf.setClass(FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS,

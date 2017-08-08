@@ -28,8 +28,10 @@ public class RouterConfigBuilder {
   private Configuration conf;
 
   private boolean enableRpcServer = false;
+  private boolean enableAdminServer = false;
   private boolean enableHeartbeat = false;
   private boolean enableLocalHeartbeat = false;
+  private boolean enableStateStore = false;
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -41,8 +43,10 @@ public class RouterConfigBuilder {
 
   public RouterConfigBuilder all() {
     this.enableRpcServer = true;
+    this.enableAdminServer = true;
     this.enableHeartbeat = true;
     this.enableLocalHeartbeat = true;
+    this.enableStateStore = true;
     return this;
   }
 
@@ -56,8 +60,18 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder admin(boolean enable) {
+    this.enableAdminServer = enable;
+    return this;
+  }
+
   public RouterConfigBuilder heartbeat(boolean enable) {
     this.enableHeartbeat = enable;
+    return this;
+  }
+
+  public RouterConfigBuilder stateStore(boolean enable) {
+    this.enableStateStore = enable;
     return this;
   }
 
@@ -65,12 +79,24 @@ public class RouterConfigBuilder {
     return this.rpc(true);
   }
 
+  public RouterConfigBuilder admin() {
+    return this.admin(true);
+  }
+
   public RouterConfigBuilder heartbeat() {
     return this.heartbeat(true);
   }
 
+  public RouterConfigBuilder stateStore() {
+    return this.stateStore(true);
+  }
+
   public Configuration build() {
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_STORE_ENABLE,
+        this.enableStateStore);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_RPC_ENABLE, this.enableRpcServer);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_ADMIN_ENABLE,
+        this.enableAdminServer);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
         this.enableHeartbeat);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,
