@@ -145,6 +145,9 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `CreateSymlinkOps` | Total number of createSymlink operations |
 | `GetLinkTargetOps` | Total number of getLinkTarget operations |
 | `FilesInGetListingOps` | Total number of files and directories listed by directory listing operations |
+| `SuccessfulReReplications` | Total number of successful block re-replications |
+| `NumTimesReReplicationNotScheduled` | Total number of times that failed to schedule a block re-replication |
+| `TimeoutReReplications` | Total number of timed out block re-replications |
 | `AllowSnapshotOps` | Total number of allowSnapshot operations |
 | `DisallowSnapshotOps` | Total number of disallowSnapshot operations |
 | `CreateSnapshotOps` | Total number of createSnapshot operations |
@@ -177,6 +180,8 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `GenerateEDEKTimeAvgTime` | Average time of generating EDEK in milliseconds |
 | `WarmUpEDEKTimeNumOps` | Total number of warming up EDEK |
 | `WarmUpEDEKTimeAvgTime` | Average time of warming up EDEK in milliseconds |
+| `ResourceCheckTime`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of NameNode resource check latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `BlockReport`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of storage block report latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 
 FSNamesystem
 ------------
