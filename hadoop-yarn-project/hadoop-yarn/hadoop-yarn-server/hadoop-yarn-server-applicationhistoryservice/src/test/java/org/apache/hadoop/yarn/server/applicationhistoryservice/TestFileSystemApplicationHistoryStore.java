@@ -32,8 +32,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,12 +47,14 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Container
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFileSystemApplicationHistoryStore extends
     ApplicationHistoryStoreTestUtils {
 
-  private static Log LOG = LogFactory
-    .getLog(TestFileSystemApplicationHistoryStore.class.getName());
+  private static final Logger LOG = LoggerFactory
+    .getLogger(TestFileSystemApplicationHistoryStore.class.getName());
 
   private FileSystem fs;
   private Path fsWorkingPath;

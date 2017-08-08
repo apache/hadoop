@@ -42,8 +42,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -79,12 +77,15 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 @Path("/ws/v1/applicationhistory")
 public class AHSWebServices extends WebServices {
 
-  private static final Log LOG = LogFactory.getLog(AHSWebServices.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AHSWebServices.class);
   private static final String NM_DOWNLOAD_URI_STR =
       "/ws/v1/node/containers";
   private static final Joiner JOINER = Joiner.on("");

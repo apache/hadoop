@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
@@ -60,6 +58,8 @@ import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * History server that keeps track of all types of history in the cluster.
@@ -68,8 +68,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class ApplicationHistoryServer extends CompositeService {
 
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  private static final Log LOG = LogFactory
-    .getLog(ApplicationHistoryServer.class);
+  private static final Logger LOG = LoggerFactory
+    .getLogger(ApplicationHistoryServer.class);
 
   private ApplicationHistoryClientService ahsClientService;
   private ApplicationACLsManager aclsManager;
@@ -178,7 +178,7 @@ public class ApplicationHistoryServer extends CompositeService {
       appHistoryServer.init(conf);
       appHistoryServer.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting ApplicationHistoryServer", t);
+      LOG.error("Error starting ApplicationHistoryServer", t);
       ExitUtil.terminate(-1, "Error starting ApplicationHistoryServer");
     }
     return appHistoryServer;

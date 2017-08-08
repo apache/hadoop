@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.timeline.security;
 import java.io.IOException;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +33,8 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.timeline.recovery.LeveldbTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore.TimelineServiceState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The service wrapper of {@link TimelineDelegationTokenSecretManager}
@@ -118,8 +118,8 @@ public class TimelineDelegationTokenSecretManagerService extends
   public static class TimelineDelegationTokenSecretManager extends
       AbstractDelegationTokenSecretManager<TimelineDelegationTokenIdentifier> {
 
-    public static final Log LOG =
-        LogFactory.getLog(TimelineDelegationTokenSecretManager.class);
+    public static final Logger LOG =
+        LoggerFactory.getLogger(TimelineDelegationTokenSecretManager.class);
 
     private TimelineStateStore stateStore;
 
