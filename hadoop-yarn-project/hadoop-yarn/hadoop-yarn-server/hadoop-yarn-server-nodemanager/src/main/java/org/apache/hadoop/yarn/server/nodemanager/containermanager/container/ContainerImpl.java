@@ -1393,6 +1393,10 @@ public class ContainerImpl implements Container {
       container.resourceSet =
           container.reInitContext.mergedResourceSet(container.resourceSet);
       container.isMarkeForKilling = false;
+      // Ensure Resources are decremented.
+      container.dispatcher.getEventHandler().handle(
+          new ContainerSchedulerEvent(container,
+          ContainerSchedulerEventType.CONTAINER_COMPLETED));
       container.sendScheduleEvent();
     }
   }

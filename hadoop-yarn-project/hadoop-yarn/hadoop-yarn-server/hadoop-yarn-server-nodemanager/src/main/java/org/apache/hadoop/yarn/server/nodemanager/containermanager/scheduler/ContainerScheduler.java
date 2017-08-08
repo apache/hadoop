@@ -419,4 +419,9 @@ public class ContainerScheduler extends AbstractService implements
   public ContainersMonitor getContainersMonitor() {
     return this.context.getContainerManager().getContainersMonitor();
   }
+
+  @VisibleForTesting
+  public ResourceUtilization getCurrentUtilization() {
+    return this.utilizationTracker.getCurrentUtilization();
+  }
 }
