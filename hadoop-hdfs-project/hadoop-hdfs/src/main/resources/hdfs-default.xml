@@ -4449,6 +4449,44 @@
     </description>
   </property>
 
+    <property>
+    <name>dfs.federation.router.admin.enable</name>
+    <value>true</value>
+    <description>
+      If the RPC admin service to handle client requests in the router is
+      enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin-address</name>
+    <value>0.0.0.0:8111</value>
+    <description>
+      RPC address that handles the admin requests.
+      The value of this property will take the form of router-host1:rpc-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the RPC admin server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.admin-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin.handler.count</name>
+    <value>1</value>
+    <description>
+      The number of server threads for the router to handle RPC requests from
+      admin.
+    </description>
+  </property>
+
   <property>
     <name>dfs.federation.router.file.resolver.client.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.MockResolver</value>
@@ -4462,6 +4500,14 @@
     <value>org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver</value>
     <description>
       Class to resolve the namenode for a subcluster.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.enable</name>
+    <value>true</value>
+    <description>
+      If the Router connects to the State Store.
     </description>
   </property>
 

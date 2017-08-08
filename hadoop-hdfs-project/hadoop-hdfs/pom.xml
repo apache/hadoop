@@ -349,6 +349,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>editlog.proto</include>
                   <include>fsimage.proto</include>
                   <include>FederationProtocol.proto</include>
+                  <include>RouterProtocol.proto</include>
                 </includes>
               </source>
             </configuration>
