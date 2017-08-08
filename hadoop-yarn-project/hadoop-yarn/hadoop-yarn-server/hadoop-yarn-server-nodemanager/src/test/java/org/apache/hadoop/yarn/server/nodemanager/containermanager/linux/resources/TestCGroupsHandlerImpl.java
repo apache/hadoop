@@ -573,4 +573,29 @@ public class TestCGroupsHandlerImpl {
         new File(new File(newMountPoint, "cpu"), this.hierarchy);
     assertTrue("Yarn cgroup should exist", hierarchyFile.exists());
   }
+
+
+  @Test
+  public void testManualCgroupSetting() throws ResourceHandlerException {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, tmpPath);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "/hadoop-yarn");
+    File cpu = new File(new File(tmpPath, "cpuacct,cpu"), "/hadoop-yarn");
+
+    try {
+      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
+
+      CGroupsHandlerImpl cGroupsHandler = new CGroupsHandlerImpl(conf, null);
+      cGroupsHandler.initializeCGroupController(
+              CGroupsHandler.CGroupController.CPU);
+
+      Assert.assertEquals("CPU CGRoup path was not set", cpu.getAbsolutePath(),
+              new File(cGroupsHandler.getPathForCGroup(
+                  CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
+
+    } finally {
+      FileUtils.deleteQuietly(cpu);
+    }
+  }
 }

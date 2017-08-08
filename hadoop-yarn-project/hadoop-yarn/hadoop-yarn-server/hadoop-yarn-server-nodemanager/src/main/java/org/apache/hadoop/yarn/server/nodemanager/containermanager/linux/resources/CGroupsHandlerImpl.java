@@ -83,7 +83,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    * @param mtab mount file location
    * @throws ResourceHandlerException if initialization failed
    */
-  public CGroupsHandlerImpl(Configuration conf, PrivilegedOperationExecutor
+  CGroupsHandlerImpl(Configuration conf, PrivilegedOperationExecutor
       privilegedOperationExecutor, String mtab)
       throws ResourceHandlerException {
     this.cGroupPrefix = conf.get(YarnConfiguration.
@@ -115,7 +115,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    *                                    PrivilegedContainerOperations
    * @throws ResourceHandlerException if initialization failed
    */
-  public CGroupsHandlerImpl(Configuration conf, PrivilegedOperationExecutor
+  CGroupsHandlerImpl(Configuration conf, PrivilegedOperationExecutor
       privilegedOperationExecutor) throws ResourceHandlerException {
     this(conf, privilegedOperationExecutor, MTAB_FILE);
   }
@@ -142,11 +142,18 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     // the same hierarchy will be mounted at each mount point with the same
     // subsystem set.
 
-    Map<String, Set<String>> newMtab;
+    Map<String, Set<String>> newMtab = null;
     Map<CGroupController, String> cPaths;
     try {
-      // parse mtab
-      newMtab = parseMtab(mtabFile);
+      if (this.cGroupMountPath != null && !this.enableCGroupMount) {
+        newMtab = ResourceHandlerModule.
+            parseConfiguredCGroupPath(this.cGroupMountPath);
+      }
+
+      if (newMtab == null) {
+        // parse mtab
+        newMtab = parseMtab(mtabFile);
+      }
 
       // find cgroup controller paths
       cPaths = initializeControllerPathsFromMtab(newMtab);
@@ -203,10 +210,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       throws IOException {
     Map<String, Set<String>> ret = new HashMap<>();
     BufferedReader in = null;
-    HashSet<String> validCgroups = new HashSet<>();
-    for (CGroupController controller : CGroupController.values()) {
-      validCgroups.add(controller.getName());
-    }
+    Set<String> validCgroups =
+        CGroupsHandler.CGroupController.getValidCGroups();
 
     try {
       FileInputStream fis = new FileInputStream(new File(mtab));
@@ -487,7 +492,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       try (BufferedReader inl =
           new BufferedReader(new InputStreamReader(new FileInputStream(cgf
               + "/tasks"), "UTF-8"))) {
-        if ((str = inl.readLine()) != null) {
+        str = inl.readLine();
+        if (str != null) {
           LOG.debug("First line in cgroup tasks file: " + cgf + " " + str);
         }
       } catch (IOException e) {
