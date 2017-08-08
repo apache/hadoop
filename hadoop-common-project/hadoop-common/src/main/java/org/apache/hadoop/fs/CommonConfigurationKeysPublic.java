@@ -565,6 +565,9 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_DNS_NAMESERVER_KEY =
     "hadoop.security.dns.nameserver";
 
+  public static final String HADOOP_HTTP_AUTHENTICATION_TYPE =
+    "hadoop.http.authentication.type";
+
   @Deprecated
   /** Only used by HttpServer. */
   public static final String HADOOP_SSL_ENABLED_KEY = "hadoop.ssl.enabled";
