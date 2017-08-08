@@ -61,7 +61,7 @@ public class MembershipNamenodeResolver
   /** Reference to the State Store. */
   private final StateStoreService stateStore;
   /** Membership State Store interface. */
-  private final MembershipStore membershipInterface;
+  private MembershipStore membershipInterface;
 
   /** Parent router ID. */
   private String routerId;
@@ -82,25 +82,27 @@ public class MembershipNamenodeResolver
     if (this.stateStore != null) {
       // Request cache updates from the state store
       this.stateStore.registerCacheExternal(this);
+    }
+  }
 
-      // Initialize the interface to get the membership
+  private synchronized MembershipStore getMembershipStore() throws IOException {
+    if (this.membershipInterface == null) {
       this.membershipInterface = this.stateStore.getRegisteredRecordStore(
           MembershipStore.class);
-    } else {
-      this.membershipInterface = null;
+      if (this.membershipInterface == null) {
+        throw new IOException("State Store does not have an interface for " +
+            MembershipStore.class.getSimpleName());
+      }
     }
-
-    if (this.membershipInterface == null) {
-      throw new IOException("State Store does not have an interface for " +
-          MembershipStore.class.getSimpleName());
-    }
+    return this.membershipInterface;
   }
 
   @Override
   public boolean loadCache(boolean force) {
     // Our cache depends on the store, update it first
     try {
-      this.membershipInterface.loadCache(force);
+      MembershipStore membership = getMembershipStore();
+      membership.loadCache(force);
     } catch (IOException e) {
       LOG.error("Cannot update membership from the State Store", e);
     }
@@ -126,8 +128,9 @@ public class MembershipNamenodeResolver
       GetNamenodeRegistrationsRequest request =
           GetNamenodeRegistrationsRequest.newInstance(partial);
 
+      MembershipStore membership = getMembershipStore();
       GetNamenodeRegistrationsResponse response =
-          this.membershipInterface.getNamenodeRegistrations(request);
+          membership.getNamenodeRegistrations(request);
       List<MembershipState> records = response.getNamenodeMemberships();
 
       if (records != null && records.size() == 1) {
@@ -135,7 +138,7 @@ public class MembershipNamenodeResolver
         UpdateNamenodeRegistrationRequest updateRequest =
             UpdateNamenodeRegistrationRequest.newInstance(
                 record.getNameserviceId(), record.getNamenodeId(), ACTIVE);
-        this.membershipInterface.updateNamenodeRegistration(updateRequest);
+        membership.updateNamenodeRegistration(updateRequest);
       }
     } catch (StateStoreUnavailableException e) {
       LOG.error("Cannot update {} as active, State Store unavailable", address);
@@ -226,14 +229,14 @@ public class MembershipNamenodeResolver
 
     NamenodeHeartbeatRequest request = NamenodeHeartbeatRequest.newInstance();
     request.setNamenodeMembership(record);
-    return this.membershipInterface.namenodeHeartbeat(request).getResult();
+    return getMembershipStore().namenodeHeartbeat(request).getResult();
   }
 
   @Override
   public Set<FederationNamespaceInfo> getNamespaces() throws IOException {
     GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
     GetNamespaceInfoResponse response =
-        this.membershipInterface.getNamespaceInfo(request);
+        getMembershipStore().getNamespaceInfo(request);
     return response.getNamespaceInfo();
   }
 
@@ -259,8 +262,9 @@ public class MembershipNamenodeResolver
     // Retrieve a list of all registrations that match this query.
     // This may include all NN records for a namespace/blockpool, including
     // duplicate records for the same NN from different routers.
+    MembershipStore membershipStore = getMembershipStore();
     GetNamenodeRegistrationsResponse response =
-        this.membershipInterface.getNamenodeRegistrations(request);
+        membershipStore.getNamenodeRegistrations(request);
 
     List<MembershipState> memberships = response.getNamenodeMemberships();
     if (!addExpired || !addUnavailable) {
