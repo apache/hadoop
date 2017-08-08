@@ -59,7 +59,7 @@ if "%1" == "--loglevel" (
     )
   )
 
-  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto router debug
+  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto router federation debug
   for %%i in ( %hdfscommands% ) do (
     if %hdfs-command% == %%i set hdfscommand=true
   )
@@ -181,6 +181,11 @@ goto :eof
 
 :router
   set CLASS=org.apache.hadoop.hdfs.server.federation.router.Router
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_ROUTER_OPTS%
+  goto :eof
+
+:federation
+  set CLASS=org.apache.hadoop.hdfs.tools.federation.RouterAdmin
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_ROUTER_OPTS%
   goto :eof
 

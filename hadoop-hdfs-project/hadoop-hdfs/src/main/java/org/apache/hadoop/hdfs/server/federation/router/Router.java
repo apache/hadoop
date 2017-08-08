@@ -81,6 +81,10 @@ public class Router extends CompositeService {
   private RouterRpcServer rpcServer;
   private InetSocketAddress rpcAddress;
 
+  /** RPC interface for the admin. */
+  private RouterAdminServer adminServer;
+  private InetSocketAddress adminAddress;
+
   /** Interface with the State Store. */
   private StateStoreService stateStore;
 
@@ -116,6 +120,14 @@ public class Router extends CompositeService {
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
 
+    if (conf.getBoolean(
+        DFSConfigKeys.DFS_ROUTER_STORE_ENABLE,
+        DFSConfigKeys.DFS_ROUTER_STORE_ENABLE_DEFAULT)) {
+      // Service that maintains the State Store connection
+      this.stateStore = new StateStoreService();
+      addService(this.stateStore);
+    }
+
     // Resolver to track active NNs
     this.namenodeResolver = newActiveNamenodeResolver(
         this.conf, this.stateStore);
@@ -136,6 +148,14 @@ public class Router extends CompositeService {
       this.rpcServer = createRpcServer();
       addService(this.rpcServer);
       this.setRpcServerAddress(rpcServer.getRpcAddress());
+    }
+
+    if (conf.getBoolean(
+        DFSConfigKeys.DFS_ROUTER_ADMIN_ENABLE,
+        DFSConfigKeys.DFS_ROUTER_ADMIN_ENABLE_DEFAULT)) {
+      // Create admin server
+      this.adminServer = createAdminServer();
+      addService(this.adminServer);
     }
 
     if (conf.getBoolean(
@@ -261,6 +281,38 @@ public class Router extends CompositeService {
    */
   public InetSocketAddress getRpcServerAddress() {
     return this.rpcAddress;
+  }
+
+  /////////////////////////////////////////////////////////
+  // Admin server
+  /////////////////////////////////////////////////////////
+
+  /**
+   * Create a new router admin server to handle the router admin interface.
+   *
+   * @return RouterAdminServer
+   * @throws IOException If the admin server was not successfully started.
+   */
+  protected RouterAdminServer createAdminServer() throws IOException {
+    return new RouterAdminServer(this.conf, this);
+  }
+
+  /**
+   * Set the current Admin socket for the router.
+   *
+   * @param adminAddress Admin RPC address.
+   */
+  protected void setAdminServerAddress(InetSocketAddress address) {
+    this.adminAddress = address;
+  }
+
+  /**
+   * Get the current Admin socket address for the router.
+   *
+   * @return InetSocketAddress Admin address.
+   */
+  public InetSocketAddress getAdminServerAddress() {
+    return adminAddress;
   }
 
   /////////////////////////////////////////////////////////
