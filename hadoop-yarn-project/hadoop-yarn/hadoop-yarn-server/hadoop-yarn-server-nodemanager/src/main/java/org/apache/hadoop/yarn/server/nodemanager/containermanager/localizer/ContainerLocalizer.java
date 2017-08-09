@@ -17,6 +17,8 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
+import static org.apache.hadoop.util.Shell.getAllShells;
+
 import com.google.common.base.Preconditions;
 import java.io.DataInputStream;
 import java.io.File;
@@ -31,6 +33,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.Callable;
@@ -82,8 +85,6 @@ import org.apache.hadoop.yarn.util.FSDownload;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import static org.apache.hadoop.util.Shell.getAllShells;
 
 public class ContainerLocalizer {
 
@@ -350,13 +351,13 @@ public class ContainerLocalizer {
     final List<LocalResourceStatus> currentResources =
       new ArrayList<LocalResourceStatus>();
     // TODO: Synchronization??
-    for (Iterator<LocalResource> i = pendingResources.keySet().iterator();
-         i.hasNext();) {
-      LocalResource rsrc = i.next();
+    for (Iterator<Entry<LocalResource, Future<Path>>> i =
+        pendingResources.entrySet().iterator(); i.hasNext();) {
+      Entry<LocalResource, Future<Path>> mapEntry = i.next();
       LocalResourceStatus stat =
         recordFactory.newRecordInstance(LocalResourceStatus.class);
-      stat.setResource(rsrc);
-      Future<Path> fPath = pendingResources.get(rsrc);
+      stat.setResource(mapEntry.getKey());
+      Future<Path> fPath = mapEntry.getValue();
       if (fPath.isDone()) {
         try {
           Path localPath = fPath.get();
