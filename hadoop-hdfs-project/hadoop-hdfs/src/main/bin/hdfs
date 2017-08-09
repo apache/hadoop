@@ -67,7 +67,6 @@ function hadoop_usage
   hadoop_add_subcommand "scm" "run the Storage Container Manager service"
   hadoop_add_subcommand "secondarynamenode" "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" "diff two snapshots of a directory or diff the current directory contents with a snapshot"
-  hadoop_add_subcommnad "sqlconvert" "convert ozone leveldb files into sqlite db file for debug purpose"
   hadoop_add_subcommand "storagepolicies" "list/get/set block storage policies"
   hadoop_add_subcommand "version" "print the version"
   hadoop_add_subcommand "zkfc" "run the ZK Failover Controller daemon"
@@ -232,9 +231,6 @@ function hdfscmd_case
     ;;
     snapshotDiff)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
-    ;;
-    sqlconvert)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SQLCLI
     ;;
     storagepolicies)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.StoragePolicyAdmin
