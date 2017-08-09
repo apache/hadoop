@@ -27,9 +27,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.PriorityQueue;
+import java.util.NavigableSet;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,11 +83,15 @@ public class LeaseManager {
   //
   private final SortedMap<String, Lease> leases = new TreeMap<>();
   // Set of: Lease
-  private final PriorityQueue<Lease> sortedLeases = new PriorityQueue<>(512,
+  private final NavigableSet<Lease> sortedLeases = new TreeSet<>(
       new Comparator<Lease>() {
         @Override
         public int compare(Lease o1, Lease o2) {
-          return Long.signum(o1.getLastUpdate() - o2.getLastUpdate());
+          if (o1.getLastUpdate() != o2.getLastUpdate()) {
+            return Long.signum(o1.getLastUpdate() - o2.getLastUpdate());
+          } else {
+            return o1.holder.compareTo(o2.holder);
+          }
         }
   });
   // INodeID -> Lease
@@ -380,9 +385,10 @@ public class LeaseManager {
 
     long start = monotonicNow();
 
-    while(!sortedLeases.isEmpty() && sortedLeases.peek().expiredHardLimit()
-      && !isMaxLockHoldToReleaseLease(start)) {
-      Lease leaseToCheck = sortedLeases.peek();
+    while(!sortedLeases.isEmpty() &&
+        sortedLeases.first().expiredHardLimit()
+        && !isMaxLockHoldToReleaseLease(start)) {
+      Lease leaseToCheck = sortedLeases.first();
       LOG.info(leaseToCheck + " has expired hard limit");
 
       final List<Long> removing = new ArrayList<>();
