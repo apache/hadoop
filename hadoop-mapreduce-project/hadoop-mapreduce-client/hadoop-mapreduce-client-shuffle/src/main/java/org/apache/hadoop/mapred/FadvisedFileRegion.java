@@ -111,7 +111,10 @@ public class FadvisedFileRegion extends DefaultFileRegion {
     
     long trans = actualCount;
     int readSize;
-    ByteBuffer byteBuffer = ByteBuffer.allocate(this.shuffleBufferSize);
+    ByteBuffer byteBuffer = ByteBuffer.allocate(
+        Math.min(
+            this.shuffleBufferSize,
+            trans > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) trans));
     
     while(trans > 0L &&
         (readSize = fileChannel.read(byteBuffer, this.position+position)) > 0) {
