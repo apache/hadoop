@@ -274,29 +274,43 @@ public final class S3Guard {
      *    true
      */
     FileStatus prevStatus = null;
-    // Iterate from leaf to root
-    for (int i = 0; i < dirs.size(); i++) {
-      boolean isLeaf = (prevStatus == null);
-      Path f = dirs.get(i);
-      assertQualified(f);
-      FileStatus status = S3AUtils.createUploadFileStatus(f, true, 0, 0, owner);
-      Collection<PathMetadata> children;
-      if (isLeaf) {
-        children = DirListingMetadata.EMPTY_DIR;
-      } else {
-        children = new ArrayList<>(1);
-        children.add(new PathMetadata(prevStatus));
+
+    // Use new batched put to reduce round trips.
+    List<PathMetadata> pathMetas = new ArrayList<>(dirs.size());
+
+    try {
+      // Iterate from leaf to root
+      for (int i = 0; i < dirs.size(); i++) {
+        boolean isLeaf = (prevStatus == null);
+        Path f = dirs.get(i);
+        assertQualified(f);
+        FileStatus status =
+            S3AUtils.createUploadFileStatus(f, true, 0, 0, owner);
+
+        // We only need to put a DirListingMetadata if we are setting
+        // authoritative bit
+        DirListingMetadata dirMeta = null;
+        if (authoritative) {
+          Collection<PathMetadata> children;
+          if (isLeaf) {
+            children = DirListingMetadata.EMPTY_DIR;
+          } else {
+            children = new ArrayList<>(1);
+            children.add(new PathMetadata(prevStatus));
+          }
+          dirMeta = new DirListingMetadata(f, children, authoritative);
+          ms.put(dirMeta);
+        }
+
+        pathMetas.add(new PathMetadata(status));
+        prevStatus = status;
       }
-      DirListingMetadata dirMeta =
-          new DirListingMetadata(f, children, authoritative);
-      try {
-        ms.put(dirMeta);
-        ms.put(new PathMetadata(status));
-      } catch (IOException ioe) {
-        LOG.error("MetadataStore#put() failure:", ioe);
-        return;
-      }
-      prevStatus = status;
+
+      // Batched put
+      ms.put(pathMetas);
+    } catch (IOException ioe) {
+      LOG.error("MetadataStore#put() failure:", ioe);
+      return;
     }
   }
 
@@ -407,7 +421,7 @@ public final class S3Guard {
       if (directory == null || directory.isDeleted()) {
         FileStatus status = new FileStatus(0, true, 1, 0, 0, 0, null, username,
             null, parent);
-        PathMetadata meta = new PathMetadata(status, Tristate.UNKNOWN, false);
+        PathMetadata meta = new PathMetadata(status, Tristate.FALSE, false);
         newDirs.add(meta);
       } else {
         break;
