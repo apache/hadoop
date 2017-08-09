@@ -209,9 +209,9 @@ public class TestErasureCodingPolicies {
     cluster.restartNameNodes();
     cluster.waitActive();
 
-    // No policies should be enabled after restart
-    Assert.assertTrue("No policies should be enabled after restart",
-        fs.getAllErasureCodingPolicies().isEmpty());
+    // Only default policy should be enabled after restart
+    Assert.assertEquals("Only default policy should be enabled after restart",
+        1, fs.getAllErasureCodingPolicies().size());
 
     // Already set directory-level policies should still be in effect
     Path disabledPolicy = new Path(dir1, "afterDisabled");
@@ -356,6 +356,24 @@ public class TestErasureCodingPolicies {
     } catch (Exception e) {
       assertExceptionContains("Policy 'RS-4-2-128k' does not match " +
           "any enabled erasure coding policies", e);
+    }
+  }
+
+  @Test
+  public void testSetDefaultPolicy()
+          throws IOException {
+    String src = "/ecDir";
+    final Path ecDir = new Path(src);
+    try {
+      fs.mkdir(ecDir, FsPermission.getDirDefault());
+      fs.getClient().setErasureCodingPolicy(src, null);
+      String actualECPolicyName = fs.getClient().
+          getErasureCodingPolicy(src).getName();
+      String expectedECPolicyName =
+          conf.get(DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
+          DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
+      assertEquals(expectedECPolicyName, actualECPolicyName);
+    } catch (Exception e) {
     }
   }
 

@@ -75,7 +75,7 @@ public class TestEnabledECPolicies {
     String defaultECPolicies = conf.get(
         DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
         DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
-    expectValidPolicy(defaultECPolicies, 0);
+    expectValidPolicy(defaultECPolicies, 1);
   }
 
   @Test
@@ -98,10 +98,10 @@ public class TestEnabledECPolicies {
     String ecPolicyName = StripedFileTestUtil.getDefaultECPolicy().getName();
     expectValidPolicy(ecPolicyName, 1);
     expectValidPolicy(ecPolicyName + ", ", 1);
-    expectValidPolicy(",", 0);
+    expectValidPolicy(",", 1);
     expectValidPolicy(", " + ecPolicyName, 1);
-    expectValidPolicy(" ", 0);
-    expectValidPolicy(" , ", 0);
+    expectValidPolicy(" ", 1);
+    expectValidPolicy(" , ", 1);
   }
 
   @Test
@@ -147,7 +147,7 @@ public class TestEnabledECPolicies {
       Assert.assertTrue("Did not find specified EC policy " + p.getName(),
           found.contains(p.getName()));
     }
-    Assert.assertEquals(enabledPolicies.length, found.size());
+    Assert.assertEquals(enabledPolicies.length, found.size()-1);
     // Check that getEnabledPolicyByName only returns enabled policies
     for (ErasureCodingPolicy p: SystemErasureCodingPolicies.getPolicies()) {
       if (found.contains(p.getName())) {

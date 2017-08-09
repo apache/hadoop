@@ -553,6 +553,41 @@
     </test>
 
     <test>
+      <description>setPolicy : set erasure coding policy without given a specific policy name</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Set default erasure coding policy on /ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getPolicy: get the default policy after setPolicy without given a specific policy name</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>RS-6-3-64k</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>getPolicy : illegal parameters - path is missing</description>
       <test-commands>
         <ec-admin-command>-fs NAMENODE -getPolicy </ec-admin-command>

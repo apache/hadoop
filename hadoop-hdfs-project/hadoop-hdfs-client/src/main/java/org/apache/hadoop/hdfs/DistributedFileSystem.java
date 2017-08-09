@@ -2515,8 +2515,6 @@ public class DistributedFileSystem extends FileSystem {
   public void setErasureCodingPolicy(final Path path,
       final String ecPolicyName) throws IOException {
     Path absF = fixRelativePart(path);
-    Preconditions.checkNotNull(ecPolicyName, "Erasure coding policy cannot be" +
-        " null.");
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException {
