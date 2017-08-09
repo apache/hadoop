@@ -221,16 +221,14 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     String savedRegion = conf.get(Constants.S3GUARD_DDB_REGION_KEY,
         getFileSystem().getBucketLocation());
     conf.unset(Constants.S3GUARD_DDB_REGION_KEY);
-    try {
-      DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
+    try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       fail("Should have failed because the table name is not set!");
     } catch (IllegalArgumentException ignored) {
     }
     // config table name
     conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    try {
-      DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
+    try  (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()){
       ddbms.initialize(conf);
       fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
