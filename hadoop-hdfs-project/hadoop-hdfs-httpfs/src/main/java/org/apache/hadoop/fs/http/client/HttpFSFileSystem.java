@@ -124,6 +124,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String POLICY_NAME_PARAM = "storagepolicy";
   public static final String OFFSET_PARAM = "offset";
   public static final String LENGTH_PARAM = "length";
+  public static final String SNAPSHOT_NAME_PARAM = "snapshotname";
+  public static final String OLD_SNAPSHOT_NAME_PARAM = "oldsnapshotname";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -143,6 +145,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String SET_REPLICATION_JSON = "boolean";
 
   public static final String UPLOAD_CONTENT_TYPE= "application/octet-stream";
+
+  public static final String SNAPSHOT_JSON = "Path";
 
   public enum FILE_TYPE {
     FILE, DIRECTORY, SYMLINK;
@@ -229,7 +233,9 @@ public class HttpFSFileSystem extends FileSystem
     DELETE(HTTP_DELETE), SETXATTR(HTTP_PUT), GETXATTRS(HTTP_GET),
     REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
     GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
-    SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST);
+    SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST),
+    CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
+    RENAMESNAPSHOT(HTTP_PUT);
 
     private String httpMethod;
 
@@ -1434,4 +1440,43 @@ public class HttpFSFileSystem extends FileSystem
         Operation.UNSETSTORAGEPOLICY.getMethod(), params, src, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
+
+  @Override
+  public final Path createSnapshot(Path path, String snapshotName)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.CREATESNAPSHOT.toString());
+    if (snapshotName != null) {
+      params.put(SNAPSHOT_NAME_PARAM, snapshotName);
+    }
+    HttpURLConnection conn = getConnection(Operation.CREATESNAPSHOT.getMethod(),
+        params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return new Path((String) json.get(SNAPSHOT_JSON));
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+                             String snapshotNewName) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.RENAMESNAPSHOT.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotNewName);
+    params.put(OLD_SNAPSHOT_NAME_PARAM, snapshotOldName);
+    HttpURLConnection conn = getConnection(Operation.RENAMESNAPSHOT.getMethod(),
+        params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  @Override
+  public void deleteSnapshot(Path path, String snapshotName)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.DELETESNAPSHOT.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotName);
+    HttpURLConnection conn = getConnection(Operation.DELETESNAPSHOT.getMethod(),
+        params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
 }
