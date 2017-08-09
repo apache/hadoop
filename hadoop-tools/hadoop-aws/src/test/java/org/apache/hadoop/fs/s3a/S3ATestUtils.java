@@ -330,7 +330,7 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Assume testing S3Guard is not enabled.
+   * Test assumption that S3Guard is/is not enabled.
    */
   public static void assumeS3GuardState(boolean shouldBeEnabled,
       Configuration originalConf) throws URISyntaxException {
