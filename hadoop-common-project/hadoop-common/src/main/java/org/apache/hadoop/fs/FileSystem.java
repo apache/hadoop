@@ -4153,9 +4153,21 @@ public abstract class FileSystem extends Configured implements Closeable {
 
     @Override
     public FSDataOutputStream build() throws IOException {
-      return getFS().create(getPath(), getPermission(), getFlags(),
-          getBufferSize(), getReplication(), getBlockSize(), getProgress(),
-          getChecksumOpt());
+      if (getFlags().contains(CreateFlag.CREATE) ||
+          getFlags().contains(CreateFlag.OVERWRITE)) {
+        if (isRecursive()) {
+          return getFS().create(getPath(), getPermission(), getFlags(),
+              getBufferSize(), getReplication(), getBlockSize(), getProgress(),
+              getChecksumOpt());
+        } else {
+          return getFS().createNonRecursive(getPath(), getPermission(),
+              getFlags(), getBufferSize(), getReplication(), getBlockSize(),
+              getProgress());
+        }
+      } else if (getFlags().contains(CreateFlag.APPEND)) {
+        return getFS().append(getPath(), getBufferSize(), getProgress());
+      }
+      throw new IOException("Must specify either create, overwrite or append");
     }
 
     @Override
@@ -4174,8 +4186,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * HADOOP-14384. Temporarily reduce the visibility of method before the
    * builder interface becomes stable.
    */
-  @InterfaceAudience.Private
-  protected FSDataOutputStreamBuilder createFile(Path path) {
+  public FSDataOutputStreamBuilder createFile(Path path) {
     return new FileSystemDataOutputStreamBuilder(this, path)
         .create().overwrite(true);
   }
@@ -4185,8 +4196,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param path file path.
    * @return a {@link FSDataOutputStreamBuilder} to build file append request.
    */
-  @InterfaceAudience.Private
-  protected FSDataOutputStreamBuilder appendFile(Path path) {
+  public FSDataOutputStreamBuilder appendFile(Path path) {
     return new FileSystemDataOutputStreamBuilder(this, path).append();
   }
 }

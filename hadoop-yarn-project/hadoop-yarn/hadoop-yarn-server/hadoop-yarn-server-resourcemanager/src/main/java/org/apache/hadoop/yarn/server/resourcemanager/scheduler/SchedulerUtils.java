@@ -22,6 +22,8 @@ import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +57,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public class SchedulerUtils {
-  
+
+  private static final Log LOG = LogFactory.getLog(SchedulerUtils.class);
+
   private static final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
@@ -200,9 +204,14 @@ public class SchedulerUtils {
       String labelExp = resReq.getNodeLabelExpression();
       if (!(RMNodeLabelsManager.NO_LABEL.equals(labelExp)
           || null == labelExp)) {
-        throw new InvalidLabelResourceRequestException(
-            "Invalid resource request, node label not enabled "
-                + "but request contains label expression");
+        String message = "NodeLabel is not enabled in cluster, but resource"
+            + " request contains a label expression.";
+        LOG.warn(message);
+        if (!isRecovery) {
+          throw new InvalidLabelResourceRequestException(
+              "Invalid resource request, node label not enabled "
+                  + "but request contains label expression");
+        }
       }
     }
     if (null == queueInfo) {
@@ -349,25 +358,7 @@ public class SchedulerUtils {
     }
     return null;
   }
-  
-  public static boolean checkResourceRequestMatchingNodePartition(
-      String requestedPartition, String nodePartition,
-      SchedulingMode schedulingMode) {
-    // We will only look at node label = nodeLabelToLookAt according to
-    // schedulingMode and partition of node.
-    String nodePartitionToLookAt = null;
-    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-      nodePartitionToLookAt = nodePartition;
-    } else {
-      nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
-    }
 
-    if (null == requestedPartition) {
-      requestedPartition = RMNodeLabelsManager.NO_LABEL;
-    }
-    return requestedPartition.equals(nodePartitionToLookAt);
-  }
-  
   private static boolean hasPendingResourceRequest(ResourceCalculator rc,
       ResourceUsage usage, String partitionToLookAt, Resource cluster) {
     if (Resources.greaterThan(rc, cluster,

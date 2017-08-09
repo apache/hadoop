@@ -92,6 +92,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import org.apache.hadoop.hdfs.protocol.BlocksStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -176,6 +177,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.UnknownCryptoProtocolVersionException;
@@ -243,10 +245,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
-import org.apache.hadoop.hdfs.server.namenode.metrics.ECBlockGroupsStatsMBean;
+import org.apache.hadoop.hdfs.server.namenode.metrics.ECBlockGroupsMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksStatsMBean;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
@@ -340,7 +341,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 @Metrics(context="dfs")
 public class FSNamesystem implements Namesystem, FSNamesystemMBean,
-    NameNodeMXBean, ReplicatedBlocksStatsMBean, ECBlockGroupsStatsMBean {
+    NameNodeMXBean, ReplicatedBlocksMBean, ECBlockGroupsMBean {
   public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
@@ -371,9 +372,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     FileStatus status = null;
     if (stat != null) {
-      Path symlink = stat.isSymlink() ? new Path(stat.getSymlink()) : null;
+      Path symlink = stat.isSymlink()
+          ? new Path(DFSUtilClient.bytes2String(stat.getSymlinkInBytes()))
+          : null;
       Path path = new Path(src);
-      status = new FileStatus(stat.getLen(), stat.isDir(),
+      status = new FileStatus(stat.getLen(), stat.isDirectory(),
           stat.getReplication(), stat.getBlockSize(),
           stat.getModificationTime(),
           stat.getAccessTime(), stat.getPermission(), stat.getOwner(),
@@ -4076,10 +4079,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @see ClientProtocol#getBlocksStats()
    */
   BlocksStats getBlocksStats() {
-    return new BlocksStats(getLowRedundancyBlocksStat(),
-        getCorruptBlocksStat(), getMissingBlocksStat(),
-        getMissingReplicationOneBlocksStat(), getBlocksBytesInFutureStat(),
-        getPendingDeletionBlocksStat());
+    return new BlocksStats(getLowRedundancyReplicatedBlocks(),
+        getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
+        getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
+        getPendingDeletionReplicatedBlocks());
   }
 
   /**
@@ -4089,9 +4092,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @see ClientProtocol#getECBlockGroupsStats()
    */
   ECBlockGroupsStats getECBlockGroupsStats() {
-    return new ECBlockGroupsStats(getLowRedundancyECBlockGroupsStat(),
-        getCorruptECBlockGroupsStat(), getMissingECBlockGroupsStat(),
-        getECBlocksBytesInFutureStat(), getPendingDeletionECBlockGroupsStat());
+    return new ECBlockGroupsStats(getLowRedundancyECBlockGroups(),
+        getCorruptECBlockGroups(), getMissingECBlockGroups(),
+        getBytesInFutureECBlockGroups(), getPendingDeletionECBlockGroups());
   }
 
   @Override // FSNamesystemMBean
@@ -4638,76 +4641,76 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // ReplicatedBlocksMBean
   @Metric({"LowRedundancyReplicatedBlocks",
       "Number of low redundancy replicated blocks"})
-  public long getLowRedundancyBlocksStat() {
-    return blockManager.getLowRedundancyBlocksStat();
+  public long getLowRedundancyReplicatedBlocks() {
+    return blockManager.getLowRedundancyBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
   @Metric({"CorruptReplicatedBlocks", "Number of corrupted replicated blocks"})
-  public long getCorruptBlocksStat() {
-    return blockManager.getCorruptBlocksStat();
+  public long getCorruptReplicatedBlocks() {
+    return blockManager.getCorruptBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
   @Metric({"MissingReplicatedBlocks", "Number of missing replicated blocks"})
-  public long getMissingBlocksStat() {
-    return blockManager.getMissingBlocksStat();
+  public long getMissingReplicatedBlocks() {
+    return blockManager.getMissingBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
-  @Metric({"MissingReplicatedOneBlocks", "Number of missing replicated blocks" +
-      " with replication factor 1"})
-  public long getMissingReplicationOneBlocksStat() {
-    return blockManager.getMissingReplicationOneBlocksStat();
+  @Metric({"MissingReplicationOneBlocks", "Number of missing replicated " +
+      "blocks with replication factor 1"})
+  public long getMissingReplicationOneBlocks() {
+    return blockManager.getMissingReplicationOneBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
-  @Metric({"BytesReplicatedFutureBlocks", "Total bytes in replicated blocks " +
-      "with future generation stamp"})
-  public long getBlocksBytesInFutureStat() {
-    return blockManager.getBytesInFutureReplicatedBlocksStat();
+  @Metric({"BytesInFutureReplicatedBlocks", "Total bytes in replicated " +
+      "blocks with future generation stamp"})
+  public long getBytesInFutureReplicatedBlocks() {
+    return blockManager.getBytesInFutureReplicatedBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
   @Metric({"PendingDeletionReplicatedBlocks", "Number of replicated blocks " +
       "that are pending deletion"})
-  public long getPendingDeletionBlocksStat() {
-    return blockManager.getPendingDeletionBlocksStat();
+  public long getPendingDeletionReplicatedBlocks() {
+    return blockManager.getPendingDeletionReplicatedBlocks();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"LowRedundancyECBlockGroups", "Number of erasure coded block " +
       "groups with low redundancy"})
-  public long getLowRedundancyECBlockGroupsStat() {
-    return blockManager.getLowRedundancyECBlockGroupsStat();
+  public long getLowRedundancyECBlockGroups() {
+    return blockManager.getLowRedundancyECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"CorruptECBlockGroups", "Number of erasure coded block groups that" +
       " are corrupt"})
-  public long getCorruptECBlockGroupsStat() {
-    return blockManager.getCorruptECBlockGroupsStat();
+  public long getCorruptECBlockGroups() {
+    return blockManager.getCorruptECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"MissingECBlockGroups", "Number of erasure coded block groups that" +
       " are missing"})
-  public long getMissingECBlockGroupsStat() {
-    return blockManager.getMissingECBlockGroupsStat();
+  public long getMissingECBlockGroups() {
+    return blockManager.getMissingECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
-  @Metric({"BytesFutureECBlockGroups", "Total bytes in erasure coded block " +
+  @Override // ECBlockGroupsMBean
+  @Metric({"BytesInFutureECBlockGroups", "Total bytes in erasure coded block " +
       "groups with future generation stamp"})
-  public long getECBlocksBytesInFutureStat() {
-    return blockManager.getBytesInFutureStripedBlocksStat();
+  public long getBytesInFutureECBlockGroups() {
+    return blockManager.getBytesInFutureECBlockGroups();
   }
 
-  @Override // ECBlockGroupsStatsMBean
+  @Override // ECBlockGroupsMBean
   @Metric({"PendingDeletionECBlockGroups", "Number of erasure coded block " +
       "groups that are pending deletion"})
-  public long getPendingDeletionECBlockGroupsStat() {
-    return blockManager.getPendingDeletionECBlockGroupsStat();
+  public long getPendingDeletionECBlockGroups() {
+    return blockManager.getPendingDeletionECBlockGroups();
   }
 
   @Override
@@ -4774,9 +4777,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Register following MBeans with their respective names.
    * FSNamesystemMBean:
    *        "hadoop:service=NameNode,name=FSNamesystemState"
-   * ReplicatedBlocksStatsMBean:
+   * ReplicatedBlocksMBean:
    *        "hadoop:service=NameNode,name=ReplicatedBlocksState"
-   * ECBlockGroupsStatsMBean:
+   * ECBlockGroupsMBean:
    *        "hadoop:service=NameNode,name=ECBlockGroupsState"
    */
   private void registerMBean() {
@@ -4785,9 +4788,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       StandardMBean namesystemBean = new StandardMBean(
           this, FSNamesystemMBean.class);
       StandardMBean replicaBean = new StandardMBean(
-          this, ReplicatedBlocksStatsMBean.class);
+          this, ReplicatedBlocksMBean.class);
       StandardMBean ecBean = new StandardMBean(
-          this, ECBlockGroupsStatsMBean.class);
+          this, ECBlockGroupsMBean.class);
       namesystemMBeanName = MBeans.register(
           "NameNode", "FSNamesystemState", namesystemBean);
       replicatedBlocksMBeanName = MBeans.register(
@@ -4840,16 +4843,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumLiveDataNodes", "Number of datanodes which are currently live"})
   public int getNumLiveDataNodes() {
     return getBlockManager().getDatanodeManager().getNumLiveDataNodes();
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumDeadDataNodes", "Number of datanodes which are currently dead"})
   public int getNumDeadDataNodes() {
     return getBlockManager().getDatanodeManager().getNumDeadDataNodes();
   }
   
   @Override // FSNamesystemMBean
+  @Metric({"NumDecomLiveDataNodes",
+      "Number of datanodes which have been decommissioned and are now live"})
   public int getNumDecomLiveDataNodes() {
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
@@ -4861,6 +4868,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumDecomDeadDataNodes",
+      "Number of datanodes which have been decommissioned and are now dead"})
   public int getNumDecomDeadDataNodes() {
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, false);
@@ -4872,6 +4881,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"VolumeFailuresTotal",
+      "Total number of volume failures across all Datanodes"})
   public int getVolumeFailuresTotal() {
     List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
@@ -4883,6 +4894,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"EstimatedCapacityLostTotal",
+      "An estimate of the total capacity lost due to volume failures"})
   public long getEstimatedCapacityLostTotal() {
     List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
@@ -4898,6 +4911,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumDecommissioningDataNodes",
+      "Number of datanodes in decommissioning state"})
   public int getNumDecommissioningDataNodes() {
     return getBlockManager().getDatanodeManager().getDecommissioningNodes()
         .size();
@@ -4915,6 +4930,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * before NN receives the first Heartbeat followed by the first Blockreport.
    */
   @Override // FSNamesystemMBean
+  @Metric({"NumStaleStorages",
+      "Number of storages marked as content stale"})
   public int getNumStaleStorages() {
     return getBlockManager().getDatanodeManager().getNumStaleStorages();
   }
@@ -4971,7 +4988,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blockId;
   }
 
-  private boolean isFileDeleted(INodeFile file) {
+  boolean isFileDeleted(INodeFile file) {
     // Not in the inodeMap or in the snapshot but marked deleted.
     if (dir.getInode(file.getId()) == null) {
       return true;
@@ -7038,18 +7055,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       resultingStat = FSDirErasureCodingOp.setErasureCodingPolicy(this,
           srcArg, ecPolicyName, pc, logRetryCache);
       success = true;
-    } catch (AccessControlException ace) {
-      logAuditEvent(success, operationName, srcArg, null,
-          resultingStat);
-      throw ace;
     } finally {
       writeUnlock(operationName);
       if (success) {
         getEditLog().logSync();
       }
+      logAuditEvent(success, operationName, srcArg, null, resultingStat);
     }
-    logAuditEvent(success, operationName, srcArg, null,
-        resultingStat);
   }
 
   /**
@@ -7057,9 +7069,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param policies The policies to add.
    * @return The according result of add operation.
    */
-  AddECPolicyResponse[] addECPolicies(ErasureCodingPolicy[] policies)
+  AddECPolicyResponse[] addErasureCodingPolicies(ErasureCodingPolicy[] policies)
       throws IOException {
-    final String operationName = "addECPolicies";
+    final String operationName = "addErasureCodingPolicies";
     String addECPolicyName = "";
     checkOperation(OperationCategory.WRITE);
     List<AddECPolicyResponse> responses = new ArrayList<>();
@@ -7184,18 +7196,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       resultingStat = FSDirErasureCodingOp.unsetErasureCodingPolicy(this,
           srcArg, pc, logRetryCache);
       success = true;
-    } catch (AccessControlException ace) {
-      logAuditEvent(success, operationName, srcArg, null,
-          resultingStat);
-      throw ace;
     } finally {
       writeUnlock(operationName);
       if (success) {
         getEditLog().logSync();
       }
+      logAuditEvent(success, operationName, srcArg, null, resultingStat);
     }
-    logAuditEvent(success, operationName, srcArg, null,
-        resultingStat);
   }
 
   /**
@@ -7203,14 +7210,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   ErasureCodingPolicy getErasureCodingPolicy(String src)
       throws AccessControlException, UnresolvedLinkException, IOException {
+    final String operationName = "getErasureCodingPolicy";
+    boolean success = false;
     checkOperation(OperationCategory.READ);
     FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingPolicy(this, src, pc);
+      final ErasureCodingPolicy ret =
+          FSDirErasureCodingOp.getErasureCodingPolicy(this, src, pc);
+      success = true;
+      return ret;
     } finally {
-      readUnlock("getErasureCodingPolicy");
+      readUnlock(operationName);
+      logAuditEvent(success, operationName, null);
     }
   }
 
@@ -7218,13 +7231,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get available erasure coding polices
    */
   ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+    final String operationName = "getErasureCodingPolicies";
+    boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingPolicies(this);
+      final ErasureCodingPolicy[] ret =
+          FSDirErasureCodingOp.getErasureCodingPolicies(this);
+      success = true;
+      return ret;
     } finally {
-      readUnlock("getErasureCodingPolicies");
+      readUnlock(operationName);
+      logAuditEvent(success, operationName, null);
     }
   }
 
@@ -7232,13 +7251,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get available erasure coding codecs and corresponding coders.
    */
   HashMap<String, String> getErasureCodingCodecs() throws IOException {
+    final String operationName = "getErasureCodingCodecs";
+    boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingCodecs(this);
+      final HashMap<String, String> ret =
+          FSDirErasureCodingOp.getErasureCodingCodecs(this);
+      success = true;
+      return ret;
     } finally {
-      readUnlock("getErasureCodingCodecs");
+      readUnlock(operationName);
+      logAuditEvent(success, operationName, null);
     }
   }
 
@@ -7539,6 +7564,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
 
   @Override // FSNamesystemMBean
+  @Metric({"NumInMaintenanceLiveDataNodes",
+      "Number of live Datanodes which are in maintenance state"})
   public int getNumInMaintenanceLiveDataNodes() {
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
@@ -7550,6 +7577,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumInMaintenanceDeadDataNodes",
+      "Number of dead Datanodes which are in maintenance state"})
   public int getNumInMaintenanceDeadDataNodes() {
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, true);
@@ -7561,6 +7590,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumEnteringMaintenanceDataNodes",
+      "Number of Datanodes that are entering the maintenance state"})
   public int getNumEnteringMaintenanceDataNodes() {
     return getBlockManager().getDatanodeManager().getEnteringMaintenanceNodes()
         .size();

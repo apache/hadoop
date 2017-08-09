@@ -18,6 +18,7 @@
 
 #include "configuration.h"
 #include "container-executor.h"
+#include "utils/string-utils.h"
 
 #include <inttypes.h>
 #include <libgen.h>
@@ -40,6 +41,7 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <getopt.h>
+#include <regex.h>
 
 #include "config.h"
 
@@ -78,6 +80,11 @@ static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
 
 //struct to store the user details
 struct passwd *user_detail = NULL;
+
+//Docker container related constants.
+static const char* DOCKER_CONTAINER_NAME_PREFIX = "container_";
+static const char* DOCKER_CLIENT_CONFIG_ARG = "--config=";
+static const char* DOCKER_PULL_COMMAND = "pull";
 
 FILE* LOGFILE = NULL;
 FILE* ERRORFILE = NULL;
@@ -1208,6 +1215,27 @@ char** tokenize_docker_command(const char *input, int *split_counter) {
   return linesplit;
 }
 
+int execute_regex_match(const char *regex_str, const char *input) {
+  regex_t regex;
+  int regex_match;
+  if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
+    fprintf(LOGFILE, "Unable to compile regex.");
+    fflush(LOGFILE);
+    exit(ERROR_COMPILING_REGEX);
+  }
+  regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);
+  regfree(&regex);
+  if(0 == regex_match) {
+    return 0;
+  }
+  return 1;
+}
+
+int validate_docker_image_name(const char *image_name) {
+  char *regex_str = "^(([a-zA-Z0-9.-]+)(:[0-9]+)?/)?([a-z0-9_./-]+)(:[a-zA-Z0-9_.-]+)?$";
+  return execute_regex_match(regex_str, image_name);
+}
+
 char* sanitize_docker_command(const char *line) {
   static struct option long_options[] = {
     {"name", required_argument, 0, 'n' },
@@ -1215,12 +1243,14 @@ char* sanitize_docker_command(const char *line) {
     {"rm", no_argument, 0, 'r' },
     {"workdir", required_argument, 0, 'w' },
     {"net", required_argument, 0, 'e' },
+    {"hostname", required_argument, 0, 'h' },
     {"cgroup-parent", required_argument, 0, 'g' },
     {"privileged", no_argument, 0, 'p' },
     {"cap-add", required_argument, 0, 'a' },
     {"cap-drop", required_argument, 0, 'o' },
     {"device", required_argument, 0, 'i' },
     {"detach", required_argument, 0, 't' },
+    {"format", required_argument, 0, 'f' },
     {0, 0, 0, 0}
   };
 
@@ -1239,6 +1269,35 @@ char* sanitize_docker_command(const char *line) {
   if(output == NULL) {
     exit(OUT_OF_MEMORY);
   }
+
+  // Handle docker client config option.
+  if(0 == strncmp(linesplit[0], DOCKER_CLIENT_CONFIG_ARG, strlen(DOCKER_CLIENT_CONFIG_ARG))) {
+    strcat(output, linesplit[0]);
+    strcat(output, " ");
+    long index = 0;
+    while(index < split_counter) {
+      linesplit[index] = linesplit[index + 1];
+      if (linesplit[index] == NULL) {
+        split_counter--;
+        break;
+      }
+      index++;
+    }
+  }
+
+  // Handle docker pull and image name validation.
+  if (0 == strncmp(linesplit[0], DOCKER_PULL_COMMAND, strlen(DOCKER_PULL_COMMAND))) {
+    if (0 != validate_docker_image_name(linesplit[1])) {
+      fprintf(ERRORFILE, "Invalid Docker image name, exiting.");
+      fflush(ERRORFILE);
+      exit(DOCKER_IMAGE_INVALID);
+    }
+    strcat(output, linesplit[0]);
+    strcat(output, " ");
+    strcat(output, linesplit[1]);
+    return output;
+  }
+
   strcat(output, linesplit[0]);
   strcat(output, " ");
   optind = 1;
@@ -1255,6 +1314,9 @@ char* sanitize_docker_command(const char *line) {
         break;
       case 'e':
         quote_and_append_arg(&output, &output_size, "--net=", optarg);
+        break;
+      case 'h':
+        quote_and_append_arg(&output, &output_size, "--hostname=", optarg);
         break;
       case 'v':
         quote_and_append_arg(&output, &output_size, "-v ", optarg);
@@ -1283,6 +1345,11 @@ char* sanitize_docker_command(const char *line) {
       case 't':
         quote_and_append_arg(&output, &output_size, "--detach=", optarg);
         break;
+      case 'f':
+        strcat(output, "--format=");
+        strcat(output, optarg);
+        strcat(output, " ");
+        break;
       default:
         fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);
         fflush(LOGFILE);
@@ -1293,7 +1360,16 @@ char* sanitize_docker_command(const char *line) {
 
   if(optind < split_counter) {
     while(optind < split_counter) {
-      quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+      if (0 == strncmp(linesplit[optind], DOCKER_CONTAINER_NAME_PREFIX, strlen(DOCKER_CONTAINER_NAME_PREFIX))) {
+        if (1 != validate_container_id(linesplit[optind])) {
+          fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", linesplit[optind]);
+          fflush(ERRORFILE);
+          exit(DOCKER_CONTAINER_NAME_INVALID);
+        }
+        strcat(output, linesplit[optind++]);
+      } else {
+        quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+      }
     }
   }
 
@@ -1324,8 +1400,8 @@ char* parse_docker_command_file(const char* command_file) {
   if(ret == NULL) {
     exit(ERROR_SANITIZING_DOCKER_COMMAND);
   }
-  fprintf(LOGFILE, "Using command %s\n", ret);
-  fflush(LOGFILE);
+  fprintf(ERRORFILE, "Using command %s\n", ret);
+  fflush(ERRORFILE);
 
   return ret;
 }
@@ -1833,7 +1909,7 @@ static int rmdir_as_nm(const char* path) {
   int user_gid = getegid();
   int ret = change_effective_user(nm_uid, nm_gid);
   if (ret == 0) {
-    if (rmdir(path) != 0) {
+    if (rmdir(path) != 0 && errno != ENOENT) {
       fprintf(LOGFILE, "rmdir of %s failed - %s\n", path, strerror(errno));
       ret = -1;
     }
@@ -1878,7 +1954,7 @@ static int unlink_helper(int dirfd, const char *name, int flags) {
   } else {
     ret = unlink(name);
   }
-  if (ret >= 0) {
+  if (ret >= 0 || errno == ENOENT) {
     return 0;
   }
   return errno;
@@ -1915,7 +1991,7 @@ static int is_symlink_helper(int dirfd, const char *name)
 static int recursive_unlink_helper(int dirfd, const char *name,
                                    const char* fullpath)
 {
-  int fd = -1, ret = 0;
+  int fd = -1, ret = 0, unlink_err = 0;
   DIR *dfd = NULL;
   struct stat stat;
 
@@ -1924,6 +2000,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   ret = is_symlink_helper(dirfd, name);
   if (ret < 0) {
     // is_symlink_helper failed.
+    if (ret == -ENOENT) {
+      ret = 0;
+      goto done;
+    }
     ret = -ret;
     fprintf(LOGFILE, "is_symlink_helper(%s) failed: %s\n",
             fullpath, strerror(ret));
@@ -1945,6 +2025,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   if (fd == -EACCES) {
     ret = chmod_helper(dirfd, name, 0700);
     if (ret) {
+      if (ret == ENOENT) {
+        ret = 0;
+        goto done;
+      }
       fprintf(LOGFILE, "chmod(%s) failed: %s\n", fullpath, strerror(ret));
       goto done;
     }
@@ -1952,11 +2036,19 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   }
   if (fd < 0) {
     ret = -fd;
+    if (ret == ENOENT) {
+      ret = 0;
+      goto done;
+    }
     fprintf(LOGFILE, "error opening %s: %s\n", fullpath, strerror(ret));
     goto done;
   }
   if (fstat(fd, &stat) < 0) {
     ret = errno;
+    if (ret == ENOENT) {
+      ret = 0;
+      goto done;
+    }
     fprintf(LOGFILE, "failed to stat %s: %s\n", fullpath, strerror(ret));
     goto done;
   }
@@ -1970,6 +2062,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
     dfd = fdopendir(fd);
     if (!dfd) {
       ret = errno;
+      if (ret == ENOENT) {
+        ret = 0;
+        goto done;
+      }
       fprintf(LOGFILE, "fopendir(%s) failed: %s\n", fullpath, strerror(ret));
       goto done;
     }
@@ -1981,7 +2077,7 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       de = readdir(dfd);
       if (!de) {
         ret = errno;
-        if (ret) {
+        if (ret && ret != ENOENT) {
           fprintf(LOGFILE, "readdir(%s) failed: %s\n", fullpath, strerror(ret));
           goto done;
         }
@@ -1999,10 +2095,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
         ret = ENOMEM;
         goto done;
       }
-      ret = recursive_unlink_helper(fd, de->d_name, new_fullpath);
+      int rc = recursive_unlink_helper(fd, de->d_name, new_fullpath);
       free(new_fullpath);
-      if (ret) {
-        goto done;
+      if (rc && !unlink_err) {
+        unlink_err = rc;
       }
     }
     if (dirfd != -1) {
@@ -2013,7 +2109,7 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       }
     }
   }
-  ret = 0;
+  ret = unlink_err;
 done:
   if (fd >= 0) {
     close(fd);
@@ -2044,9 +2140,6 @@ static int delete_path(const char *full_path,
     return PATH_TO_DELETE_IS_NULL;
   }
   ret = recursive_unlink_children(full_path);
-  if (ret == ENOENT) {
-    return 0;
-  }
   if (ret != 0) {
     fprintf(LOGFILE, "Error while deleting %s: %d (%s)\n",
             full_path, ret, strerror(ret));

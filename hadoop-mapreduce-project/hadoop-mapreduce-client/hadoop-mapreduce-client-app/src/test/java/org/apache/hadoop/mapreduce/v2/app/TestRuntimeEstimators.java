@@ -896,5 +896,15 @@ public class TestRuntimeEstimators {
     public TaskAttemptFinishingMonitor getTaskAttemptFinishingMonitor() {
       return null;
     }
+
+    @Override
+    public String getHistoryUrl() {
+      return null;
+    }
+
+    @Override
+    public void setHistoryUrl(String historyUrl) {
+      return;
+    }
   }
 }

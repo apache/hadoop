@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
  * because of a redirection issue.
  */
 public class RedirectionErrorPage extends RmView {
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     String aid = $(YarnWebParams.APPLICATION_ID);
 
     commonPreHead(html);

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.sharedcachemanager.metrics;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -31,6 +29,8 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricsSourceBuilder;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is for maintaining the various Cleaner activity statistics and
@@ -40,7 +40,8 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 @Evolving
 @Metrics(name = "CleanerActivity", about = "Cleaner service metrics", context = "yarn")
 public class CleanerMetrics {
-  public static final Log LOG = LogFactory.getLog(CleanerMetrics.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CleanerMetrics.class);
   private final MetricsRegistry registry = new MetricsRegistry("cleaner");
   private final static CleanerMetrics INSTANCE = create();
   

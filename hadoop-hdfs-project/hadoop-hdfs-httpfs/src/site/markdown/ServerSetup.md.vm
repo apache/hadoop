@@ -82,7 +82,7 @@ Enable SSL in `etc/hadoop/httpfs-site.xml`:
 
 ```xml
   <property>
-    <name>hadoop.httpfs.ssl.enabled</name>
+    <name>httpfs.ssl.enabled</name>
     <value>true</value>
     <description>
       Whether SSL is enabled. Default is false, i.e. disabled.
@@ -142,11 +142,11 @@ configuration properties instead.
 
 Environment Variable        | Configuration Property       | Configuration File
 ----------------------------|------------------------------|--------------------
-HTTPFS_TEMP                 | hadoop.http.temp.dir         | httpfs-site.xml
-HTTPFS_HTTP_PORT            | hadoop.httpfs.http.port      | httpfs-site.xml
+HTTPFS_HTTP_HOSTNAME        | httpfs.http.hostname         | httpfs-site.xml
+HTTPFS_HTTP_PORT            | httpfs.http.port             | httpfs-site.xml
 HTTPFS_MAX_HTTP_HEADER_SIZE | hadoop.http.max.request.header.size and hadoop.http.max.response.header.size | httpfs-site.xml
 HTTPFS_MAX_THREADS          | hadoop.http.max.threads      | httpfs-site.xml
-HTTPFS_SSL_ENABLED          | hadoop.httpfs.ssl.enabled    | httpfs-site.xml
+HTTPFS_SSL_ENABLED          | httpfs.ssl.enabled           | httpfs-site.xml
 HTTPFS_SSL_KEYSTORE_FILE    | ssl.server.keystore.location | ssl-server.xml
 HTTPFS_SSL_KEYSTORE_PASS    | ssl.server.keystore.password | ssl-server.xml
 
@@ -182,7 +182,7 @@ and `/stacks`, configure the following properties in `httpfs-site.xml`:
   </property>
 
   <property>
-    <name>hadoop.httpfs.http.administrators</name>
+    <name>httpfs.http.administrators</name>
     <value></value>
     <description>ACL for the admins, this configuration is used to control
       who can access the default servlets for HttpFS server. The value

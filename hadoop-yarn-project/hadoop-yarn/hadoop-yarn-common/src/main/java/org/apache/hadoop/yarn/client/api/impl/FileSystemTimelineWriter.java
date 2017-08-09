@@ -145,9 +145,12 @@ public class FileSystemTimelineWriter extends TimelineWriter{
         new LogFDsCache(flushIntervalSecs, cleanIntervalSecs, ttl,
             timerTaskTTL);
 
-    this.isAppendSupported =
-        conf.getBoolean(
-            YarnConfiguration.TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND, true);
+    this.isAppendSupported = conf.getBoolean(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND, true);
+
+    boolean storeInsideUserDir = conf.getBoolean(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR,
+        false);
 
     objMapper = createObjectMapper();
 
@@ -157,8 +160,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
         YarnConfiguration
             .DEFAULT_TIMELINE_SERVICE_CLIENT_INTERNAL_ATTEMPT_DIR_CACHE_SIZE);
 
-    attemptDirCache =
-        new AttemptDirCache(attemptDirCacheSize, fs, activePath);
+    attemptDirCache = new AttemptDirCache(attemptDirCacheSize, fs, activePath,
+        authUgi, storeInsideUserDir);
 
     if (LOG.isDebugEnabled()) {
       StringBuilder debugMSG = new StringBuilder();
@@ -171,6 +174,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
               + "=" + ttl + ", " +
           YarnConfiguration.TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND
               + "=" + isAppendSupported + ", " +
+          YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR
+              + "=" + storeInsideUserDir + ", " +
           YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR
               + "=" + activePath);
 
@@ -946,8 +951,11 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     private final Map<ApplicationAttemptId, Path> attemptDirCache;
     private final FileSystem fs;
     private final Path activePath;
+    private final UserGroupInformation authUgi;
+    private final boolean storeInsideUserDir;
 
-    public AttemptDirCache(int cacheSize, FileSystem fs, Path activePath) {
+    public AttemptDirCache(int cacheSize, FileSystem fs, Path activePath,
+        UserGroupInformation ugi, boolean storeInsideUserDir) {
       this.attemptDirCacheSize = cacheSize;
       this.attemptDirCache =
           new LinkedHashMap<ApplicationAttemptId, Path>(
@@ -961,6 +969,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
           };
       this.fs = fs;
       this.activePath = activePath;
+      this.authUgi = ugi;
+      this.storeInsideUserDir = storeInsideUserDir;
     }
 
     public Path getAppAttemptDir(ApplicationAttemptId attemptId)
@@ -993,8 +1003,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     }
 
     private Path createApplicationDir(ApplicationId appId) throws IOException {
-      Path appDir =
-          new Path(activePath, appId.toString());
+      Path appRootDir = getAppRootDir(authUgi.getShortUserName());
+      Path appDir = new Path(appRootDir, appId.toString());
       if (FileSystem.mkdirs(fs, appDir,
           new FsPermission(APP_LOG_DIR_PERMISSIONS))) {
         if (LOG.isDebugEnabled()) {
@@ -1002,6 +1012,20 @@ public class FileSystemTimelineWriter extends TimelineWriter{
         }
       }
       return appDir;
+    }
+
+    private Path getAppRootDir(String user) throws IOException {
+      if (!storeInsideUserDir) {
+        return activePath;
+      }
+      Path userDir = new Path(activePath, user);
+      if (FileSystem.mkdirs(fs, userDir,
+          new FsPermission(APP_LOG_DIR_PERMISSIONS))) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("New user directory created - " + userDir);
+        }
+      }
+      return userDir;
     }
   }
 }

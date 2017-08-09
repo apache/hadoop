@@ -419,7 +419,7 @@ public class TestReconstructStripedBlocks {
 
       // Verify low redundancy count matching EC block groups count
       BlockManagerTestUtil.updateState(bm);
-      assertEquals(blockGroups, bm.getLowRedundancyECBlockGroupsStat());
+      assertEquals(blockGroups, bm.getLowRedundancyECBlockGroups());
       DFSTestUtil.verifyClientStats(conf, dfsCluster);
 
 
@@ -429,7 +429,7 @@ public class TestReconstructStripedBlocks {
 
       // Verify pending reconstruction count
       assertEquals(blockGroups, getNumberOfBlocksToBeErasureCoded(dfsCluster));
-      assertEquals(0, bm.getLowRedundancyECBlockGroupsStat());
+      assertEquals(0, bm.getLowRedundancyECBlockGroups());
       DFSTestUtil.verifyClientStats(conf, dfsCluster);
     } finally {
       dfsCluster.shutdown();

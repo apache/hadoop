@@ -524,7 +524,7 @@ public class AppSchedulingInfo {
     this.placesBlacklistedByApp = appInfo.getBlackList();
   }
 
-  public void recoverContainer(RMContainer rmContainer) {
+  public void recoverContainer(RMContainer rmContainer, String partition) {
     try {
       this.writeLock.lock();
       QueueMetrics metrics = queue.getMetrics();
@@ -540,8 +540,8 @@ public class AppSchedulingInfo {
         return;
       }
 
-      metrics.allocateResources(rmContainer.getNodeLabelExpression(),
-          user, 1, rmContainer.getAllocatedResource(), false);
+      metrics.allocateResources(partition, user, 1,
+          rmContainer.getAllocatedResource(), false);
     } finally {
       this.writeLock.unlock();
     }

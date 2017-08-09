@@ -102,7 +102,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
-          <maxmemory>512m</maxmemory>
+          <maxmemory>768m</maxmemory>
           <quiet>true</quiet>
           <verbose>false</verbose>
           <source>${maven.compile.source}</source>

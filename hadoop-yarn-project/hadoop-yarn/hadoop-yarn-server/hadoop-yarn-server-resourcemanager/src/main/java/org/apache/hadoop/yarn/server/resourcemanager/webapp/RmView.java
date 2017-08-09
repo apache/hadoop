@@ -33,7 +33,7 @@ public class RmView extends TwoColumnLayout {
   static final int MAX_FAST_ROWS = 1000;    // inline js array
 
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     set(DATATABLES_ID, "apps");
     set(initID(DATATABLES, "apps"), initAppsTable());
@@ -45,7 +45,7 @@ public class RmView extends TwoColumnLayout {
     setTitle(sjoin(reqState, "Applications"));
   }
 
-  protected void commonPreHead(Page.HTML<_> html) {
+  protected void commonPreHead(Page.HTML<__> html) {
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
   }

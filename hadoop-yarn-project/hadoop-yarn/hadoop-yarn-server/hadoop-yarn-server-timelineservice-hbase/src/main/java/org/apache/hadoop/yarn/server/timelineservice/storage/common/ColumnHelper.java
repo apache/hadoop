@@ -24,13 +24,14 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * This class is meant to be used only by explicit Columns, and not directly to
  * write by clients.
@@ -38,7 +39,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
  * @param <T> refers to the table.
  */
 public class ColumnHelper<T> {
-  private static final Log LOG = LogFactory.getLog(ColumnHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ColumnHelper.class);
 
   private final ColumnFamily<T> columnFamily;
 

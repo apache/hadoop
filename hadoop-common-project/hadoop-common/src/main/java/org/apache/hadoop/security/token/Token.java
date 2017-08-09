@@ -23,14 +23,14 @@ import com.google.protobuf.ByteString;
 import com.google.common.primitives.Bytes;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Arrays;
@@ -44,7 +44,7 @@ import java.util.UUID;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Token<T extends TokenIdentifier> implements Writable {
-  public static final Log LOG = LogFactory.getLog(Token.class);
+  public static final Logger LOG = LoggerFactory.getLogger(Token.class);
 
   private static Map<Text, Class<? extends TokenIdentifier>> tokenKindMap;
 

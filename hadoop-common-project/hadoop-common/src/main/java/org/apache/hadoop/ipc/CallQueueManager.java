@@ -28,20 +28,21 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstracts queue operations for different blocking queues.
  */
 public class CallQueueManager<E extends Schedulable>
     extends AbstractQueue<E> implements BlockingQueue<E> {
-  public static final Log LOG = LogFactory.getLog(CallQueueManager.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CallQueueManager.class);
   // Number of checkpoints for empty queue.
   private static final int CHECKPOINT_NUM = 20;
   // Interval to check empty queue.

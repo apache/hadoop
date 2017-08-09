@@ -31,6 +31,7 @@ import java.util.Collections;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -68,6 +69,16 @@ public class TestFSSchedulerNode {
     when(container.getExecutionType()).thenReturn(ExecutionType.GUARANTEED);
     when(container.getAllocatedResource()).
         thenReturn(Resources.clone(request));
+    when(container.compareTo(any())).thenAnswer(new Answer<Integer>() {
+      public Integer answer(InvocationOnMock invocation) {
+        return
+            Long.compare(
+            ((RMContainer)invocation.getMock()).getContainerId()
+                .getContainerId(),
+            ((RMContainer)invocation.getArguments()[0]).getContainerId()
+                .getContainerId());
+      }
+    });
     containers.add(container);
     return container;
   }
@@ -203,6 +214,47 @@ public class TestFSSchedulerNode {
     // Request preemption
     FSAppAttempt starvingApp = createStarvingApp(schedulerNode,
         Resource.newInstance(1024, 1));
+    schedulerNode.addContainersForPreemption(
+        Collections.singletonList(containers.get(0)), starvingApp);
+    assertEquals(
+        "No resource amount should be reserved for preemptees",
+        containers.get(0).getAllocatedResource(),
+        schedulerNode.getTotalReserved());
+
+    // Preemption occurs release one container
+    schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
+    allocateContainers(schedulerNode);
+    assertEquals("Container should be allocated",
+        schedulerNode.getTotalResource(),
+        schedulerNode.getAllocatedResource());
+
+    // Release all remaining containers
+    for (int i = 1; i < containers.size(); ++i) {
+      schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
+    }
+    finalValidation(schedulerNode);
+  }
+
+  /**
+   * Allocate a single container twice and release.
+   */
+  @Test
+  public void testDuplicatePreemption() {
+    RMNode node = createNode();
+    FSSchedulerNode schedulerNode = new FSSchedulerNode(node, false);
+
+    // Launch containers and saturate the cluster
+    saturateCluster(schedulerNode);
+    assertEquals("Container should be allocated",
+        Resources.multiply(containers.get(0).getContainer().getResource(),
+            containers.size()),
+        schedulerNode.getAllocatedResource());
+
+    // Request preemption twice
+    FSAppAttempt starvingApp = createStarvingApp(schedulerNode,
+        Resource.newInstance(1024, 1));
+    schedulerNode.addContainersForPreemption(
+        Collections.singletonList(containers.get(0)), starvingApp);
     schedulerNode.addContainersForPreemption(
         Collections.singletonList(containers.get(0)), starvingApp);
     assertEquals(

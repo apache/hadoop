@@ -985,25 +985,22 @@ public class FairScheduler extends
    * Assign preempted containers to the applications that have reserved
    * resources for preempted containers.
    * @param node Node to check
-   * @return assignment has occurred
    */
-  static boolean assignPreemptedContainers(FSSchedulerNode node) {
-    boolean assignedAny = false;
+  static void assignPreemptedContainers(FSSchedulerNode node) {
     for (Entry<FSAppAttempt, Resource> entry :
         node.getPreemptionList().entrySet()) {
       FSAppAttempt app = entry.getKey();
       Resource preemptionPending = Resources.clone(entry.getValue());
       while (!app.isStopped() && !Resources.isNone(preemptionPending)) {
         Resource assigned = app.assignContainer(node);
-        if (Resources.isNone(assigned)) {
+        if (Resources.isNone(assigned) ||
+            assigned.equals(FairScheduler.CONTAINER_RESERVED)) {
           // Fail to assign, let's not try further
           break;
         }
-        assignedAny = true;
         Resources.subtractFromNonNegative(preemptionPending, assigned);
       }
     }
-    return assignedAny;
   }
 
   @VisibleForTesting
@@ -1046,16 +1043,13 @@ public class FairScheduler extends
         Resource maxResourcesToAssign = Resources.multiply(
             node.getUnallocatedResource(), 0.5f);
         while (node.getReservedContainer() == null) {
-          boolean assignedContainer = false;
           Resource assignment = queueMgr.getRootQueue().assignContainer(node);
-          if (!assignment.equals(Resources.none())) {
-            assignedContainers++;
-            assignedContainer = true;
-            Resources.addTo(assignedResource, assignment);
-          }
-          if (!assignedContainer) {
+          if (assignment.equals(Resources.none())) {
             break;
           }
+
+          assignedContainers++;
+          Resources.addTo(assignedResource, assignment);
           if (!shouldContinueAssigning(assignedContainers, maxResourcesToAssign,
               assignedResource)) {
             break;

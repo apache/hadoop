@@ -18,8 +18,6 @@
 package org.apache.hadoop.security;
 
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
@@ -34,6 +32,8 @@ import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -58,8 +58,8 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
   private static final Configuration masterConf = new Configuration();
   
   
-  public static final Log LOG = LogFactory
-      .getLog(TestDoAsEffectiveUser.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestDoAsEffectiveUser.class);
   
   
   static {

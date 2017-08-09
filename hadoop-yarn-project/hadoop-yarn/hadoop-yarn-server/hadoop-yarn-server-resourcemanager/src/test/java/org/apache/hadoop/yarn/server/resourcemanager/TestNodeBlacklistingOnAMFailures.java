@@ -413,11 +413,9 @@ public class TestNodeBlacklistingOnAMFailures {
   }
 
   private MockRM startRM(YarnConfiguration conf) {
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-
-    MockRM rm = new MockRM(conf, memStore);
-
+    conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    MockRM rm = new MockRM(conf);
     rm.start();
     return rm;
   }

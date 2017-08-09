@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -194,11 +195,17 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 
     if (captureOpenFiles) {
-      Set<INodesInPath> openFilesIIP =
-          leaseManager.getINodeWithLeases(snapshotRoot);
-      for (INodesInPath openFileIIP : openFilesIIP)  {
-        INodeFile openFile = openFileIIP.getLastINode().asFile();
-        openFile.recordModification(openFileIIP.getLatestSnapshotId());
+      try {
+        Set<INodesInPath> openFilesIIP =
+            leaseManager.getINodeWithLeases(snapshotRoot);
+        for (INodesInPath openFileIIP : openFilesIIP) {
+          INodeFile openFile = openFileIIP.getLastINode().asFile();
+          openFile.recordModification(openFileIIP.getLatestSnapshotId());
+        }
+      } catch (Exception e) {
+        throw new SnapshotException("Failed to add snapshot: Unable to " +
+            "capture all open files under the snapshot dir " +
+            snapshotRoot.getFullPathName() + " for snapshot '" + name + "'", e);
       }
     }
     return s;
@@ -234,7 +241,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
 
   @Override
   public void computeContentSummary4Snapshot(final BlockStoragePolicySuite bsps,
-      final ContentCounts counts) {
+      final ContentCounts counts) throws AccessControlException {
     counts.addContent(Content.SNAPSHOT, snapshotsByNames.size());
     counts.addContent(Content.SNAPSHOTTABLE_DIRECTORY, 1);
     super.computeContentSummary4Snapshot(bsps, counts);

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azure;
 import static org.junit.Assume.assumeNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -60,6 +61,14 @@ public abstract class AbstractWasbTestBase {
     }
   }
 
+  public Configuration getConfiguration() {
+    return new Configuration();
+  }
+
   protected abstract AzureBlobStorageTestAccount createTestAccount()
       throws Exception;
+
+  protected AzureBlobStorageTestAccount getTestAccount() {
+    return testAccount;
+  }
 }

@@ -27,7 +27,7 @@ public class LipsumBlock extends HtmlBlock {
   public void render(Block html) {
     html.
       p().
-        _("Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        __("Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
           "Vivamus eu dui in ipsum tincidunt egestas ac sed nibh.",
           "Praesent quis nisl lorem, nec interdum urna.",
           "Duis sagittis dignissim purus sed sollicitudin.",
@@ -45,6 +45,6 @@ public class LipsumBlock extends HtmlBlock {
           "Proin eu ante nisl, vel porttitor eros.",
           "Aliquam gravida luctus augue, at scelerisque enim consectetur vel.",
           "Donec interdum tempor nisl, quis laoreet enim venenatis eu.",
-          "Quisque elit elit, vulputate eget porta vel, laoreet ac lacus.")._();
+          "Quisque elit elit, vulputate eget porta vel, laoreet ac lacus.").__();
   }
 }

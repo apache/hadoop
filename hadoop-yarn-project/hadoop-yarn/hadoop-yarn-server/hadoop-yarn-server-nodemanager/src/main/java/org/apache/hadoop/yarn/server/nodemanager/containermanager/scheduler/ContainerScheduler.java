@@ -192,7 +192,9 @@ public class ContainerScheduler extends AbstractService implements
     // decrement only if it was a running container
     Container completedContainer = runningContainers.remove(container
         .getContainerId());
-    if (completedContainer != null) {
+    // only a running container releases resources upon completion
+    boolean resourceReleased = completedContainer != null;
+    if (resourceReleased) {
       this.utilizationTracker.subtractContainerResource(container);
       if (container.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.OPPORTUNISTIC) {
@@ -218,8 +220,7 @@ public class ContainerScheduler extends AbstractService implements
     boolean resourcesAvailable = true;
     while (cIter.hasNext() && resourcesAvailable) {
       Container container = cIter.next();
-      if (this.utilizationTracker.hasResourcesAvailable(container)) {
-        startAllocatedContainer(container);
+      if (tryStartContainer(container)) {
         cIter.remove();
       } else {
         resourcesAvailable = false;
@@ -228,50 +229,95 @@ public class ContainerScheduler extends AbstractService implements
     return resourcesAvailable;
   }
 
+  private boolean tryStartContainer(Container container) {
+    boolean containerStarted = false;
+    if (resourceAvailableToStartContainer(container)) {
+      startContainer(container);
+      containerStarted = true;
+    }
+    return containerStarted;
+  }
+
+  /**
+   * Check if there is resource available to start a given container
+   * immediately. (This can be extended to include overallocated resources)
+   * @param container the container to start
+   * @return true if container can be launched directly
+   */
+  private boolean resourceAvailableToStartContainer(Container container) {
+    return this.utilizationTracker.hasResourcesAvailable(container);
+  }
+
+  private boolean enqueueContainer(Container container) {
+    boolean isGuaranteedContainer = container.getContainerTokenIdentifier().
+        getExecutionType() == ExecutionType.GUARANTEED;
+
+    boolean isQueued;
+    if (isGuaranteedContainer) {
+      queuedGuaranteedContainers.put(container.getContainerId(), container);
+      isQueued = true;
+    } else {
+      if (queuedOpportunisticContainers.size() < maxOppQueueLength) {
+        LOG.info("Opportunistic container {} will be queued at the NM.",
+            container.getContainerId());
+        queuedOpportunisticContainers.put(
+            container.getContainerId(), container);
+        isQueued = true;
+      } else {
+        LOG.info("Opportunistic container [{}] will not be queued at the NM" +
+                "since max queue length [{}] has been reached",
+            container.getContainerId(), maxOppQueueLength);
+        container.sendKillEvent(
+            ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER,
+            "Opportunistic container queue is full.");
+        isQueued = false;
+      }
+    }
+
+    if (isQueued) {
+      try {
+        this.context.getNMStateStore().storeContainerQueued(
+            container.getContainerId());
+      } catch (IOException e) {
+        LOG.warn("Could not store container [" + container.getContainerId()
+            + "] state. The Container has been queued.", e);
+      }
+    }
+
+    return isQueued;
+  }
+
   @VisibleForTesting
   protected void scheduleContainer(Container container) {
-    if (maxOppQueueLength <= 0) {
-      startAllocatedContainer(container);
-      return;
-    }
-    if (queuedGuaranteedContainers.isEmpty() &&
-        queuedOpportunisticContainers.isEmpty() &&
-        this.utilizationTracker.hasResourcesAvailable(container)) {
-      startAllocatedContainer(container);
-    } else {
-      LOG.info("No available resources for container {} to start its execution "
-          + "immediately.", container.getContainerId());
-      boolean isQueued = true;
-      if (container.getContainerTokenIdentifier().getExecutionType() ==
-          ExecutionType.GUARANTEED) {
-        queuedGuaranteedContainers.put(container.getContainerId(), container);
-        // Kill running opportunistic containers to make space for
-        // guaranteed container.
+    boolean isGuaranteedContainer = container.getContainerTokenIdentifier().
+        getExecutionType() == ExecutionType.GUARANTEED;
+
+    // Given a guaranteed container, we enqueue it first and then try to start
+    // as many queuing guaranteed containers as possible followed by queuing
+    // opportunistic containers based on remaining resources available. If the
+    // container still stays in the queue afterwards, we need to preempt just
+    // enough number of opportunistic containers.
+    if (isGuaranteedContainer) {
+      enqueueContainer(container);
+      startPendingContainers();
+
+      // if the guaranteed container is queued, we need to preempt opportunistic
+      // containers for make room for it
+      if (queuedGuaranteedContainers.containsKey(container.getContainerId())) {
         killOpportunisticContainers(container);
-      } else {
-        if (queuedOpportunisticContainers.size() <= maxOppQueueLength) {
-          LOG.info("Opportunistic container {} will be queued at the NM.",
-              container.getContainerId());
-          queuedOpportunisticContainers.put(
-              container.getContainerId(), container);
-        } else {
-          isQueued = false;
-          LOG.info("Opportunistic container [{}] will not be queued at the NM" +
-              "since max queue length [{}] has been reached",
-              container.getContainerId(), maxOppQueueLength);
-          container.sendKillEvent(
-              ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER,
-              "Opportunistic container queue is full.");
-        }
       }
-      if (isQueued) {
-        try {
-          this.context.getNMStateStore().storeContainerQueued(
-              container.getContainerId());
-        } catch (IOException e) {
-          LOG.warn("Could not store container [" + container.getContainerId()
-              + "] state. The Container has been queued.", e);
-        }
+    } else {
+      // Given an opportunistic container, we first try to start as many queuing
+      // guaranteed containers as possible followed by queuing opportunistic
+      // containers based on remaining resource available, then enqueue the
+      // opportunistic container. If the container is enqueued, we do another
+      // pass to try to start the newly enqueued opportunistic container.
+      startPendingContainers();
+      boolean containerQueued = enqueueContainer(container);
+      // container may not get queued because the max opportunistic container
+      // queue length is reached. If so, there is no point doing another pass
+      if (containerQueued) {
+        startPendingContainers();
       }
     }
   }
@@ -292,7 +338,7 @@ public class ContainerScheduler extends AbstractService implements
     }
   }
 
-  private void startAllocatedContainer(Container container) {
+  private void startContainer(Container container) {
     LOG.info("Starting container [" + container.getContainerId()+ "]");
     runningContainers.put(container.getContainerId(), container);
     this.utilizationTracker.addContainerResources(container);
@@ -346,7 +392,10 @@ public class ContainerScheduler extends AbstractService implements
       ResourceUtilization resourcesToFreeUp) {
     return resourcesToFreeUp.getPhysicalMemory() <= 0 &&
         resourcesToFreeUp.getVirtualMemory() <= 0 &&
-        resourcesToFreeUp.getCPU() <= 0.0f;
+        // Convert the number of cores to nearest integral number, due to
+        // imprecision of direct float comparison.
+        Math.round(resourcesToFreeUp.getCPU()
+            * getContainersMonitor().getVCoresAllocatedForContainers()) <= 0;
   }
 
   private ResourceUtilization resourcesToFreeUp(
@@ -415,5 +464,10 @@ public class ContainerScheduler extends AbstractService implements
 
   public ContainersMonitor getContainersMonitor() {
     return this.context.getContainerManager().getContainersMonitor();
+  }
+
+  @VisibleForTesting
+  public ResourceUtilization getCurrentUtilization() {
+    return this.utilizationTracker.getCurrentUtilization();
   }
 }

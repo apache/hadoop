@@ -119,9 +119,8 @@ public class TestReservationInputValidator {
     } catch (YarnException e) {
       Assert.assertNull(plan);
       String message = e.getMessage();
-      Assert
-          .assertTrue(message
-              .equals("The queue is not specified. Please try again with a valid reservable queue."));
+      Assert.assertEquals("The queue is not specified. Please try again with a "
+          + "valid reservable queue.", message);
       LOG.info(message);
     }
   }
@@ -161,9 +160,8 @@ public class TestReservationInputValidator {
     } catch (YarnException e) {
       Assert.assertNull(plan);
       String message = e.getMessage();
-      Assert
-          .assertTrue(message
-              .equals("Missing reservation definition. Please try again by specifying a reservation definition."));
+      Assert.assertEquals("Missing reservation definition. Please try again by "
+          + "specifying a reservation definition.", message);
       LOG.info(message);
     }
   }

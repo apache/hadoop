@@ -20,14 +20,14 @@ package org.apache.hadoop.mapred;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.apache.hadoop.test.MockitoMaker.make;
-import static org.apache.hadoop.test.MockitoMaker.stub;
 import static org.junit.Assert.assertTrue;
 import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -188,8 +188,8 @@ public class TestShuffleHandler {
   public void testShuffleMetrics() throws Exception {
     MetricsSystem ms = new MetricsSystemImpl();
     ShuffleHandler sh = new ShuffleHandler(ms);
-    ChannelFuture cf = make(stub(ChannelFuture.class).
-        returning(true, false).from.isSuccess());
+    ChannelFuture cf = mock(ChannelFuture.class);
+    when(cf.isSuccess()).thenReturn(true).thenReturn(false);
 
     sh.metrics.shuffleConnections.incr();
     sh.metrics.shuffleOutputBytes.incr(1*MiB);
@@ -1080,10 +1080,10 @@ public class TestShuffleHandler {
         new ArrayList<ShuffleHandler.ReduceMapFileCount>();
 
     final ChannelHandlerContext mockCtx =
-        Mockito.mock(ChannelHandlerContext.class);
-    final MessageEvent mockEvt = Mockito.mock(MessageEvent.class);
-    final Channel mockCh = Mockito.mock(AbstractChannel.class);
-    final ChannelPipeline mockPipeline = Mockito.mock(ChannelPipeline.class);
+        mock(ChannelHandlerContext.class);
+    final MessageEvent mockEvt = mock(MessageEvent.class);
+    final Channel mockCh = mock(AbstractChannel.class);
+    final ChannelPipeline mockPipeline = mock(ChannelPipeline.class);
 
     // Mock HttpRequest and ChannelFuture
     final HttpRequest mockHttpRequest = createMockHttpRequest();
@@ -1094,16 +1094,16 @@ public class TestShuffleHandler {
 
     // Mock Netty Channel Context and Channel behavior
     Mockito.doReturn(mockCh).when(mockCtx).getChannel();
-    Mockito.when(mockCh.getPipeline()).thenReturn(mockPipeline);
-    Mockito.when(mockPipeline.get(
+    when(mockCh.getPipeline()).thenReturn(mockPipeline);
+    when(mockPipeline.get(
         Mockito.any(String.class))).thenReturn(timerHandler);
-    Mockito.when(mockCtx.getChannel()).thenReturn(mockCh);
+    when(mockCtx.getChannel()).thenReturn(mockCh);
     Mockito.doReturn(mockFuture).when(mockCh).write(Mockito.any(Object.class));
-    Mockito.when(mockCh.write(Object.class)).thenReturn(mockFuture);
+    when(mockCh.write(Object.class)).thenReturn(mockFuture);
 
     //Mock MessageEvent behavior
     Mockito.doReturn(mockCh).when(mockEvt).getChannel();
-    Mockito.when(mockEvt.getChannel()).thenReturn(mockCh);
+    when(mockEvt.getChannel()).thenReturn(mockCh);
     Mockito.doReturn(mockHttpRequest).when(mockEvt).getMessage();
 
     final ShuffleHandler sh = new MockShuffleHandler();
@@ -1127,8 +1127,8 @@ public class TestShuffleHandler {
 
   public ChannelFuture createMockChannelFuture(Channel mockCh,
       final List<ShuffleHandler.ReduceMapFileCount> listenerList) {
-    final ChannelFuture mockFuture = Mockito.mock(ChannelFuture.class);
-    Mockito.when(mockFuture.getChannel()).thenReturn(mockCh);
+    final ChannelFuture mockFuture = mock(ChannelFuture.class);
+    when(mockFuture.getChannel()).thenReturn(mockCh);
     Mockito.doReturn(true).when(mockFuture).isSuccess();
     Mockito.doAnswer(new Answer() {
       @Override
@@ -1146,7 +1146,7 @@ public class TestShuffleHandler {
   }
 
   public HttpRequest createMockHttpRequest() {
-    HttpRequest mockHttpRequest = Mockito.mock(HttpRequest.class);
+    HttpRequest mockHttpRequest = mock(HttpRequest.class);
     Mockito.doReturn(HttpMethod.GET).when(mockHttpRequest).getMethod();
     Mockito.doAnswer(new Answer() {
       @Override

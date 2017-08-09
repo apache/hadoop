@@ -32,13 +32,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -49,7 +48,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class IOUtils {
-  public static final Log LOG = LogFactory.getLog(IOUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(IOUtils.class);
 
   /**
    * Copies from one stream to another.
@@ -246,7 +245,10 @@ public class IOUtils {
    *
    * @param log the log to record problems to at debug level. Can be null.
    * @param closeables the objects to close
+   * @deprecated use {@link #cleanupWithLogger(Logger, java.io.Closeable...)}
+   * instead
    */
+  @Deprecated
   public static void cleanup(Log log, java.io.Closeable... closeables) {
     for (java.io.Closeable c : closeables) {
       if (c != null) {
@@ -291,7 +293,7 @@ public class IOUtils {
    */
   public static void closeStream(java.io.Closeable stream) {
     if (stream != null) {
-      cleanup(null, stream);
+      cleanupWithLogger(null, stream);
     }
   }
   

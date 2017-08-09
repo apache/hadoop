@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -30,16 +31,37 @@ import org.junit.Test;
 
 public class TestMapReduceTrackingUriPlugin {
   @Test
-  public void testProducesHistoryServerUriForAppId() throws URISyntaxException {
+  public void testProducesHistoryServerUriForAppId()
+      throws URISyntaxException {
     final String historyAddress = "example.net:424242";
     YarnConfiguration conf = new YarnConfiguration();
+    conf.set(JHAdminConfig.MR_HS_HTTP_POLICY,
+        HttpConfig.Policy.HTTP_ONLY.name());
     conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, historyAddress);
     MapReduceTrackingUriPlugin plugin = new MapReduceTrackingUriPlugin();
     plugin.setConf(conf);
-    ApplicationId id = ApplicationId.newInstance(6384623l, 5);
+    ApplicationId id = ApplicationId.newInstance(6384623L, 5);
     String jobSuffix = id.toString().replaceFirst("^application_", "job_");
     URI expected =
         new URI("http://" + historyAddress + "/jobhistory/job/" + jobSuffix);
+    URI actual = plugin.getTrackingUri(id);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testProducesHistoryServerUriWithHTTPS()
+      throws URISyntaxException {
+    final String historyAddress = "example.net:404040";
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(JHAdminConfig.MR_HS_HTTP_POLICY,
+        HttpConfig.Policy.HTTPS_ONLY.name());
+    conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS, historyAddress);
+    MapReduceTrackingUriPlugin plugin = new MapReduceTrackingUriPlugin();
+    plugin.setConf(conf);
+    ApplicationId id = ApplicationId.newInstance(6384623L, 5);
+    String jobSuffix = id.toString().replaceFirst("^application_", "job_");
+    URI expected =
+        new URI("https://" + historyAddress + "/jobhistory/job/" + jobSuffix);
     URI actual = plugin.getTrackingUri(id);
     assertEquals(expected, actual);
   }

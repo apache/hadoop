@@ -582,10 +582,17 @@ abstract class StorageInterface {
         throws StorageException;
 
     SelfRenewingLease acquireLease() throws StorageException;
-    
+
+    /**
+     * Gets the minimum read block size to use with this Blob.
+     *
+     * @return The minimum block size, in bytes, for reading from a block blob.
+     */
+    int getStreamMinimumReadSizeInBytes();
+
     /**
      * Sets the minimum read block size to use with this Blob.
-     * 
+     *
      * @param minimumReadSizeBytes
      *          The maximum block size, in bytes, for reading from a block blob
      *          while using a {@link BlobInputStream} object, ranging from 512

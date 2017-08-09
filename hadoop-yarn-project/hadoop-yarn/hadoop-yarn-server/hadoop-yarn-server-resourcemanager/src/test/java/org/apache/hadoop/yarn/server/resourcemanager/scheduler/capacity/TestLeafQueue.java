@@ -820,8 +820,6 @@ public class TestLeafQueue {
       applyCSAssignment(clusterResource, assign, b, nodes, apps);
     } while (assign.getResource().getMemorySize() > 0 &&
         assign.getAssignmentInformation().getNumReservations() == 0);
-    //LOG.info("user_0: " + queueUser0.getUsed());
-    //LOG.info("user_1: " + queueUser1.getUsed());
 
     assertTrue("Verify user_0 got resources ", queueUser0.getUsed()
         .getMemorySize() > 0);
@@ -1146,7 +1144,7 @@ public class TestLeafQueue {
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), qb, nodes, apps);
     qb.computeUserLimitAndSetHeadroom(app_0, clusterResource,
-        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
 
     //maxqueue 16G, userlimit 13G, - 4G used = 9G
     assertEquals(9*GB,app_0.getHeadroom().getMemorySize());
@@ -1169,7 +1167,7 @@ public class TestLeafQueue {
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), qb, nodes, apps);
     qb.computeUserLimitAndSetHeadroom(app_0, clusterResource,
-        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
 
     assertEquals(8*GB, qb.getUsedResources().getMemorySize());
     assertEquals(4*GB, app_0.getCurrentConsumption().getMemorySize());
@@ -1219,7 +1217,7 @@ public class TestLeafQueue {
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), qb, nodes, apps);
     qb.computeUserLimitAndSetHeadroom(app_3, clusterResource,
-        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
     assertEquals(4*GB, qb.getUsedResources().getMemorySize());
     //maxqueue 16G, userlimit 7G, used (by each user) 2G, headroom 5G (both)
     assertEquals(5*GB, app_3.getHeadroom().getMemorySize());
@@ -1240,9 +1238,9 @@ public class TestLeafQueue {
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), qb, nodes, apps);
     qb.computeUserLimitAndSetHeadroom(app_4, clusterResource,
-        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
     qb.computeUserLimitAndSetHeadroom(app_3, clusterResource,
-        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+        "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
     
     
     //app3 is user1, active from last test case

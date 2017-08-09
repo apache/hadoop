@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -92,9 +93,14 @@ public final class ErasureCodingPolicyManager {
 
   public void init(Configuration conf) {
     // Populate the list of enabled policies from configuration
-    final String[] policyNames = conf.getTrimmedStrings(
-        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
+    final String[] enablePolicyNames = conf.getTrimmedStrings(
+            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
+    final String defaultPolicyName = conf.getTrimmed(
+            DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
+            DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
+    final String[] policyNames =
+            (String[]) ArrayUtils.add(enablePolicyNames, defaultPolicyName);
     this.userPoliciesByID = new TreeMap<>();
     this.userPoliciesByName = new TreeMap<>();
     this.removedPoliciesByName = new TreeMap<>();

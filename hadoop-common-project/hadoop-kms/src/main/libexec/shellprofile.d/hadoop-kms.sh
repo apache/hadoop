@@ -16,7 +16,7 @@
 # limitations under the License.
 
 if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-  hadoop_add_subcommand "kms" "run KMS, the Key Management Server"
+  hadoop_add_subcommand "kms" daemon "run KMS, the Key Management Server"
 fi
 
 ## @description  Command handler for kms subcommand

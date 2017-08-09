@@ -74,7 +74,10 @@ enum errorcodes {
   COULD_NOT_CREATE_APP_LOG_DIRECTORIES = 36,
   COULD_NOT_CREATE_TMP_DIRECTORIES = 37,
   ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS = 38,
-  ERROR_SANITIZING_DOCKER_COMMAND = 39
+  ERROR_SANITIZING_DOCKER_COMMAND = 39,
+  DOCKER_IMAGE_INVALID = 40,
+  DOCKER_CONTAINER_NAME_INVALID = 41,
+  ERROR_COMPILING_REGEX = 42
 };
 
 enum operations {
@@ -309,3 +312,15 @@ int run_docker(const char *command_file);
  * Sanitize docker commands. Returns NULL if there was any failure.
 */
 char* sanitize_docker_command(const char *line);
+
+/*
+ * Compile the regex_str and determine if the input string matches.
+ * Return 0 on match, 1 of non-match.
+ */
+int execute_regex_match(const char *regex_str, const char *input);
+
+/**
+ * Validate the docker image name matches the expected input.
+ * Return 0 on success.
+ */
+int validate_docker_image_name(const char *image_name);

@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -47,6 +46,7 @@ import org.apache.hadoop.security.AccessControlException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.EnumSet;
 
 import static org.apache.hadoop.util.Time.now;
 
@@ -127,10 +127,8 @@ class FSDirStatAndListingOp {
       FSDirectory fsd, String src) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
-    if (fsd.isPermissionEnabled()) {
-      fsd.checkPermission(pc, iip, false, null, null, null,
-          FsAction.READ_EXECUTE);
-    }
+    // getContentSummaryInt() call will check access (if enabled) when
+    // traversing all sub directories.
     return getContentSummaryInt(fsd, iip);
   }
 
@@ -386,7 +384,6 @@ class FSDirStatAndListingOp {
    * @param child for a directory listing of the iip, else null
    * @param storagePolicy for the path or closest ancestor
    * @param needLocation if block locations need to be included or not
-   * @param includeStoragePolicy if storage policy should be returned
    * @return a file status
    * @throws java.io.IOException if any error occurs
    */
@@ -441,7 +438,19 @@ class FSDirStatAndListingOp {
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;
 
+    EnumSet<HdfsFileStatus.Flags> flags =
+        EnumSet.noneOf(HdfsFileStatus.Flags.class);
     INodeAttributes nodeAttrs = fsd.getAttributes(iip);
+    boolean hasAcl = nodeAttrs.getAclFeature() != null;
+    if (hasAcl) {
+      flags.add(HdfsFileStatus.Flags.HAS_ACL);
+    }
+    if (isEncrypted) {
+      flags.add(HdfsFileStatus.Flags.HAS_CRYPT);
+    }
+    if (isErasureCoded) {
+      flags.add(HdfsFileStatus.Flags.HAS_EC);
+    }
     return createFileStatus(
         size,
         node.isDirectory(),
@@ -449,7 +458,8 @@ class FSDirStatAndListingOp {
         blocksize,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
-        getPermissionForFileStatus(nodeAttrs, isEncrypted, isErasureCoded),
+        nodeAttrs.getFsPermission(),
+        flags,
         nodeAttrs.getUserName(),
         nodeAttrs.getGroupName(),
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
@@ -462,42 +472,22 @@ class FSDirStatAndListingOp {
         loc);
   }
 
-  private static HdfsFileStatus createFileStatus(long length, boolean isdir,
-      int replication, long blocksize, long mtime,
-      long atime, FsPermission permission, String owner, String group,
-      byte[] symlink, byte[] path, long fileId, int childrenNum,
-      FileEncryptionInfo feInfo, byte storagePolicy,
+  private static HdfsFileStatus createFileStatus(
+      long length, boolean isdir,
+      int replication, long blocksize, long mtime, long atime,
+      FsPermission permission, EnumSet<HdfsFileStatus.Flags> flags,
+      String owner, String group, byte[] symlink, byte[] path, long fileId,
+      int childrenNum, FileEncryptionInfo feInfo, byte storagePolicy,
       ErasureCodingPolicy ecPolicy, LocatedBlocks locations) {
     if (locations == null) {
       return new HdfsFileStatus(length, isdir, replication, blocksize,
-          mtime, atime, permission, owner, group, symlink, path, fileId,
-          childrenNum, feInfo, storagePolicy, ecPolicy);
+          mtime, atime, permission, flags, owner, group, symlink, path,
+          fileId, childrenNum, feInfo, storagePolicy, ecPolicy);
     } else {
       return new HdfsLocatedFileStatus(length, isdir, replication, blocksize,
-          mtime, atime, permission, owner, group, symlink, path, fileId,
-          locations, childrenNum, feInfo, storagePolicy, ecPolicy);
+          mtime, atime, permission, flags, owner, group, symlink, path,
+          fileId, locations, childrenNum, feInfo, storagePolicy, ecPolicy);
     }
-  }
-
-  /**
-   * Returns an inode's FsPermission for use in an outbound FileStatus.  If the
-   * inode has an ACL or is for an encrypted file/dir, then this method will
-   * return an FsPermissionExtension.
-   *
-   * @param node INode to check
-   * @param isEncrypted boolean true if the file/dir is encrypted
-   * @return FsPermission from inode, with ACL bit on if the inode has an ACL
-   * and encrypted bit on if it represents an encrypted file/dir.
-   */
-  private static FsPermission getPermissionForFileStatus(
-      INodeAttributes node, boolean isEncrypted, boolean isErasureCoded) {
-    FsPermission perm = node.getFsPermission();
-    boolean hasAcl = node.getAclFeature() != null;
-    if (hasAcl || isEncrypted || isErasureCoded) {
-      perm = new FsPermissionExtension(perm, hasAcl,
-          isEncrypted, isErasureCoded);
-    }
-    return perm;
   }
 
   private static ContentSummary getContentSummaryInt(FSDirectory fsd,
@@ -513,7 +503,8 @@ class FSDirStatAndListingOp {
         // processed. 0 means disabled. I.e. blocking for the entire duration.
         ContentSummaryComputationContext cscc =
             new ContentSummaryComputationContext(fsd, fsd.getFSNamesystem(),
-                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec());
+                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec(),
+                fsd.getPermissionChecker());
         ContentSummary cs = targetNode.computeAndConvertContentSummary(
             iip.getPathSnapshotId(), cscc);
         fsd.addYieldCount(cscc.getYieldCount());

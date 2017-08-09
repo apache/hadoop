@@ -1,0 +1,165 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.yarn.federation.proto";
+option java_outer_classname = "YarnServerFederationProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
+
+import "yarn_protos.proto";
+import "yarn_server_common_protos.proto";
+
+message SubClusterIdProto {
+  optional string id = 1;
+}
+
+enum SubClusterStateProto {
+  SC_NEW = 1;
+  SC_RUNNING = 2;
+  SC_UNHEALTHY = 3;
+  SC_DECOMMISSIONING = 4;
+  SC_LOST = 5;
+  SC_UNREGISTERED = 6;
+  SC_DECOMMISSIONED = 7;
+}
+
+message SubClusterInfoProto {
+  optional SubClusterIdProto sub_cluster_id = 1;
+  optional string aMRM_service_address = 2;
+  optional string client_rM_service_address = 3;
+  optional string rM_admin_service_address = 4;
+  optional string rM_web_service_address = 5;
+  optional int64 lastHeartBeat = 6;
+  optional SubClusterStateProto state = 7;
+  optional int64 lastStartTime = 8;
+  optional string capability = 9;
+}
+
+message SubClusterRegisterRequestProto {
+  optional SubClusterInfoProto sub_cluster_info = 1;
+}
+
+message SubClusterRegisterResponseProto {
+}
+
+message SubClusterHeartbeatRequestProto {
+  optional SubClusterIdProto sub_cluster_id = 1;
+  optional int64 lastHeartBeat = 2;
+  optional SubClusterStateProto state = 3;
+  optional string capability = 4;
+}
+
+message SubClusterHeartbeatResponseProto {
+}
+
+message SubClusterDeregisterRequestProto {
+  optional SubClusterIdProto sub_cluster_id = 1;
+  optional SubClusterStateProto state = 2;
+}
+
+message SubClusterDeregisterResponseProto {
+}
+
+message GetSubClusterInfoRequestProto {
+  optional SubClusterIdProto sub_cluster_id = 1;
+}
+
+message GetSubClusterInfoResponseProto {
+  optional SubClusterInfoProto sub_cluster_info = 1;
+}
+
+message GetSubClustersInfoRequestProto {
+  optional bool filter_inactive_subclusters = 1 [default = true];
+}
+
+message GetSubClustersInfoResponseProto {
+  repeated SubClusterInfoProto sub_cluster_infos = 1;
+}
+
+message ApplicationHomeSubClusterProto {
+  optional ApplicationIdProto application_id = 1;
+  optional SubClusterIdProto home_sub_cluster = 2;
+}
+
+message AddApplicationHomeSubClusterRequestProto {
+  optional ApplicationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message AddApplicationHomeSubClusterResponseProto {
+  optional SubClusterIdProto home_sub_cluster = 1;
+}
+
+message UpdateApplicationHomeSubClusterRequestProto {
+  optional ApplicationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message UpdateApplicationHomeSubClusterResponseProto {
+}
+
+message GetApplicationHomeSubClusterRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message GetApplicationHomeSubClusterResponseProto {
+  optional ApplicationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message GetApplicationsHomeSubClusterRequestProto {
+
+}
+
+message GetApplicationsHomeSubClusterResponseProto {
+  repeated ApplicationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+
+message DeleteApplicationHomeSubClusterRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message DeleteApplicationHomeSubClusterResponseProto {
+}
+
+message SubClusterPolicyConfigurationProto {
+  optional string queue = 1;
+  optional string type = 2;
+  optional bytes params = 3;
+}
+
+message GetSubClusterPolicyConfigurationRequestProto {
+  optional string queue = 1;
+}
+
+message GetSubClusterPolicyConfigurationResponseProto {
+  optional SubClusterPolicyConfigurationProto policy_configuration = 1;
+}
+
+message SetSubClusterPolicyConfigurationRequestProto {
+  optional SubClusterPolicyConfigurationProto policy_configuration = 1;
+}
+
+message SetSubClusterPolicyConfigurationResponseProto {
+}
+
+message GetSubClusterPoliciesConfigurationsRequestProto {
+}
+
+message GetSubClusterPoliciesConfigurationsResponseProto {
+  repeated SubClusterPolicyConfigurationProto policies_configurations = 1;
+ }

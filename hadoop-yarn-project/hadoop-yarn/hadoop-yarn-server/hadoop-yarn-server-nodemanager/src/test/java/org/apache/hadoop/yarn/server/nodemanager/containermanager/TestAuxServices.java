@@ -210,7 +210,7 @@ public class TestAuxServices {
       defaultAuxClassPath = new HashSet<String>(Arrays.asList(StringUtils
           .getTrimmedStrings(auxClassPath)));
     }
-    Assert.assertTrue(auxName.equals("ServiceC"));
+    Assert.assertEquals("ServiceC", auxName);
     aux.serviceStop();
 
     // create a new jar file, and configure it as customized class path

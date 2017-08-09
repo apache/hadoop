@@ -39,11 +39,11 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -62,12 +62,12 @@ public class SingleCounterBlock extends HtmlBlock {
   @Override protected void render(Block html) {
     if (job == null) {
       html.
-        p()._("Sorry, no counters for nonexistent", $(JOB_ID, "job"))._();
+        p().__("Sorry, no counters for nonexistent", $(JOB_ID, "job")).__();
       return;
     }
     if (!$(TASK_ID).isEmpty() && task == null) {
       html.
-        p()._("Sorry, no counters for nonexistent", $(TASK_ID, "task"))._();
+        p().__("Sorry, no counters for nonexistent", $(TASK_ID, "task")).__();
       return;
     }
     
@@ -79,7 +79,7 @@ public class SingleCounterBlock extends HtmlBlock {
         thead().
           tr().
             th(".ui-state-default", columnType).
-            th(".ui-state-default", "Value")._()._().
+            th(".ui-state-default", "Value").__().__().
           tbody();
     for (Map.Entry<String, Long> entry : values.entrySet()) {
       TR<TBODY<TABLE<DIV<Hamlet>>>> row = tbody.tr();
@@ -87,16 +87,16 @@ public class SingleCounterBlock extends HtmlBlock {
       String val = entry.getValue().toString();
       if(task != null) {
         row.td(id);
-        row.td().br().$title(val)._()._(val)._();
+        row.td().br().$title(val).__().__(val).__();
       } else {
         row.td().a(url("singletaskcounter",entry.getKey(),
-            $(COUNTER_GROUP), $(COUNTER_NAME)), id)._();
-        row.td().br().$title(val)._().a(url("singletaskcounter",entry.getKey(),
-            $(COUNTER_GROUP), $(COUNTER_NAME)), val)._();
+            $(COUNTER_GROUP), $(COUNTER_NAME)), id).__();
+        row.td().br().$title(val).__().a(url("singletaskcounter", entry.getKey(),
+            $(COUNTER_GROUP), $(COUNTER_NAME)), val).__();
       }
-      row._();
+      row.__();
     }
-    tbody._()._()._();
+    tbody.__().__().__();
   }
 
   private void populateMembers(AppContext ctx) {

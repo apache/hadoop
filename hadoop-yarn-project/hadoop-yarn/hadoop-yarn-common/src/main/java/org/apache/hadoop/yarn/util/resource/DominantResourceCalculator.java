@@ -218,27 +218,19 @@ public class DominantResourceCalculator extends ResourceCalculator {
   public Resource multiplyAndNormalizeUp(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
-        roundUp(
-            (int)Math.ceil(r.getMemorySize() * by), stepFactor.getMemorySize()),
-        roundUp(
-            (int)Math.ceil(r.getVirtualCores() * by),
-            stepFactor.getVirtualCores())
-        );
+        roundUp((long) Math.ceil((float) (r.getMemorySize() * by)),
+            stepFactor.getMemorySize()),
+        roundUp((int) Math.ceil((float) (r.getVirtualCores() * by)),
+            stepFactor.getVirtualCores()));
   }
 
   @Override
   public Resource multiplyAndNormalizeDown(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
-        roundDown(
-            (int)(r.getMemorySize() * by),
-            stepFactor.getMemorySize()
-            ),
-        roundDown(
-            (int)(r.getVirtualCores() * by),
-            stepFactor.getVirtualCores()
-            )
-        );
+        roundDown((long) (r.getMemorySize() * by), stepFactor.getMemorySize()),
+        roundDown((int) (r.getVirtualCores() * by),
+            stepFactor.getVirtualCores()));
   }
 
   @Override

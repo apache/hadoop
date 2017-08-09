@@ -27,20 +27,21 @@ import java.util.Date;
 import java.util.ServiceLoader;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * DtFileOperations is a collection of delegation token file operations.
  */
 public final class DtFileOperations {
-  private static final Log LOG = LogFactory.getLog(DtFileOperations.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DtFileOperations.class);
 
   /** No public constructor as per checkstyle. */
   private DtFileOperations() { }

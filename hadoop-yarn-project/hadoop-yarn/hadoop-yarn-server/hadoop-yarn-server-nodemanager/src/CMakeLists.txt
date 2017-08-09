@@ -89,6 +89,7 @@ add_library(container
     main/native/container-executor/impl/configuration.c
     main/native/container-executor/impl/container-executor.c
     main/native/container-executor/impl/get_executable.c
+    main/native/container-executor/impl/utils/string-utils.c
 )
 
 add_executable(container-executor

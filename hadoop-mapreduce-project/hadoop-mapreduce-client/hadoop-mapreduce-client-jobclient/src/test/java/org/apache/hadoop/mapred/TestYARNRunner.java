@@ -871,10 +871,10 @@ public class TestYARNRunner {
     Configuration confSent = BuilderUtils.parseTokensConf(submissionContext);
 
     // configs that match regex should be included
-    Assert.assertTrue(confSent.get("dfs.namenode.rpc-address.mycluster2.nn1")
-        .equals("123.0.0.1"));
-    Assert.assertTrue(confSent.get("dfs.namenode.rpc-address.mycluster2.nn2")
-        .equals("123.0.0.2"));
+    Assert.assertEquals("123.0.0.1",
+        confSent.get("dfs.namenode.rpc-address.mycluster2.nn1"));
+    Assert.assertEquals("123.0.0.2",
+        confSent.get("dfs.namenode.rpc-address.mycluster2.nn2"));
 
     // configs that aren't matching regex should not be included
     Assert.assertTrue(confSent.get("hadoop.tmp.dir") == null || !confSent

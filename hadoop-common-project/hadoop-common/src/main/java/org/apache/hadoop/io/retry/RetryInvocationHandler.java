@@ -295,6 +295,17 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
 
       return new RetryInfo(maxRetryDelay, max, expectedFailoverCount, ex);
     }
+
+    @Override
+    public String toString() {
+      return "RetryInfo{" +
+              "retryTime=" + retryTime +
+              ", delay=" + delay +
+              ", action=" + action +
+              ", expectedFailoverCount=" + expectedFailoverCount +
+              ", failException=" + failException +
+              '}';
+    }
   }
 
   private final ProxyDescriptor<T> proxyDescriptor;

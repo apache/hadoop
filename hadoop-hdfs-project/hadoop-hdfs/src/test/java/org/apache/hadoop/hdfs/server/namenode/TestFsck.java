@@ -48,6 +48,7 @@ import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -946,7 +947,8 @@ public class TestFsck {
     DatanodeDescriptor dnDesc0 = dnm.getDatanode(
         cluster.getDataNodes().get(0).getDatanodeId());
 
-    bm.getDatanodeManager().getDecomManager().startDecommission(dnDesc0);
+    bm.getDatanodeManager().getDatanodeAdminManager().startDecommission(
+        dnDesc0);
     final String dn0Name = dnDesc0.getXferAddr();
 
     // check the replica status while decommissioning
@@ -999,7 +1001,7 @@ public class TestFsck {
         cluster.getDataNodes().get(1).getDatanodeId());
     final String dn1Name = dnDesc1.getXferAddr();
 
-    bm.getDatanodeManager().getDecomManager().startMaintenance(dnDesc1,
+    bm.getDatanodeManager().getDatanodeAdminManager().startMaintenance(dnDesc1,
         Long.MAX_VALUE);
 
     // check the replica status while entering maintenance
@@ -1355,7 +1357,8 @@ public class TestFsck {
     byte storagePolicy = 0;
 
     HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
-        blockSize, modTime, accessTime, perms, owner, group, symlink,
+        blockSize, modTime, accessTime, perms,
+        EnumSet.noneOf(HdfsFileStatus.Flags.class), owner, group, symlink,
         path, fileId, numChildren, null, storagePolicy, null);
     Result replRes = new ReplicationResult(conf);
     Result ecRes = new ErasureCodingResult(conf);
@@ -1537,7 +1540,7 @@ public class TestFsck {
       fsn.writeUnlock();
     }
     DatanodeDescriptor dn = bc.getBlocks()[0].getDatanode(0);
-    bm.getDatanodeManager().getDecomManager().startDecommission(dn);
+    bm.getDatanodeManager().getDatanodeAdminManager().startDecommission(dn);
     String dnName = dn.getXferAddr();
 
     //wait for decommission start
@@ -1617,7 +1620,7 @@ public class TestFsck {
     DatanodeManager dnm = bm.getDatanodeManager();
     DatanodeDescriptor dn = dnm.getDatanode(cluster.getDataNodes().get(0)
         .getDatanodeId());
-    bm.getDatanodeManager().getDecomManager().startMaintenance(dn,
+    bm.getDatanodeManager().getDatanodeAdminManager().startMaintenance(dn,
         Long.MAX_VALUE);
     final String dnName = dn.getXferAddr();
 
@@ -1852,7 +1855,7 @@ public class TestFsck {
     }
     DatanodeDescriptor dn = bc.getBlocks()[0]
         .getDatanode(0);
-    bm.getDatanodeManager().getDecomManager().startDecommission(dn);
+    bm.getDatanodeManager().getDatanodeAdminManager().startDecommission(dn);
     String dnName = dn.getXferAddr();
 
     // wait for decommission start
@@ -1931,7 +1934,7 @@ public class TestFsck {
     DatanodeManager dnm = bm.getDatanodeManager();
     DatanodeDescriptor dn = dnm.getDatanode(cluster.getDataNodes().get(0)
         .getDatanodeId());
-    bm.getDatanodeManager().getDecomManager().startMaintenance(dn,
+    bm.getDatanodeManager().getDatanodeAdminManager().startMaintenance(dn,
         Long.MAX_VALUE);
     final String dnName = dn.getXferAddr();
 

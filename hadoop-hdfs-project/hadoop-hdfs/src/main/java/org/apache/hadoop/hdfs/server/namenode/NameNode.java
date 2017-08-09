@@ -2050,7 +2050,10 @@ public class NameNode extends ReconfigurableBase implements
         datanodeManager.setHeartbeatInterval(DFS_HEARTBEAT_INTERVAL_DEFAULT);
         return String.valueOf(DFS_HEARTBEAT_INTERVAL_DEFAULT);
       } else {
-        datanodeManager.setHeartbeatInterval(Long.parseLong(newVal));
+        long newInterval = getConf()
+            .getTimeDurationHelper(DFS_HEARTBEAT_INTERVAL_KEY,
+                newVal, TimeUnit.SECONDS);
+        datanodeManager.setHeartbeatInterval(newInterval);
         return String.valueOf(datanodeManager.getHeartbeatInterval());
       }
     } catch (NumberFormatException nfe) {

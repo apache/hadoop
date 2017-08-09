@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.http.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -73,6 +75,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -363,8 +366,15 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     assertEquals(status2.getLen(), status1.getLen());
 
     FileStatus[] stati = fs.listStatus(path.getParent());
-    assertEquals(stati.length, 1);
+    assertEquals(1, stati.length);
     assertEquals(stati[0].getPath().getName(), path.getName());
+
+    // The full path should be the path to the file. See HDFS-12139
+    FileStatus[] statl = fs.listStatus(path);
+    Assert.assertEquals(1, statl.length);
+    Assert.assertEquals(status2.getPath(), statl[0].getPath());
+    Assert.assertEquals(statl[0].getPath().getName(), path.getName());
+    Assert.assertEquals(stati[0].getPath(), statl[0].getPath());
   }
 
   private static void assertSameListing(FileSystem expected, FileSystem
@@ -410,6 +420,23 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       proxyFs.create(new Path(dir, "file" + i)).close();
       assertSameListing(proxyFs, httpFs, dir);
     }
+
+    // Test for HDFS-12139
+    Path dir1 = new Path(getProxiedFSTestDir(), "dir1");
+    proxyFs.mkdirs(dir1);
+    Path file1 = new Path(dir1, "file1");
+    proxyFs.create(file1).close();
+
+    RemoteIterator<FileStatus> si = proxyFs.listStatusIterator(dir1);
+    FileStatus statusl = si.next();
+    FileStatus status = proxyFs.getFileStatus(file1);
+    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
+    Assert.assertEquals(status.getPath(), statusl.getPath());
+
+    si = proxyFs.listStatusIterator(file1);
+    statusl = si.next();
+    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
+    Assert.assertEquals(status.getPath(), statusl.getPath());
   }
 
   private void testWorkingdirectory() throws Exception {
@@ -827,10 +854,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
   }
 
-  private static void assertSameAclBit(FileSystem expected, FileSystem actual,
+  private static void assertSameAcls(FileSystem expected, FileSystem actual,
       Path path) throws IOException {
     FileStatus expectedFileStatus = expected.getFileStatus(path);
     FileStatus actualFileStatus = actual.getFileStatus(path);
+    assertEquals(actualFileStatus.hasAcl(), expectedFileStatus.hasAcl());
     assertEquals(actualFileStatus.getPermission().getAclBit(),
         expectedFileStatus.getPermission().getAclBit());
   }
@@ -863,31 +891,31 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     AclStatus proxyAclStat = proxyFs.getAclStatus(path);
     AclStatus httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.setAcl(path, AclEntry.parseAclSpec(aclSet,true));
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.modifyAclEntries(path, AclEntry.parseAclSpec(aclUser2, true));
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.removeAclEntries(path, AclEntry.parseAclSpec(rmAclUser1, false));
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
 
     httpfs.removeAcl(path);
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, path);
+    assertSameAcls(httpfs, proxyFs, path);
   }
 
   /**
@@ -910,21 +938,21 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     AclStatus proxyAclStat = proxyFs.getAclStatus(dir);
     AclStatus httpfsAclStat = httpfs.getAclStatus(dir);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, dir);
+    assertSameAcls(httpfs, proxyFs, dir);
 
     /* Set a default ACL on the directory */
     httpfs.setAcl(dir, (AclEntry.parseAclSpec(defUser1,true)));
     proxyAclStat = proxyFs.getAclStatus(dir);
     httpfsAclStat = httpfs.getAclStatus(dir);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, dir);
+    assertSameAcls(httpfs, proxyFs, dir);
 
     /* Remove the default ACL */
     httpfs.removeDefaultAcl(dir);
     proxyAclStat = proxyFs.getAclStatus(dir);
     httpfsAclStat = httpfs.getAclStatus(dir);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-    assertSameAclBit(httpfs, proxyFs, dir);
+    assertSameAcls(httpfs, proxyFs, dir);
   }
 
   private void testEncryption() throws Exception {
@@ -1008,11 +1036,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   }
 
   protected enum Operation {
-    GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS, 
-    WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER, 
+    GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS,
+    WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER,
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
     GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
-    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING
+    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING, GETFILEBLOCKLOCATIONS,
+    CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT
   }
 
   private void operation(Operation op) throws Exception {
@@ -1101,6 +1130,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     case ERASURE_CODING:
       testErasureCoding();
       break;
+    case GETFILEBLOCKLOCATIONS:
+      testGetFileBlockLocations();
+      break;
+    case CREATE_SNAPSHOT:
+      testCreateSnapshot();
+      break;
+    case RENAME_SNAPSHOT:
+      testRenameSnapshot();
+      break;
+    case DELETE_SNAPSHOT:
+      testDeleteSnapshot();
+      break;
     }
   }
 
@@ -1145,6 +1186,181 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         return null;
       }
     });
+  }
+
+  private void testGetFileBlockLocations() throws Exception {
+    BlockLocation[] locations1, locations2, locations11, locations21 = null;
+    Path testFile = null;
+
+    // Test single block file block locations.
+    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
+      testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
+      DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
+      locations1 = fs.getFileBlockLocations(testFile, 0, 1);
+      Assert.assertNotNull(locations1);
+    }
+
+    try (FileSystem fs = getHttpFSFileSystem()) {
+      locations2 = fs.getFileBlockLocations(testFile, 0, 1);
+      Assert.assertNotNull(locations2);
+    }
+
+    verifyBlockLocations(locations1, locations2);
+
+    // Test multi-block single replica file block locations.
+    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
+      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
+      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
+          (long) 512, (short) 1,  0L);
+      locations1 = fs.getFileBlockLocations(testFile, 0, 1024);
+      locations11 = fs.getFileBlockLocations(testFile, 1024, 2048);
+      Assert.assertNotNull(locations1);
+      Assert.assertNotNull(locations11);
+    }
+
+    try (FileSystem fs = getHttpFSFileSystem()) {
+      locations2 = fs.getFileBlockLocations(testFile, 0, 1024);
+      locations21 = fs.getFileBlockLocations(testFile, 1024, 2048);
+      Assert.assertNotNull(locations2);
+      Assert.assertNotNull(locations21);
+    }
+
+    verifyBlockLocations(locations1, locations2);
+    verifyBlockLocations(locations11, locations21);
+
+    // Test multi-block multi-replica file block locations.
+    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
+      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
+      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
+          (long) 512, (short) 3,  0L);
+      locations1 = fs.getFileBlockLocations(testFile, 0, 2048);
+      Assert.assertNotNull(locations1);
+    }
+
+    try (FileSystem fs = getHttpFSFileSystem()) {
+      locations2 = fs.getFileBlockLocations(testFile, 0, 2048);
+      Assert.assertNotNull(locations2);
+    }
+
+    verifyBlockLocations(locations1, locations2);
+  }
+
+  private void verifyBlockLocations(BlockLocation[] locations1,
+      BlockLocation[] locations2) throws IOException {
+    Assert.assertEquals(locations1.length, locations2.length);
+    for (int i = 0; i < locations1.length; i++) {
+      BlockLocation location1 = locations1[i];
+      BlockLocation location2 = locations2[i];
+
+      Assert.assertEquals(location1.isCorrupt(), location2.isCorrupt());
+      Assert.assertEquals(location1.getOffset(), location2.getOffset());
+      Assert.assertEquals(location1.getLength(), location2.getLength());
+
+      Arrays.sort(location1.getHosts());
+      Arrays.sort(location2.getHosts());
+      Arrays.sort(location1.getNames());
+      Arrays.sort(location2.getNames());
+      Arrays.sort(location1.getTopologyPaths());
+      Arrays.sort(location2.getTopologyPaths());
+
+      Assert.assertArrayEquals(location1.getHosts(), location2.getHosts());
+      Assert.assertArrayEquals(location1.getNames(), location2.getNames());
+      Assert.assertArrayEquals(location1.getTopologyPaths(),
+          location2.getTopologyPaths());
+    }
+  }
+
+  private void testCreateSnapshot(String snapshotName) throws Exception {
+    if (!this.isLocalFS()) {
+      Path snapshottablePath = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(snapshottablePath);
+      //Now get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      if (snapshotName == null) {
+        fs.createSnapshot(snapshottablePath);
+      } else {
+        fs.createSnapshot(snapshottablePath, snapshotName);
+      }
+      Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
+      FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("Should have exactly one snapshot.",
+          snapshotItems.length == 1);
+      String resultingSnapName = snapshotItems[0].getPath().getName();
+      if (snapshotName == null) {
+        assertTrue("Snapshot auto generated name not matching pattern",
+            Pattern.matches("(s)(\\d{8})(-)(\\d{6})(\\.)(\\d{3})",
+                resultingSnapName));
+      } else {
+        assertTrue("Snapshot name is not same as passed name.",
+            snapshotName.equals(resultingSnapName));
+      }
+      cleanSnapshotTests(snapshottablePath, resultingSnapName);
+    }
+  }
+
+  private void testCreateSnapshot() throws Exception {
+    testCreateSnapshot(null);
+    testCreateSnapshot("snap-with-name");
+  }
+
+  private void createSnapshotTestsPreconditions(Path snapshottablePath)
+      throws Exception {
+    //Needed to get a DistributedFileSystem instance, in order to
+    //call allowSnapshot on the newly created directory
+    DistributedFileSystem distributedFs = (DistributedFileSystem)
+        FileSystem.get(snapshottablePath.toUri(), this.getProxiedFSConf());
+    distributedFs.mkdirs(snapshottablePath);
+    distributedFs.allowSnapshot(snapshottablePath);
+    Path subdirPath = new Path("/tmp/tmp-snap-test/subdir");
+    distributedFs.mkdirs(subdirPath);
+
+  }
+
+  private void cleanSnapshotTests(Path snapshottablePath,
+                                  String resultingSnapName) throws Exception {
+    DistributedFileSystem distributedFs = (DistributedFileSystem)
+        FileSystem.get(snapshottablePath.toUri(), this.getProxiedFSConf());
+    distributedFs.deleteSnapshot(snapshottablePath, resultingSnapName);
+    distributedFs.delete(snapshottablePath, true);
+  }
+
+  private void testRenameSnapshot() throws Exception {
+    if (!this.isLocalFS()) {
+      Path snapshottablePath = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(snapshottablePath);
+      //Now get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      fs.createSnapshot(snapshottablePath, "snap-to-rename");
+      fs.renameSnapshot(snapshottablePath, "snap-to-rename",
+          "snap-new-name");
+      Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
+      FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("Should have exactly one snapshot.",
+          snapshotItems.length == 1);
+      String resultingSnapName = snapshotItems[0].getPath().getName();
+      assertTrue("Snapshot name is not same as passed name.",
+          "snap-new-name".equals(resultingSnapName));
+      cleanSnapshotTests(snapshottablePath, resultingSnapName);
+    }
+  }
+
+  private void testDeleteSnapshot() throws Exception {
+    if (!this.isLocalFS()) {
+      Path snapshottablePath = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(snapshottablePath);
+      //Now get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      fs.createSnapshot(snapshottablePath, "snap-to-delete");
+      Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
+      FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("Should have exactly one snapshot.",
+          snapshotItems.length == 1);
+      fs.deleteSnapshot(snapshottablePath, "snap-to-delete");
+      snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("There should be no snapshot anymore.",
+          snapshotItems.length == 0);
+      fs.delete(snapshottablePath, true);
+    }
   }
 
 }

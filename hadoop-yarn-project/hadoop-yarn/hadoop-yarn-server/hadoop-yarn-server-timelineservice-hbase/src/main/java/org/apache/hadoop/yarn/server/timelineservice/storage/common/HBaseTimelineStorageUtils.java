@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -30,6 +28,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCom
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOperation;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,8 +41,8 @@ import java.util.Map;
 public final class HBaseTimelineStorageUtils {
   /** milliseconds in one day. */
   public static final long MILLIS_ONE_DAY = 86400000L;
-  private static final Log LOG =
-      LogFactory.getLog(HBaseTimelineStorageUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HBaseTimelineStorageUtils.class);
 
   private HBaseTimelineStorageUtils() {
   }

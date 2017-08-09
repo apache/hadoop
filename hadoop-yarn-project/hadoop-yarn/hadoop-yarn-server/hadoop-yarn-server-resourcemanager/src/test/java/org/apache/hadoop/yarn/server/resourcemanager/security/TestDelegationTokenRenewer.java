@@ -1006,9 +1006,8 @@ public class TestDelegationTokenRenewer {
     Credentials credentials = new Credentials();
     credentials.addToken(userText1, originalToken);
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(yarnConf);
-    MockRM rm1 = new TestSecurityMockRM(yarnConf, memStore);
+    MockRM rm1 = new TestSecurityMockRM(yarnConf);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
     rm1.start();
     RMApp app = rm1.submitApp(200, "name", "user",
         new HashMap<ApplicationAccessType, String>(), false, "default", 1,

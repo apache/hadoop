@@ -33,11 +33,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A queue with multiple levels for each priority.
@@ -50,7 +50,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   public static final String IPC_CALLQUEUE_PRIORITY_LEVELS_KEY =
     "faircallqueue.priority-levels";
 
-  public static final Log LOG = LogFactory.getLog(FairCallQueue.class);
+  public static final Logger LOG = LoggerFactory.getLogger(FairCallQueue.class);
 
   /* The queues */
   private final ArrayList<BlockingQueue<E>> queues;

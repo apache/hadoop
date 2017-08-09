@@ -29,11 +29,18 @@
     </property>
   -->
 
-  <property>
-    <name>fs.azure.secure.mode</name>
-    <value>false</value>
-  </property>
+  <!-- uncomment to test in Azure secure mode -->
+  <!--
+    <property>
+      <name>fs.azure.secure.mode</name>
+      <value>true</value>
+    </property>
+  -->
 
+  <property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>MSFT</value>
+  </property>
 
   <!-- Save the above configuration properties in a separate file named -->
   <!-- azure-auth-keys.xml in the same directory as this file. -->

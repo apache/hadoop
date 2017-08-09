@@ -320,7 +320,7 @@ public class TestHardLink {
     assertEquals(2, ("%f").length()); 
     //make sure "\\%f" was munged correctly
     assertEquals(3, ("\\%f").length()); 
-    assertTrue(win.getLinkCountCommand[1].equals("hardlink"));
+    assertEquals("hardlink", win.getLinkCountCommand[1]);
     //make sure "-c%h" was not munged
     assertEquals(4, ("-c%h").length()); 
   }

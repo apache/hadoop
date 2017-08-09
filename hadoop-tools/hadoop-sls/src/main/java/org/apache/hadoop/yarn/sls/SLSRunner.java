@@ -395,18 +395,28 @@ public class SLSRunner extends Configured implements Tool {
     String queue = jsonJob.get("job.queue.name").toString();
     increaseQueueAppNum(queue);
 
-    String oldAppId = (String)jsonJob.get("job.id");
-    if (oldAppId == null) {
-      oldAppId = Integer.toString(AM_ID);
-    }
-
     String amType = (String)jsonJob.get("am.type");
     if (amType == null) {
       amType = SLSUtils.DEFAULT_JOB_TYPE;
     }
 
-    runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
-        getTaskContainers(jsonJob), null);
+    int jobCount = 1;
+    if (jsonJob.containsKey("job.count")) {
+      jobCount = Integer.parseInt(jsonJob.get("job.count").toString());
+    }
+    jobCount = Math.max(jobCount, 1);
+
+    String oldAppId = (String)jsonJob.get("job.id");
+    // Job id is generated automatically if this job configuration allows
+    // multiple job instances
+    if(jobCount > 1) {
+      oldAppId = null;
+    }
+
+    for (int i = 0; i < jobCount; i++) {
+      runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
+          getTaskContainers(jsonJob), null, getAMContainerResource(jsonJob));
+    }
   }
 
   private List<ContainerSimulator> getTaskContainers(Map jsonJob)
@@ -558,7 +568,8 @@ public class SLSRunner extends Configured implements Tool {
 
     // Only supports the default job type currently
     runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-        jobStartTimeMS, jobFinishTimeMS, containerList, null);
+        jobStartTimeMS, jobFinishTimeMS, containerList, null,
+        getAMContainerResource(null));
   }
 
   private Resource getDefaultContainerResource() {
@@ -676,12 +687,33 @@ public class SLSRunner extends Configured implements Tool {
         }
 
         runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-            jobStartTimeMS, jobFinishTimeMS, containerList, rr);
+            jobStartTimeMS, jobFinishTimeMS, containerList, rr,
+            getAMContainerResource(null));
       }
     } finally {
       stjp.close();
     }
 
+  }
+
+  private Resource getAMContainerResource(Map jsonJob) {
+    Resource amContainerResource =
+        SLSConfiguration.getAMContainerResource(getConf());
+
+    if (jsonJob == null) {
+      return amContainerResource;
+    }
+
+    if (jsonJob.containsKey("am.memory")) {
+      amContainerResource.setMemorySize(
+          Long.parseLong(jsonJob.get("am.memory").toString()));
+    }
+
+    if (jsonJob.containsKey("am.vcores")) {
+      amContainerResource.setVirtualCores(
+          Integer.parseInt(jsonJob.get("am.vcores").toString()));
+    }
+    return amContainerResource;
   }
 
   private void increaseQueueAppNum(String queue) throws YarnException {
@@ -700,7 +732,7 @@ public class SLSRunner extends Configured implements Tool {
   private void runNewAM(String jobType, String user,
       String jobQueue, String oldJobId, long jobStartTimeMS,
       long jobFinishTimeMS, List<ContainerSimulator> containerList,
-      ReservationSubmissionRequest rr) {
+      ReservationSubmissionRequest rr, Resource amContainerResource) {
 
     AMSimulator amSim = (AMSimulator) ReflectionUtils.newInstance(
         amClassMap.get(jobType), new Configuration());
@@ -710,9 +742,15 @@ public class SLSRunner extends Configured implements Tool {
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS,
           SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS_DEFAULT);
       boolean isTracked = trackedApps.contains(oldJobId);
-      amSim.init(AM_ID++, heartbeatInterval, containerList,
-          rm, this, jobStartTimeMS, jobFinishTimeMS, user, jobQueue,
-          isTracked, oldJobId, rr, runner.getStartTimeMS());
+
+      if (oldJobId == null) {
+        oldJobId = Integer.toString(AM_ID);
+      }
+      AM_ID++;
+
+      amSim.init(heartbeatInterval, containerList, rm, this, jobStartTimeMS,
+          jobFinishTimeMS, user, jobQueue, isTracked, oldJobId, rr,
+          runner.getStartTimeMS(), amContainerResource);
       runner.schedule(amSim);
       maxRuntime = Math.max(maxRuntime, jobFinishTimeMS);
       numTasks += containerList.size();
