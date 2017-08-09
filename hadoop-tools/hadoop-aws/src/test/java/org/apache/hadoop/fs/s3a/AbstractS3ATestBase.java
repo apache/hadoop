@@ -112,10 +112,21 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   protected Path writeThenReadFile(String name, int len) throws IOException {
     Path path = path(name);
+    writeThenReadFile(path, len);
+    return path;
+  }
+
+  /**
+   * Write a file, read it back, validate the dataset. Overwrites the file
+   * if it is present
+   * @param path path to file
+   * @param len length of file
+   * @throws IOException any IO problem
+   */
+  protected void writeThenReadFile(Path path, int len) throws IOException {
     byte[] data = dataset(len, 'a', 'z');
     writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
-    return path;
   }
 
   /**
