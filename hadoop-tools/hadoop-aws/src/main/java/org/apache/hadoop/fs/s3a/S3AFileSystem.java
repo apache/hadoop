@@ -1670,41 +1670,6 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
-  private enum DirectoryStatus {
-    DOES_NOT_EXIST, EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY,
-    EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE, EXISTS_AND_IS_FILE
-  }
-
-  private DirectoryStatus checkPathForDirectory(Path path) throws
-      IOException {
-    try {
-      if (path.isRoot()) {
-        return DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE;
-      }
-      String key = pathToKey(path);
-
-      // Check MetadataStore, if any.
-      FileStatus status = null;
-      PathMetadata pm = metadataStore.get(path, false);
-      if (pm != null) {
-        if (pm.isDeleted()) {
-          return DirectoryStatus.DOES_NOT_EXIST;
-        }
-        status = pm.getFileStatus();
-        if (status != null && status.isDirectory()) {
-          return DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE;
-        }
-      }
-      status = s3GetFileStatus(path, key, null);
-      if (status.isDirectory()) {
-        return DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY;
-      }
-    } catch (FileNotFoundException e) {
-      return DirectoryStatus.DOES_NOT_EXIST;
-    }
-    return DirectoryStatus.EXISTS_AND_IS_FILE;
-  }
-
   /**
    *
    * Make the given path and all non-existent parents into
@@ -1719,65 +1684,58 @@ public class S3AFileSystem extends FileSystem {
    */
   private boolean innerMkdirs(Path p, FsPermission permission)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
-    boolean createOnS3 = false;
     Path f = qualify(p);
     LOG.debug("Making directory: {}", f);
     incrementStatistic(INVOCATION_MKDIRS);
+    FileStatus fileStatus;
     List<Path> metadataStoreDirs = null;
     if (hasMetadataStore()) {
       metadataStoreDirs = new ArrayList<>();
     }
 
-    DirectoryStatus status = checkPathForDirectory(f);
-    if (status == DirectoryStatus.DOES_NOT_EXIST) {
-      createOnS3 = true;
-      if (metadataStoreDirs != null) {
-        metadataStoreDirs.add(f);
-      }
-    } else if (status == DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY) {
-      if (metadataStoreDirs != null) {
-        metadataStoreDirs.add(f);
-      }
-    } else if (status == DirectoryStatus
-        .EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE) {
-      return true;
-    } else if (status == DirectoryStatus.EXISTS_AND_IS_FILE) {
-      throw new FileAlreadyExistsException("Path is a file: " + f);
-    }
+    try {
+      fileStatus = getFileStatus(f);
 
-    // Walk path to root, ensuring closest ancestor is a directory, not file
-    Path fPart = f.getParent();
-    do {
-      status = checkPathForDirectory(fPart);
-      // The fake directory on S3 may not be visible immediately, but
-      // only the leaf node has a fake directory on S3 so we can treat both
-      // cases the same and just create a metadata store entry.
-      if (status == DirectoryStatus.DOES_NOT_EXIST || status ==
-          DirectoryStatus.EXISTS_AND_IS_DIRECTORY_ON_S3_ONLY) {
-        if (metadataStoreDirs != null) {
-          metadataStoreDirs.add(fPart);
-        }
-      } else if (status == DirectoryStatus
-          .EXISTS_AND_IS_DIRECTORY_ON_METADATASTORE) {
-        // do nothing - just break out of the loop, make whatever child
-        // directories are needed on the metadata store, and return the
-        // result.
-        break;
-      } else if (status == DirectoryStatus.EXISTS_AND_IS_FILE) {
+      if (fileStatus.isDirectory()) {
+        return true;
+      } else {
         throw new FileAlreadyExistsException("Path is a file: " + f);
       }
-      fPart = fPart.getParent();
-    } while (fPart != null);
-
-    if (createOnS3) {
+    } catch (FileNotFoundException e) {
+      // Walk path to root, ensuring closest ancestor is a directory, not file
+      Path fPart = f.getParent();
+      if (metadataStoreDirs != null) {
+        metadataStoreDirs.add(f);
+      }
+      while (fPart != null) {
+        try {
+          fileStatus = getFileStatus(fPart);
+          if (fileStatus.isDirectory()) {
+            break;
+          }
+          if (fileStatus.isFile()) {
+            throw new FileAlreadyExistsException(String.format(
+                "Can't make directory for path '%s' since it is a file.",
+                fPart));
+          }
+        } catch (FileNotFoundException fnfe) {
+          instrumentation.errorIgnored();
+          // We create all missing directories in MetadataStore; it does not
+          // infer directories exist by prefix like S3.
+          if (metadataStoreDirs != null) {
+            metadataStoreDirs.add(fPart);
+          }
+        }
+        fPart = fPart.getParent();
+      }
       String key = pathToKey(f);
       createFakeDirectory(key);
+      S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username, true);
+      // this is complicated because getParent(a/b/c/) returns a/b/c, but
+      // we want a/b. See HADOOP-14428 for more details.
+      deleteUnnecessaryFakeDirectories(new Path(f.toString()).getParent());
+      return true;
     }
-    S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username, true);
-    // this is complicated because getParent(a/b/c/) returns a/b/c, but
-    // we want a/b. See HADOOP-14428 for more details.
-    deleteUnnecessaryFakeDirectories(new Path(f.toString()).getParent());
-    return true;
   }
 
   /**
