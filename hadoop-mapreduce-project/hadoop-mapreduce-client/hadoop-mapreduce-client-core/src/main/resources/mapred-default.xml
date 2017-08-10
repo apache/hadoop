@@ -1126,6 +1126,14 @@
 </property>
 
 <property>
+  <name>mapreduce.job.finish-when-all-reducers-done</name>
+  <value>true</value>
+  <description>Specifies whether the job should complete once all reducers
+     have finished, regardless of whether there are still running mappers.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.token.tracking.ids.enabled</name>
   <value>false</value>
   <description>Whether to write tracking ids of tokens to
