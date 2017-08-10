@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.timeline.security.TimelineDelgationTokenSec
  */
 public class TimelineV2DelegationTokenSecretManagerService extends
     TimelineDelgationTokenSecretManagerService {
+
   public TimelineV2DelegationTokenSecretManagerService() {
     super(TimelineV2DelegationTokenSecretManagerService.class.getName());
   }
@@ -52,6 +53,11 @@ public class TimelineV2DelegationTokenSecretManagerService extends
       UserGroupInformation ugi, String renewer) {
     return ((TimelineV2DelegationTokenSecretManager)
         getTimelineDelegationTokenSecretManager()).generateToken(ugi, renewer);
+  }
+
+  public long renewToken(Token<TimelineDelegationTokenIdentifier> token,
+      String renewer) throws IOException {
+    return getTimelineDelegationTokenSecretManager().renewToken(token, renewer);
   }
 
   public void cancelToken(Token<TimelineDelegationTokenIdentifier> token,
