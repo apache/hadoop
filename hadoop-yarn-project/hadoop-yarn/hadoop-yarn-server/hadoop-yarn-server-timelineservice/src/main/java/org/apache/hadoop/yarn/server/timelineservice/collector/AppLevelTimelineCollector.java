@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
+import java.util.concurrent.Future;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -48,6 +50,7 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   private final TimelineCollectorContext context;
   private UserGroupInformation currentUser;
   private Token<TimelineDelegationTokenIdentifier> delegationTokenForApp;
+  private Future<?> renewalFuture;
 
   public AppLevelTimelineCollector(ApplicationId appId) {
     this(appId, null);
@@ -69,9 +72,15 @@ public class AppLevelTimelineCollector extends TimelineCollector {
     return appUser;
   }
 
-  void setDelegationTokenForApp(
-      Token<TimelineDelegationTokenIdentifier> token) {
+  void setDelegationTokenAndFutureForApp(
+      Token<TimelineDelegationTokenIdentifier> token,
+      Future<?> appRenewalFuture) {
     this.delegationTokenForApp = token;
+    this.renewalFuture = appRenewalFuture;
+  }
+
+  void setRenewalFutureForApp(Future<?> appRenewalFuture) {
+    this.renewalFuture = appRenewalFuture;
   }
 
   @VisibleForTesting
@@ -99,6 +108,9 @@ public class AppLevelTimelineCollector extends TimelineCollector {
 
   @Override
   protected void serviceStop() throws Exception {
+    if (renewalFuture != null && !renewalFuture.isDone()) {
+      renewalFuture.cancel(true);
+    }
     super.serviceStop();
   }
 
@@ -106,5 +118,4 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   public TimelineCollectorContext getTimelineEntityContext() {
     return context;
   }
-
 }
