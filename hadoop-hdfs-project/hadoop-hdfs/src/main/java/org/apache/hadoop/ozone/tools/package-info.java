@@ -15,45 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.test;
-
-import org.apache.hadoop.ozone.tools.Corona;
-import org.apache.hadoop.util.ProgramDriver;
+package org.apache.hadoop.ozone.tools;
 
 /**
- * Driver for Ozone tests.
+ This package contains class used for testing and benchmarking ozone cluster.
  */
-public class OzoneTestDriver {
-
-  private final ProgramDriver pgd;
-
-  public OzoneTestDriver() {
-    this(new ProgramDriver());
-  }
-
-  public OzoneTestDriver(ProgramDriver pgd) {
-    this.pgd = pgd;
-    try {
-      pgd.addClass("corona", Corona.class,
-          "Populates ozone with data.");
-    } catch(Throwable e) {
-      e.printStackTrace();
-    }
-  }
-
-  public void run(String[] args) {
-    int exitCode = -1;
-    try {
-      exitCode = pgd.run(args);
-    } catch(Throwable e) {
-      e.printStackTrace();
-    }
-
-    System.exit(exitCode);
-  }
-
-  public static void main(String[] args){
-    new OzoneTestDriver().run(args);
-  }
-}
