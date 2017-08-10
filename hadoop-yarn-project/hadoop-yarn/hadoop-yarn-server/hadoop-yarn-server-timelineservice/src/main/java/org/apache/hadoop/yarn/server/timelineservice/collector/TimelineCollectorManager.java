@@ -184,9 +184,11 @@ public class TimelineCollectorManager extends CompositeService {
     if (collector == null) {
       LOG.error("the collector for " + appId + " does not exist!");
     } else {
-      postRemove(appId, collector);
-      // stop the service to do clean up
-      collector.stop();
+      synchronized (collector) {
+        postRemove(appId, collector);
+        // stop the service to do clean up
+        collector.stop();
+      }
       LOG.info("The collector service for " + appId + " was removed");
     }
     return collector != null;

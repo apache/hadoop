@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -183,6 +184,13 @@ public class TestTimelineAuthFilterForV2 {
       conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
           HttpConfig.Policy.HTTP_ONLY.name());
     }
+    if (!withKerberosLogin) {
+      // For timeline delegation token based access, set delegation token renew
+      // interval to 100 ms. to test if timeline delegation token for the app is
+      // renewed automatically if app is still alive.
+      conf.setLong(
+          YarnConfiguration.TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL, 100);
+    }
     UserGroupInformation.setConfiguration(conf);
     collectorManager = new DummyNodeTimelineCollectorManager();
     auxService = PerNodeTimelineCollectorsAuxService.launchServer(
@@ -282,12 +290,12 @@ public class TestTimelineAuthFilterForV2 {
   }
 
   private void publishAndVerifyEntity(ApplicationId appId, File entityTypeDir,
-      String entityType) throws Exception {
+      String entityType, int numEntities) throws Exception {
     TimelineV2Client client = createTimelineClientForUGI(appId);
     try {
     // Sync call. Results available immediately.
       client.putEntities(createEntity("entity1", entityType));
-      assertEquals(1, entityTypeDir.listFiles().length);
+      assertEquals(numEntities, entityTypeDir.listFiles().length);
       verifyEntity(entityTypeDir, "entity1", entityType);
       // Async call.
       client.putEntitiesAsync(createEntity("entity2", entityType));
@@ -312,12 +320,22 @@ public class TestTimelineAuthFilterForV2 {
         KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
           @Override
           public Void call() throws Exception {
-            publishAndVerifyEntity(appId, entityTypeDir, entityType);
+            publishAndVerifyEntity(appId, entityTypeDir, entityType, 1);
             return null;
           }
         });
       } else {
-        publishAndVerifyEntity(appId, entityTypeDir, entityType);
+        publishAndVerifyEntity(appId, entityTypeDir, entityType, 1);
+        // Verify if token is renewed automatically and entities can still be
+        // published.
+        Thread.sleep(1000);
+        publishAndVerifyEntity(appId, entityTypeDir, entityType, 2);
+        AppLevelTimelineCollector collector =
+            (AppLevelTimelineCollector) collectorManager.get(appId);
+        assertNotNull(collector);
+        verify(collectorManager.getTokenManagerService(), atLeastOnce()).
+            renewToken(eq(collector.getDelegationTokenForApp()),
+                any(String.class));
       }
       // Wait for async entity to be published.
       for (int i = 0; i < 50; i++) {
@@ -330,6 +348,7 @@ public class TestTimelineAuthFilterForV2 {
       verifyEntity(entityTypeDir, "entity2", entityType);
       AppLevelTimelineCollector collector =
           (AppLevelTimelineCollector)collectorManager.get(appId);
+      assertNotNull(collector);
       auxService.removeApplication(appId);
       verify(collectorManager.getTokenManagerService()).cancelToken(
           eq(collector.getDelegationTokenForApp()), any(String.class));
