@@ -127,10 +127,6 @@ public class FairSchedulerQueueInfo {
     childQueues = getChildQueues(queue, scheduler);
   }
 
-  public long getPendingContainers() {
-    return pendingContainers;
-  }
-
   public long getAllocatedContainers() {
     return allocatedContainers;
   }
@@ -234,14 +230,6 @@ public class FairSchedulerQueueInfo {
     return demandResources;
   }
 
-  /**
-   * Returns the queue's min share in as a fraction of the entire
-   * cluster capacity.
-   */
-  public float getMinShareMemoryFraction() {
-    return fractionMemMinShare;
-  }
-  
   /**
    * Returns the memory used by this queue as a fraction of the entire 
    * cluster capacity.
