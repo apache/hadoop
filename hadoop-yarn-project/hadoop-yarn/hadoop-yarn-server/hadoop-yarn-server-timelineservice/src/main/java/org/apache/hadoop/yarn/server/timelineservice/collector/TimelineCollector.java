@@ -62,6 +62,8 @@ public abstract class TimelineCollector extends CompositeService {
 
   private volatile boolean readyToAggregate = false;
 
+  private volatile boolean isStopped = false;
+
   public TimelineCollector(String name) {
     super(name);
   }
@@ -78,7 +80,12 @@ public abstract class TimelineCollector extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
+    isStopped = true;
     super.serviceStop();
+  }
+
+  boolean isStopped() {
+    return isStopped;
   }
 
   protected void setWriter(TimelineWriter w) {
