@@ -76,7 +76,7 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
     // Future-proof by ensuring the right column prefix hygiene.
     this.columnQualifierBytes = Bytes.toBytes(Separator.SPACE
         .encode(columnQualifier));
-    this.column = new ColumnHelper<FlowRunTable>(columnFamily, converter);
+    this.column = new ColumnHelper<FlowRunTable>(columnFamily, converter, true);
   }
 
   /**
