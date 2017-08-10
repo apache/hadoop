@@ -2586,11 +2586,16 @@
     <value>ClientCredential</value>
     <description>
       Defines Azure Active Directory OAuth2 access token provider type.
-      Supported types are ClientCredential, RefreshToken, and Custom.
+      Supported types are ClientCredential, RefreshToken, MSI, DeviceCode,
+      and Custom.
       The ClientCredential type requires property fs.adl.oauth2.client.id,
       fs.adl.oauth2.credential, and fs.adl.oauth2.refresh.url.
       The RefreshToken type requires property fs.adl.oauth2.client.id and
       fs.adl.oauth2.refresh.token.
+      The MSI type requires properties fs.adl.oauth2.msi.port and
+      fs.adl.oauth2.msi.tenantguid.
+      The DeviceCode type requires property
+      fs.adl.oauth2.devicecode.clientapp.id.
       The Custom type requires property fs.adl.oauth2.access.token.provider.
     </description>
   </property>
@@ -2624,6 +2629,36 @@
     <value></value>
     <description>
       The class name of the OAuth2 access token provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.msi.port</name>
+    <value></value>
+    <description>
+      The localhost port for the MSI token service. This is the port specified
+      when creating the Azure VM.
+      Used by MSI token provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.msi.tenantguid</name>
+    <value></value>
+    <description>
+      The tenant guid for the Azure AAD tenant under which the azure data lake
+      store account is created.
+      Used by MSI token provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.devicecode.clientapp.id</name>
+    <value></value>
+    <description>
+      The app id of the AAD native app in whose context the auth request
+      should be made.
+      Used by DeviceCode token provider.
     </description>
   </property>
 
