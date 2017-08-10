@@ -104,7 +104,7 @@ function hdfscmd_case
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
     ;;
     corona)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.Corona
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.Corona
     ;;
     crypto)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CryptoAdmin

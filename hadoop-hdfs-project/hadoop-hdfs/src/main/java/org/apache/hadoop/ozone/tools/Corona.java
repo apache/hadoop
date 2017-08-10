@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone;
+package org.apache.hadoop.ozone.tools;
 
 
 import org.apache.commons.cli.CommandLine;
@@ -26,9 +26,11 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -144,7 +146,7 @@ public final class Corona extends Configured implements Tool {
     parseOzonePetaGenOptions(parser.getCommandLine());
     if(printUsage) {
       usage();
-      System.exit(0);
+      return 0;
     }
     LOG.info("Number of Threads: " + numOfThreads);
     processor = Executors.newFixedThreadPool(Integer.parseInt(numOfThreads));
@@ -300,7 +302,8 @@ public final class Corona extends Configured implements Tool {
           for (int k = 0; k < totalKeys; k++) {
             String key = "key-" + k + "-" +
                 RandomStringUtils.randomNumeric(5);
-            byte[] value = RandomStringUtils.randomAscii(10240).getBytes();
+            byte[] value = DFSUtil.string2Bytes(
+                RandomStringUtils.randomAscii(10240));
             try {
               LOG.trace("Adding key: {} in bucket: {} of volume: {}",
                   key, bucket, volume);
@@ -349,7 +352,7 @@ public final class Corona extends Configured implements Tool {
 
   private class ProgressBar implements Runnable {
 
-    private final long refreshInterval = 1000L;
+    private static final long REFRESH_INTERVAL = 1000L;
 
     private PrintStream stream;
     private long maxValue;
@@ -369,7 +372,7 @@ public final class Corona extends Configured implements Tool {
           if(completed) {
             break;
           }
-          Thread.sleep(refreshInterval);
+          Thread.sleep(REFRESH_INTERVAL);
         }
         if(exception) {
           stream.println();
