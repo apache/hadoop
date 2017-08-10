@@ -330,8 +330,9 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     // start decommissioning h9
     boolean satisfied = bm.isPlacementPolicySatisfied(blockInfo);
     Assert.assertFalse(satisfied);
-    final DecommissionManager decomManager =
-        (DecommissionManager) Whitebox.getInternalState(dm, "decomManager");
+    final DatanodeAdminManager decomManager =
+        (DatanodeAdminManager) Whitebox.getInternalState(
+            dm, "datanodeAdminManager");
     cluster.getNamesystem().writeLock();
     try {
       dn9.stopDecommission();

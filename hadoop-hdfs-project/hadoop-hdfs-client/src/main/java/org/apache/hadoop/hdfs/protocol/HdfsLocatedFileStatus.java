@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.net.URI;
+import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,7 +35,14 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HdfsLocatedFileStatus extends HdfsFileStatus {
-  private final LocatedBlocks locations;
+
+  private static final long serialVersionUID = 0x23c73328;
+
+  /**
+   * Left transient, because {@link #makeQualifiedLocated(URI,Path)}
+   * is the user-facing type.
+   */
+  private transient LocatedBlocks locations;
 
   /**
    * Constructor
@@ -56,12 +64,12 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
    */
   public HdfsLocatedFileStatus(long length, boolean isdir,
       int block_replication, long blocksize, long modification_time,
-      long access_time, FsPermission permission, String owner, String group,
-      byte[] symlink, byte[] path, long fileId, LocatedBlocks locations,
-      int childrenNum, FileEncryptionInfo feInfo, byte storagePolicy,
-      ErasureCodingPolicy ecPolicy) {
+      long access_time, FsPermission permission, EnumSet<Flags> flags,
+      String owner, String group, byte[] symlink, byte[] path, long fileId,
+      LocatedBlocks locations, int childrenNum, FileEncryptionInfo feInfo,
+      byte storagePolicy, ErasureCodingPolicy ecPolicy) {
     super(length, isdir, block_replication, blocksize, modification_time,
-        access_time, permission, owner, group, symlink, path, fileId,
+        access_time, permission, flags, owner, group, symlink, path, fileId,
         childrenNum, feInfo, storagePolicy, ecPolicy);
     this.locations = locations;
   }
@@ -72,13 +80,21 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
 
   public final LocatedFileStatus makeQualifiedLocated(URI defaultUri,
       Path path) {
-    return new LocatedFileStatus(getLen(), isDir(), getReplication(),
-        getBlockSize(), getModificationTime(),
-        getAccessTime(),
-        getPermission(), getOwner(), getGroup(),
-        isSymlink() ? new Path(getSymlink()) : null,
-        (getFullPath(path)).makeQualified(
-            defaultUri, null), // fully-qualify path
+    makeQualified(defaultUri, path);
+    return new LocatedFileStatus(this,
         DFSUtilClient.locatedBlocks2Locations(getBlockLocations()));
   }
+
+  @Override
+  public boolean equals(Object o) {
+    // satisfy findbugs
+    return super.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    // satisfy findbugs
+    return super.hashCode();
+  }
+
 }

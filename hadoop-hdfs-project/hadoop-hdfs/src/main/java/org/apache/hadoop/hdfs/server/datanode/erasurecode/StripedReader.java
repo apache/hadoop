@@ -68,6 +68,8 @@ class StripedReader {
   private int[] successList;
 
   private final int minRequiredSources;
+  // the number of xmits used by the re-construction task.
+  private final int xmits;
   // The buffers and indices for striped blocks whose length is 0
   private ByteBuffer[] zeroStripeBuffers;
   private short[] zeroStripeIndices;
@@ -106,6 +108,12 @@ class StripedReader {
       zeroStripeBuffers = new ByteBuffer[zeroStripNum];
       zeroStripeIndices = new short[zeroStripNum];
     }
+
+    // It is calculated by the maximum number of connections from either sources
+    // or targets.
+    xmits = Math.max(minRequiredSources,
+        stripedReconInfo.getTargets() != null ?
+        stripedReconInfo.getTargets().length : 0);
 
     this.liveIndices = stripedReconInfo.getLiveIndices();
     assert liveIndices != null;
@@ -471,5 +479,17 @@ class StripedReader {
 
   CachingStrategy getCachingStrategy() {
     return reconstructor.getCachingStrategy();
+  }
+
+  /**
+   * Return the xmits of this EC reconstruction task.
+   * <p>
+   * DN uses it to coordinate with NN to adjust the speed of scheduling the
+   * EC reconstruction tasks to this DN.
+   *
+   * @return the xmits of this reconstruction task.
+   */
+  int getXmits() {
+    return xmits;
   }
 }

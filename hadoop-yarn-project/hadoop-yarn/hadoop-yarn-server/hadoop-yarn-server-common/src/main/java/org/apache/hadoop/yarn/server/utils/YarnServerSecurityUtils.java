@@ -23,13 +23,16 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -42,8 +45,8 @@ import org.slf4j.LoggerFactory;
  */
 @Private
 public final class YarnServerSecurityUtils {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(YarnServerSecurityUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(YarnServerSecurityUtils.class);
 
   private YarnServerSecurityUtils() {
   }
@@ -55,8 +58,7 @@ public final class YarnServerSecurityUtils {
    * @return the AMRMTokenIdentifier instance for the current user
    * @throws YarnException
    */
-  public static AMRMTokenIdentifier authorizeRequest()
-      throws YarnException {
+  public static AMRMTokenIdentifier authorizeRequest() throws YarnException {
 
     UserGroupInformation remoteUgi;
     try {
@@ -82,9 +84,8 @@ public final class YarnServerSecurityUtils {
       }
     } catch (IOException e) {
       tokenFound = false;
-      message =
-          "Got exception while looking for AMRMToken for user "
-              + remoteUgi.getUserName();
+      message = "Got exception while looking for AMRMToken for user "
+          + remoteUgi.getUserName();
     }
 
     if (!tokenFound) {
@@ -113,8 +114,29 @@ public final class YarnServerSecurityUtils {
   }
 
   /**
+   * Update the new AMRMToken into the ugi used for RM proxy.
+   *
+   * @param token the new AMRMToken sent by RM
+   * @param user ugi used for RM proxy
+   * @param conf configuration
+   */
+  public static void updateAMRMToken(
+      org.apache.hadoop.yarn.api.records.Token token, UserGroupInformation user,
+      Configuration conf) {
+    Token<AMRMTokenIdentifier> amrmToken = new Token<AMRMTokenIdentifier>(
+        token.getIdentifier().array(), token.getPassword().array(),
+        new Text(token.getKind()), new Text(token.getService()));
+    // Preserve the token service sent by the RM when adding the token
+    // to ensure we replace the previous token setup by the RM.
+    // Afterwards we can update the service address for the RPC layer.
+    user.addToken(amrmToken);
+    amrmToken.setService(ClientRMProxy.getAMRMTokenService(conf));
+  }
+
+  /**
    * Parses the container launch context and returns a Credential instance that
-   * contains all the tokens from the launch context. 
+   * contains all the tokens from the launch context.
+   *
    * @param launchContext
    * @return the credential instance
    * @throws IOException
@@ -130,8 +152,7 @@ public final class YarnServerSecurityUtils {
       buf.reset(tokens);
       credentials.readTokenStorageStream(buf);
       if (LOG.isDebugEnabled()) {
-        for (Token<? extends TokenIdentifier> tk : credentials
-            .getAllTokens()) {
+        for (Token<? extends TokenIdentifier> tk : credentials.getAllTokens()) {
           LOG.debug(tk.getService() + " = " + tk.toString());
         }
       }

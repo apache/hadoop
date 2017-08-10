@@ -335,11 +335,6 @@ public class ECAdmin extends Configured implements Tool {
 
       final String ecPolicyName = StringUtils.popOptionWithArgument("-policy",
           args);
-      if (ecPolicyName == null) {
-        System.err.println("Please specify the policy name.\nUsage: " +
-            getLongUsage());
-        return 1;
-      }
 
       if (args.size() > 0) {
         System.err.println(getName() + ": Too many arguments");
@@ -350,8 +345,13 @@ public class ECAdmin extends Configured implements Tool {
       final DistributedFileSystem dfs = AdminHelper.getDFS(p.toUri(), conf);
       try {
         dfs.setErasureCodingPolicy(p, ecPolicyName);
-        System.out.println("Set erasure coding policy " + ecPolicyName +
-            " on " + path);
+        if (ecPolicyName == null){
+          System.out.println("Set default erasure coding policy" +
+              " on " + path);
+        } else {
+          System.out.println("Set erasure coding policy " + ecPolicyName +
+              " on " + path);
+        }
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;

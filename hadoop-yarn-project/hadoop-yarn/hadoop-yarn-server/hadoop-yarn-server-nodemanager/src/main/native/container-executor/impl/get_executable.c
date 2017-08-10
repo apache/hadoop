@@ -31,6 +31,7 @@
 #include "config.h"
 #include "configuration.h"
 #include "container-executor.h"
+#include "util.h"
 
 #include <errno.h>
 #include <stdio.h>

@@ -117,6 +117,11 @@ Deployment
   be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as
   there are at least 14 DataNodes in the cluster.
 
+  A system default EC policy can be configured via 'dfs.namenode.ec.system.default.policy' configuration. With this configuration,
+  the default EC policy will be used when no policy name is passed as an argument in the '-setPolicy' command.
+
+  By default, the 'dfs.namenode.ec.system.default.policy' is "RS-6-3-64k".
+
   The codec implementations for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
   `io.erasurecode.codec.rs.rawcoders` for the default RS codec,
   `io.erasurecode.codec.rs-legacy.rawcoders` for the legacy RS codec,
@@ -167,6 +172,9 @@ Below are the details about each command.
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
       `policyName`: The erasure coding policy to be used for files under this directory.
+      This parameter can be omitted if a 'dfs.namenode.ec.system.default.policy' configuration is set.
+      The EC policy of the path will be set with the default value in configuration.
+
 
  *  `[-getPolicy -path <path>]`
 
@@ -199,3 +207,22 @@ Below are the details about each command.
 *  `[-disablePolicy -policy <policyName>]`
 
      Disable an erasure coding policy.
+
+Limitations
+-----------
+
+Certain HDFS file write operations, i.e., `hflush`, `hsync` and `append`,
+are not supported on erasure coded files due to substantial technical
+challenges.
+
+* `append()` on an erasure coded file will throw `IOException`.
+* `hflush()` and `hsync()` on `DFSStripedOutputStream` are no-op. Thus calling
+`hflush()` or `hsync()` on an erasure coded file can not guarantee data
+being persistent.
+
+A client can use [`StreamCapabilities`](../hadoop-common/filesystem/filesystem.html#interface_StreamCapabilities)
+API to query whether a `OutputStream` supports `hflush()` and `hsync()`.
+If the client desires data persistence via `hflush()` and `hsync()`, the current
+remedy is creating such files as regular 3x replication files in a
+non-erasure-coded directory, or using `FSDataOutputStreamBuilder#replicate()`
+API to create 3x replication files in an erasure-coded directory.

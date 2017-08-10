@@ -17,6 +17,8 @@
  */
 #include "configuration.h"
 #include "container-executor.h"
+#include "utils/string-utils.h"
+#include "util.h"
 
 #include <inttypes.h>
 #include <errno.h>
@@ -368,7 +370,7 @@ void test_delete_app() {
   sprintf(buffer, "chmod 000 %s/who/let", container_dir);
   run(buffer);
 
-  // delete container directory
+  // delete application directory
   int ret = delete_as_user(yarn_username, app_dir, NULL);
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
@@ -390,13 +392,20 @@ void test_delete_app() {
     printf("FAIL: accidently deleted file %s\n", dont_touch);
     exit(1);
   }
+  // verify attempt to delete a nonexistent directory does not fail
+  ret = delete_as_user(yarn_username, app_dir, NULL);
+  if (ret != 0) {
+    printf("FAIL: return code from delete_as_user is %d\n", ret);
+    exit(1);
+  }
+
   free(app_dir);
   free(container_dir);
   free(dont_touch);
 }
 
 void validate_feature_enabled_value(int expected_value, const char* key,
-    int default_value, struct configuration *cfg) {
+    int default_value, struct section *cfg) {
   int value = is_feature_enabled(key, default_value, cfg);
 
   if (value != expected_value) {
@@ -411,7 +420,8 @@ void test_is_feature_enabled() {
   FILE *file = fopen(filename, "w");
   int disabled = 0;
   int enabled = 1;
-  struct configuration cfg = {.size=0, .confdetails=NULL};
+  struct configuration exec_cfg = {.size=0, .sections=NULL};
+  struct section cfg = {.size=0, .kv_pairs=NULL};
 
   if (file == NULL) {
     printf("FAIL: Could not open configuration file: %s\n", filename);
@@ -425,7 +435,8 @@ void test_is_feature_enabled() {
   fprintf(file, "feature.name5.enabled=-1\n");
   fprintf(file, "feature.name6.enabled=2\n");
   fclose(file);
-  read_config(filename, &cfg);
+  read_config(filename, &exec_cfg);
+  cfg = *(get_configuration_section("", &exec_cfg));
 
   validate_feature_enabled_value(disabled, "feature.name1.enabled",
       disabled, &cfg);
@@ -441,7 +452,7 @@ void test_is_feature_enabled() {
           disabled, &cfg);
 
 
-  free_configurations(&cfg);
+  free_configuration(&exec_cfg);
 }
 
 void test_delete_user() {
@@ -975,6 +986,83 @@ static void expect_type(const char *path, int mode) {
   }
 }
 
+static void test_delete_race_internal() {
+  char* app_dir = get_app_directory(TEST_ROOT "/local-2", yarn_username, "app_1");
+  char* container_dir = get_container_work_directory(TEST_ROOT "/local-2",
+                          yarn_username, "app_1", "container_1");
+  char buffer[100000];
+
+  sprintf(buffer, "mkdir -p %s/a/b/c/d", container_dir);
+  run(buffer);
+  int i;
+  for (i = 0; i < 100; ++i) {
+    sprintf(buffer, "%s/a/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/c/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/c/d/f%d", container_dir, i);
+    touch_or_die(buffer);
+  }
+
+  pid_t child = fork();
+  if (child == -1) {
+    printf("FAIL: fork failed\n");
+    exit(1);
+  } else if (child == 0) {
+    // delete container directory
+    char * dirs[] = {app_dir, 0};
+    int ret = delete_as_user(yarn_username, "container_1" , dirs);
+    if (ret != 0) {
+      printf("FAIL: return code from delete_as_user is %d\n", ret);
+      exit(1);
+    }
+    exit(0);
+  } else {
+    // delete application directory
+    int ret = delete_as_user(yarn_username, app_dir, NULL);
+    int status = 0;
+    if (waitpid(child, &status, 0) == -1) {
+      printf("FAIL: waitpid %" PRId64 " failed - %s\n", (int64_t)child, strerror(errno));
+      exit(1);
+    }
+    if (!WIFEXITED(status)) {
+      printf("FAIL: child %" PRId64 " didn't exit - %d\n", (int64_t)child, status);
+      exit(1);
+    }
+    if (WEXITSTATUS(status) != 0) {
+      printf("FAIL: child %" PRId64 " exited with bad status %d\n",
+             (int64_t)child, WEXITSTATUS(status));
+      exit(1);
+    }
+    if (ret != 0) {
+      printf("FAIL: return code from delete_as_user is %d\n", ret);
+      exit(1);
+    }
+  }
+
+  // check to make sure the app directory is gone
+  if (access(app_dir, R_OK) == 0) {
+    printf("FAIL: didn't delete the directory - %s\n", app_dir);
+    exit(1);
+  }
+
+  free(app_dir);
+  free(container_dir);
+}
+
+void test_delete_race() {
+  if (initialize_user(yarn_username, local_dirs)) {
+    printf("FAIL: failed to initialize user %s\n", yarn_username);
+    exit(1);
+  }
+  int i;
+  for (i = 0; i < 100; ++i) {
+    test_delete_race_internal();
+  }
+}
+
 int recursive_unlink_children(const char *name);
 
 void test_recursive_unlink_children() {
@@ -1092,7 +1180,13 @@ void test_sanitize_docker_command() {
     "run --name=$CID --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
     "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
     "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu' || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run ''''''''"
+    "run ''''''''",
+    "inspect --format='{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}' container_e111_1111111111111_1111_01_111111",
+    "rm container_e111_1111111111111_1111_01_111111",
+    "stop container_e111_1111111111111_1111_01_111111",
+    "pull ubuntu",
+    "pull registry.com/user/ubuntu",
+    "--config=/yarn/local/cdir/ pull registry.com/user/ubuntu"
   };
   char *expected_output[] = {
       "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
@@ -1100,12 +1194,18 @@ void test_sanitize_docker_command() {
       "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
       "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu'\"'\"'' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
       "run ''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"'' ",
+      "inspect --format='{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}' container_e111_1111111111111_1111_01_111111",
+      "rm container_e111_1111111111111_1111_01_111111",
+      "stop container_e111_1111111111111_1111_01_111111",
+      "pull ubuntu",
+      "pull registry.com/user/ubuntu",
+      "--config=/yarn/local/cdir/ pull registry.com/user/ubuntu"
   };
 
   int input_size = sizeof(input) / sizeof(char *);
   int i = 0;
   for(i = 0;  i < input_size; i++) {
-    char *command = (char *) calloc(strlen(input[i]), sizeof(char));
+    char *command = (char *) calloc(strlen(input[i]) + 1 , sizeof(char));
     strncpy(command, input[i], strlen(input[i]));
     char *op = sanitize_docker_command(command);
     if(strncmp(expected_output[i], op, strlen(expected_output[i])) != 0) {
@@ -1113,6 +1213,102 @@ void test_sanitize_docker_command() {
       exit(1);
     }
     free(command);
+  }
+}
+
+void test_validate_docker_image_name() {
+
+  char *good_input[] = {
+    "ubuntu",
+    "ubuntu:latest",
+    "ubuntu:14.04",
+    "ubuntu:LATEST",
+    "registry.com:5000/user/ubuntu",
+    "registry.com:5000/user/ubuntu:latest",
+    "registry.com:5000/user/ubuntu:0.1.2.3",
+    "registry.com/user/ubuntu",
+    "registry.com/user/ubuntu:latest",
+    "registry.com/user/ubuntu:0.1.2.3",
+    "registry.com/user/ubuntu:test-image",
+    "registry.com/user/ubuntu:test_image",
+    "registry.com/ubuntu",
+    "user/ubuntu",
+    "user/ubuntu:0.1.2.3",
+    "user/ubuntu:latest",
+    "user/ubuntu:test_image",
+    "user/ubuntu.test:test_image",
+    "user/ubuntu-test:test-image",
+    "registry.com/ubuntu/ubuntu/ubuntu"
+  };
+
+  char *bad_input[] = {
+    "UBUNTU",
+    "registry.com|5000/user/ubuntu",
+    "registry.com | 5000/user/ubuntu",
+    "ubuntu' || touch /tmp/file #",
+    "ubuntu || touch /tmp/file #",
+    "''''''''",
+    "bad_host_name:5000/user/ubuntu",
+    "registry.com:foo/ubuntu/ubuntu/ubuntu",
+    "registry.com/ubuntu:foo/ubuntu/ubuntu"
+  };
+
+  int good_input_size = sizeof(good_input) / sizeof(char *);
+  int i = 0;
+  for(i = 0; i < good_input_size; i++) {
+    int op = validate_docker_image_name(good_input[i]);
+    if(0 != op) {
+      printf("\nFAIL: docker image name %s is invalid", good_input[i]);
+      exit(1);
+    }
+  }
+
+  int bad_input_size = sizeof(bad_input) / sizeof(char *);
+  int j = 0;
+  for(j = 0; j < bad_input_size; j++) {
+    int op = validate_docker_image_name(bad_input[j]);
+    if(1 != op) {
+      printf("\nFAIL: docker image name %s is valid, expected invalid", bad_input[j]);
+      exit(1);
+    }
+  }
+}
+
+void test_validate_container_id() {
+  char *good_input[] = {
+    "container_e134_1499953498516_50875_01_000007",
+    "container_1499953498516_50875_01_000007",
+    "container_e1_12312_11111_02_000001"
+  };
+
+  char *bad_input[] = {
+    "CONTAINER",
+    "container_e1_12312_11111_02_000001 | /tmp/file"
+    "container_e1_12312_11111_02_000001 || # /tmp/file",
+    "container_e1_12312_11111_02_000001 # /tmp/file",
+    "container_e1_12312_11111_02_000001' || touch /tmp/file #",
+    "ubuntu || touch /tmp/file #",
+    "''''''''"
+  };
+
+  int good_input_size = sizeof(good_input) / sizeof(char *);
+  int i = 0;
+  for(i = 0; i < good_input_size; i++) {
+    int op = validate_container_id(good_input[i]);
+    if(1 != op) {
+      printf("FAIL: docker container name %s is invalid\n", good_input[i]);
+      exit(1);
+    }
+  }
+
+  int bad_input_size = sizeof(bad_input) / sizeof(char *);
+  int j = 0;
+  for(j = 0; j < bad_input_size; j++) {
+    int op = validate_container_id(bad_input[j]);
+    if(0 != op) {
+      printf("FAIL: docker container name %s is valid, expected invalid\n", bad_input[j]);
+      exit(1);
+    }
   }
 }
 
@@ -1152,8 +1348,8 @@ int main(int argc, char **argv) {
 
   read_executor_config(TEST_ROOT "/test.cfg");
 
-  local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
-  log_dirs = extract_values(strdup(NM_LOG_DIRS));
+  local_dirs = split(strdup(NM_LOCAL_DIRS));
+  log_dirs = split(strdup(NM_LOG_DIRS));
 
   create_nm_roots(local_dirs);
 
@@ -1204,11 +1400,20 @@ int main(int argc, char **argv) {
   printf("\nTesting delete_app()\n");
   test_delete_app();
 
+  printf("\nTesting delete race\n");
+  test_delete_race();
+
   printf("\nTesting is_feature_enabled()\n");
   test_is_feature_enabled();
 
   printf("\nTesting sanitize docker commands()\n");
   test_sanitize_docker_command();
+
+  printf("\nTesting validate_docker_image_name()\n");
+  test_validate_docker_image_name();
+
+  printf("\nTesting validate_container_id()\n");
+  test_validate_container_id();
 
   test_check_user(0);
 

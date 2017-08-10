@@ -84,7 +84,7 @@ container ID.
 
 ## The binding problem
 Hadoop YARN allows applications to run on the Hadoop cluster. Some of these are
-batch jobs or queries that can managed via Yarn’s existing API using its
+batch jobs or queries that can managed via YARN’s existing API using its
 application ID. In addition YARN can deploy ong-lived services instances such a
 pool of Apache Tomcat web servers or an Apache HBase cluster. YARN will deploy
 them across the cluster depending on the individual each component requirements
@@ -121,7 +121,7 @@ services accessible from within the Hadoop cluster
         /services/yarn
         /services/oozie
 
-Yarn-deployed services belonging to individual users.
+YARN-deployed services belonging to individual users.
 
         /users/joe/org-apache-hbase/demo1
         /users/joe/org-apache-hbase/demo1/components/regionserver1
@@ -148,7 +148,7 @@ their application master, to which they heartbeat regularly.
 
 ## Unsupported Registration use cases:
 
-1. A short-lived Yarn application is registered automatically in the registry,
+1. A short-lived YARN application is registered automatically in the registry,
 including all its containers. and unregistered when the job terminates.
 Short-lived applications with many containers will place excessive load on a
 registry. All YARN applications will be given the option of registering, but it
@@ -259,7 +259,7 @@ service since it supports many of the properties, We pick a part of the ZK
 namespace to be the root of the service registry ( default: `yarnRegistry`).
 
 On top this base implementation we build our registry service API and the
-naming conventions that Yarn will use for its services. The registry will be
+naming conventions that YARN will use for its services. The registry will be
 accessed by the registry API, not directly via ZK - ZK is just an
 implementation choice (although unlikely to change in the future).
 
@@ -297,7 +297,7 @@ them.
 6. Core services will be registered using the following convention:
 `/services/{servicename}` e.g. `/services/hdfs`.
 
-7. Yarn services SHOULD be registered using the following convention:
+7. YARN services SHOULD be registered using the following convention:
 
         /users/{username}/{serviceclass}/{instancename}
 
@@ -823,8 +823,8 @@ The `RegistryPathStatus` class summarizes the contents of a node in the registry
 ## Security
 
 The registry will allow a service instance can only be registered under the
-path where it has permissions. Yarn will create directories with appropriate
-permissions for users where Yarn deployed services can be registered by a user.
+path where it has permissions. YARN will create directories with appropriate
+permissions for users where YARN deployed services can be registered by a user.
 of the user account of the service instance. The admin will also create
 directories (such as `/services`) with appropriate permissions (where core Hadoop
 services can register themselves.

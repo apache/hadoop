@@ -47,10 +47,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -437,7 +438,15 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     File newStartFile = new File(tmpDir, "start_file_n.txt").getAbsoluteFile();
 
+    ResourceUtilization beforeUpgrade =
+        ResourceUtilization.newInstance(
+            containerManager.getContainerScheduler().getCurrentUtilization());
     prepareContainerUpgrade(autoCommit, false, false, cId, newStartFile);
+    ResourceUtilization afterUpgrade =
+        ResourceUtilization.newInstance(
+            containerManager.getContainerScheduler().getCurrentUtilization());
+    Assert.assertEquals("Possible resource leak detected !!",
+        beforeUpgrade, afterUpgrade);
 
     // Assert that the First process is not alive anymore
     Assert.assertFalse("Process is still alive!",
@@ -1549,16 +1558,15 @@ public class TestContainerManager extends BaseContainerManagerTest {
             context.getContainerTokenSecretManager(), null);
     increaseTokens.add(containerToken);
 
-    IncreaseContainersResourceRequest increaseRequest =
-        IncreaseContainersResourceRequest
-          .newInstance(increaseTokens);
-    IncreaseContainersResourceResponse increaseResponse =
-        containerManager.increaseContainersResource(increaseRequest);
+    ContainerUpdateRequest updateRequest =
+        ContainerUpdateRequest.newInstance(increaseTokens);
+    ContainerUpdateResponse updateResponse =
+        containerManager.updateContainer(updateRequest);
     // Check response
     Assert.assertEquals(
-        0, increaseResponse.getSuccessfullyIncreasedContainers().size());
-    Assert.assertEquals(2, increaseResponse.getFailedRequests().size());
-    for (Map.Entry<ContainerId, SerializedException> entry : increaseResponse
+        0, updateResponse.getSuccessfullyUpdatedContainers().size());
+    Assert.assertEquals(2, updateResponse.getFailedRequests().size());
+    for (Map.Entry<ContainerId, SerializedException> entry : updateResponse
         .getFailedRequests().entrySet()) {
       Assert.assertNotNull("Failed message", entry.getValue().getMessage());
       if (cId0.equals(entry.getKey())) {
@@ -1635,16 +1643,15 @@ public class TestContainerManager extends BaseContainerManagerTest {
             Resource.newInstance(512, 1),
             context.getContainerTokenSecretManager(), null);
     increaseTokens.add(containerToken);
-    IncreaseContainersResourceRequest increaseRequest =
-        IncreaseContainersResourceRequest
-            .newInstance(increaseTokens);
-    IncreaseContainersResourceResponse increaseResponse =
-        containerManager.increaseContainersResource(increaseRequest);
+    ContainerUpdateRequest updateRequest =
+        ContainerUpdateRequest.newInstance(increaseTokens);
+    ContainerUpdateResponse updateResponse =
+        containerManager.updateContainer(updateRequest);
     // Check response
     Assert.assertEquals(
-        0, increaseResponse.getSuccessfullyIncreasedContainers().size());
-    Assert.assertEquals(1, increaseResponse.getFailedRequests().size());
-    for (Map.Entry<ContainerId, SerializedException> entry : increaseResponse
+        0, updateResponse.getSuccessfullyUpdatedContainers().size());
+    Assert.assertEquals(1, updateResponse.getFailedRequests().size());
+    for (Map.Entry<ContainerId, SerializedException> entry : updateResponse
         .getFailedRequests().entrySet()) {
       if (cId.equals(entry.getKey())) {
         Assert.assertNotNull("Failed message", entry.getValue().getMessage());
@@ -1717,13 +1724,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
         context.getNodeId(), user, targetResource,
             context.getContainerTokenSecretManager(), null);
     increaseTokens.add(containerToken);
-    IncreaseContainersResourceRequest increaseRequest =
-        IncreaseContainersResourceRequest.newInstance(increaseTokens);
-    IncreaseContainersResourceResponse increaseResponse =
-        containerManager.increaseContainersResource(increaseRequest);
+    ContainerUpdateRequest updateRequest =
+        ContainerUpdateRequest.newInstance(increaseTokens);
+    ContainerUpdateResponse updateResponse =
+        containerManager.updateContainer(updateRequest);
     Assert.assertEquals(
-        1, increaseResponse.getSuccessfullyIncreasedContainers().size());
-    Assert.assertTrue(increaseResponse.getFailedRequests().isEmpty());
+        1, updateResponse.getSuccessfullyUpdatedContainers().size());
+    Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
     // Check status
     List<ContainerId> containerIds = new ArrayList<>();
     containerIds.add(cId);

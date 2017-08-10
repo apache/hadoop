@@ -77,6 +77,7 @@ public class JournalNodeSyncer {
   private final long journalSyncInterval;
   private final int logSegmentTransferTimeout;
   private final DataTransferThrottler throttler;
+  private final JournalMetrics metrics;
 
   JournalNodeSyncer(JournalNode jouranlNode, Journal journal, String jid,
       Configuration conf) {
@@ -93,6 +94,7 @@ public class JournalNodeSyncer {
         DFSConfigKeys.DFS_EDIT_LOG_TRANSFER_TIMEOUT_KEY,
         DFSConfigKeys.DFS_EDIT_LOG_TRANSFER_TIMEOUT_DEFAULT);
     throttler = getThrottler(conf);
+    metrics = journal.getMetrics();
   }
 
   void stopSync() {
@@ -411,6 +413,8 @@ public class JournalNodeSyncer {
         LOG.warn("Deleting " + tmpEditsFile + " has failed");
       }
       return false;
+    } else {
+      metrics.incrNumEditLogsSynced();
     }
     return true;
   }

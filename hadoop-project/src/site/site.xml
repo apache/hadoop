@@ -138,6 +138,7 @@
       <item name="Reservation System" href="hadoop-yarn/hadoop-yarn-site/ReservationSystem.html"/>
       <item name="Graceful Decommission" href="hadoop-yarn/hadoop-yarn-site/GracefulDecommission.html"/>
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
+      <item name="YARN Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">

@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.fs;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -31,7 +33,11 @@ import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import java.io.*;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
@@ -45,6 +51,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.internal.util.reflection.Whitebox;
+
+import javax.annotation.Nonnull;
 
 
 /**
@@ -659,7 +667,7 @@ public class TestLocalFileSystem {
 
     try {
       FSDataOutputStreamBuilder builder =
-          fileSys.createFile(path);
+          fileSys.createFile(path).recursive();
       FSDataOutputStream out = builder.build();
       String content = "Create with a generic type of createFile!";
       byte[] contentOrigin = content.getBytes("UTF8");
@@ -702,5 +710,67 @@ public class TestLocalFileSystem {
         builder.getReplication(), 0);
     Assert.assertEquals("Buffer size should be 0",
         builder.getBufferSize(), 0);
+  }
+
+  /**
+   * A builder to verify configuration keys are supported.
+   */
+  private static class BuilderWithSupportedKeys
+      extends FSDataOutputStreamBuilder<FSDataOutputStream,
+      BuilderWithSupportedKeys> {
+
+    private final Set<String> supportedKeys = new HashSet<>();
+
+    BuilderWithSupportedKeys(@Nonnull final Collection<String> supportedKeys,
+        @Nonnull FileSystem fileSystem, @Nonnull Path p) {
+      super(fileSystem, p);
+      this.supportedKeys.addAll(supportedKeys);
+    }
+
+    @Override
+    protected BuilderWithSupportedKeys getThisBuilder() {
+      return this;
+    }
+
+    @Override
+    public FSDataOutputStream build()
+        throws IllegalArgumentException, IOException {
+      Set<String> unsupported = new HashSet<>(getMandatoryKeys());
+      unsupported.removeAll(supportedKeys);
+      Preconditions.checkArgument(unsupported.isEmpty(),
+          "unsupported key found: " + supportedKeys);
+      return getFS().create(
+          getPath(), getPermission(), getFlags(), getBufferSize(),
+          getReplication(), getBlockSize(), getProgress(), getChecksumOpt());
+    }
+  }
+
+  @Test
+  public void testFSOutputStreamBuilderOptions() throws Exception {
+    Path path = new Path(TEST_ROOT_DIR, "testBuilderOpt");
+    final List<String> supportedKeys = Arrays.asList("strM");
+
+    FSDataOutputStreamBuilder<?, ?> builder =
+        new BuilderWithSupportedKeys(supportedKeys, fileSys, path);
+    builder.opt("strKey", "value");
+    builder.opt("intKey", 123);
+    builder.opt("strM", "ignored");
+    // Over-write an optional value with a mandatory value.
+    builder.must("strM", "value");
+    builder.must("unsupported", 12.34);
+
+    assertEquals("Optional value should be overwrite by a mandatory value",
+        "value", builder.getOptions().get("strM"));
+
+    Set<String> mandatoryKeys = builder.getMandatoryKeys();
+    Set<String> expectedKeys = new HashSet<>();
+    expectedKeys.add("strM");
+    expectedKeys.add("unsupported");
+    assertEquals(expectedKeys, mandatoryKeys);
+    assertEquals(2, mandatoryKeys.size());
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "unsupported key found", builder::build
+    );
   }
 }

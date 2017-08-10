@@ -1325,7 +1325,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       int cfgCnt = 0;
       for (TimelineEntity entity : entities) {
         cfgCnt += entity.getConfigs().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
       assertEquals(0, cfgCnt);
 
@@ -1343,7 +1343,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       cfgCnt = 0;
       for (TimelineEntity entity : entities) {
         cfgCnt += entity.getConfigs().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
       assertEquals(3, cfgCnt);
 
@@ -1360,7 +1360,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       cfgCnt = 0;
       for (TimelineEntity entity : entities) {
         cfgCnt += entity.getConfigs().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
         for (String configKey : entity.getConfigs().keySet()) {
           assertTrue(configKey.startsWith("cfg_") ||
               configKey.startsWith("configuration_"));
@@ -1393,7 +1393,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
     } finally {
       client.destroy();
@@ -1457,7 +1457,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       int infoCnt = 0;
       for (TimelineEntity entity : entities) {
         infoCnt += entity.getInfo().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
       // Includes UID in info field even if fields not specified as INFO.
       assertEquals(1, infoCnt);
@@ -1476,7 +1476,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       infoCnt = 0;
       for (TimelineEntity entity : entities) {
         infoCnt += entity.getInfo().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
       // Includes UID in info field.
       assertEquals(4, infoCnt);
@@ -1506,7 +1506,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue(entity.getId().equals("entity1"));
+        assertEquals("entity1", entity.getId());
       }
     } finally {
       client.destroy();
@@ -1556,7 +1556,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       int metricCnt = 0;
       for (TimelineEntity entity : entities) {
         metricCnt += entity.getMetrics().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
       assertEquals(0, metricCnt);
 
@@ -1574,7 +1574,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       metricCnt = 0;
       for (TimelineEntity entity : entities) {
         metricCnt += entity.getMetrics().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
       assertEquals(3, metricCnt);
 
@@ -1593,7 +1593,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       metricCnt = 0;
       for (TimelineEntity entity : entities) {
         metricCnt += entity.getMetrics().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
         for (TimelineMetric metric : entity.getMetrics()) {
           assertTrue(metric.getId().startsWith("MAP1"));
           assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
@@ -1614,7 +1614,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       metricCnt = 0;
       for (TimelineEntity entity : entities) {
         metricCnt += entity.getMetrics().size();
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
         for (TimelineMetric metric : entity.getMetrics()) {
           assertTrue(metric.getId().startsWith("MAP1"));
           if (metric.getId().equals("MAP1_SLOT_MILLIS")) {
@@ -1654,7 +1654,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
     } finally {
       client.destroy();
@@ -1695,7 +1695,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
 
       //  eventfilters=(!(event1,event3) OR event5,event6) OR
@@ -1753,7 +1753,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
 
       // isrelatedto=(!(type3:entity31,type2:entity21:entity22)OR type5:
@@ -1785,7 +1785,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue(entity.getId().equals("entity2"));
+        assertEquals("entity2", entity.getId());
       }
 
       // relatesto=(!(type3:entity31,type2:entity21:entity22)OR type5:entity51,

@@ -286,8 +286,7 @@ public class Journal implements Closeable {
     fjm.setLastReadableTxId(val);
   }
 
-  @VisibleForTesting
-  JournalMetrics getMetricsForTests() {
+  JournalMetrics getMetrics() {
     return metrics;
   }
 

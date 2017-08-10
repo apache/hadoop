@@ -282,6 +282,8 @@ public class TestWasbRemoteCallHelper
   @Test
   public void testWhenOneInstanceIsDown() throws Throwable {
 
+    boolean isAuthorizationCachingEnabled = fs.getConf().getBoolean(CachingAuthorizer.KEY_AUTH_SERVICE_CACHING_ENABLE, false);
+
     // set up mocks
     HttpClient mockHttpClient = Mockito.mock(HttpClient.class);
     HttpEntity mockHttpEntity = Mockito.mock(HttpEntity.class);
@@ -356,8 +358,9 @@ public class TestWasbRemoteCallHelper
 
     performop(mockHttpClient);
 
-    Mockito.verify(mockHttpClient, times(2)).execute(Mockito.argThat(new HttpGetForServiceLocal()));
-    Mockito.verify(mockHttpClient, times(2)).execute(Mockito.argThat(new HttpGetForService2()));
+    int expectedNumberOfInvocations = isAuthorizationCachingEnabled ? 1 : 2;
+    Mockito.verify(mockHttpClient, times(expectedNumberOfInvocations)).execute(Mockito.argThat(new HttpGetForServiceLocal()));
+    Mockito.verify(mockHttpClient, times(expectedNumberOfInvocations)).execute(Mockito.argThat(new HttpGetForService2()));
   }
 
   @Test

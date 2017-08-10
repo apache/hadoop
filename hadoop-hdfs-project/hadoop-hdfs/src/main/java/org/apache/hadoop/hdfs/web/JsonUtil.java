@@ -17,10 +17,18 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.ipc.RemoteException;
@@ -110,21 +118,20 @@ public class JsonUtil {
     m.put("pathSuffix", status.getLocalName());
     m.put("type", WebHdfsConstants.PathType.valueOf(status));
     if (status.isSymlink()) {
-      m.put("symlink", status.getSymlink());
+      m.put("symlink", DFSUtilClient.bytes2String(status.getSymlinkInBytes()));
     }
-
     m.put("length", status.getLen());
     m.put("owner", status.getOwner());
     m.put("group", status.getGroup());
     FsPermission perm = status.getPermission();
     m.put("permission", toString(perm));
-    if (perm.getAclBit()) {
+    if (status.hasAcl()) {
       m.put("aclBit", true);
     }
-    if (perm.getEncryptedBit()) {
+    if (status.isEncrypted()) {
       m.put("encBit", true);
     }
-    if (perm.getErasureCodedBit()) {
+    if (status.isErasureCoded()) {
       m.put("ecBit", true);
     }
     m.put("accessTime", status.getAccessTime());
@@ -373,15 +380,6 @@ public class JsonUtil {
     FsPermission perm = status.getPermission();
     if (perm != null) {
       m.put("permission", toString(perm));
-      if (perm.getAclBit()) {
-        m.put("aclBit", true);
-      }
-      if (perm.getEncryptedBit()) {
-        m.put("encBit", true);
-      }
-      if (perm.getErasureCodedBit()) {
-        m.put("ecBit", true);
-      }
     }
     final Map<String, Map<String, Object>> finalMap =
         new TreeMap<String, Map<String, Object>>();

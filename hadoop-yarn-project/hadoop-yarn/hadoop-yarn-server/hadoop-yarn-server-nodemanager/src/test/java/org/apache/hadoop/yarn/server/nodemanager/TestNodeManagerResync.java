@@ -45,9 +45,9 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -224,7 +224,7 @@ public class TestNodeManagerResync {
     // Start a container and make sure it is in RUNNING state
     ((TestNodeManager4)nm).startContainer();
     // Simulate a container resource increase in a separate thread
-    ((TestNodeManager4)nm).increaseContainersResource();
+    ((TestNodeManager4)nm).updateContainerResource();
     // Simulate RM restart by sending a RESYNC event
     LOG.info("Sending out RESYNC event");
     nm.getNMDispatcher().getEventHandler().handle(
@@ -505,7 +505,7 @@ public class TestNodeManagerResync {
 
   class TestNodeManager4 extends NodeManager {
 
-    private Thread increaseContainerResourceThread = null;
+    private Thread containerUpdateResourceThread = null;
 
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
@@ -621,11 +621,11 @@ public class TestNodeManagerResync {
     }
 
     // Increase container resource in a thread
-    public void increaseContainersResource()
+    public void updateContainerResource()
         throws InterruptedException {
       LOG.info("Increase a container resource in a separate thread");
-      increaseContainerResourceThread = new IncreaseContainersResourceThread();
-      increaseContainerResourceThread.start();
+      containerUpdateResourceThread = new ContainerUpdateResourceThread();
+      containerUpdateResourceThread.start();
     }
 
     class TestNodeStatusUpdaterImpl4 extends MockNodeStatusUpdater {
@@ -652,7 +652,7 @@ public class TestNodeManagerResync {
             updateBarrier.await();
             // Call the actual rebootNodeStatusUpdaterAndRegisterWithRM().
             // This function should be synchronized with
-            // increaseContainersResource().
+            // updateContainer().
             updateBarrier.await();
             super.rebootNodeStatusUpdaterAndRegisterWithRM();
             // Check status after registerWithRM
@@ -672,7 +672,7 @@ public class TestNodeManagerResync {
       }
     }
 
-    class IncreaseContainersResourceThread extends Thread {
+    class ContainerUpdateResourceThread extends Thread {
       @Override
       public void run() {
         // Construct container resource increase request
@@ -683,15 +683,15 @@ public class TestNodeManagerResync {
           try {
             updateBarrier.await();
             increaseTokens.add(getContainerToken(targetResource));
-            IncreaseContainersResourceRequest increaseRequest =
-                IncreaseContainersResourceRequest.newInstance(increaseTokens);
-            IncreaseContainersResourceResponse increaseResponse =
+            ContainerUpdateRequest updateRequest =
+                ContainerUpdateRequest.newInstance(increaseTokens);
+            ContainerUpdateResponse updateResponse =
                 getContainerManager()
-                    .increaseContainersResource(increaseRequest);
+                    .updateContainer(updateRequest);
             Assert.assertEquals(
-                1, increaseResponse.getSuccessfullyIncreasedContainers()
+                1, updateResponse.getSuccessfullyUpdatedContainers()
                     .size());
-            Assert.assertTrue(increaseResponse.getFailedRequests().isEmpty());
+            Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
           } catch (Exception e) {
             e.printStackTrace();
           } finally {

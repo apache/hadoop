@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.sharedcachemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +43,8 @@ import org.apache.hadoop.yarn.server.sharedcache.SharedCacheUtil;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.ClientSCMMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This service handles all rpc calls from the client to the shared cache
@@ -55,7 +55,8 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourc
 public class ClientProtocolService extends AbstractService implements
     ClientSCMProtocol {
 
-  private static final Log LOG = LogFactory.getLog(ClientProtocolService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ClientProtocolService.class);
 
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);

@@ -1016,15 +1016,7 @@ public class WebHdfsFileSystem extends FileSystem
   public FileStatus getFileStatus(Path f) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_FILE_STATUS);
-    return makeQualified(getHdfsFileStatus(f), f);
-  }
-
-  private FileStatus makeQualified(HdfsFileStatus f, Path parent) {
-    return new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
-        f.getBlockSize(), f.getModificationTime(), f.getAccessTime(),
-        f.getPermission(), f.getOwner(), f.getGroup(),
-        f.isSymlink() ? new Path(f.getSymlink()) : null,
-        f.getFullPath(parent).makeQualified(getUri(), getWorkingDirectory()));
+    return getHdfsFileStatus(f).makeQualified(getUri(), f);
   }
 
   @Override
@@ -1507,6 +1499,7 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.LIST_STATUS);
 
+    final URI fsUri = getUri();
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
     return new FsPathResponseRunner<FileStatus[]>(op, f) {
       @Override
@@ -1515,7 +1508,7 @@ public class WebHdfsFileSystem extends FileSystem
             JsonUtilClient.toHdfsFileStatusArray(json);
         final FileStatus[] statuses = new FileStatus[hdfsStatuses.length];
         for (int i = 0; i < hdfsStatuses.length; i++) {
-          statuses[i] = makeQualified(hdfsStatuses[i], f);
+          statuses[i] = hdfsStatuses[i].makeQualified(fsUri, f);
         }
 
         return statuses;
@@ -1541,10 +1534,11 @@ public class WebHdfsFileSystem extends FileSystem
       }
     }.run();
     // Qualify the returned FileStatus array
+    final URI fsUri = getUri();
     final HdfsFileStatus[] statuses = listing.getPartialListing();
     FileStatus[] qualified = new FileStatus[statuses.length];
     for (int i = 0; i < statuses.length; i++) {
-      qualified[i] = makeQualified(statuses[i], f);
+      qualified[i] = statuses[i].makeQualified(fsUri, f);
     }
     return new DirectoryEntries(qualified, listing.getLastName(),
         listing.hasMore());

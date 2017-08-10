@@ -180,11 +180,11 @@ It is also possible to add the new subcommands to the usage output. The `hadoop_
 
 ```bash
 if [[ "${HADOOP_SHELL_EXECNAME}" = "yarn" ]]; then
-  hadoop_add_subcommand "hello" "Print some text to the screen"
+  hadoop_add_subcommand "hello" client "Print some text to the screen"
 fi
 ```
 
-This functionality may also be use to override the built-ins.  For example, defining:
+We set the subcommand type to be "client" as there are no special restrictions, extra capabilities, etc.  This functionality may also be use to override the built-ins.  For example, defining:
 
 ```bash
 function hdfs_subcommand_fetchdt

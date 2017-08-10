@@ -16,7 +16,7 @@
 # limitations under the License.
 
 if [[ "${HADOOP_SHELL_EXECNAME}" = hdfs ]]; then
-  hadoop_add_subcommand "httpfs" "run HttpFS server, the HDFS HTTP Gateway"
+  hadoop_add_subcommand "httpfs" daemon "run HttpFS server, the HDFS HTTP Gateway"
 fi
 
 ## @description  Command handler for httpfs subcommand

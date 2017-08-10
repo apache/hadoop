@@ -26,10 +26,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.PriorityQueue;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -87,11 +88,15 @@ public class LeaseManager {
   // Mapping: leaseHolder -> Lease
   private final SortedMap<String, Lease> leases = new TreeMap<>();
   // Set of: Lease
-  private final PriorityQueue<Lease> sortedLeases = new PriorityQueue<>(512,
+  private final NavigableSet<Lease> sortedLeases = new TreeSet<>(
       new Comparator<Lease>() {
         @Override
         public int compare(Lease o1, Lease o2) {
-          return Long.signum(o1.getLastUpdate() - o2.getLastUpdate());
+          if (o1.getLastUpdate() != o2.getLastUpdate()) {
+            return Long.signum(o1.getLastUpdate() - o2.getLastUpdate());
+          } else {
+            return o1.holder.compareTo(o2.holder);
+          }
         }
   });
   // INodeID -> Lease
@@ -162,18 +167,25 @@ public class LeaseManager {
    *
    * @return Set<INodesInPath>
    */
-  public Set<INodesInPath> getINodeWithLeases() {
+  @VisibleForTesting
+  Set<INodesInPath> getINodeWithLeases() throws IOException {
     return getINodeWithLeases(null);
   }
 
   private synchronized INode[] getINodesWithLease() {
-    int inodeCount = 0;
-    INode[] inodes = new INode[leasesById.size()];
+    List<INode> inodes = new ArrayList<>(leasesById.size());
+    INode currentINode;
     for (long inodeId : leasesById.keySet()) {
-      inodes[inodeCount] = fsnamesystem.getFSDirectory().getInode(inodeId);
-      inodeCount++;
+      currentINode = fsnamesystem.getFSDirectory().getInode(inodeId);
+      // A file with an active lease could get deleted, or its
+      // parent directories could get recursively deleted.
+      if (currentINode != null &&
+          currentINode.isFile() &&
+          !fsnamesystem.isFileDeleted(currentINode.asFile())) {
+        inodes.add(currentINode);
+      }
     }
-    return inodes;
+    return inodes.toArray(new INode[0]);
   }
 
   /**
@@ -186,7 +198,7 @@ public class LeaseManager {
    * @return Set<INodesInPath>
    */
   public Set<INodesInPath> getINodeWithLeases(final INodeDirectory
-      ancestorDir) {
+      ancestorDir) throws IOException {
     assert fsnamesystem.hasReadLock();
     final long startTimeMs = Time.monotonicNow();
     Set<INodesInPath> iipSet = new HashSet<>();
@@ -233,7 +245,7 @@ public class LeaseManager {
       try {
         iipSet.addAll(f.get());
       } catch (Exception e) {
-        LOG.warn("INode filter task encountered exception: ", e);
+        throw new IOException("Failed to get files with active leases", e);
       }
     }
     final long endTimeMs = Time.monotonicNow();
@@ -521,9 +533,10 @@ public class LeaseManager {
 
     long start = monotonicNow();
 
-    while(!sortedLeases.isEmpty() && sortedLeases.peek().expiredHardLimit()
-      && !isMaxLockHoldToReleaseLease(start)) {
-      Lease leaseToCheck = sortedLeases.peek();
+    while(!sortedLeases.isEmpty() &&
+        sortedLeases.first().expiredHardLimit()
+        && !isMaxLockHoldToReleaseLease(start)) {
+      Lease leaseToCheck = sortedLeases.first();
       LOG.info(leaseToCheck + " has expired hard limit");
 
       final List<Long> removing = new ArrayList<>();

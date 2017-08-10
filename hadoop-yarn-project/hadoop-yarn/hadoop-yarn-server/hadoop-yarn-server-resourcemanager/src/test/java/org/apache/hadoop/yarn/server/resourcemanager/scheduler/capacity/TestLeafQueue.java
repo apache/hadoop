@@ -820,8 +820,6 @@ public class TestLeafQueue {
       applyCSAssignment(clusterResource, assign, b, nodes, apps);
     } while (assign.getResource().getMemorySize() > 0 &&
         assign.getAssignmentInformation().getNumReservations() == 0);
-    //LOG.info("user_0: " + queueUser0.getUsed());
-    //LOG.info("user_1: " + queueUser1.getUsed());
 
     assertTrue("Verify user_0 got resources ", queueUser0.getUsed()
         .getMemorySize() > 0);

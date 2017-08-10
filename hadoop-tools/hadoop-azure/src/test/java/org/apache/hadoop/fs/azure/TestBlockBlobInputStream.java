@@ -155,7 +155,7 @@ public class TestBlockBlobInputStream extends AbstractWasbTestBase {
     }
 
     LOG.info("Creating test file {} of size: {}", TEST_FILE_PATH,
-        TEST_FILE_SIZE );
+        TEST_FILE_SIZE);
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
     try(FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH)) {
@@ -198,7 +198,7 @@ public class TestBlockBlobInputStream extends AbstractWasbTestBase {
   }
 
   @Test
-  public void test_0200_BasicReadTestV2() throws Exception {
+  public void test_0200_BasicReadTest() throws Exception {
     assumeHugeFileExists();
 
     try (
@@ -214,12 +214,12 @@ public class TestBlockBlobInputStream extends AbstractWasbTestBase {
       // v1 forward seek and read a kilobyte into first kilobyte of bufferV1
       inputStreamV1.seek(5 * MEGABYTE);
       int numBytesReadV1 = inputStreamV1.read(bufferV1, 0, KILOBYTE);
-      assertEquals(numBytesReadV1, KILOBYTE);
+      assertEquals(KILOBYTE, numBytesReadV1);
 
       // v2 forward seek and read a kilobyte into first kilobyte of bufferV2
       inputStreamV2.seek(5 * MEGABYTE);
       int numBytesReadV2 = inputStreamV2.read(bufferV2, 0, KILOBYTE);
-      assertEquals(numBytesReadV2, KILOBYTE);
+      assertEquals(KILOBYTE, numBytesReadV2);
 
       assertArrayEquals(bufferV1, bufferV2);
 
@@ -229,15 +229,88 @@ public class TestBlockBlobInputStream extends AbstractWasbTestBase {
       // v1 reverse seek and read a megabyte into last megabyte of bufferV1
       inputStreamV1.seek(3 * MEGABYTE);
       numBytesReadV1 = inputStreamV1.read(bufferV1, offset, len);
-      assertEquals(numBytesReadV1, len);
+      assertEquals(len, numBytesReadV1);
 
       // v2 reverse seek and read a megabyte into last megabyte of bufferV2
       inputStreamV2.seek(3 * MEGABYTE);
       numBytesReadV2 = inputStreamV2.read(bufferV2, offset, len);
-      assertEquals(numBytesReadV2, len);
+      assertEquals(len, numBytesReadV2);
 
       assertArrayEquals(bufferV1, bufferV2);
     }
+  }
+
+  @Test
+  public void test_0201_RandomReadTest() throws Exception {
+    assumeHugeFileExists();
+
+    try (
+        FSDataInputStream inputStreamV1
+            = accountUsingInputStreamV1.getFileSystem().open(TEST_FILE_PATH);
+
+        FSDataInputStream inputStreamV2
+            = accountUsingInputStreamV2.getFileSystem().open(TEST_FILE_PATH);
+    ) {
+      final int bufferSize = 4 * KILOBYTE;
+      byte[] bufferV1 = new byte[bufferSize];
+      byte[] bufferV2 = new byte[bufferV1.length];
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      inputStreamV1.seek(0);
+      inputStreamV2.seek(0);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      int seekPosition = 2 * KILOBYTE;
+      inputStreamV1.seek(seekPosition);
+      inputStreamV2.seek(seekPosition);
+
+      inputStreamV1.seek(0);
+      inputStreamV2.seek(0);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      seekPosition = 5 * KILOBYTE;
+      inputStreamV1.seek(seekPosition);
+      inputStreamV2.seek(seekPosition);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      seekPosition = 10 * KILOBYTE;
+      inputStreamV1.seek(seekPosition);
+      inputStreamV2.seek(seekPosition);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+
+      seekPosition = 4100 * KILOBYTE;
+      inputStreamV1.seek(seekPosition);
+      inputStreamV2.seek(seekPosition);
+
+      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
+    }
+  }
+
+  private void verifyConsistentReads(FSDataInputStream inputStreamV1,
+      FSDataInputStream inputStreamV2,
+      byte[] bufferV1,
+      byte[] bufferV2) throws IOException {
+    int size = bufferV1.length;
+    final int numBytesReadV1 = inputStreamV1.read(bufferV1, 0, size);
+    assertEquals("Bytes read from V1 stream", size, numBytesReadV1);
+
+    final int numBytesReadV2 = inputStreamV2.read(bufferV2, 0, size);
+    assertEquals("Bytes read from V2 stream", size, numBytesReadV2);
+
+    assertArrayEquals("Mismatch in read data", bufferV1, bufferV2);
   }
 
   /**
