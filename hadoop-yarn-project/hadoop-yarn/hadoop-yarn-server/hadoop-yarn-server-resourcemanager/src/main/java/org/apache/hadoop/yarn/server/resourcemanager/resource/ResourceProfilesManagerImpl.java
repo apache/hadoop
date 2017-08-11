@@ -87,22 +87,22 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
     Iterator iterator = data.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry entry = (Map.Entry) iterator.next();
-      String key = entry.getKey().toString();
-      if (key.isEmpty()) {
+      String profileName = entry.getKey().toString();
+      if (profileName.isEmpty()) {
         throw new IOException(
             "Name of resource profile cannot be an empty string");
       }
       if (entry.getValue() instanceof Map) {
-        Map value = (Map) entry.getValue();
+        Map profileInfo = (Map) entry.getValue();
         // ensure memory and vcores are specified
-        if (!value.containsKey(MEMORY) || !value.containsKey(VCORES)) {
+        if (!profileInfo.containsKey(MEMORY) || !profileInfo.containsKey(VCORES)) {
           throw new IOException(
-              "Illegal resource profile definition; profile '" + key
+              "Illegal resource profile definition; profile '" + profileName
                   + "' must contain '" + MEMORY + "' and '" + VCORES + "'");
         }
-        Resource resource = parseResource(key, value);
-        profiles.put(key, resource);
-        LOG.info("Added profile '" + key + "' with resources " + resource);
+        Resource resource = parseResource(profileInfo);
+        profiles.put(profileName, resource);
+        LOG.info("Added profile '" + profileName + "' with resources " + resource);
       }
     }
     // check to make sure mandatory profiles are present
@@ -116,9 +116,9 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
     LOG.info("Loaded profiles " + profiles.keySet());
   }
 
-  private Resource parseResource(String key, Map value) throws IOException {
+  private Resource parseResource(Map profileInfo) throws IOException {
     Resource resource = Resource.newInstance(0, 0);
-    Iterator iterator = value.entrySet().iterator();
+    Iterator iterator = profileInfo.entrySet().iterator();
     Map<String, ResourceInformation> resourceTypes = ResourceUtils
         .getResourceTypes();
     while (iterator.hasNext()) {
