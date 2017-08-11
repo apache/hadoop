@@ -73,8 +73,8 @@ public class TestMRJobsWithHistoryService {
     }
   }
 
-  private static Path TEST_ROOT_DIR = new Path("target",
-      TestMRJobs.class.getName() + "-tmpDir").makeQualified(localFs);
+  private static Path TEST_ROOT_DIR = localFs.makeQualified(
+      new Path("target", TestMRJobs.class.getName() + "-tmpDir"));
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
   @Before
