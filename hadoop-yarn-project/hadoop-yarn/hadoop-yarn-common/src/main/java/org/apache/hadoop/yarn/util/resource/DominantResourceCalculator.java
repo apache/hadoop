@@ -567,4 +567,11 @@ public class DominantResourceCalculator extends ResourceCalculator {
     }
     return false;
   }
+
+  @Override
+  public Resource normalizeDown(Resource r, Resource stepFactor) {
+    return Resources.createResource(
+        roundDown(r.getMemorySize(), stepFactor.getMemorySize()),
+        roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()));
+  }
 }

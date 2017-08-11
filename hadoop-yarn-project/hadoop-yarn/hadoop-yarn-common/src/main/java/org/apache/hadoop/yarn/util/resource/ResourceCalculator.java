@@ -235,4 +235,16 @@ public abstract class ResourceCalculator {
    * @return returns true if any resource is zero.
    */
   public abstract boolean isAnyMajorResourceZero(Resource resource);
+
+  /**
+   * Get resource <code>r</code>and normalize down using step-factor
+   * <code>stepFactor</code>.
+   *
+   * @param r
+   *          resource to be multiplied
+   * @param stepFactor
+   *          factor by which to normalize down
+   * @return resulting normalized resource
+   */
+  public abstract Resource normalizeDown(Resource r, Resource stepFactor);
 }

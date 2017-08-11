@@ -150,7 +150,7 @@ class CSQueueUtils {
       }
     }
   }
-  
+
   // Set absolute capacities for {capacity, maximum-capacity}
   private static void updateAbsoluteCapacitiesByNodeLabels(
       QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
@@ -180,8 +180,8 @@ class CSQueueUtils {
    * used resource for all partitions of this queue.
    */
   public static void updateUsedCapacity(final ResourceCalculator rc,
-      final Resource totalPartitionResource, String nodePartition,
-      AbstractCSQueue childQueue) {
+      final Resource totalPartitionResource, Resource clusterResource,
+      String nodePartition, AbstractCSQueue childQueue) {
     QueueCapacities queueCapacities = childQueue.getQueueCapacities();
     CSQueueMetrics queueMetrics = childQueue.getMetrics();
     ResourceUsage queueResourceUsage = childQueue.getQueueResourceUsage();
@@ -193,11 +193,8 @@ class CSQueueUtils {
 
     if (Resources.greaterThan(rc, totalPartitionResource,
         totalPartitionResource, Resources.none())) {
-      // queueGuaranteed = totalPartitionedResource *
-      // absolute_capacity(partition)
-      Resource queueGuranteedResource =
-          Resources.multiply(totalPartitionResource,
-              queueCapacities.getAbsoluteCapacity(nodePartition));
+      Resource queueGuranteedResource = childQueue
+          .getEffectiveCapacity(nodePartition);
 
       // make queueGuranteed >= minimum_allocation to avoid divided by 0.
       queueGuranteedResource =
@@ -248,9 +245,7 @@ class CSQueueUtils {
     for (String partition : nodeLabels) {
       // Calculate guaranteed resource for a label in a queue by below logic.
       // (total label resource) * (absolute capacity of label in that queue)
-      Resource queueGuranteedResource = Resources.multiply(nlm
-          .getResourceByLabel(partition, cluster), queue.getQueueCapacities()
-          .getAbsoluteCapacity(partition));
+      Resource queueGuranteedResource = queue.getEffectiveCapacity(partition);
 
       // Available resource in queue for a specific label will be calculated as
       // {(guaranteed resource for a label in a queue) -
@@ -289,15 +284,14 @@ class CSQueueUtils {
     ResourceUsage queueResourceUsage = childQueue.getQueueResourceUsage();
 
     if (nodePartition == null) {
-      for (String partition : Sets.union(
-          queueCapacities.getNodePartitionsSet(),
+      for (String partition : Sets.union(queueCapacities.getNodePartitionsSet(),
           queueResourceUsage.getNodePartitionsSet())) {
         updateUsedCapacity(rc, nlm.getResourceByLabel(partition, cluster),
-            partition, childQueue);
+            cluster, partition, childQueue);
       }
     } else {
       updateUsedCapacity(rc, nlm.getResourceByLabel(nodePartition, cluster),
-          nodePartition, childQueue);
+          cluster, nodePartition, childQueue);
     }
 
     // Update queue metrics w.r.t node labels. In a generic way, we can

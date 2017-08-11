@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
@@ -644,9 +645,11 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
 
     QueueCapacities qc = new QueueCapacities(0 == myLevel);
     ResourceUsage ru = new ResourceUsage();
+    QueueResourceQuotas qr  = new QueueResourceQuotas();
 
     when(queue.getQueueCapacities()).thenReturn(qc);
     when(queue.getQueueResourceUsage()).thenReturn(ru);
+    when(queue.getQueueResourceQuotas()).thenReturn(qr);
 
     LOG.debug("Setup queue, name=" + queue.getQueueName() + " path="
         + queue.getQueuePath());
@@ -679,7 +682,17 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       qc.setAbsoluteMaximumCapacity(partitionName, absMax);
       qc.setAbsoluteUsedCapacity(partitionName, absUsed);
       qc.setUsedCapacity(partitionName, used);
+      qr.setEffectiveMaxResource(parseResourceFromString(values[1].trim()));
+      qr.setEffectiveMinResource(parseResourceFromString(values[0].trim()));
+      qr.setEffectiveMaxResource(partitionName,
+          parseResourceFromString(values[1].trim()));
+      qr.setEffectiveMinResource(partitionName,
+          parseResourceFromString(values[0].trim()));
       when(queue.getUsedCapacity()).thenReturn(used);
+      when(queue.getEffectiveCapacity(partitionName))
+          .thenReturn(parseResourceFromString(values[0].trim()));
+      when(queue.getEffectiveMaxCapacity(partitionName))
+          .thenReturn(parseResourceFromString(values[1].trim()));
       ru.setPending(partitionName, pending);
       // Setup reserved resource if it contained by input config
       Resource reserved = Resources.none();
