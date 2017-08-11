@@ -294,8 +294,9 @@ public class AllocationFileLoaderService extends AbstractService {
           NodeList fields = element.getChildNodes();
           for (int j = 0; j < fields.getLength(); j++) {
             Node fieldNode = fields.item(j);
-            if (!(fieldNode instanceof Element))
+            if (!(fieldNode instanceof Element)) {
               continue;
+            }
             Element field = (Element) fieldNode;
             if ("maxRunningApps".equals(field.getTagName())) {
               String text = ((Text)field.getFirstChild()).getData().trim();
@@ -490,8 +491,9 @@ public class AllocationFileLoaderService extends AbstractService {
 
     for (int j = 0; j < fields.getLength(); j++) {
       Node fieldNode = fields.item(j);
-      if (!(fieldNode instanceof Element))
+      if (!(fieldNode instanceof Element)) {
         continue;
+      }
       Element field = (Element) fieldNode;
       if ("minResources".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
