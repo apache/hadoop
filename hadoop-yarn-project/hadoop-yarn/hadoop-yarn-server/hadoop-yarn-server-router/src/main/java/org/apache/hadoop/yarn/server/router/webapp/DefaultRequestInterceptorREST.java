@@ -30,6 +30,7 @@ import javax.ws.rs.core.Response;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -66,10 +67,23 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
  * implementation that simply forwards the client requests to the resource
  * manager.
  */
-public final class DefaultRequestInterceptorREST
+public class DefaultRequestInterceptorREST
     extends AbstractRESTRequestInterceptor {
 
   private String webAppAddress;
+  private SubClusterId subClusterId = null;
+
+  public void setWebAppAddress(String webAppAddress) {
+    this.webAppAddress = webAppAddress;
+  }
+
+  protected void setSubClusterId(SubClusterId scId) {
+    this.subClusterId = scId;
+  }
+
+  protected SubClusterId getSubClusterId() {
+    return this.subClusterId;
+  }
 
   @Override
   public void init(String user) {
