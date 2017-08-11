@@ -27,8 +27,8 @@ import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * This policy checks at every invocation that a given set of invariants
@@ -78,9 +77,9 @@ public class MetricsInvariantChecker extends InvariantsChecker {
 
   @Override
   public void init(Configuration config, RMContext rmContext,
-      PreemptableResourceScheduler preemptableResourceScheduler) {
+      ResourceScheduler scheduler) {
 
-    super.init(config, rmContext, preemptableResourceScheduler);
+    super.init(config, rmContext, scheduler);
 
     this.metricsSystem = DefaultMetricsSystem.instance();
     this.queueMetrics =

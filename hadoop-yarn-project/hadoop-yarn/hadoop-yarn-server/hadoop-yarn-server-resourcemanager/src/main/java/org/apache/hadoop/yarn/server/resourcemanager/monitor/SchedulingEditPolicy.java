@@ -19,12 +19,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
 public interface SchedulingEditPolicy {
 
   void init(Configuration config, RMContext context,
-      PreemptableResourceScheduler scheduler);
+      ResourceScheduler scheduler);
 
   /**
    * This method is invoked at regular intervals. Internally the policy is
