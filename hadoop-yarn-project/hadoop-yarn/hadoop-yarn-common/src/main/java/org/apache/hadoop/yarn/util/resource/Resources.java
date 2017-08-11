@@ -546,4 +546,9 @@ public class Resources {
       Resource resource) {
     return rc.isAnyMajorResourceZero(resource);
   }
+
+  public static Resource normalizeDown(ResourceCalculator calculator,
+      Resource resource, Resource factor) {
+    return calculator.normalizeDown(resource, factor);
+  }
 }

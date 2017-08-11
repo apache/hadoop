@@ -48,6 +48,9 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
 
   double normalizedGuarantee;
 
+  private Resource effMinRes;
+  private Resource effMaxRes;
+
   final ArrayList<TempQueuePerPartition> children;
   private Collection<TempAppPerPartition> apps;
   LeafQueue leafQueue;
@@ -68,7 +71,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   TempQueuePerPartition(String queueName, Resource current,
       boolean preemptionDisabled, String partition, Resource killable,
       float absCapacity, float absMaxCapacity, Resource totalPartitionResource,
-      Resource reserved, CSQueue queue) {
+      Resource reserved, CSQueue queue, Resource effMinRes,
+      Resource effMaxRes) {
     super(queueName, current, Resource.newInstance(0, 0), reserved,
         Resource.newInstance(0, 0));
 
@@ -95,6 +99,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     this.absCapacity = absCapacity;
     this.absMaxCapacity = absMaxCapacity;
     this.totalPartitionResource = totalPartitionResource;
+    this.effMinRes = effMinRes;
+    this.effMaxRes = effMaxRes;
   }
 
   public void setLeafQueue(LeafQueue l) {
@@ -177,10 +183,18 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   }
 
   public Resource getGuaranteed() {
+    if(!effMinRes.equals(Resources.none())) {
+      return Resources.clone(effMinRes);
+    }
+
     return Resources.multiply(totalPartitionResource, absCapacity);
   }
 
   public Resource getMax() {
+    if(!effMaxRes.equals(Resources.none())) {
+      return Resources.clone(effMaxRes);
+    }
+
     return Resources.multiply(totalPartitionResource, absMaxCapacity);
   }
 

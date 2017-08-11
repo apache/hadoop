@@ -4307,7 +4307,7 @@ public class TestCapacityScheduler {
           null, null, NULL_UPDATE_REQUESTS);
       CapacityScheduler.schedule(cs);
     }
-    assertEquals("P2 Used Resource should be 8 GB", 8 * GB,
+    assertEquals("P2 Used Resource should be 7 GB", 7 * GB,
         cs.getQueue("p2").getUsedResources().getMemorySize());
 
     //Free a container from X1

@@ -20,9 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -121,6 +123,15 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
       // For queue with same used ratio / priority, queue with higher configured
       // capacity goes first
       if (0 == rc) {
+        Resource minEffRes1 = q1.getQueueResourceQuotas()
+            .getConfiguredMinResource(p);
+        Resource minEffRes2 = q2.getQueueResourceQuotas()
+            .getConfiguredMinResource(p);
+        if (!minEffRes1.equals(Resources.none())
+            && !minEffRes2.equals(Resources.none())) {
+          return minEffRes2.compareTo(minEffRes1);
+        }
+
         float abs1 = q1.getQueueCapacities().getAbsoluteCapacity(p);
         float abs2 = q2.getQueueCapacities().getAbsoluteCapacity(p);
         return Float.compare(abs2, abs1);
