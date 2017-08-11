@@ -1317,7 +1317,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // AFTER the initial saving on app-attempt-start
     // These fields can be visible from outside only after they are saved in
     // StateStore
-    String diags = null;
+    BoundedAppender diags = new BoundedAppender(diagnostics.limit);
 
     // don't leave the tracking URL pointing to a non-existent AM
     if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
@@ -1331,15 +1331,15 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     int exitStatus = ContainerExitStatus.INVALID;
     switch (event.getType()) {
     case LAUNCH_FAILED:
-      diags = event.getDiagnosticMsg();
+      diags.append(event.getDiagnosticMsg());
       break;
     case REGISTERED:
-      diags = getUnexpectedAMRegisteredDiagnostics();
+      diags.append(getUnexpectedAMRegisteredDiagnostics());
       break;
     case UNREGISTERED:
       RMAppAttemptUnregistrationEvent unregisterEvent =
           (RMAppAttemptUnregistrationEvent) event;
-      diags = unregisterEvent.getDiagnosticMsg();
+      diags.append(unregisterEvent.getDiagnosticMsg());
       // reset finalTrackingUrl to url sent by am
       finalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
       finalStatus = unregisterEvent.getFinalApplicationStatus();
@@ -1347,16 +1347,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     case CONTAINER_FINISHED:
       RMAppAttemptContainerFinishedEvent finishEvent =
           (RMAppAttemptContainerFinishedEvent) event;
-      diags = getAMContainerCrashedDiagnostics(finishEvent);
+      diags.append(getAMContainerCrashedDiagnostics(finishEvent));
       exitStatus = finishEvent.getContainerStatus().getExitStatus();
       break;
     case KILL:
       break;
     case FAIL:
-      diags = event.getDiagnosticMsg();
+      diags.append(event.getDiagnosticMsg());
       break;
     case EXPIRE:
-      diags = getAMExpiredDiagnostics(event);
+      diags.append(getAMExpiredDiagnostics(event));
       break;
     default:
       break;
@@ -1370,7 +1370,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         ApplicationAttemptStateData.newInstance(
             applicationAttemptId,  getMasterContainer(),
             rmStore.getCredentialsFromAppAttempt(this),
-            startTime, stateToBeStored, finalTrackingUrl, diags,
+            startTime, stateToBeStored, finalTrackingUrl, diags.toString(),
             finalStatus, exitStatus,
           getFinishTime(), resUsage.getMemorySeconds(),
           resUsage.getVcoreSeconds(),
