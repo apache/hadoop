@@ -305,7 +305,7 @@ public class MockResourceManagerFacade implements
         new ArrayList<ContainerStatus>(), containerList,
         new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC, 1, null,
         new ArrayList<NMToken>(), newAMRMToken,
-        new ArrayList<UpdatedContainer>());
+        new ArrayList<UpdatedContainer>(), null);
   }
 
   @Override

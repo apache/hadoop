@@ -297,7 +297,7 @@ public class TestLocalContainerAllocator {
           Resources.none(), null, 1, null,
           Collections.<NMToken>emptyList(),
           yarnToken,
-          Collections.<UpdatedContainer>emptyList());
+          Collections.<UpdatedContainer>emptyList(), null);
       response.setApplicationPriority(Priority.newInstance(0));
       return response;
     }

@@ -23,7 +23,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
@@ -40,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,10 +55,12 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
+import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.timelineservice.collector.NodeTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
@@ -76,7 +82,6 @@ public class TestTimelineAuthFilterForV2 {
 
   private static final String FOO_USER = "foo";
   private static final String HTTP_USER = "HTTP";
-
   private static final File TEST_ROOT_DIR = new File(
       System.getProperty("test.build.dir", "target" + File.separator +
           "test-dir"), UUID.randomUUID().toString());
@@ -88,21 +93,35 @@ public class TestTimelineAuthFilterForV2 {
   private static String httpSpnegoPrincipal = KerberosTestUtils.
       getServerPrincipal();
 
+  // First param indicates whether HTTPS access or HTTP access and second param
+  // indicates whether it is kerberos access or token based access.
   @Parameterized.Parameters
-  public static Collection<Object[]> withSsl() {
-    return Arrays.asList(new Object[][] {{false}, {true}});
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][] {{false, true}, {false, false},
+        {true, false}, {true, true}});
   }
 
   private static MiniKdc testMiniKDC;
   private static String keystoresDir;
   private static String sslConfDir;
   private static Configuration conf;
+  private static UserGroupInformation nonKerberosUser;
+  static {
+    try {
+      nonKerberosUser = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {}
+  }
+  // Indicates whether HTTPS or HTTP access.
   private boolean withSsl;
+  // Indicates whether Kerberos based login is used or token based access is
+  // done.
+  private boolean withKerberosLogin;
   private NodeTimelineCollectorManager collectorManager;
   private PerNodeTimelineCollectorsAuxService auxService;
-
-  public TestTimelineAuthFilterForV2(boolean withSsl) {
+  public TestTimelineAuthFilterForV2(boolean withSsl,
+      boolean withKerberosLogin) {
     this.withSsl = withSsl;
+    this.withKerberosLogin = withKerberosLogin;
   }
 
   @BeforeClass
@@ -143,8 +162,6 @@ public class TestTimelineAuthFilterForV2 {
       conf.set("hadoop.proxyuser.HTTP.hosts", "*");
       conf.set("hadoop.proxyuser.HTTP.users", FOO_USER);
       UserGroupInformation.setConfiguration(conf);
-      SecurityUtil.login(conf, YarnConfiguration.TIMELINE_SERVICE_KEYTAB,
-          YarnConfiguration.TIMELINE_SERVICE_PRINCIPAL, "localhost");
     } catch (Exception e) {
       fail("Couldn't setup TimelineServer V2.");
     }
@@ -166,9 +183,27 @@ public class TestTimelineAuthFilterForV2 {
       conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
           HttpConfig.Policy.HTTP_ONLY.name());
     }
+    UserGroupInformation.setConfiguration(conf);
     collectorManager = new DummyNodeTimelineCollectorManager();
-    auxService = PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
-        collectorManager, conf);
+    auxService = PerNodeTimelineCollectorsAuxService.launchServer(
+        new String[0], collectorManager, conf);
+    if (withKerberosLogin) {
+      SecurityUtil.login(conf, YarnConfiguration.TIMELINE_SERVICE_KEYTAB,
+          YarnConfiguration.TIMELINE_SERVICE_PRINCIPAL, "localhost");
+    }
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    auxService.addApplication(
+        appId, UserGroupInformation.getCurrentUser().getUserName());
+    if (!withKerberosLogin) {
+      AppLevelTimelineCollector collector =
+          (AppLevelTimelineCollector)collectorManager.get(appId);
+      org.apache.hadoop.security.token.Token
+          <TimelineDelegationTokenIdentifier> token =
+              collector.getDelegationTokenForApp();
+      token.setService(new Text("localhost" + token.getService().toString().
+          substring(token.getService().toString().indexOf(":"))));
+      UserGroupInformation.getCurrentUser().addToken(token);
+    }
   }
 
   private TimelineV2Client createTimelineClientForUGI(ApplicationId appId) {
@@ -199,9 +234,14 @@ public class TestTimelineAuthFilterForV2 {
     }
     if (withSsl) {
       KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
-      File base = new File(BASEDIR);
-      FileUtil.fullyDelete(base);
+      FileUtil.fullyDelete(new File(BASEDIR));
     }
+    if (withKerberosLogin) {
+      UserGroupInformation.getCurrentUser().logoutUserFromKeytab();
+    }
+    // Reset the user for next run.
+    UserGroupInformation.setLoginUser(
+        UserGroupInformation.createRemoteUser(nonKerberosUser.getUserName()));
   }
 
   private static TimelineEntity createEntity(String id, String type) {
@@ -241,35 +281,44 @@ public class TestTimelineAuthFilterForV2 {
     }
   }
 
+  private void publishAndVerifyEntity(ApplicationId appId, File entityTypeDir,
+      String entityType) throws Exception {
+    TimelineV2Client client = createTimelineClientForUGI(appId);
+    try {
+    // Sync call. Results available immediately.
+      client.putEntities(createEntity("entity1", entityType));
+      assertEquals(1, entityTypeDir.listFiles().length);
+      verifyEntity(entityTypeDir, "entity1", entityType);
+      // Async call.
+      client.putEntitiesAsync(createEntity("entity2", entityType));
+    } finally {
+      client.stop();
+    }
+  }
+
   @Test
   public void testPutTimelineEntities() throws Exception {
-    final ApplicationId appId = ApplicationId.newInstance(0, 1);
-    auxService.addApplication(appId);
     final String entityType = "dummy_type";
+    final ApplicationId appId = ApplicationId.newInstance(0, 1);
     final File entityTypeDir = new File(TEST_ROOT_DIR.getAbsolutePath() +
         File.separator + "entities" + File.separator +
-        YarnConfiguration.DEFAULT_RM_CLUSTER_ID + File.separator + "test_user" +
+        YarnConfiguration.DEFAULT_RM_CLUSTER_ID + File.separator +
+        UserGroupInformation.getCurrentUser().getUserName() +
         File.separator + "test_flow_name" + File.separator +
         "test_flow_version" + File.separator + "1" + File.separator +
         appId.toString() + File.separator + entityType);
     try {
-      KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          TimelineV2Client client = createTimelineClientForUGI(appId);
-          try {
-            // Sync call. Results available immediately.
-            client.putEntities(createEntity("entity1", entityType));
-            assertEquals(1, entityTypeDir.listFiles().length);
-            verifyEntity(entityTypeDir, "entity1", entityType);
-            // Async call.
-            client.putEntitiesAsync(createEntity("entity2", entityType));
+      if (withKerberosLogin) {
+        KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            publishAndVerifyEntity(appId, entityTypeDir, entityType);
             return null;
-          } finally {
-            client.stop();
           }
-        }
-      });
+        });
+      } else {
+        publishAndVerifyEntity(appId, entityTypeDir, entityType);
+      }
       // Wait for async entity to be published.
       for (int i = 0; i < 50; i++) {
         if (entityTypeDir.listFiles().length == 2) {
@@ -279,6 +328,11 @@ public class TestTimelineAuthFilterForV2 {
       }
       assertEquals(2, entityTypeDir.listFiles().length);
       verifyEntity(entityTypeDir, "entity2", entityType);
+      AppLevelTimelineCollector collector =
+          (AppLevelTimelineCollector)collectorManager.get(appId);
+      auxService.removeApplication(appId);
+      verify(collectorManager.getTokenManagerService()).cancelToken(
+          eq(collector.getDelegationTokenForApp()), any(String.class));
     } finally {
       FileUtils.deleteQuietly(entityTypeDir);
     }
@@ -291,12 +345,19 @@ public class TestTimelineAuthFilterForV2 {
     }
 
     @Override
+    protected TimelineV2DelegationTokenSecretManagerService
+        createTokenManagerService() {
+      return spy(new TimelineV2DelegationTokenSecretManagerService());
+    }
+
+    @Override
     protected CollectorNodemanagerProtocol getNMCollectorService() {
       CollectorNodemanagerProtocol protocol =
           mock(CollectorNodemanagerProtocol.class);
       try {
         GetTimelineCollectorContextResponse response =
-            GetTimelineCollectorContextResponse.newInstance("test_user",
+            GetTimelineCollectorContextResponse.newInstance(
+                UserGroupInformation.getCurrentUser().getUserName(),
                 "test_flow_name", "test_flow_version", 1L);
         when(protocol.getTimelineCollectorContext(any(
             GetTimelineCollectorContextRequest.class))).thenReturn(response);
