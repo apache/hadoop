@@ -213,6 +213,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>target</artifactId>
       <version>2.5.3</version>
       <optional>true</optional>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jctools</groupId>
