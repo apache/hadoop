@@ -35,7 +35,7 @@
 
   <property>
     <name>ozone.handler.type</name>
-    <value>local</value>
+    <value>distributed</value>
     <description>
       The second key dfs.storage.handler.type tells ozone which storage
       handler to use. The possible values are:
@@ -195,7 +195,7 @@
 
   <property>
     <name>ozone.scm.handler.count.key</name>
-    <value>20</value>
+    <value>10</value>
     <description>
       The number of RPC handler threads for each SCM service endpoint.
 
