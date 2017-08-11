@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
+import org.apache.hadoop.ozone.container.common.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 import org.apache.hadoop.ozone.protocol.proto
@@ -45,6 +46,10 @@ import java.util.List;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
 
 /**
  * Ozone main class sets up the network server and initializes the container
@@ -60,6 +65,7 @@ public class OzoneContainer {
   private final XceiverServerSpi server;
   private final ChunkManager chunkManager;
   private final KeyManager keyManager;
+  private final BlockDeletingService blockDeletingService;
 
   /**
    * Creates a network endpoint and enables Ozone container.
@@ -90,6 +96,12 @@ public class OzoneContainer {
     this.keyManager = new KeyManagerImpl(manager, ozoneConfig);
     manager.setKeyManager(this.keyManager);
 
+    int svcInterval = ozoneConfig.getInt(
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
+    this.blockDeletingService = new BlockDeletingService(manager,
+        svcInterval, ozoneConfig);
+
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
 
     final boolean useRatis = ozoneConfig.getBoolean(
@@ -107,6 +119,7 @@ public class OzoneContainer {
    */
   public void start() throws IOException {
     server.start();
+    blockDeletingService.start();
     dispatcher.init();
   }
 
@@ -152,6 +165,7 @@ public class OzoneContainer {
       this.chunkManager.shutdown();
       this.keyManager.shutdown();
       this.manager.shutdown();
+      this.blockDeletingService.shutdown();
       LOG.info("container services shutdown complete.");
     } catch (IOException ex) {
       LOG.warn("container service shutdown error:", ex);

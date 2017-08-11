@@ -360,6 +360,37 @@
   </property>
 
   <property>
+    <name>ozone.block.deleting.service.interval.ms</name>
+    <value>60000</value>
+    <description>
+      Time interval in milliseconds of the block deleting service.
+      The block deleting service runs on each datanode to scan staled
+      blocks and delete them asynchronously.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.block.deleting.limit.per.task</name>
+    <value>1000</value>
+    <description>
+      Maximum number of blocks to be deleted by block deleting service
+      per time interval. This property is used to throttle the actual number
+      of block deletions on a datanode per container.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.block.deleting.container.limit.per.interval</name>
+    <value>10</value>
+    <description>
+      Maximum number of containers to be scanned by block deleting service
+      per time interval. The block deleting service spawns a thread to handle
+      block deletions in a container. This property is used to throttle
+      the number of threads spawned for block deletions.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.container.ipc</name>
     <value>50011</value>
     <description>

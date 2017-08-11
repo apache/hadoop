@@ -94,6 +94,24 @@ public final class OzoneConfigKeys {
       "ozone.client.connection.timeout.ms";
   public static final int OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT = 5000;
 
+  /**
+   * Configuration properties for Ozone Block Deleting Service.
+   */
+  public static final String OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS =
+      "ozone.block.deleting.service.interval.ms";
+  public static final int OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT
+      = 60000;
+
+  public static final String OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER =
+      "ozone.block.deleting.limit.per.task";
+  public static final int OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER_DEFAULT
+      = 1000;
+
+  public static final String OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL
+      = "ozone.block.deleting.container.limit.per.interval";
+  public static final int
+      OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL_DEFAULT = 10;
+
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT

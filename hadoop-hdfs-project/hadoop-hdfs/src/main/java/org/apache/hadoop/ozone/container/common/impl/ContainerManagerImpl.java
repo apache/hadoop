@@ -407,7 +407,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
 
   @VisibleForTesting
-  ConcurrentSkipListMap<String, ContainerStatus> getContainerMap() {
+  public ConcurrentSkipListMap<String, ContainerStatus> getContainerMap() {
     return containerMap;
   }
 
