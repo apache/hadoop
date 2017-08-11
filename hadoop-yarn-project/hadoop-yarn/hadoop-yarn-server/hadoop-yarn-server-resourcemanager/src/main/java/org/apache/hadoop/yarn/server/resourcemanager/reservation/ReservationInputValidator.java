@@ -129,11 +129,12 @@ public class ReservationInputValidator {
               Resources.multiply(rr.getCapability(), rr.getConcurrency()));
     }
     // verify the allocation is possible (skip for ANY)
-    if (contract.getDeadline() - contract.getArrival() < minDuration
+    long duration = contract.getDeadline() - contract.getArrival();
+    if (duration < minDuration
         && type != ReservationRequestInterpreter.R_ANY) {
       message =
           "The time difference ("
-              + (contract.getDeadline() - contract.getArrival())
+              + (duration)
               + ") between arrival (" + contract.getArrival() + ") "
               + "and deadline (" + contract.getDeadline() + ") must "
               + " be greater or equal to the minimum resource duration ("
@@ -158,15 +159,22 @@ public class ReservationInputValidator {
     // check that the recurrence is a positive long value.
     String recurrenceExpression = contract.getRecurrenceExpression();
     try {
-      Long recurrence = Long.parseLong(recurrenceExpression);
+      long recurrence = Long.parseLong(recurrenceExpression);
       if (recurrence < 0) {
         message = "Negative Period : " + recurrenceExpression + ". Please try"
-            + " again with a non-negative long value as period";
+            + " again with a non-negative long value as period.";
+        throw RPCUtil.getRemoteException(message);
+      }
+      // verify duration is less than recurrence for periodic reservations
+      if (recurrence > 0 && duration > recurrence) {
+        message = "Duration of the requested reservation: " + duration
+            + " is greater than the recurrence: " + recurrence
+            + ". Please try again with a smaller duration.";
         throw RPCUtil.getRemoteException(message);
       }
     } catch (NumberFormatException e) {
       message = "Invalid period " + recurrenceExpression + ". Please try"
-          + " again with a non-negative long value as period";
+          + " again with a non-negative long value as period.";
       throw RPCUtil.getRemoteException(message);
     }
   }
