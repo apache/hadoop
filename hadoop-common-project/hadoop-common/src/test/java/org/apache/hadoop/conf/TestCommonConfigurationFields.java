@@ -105,6 +105,18 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("s3.");
     xmlPrefixToSkipCompare.add("s3native.");
 
+    // WASB properties are in a different subtree.
+    // - org.apache.hadoop.fs.azure.NativeAzureFileSystem
+    xmlPrefixToSkipCompare.add("fs.wasb.impl");
+    xmlPrefixToSkipCompare.add("fs.wasbs.impl");
+    xmlPrefixToSkipCompare.add("fs.azure.");
+
+    // ADL properties are in a different subtree
+    // - org.apache.hadoop.hdfs.web.ADLConfKeys
+    xmlPrefixToSkipCompare.add("adl.");
+    xmlPrefixToSkipCompare.add("fs.adl.");
+    xmlPropsToSkipCompare.add("fs.AbstractFileSystem.adl.impl");
+
     // Azure properties are in a different class
     // - org.apache.hadoop.fs.azure.AzureNativeFileSystemStore
     // - org.apache.hadoop.fs.azure.SASKeyGeneratorImpl
