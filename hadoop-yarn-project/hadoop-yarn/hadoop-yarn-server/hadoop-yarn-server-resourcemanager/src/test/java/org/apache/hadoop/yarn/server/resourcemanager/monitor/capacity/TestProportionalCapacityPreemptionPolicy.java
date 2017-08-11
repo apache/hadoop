@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -48,7 +49,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preempti
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.Clock;
@@ -437,8 +437,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     policy.editSchedule();
     // queueF(appD) wants resources, Verify that resources come from queueE(appC)
     // because it's a sibling and queueB(appA) because queueA is over capacity.
-    verify(mDisp, times(28)).handle(argThat(new IsPreemptionRequestFor(appA)));
-    verify(mDisp, times(22)).handle(argThat(new IsPreemptionRequestFor(appC)));
+    verify(mDisp, times(27)).handle(argThat(new IsPreemptionRequestFor(appA)));
+    verify(mDisp, times(23)).handle(argThat(new IsPreemptionRequestFor(appC)));
 
     // Need to call setup() again to reset mDisp
     setup();
@@ -1202,6 +1202,17 @@ public class TestProportionalCapacityPreemptionPolicy {
     when(root.getQueuePath()).thenReturn(CapacitySchedulerConfiguration.ROOT);
     boolean preemptionDisabled = mockPreemptionStatus("root");
     when(root.getPreemptionDisabled()).thenReturn(preemptionDisabled);
+    QueueResourceQuotas rootQr = new QueueResourceQuotas();
+    rootQr.setEffectiveMaxResource(Resource.newInstance(maxCap[0], 0));
+    rootQr.setEffectiveMinResource(abs[0]);
+    rootQr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
+        Resource.newInstance(maxCap[0], 0));
+    rootQr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, abs[0]);
+    when(root.getQueueResourceQuotas()).thenReturn(rootQr);
+    when(root.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(abs[0]);
+    when(root.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resource.newInstance(maxCap[0], 0));
 
     for (int i = 1; i < queues.length; ++i) {
       final CSQueue q;
@@ -1231,6 +1242,18 @@ public class TestProportionalCapacityPreemptionPolicy {
       qc.setAbsoluteCapacity(Resources.divide(rc, tot, abs[i], tot));
       qc.setAbsoluteMaximumCapacity(maxCap[i] / (float) tot.getMemorySize());
       when(q.getQueueCapacities()).thenReturn(qc);
+
+      QueueResourceQuotas qr = new QueueResourceQuotas();
+      qr.setEffectiveMaxResource(Resource.newInstance(maxCap[i], 0));
+      qr.setEffectiveMinResource(abs[i]);
+      qr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
+          Resource.newInstance(maxCap[i], 0));
+      qr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, abs[i]);
+      when(q.getQueueResourceQuotas()).thenReturn(qr);
+      when(q.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+          .thenReturn(abs[i]);
+      when(q.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+          .thenReturn(Resource.newInstance(maxCap[i], 0));
 
       String parentPathName = p.getQueuePath();
       parentPathName = (parentPathName == null) ? "root" : parentPathName;

@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -600,6 +601,7 @@ public class TestApplicationLimitsByPartition {
     RMContext spyRMContext = spy(rmContext);
     when(spyRMContext.getNodeLabelManager()).thenReturn(mgr);
     when(csContext.getRMContext()).thenReturn(spyRMContext);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
 
     mgr.activateNode(NodeId.newInstance("h0", 0),
         Resource.newInstance(160 * GB, 16)); // default Label
@@ -615,6 +617,8 @@ public class TestApplicationLimitsByPartition {
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
+    rootQueue.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     ResourceUsage queueResUsage = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())

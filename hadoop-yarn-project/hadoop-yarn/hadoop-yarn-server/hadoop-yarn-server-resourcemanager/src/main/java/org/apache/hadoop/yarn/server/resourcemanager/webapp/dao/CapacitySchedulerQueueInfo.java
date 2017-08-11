@@ -62,6 +62,8 @@ public class CapacitySchedulerQueueInfo {
   protected long pendingContainers;
   protected QueueCapacitiesInfo capacities;
   protected ResourcesInfo resources;
+  protected ResourceInfo minEffectiveCapacity;
+  protected ResourceInfo maxEffectiveCapacity;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -105,6 +107,11 @@ public class CapacitySchedulerQueueInfo {
 
     ResourceUsage queueResourceUsage = q.getQueueResourceUsage();
     populateQueueResourceUsage(queueResourceUsage);
+
+    minEffectiveCapacity = new ResourceInfo(
+        q.getQueueResourceQuotas().getEffectiveMinResource());
+    maxEffectiveCapacity = new ResourceInfo(
+        q.getQueueResourceQuotas().getEffectiveMaxResource());
   }
 
   protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
@@ -199,5 +206,13 @@ public class CapacitySchedulerQueueInfo {
 
   public ResourcesInfo getResources() {
     return resources;
+  }
+
+  public ResourceInfo getMinEffectiveCapacity(){
+    return minEffectiveCapacity;
+  }
+
+  public ResourceInfo getMaxEffectiveCapacity(){
+    return maxEffectiveCapacity;
   }
 }

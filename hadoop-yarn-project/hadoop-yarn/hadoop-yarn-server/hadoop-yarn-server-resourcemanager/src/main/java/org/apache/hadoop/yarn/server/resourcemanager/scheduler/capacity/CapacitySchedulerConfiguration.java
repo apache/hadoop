@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -60,6 +61,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -317,6 +320,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = -1;
 
+  /** Configuring absolute min/max resources in a queue **/
+  @Private
+  public static final String MINIMUM_RESOURCE = "min-resource";
+
+  @Private
+  public static final String MAXIMUM_RESOURCE = "max-resource";
+
+  public static final String DEFAULT_RESOURCE_TYPES = "memory,vcores";
+
+  public static final String PATTERN_FOR_ABSOLUTE_RESOURCE = "\\[([^\\]]+)";
+
+  public enum AbsoluteResourceType {
+    MEMORY, VCORES;
+  }
+
   AppPriorityACLConfigurationParser priorityACLConfig = new AppPriorityACLConfigurationParser();
 
   public CapacitySchedulerConfiguration() {
@@ -394,7 +412,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   
   public float getNonLabeledQueueCapacity(String queue) {
     float capacity = queue.equals("root") ? 100.0f : getFloat(
-        getQueuePrefix(queue) + CAPACITY, UNDEFINED);
+        getQueuePrefix(queue) + CAPACITY, 0f);
     if (capacity < MINIMUM_CAPACITY_VALUE || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException("Illegal " +
       		"capacity of " + capacity + " for queue " + queue);
@@ -1675,5 +1693,164 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
     setMaximumCapacity(leafQueueConfPrefix, val);
+  }
+
+  public static String getUnits(String resourceValue) {
+    String units;
+    for (int i = 0; i < resourceValue.length(); i++) {
+      if (Character.isAlphabetic(resourceValue.charAt(i))) {
+        units = resourceValue.substring(i);
+        if (StringUtils.isAlpha(units)) {
+          return units;
+        }
+      }
+    }
+    return "";
+  }
+
+  /**
+   * Get absolute minimum resource requirement for a queue.
+   *
+   * @param label
+   *          NodeLabel
+   * @param queue
+   *          queue path
+   * @param resourceTypes
+   *          Resource types
+   * @return ResourceInformation
+   */
+  public Resource getMinimumResourceRequirement(String label, String queue,
+      Set<String> resourceTypes) {
+    return internalGetLabeledResourceRequirementForQueue(queue, label,
+        resourceTypes, MINIMUM_RESOURCE);
+  }
+
+  /**
+   * Get absolute maximum resource requirement for a queue.
+   *
+   * @param label
+   *          NodeLabel
+   * @param queue
+   *          queue path
+   * @param resourceTypes
+   *          Resource types
+   * @return Resource
+   */
+  public Resource getMaximumResourceRequirement(String label, String queue,
+      Set<String> resourceTypes) {
+    return internalGetLabeledResourceRequirementForQueue(queue, label,
+        resourceTypes, MAXIMUM_RESOURCE);
+  }
+
+  @VisibleForTesting
+  public void setMinimumResourceRequirement(String label, String queue,
+      Resource resource) {
+    updateMinMaxResourceToConf(label, queue, resource, MINIMUM_RESOURCE);
+  }
+
+  @VisibleForTesting
+  public void setMaximumResourceRequirement(String label, String queue,
+      Resource resource) {
+    updateMinMaxResourceToConf(label, queue, resource, MAXIMUM_RESOURCE);
+  }
+
+  private void updateMinMaxResourceToConf(String label, String queue,
+      Resource resource, String type) {
+    if (queue.equals("root")) {
+      throw new IllegalArgumentException(
+          "Cannot set resource, root queue will take 100% of cluster capacity");
+    }
+
+    StringBuilder resourceString = new StringBuilder();
+    resourceString
+        .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
+            + resource.getMemorySize() + ","
+            + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
+            + resource.getVirtualCores() + "]");
+
+    String prefix = getQueuePrefix(queue) + type;
+    if (!label.isEmpty()) {
+      prefix = getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label
+          + DOT + type;
+    }
+    set(prefix, resourceString.toString());
+  }
+
+  private Resource internalGetLabeledResourceRequirementForQueue(String queue,
+      String label, Set<String> resourceTypes, String suffix) {
+    String propertyName = getNodeLabelPrefix(queue, label) + suffix;
+    String resourceString = get(propertyName);
+    if (resourceString == null || resourceString.isEmpty()) {
+      return Resources.none();
+    }
+
+    // Define resource here.
+    Resource resource = Resource.newInstance(0l, 0);
+    Matcher matcher = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE)
+        .matcher(resourceString);
+    /*
+     * Absolute resource configuration for a queue will be grouped by "[]".
+     * Syntax of absolute resource config could be like below
+     * "memory=4Gi vcores=2". Ideally this means "4GB of memory and 2 vcores".
+     */
+    if (matcher.find()) {
+      // Get the sub-group.
+      String subGroup = matcher.group(1);
+      if (subGroup.trim().isEmpty()) {
+        return Resources.none();
+      }
+
+      for (String kvPair : subGroup.trim().split(",")) {
+        String[] splits = kvPair.split("=");
+
+        // Ensure that each sub string is key value pair separated by '='.
+        if (splits != null && splits.length > 1) {
+          updateResourceValuesFromConfig(resourceTypes, resource, splits);
+        }
+      }
+    }
+
+    // Memory has to be configured always.
+    if (resource.getMemorySize() == 0l) {
+      return Resources.none();
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("CSConf - getAbsolueResourcePerQueue: prefix="
+          + getNodeLabelPrefix(queue, label) + ", capacity=" + resource);
+    }
+    return resource;
+  }
+
+  private void updateResourceValuesFromConfig(Set<String> resourceTypes,
+      Resource resource, String[] splits) {
+
+    // If key is not a valid type, skip it.
+    if (!resourceTypes.contains(splits[0])) {
+      return;
+    }
+
+    String units = getUnits(splits[1]);
+    Long resourceValue = Long
+        .valueOf(splits[1].substring(0, splits[1].length() - units.length()));
+
+    // Convert all incoming units to MB if units is configured.
+    if (!units.isEmpty()) {
+      resourceValue = UnitsConversionUtil.convert(units, "Mi", resourceValue);
+    }
+
+    // map it based on key.
+    AbsoluteResourceType resType = AbsoluteResourceType
+        .valueOf(StringUtils.toUpperCase(splits[0].trim()));
+    switch (resType) {
+      case MEMORY :
+        resource.setMemorySize(resourceValue);
+        break;
+      case VCORES :
+        resource.setVirtualCores(resourceValue.intValue());
+        break;
+      default :
+        break;
+    }
   }
 }
