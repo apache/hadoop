@@ -26,32 +26,35 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ContainerQueuingLimitProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -158,6 +161,8 @@ public class NodeHeartbeatResponsePBImpl extends
       builder.addAppCollectors(AppCollectorDataProto.newBuilder()
           .setAppId(convertToProtoFormat(entry.getKey()))
           .setAppCollectorAddr(data.getCollectorAddr())
+          .setAppCollectorToken(
+              convertToProtoFormat(entry.getValue().getCollectorToken()))
           .setRmIdentifier(data.getRMIdentifier())
           .setVersion(data.getVersion()));
     }
@@ -663,8 +668,10 @@ public class NodeHeartbeatResponsePBImpl extends
       this.appCollectorsMap = new HashMap<>();
       for (AppCollectorDataProto c : list) {
         ApplicationId appId = convertFromProtoFormat(c.getAppId());
+        Token collectorToken = convertFromProtoFormat(c.getAppCollectorToken());
         AppCollectorData data = AppCollectorData.newInstance(appId,
-            c.getAppCollectorAddr(), c.getRmIdentifier(), c.getVersion());
+            c.getAppCollectorAddr(), c.getRmIdentifier(), c.getVersion(),
+            collectorToken);
         this.appCollectorsMap.put(appId, data);
       }
     }
@@ -843,6 +850,14 @@ public class NodeHeartbeatResponsePBImpl extends
   private SignalContainerRequestProto convertToProtoFormat(
       SignalContainerRequest t) {
     return ((SignalContainerRequestPBImpl)t).getProto();
+  }
+
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl) t).getProto();
+  }
+
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 }
 

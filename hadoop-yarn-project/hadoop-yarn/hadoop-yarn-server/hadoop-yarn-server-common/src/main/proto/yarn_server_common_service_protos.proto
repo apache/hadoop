@@ -22,6 +22,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.yarn;
 
+import "Security.proto";
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
 import "yarn_service_protos.proto";
@@ -140,6 +141,7 @@ message AppCollectorDataProto {
   optional string app_collector_addr = 2;
   optional int64 rm_identifier = 3 [default = -1];
   optional int64 version = 4 [default = -1];
+  optional hadoop.common.TokenProto app_collector_token = 5;
 }
 
 //////////////////////////////////////////////////////

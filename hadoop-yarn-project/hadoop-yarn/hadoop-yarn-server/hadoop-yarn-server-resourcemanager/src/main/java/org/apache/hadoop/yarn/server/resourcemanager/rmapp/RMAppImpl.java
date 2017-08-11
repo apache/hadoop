@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -163,6 +164,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private int firstAttemptIdInStateStore = 1;
   private int nextAttemptId = 1;
   private AppCollectorData collectorData;
+  private CollectorInfo collectorInfo;
   // This field isn't protected by readlock now.
   private volatile RMAppAttempt currentAttempt;
   private String queue;
@@ -526,7 +528,7 @@ public class RMAppImpl implements RMApp, Recoverable {
    */
   public void startTimelineCollector() {
     AppLevelTimelineCollector collector =
-        new AppLevelTimelineCollector(applicationId);
+        new AppLevelTimelineCollector(applicationId, user);
     rmContext.getRMTimelineCollectorManager().putIfAbsent(
         applicationId, collector);
   }
@@ -614,6 +616,12 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   public void setCollectorData(AppCollectorData incomingData) {
     this.collectorData = incomingData;
+    this.collectorInfo = CollectorInfo.newInstance(
+        incomingData.getCollectorAddr(), incomingData.getCollectorToken());
+  }
+
+  public CollectorInfo getCollectorInfo() {
+    return this.collectorInfo;
   }
 
   public void removeCollectorData() {

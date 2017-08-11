@@ -24,9 +24,12 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -41,18 +44,39 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   private static final Log LOG = LogFactory.getLog(TimelineCollector.class);
 
   private final ApplicationId appId;
+  private final String appUser;
   private final TimelineCollectorContext context;
   private UserGroupInformation currentUser;
+  private Token<TimelineDelegationTokenIdentifier> delegationTokenForApp;
 
   public AppLevelTimelineCollector(ApplicationId appId) {
+    this(appId, null);
+  }
+
+  public AppLevelTimelineCollector(ApplicationId appId, String user) {
     super(AppLevelTimelineCollector.class.getName() + " - " + appId.toString());
     Preconditions.checkNotNull(appId, "AppId shouldn't be null");
     this.appId = appId;
+    this.appUser = user;
     context = new TimelineCollectorContext();
   }
 
   public UserGroupInformation getCurrentUser() {
     return currentUser;
+  }
+
+  public String getAppUser() {
+    return appUser;
+  }
+
+  void setDelegationTokenForApp(
+      Token<TimelineDelegationTokenIdentifier> token) {
+    this.delegationTokenForApp = token;
+  }
+
+  @VisibleForTesting
+  public Token<TimelineDelegationTokenIdentifier> getDelegationTokenForApp() {
+    return this.delegationTokenForApp;
   }
 
   @Override

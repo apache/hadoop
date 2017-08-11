@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -37,11 +38,11 @@ public abstract class ReportNewCollectorInfoRequest {
   }
 
   public static ReportNewCollectorInfoRequest newInstance(
-      ApplicationId id, String collectorAddr) {
+      ApplicationId id, String collectorAddr, Token token) {
     ReportNewCollectorInfoRequest request =
         Records.newRecord(ReportNewCollectorInfoRequest.class);
     request.setAppCollectorsList(
-        Arrays.asList(AppCollectorData.newInstance(id, collectorAddr)));
+        Arrays.asList(AppCollectorData.newInstance(id, collectorAddr, token)));
     return request;
   }
 

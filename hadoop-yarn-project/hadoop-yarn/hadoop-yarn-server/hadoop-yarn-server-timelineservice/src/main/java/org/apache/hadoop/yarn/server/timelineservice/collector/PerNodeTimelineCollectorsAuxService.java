@@ -114,11 +114,12 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    * exists, no new service is created.
    *
    * @param appId Application Id to be added.
+   * @param user Application Master container user.
    * @return whether it was added successfully
    */
-  public boolean addApplication(ApplicationId appId) {
+  public boolean addApplication(ApplicationId appId, String user) {
     AppLevelTimelineCollector collector =
-        new AppLevelTimelineCollectorWithAgg(appId);
+        new AppLevelTimelineCollectorWithAgg(appId, user);
     return (collectorManager.putIfAbsent(appId, collector)
         == collector);
   }
@@ -147,7 +148,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
-      addApplication(appId);
+      addApplication(appId, context.getUser());
     }
   }
 
