@@ -19,10 +19,11 @@ package org.apache.hadoop.yarn.server.api.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
-
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProtoOrBuilder;
@@ -43,6 +44,7 @@ public class AppCollectorDataPBImpl extends AppCollectorData {
   private String collectorAddr = null;
   private Long rmIdentifier = null;
   private Long version = null;
+  private Token collectorToken = null;
 
   public AppCollectorDataPBImpl() {
     builder = AppCollectorDataProto.newBuilder();
@@ -158,6 +160,24 @@ public class AppCollectorDataPBImpl extends AppCollectorData {
     builder.setVersion(version);
   }
 
+  @Override
+  public Token getCollectorToken() {
+    AppCollectorDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.collectorToken == null && p.hasAppCollectorToken()) {
+      this.collectorToken = new TokenPBImpl(p.getAppCollectorToken());
+    }
+    return this.collectorToken;
+  }
+
+  @Override
+  public void setCollectorToken(Token token) {
+    maybeInitBuilder();
+    if (token == null) {
+      builder.clearAppCollectorToken();
+    }
+    this.collectorToken = token;
+  }
+
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);
   }
@@ -195,6 +215,9 @@ public class AppCollectorDataPBImpl extends AppCollectorData {
     if (this.version != null) {
       builder.setVersion(this.version);
     }
+    if (this.collectorToken != null) {
+      builder.setAppCollectorToken(
+          ((TokenPBImpl)this.collectorToken).getProto());
+    }
   }
-
 }

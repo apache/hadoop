@@ -56,8 +56,8 @@ public class AppLevelTimelineCollectorWithAgg
   private ScheduledThreadPoolExecutor appAggregationExecutor;
   private AppLevelAggregator appAggregator;
 
-  public AppLevelTimelineCollectorWithAgg(ApplicationId appId) {
-    super(appId);
+  public AppLevelTimelineCollectorWithAgg(ApplicationId appId, String user) {
+    super(appId, user);
   }
 
   private static Set<String> initializeSkipSet() {

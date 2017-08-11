@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.api.records;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
 
 
@@ -31,20 +32,32 @@ public abstract class AppCollectorData {
   protected static final long DEFAULT_TIMESTAMP_VALUE = -1;
 
   public static AppCollectorData newInstance(
-      ApplicationId id, String collectorAddr, long rmIdentifier, long version) {
+      ApplicationId id, String collectorAddr, long rmIdentifier, long version,
+      Token token) {
     AppCollectorData appCollectorData =
         Records.newRecord(AppCollectorData.class);
     appCollectorData.setApplicationId(id);
     appCollectorData.setCollectorAddr(collectorAddr);
     appCollectorData.setRMIdentifier(rmIdentifier);
     appCollectorData.setVersion(version);
+    appCollectorData.setCollectorToken(token);
     return appCollectorData;
+  }
+
+  public static AppCollectorData newInstance(
+      ApplicationId id, String collectorAddr, long rmIdentifier, long version) {
+    return newInstance(id, collectorAddr, rmIdentifier, version, null);
+  }
+
+  public static AppCollectorData newInstance(ApplicationId id,
+      String collectorAddr, Token token) {
+    return newInstance(id, collectorAddr, DEFAULT_TIMESTAMP_VALUE,
+        DEFAULT_TIMESTAMP_VALUE, token);
   }
 
   public static AppCollectorData newInstance(ApplicationId id,
       String collectorAddr) {
-    return newInstance(id, collectorAddr, DEFAULT_TIMESTAMP_VALUE,
-        DEFAULT_TIMESTAMP_VALUE);
+    return newInstance(id, collectorAddr, null);
   }
 
   /**
@@ -101,4 +114,12 @@ public abstract class AppCollectorData {
 
   public abstract void setVersion(long version);
 
+  /**
+   * Get delegation token for app collector which AM will use to publish
+   * entities.
+   * @return the delegation token for app collector.
+   */
+  public abstract Token getCollectorToken();
+
+  public abstract void setCollectorToken(Token token);
 }

@@ -860,13 +860,16 @@ public class RMContainerAllocator extends RMContainerRequestor
     handleUpdatedNodes(response);
     handleJobPriorityChange(response);
     // handle receiving the timeline collector address for this app
-    String collectorAddr = response.getCollectorAddr();
+    String collectorAddr = null;
+    if (response.getCollectorInfo() != null) {
+      collectorAddr = response.getCollectorInfo().getCollectorAddr();
+    }
+
     MRAppMaster.RunningAppContext appContext =
         (MRAppMaster.RunningAppContext)this.getContext();
     if (collectorAddr != null && !collectorAddr.isEmpty()
         && appContext.getTimelineV2Client() != null) {
-      appContext.getTimelineV2Client().setTimelineServiceAddress(
-          response.getCollectorAddr());
+      appContext.getTimelineV2Client().setTimelineServiceAddress(collectorAddr);
     }
 
     for (ContainerStatus cont : finishedContainers) {

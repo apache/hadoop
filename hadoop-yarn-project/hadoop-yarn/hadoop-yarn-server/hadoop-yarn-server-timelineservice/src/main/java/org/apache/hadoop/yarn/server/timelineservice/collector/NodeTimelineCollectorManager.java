@@ -30,14 +30,17 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
@@ -71,6 +74,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
 
   private final boolean runningAsAuxService;
 
+  private UserGroupInformation loginUGI;
+
   static final String COLLECTOR_MANAGER_ATTR_KEY = "collector.manager";
 
   @VisibleForTesting
@@ -85,23 +90,38 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    tokenMgrService = new TimelineV2DelegationTokenSecretManagerService();
+    tokenMgrService = createTokenManagerService();
     addService(tokenMgrService);
+    this.loginUGI = UserGroupInformation.getCurrentUser();
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
-    if (UserGroupInformation.isSecurityEnabled() && !runningAsAuxService) {
+    if (UserGroupInformation.isSecurityEnabled()) {
       // Do security login for cases where collector is running outside NM.
-      try {
-        doSecureLogin();
-      } catch(IOException ie) {
-        throw new YarnRuntimeException("Failed to login", ie);
+      if (!runningAsAuxService) {
+        try {
+          doSecureLogin();
+        } catch(IOException ie) {
+          throw new YarnRuntimeException("Failed to login", ie);
+        }
       }
+      this.loginUGI = UserGroupInformation.getLoginUser();
     }
     super.serviceStart();
     startWebApp();
+  }
+
+  protected TimelineV2DelegationTokenSecretManagerService
+      createTokenManagerService() {
+    return new TimelineV2DelegationTokenSecretManagerService();
+  }
+
+  @VisibleForTesting
+  public TimelineV2DelegationTokenSecretManagerService
+      getTokenManagerService() {
+    return tokenMgrService;
   }
 
   private void doSecureLogin() throws IOException {
@@ -122,17 +142,61 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     super.serviceStop();
   }
 
+  @VisibleForTesting
+  public Token<TimelineDelegationTokenIdentifier> generateTokenForAppCollector(
+      String user) {
+    Token<TimelineDelegationTokenIdentifier> token  = tokenMgrService.
+        generateToken(UserGroupInformation.createRemoteUser(user),
+            loginUGI.getShortUserName());
+    token.setService(new Text(timelineRestServerBindAddress));
+    return token;
+  }
+
+  @VisibleForTesting
+  public void cancelTokenForAppCollector(
+      AppLevelTimelineCollector appCollector) throws IOException {
+    if (appCollector.getDelegationTokenForApp() != null) {
+      tokenMgrService.cancelToken(appCollector.getDelegationTokenForApp(),
+          appCollector.getAppUser());
+    }
+  }
+
   @Override
   protected void doPostPut(ApplicationId appId, TimelineCollector collector) {
     try {
       // Get context info from NM
       updateTimelineCollectorContext(appId, collector);
+      // Generate token for app collector.
+      org.apache.hadoop.yarn.api.records.Token token = null;
+      if (UserGroupInformation.isSecurityEnabled() &&
+          collector instanceof AppLevelTimelineCollector) {
+        AppLevelTimelineCollector appCollector =
+            (AppLevelTimelineCollector)collector;
+        Token<TimelineDelegationTokenIdentifier> timelineToken =
+            generateTokenForAppCollector(appCollector.getAppUser());
+        appCollector.setDelegationTokenForApp(timelineToken);
+        token = org.apache.hadoop.yarn.api.records.Token.newInstance(
+            timelineToken.getIdentifier(), timelineToken.getKind().toString(),
+            timelineToken.getPassword(), timelineToken.getService().toString());
+      }
       // Report to NM if a new collector is added.
-      reportNewCollectorToNM(appId);
+      reportNewCollectorToNM(appId, token);
     } catch (YarnException | IOException e) {
       // throw exception here as it cannot be used if failed communicate with NM
       LOG.error("Failed to communicate with NM Collector Service for " + appId);
       throw new YarnRuntimeException(e);
+    }
+  }
+
+  @Override
+  protected void postRemove(ApplicationId appId, TimelineCollector collector) {
+    if (collector instanceof AppLevelTimelineCollector) {
+      try {
+        cancelTokenForAppCollector((AppLevelTimelineCollector)collector);
+      } catch (IOException e) {
+        LOG.warn("Failed to cancel token for app collector with appId " +
+            appId, e);
+      }
     }
   }
 
@@ -180,11 +244,12 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
         timelineRestServerBindAddress);
   }
 
-  private void reportNewCollectorToNM(ApplicationId appId)
+  private void reportNewCollectorToNM(ApplicationId appId,
+      org.apache.hadoop.yarn.api.records.Token token)
       throws YarnException, IOException {
     ReportNewCollectorInfoRequest request =
         ReportNewCollectorInfoRequest.newInstance(appId,
-            this.timelineRestServerBindAddress);
+            this.timelineRestServerBindAddress, token);
     LOG.info("Report a new collector for application: " + appId +
         " to the NM Collector Service.");
     getNMCollectorService().reportNewCollectorInfo(request);

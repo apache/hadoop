@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.security;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineDelgationTokenSecretManagerService;
@@ -41,6 +46,17 @@ public class TimelineV2DelegationTokenSecretManagerService extends
           long tokenRemovalScanInterval) {
     return new TimelineV2DelegationTokenSecretManager(secretKeyInterval,
         tokenMaxLifetime, tokenRenewInterval, tokenRemovalScanInterval);
+  }
+
+  public Token<TimelineDelegationTokenIdentifier> generateToken(
+      UserGroupInformation ugi, String renewer) {
+    return ((TimelineV2DelegationTokenSecretManager)
+        getTimelineDelegationTokenSecretManager()).generateToken(ugi, renewer);
+  }
+
+  public void cancelToken(Token<TimelineDelegationTokenIdentifier> token,
+      String canceller) throws IOException {
+    getTimelineDelegationTokenSecretManager().cancelToken(token, canceller);
   }
 
   /**
@@ -68,6 +84,21 @@ public class TimelineV2DelegationTokenSecretManagerService extends
         long delegationTokenRemoverScanInterval) {
       super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
           delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+    }
+
+    public Token<TimelineDelegationTokenIdentifier> generateToken(
+        UserGroupInformation ugi, String renewer) {
+      Text realUser = null;
+      if (ugi.getRealUser() != null) {
+        realUser = new Text(ugi.getRealUser().getUserName());
+      }
+      TimelineDelegationTokenIdentifier identifier = createIdentifier();
+      identifier.setOwner(new Text(ugi.getUserName()));
+      identifier.setRenewer(new Text(renewer));
+      identifier.setRealUser(realUser);
+      byte[] password = createPassword(identifier);
+      return new Token<TimelineDelegationTokenIdentifier>(identifier.getBytes(),
+          password, identifier.getKind(), null);
     }
 
     @Override

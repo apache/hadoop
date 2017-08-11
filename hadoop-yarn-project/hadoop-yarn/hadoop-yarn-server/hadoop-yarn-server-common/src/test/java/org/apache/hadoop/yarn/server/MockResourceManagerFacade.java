@@ -418,10 +418,11 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     // Always issue a new AMRMToken as if RM rolled master key
     Token newAMRMToken = Token.newInstance(new byte[0], "", new byte[0], "");
 
-    return AllocateResponse.newInstance(0, new ArrayList<ContainerStatus>(),
-        containerList, new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC,
-        1, null, new ArrayList<NMToken>(), newAMRMToken,
-        new ArrayList<UpdatedContainer>());
+    return AllocateResponse.newInstance(0,
+        new ArrayList<ContainerStatus>(), containerList,
+        new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC, 1, null,
+        new ArrayList<NMToken>(), newAMRMToken,
+        new ArrayList<UpdatedContainer>(), null);
   }
 
   @Override

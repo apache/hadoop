@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -187,13 +188,23 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * only if the timeline service v.2 is enabled.
    *
    * @return the data for the application's collector, including collector
-   * address, collector ID. Return null if the timeline service v.2 is not
-   * enabled.
+   * address, RM ID, version and collector token. Return null if the timeline
+   * service v.2 is not enabled.
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   AppCollectorData getCollectorData();
 
+  /**
+   * The timeline collector information to be sent to AM. It should be used
+   * only if the timeline service v.2 is enabled.
+   *
+   * @return collector info, including collector address and collector token.
+   * Return null if the timeline service v.2 is not enabled.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  CollectorInfo getCollectorInfo();
   /**
    * The original tracking url for the application master.
    * @return the original tracking url for the application master.
