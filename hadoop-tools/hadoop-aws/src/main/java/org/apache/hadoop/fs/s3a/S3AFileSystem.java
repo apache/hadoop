@@ -295,6 +295,7 @@ public class S3AFileSystem extends FileSystem {
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
+
   }
 
   /**
@@ -838,8 +839,8 @@ public class S3AFileSystem extends FileSystem {
       srcPaths = new HashSet<>(); // srcPaths need fast look up before put
       dstMetas = new ArrayList<>();
     }
-    // HADOOP-13761 s3guard: retries when source paths are not visible yet
-    // TODO s3guard: performance: mark destination dirs as authoritative
+    // TODO S3Guard HADOOP-13761: retries when source paths are not visible yet
+    // TODO S3Guard: performance: mark destination dirs as authoritative
 
     // Ok! Time to start
     if (srcStatus.isFile()) {
@@ -904,6 +905,8 @@ public class S3AFileSystem extends FileSystem {
         copyFile(key, newDstKey, length);
 
         if (hasMetadataStore()) {
+          // with a metadata store, the object entries need to be updated,
+          // including, potentially, the ancestors
           Path childSrc = keyToQualifiedPath(key);
           Path childDst = keyToQualifiedPath(newDstKey);
           if (objectRepresentsDirectory(key, length)) {
@@ -960,12 +963,18 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * Does this Filesystem have a metadata store?
-   * @return true if the FS has been instantiated with a metadata store
+   * @return true iff the FS has been instantiated with a metadata store
    */
   public boolean hasMetadataStore() {
     return !S3Guard.isNullMetadataStore(metadataStore);
   }
 
+  /**
+   * Get the metadata store.
+   * This will always be non-null, but may be bound to the
+   * {@code NullMetadataStore}.
+   * @return the metadata store of this FS instance
+   */
   @VisibleForTesting
   MetadataStore getMetadataStore() {
     return metadataStore;
@@ -1448,7 +1457,7 @@ public class S3AFileSystem extends FileSystem {
 
       if (status.isEmptyDirectory() == Tristate.TRUE) {
         LOG.debug("Deleting fake empty directory {}", key);
-        // HADOOP-13761 s3guard: retries here
+        // HADOOP-13761 S3Guard: retries here
         deleteObject(key);
         metadataStore.delete(f);
         instrumentation.directoryDeleted();
@@ -1466,7 +1475,7 @@ public class S3AFileSystem extends FileSystem {
             LOG.debug("Got object to delete {}", summary.getKey());
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-              // HADOOP-13761 s3guard: retries
+              // TODO: HADOOP-13761 S3Guard: retries
               removeKeys(keys, true, false);
             }
           }
@@ -1475,7 +1484,7 @@ public class S3AFileSystem extends FileSystem {
             objects = continueListObjects(objects);
           } else {
             if (!keys.isEmpty()) {
-              // HADOOP-13761 s3guard: retries
+              // TODO: HADOOP-13761 S3Guard: retries
               removeKeys(keys, false, false);
             }
             break;
@@ -1742,7 +1751,7 @@ public class S3AFileSystem extends FileSystem {
    * Return a file status object that represents the path.
    * @param f The path we want information from
    * @return a FileStatus object
-   * @throws java.io.FileNotFoundException when the path does not exist;
+   * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
   public FileStatus getFileStatus(final Path f) throws IOException {
@@ -1750,12 +1759,12 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Internal version of getFileStatus().
+   * Internal version of {@link #getFileStatus(Path)}.
    * @param f The path we want information from
    * @param needEmptyDirectoryFlag if true, implementation will calculate
    *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
    * @return a S3AFileStatus object
-   * @throws java.io.FileNotFoundException when the path does not exist;
+   * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
   @VisibleForTesting
@@ -1800,19 +1809,25 @@ public class S3AFileSystem extends FileSystem {
       } catch (FileNotFoundException e) {
         return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE);
       }
+      // entry was found, save in S3Guard
       return S3Guard.putAndReturn(metadataStore, s3FileStatus, instrumentation);
+    } else {
+      // there was no entry in S3Guard
+      // retrieve the data and update the metadata store in the process.
+      return S3Guard.putAndReturn(metadataStore,
+          s3GetFileStatus(path, key, tombstones), instrumentation);
     }
-    return S3Guard.putAndReturn(metadataStore,
-        s3GetFileStatus(path, key, tombstones), instrumentation);
   }
 
   /**
-   * Raw get file status that only uses S3.  Used to implement
-   * innerGetFileStatus, and for direct management of empty directory blobs.
+   * Raw {@code getFileStatus} that talks direct to S3.
+   * Used to implement {@link #innerGetFileStatus(Path, boolean)},
+   * and for direct management of empty directory blobs.
    * @param path Qualified path
    * @param key  Key string for the path
    * @return Status
-   * @throws IOException
+   * @throws FileNotFoundException when the path does not exist
+   * @throws IOException on other problems.
    */
   private S3AFileStatus s3GetFileStatus(final Path path, String key,
       Set<Path> tombstones) throws IOException {
@@ -1826,10 +1841,10 @@ public class S3AFileSystem extends FileSystem {
         } else {
           LOG.debug("Found exact file: normal file");
           return new S3AFileStatus(meta.getContentLength(),
-                  dateToLong(meta.getLastModified()),
-                  path,
-                  getDefaultBlockSize(path),
-                  username);
+              dateToLong(meta.getLastModified()),
+              path,
+              getDefaultBlockSize(path),
+              username);
         }
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() != 404) {
@@ -1911,7 +1926,8 @@ public class S3AFileSystem extends FileSystem {
     throw new FileNotFoundException("No such file or directory: " + path);
   }
 
-  /** Helper function to determine if a collection of paths is empty
+  /**
+   * Helper function to determine if a collection of paths is empty
    * after accounting for tombstone markers (if provided).
    * @param keys Collection of path (prefixes / directories or keys).
    * @param tombstones Set of tombstone markers, or null if not applicable.
@@ -1932,7 +1948,8 @@ public class S3AFileSystem extends FileSystem {
     return true;
   }
 
-  /** Helper function to determine if a collection of object summaries is empty
+  /**
+   * Helper function to determine if a collection of object summaries is empty
    * after accounting for tombstone markers (if provided).
    * @param summaries Collection of objects as returned by listObjects.
    * @param tombstones Set of tombstone markers, or null if not applicable.
@@ -1945,13 +1962,11 @@ public class S3AFileSystem extends FileSystem {
       return summaries.isEmpty();
     }
     Collection<String> stringCollection = new ArrayList<>(summaries.size());
-    for(S3ObjectSummary summary : summaries) {
+    for (S3ObjectSummary summary : summaries) {
       stringCollection.add(summary.getKey());
     }
     return isEmptyOfKeys(stringCollection, tombstones);
   }
-
-
 
   /**
    * Raw version of {@link FileSystem#exists(Path)} which uses S3 only:
@@ -1962,7 +1977,8 @@ public class S3AFileSystem extends FileSystem {
     Path path = qualify(f);
     String key = pathToKey(path);
     try {
-      return s3GetFileStatus(path, key, null) != null;
+      s3GetFileStatus(path, key, null);
+      return true;
     } catch (FileNotFoundException e) {
       return false;
     }
@@ -2247,7 +2263,7 @@ public class S3AFileSystem extends FileSystem {
     deleteUnnecessaryFakeDirectories(p.getParent());
     Preconditions.checkArgument(length >= 0, "content length is negative");
 
-    // See note about failure semantics in s3guard.md doc.
+    // See note about failure semantics in S3Guard documentation
     try {
       if (hasMetadataStore()) {
         S3Guard.addAncestors(metadataStore, p, username);
@@ -2257,7 +2273,7 @@ public class S3AFileSystem extends FileSystem {
         S3Guard.putAndReturn(metadataStore, status, instrumentation);
       }
     } catch (IOException e) {
-      LOG.error("s3guard: Error updating MetadataStore for write to {}:",
+      LOG.error("S3Guard: Error updating MetadataStore for write to {}:",
           key, e);
       instrumentation.errorIgnored();
     }
@@ -2593,6 +2609,7 @@ public class S3AFileSystem extends FileSystem {
           cachedFilesIterator = listing.createProvidedFileStatusIterator(
               S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
           if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
+            // metadata listing is authoritative, so return it directly
             return listing.createLocatedFileStatusIterator(cachedFilesIterator);
           }
         }
@@ -2606,8 +2623,7 @@ public class S3AFileSystem extends FileSystem {
             tombstones);
       }
     } catch (AmazonClientException e) {
-      // TODO s3guard:
-      // 1. retry on file not found exception
+      // TODO S3Guard: retry on file not found exception
       throw translateException("listFiles", path, e);
     }
   }

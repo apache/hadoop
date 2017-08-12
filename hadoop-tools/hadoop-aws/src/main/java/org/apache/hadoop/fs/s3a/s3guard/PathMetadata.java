@@ -37,6 +37,11 @@ public class PathMetadata {
   private Tristate isEmptyDirectory;
   private boolean isDeleted;
 
+  /**
+   * Create a tombstone from the current time.
+   * @param path path to tombstone
+   * @return the entry.
+   */
   public static PathMetadata tombstone(Path path) {
     long now = System.currentTimeMillis();
     FileStatus status = new FileStatus(0, false, 0, 0, now, path);
@@ -75,6 +80,7 @@ public class PathMetadata {
   }
 
   /**
+   * Query if a directory is empty.
    * @return Tristate.TRUE if this is known to be an empty directory,
    * Tristate.FALSE if known to not be empty, and Tristate.UNKNOWN if the
    * MetadataStore does have enough information to determine either way.

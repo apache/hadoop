@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-
-import org.junit.Test;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * MetadataStore unit test for {@link LocalMetadataStore}.

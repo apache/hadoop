@@ -170,7 +170,7 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- s3guard -->
+                    <!-- S3Guard -->
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
@@ -216,7 +216,7 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- s3guard -->
+                    <!-- S3Guard -->
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
@@ -262,7 +262,7 @@
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- s3guard -->
+                    <!-- S3Guard -->
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
@@ -289,7 +289,7 @@
       </properties>
     </profile>
 
-    <!-- Turn on s3guard tests-->
+    <!-- Turn on S3Guard tests-->
     <profile>
       <id>s3guard</id>
       <activation>
@@ -302,7 +302,7 @@
       </properties>
     </profile>
 
-    <!-- Switch to dynamo DB for s3guard. Has no effect unless s3guard is enabled -->
+    <!-- Switch to DynamoDB for S3Guard. Has no effect unless S3Guard is enabled -->
     <profile>
       <id>dynamo</id>
       <activation>
@@ -315,7 +315,7 @@
       </properties>
     </profile>
 
-    <!-- Switch to DynamoDBLocal for s3guard. Has no effect unless s3guard is enabled -->
+    <!-- Switch to DynamoDBLocal for S3Guard. Has no effect unless S3Guard is enabled -->
     <profile>
       <id>dynamodblocal</id>
       <activation>
@@ -328,8 +328,8 @@
       </properties>
     </profile>
 
-    <!-- Switch s3guard from Authoritative=false to true
-     Has no effect unless s3guard is enabled -->
+    <!-- Switch S3Guard from Authoritative=false to true
+     Has no effect unless S3Guard is enabled -->
     <profile>
       <id>non-auth</id>
       <activation>

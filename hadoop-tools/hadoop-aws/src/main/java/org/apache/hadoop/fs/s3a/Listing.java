@@ -70,7 +70,8 @@ public class Listing {
    * @return the file status iterator
    */
   ProvidedFileStatusIterator createProvidedFileStatusIterator(
-      FileStatus[] fileStatuses, PathFilter filter,
+      FileStatus[] fileStatuses,
+      PathFilter filter,
       FileStatusAcceptor acceptor) {
     return new ProvidedFileStatusIterator(fileStatuses, filter, acceptor);
   }
@@ -356,7 +357,8 @@ public class Listing {
      * If there is data in the local filtered list, return true.
      * Else: request more data util that condition is met, or there
      * is no more remote listing data.
-     * Lastly, return true if the provided file status has left items.
+     * Lastly, return true if the {@code providedStatusIterator}
+     * has left items.
      * @return true if a call to {@link #next()} will succeed.
      * @throws IOException
      */

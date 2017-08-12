@@ -18,8 +18,23 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,25 +49,11 @@ import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
- * Manage S3Guard Metadata Store.
+ * CLI to manage S3Guard Metadata Store.
  */
 public abstract class S3GuardTool extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardTool.class);
@@ -74,6 +75,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       "\t" + Import.NAME + " - " + Import.PURPOSE + "\n" +
       "\t" + Diff.NAME + " - " + Diff.PURPOSE + "\n" +
       "\t" + Prune.NAME + " - " + Prune.PURPOSE + "\n";
+  private static final String DATA_IN_S3_IS_PRESERVED
+      = "(all data in S3 is preserved";
 
   abstract public String getUsage();
 
@@ -100,7 +103,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * Constructor a S3Guard tool with HDFS configuration.
    * @param conf Configuration.
    */
-  public S3GuardTool(Configuration conf) {
+  protected S3GuardTool(Configuration conf) {
     super(conf);
 
     commandFormat = new CommandFormat(0, Integer.MAX_VALUE);
@@ -253,8 +256,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
   }
 
   /**
-   * Parse CLI arguments and returns the position arguments. The options are
-   * stored in {@link #commandFormat}
+   * Parse CLI arguments and returns the position arguments.
+   * The options are stored in {@link #commandFormat}
    *
    * @param args command line arguments.
    * @return the position arguments from CLI.
@@ -332,7 +335,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Destroy extends S3GuardTool {
     private static final String NAME = "destroy";
-    public static final String PURPOSE = "destroy metadata repository";
+    public static final String PURPOSE = "destroy Metadata Store data "
+        + DATA_IN_S3_IS_PRESERVED;
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
@@ -367,8 +371,16 @@ public abstract class S3GuardTool extends Configured implements Tool {
         return INVALID_ARGUMENT;
       }
 
-      initMetadataStore(false);
-      Preconditions.checkState(ms != null, "Metadata store is not initialized");
+      try {
+        initMetadataStore(false);
+      } catch (FileNotFoundException e) {
+        // indication that the table was not found
+        LOG.debug("Failed to bind to store to be destroyed", e);
+        LOG.info("Metadata Store does not exist.");
+        return SUCCESS;
+      }
+
+      Preconditions.checkState(ms != null, "Metadata Store is not initialized");
 
       ms.destroy();
       LOG.info("Metadata store is deleted.");
@@ -440,8 +452,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
 
     /**
-     * Recursively import every path under path
+     * Recursively import every path under path.
      * @return number of items inserted into MetadataStore
+     * @throws IOException on I/O errors.
      */
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
@@ -625,7 +638,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @param msDir the directory FileStatus obtained from the metadata store.
      * @param s3Dir the directory FileStatus obtained from S3.
      * @param out the output stream to generate diff results.
-     * @throws IOException
+     * @throws IOException on I/O errors.
      */
     private void compareDir(FileStatus msDir, FileStatus s3Dir,
                             PrintStream out) throws IOException {
@@ -676,7 +689,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
      *
      * @param path the path to be compared.
      * @param out  the output stream to display results.
-     * @throws IOException
+     * @throws IOException on I/O errors.
      */
     private void compareRoot(Path path, PrintStream out) throws IOException {
       Path qualified = s3a.qualify(path);
@@ -732,7 +745,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
   static class Prune extends S3GuardTool {
     private static final String NAME = "prune";
     public static final String PURPOSE = "truncate older metadata from " +
-        "repository";
+        "repository "
+        + DATA_IN_S3_IS_PRESERVED;;
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
@@ -830,8 +844,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
   private static void printHelp() {
     if (cmd == null) {
       System.err.println("Usage: hadoop " + USAGE);
-      System.err.println("\tperform metadata store " +
-          "administrative commands for s3a filesystem.");
+      System.err.println("\tperform S3Guard metadata store " +
+          "administrative commands.");
     } else {
       System.err.println("Usage: hadoop " + cmd.getUsage());
     }
@@ -881,7 +895,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
     return ToolRunner.run(conf, cmd, otherArgs);
   }
 
-  public static void main(String[] args) throws Exception {
+  /**
+   * Main entry point. Calls {@code System.exit()} on all execution paths.
+   * @param args argument list
+   */
+  public static void main(String[] args) {
     try {
       int ret = run(args, new Configuration());
       System.exit(ret);
@@ -889,7 +907,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       System.err.println(e.getMessage());
       printHelp();
       System.exit(INVALID_ARGUMENT);
-    } catch (Exception e) {
+    } catch (Throwable e) {
       e.printStackTrace(System.err);
       System.exit(ERROR);
     }

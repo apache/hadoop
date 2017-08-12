@@ -18,67 +18,69 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.io.IOUtils;
+
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
-
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Common functionality for S3GuardTool test cases.
  */
-public abstract class S3GuardToolTestBase extends AbstractS3ATestBase {
+public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
   protected static final String OWNER = "hdfs";
 
-  private Configuration conf;
   private MetadataStore ms;
-  private S3AFileSystem fs;
 
-  protected Configuration getConf() {
-    return conf;
+  protected static void expectResult(int expected,
+      String message,
+      S3GuardTool tool,
+      String... args) throws Exception {
+    assertEquals(message, expected, tool.run(args));
+  }
+
+  protected static void expectSuccess(
+      String message,
+      S3GuardTool tool,
+      String... args) throws Exception {
+    assertEquals(message, SUCCESS, tool.run(args));
   }
 
   protected MetadataStore getMetadataStore() {
     return ms;
   }
 
-  protected S3AFileSystem getFs() {
-    return fs;
-  }
-
   protected abstract MetadataStore newMetadataStore();
 
-  @Before
-  public void setUp() throws Exception {
-    conf = new Configuration();
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    S3ATestUtils.assumeS3GuardState(true, getConf());
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    S3ATestUtils.assumeS3GuardState(true, getConfiguration());
     ms = newMetadataStore();
-    ms.initialize(fs);
+    ms.initialize(getFileSystem());
   }
 
-  @After
-  public void tearDown() {
+  @Override
+  public void teardown() throws Exception {
+    super.teardown();
+    IOUtils.cleanupWithLogger(LOG, ms);
   }
 
   protected void mkdirs(Path path, boolean onS3, boolean onMetadataStore)
       throws IOException {
     if (onS3) {
-      fs.mkdirs(path);
+      getFileSystem().mkdirs(path);
     }
     if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(true, path, OWNER);
@@ -104,26 +106,26 @@ public abstract class S3GuardToolTestBase extends AbstractS3ATestBase {
    * @param onS3 set to true to create the file on S3.
    * @param onMetadataStore set to true to create the file on the
    *                        metadata store.
-   * @throws IOException
+   * @throws IOException IO problem
    */
   protected void createFile(Path path, boolean onS3, boolean onMetadataStore)
       throws IOException {
     if (onS3) {
-      ContractTestUtils.touch(fs, path);
+      ContractTestUtils.touch(getFileSystem(), path);
     }
 
     if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(100L, System.currentTimeMillis(),
-          fs.qualify(path), 512L, "hdfs");
+          getFileSystem().qualify(path), 512L, "hdfs");
       putFile(ms, status);
     }
   }
 
-  private void testPruneCommand(Configuration cmdConf, String[] args)
+  private void testPruneCommand(Configuration cmdConf, String...args)
       throws Exception {
     Path parent = path("prune-cli");
     try {
-      fs.mkdirs(parent);
+      getFileSystem().mkdirs(parent);
 
       S3GuardTool.Prune cmd = new S3GuardTool.Prune(cmdConf);
       cmd.setMetadataStore(ms);
@@ -133,11 +135,11 @@ public abstract class S3GuardToolTestBase extends AbstractS3ATestBase {
       createFile(new Path(parent, "fresh"), true, true);
 
       assertEquals(2, ms.listChildren(parent).getListing().size());
-      assertEquals("Prune command did not exit successfully - see output",
-          SUCCESS, cmd.run(args));
+      expectSuccess("Prune command did not exit successfully - see output", cmd,
+          args);
       assertEquals(1, ms.listChildren(parent).getListing().size());
     } finally {
-      fs.delete(parent, true);
+      getFileSystem().delete(parent, true);
       ms.prune(Long.MAX_VALUE);
     }
   }
@@ -145,15 +147,15 @@ public abstract class S3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testPruneCommandCLI() throws Exception {
     String testPath = path("testPruneCommandCLI").toString();
-    testPruneCommand(fs.getConf(), new String[]{"prune", "-seconds", "1",
-        testPath});
+    testPruneCommand(getFileSystem().getConf(),
+        "prune", "-seconds", "1", testPath);
   }
 
   @Test
   public void testPruneCommandConf() throws Exception {
-    conf.setLong(Constants.S3GUARD_CLI_PRUNE_AGE,
+    getConfiguration().setLong(Constants.S3GUARD_CLI_PRUNE_AGE,
         TimeUnit.SECONDS.toMillis(1));
     String testPath = path("testPruneCommandConf").toString();
-    testPruneCommand(conf, new String[]{"prune", testPath});
+    testPruneCommand(getConfiguration(), "prune", testPath);
   }
 }

@@ -48,12 +48,20 @@ import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory.DefaultDyna
  * in DynamoDBLocal. This is for testing purpose only.
  *
  * To use this for creating DynamoDB client in tests:
- * 1. As all DynamoDBClientFactory implementations, this should be configured.
- * 2. The singleton DynamoDBLocal server instance is started automatically when
+ * <ol>
+ * <li>
+ *    As all DynamoDBClientFactory implementations, this should be configured.
+ * </li>
+ * <li>
+ *    The singleton DynamoDBLocal server instance is started automatically when
  *    creating the AmazonDynamoDB client for the first time. It still merits to
  *    launch the server before all the tests and fail fast if error happens.
- * 3. The sever can be stopped explicitly, which is not actually needed in tests
- *    as JVM termination will do that.
+ * </li>
+ * <li>
+ *    The server can be stopped explicitly, which is not actually needed in
+ *    tests as JVM termination will do that.
+ * </li>
+ * </ol>
  *
  * @see DefaultDynamoDBClientFactory
  */

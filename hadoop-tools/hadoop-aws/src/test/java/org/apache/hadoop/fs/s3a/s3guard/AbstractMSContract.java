@@ -28,6 +28,6 @@ import java.io.IOException;
  */
 public abstract class AbstractMSContract {
 
-  public abstract FileSystem getFileSystem();
+  public abstract FileSystem getFileSystem() throws IOException;
   public abstract MetadataStore getMetadataStore() throws IOException;
 }

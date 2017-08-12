@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -34,6 +29,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.base.Preconditions;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -61,7 +61,8 @@ public class DirListingMetadata {
    * Create a directory listing metadata container.
    *
    * @param path Path of the directory. If this path has a host component, then
-   *     all paths added later via put() must also have the same host.
+   *     all paths added later via {@link #put(FileStatus)} must also have
+   *     the same host.
    * @param listing Entries in the directory.
    * @param isAuthoritative true iff listing is the full contents of the
    *     directory, and the calling client reports that this may be cached as
@@ -257,6 +258,7 @@ public class DirListingMetadata {
     prettyPrint(sb);
     return sb.toString();
   }
+
   /**
    * Checks that child path is valid.
    * @param childPath path to check.
@@ -284,12 +286,15 @@ public class DirListingMetadata {
   }
 
   /**
-   * For Path's that are handed in directly, we assert they are in consistent
+   * For Paths that are handed in directly, we assert they are in consistent
    * format with checkPath().  For paths that are supplied embedded in
-   * FileStatus', we attempt to fill in missing scheme and host, when this
+   * FileStatus, we attempt to fill in missing scheme and host, when this
    * DirListingMetadata is associated with one.
    *
    * @return Path suitable for consistent hashtable lookups
+   * @throws NullPointerException null status argument
+   * @throws IllegalArgumentException bad status values or failure to
+   *                                  create a URI.
    */
   private Path childStatusToPathKey(FileStatus status) {
     Path p = status.getPath();

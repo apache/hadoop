@@ -331,13 +331,17 @@ public final class S3ATestUtils {
 
   /**
    * Test assumption that S3Guard is/is not enabled.
+   * @param shouldBeEnabled should S3Guard be enabled?
+   * @param originalConf configuration to check
+   * @throws URISyntaxException
    */
   public static void assumeS3GuardState(boolean shouldBeEnabled,
       Configuration originalConf) throws URISyntaxException {
     boolean isEnabled = getTestPropertyBool(originalConf, TEST_S3GUARD_ENABLED,
         originalConf.getBoolean(TEST_S3GUARD_ENABLED, false));
-    Assume.assumeThat("Unexpected S3Guard test state: shouldBeEnabled=" +
-        shouldBeEnabled + " and isEnabled =" + isEnabled,
+    Assume.assumeThat("Unexpected S3Guard test state:"
+            + " shouldBeEnabled=" + shouldBeEnabled
+            + " and isEnabled=" + isEnabled,
         shouldBeEnabled, Is.is(isEnabled));
 
     final String fsname = originalConf.getTrimmed(TEST_FS_S3A_NAME);
@@ -346,8 +350,9 @@ public final class S3ATestUtils {
     final Configuration conf = propagateBucketOptions(originalConf, bucket);
     boolean usingNullImpl = S3GUARD_METASTORE_NULL.equals(
         conf.getTrimmed(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL));
-    Assume.assumeThat("Unexpected S3Guard test state: shouldBeEnabled=" +
-        shouldBeEnabled + " but usingNullImpl=" + usingNullImpl,
+    Assume.assumeThat("Unexpected S3Guard test state:"
+            + " shouldBeEnabled=" + shouldBeEnabled
+            + " but usingNullImpl=" + usingNullImpl,
         shouldBeEnabled, Is.is(!usingNullImpl));
   }
 
@@ -358,7 +363,7 @@ public final class S3ATestUtils {
   public static void maybeEnableS3Guard(Configuration conf) {
     if (getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
         conf.getBoolean(TEST_S3GUARD_ENABLED, false))) {
-      // s3guard is enabled.
+      // S3Guard is enabled.
       boolean authoritative = getTestPropertyBool(conf,
           TEST_S3GUARD_AUTHORITATIVE,
           conf.getBoolean(TEST_S3GUARD_AUTHORITATIVE, true));
@@ -603,12 +608,32 @@ public final class S3ATestUtils {
   private S3ATestUtils() {
   }
 
+  /**
+   * Verify the core size, block size and timestamp values of a file.
+   * @param status status entry to check
+   * @param size file size
+   * @param blockSize block size
+   * @param modTime modified time
+   */
   public static void verifyFileStatus(FileStatus status, long size,
       long blockSize, long modTime) {
     verifyFileStatus(status, size, 0, modTime, 0, blockSize, null, null, null);
   }
 
-  public static void verifyFileStatus(FileStatus status, long size,
+  /**
+   * Verify the status entry of a file matches that expected.
+   * @param status status entry to check
+   * @param size file size
+   * @param replication replication factor (may be 0)
+   * @param modTime modified time
+   * @param accessTime access time (may be 0)
+   * @param blockSize block size
+   * @param owner owner (may be null)
+   * @param group user group (may be null)
+   * @param permission permission (may be null)
+   */
+  public static void verifyFileStatus(FileStatus status,
+      long size,
       int replication,
       long modTime,
       long accessTime,
@@ -641,6 +666,16 @@ public final class S3ATestUtils {
     }
   }
 
+  /**
+   * Verify the status entry of a directory matches that expected.
+   * @param status status entry to check
+   * @param replication replication factor
+   * @param modTime modified time
+   * @param accessTime access time
+   * @param owner owner
+   * @param group user group
+   * @param permission permission.
+   */
   public static void verifyDirStatus(FileStatus status,
       int replication,
       long modTime,

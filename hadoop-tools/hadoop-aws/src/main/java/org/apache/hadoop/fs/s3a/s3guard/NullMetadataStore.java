@@ -43,22 +43,18 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void close() throws IOException {
-    return;
   }
 
   @Override
   public void delete(Path path) throws IOException {
-    return;
   }
 
   @Override
   public void forgetMetadata(Path path) throws IOException {
-    return;
   }
 
   @Override
   public void deleteSubtree(Path path) throws IOException {
-    return;
   }
 
   @Override
@@ -80,22 +76,18 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public void move(Collection<Path> pathsToDelete,
       Collection<PathMetadata> pathsToCreate) throws IOException {
-    return;
   }
 
   @Override
   public void put(PathMetadata meta) throws IOException {
-    return;
   }
 
   @Override
   public void put(Collection<PathMetadata> meta) throws IOException {
-    return;
   }
 
   @Override
   public void put(DirListingMetadata meta) throws IOException {
-    return;
   }
 
   @Override
@@ -104,7 +96,6 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void prune(long modTime) {
-    return;
   }
 
   @Override

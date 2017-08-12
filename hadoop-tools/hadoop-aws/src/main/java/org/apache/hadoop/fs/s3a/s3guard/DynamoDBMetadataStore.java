@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.URI;
@@ -50,34 +51,32 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
-
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 
 /**
  * DynamoDBMetadataStore is a {@link MetadataStore} that persists
@@ -159,7 +158,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*
  * the S3 bucket that hosts the S3A instance.  During initialization, it checks
  * the location of the S3 bucket and creates a DynamoDB client connected to the
  * same region. The region may also be set explicitly by setting the config
- * parameter fs.s3a.s3guard.ddb.endpoint with the corresponding endpoint.
+ * parameter {@code fs.s3a.s3guard.ddb.region} to the corresponding region.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -203,6 +202,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param conf the file system configuration
    * @param s3Region region of the associated S3 bucket (if any).
    * @return DynamoDB instance.
+   * @throws IOException I/O error.
    */
   private static DynamoDB createDynamoDB(Configuration conf, String s3Region)
       throws IOException {
@@ -255,11 +255,18 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * not explicitly relate to any S3 bucket, which be nonexistent.
    *
    * This is used to operate the metadata store directly beyond the scope of the
-   * S3AFileSystem integration, e.g. command line tools. Generally you should
-   * use {@link #initialize(FileSystem)} if given an initialized S3 file system.
+   * S3AFileSystem integration, e.g. command line tools.
+   * Generally, callers should use {@link #initialize(FileSystem)}
+   * with an initialized {@code S3AFileSystem} instance.
+   *
+   * Without a filesystem to act as a reference point, the configuration itself
+   * must declare the table name and region in the
+   * {@link Constants#S3GUARD_DDB_TABLE_NAME_KEY} and
+   * {@link Constants#S3GUARD_DDB_REGION_KEY} respectively.
    *
    * @see #initialize(FileSystem)
    * @throws IOException if there is an error
+   * @throws IllegalArgumentException if the configuration is incomplete
    */
   @Override
   public void initialize(Configuration config) throws IOException {
@@ -267,10 +274,10 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
     Preconditions.checkArgument(!StringUtils.isEmpty(tableName),
-        "No DynamoDB table name configured!");
+        "No DynamoDB table name configured");
     region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
     Preconditions.checkArgument(!StringUtils.isEmpty(region),
-        "No DynamoDB region configured!");
+        "No DynamoDB region configured");
     dynamoDB = createDynamoDB(conf, region);
 
     username = UserGroupInformation.getCurrentUser().getShortUserName();
@@ -279,6 +286,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
     initTable();
   }
 
+  /**
+   * Set retry policy. This is driven by the value of
+   * {@link Constants#S3GUARD_DDB_MAX_RETRIES} with an exponential backoff
+   * between each attempt of {@link #MIN_RETRY_SLEEP_MSEC} milliseconds.
+   * @param config
+   */
   private void setMaxRetries(Configuration config) {
     int maxRetries = config.getInt(S3GUARD_DDB_MAX_RETRIES,
         S3GUARD_DDB_MAX_RETRIES_DEFAULT);
@@ -297,6 +310,14 @@ public class DynamoDBMetadataStore implements MetadataStore {
     innerDelete(path, false);
   }
 
+  /**
+   * Inner delete option, action based on the {@code tombstone} flag.
+   * No tombstone: delete the entry. Tombstone: create a tombstone entry.
+   * There is no check as to whether the entry exists in the table first.
+   * @param path path to delete
+   * @param tombstone flag to create a tombstone marker
+   * @throws IOException I/O error.
+   */
   private void innerDelete(Path path, boolean tombstone)
       throws IOException {
     path = checkPath(path);
@@ -414,6 +435,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     path = checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
 
+    // find the children in the table
     try {
       final QuerySpec spec = new QuerySpec()
           .withHashKey(pathToParentKeyAttribute(path))
@@ -432,10 +454,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
           ? null
           : new DirListingMetadata(path, metas, false);
     } catch (AmazonClientException e) {
+      // failure, including the path not being present
       throw translateException("listChildren", path, e);
     }
   }
 
+  // build the list of all parent entries.
   Collection<PathMetadata> completeAncestry(
       Collection<PathMetadata> pathsToCreate) {
     // Key on path to allow fast lookup
@@ -677,7 +701,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       return;
     }
     LOG.info("Deleting DynamoDB table {} in region {}", tableName, region);
-    Preconditions.checkNotNull(dynamoDB, "Not connected to Dynamo");
+    Preconditions.checkNotNull(dynamoDB, "Not connected to DynamoDB");
     try {
       table.delete();
       table.waitForDelete();
@@ -766,22 +790,23 @@ public class DynamoDBMetadataStore implements MetadataStore {
         LOG.debug("Binding to table {}", tableName);
         final String status = table.describe().getTableStatus();
         switch (status) {
-          case "CREATING":
-          case "UPDATING":
-            LOG.debug("Table {} in region {} is being created/updated. This may "
-                    + "indicate that the table is being operated by another "
-                    + "concurrent thread or process. Waiting for active...",
-                tableName, region);
-            waitForTableActive(table);
-            break;
-          case "DELETING":
-            throw new IOException("DynamoDB table '" + tableName + "' is being "
-                + "deleted in region " + region);
-          case "ACTIVE":
-            break;
-          default:
-            throw new IOException("Unknown DynamoDB table status " + status
-                + ": tableName='" + tableName + "', region=" + region);
+        case "CREATING":
+        case "UPDATING":
+          LOG.debug("Table {} in region {} is being created/updated. This may"
+                  + " indicate that the table is being operated by another "
+                  + "concurrent thread or process. Waiting for active...",
+              tableName, region);
+          waitForTableActive(table);
+          break;
+        case "DELETING":
+          throw new FileNotFoundException("DynamoDB table "
+              + "'" + tableName + "' is being "
+              + "deleted in region " + region);
+        case "ACTIVE":
+          break;
+        default:
+          throw new IOException("Unknown DynamoDB table status " + status
+              + ": tableName='" + tableName + "', region=" + region);
         }
 
         final Item versionMarker = getVersionMarkerItem();
@@ -799,7 +824,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
           createTable(capacity);
         } else {
-          throw new IOException("DynamoDB table '" + tableName + "' does not "
+          throw new FileNotFoundException("DynamoDB table "
+              + "'" + tableName + "' does not "
               + "exist in region " + region + "; auto-creation is turned off");
         }
       }

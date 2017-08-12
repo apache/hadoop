@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests of {@link DirListingMetadata}.

@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.Tristate;
-import org.apache.hadoop.io.IOUtils;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.google.common.collect.Sets;
 import org.junit.After;
@@ -36,12 +34,14 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Main test class for MetadataStore implementations.
@@ -139,7 +139,6 @@ public abstract class MetadataStoreTestBase extends Assert {
    * MetadataStoreListFilesIterator behavior.
    * @param createNodes List of paths to create
    * @param checkNodes List of paths that the iterator should return
-   * @throws IOException
    */
   private void doTestDescendantsIterator(
       Class implementation, String[] createNodes,
@@ -504,13 +503,7 @@ public abstract class MetadataStoreTestBase extends Assert {
       assertListingsEqual(dirMeta.getListing(), "/a1/b1", "/a1/b2");
     }
 
-    // TODO
-    // 1. Add properties query to MetadataStore interface
-    // supportsAuthoritativeDirectories() or something.
-    // 2. Add "isNew" flag to MetadataStore.put(DirListingMetadata)
-    // 3. If #1 is true, assert that directory is still fully cached here.
-    // assertTrue("Created dir is fully cached", dirMeta.isAuthoritative());
-
+    // TODO HADOOP-14756 instrument MetadataStore for asserting & testing
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
     if (!allowMissing() || dirMeta != null) {
       assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
@@ -599,7 +592,6 @@ public abstract class MetadataStoreTestBase extends Assert {
   /**
    * Test that the MetadataStore differentiates between the same path in two
    * different buckets.
-   * @throws Exception
    */
   @Test
   public void testMultiBucketPaths() throws Exception {
@@ -621,7 +613,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     if (!allowMissing()) {
       ms.delete(new Path(p2));
       meta = ms.get(new Path(p1));
-      assertNotNull("Path should not have been deleted");
+      assertNotNull("Path should not have been deleted", meta);
     }
     ms.delete(new Path(p1));
   }
@@ -722,7 +714,8 @@ public abstract class MetadataStoreTestBase extends Assert {
    */
 
   /** Modifies paths input array and returns it. */
-  private String[] buildPathStrings(String parent, String... paths) {
+  private String[] buildPathStrings(String parent, String... paths)
+      throws IOException {
     for (int i = 0; i < paths.length; i++) {
       Path p = new Path(strToPath(parent), paths[i]);
       paths[i] = p.toString();
@@ -752,7 +745,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   }
 
   private void assertListingsEqual(Collection<PathMetadata> listing,
-      String ...pathStrs) {
+      String ...pathStrs) throws IOException {
     Set<Path> a = new HashSet<>();
     for (PathMetadata meta : listing) {
       a.add(meta.getFileStatus().getPath());
@@ -768,8 +761,8 @@ public abstract class MetadataStoreTestBase extends Assert {
   private void putListStatusFiles(String dirPath, boolean authoritative,
       String... filenames) throws IOException {
     ArrayList<PathMetadata> metas = new ArrayList<>(filenames .length);
-    for (int i = 0; i < filenames.length; i++) {
-      metas.add(new PathMetadata(makeFileStatus(filenames[i], 100)));
+    for (String filename : filenames) {
+      metas.add(new PathMetadata(makeFileStatus(filename, 100)));
     }
     DirListingMetadata dirMeta =
         new DirListingMetadata(strToPath(dirPath), metas, authoritative);
@@ -825,7 +818,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   /**
    * Convenience to create a fully qualified Path from string.
    */
-  Path strToPath(String p) {
+  Path strToPath(String p) throws IOException {
     final Path path = new Path(p);
     assert path.isAbsolute();
     return path.makeQualified(contract.getFileSystem().getUri(), null);

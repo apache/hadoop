@@ -48,7 +48,6 @@ public interface MetadataStore extends Closeable {
 
   /**
    * Performs one-time initialization of the metadata store via configuration.
-   *
    * @see #initialize(FileSystem)
    * @param conf Configuration.
    * @throws IOException if there is an error
@@ -149,8 +148,8 @@ public interface MetadataStore extends Closeable {
    *                      ().
    * @throws IOException if there is an error
    */
-  void move(Collection<Path> pathsToDelete, Collection<PathMetadata>
-      pathsToCreate) throws IOException;
+  void move(Collection<Path> pathsToDelete,
+      Collection<PathMetadata> pathsToCreate) throws IOException;
 
   /**
    * Saves metadata for exactly one path.

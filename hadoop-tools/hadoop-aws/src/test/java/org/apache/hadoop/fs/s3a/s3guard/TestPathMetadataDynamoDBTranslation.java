@@ -28,26 +28,23 @@ import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.FileStatus;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
 import static com.amazonaws.services.dynamodbv2.model.KeyType.RANGE;
 import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION_MARKER;
@@ -57,7 +54,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION;
  * Test the PathMetadataDynamoDBTranslation is able to translate between domain
  * model objects and DynamoDB items.
  */
-public class TestPathMetadataDynamoDBTranslation {
+public class TestPathMetadataDynamoDBTranslation extends Assert {
 
   private static final Path TEST_DIR_PATH = new Path("s3a://test-bucket/myDir");
   private static final Item TEST_DIR_ITEM = new Item();
@@ -151,7 +148,7 @@ public class TestPathMetadataDynamoDBTranslation {
     assertEquals(bSize, status.getBlockSize());
 
     /*
-     * S3AFileStatue#getModificationTime() report the current time, so the
+     * S3AFileStatue#getModificationTime() reports the current time, so the
      * following assertion is failing.
      *
      * long modTime = item.hasAttribute(MOD_TIME) ? item.getLong(MOD_TIME) : 0;
@@ -195,11 +192,8 @@ public class TestPathMetadataDynamoDBTranslation {
 
   @Test
   public void testPathToKey() throws Exception {
-    try {
-      pathToKey(new Path("/"));
-      fail("Root path should have not been mapped to any PrimaryKey");
-    } catch (IllegalArgumentException ignored) {
-    }
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> pathToKey(new Path("/")));
     doTestPathToKey(TEST_DIR_PATH);
     doTestPathToKey(TEST_FILE_PATH);
   }

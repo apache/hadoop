@@ -20,7 +20,7 @@
 
 ## Overview
 
-*S3Guard* is an experimental feature for the S3A client of the S3 Filesystem,
+*S3Guard* is an experimental feature for the S3A client of the S3 object store,
 which can use a (consistent) database as the store of metadata about objects
 in an S3 bucket.
 
@@ -34,8 +34,8 @@ processes.
 1. Permits a consistent view of the object store. Without this, changes in
 objects may not be immediately visible, especially in listing operations.
 
-1. Create a platform for future performance improvements for running Hadoop
-   workloads on top of object stores
+1. Offers a platform for future performance improvements for running Hadoop
+workloads on top of object stores
 
 The basic idea is that, for each operation in the Hadoop S3 client (s3a) that
 reads or modifies metadata, a shadow copy of that metadata is stored in a
@@ -60,19 +60,22 @@ S3 Repository to use the feature. Clients reading the data may work directly
 with the S3A data, in which case the normal S3 consistency guarantees apply.
 
 
-## Configuring S3Guard
+## Setting up S3Guard
 
 The latest configuration parameters are defined in `core-default.xml`.  You
 should consult that file for full information, but a summary is provided here.
 
 
-### 1. Choose your MetadataStore implementation.
+### 1. Choose the Database
 
-By default, S3Guard is not enabled.  S3A uses "`NullMetadataStore`", which is a
-MetadataStore that does nothing.
+A core concept of S3Guard is that the directory listing data of the object
+store, *the metadata* is replicated in a higher-performance, consistent,
+database. In S3Guard, this database is called *The Metadata Store*
 
-The funtional MetadataStore back-end uses Amazon's DynamoDB database service.  The
- following setting will enable this MetadataStore:
+By default, S3Guard is not enabled.
+
+The Metadata Store to use in production is bonded to Amazon's DynamoDB
+database service.  The following setting will enable this Metadata Store:
 
 ```xml
 <property>
@@ -81,8 +84,8 @@ The funtional MetadataStore back-end uses Amazon's DynamoDB database service.  T
 </property>
 ```
 
-
-Note that the Null metadata store can be explicitly requested if desired.
+Note that the `NullMetadataStore` store can be explicitly requested if desired.
+This offers no metadata storage, and effectively disables S3Guard.
 
 ```xml
 <property>
@@ -91,10 +94,10 @@ Note that the Null metadata store can be explicitly requested if desired.
 </property>
 ```
 
-### 2. Configure S3Guard settings
+### 2. Configure S3Guard Settings
 
-More settings will be added here in the future as we add to S3Guard.
-Currently the only MetadataStore-independent setting, besides the
+More settings will may be added in the future.
+Currently the only Metadata Store-independent setting, besides the
 implementation class above, is the *allow authoritative* flag.
 
 It is recommended that you leave the default setting here:
@@ -107,25 +110,32 @@ It is recommended that you leave the default setting here:
 
 ```
 
-Setting this to true is currently an experimental feature.  When true, the
+Setting this to `true` is currently an experimental feature.  When true, the
 S3A client will avoid round-trips to S3 when getting directory listings, if
-there is a fully-cached version of the directory stored in the MetadataStore.
+there is a fully-cached version of the directory stored in the Metadata Store.
 
 Note that if this is set to true, it may exacerbate or persist existing race
 conditions around multiple concurrent modifications and listings of a given
 directory tree.
 
+In particular: **If the Metadata Store is declared as authoritative,
+all interactions with the S3 bucket(s) must be through S3A clients sharing
+the same Metadata Store**
 
-### 3. Configure the MetadataStore.
 
-Here are the `DynamoDBMetadataStore` settings.  Other MetadataStore
- implementations will have their own configuration parameters.
+### 3. Configure the Metadata Store.
+
+Here are the `DynamoDBMetadataStore` settings.  Other Metadata Store
+implementations will have their own configuration parameters.
+
+
+### 4. Name Your Table
 
 First, choose the name of the table you wish to use for the S3Guard metadata
-storage in your DynamoDB instance.  If you leave the default blank value, a
+storage in your DynamoDB instance.  If you leave it unset/empty, a
 separate table will be created for each S3 bucket you access, and that
-bucket's name will be used for the name of the DynamoDB table.  Here we
-choose our own table name:
+bucket's name will be used for the name of the DynamoDB table.  For example,
+this sets the table name to `my-ddb-table-name`
 
 ```xml
 <property>
@@ -133,16 +143,45 @@ choose our own table name:
   <value>my-ddb-table-name</value>
   <description>
     The DynamoDB table name to operate. Without this property, the respective
-    S3 bucket name will be used.
+    S3 bucket names will be used.
   </description>
 </property>
 ```
+
+It is good to share a table across multiple buckets for multiple reasons.
+
+1. You are billed for the I/O capacity allocated to the table,
+*even when the table is not used*. Sharing capacity can reduce costs.
+
+1. You can share the "provision burden" across the buckets. That is, rather
+than allocating for the peak load on a single bucket, you can allocate for
+the peak load *across all the buckets*, which is likely to be significantly
+lower.
+
+1. It's easier to measure and tune the load requirements and cost of
+S3Guard, because there is only one table to review and configure in the
+AWS management console.
+
+When wouldn't you want to share a table?
+
+1. When you do explicitly want to provision I/O capacity to a specific bucket
+and table, isolated from others.
+
+1. When you are using separate billing for specific buckets allocated
+to specific projects.
+
+1. When different users/roles have different access rights to different buckets.
+As S3Guard requires all users to have R/W access to the table, all users will
+be able to list the metadata in all buckets, even those to which they lack
+read access.
+
+### 5. Locate your Table
 
 You may also wish to specify the region to use for DynamoDB.  If a region
 is not configured, S3A will assume that it is in the same region as the S3
 bucket. A list of regions for the DynamoDB service can be found in
 [Amazon's documentation](http://docs.aws.amazon.com/general/latest/gr/rande.html#ddb_region).
-In this example, we set the US West 2 region:
+In this example, to use the US West 2 region:
 
 ```xml
 <property>
@@ -151,9 +190,17 @@ In this example, we set the US West 2 region:
 </property>
 ```
 
+When working with S3Guard-managed buckets from EC2 VMs running in AWS
+infrastructure, using a local DynamoDB region ensures the lowest latency
+and highest reliability, as well as avoiding all long-haul network charges.
+The S3Guard tables, and indeed, the S3 buckets, should all be in the same
+region as the VMs.
+
+### 6. Optional: Create your Table
+
 Next, you can choose whether or not the table will be automatically created
-(if it doesn't already exist).  If we want this feature, we can set the
-following parameter to true.
+(if it doesn't already exist).  If you want this feature, set the
+`fs.s3a.s3guard.ddb.table.create` option to `true`.
 
 ```xml
 <property>
@@ -165,6 +212,8 @@ following parameter to true.
 </property>
 ```
 
+### 7. If creating a table: Set your DynamoDB IO Capacity
+
 Next, you need to set the DynamoDB read and write throughput requirements you
 expect to need for your cluster.  Setting higher values will cost you more
 money.  *Note* that these settings only affect table creation when
@@ -174,10 +223,10 @@ an existing table, use the AWS console or CLI tool.
 For more details on DynamoDB capacity units, see the AWS page on [Capacity
 Unit Calculations](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#CapacityUnitCalculations).
 
-The charges are incurred per hour for the life of the table, even when the
-table and the underlying S3 bucket are not being used.
+The charges are incurred per hour for the life of the table, *even when the
+table and the underlying S3 buckets are not being used*.
 
-There are also charges incurred for data storage and  for data IO outside of the
+There are also charges incurred for data storage and for data IO outside of the
 region of the DynamoDB instance. S3Guard only stores metadata in DynamoDB: path names
 and summary details of objects —the actual data is stored in S3, so billed at S3
 rates.
@@ -210,29 +259,107 @@ Attempting to perform more IO than the capacity requested simply throttles the
 IO; small capacity numbers are recommended when initially experimenting
 with S3Guard.
 
-## Credentials
+## Authenticating with S3Guard
 
 The DynamoDB metadata store takes advantage of the fact that the DynamoDB
-service uses uses the same authentication mechanisms as S3. With S3Guard,
-DynamoDB doesn't have any dedicated authentication configuration; it gets its
-credentials from the S3A client that is using it.
+service uses the same authentication mechanisms as S3. S3Guard
+gets all its credentials from the S3A client that is using it.
 
-The existing S3 authentication mechanisms can be used, except for one
-exception. Credentials placed in URIs are not supported for S3Guard.  The
-reason is that providing login details in filesystem URIs is considered
-unsafe and thus deprecated.
+All existing S3 authentication mechanisms can be used, except for one
+exception. Credentials placed in URIs are not supported for S3Guard, for security
+reasons.
+
+## Per-bucket S3Guard configuration
+
+In production, it is likely only some buckets will have S3Guard enabled;
+those which are read-only may have disabled, for example. Equally importantly,
+buckets in different regions should have different tables, each
+in the relevant region.
+
+These options can be managed through S3A's [per-bucket configuration
+mechanism](./index.html#Configuring_different_S3_buckets).
+All options with the under `fs.s3a.bucket.BUCKETNAME.KEY` are propagated
+to the options `fs.s3a.KEY` *for that bucket only*.
+
+As an example, here is a configuration to use different metadata stores
+and tables for different buckets
+
+First, we define shortcuts for the metadata store classnames
+
+
+```xml
+<property>
+  <name>s3guard.null</name>
+  <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+</property>
+
+<property>
+  <name>s3guard.dynamo</name>
+  <value>org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore</value>
+</property>
+```
+
+Next, Amazon's public landsat database is configured with no
+metadata store
+
+```xml
+<property>
+  <name>fs.s3a.bucket.landsat-pds.metadatastore.impl</name>
+  <value>${s3guard.null}</value>
+  <description>The read-only landsat-pds repository isn't
+  managed by S3Guard</description>
+</property>
+```
+
+Next the `ireland-2` and `ireland-offline` buckets are configured with
+DynamoDB as the store, and a shared table `production-table`
+
+
+```xml
+<property>
+  <name>fs.s3a.bucket.ireland-2.metadatastore.impl</name>
+  <value>${s3guard.dynamo}</value>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.ireland-offline.metadatastore.impl</name>
+  <value>${s3guard.dynamo}</value>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.ireland-2.s3guard.ddb.table</name>
+  <value>production-table</value>
+</property>
+```
+
+The region of this table is automatically set to be that of the buckets,
+here `eu-west-1`; the same table name may actually be used in different
+regions.
+
+Together then, this configuration enables the DynamoDB Metadata Store
+for two buckets with a shared table, while disabling it for the public
+bucket.
+
 
 ## S3Guard Command Line Interface (CLI)
 
-Note that in some cases an AWS region or s3a:// URI can be provided.
+Note that in some cases an AWS region or `s3a://` URI can be provided.
 
 Metadata store URIs include a scheme that designates the backing store. For
-example (e.g. dynamodb://&lt;table_name&gt;). As documented above, AWS region
-can be inferred if the URI to an existing bucket is provided.
+example (e.g. `dynamodb://table_name`;). As documented above, the
+AWS region can be inferred if the URI to an existing bucket is provided.
 
-### Init
 
-```
+The S3A URI must also be provided for per-bucket configuration options
+to be picked up. That is: when an s3a URL is provided on the command line,
+all its "resolved" per-bucket settings are used to connect to, authenticate
+with and configure the S3Guard table. If no such URL is provided, then
+the base settings are picked up.
+
+
+### Create a table: `s3guard init`
+
+```bash
 hadoop s3guard init -meta URI ( -region REGION | s3a://BUCKET )
 ```
 
@@ -241,44 +368,124 @@ Creates and initializes an empty metadata store.
 A DynamoDB metadata store can be initialized with additional parameters
 pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html):
 
-```
+```bash
 [-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
 ```
 
-### Import
+Example 1
 
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -write 5 -read 10 s3a://ireland-1
 ```
+
+Creates a table "ireland-team" with a capacity of 5 for writes, 10 for reads,
+in the same location as the bucket "ireland-1".
+
+
+Example 2
+
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1
+```
+
+Creates a table "ireland-team" in the same region "s3-eu-west-1.amazonaws.com"
+
+
+### Import a bucket: `s3guard import`
+
+```bash
 hadoop s3guard import [-meta URI] s3a://BUCKET
 ```
 
 Pre-populates a metadata store according to the current contents of an S3
-bucket.
+bucket. If the `-meta` option is omitted, the binding information is taken
+from the `core-site.xml` configuration.
 
-### Diff
+Example
 
+```bash
+hadoop s3guard import s3a://ireland-1
 ```
+
+### Audit a table: `s3guard diff`
+
+```bash
 hadoop s3guard diff [-meta URI] s3a://BUCKET
 ```
 
 Lists discrepancies between a metadata store and bucket. Note that depending on
 how S3Guard is used, certain discrepancies are to be expected.
 
-### Destroy
+Example
 
+```bash
+hadoop s3guard diff s3a://ireland-1
 ```
+
+### Delete a table: `s3guard destroy`
+
+
+Deletes a metadata store. With DynamoDB as the store, this means
+the specific DynamoDB table use to store the metadata.
+
+```bash
 hadoop s3guard destroy [-meta URI] ( -region REGION | s3a://BUCKET )
 ```
 
-Deletes a metadata store.
+This *does not* delete the bucket, only the S3Guard table which it is bound
+to.
 
-### Prune
 
+Examples
+
+```bash
+hadoop s3guard destroy s3a://ireland-1
 ```
+
+Deletes the table which the bucket ireland-1 is configured to use
+as its MetadataStore.
+
+```bash
+hadoop s3guard destroy -meta dynamodb://ireland-team -region eu-west-1
+```
+
+
+
+### Clean up a table, `s3guard prune`
+
+Delete all file entries in the MetadataStore table whose object "modification
+time" is older than the specified age.
+
+```bash
 hadoop s3guard prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
     [-seconds SECONDS] [-m URI] ( -region REGION | s3a://BUCKET )
 ```
 
-Trims metadata for files that are older than the time given. Must supply at least length of time.
+A time value must be supplied.
+
+1. This does not delete the entries in the bucket itself.
+1. The modification time is effectively the creation time of the objects
+in the S3 Bucket.
+1. Even when an S3A URI is supplied, all entries in the table older than
+a specific age are deleted &mdash; even those from other buckets.
+
+Example
+
+```bash
+hadoop s3guard prune -days 7 s3a://ireland-1
+```
+
+Deletes all entries in the S3Guard table for files older than seven days from
+the table associated with `s3a://ireland-1`.
+
+```bash
+hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
+```
+
+Delete all entries more than 90 minutes old from the table "ireland-team" in
+the region "eu-west-1".
+
+
 
 ## Debugging and Error Handling
 
@@ -286,7 +493,6 @@ If you run into network connectivity issues, or have a machine failure in the
 middle of an operation, you may end up with your metadata store having state
 that differs from S3.  The S3Guard CLI commands, covered in the CLI section
 above, can be used to diagnose and repair these issues.
-
 
 There are some logs whose log level can be increased to provide more
 information.
@@ -298,7 +504,7 @@ log4j.logger.org.apache.hadoop.fs.s3a.s3guard=DEBUG
 # Log all S3A classes
 log4j.logger.org.apache.hadoop.fs.s3a=DEBUG
 
-# Enable debug logging of AWS Dynamo client
+# Enable debug logging of AWS DynamoDB client
 log4j.logger.com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 
 # Log all HTTP requests made; includes S3 interaction. This may
@@ -308,7 +514,7 @@ log4j.logger.com.amazonaws.request=DEBUG
 ```
 
 If all else fails, S3Guard is designed to allow for easy recovery by deleting
-your metadata store data.  In DynamoDB, this can be accomplished by simply
+the metadata store data. In DynamoDB, this can be accomplished by simply
 deleting the table, and allowing S3Guard to recreate it from scratch.  Note
 that S3Guard tracks recent changes to file metadata to implement consistency.
 Deleting the metadata store table will simply result in a period of eventual
@@ -319,10 +525,10 @@ was deleted.
 
 Operations which modify metadata will make changes to S3 first. If, and only
 if, those operations succeed, the equivalent changes will be made to the
-MetadataStore.
+Metadata Store.
 
-These changes to S3 and MetadataStore are not fully-transactional:  If the S3
-operations succeed, and the subsequent MetadataStore updates fail, the S3
+These changes to S3 and Metadata Store are not fully-transactional:  If the S3
+operations succeed, and the subsequent Metadata Store updates fail, the S3
 changes will *not* be rolled back.  In this case, an error message will be
 logged.
 
@@ -351,6 +557,20 @@ in an incompatible manner. The version marker in tables exists to support
 such an option if it ever becomes necessary, by ensuring that all S3Guard
 client can recognise any version mismatch.
 
+### Security
+
+All users of the DynamoDB table must have write access to it. This
+effectively means they must have write access to the entire object store.
+
+There's not been much testing of using a S3Guard Metadata Store
+with a read-only S3 Bucket. It *should* work, provided all users
+have write access to the DynamoDB table. And, as updates to the Metadata Store
+are only made after successful file creation, deletion and rename, the
+store is *unlikely* to get out of sync, it is still something which
+merits more testing before it could be considered reliable.
+
+### Troubleshooting
+
 #### Error: `S3Guard table lacks version marker.`
 
 The table which was intended to be used as a S3guard metadata store
@@ -376,148 +596,15 @@ bucket. Upgrade the application/library.
 If the expected version is higher than the actual version, then the table
 itself will need upgrading.
 
-## Testing S3Guard
+#### Error `"DynamoDB table TABLE does not exist in region REGION; auto-creation is turned off"`
 
-The basic strategy for testing S3Guard correctness consists of:
+S3Guard could not find the DynamoDB table for the Metadata Store,
+and it was not configured to create it. Either the table was missing,
+or the configuration is preventing S3Guard from finding the table.
 
-1. MetadataStore Contract tests.
-
-    The MetadataStore contract tests are inspired by the Hadoop FileSystem and
-    FileContext contract tests.  Each implementation of the MetadataStore interface
-    subclasses the `MetadataStoreTestBase` class and customizes it to initialize
-    their MetadataStore.  This test ensures that the different implementations
-    all satisfy the semantics of the MetadataStore API.
-
-2. Running existing S3A unit and integration tests with S3Guard enabled.
-
-    You can run the S3A integration tests on top of S3Guard by configuring your
-    MetadataStore (as documented above) in your
-    `hadoop-tools/hadoop-aws/src/test/resources/core-site.xml` or
-    `hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml` files.
-    Next run the S3A integration tests as outlined in the *Running the Tests* section
-    of the [S3A documentation](./index.html)
-
-3. Running fault-injection tests that test S3Guard's consistency features.
-
-    The `ITestS3GuardListConsistency` uses failure injection to ensure
-    that list consistency logic is correct even when the underlying storage is
-    eventually consistent.
-
-    The integration test adds a shim above the Amazon S3 Client layer that injects
-    delays in object visibility.
-
-    All of these tests will be run if you follow the steps listed in step 2 above.
-
-    No charges are incurred for using this store, and its consistency
-    guarantees are that of the underlying object store instance. <!-- :) -->
-
-## Testing S3 with S3Guard Enabled
-
-All the S3A tests which work with a private repository can be configured to
-run with S3Guard by using the `s3guard` profile. When set, this will run
-all the tests with local memory for the metadata set to "non-authoritative" mode.
-
-```bash
-mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard 
-```
-
-When the `s3guard` profile is enabled, following profiles can be specified:
-
-* `dynamo`: use an AWS-hosted DynamoDB table; creating the table if it does
-  not exist. You will have to pay the bills for DynamoDB web service.
-* `dynamodblocal`: use an in-memory DynamoDBLocal server instead of real AWS
-  DynamoDB web service; launch the server if it is not yet started; creating the
-  table if it does not exist. You won't be charged bills for using DynamoDB in
-  test. However, the DynamoDBLocal is a simulator of real AWS DynamoDB and is
-  maintained separately, so it may be stale.
-* `non-auth`: treat the s3guard metadata as authorative
-
-```bash
-mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth 
-```
-
-When experimenting with options, it is usually best to run a single test suite
-at a time until the operations appear to be working.
-
-```bash
-mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
-```
-
-### Notes
-
-1. If the `s3guard` profile is not set, then the s3guard properties are those
-of the test configuration set in `contract-test-options.xml` or `auth-keys.xml`
-
-If the `s3guard` profile *is* set, 
-1. The s3guard options from maven (the dynamo and authoritative flags)
-  overwrite any previously set. in the configuration files.
-1. Dynamo will be configured to create any missing tables.
-
-### Warning About Concurrent Tests
-
-You should not run S3A and S3N tests in parallel on the same bucket.  This is
-especially true when S3Guard is enabled.  S3Guard requires that all clients
-that are modifying the bucket have S3Guard enabled, so having S3N
-integration tests running in parallel with S3A tests will cause strange
-failures.
-
-### Scale Testing MetadataStore Directly
-
-We also have some scale tests that exercise MetadataStore implementations
-directly.  These allow us to ensure were are robust to things like DynamoDB
-throttling, and compare performance for different implementations. See the
-main [S3A documentation](./index.html) for more details on how to enable the
-S3A scale tests.
-
-The two scale tests here are `ITestDynamoDBMetadataStoreScale` and
-`ITestLocalMetadataStoreScale`.  To run the DynamoDB test, you will need to
-define your table name and region in your test configuration.  For example,
-the following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
-artificially low read and write capacity provisioned, so we can judge the
-effects of being throttled by the DynamoDB service:
-
-```
-<property>
-    <name>scale.test.operation.count</name>
-    <value>10</value>
-</property>
-<property>
-    <name>scale.test.directory.count</name>
-    <value>3</value>
-</property>
-<property>
-    <name>fs.s3a.scale.test.enabled</name>
-    <value>true</value>
-</property>
-<property>
-    <name>fs.s3a.s3guard.ddb.table</name>
-    <value>my-scale-test</value>
-</property>
-<property>
-    <name>fs.s3a.s3guard.ddb.region</name>
-    <value>us-west-2</value>
-</property>
-<property>
-    <name>fs.s3a.s3guard.ddb.table.create</name>
-    <value>true</value>
-</property>
-<property>
-    <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-    <value>10</value>
-</property>
-<property>
-    <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-    <value>10</value>
-</property>
-```
-
-### Testing only: Local Metadata Store
-
-There is an in-memory metadata store for testing.
-
-```xml
-<property>
-  <name>fs.s3a.metadatastore.impl</name>
-  <value>org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore</value>
-</property>
-```
+1. Verify that the value of `fs.s3a.s3guard.ddb.table` is correct.
+1. If the region for an existing table has been set in
+`fs.s3a.s3guard.ddb.region`, verify that the value is correct.
+1. If the region is not set, verify that the table exists in the same
+region as the bucket being used.
+1. Create the table if necessary.

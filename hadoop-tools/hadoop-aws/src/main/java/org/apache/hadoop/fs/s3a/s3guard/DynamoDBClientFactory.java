@@ -71,7 +71,8 @@ public interface DynamoDBClientFactory extends Configurable {
     @Override
     public AmazonDynamoDB createDynamoDBClient(String defaultRegion)
         throws IOException {
-      assert getConf() != null : "Should have been configured before usage";
+      Preconditions.checkNotNull(getConf(),
+          "Should have been configured before usage");
 
       final Configuration conf = getConf();
       final AWSCredentialsProvider credentials =

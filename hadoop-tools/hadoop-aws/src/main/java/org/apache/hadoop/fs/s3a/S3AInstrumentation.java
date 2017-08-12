@@ -91,7 +91,7 @@ public class S3AInstrumentation {
   private final Map<String, MutableCounterLong> streamMetrics =
       new HashMap<>(30);
 
-  /** Instantiate this without caring whether or not s3guard is enabled. */
+  /** Instantiate this without caring whether or not S3Guard is enabled. */
   private final S3GuardInstrumentation s3GuardInstrumentation
       = new S3GuardInstrumentation();
 

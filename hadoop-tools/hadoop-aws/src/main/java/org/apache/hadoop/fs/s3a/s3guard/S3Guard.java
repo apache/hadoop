@@ -18,8 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -29,21 +38,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-
-import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_LATENCY;
+import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_REQUEST;
+import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -75,10 +76,6 @@ public final class S3Guard {
    * {@link MetadataStore#initialize(FileSystem)} by this function before
    * returning it.  Callers must clean up by calling
    * {@link MetadataStore#close()} when done using the MetadataStore.
-   *
-   * If this fails to instantiate the class specified in config (fs.s3a
-   * .metadatastore.impl), or there is an error initializing it, this will log
-   * an error and return an instance of {@link NullMetadataStore} instead.
    *
    * @param fs  FileSystem whose Configuration specifies which
    *            implementation to use.
@@ -124,9 +121,9 @@ public final class S3Guard {
 
 
   /**
-   * Helper function which puts given S3AFileStatus in the MetadataStore and
-   * returns the same S3AFileStatus.
-   * @param ms MetadataStore to put() into.
+   * Helper function which puts a given S3AFileStatus into the MetadataStore and
+   * returns the same S3AFileStatus. Instrumentation monitors the put operation.
+   * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
    * @param instrumentation instrumentation of the s3a file system
    * @return The same status as passed in
@@ -168,7 +165,7 @@ public final class S3Guard {
   }
 
   /**
-   * Given directory listing metadata from both the backing store, and the
+   * Given directory listing metadata from both the backing store and the
    * MetadataStore, merge the two sources of truth to create a consistent
    * view of the current directory contents, which can be returned to clients.
    *
@@ -187,7 +184,7 @@ public final class S3Guard {
       boolean isAuthoritative) throws IOException {
 
     // Fast-path for NullMetadataStore
-    if (ms instanceof NullMetadataStore) {
+    if (isNullMetadataStore(ms)) {
       return backingStatuses.toArray(new FileStatus[backingStatuses.size()]);
     }
 
@@ -216,7 +213,7 @@ public final class S3Guard {
 
       // Minor race condition here.  Multiple threads could add to this
       // mutable DirListingMetadata.  Since it is backed by a
-      // ConcurrentHashMap, the last put() wins.  I think this is ok.
+      // ConcurrentHashMap, the last put() wins.
       // More concerning is two threads racing on listStatus() and delete().
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
@@ -245,6 +242,9 @@ public final class S3Guard {
 
   /**
    * Update MetadataStore to reflect creation of the given  directories.
+   *
+   * If an IOException is raised while trying to update the entry, this
+   * operation catches the exception and returns.
    * @param ms    MetadataStore to update.
    * @param dirs  null, or an ordered list of directories from leaf to root.
    *              E.g. if /a/ exists, and  mkdirs(/a/b/c/d) is called, this
@@ -285,7 +285,7 @@ public final class S3Guard {
         Path f = dirs.get(i);
         assertQualified(f);
         FileStatus status =
-            S3AUtils.createUploadFileStatus(f, true, 0, 0, owner);
+            createUploadFileStatus(f, true, 0, 0, owner);
 
         // We only need to put a DirListingMetadata if we are setting
         // authoritative bit
@@ -315,15 +315,16 @@ public final class S3Guard {
   }
 
   /**
-   * Helper function that records the move of directory path, adding
-   * resulting metadata to the supplied lists.  Does not store in MetadataStore.
+   * Helper function that records the move of directory paths, adding
+   * resulting metadata to the supplied lists.
+   * Does not store in MetadataStore.
    * @param ms  MetadataStore, used to make this a no-op, when it is
    *            NullMetadataStore.
    * @param srcPaths stores the source path here
    * @param dstMetas stores destination metadata here
    * @param srcPath  source path to store
    * @param dstPath  destination path to store
-   * @param owner Hadoop user name
+   * @param owner file owner to use in created records
    */
   public static void addMoveDir(MetadataStore ms, Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas, Path srcPath, Path dstPath,
@@ -331,10 +332,9 @@ public final class S3Guard {
     if (isNullMetadataStore(ms)) {
       return;
     }
-    assertQualified(srcPath);
-    assertQualified(dstPath);
-    FileStatus dstStatus = S3AUtils.createUploadFileStatus(dstPath, true, 0,
-        0, owner);
+    assertQualified(srcPath, dstPath);
+
+    FileStatus dstStatus = createUploadFileStatus(dstPath, true, 0, 0, owner);
     addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
   }
 
@@ -349,7 +349,7 @@ public final class S3Guard {
    * @param dstPath  destination path to store
    * @param size length of file moved
    * @param blockSize  blocksize to associate with destination file
-   * @param owner Hadoop user name
+   * @param owner file owner to use in created records
    */
   public static void addMoveFile(MetadataStore ms, Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas, Path srcPath, Path dstPath,
@@ -357,9 +357,8 @@ public final class S3Guard {
     if (isNullMetadataStore(ms)) {
       return;
     }
-    assertQualified(srcPath);
-    assertQualified(dstPath);
-    FileStatus dstStatus = S3AUtils.createUploadFileStatus(dstPath, false,
+    assertQualified(srcPath, dstPath);
+    FileStatus dstStatus = createUploadFileStatus(dstPath, false,
         size, blockSize, owner);
     addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
   }
@@ -390,9 +389,7 @@ public final class S3Guard {
       return;
     }
 
-    assertQualified(srcRoot);
-    assertQualified(srcPath);
-    assertQualified(dstPath);
+    assertQualified(srcRoot, srcPath, dstPath);
 
     if (srcPath.equals(srcRoot)) {
       LOG.debug("Skip moving ancestors of source root directory {}", srcRoot);
@@ -438,6 +435,11 @@ public final class S3Guard {
     dstMetas.add(new PathMetadata(dstStatus));
   }
 
+  /**
+   * Assert that the path is qualified with a host and scheme.
+   * @param p path to check
+   * @throws NullPointerException if either argument does not hold
+   */
   public static void assertQualified(Path p) {
     URI uri = p.toUri();
     // Paths must include bucket in case MetadataStore is shared between
@@ -446,5 +448,16 @@ public final class S3Guard {
 
     // I believe this should never fail, since there is a host?
     Preconditions.checkNotNull(uri.getScheme(), "Null scheme in " + uri);
+  }
+
+  /**
+   * Assert that all paths are valid.
+   * @param paths path to check
+   * @throws NullPointerException if either argument does not hold
+   */
+  public static void assertQualified(Path...paths) {
+    for (Path path : paths) {
+      assertQualified(path);
+    }
   }
 }

@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Tests for the {@link S3Guard} utility class.

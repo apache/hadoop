@@ -37,12 +37,13 @@ import java.util.Map;
 
 /**
  * This is a local, in-memory, implementation of MetadataStore.
- * This is *not* a coherent cache across processes.  It is only
+ * This is <i>not</i> a coherent cache across processes.  It is only
  * locally-coherent.
  *
- * The purpose of this is for unit testing.  It could also be used to accelerate
- * local-only operations where only one process is operating on a given object
- * store, or multiple processes are accessing a read-only storage bucket.
+ * The purpose of this is for unit and integration testing.
+ * It could also be used to accelerate local-only operations where only one
+ * process is operating on a given object store, or multiple processes are
+ * accessing a read-only storage bucket.
  *
  * This MetadataStore does not enforce filesystem rules such as disallowing
  * non-recursive removal of non-empty directories.  It is assumed the caller
@@ -53,6 +54,10 @@ public class LocalMetadataStore implements MetadataStore {
   public static final Logger LOG = LoggerFactory.getLogger(MetadataStore.class);
   // TODO HADOOP-13649: use time instead of capacity for eviction.
   public static final int DEFAULT_MAX_RECORDS = 128;
+
+  /**
+   * Maximum number of records.
+   */
   public static final String CONF_MAX_RECORDS =
       "fs.metadatastore.local.max_records";
 

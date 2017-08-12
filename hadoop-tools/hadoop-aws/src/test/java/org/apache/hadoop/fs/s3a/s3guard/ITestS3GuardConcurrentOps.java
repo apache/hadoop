@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -33,16 +29,19 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.Constants;
-
-import org.apache.commons.lang3.StringUtils;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.Constants;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 

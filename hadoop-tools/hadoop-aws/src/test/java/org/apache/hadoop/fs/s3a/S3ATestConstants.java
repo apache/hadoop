@@ -135,7 +135,7 @@ public interface S3ATestConstants {
   String TEST_STS_ENDPOINT = "test.fs.s3a.sts.endpoint";
 
   /**
-   * Various s3guard tests.
+   * Various S3Guard tests.
    */
   String TEST_S3GUARD_PREFIX = "fs.s3a.s3guard.test";
   String TEST_S3GUARD_ENABLED = TEST_S3GUARD_PREFIX + ".enabled";

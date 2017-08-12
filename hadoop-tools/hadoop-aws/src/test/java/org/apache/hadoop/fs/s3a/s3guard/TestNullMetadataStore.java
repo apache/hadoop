@@ -29,14 +29,9 @@ import java.io.IOException;
 public class TestNullMetadataStore extends MetadataStoreTestBase {
   private static class NullMSContract extends AbstractMSContract {
     @Override
-    public FileSystem getFileSystem() {
+    public FileSystem getFileSystem() throws IOException {
       Configuration config = new Configuration();
-      try {
-        return FileSystem.getLocal(config);
-      } catch (IOException e) {
-        fail("Error creating LocalFileSystem");
-        return null;
-      }
+      return FileSystem.getLocal(config);
     }
 
     @Override

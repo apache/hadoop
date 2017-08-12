@@ -24,8 +24,8 @@ import com.amazonaws.services.s3.transfer.Upload;
  * Simple struct that contains information about a S3 upload.
  */
 public class UploadInfo {
-  private Upload upload;
-  private long length;
+  private final Upload upload;
+  private final long length;
 
   public UploadInfo(Upload upload, long length) {
     this.upload = upload;

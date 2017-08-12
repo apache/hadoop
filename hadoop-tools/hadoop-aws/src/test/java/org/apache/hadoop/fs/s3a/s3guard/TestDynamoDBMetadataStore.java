@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.MockS3ClientFactory;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -81,7 +80,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       LoggerFactory.getLogger(TestDynamoDBMetadataStore.class);
   private static final String BUCKET = "TestDynamoDBMetadataStore";
   private static final String S3URI =
-      URI.create(Constants.FS_S3A + "://" + BUCKET + "/").toString();
+      URI.create(FS_S3A + "://" + BUCKET + "/").toString();
   public static final PrimaryKey
       VERSION_MARKER_PRIMARY_KEY = createVersionMarkerPrimaryKey(
       DynamoDBMetadataStore.VERSION_MARKER);
@@ -135,9 +134,9 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
           S3ClientFactory.class);
       conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, S3URI);
       // setting config for creating a DynamoDBClient against local server
-      conf.set(Constants.ACCESS_KEY, "dummy-access-key");
-      conf.set(Constants.SECRET_KEY, "dummy-secret-key");
-      conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
+      conf.set(ACCESS_KEY, "dummy-access-key");
+      conf.set(SECRET_KEY, "dummy-secret-key");
+      conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
       conf.setClass(S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL,
           DynamoDBLocalClientFactory.class, DynamoDBClientFactory.class);
 
@@ -181,7 +180,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     return (DynamoDBMetadataStore) getContract().getMetadataStore();
   }
 
-  private S3AFileSystem getFileSystem() {
+  private S3AFileSystem getFileSystem() throws IOException {
     return (S3AFileSystem) getContract().getFileSystem();
   }
 
@@ -194,13 +193,13 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = "testInitializeWithFileSystem";
     final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
-    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(s3afs);
       verifyTableInitialized(tableName);
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
-      String expectedRegion = conf.get(Constants.S3GUARD_DDB_REGION_KEY,
+      String expectedRegion = conf.get(S3GUARD_DDB_REGION_KEY,
           s3afs.getBucketLocation(tableName));
       assertEquals("DynamoDB table should be in configured region or the same" +
               " region as S3 bucket",
@@ -217,24 +216,24 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public void testInitializeWithConfiguration() throws IOException {
     final String tableName = "testInitializeWithConfiguration";
     final Configuration conf = getFileSystem().getConf();
-    conf.unset(Constants.S3GUARD_DDB_TABLE_NAME_KEY);
-    String savedRegion = conf.get(Constants.S3GUARD_DDB_REGION_KEY,
+    conf.unset(S3GUARD_DDB_TABLE_NAME_KEY);
+    String savedRegion = conf.get(S3GUARD_DDB_REGION_KEY,
         getFileSystem().getBucketLocation());
-    conf.unset(Constants.S3GUARD_DDB_REGION_KEY);
+    conf.unset(S3GUARD_DDB_REGION_KEY);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       fail("Should have failed because the table name is not set!");
     } catch (IllegalArgumentException ignored) {
     }
     // config table name
-    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    try  (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()){
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
     }
     // config region
-    conf.set(Constants.S3GUARD_DDB_REGION_KEY, savedRegion);
+    conf.set(S3GUARD_DDB_REGION_KEY, savedRegion);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       verifyTableInitialized(tableName);
@@ -348,12 +347,12 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testTableVersionRequired() throws Exception {
     Configuration conf = getFileSystem().getConf();
-    int maxRetries = conf.getInt(Constants.S3GUARD_DDB_MAX_RETRIES, Constants
-        .S3GUARD_DDB_MAX_RETRIES_DEFAULT);
-    conf.setInt(Constants.S3GUARD_DDB_MAX_RETRIES, 3);
+    int maxRetries = conf.getInt(S3GUARD_DDB_MAX_RETRIES,
+        S3GUARD_DDB_MAX_RETRIES_DEFAULT);
+    conf.setInt(S3GUARD_DDB_MAX_RETRIES, 3);
 
     final DynamoDBMetadataStore ddbms = createContract(conf).getMetadataStore();
-    String tableName = conf.get(Constants.S3GUARD_DDB_TABLE_NAME_KEY, BUCKET);
+    String tableName = conf.get(S3GUARD_DDB_TABLE_NAME_KEY, BUCKET);
     Table table = verifyTableInitialized(tableName);
     table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
 
@@ -361,7 +360,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     intercept(IOException.class, E_NO_VERSION_MARKER,
         () -> ddbms.initTable());
 
-    conf.setInt(Constants.S3GUARD_DDB_MAX_RETRIES, maxRetries);
+    conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
   }
 
   /**
@@ -371,16 +370,15 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testTableVersionMismatch() throws Exception {
     final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
-    String tableName = getFileSystem().getConf().get(Constants
-        .S3GUARD_DDB_TABLE_NAME_KEY, BUCKET);
+    String tableName = getFileSystem().getConf()
+        .get(S3GUARD_DDB_TABLE_NAME_KEY, BUCKET);
     Table table = verifyTableInitialized(tableName);
     table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
     Item v200 = createVersionMarker(VERSION_MARKER, 200, 0);
     table.putItem(v200);
 
     // create existing table
-    intercept(IOException.class, E_INCOMPATIBLE_VERSION,
-        () -> ddbms.initTable());
+    intercept(IOException.class, E_INCOMPATIBLE_VERSION, ddbms::initTable);
   }
 
   /**
@@ -392,13 +390,12 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = "testFailNonexistentTable";
     final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
-    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    conf.unset(Constants.S3GUARD_DDB_TABLE_CREATE_KEY);
-    try {
-      final DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.unset(S3GUARD_DDB_TABLE_CREATE_KEY);
+    try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(s3afs);
-      fail("Should have failed as table does not exist and table auto-creation "
-          + "is disabled");
+      fail("Should have failed as table does not exist and table auto-creation"
+          + " is disabled");
     } catch (IOException ignored) {
     }
   }
@@ -425,11 +422,13 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertTrue(status.isDirectory());
     // UNKNOWN is always a valid option, but true / false should not contradict
     if (isEmpty) {
-      assertTrue("Should not be marked non-empty",
-          rootMeta.isEmptyDirectory() != Tristate.FALSE);
+      assertNotSame("Should not be marked non-empty",
+          Tristate.FALSE,
+          rootMeta.isEmptyDirectory());
     } else {
-      assertTrue("Should not be marked empty",
-          rootMeta.isEmptyDirectory() != Tristate.TRUE);
+      assertNotSame("Should not be marked empty",
+          Tristate.TRUE,
+          rootMeta.isEmptyDirectory());
     }
   }
 
@@ -437,7 +436,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
    * Test that when moving nested paths, all its ancestors up to destination
    * root will also be created.
    * Here is the directory tree before move:
-   *
+   * <pre>
    * testMovePopulateAncestors
    * ├── a
    * │   └── b
@@ -448,7 +447,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
    * └── c
    *     └── d
    *         └── dest
-   *
+   *</pre>
    * As part of rename(a/b/src, d/c/dest), S3A will enumerate the subtree at
    * a/b/src.  This test verifies that after the move, the new subtree at
    * 'dest' is reachable from the root (i.e. c/ and c/d exist in the table.
@@ -525,7 +524,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = "testDeleteTable";
     final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
-    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(s3afs);
       // we can list the empty table

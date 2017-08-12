@@ -18,24 +18,24 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.Callable;
+
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import org.junit.Test;
+
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Random;
-
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 /**
  * Test S3Guard related CLI commands against DynamoDB.
  */
-public class ITestS3GuardToolDynamoDB extends S3GuardToolTestBase {
+public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Override
   protected MetadataStore newMetadataStore() {
@@ -58,39 +58,38 @@ public class ITestS3GuardToolDynamoDB extends S3GuardToolTestBase {
 
   @Test
   public void testInvalidRegion() throws Exception {
-    String testTableName = "testInvalidRegion" + new Random().nextInt();
+    final String testTableName = "testInvalidRegion" + new Random().nextInt();
     String testRegion = "invalidRegion";
     // Initialize MetadataStore
-    Init initCmd = new Init(getFs().getConf());
-    try {
-      initCmd.run(new String[]{
-          "init",
-          "-region", testRegion,
-          "-meta", "dynamodb://" + testTableName
-      });
-    } catch (IOException e) {
-      // Expected
-      return;
-    }
-    fail("Use of invalid region did not fail - table may have been " +
-        "created and not cleaned up: " + testTableName);
+    Init initCmd = new Init(getFileSystem().getConf());
+    LambdaTestUtils.intercept(IOException.class,
+        new Callable<String>() {
+          @Override
+          public String call() throws Exception {
+            int res = initCmd.run(new String[]{
+                "init",
+                "-region", testRegion,
+                "-meta", "dynamodb://" + testTableName
+            });
+            return "Use of invalid region did not fail, returning " + res
+                + "- table may have been " +
+                "created and not cleaned up: " + testTableName;
+          }
+        });
   }
 
   @Test
-  public void testDynamoDBInitDestroyCycle() throws IOException,
-      InterruptedException {
+  public void testDynamoDBInitDestroyCycle() throws Exception {
     String testTableName = "testDynamoDBInitDestroy" + new Random().nextInt();
     String testS3Url = path(testTableName).toString();
-    S3AFileSystem fs = getFs();
+    S3AFileSystem fs = getFileSystem();
     DynamoDB db = null;
     try {
       // Initialize MetadataStore
       Init initCmd = new Init(fs.getConf());
-      assertEquals("Init command did not exit successfully - see output",
-          SUCCESS, initCmd.run(new String[]{
-              "init", "-meta", "dynamodb://" + testTableName,
-              testS3Url
-          }));
+      expectSuccess("Init command did not exit successfully - see output",
+          initCmd,
+          "init", "-meta", "dynamodb://" + testTableName, testS3Url);
       // Verify it exists
       MetadataStore ms = getMetadataStore();
       assertTrue("metadata store should be DynamoDBMetadataStore",
@@ -102,18 +101,24 @@ public class ITestS3GuardToolDynamoDB extends S3GuardToolTestBase {
 
       // Destroy MetadataStore
       Destroy destroyCmd = new Destroy(fs.getConf());
-      assertEquals("Destroy command did not exit successfully - see output",
-          SUCCESS, destroyCmd.run(new String[]{
-              "destroy", "-meta", "dynamodb://" + testTableName,
-              testS3Url
-          }));
+
+      expectSuccess("Destroy command did not exit successfully - see output",
+          destroyCmd,
+          "destroy", "-meta", "dynamodb://" + testTableName, testS3Url);
       // Verify it does not exist
       assertFalse(String.format("%s still exists", testTableName),
           exist(db, testTableName));
+
+      // delete again and expect success again
+      expectSuccess("Destroy command did not exit successfully - see output",
+          destroyCmd,
+          "destroy", "-meta", "dynamodb://" + testTableName, testS3Url);
     } catch (ResourceNotFoundException e) {
-      fail(String.format("DynamoDB table %s does not exist", testTableName));
+      throw new AssertionError(
+          String.format("DynamoDB table %s does not exist", testTableName),
+          e);
     } finally {
-      System.out.println("Warning! Table may have not been cleaned up: " +
+      LOG.warn("Table may have not been cleaned up: " +
           testTableName);
       if (db != null) {
         Table table = db.getTable(testTableName);

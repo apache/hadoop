@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Diff;
-import org.junit.Test;
-
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -33,14 +27,20 @@ import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.junit.Test;
+
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Diff;
+
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+
 
 /**
  * Test S3Guard related CLI commands against a LocalMetadataStore.
  */
-public class ITestS3GuardToolLocal extends S3GuardToolTestBase {
+public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
 
   @Override
   protected MetadataStore newMetadataStore() {
@@ -48,8 +48,8 @@ public class ITestS3GuardToolLocal extends S3GuardToolTestBase {
   }
 
   @Test
-  public void testImportCommand() throws IOException {
-    S3AFileSystem fs = getFs();
+  public void testImportCommand() throws Exception {
+    S3AFileSystem fs = getFileSystem();
     MetadataStore ms = getMetadataStore();
     Path parent = path("test-import");
     fs.mkdirs(parent);
@@ -67,8 +67,9 @@ public class ITestS3GuardToolLocal extends S3GuardToolTestBase {
     S3GuardTool.Import cmd = new S3GuardTool.Import(fs.getConf());
     cmd.setMetadataStore(ms);
 
-    assertEquals("Import command did not exit successfully - see output",
-        SUCCESS, cmd.run(new String[]{"import", parent.toString()}));
+    expectSuccess("Import command did not exit successfully - see output",
+        cmd,
+        "import", parent.toString());
 
     DirListingMetadata children =
         ms.listChildren(dir);
@@ -81,7 +82,7 @@ public class ITestS3GuardToolLocal extends S3GuardToolTestBase {
 
   @Test
   public void testDiffCommand() throws IOException {
-    S3AFileSystem fs = getFs();
+    S3AFileSystem fs = getFileSystem();
     MetadataStore ms = getMetadataStore();
     Set<Path> filesOnS3 = new HashSet<>(); // files on S3.
     Set<Path> filesOnMS = new HashSet<>(); // files on metadata store.
@@ -114,30 +115,29 @@ public class ITestS3GuardToolLocal extends S3GuardToolTestBase {
     assertEquals("Diff command did not exit successfully - see output", SUCCESS,
         cmd.run(new String[]{"diff", "-meta", "local://metadata",
             testPath.toString()}, out));
+    out.close();
 
     Set<Path> actualOnS3 = new HashSet<>();
     Set<Path> actualOnMS = new HashSet<>();
     boolean duplicates = false;
-    try (ByteArrayInputStream in =
-             new ByteArrayInputStream(buf.toByteArray())) {
-      try (BufferedReader reader =
-               new BufferedReader(new InputStreamReader(in))) {
-        String line;
-        while ((line = reader.readLine()) != null) {
-          String[] fields = line.split("\\s");
-          assertEquals("[" + line + "] does not have enough fields",
-              4, fields.length);
-          String where = fields[0];
-          Path path = new Path(fields[3]);
-          if (Diff.S3_PREFIX.equals(where)) {
-            duplicates = duplicates || actualOnS3.contains(path);
-            actualOnS3.add(path);
-          } else if (Diff.MS_PREFIX.equals(where)) {
-            duplicates = duplicates || actualOnMS.contains(path);
-            actualOnMS.add(path);
-          } else {
-            fail("Unknown prefix: " + where);
-          }
+    try (BufferedReader reader =
+             new BufferedReader(new InputStreamReader(
+                 new ByteArrayInputStream(buf.toByteArray())))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        String[] fields = line.split("\\s");
+        assertEquals("[" + line + "] does not have enough fields",
+            4, fields.length);
+        String where = fields[0];
+        Path path = new Path(fields[3]);
+        if (Diff.S3_PREFIX.equals(where)) {
+          duplicates = duplicates || actualOnS3.contains(path);
+          actualOnS3.add(path);
+        } else if (Diff.MS_PREFIX.equals(where)) {
+          duplicates = duplicates || actualOnMS.contains(path);
+          actualOnMS.add(path);
+        } else {
+          fail("Unknown prefix: " + where);
         }
       }
     }

@@ -142,7 +142,7 @@ public enum Statistic {
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
       "Total queue duration of all block uploads"),
 
-  // S3guard stats
+  // S3Guard stats
   S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
       "s3guard_metadatastore_put_path_request",
       "s3guard metadata store put one metadata path request"),

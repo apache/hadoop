@@ -136,7 +136,7 @@ final class PathMetadataDynamoDBTranslation {
           username, username, path);
     }
     boolean isDeleted =
-        item.hasAttribute(IS_DELETED) ? item.getBoolean(IS_DELETED) : false;
+        item.hasAttribute(IS_DELETED) && item.getBoolean(IS_DELETED);
 
     return new PathMetadata(fileStatus, Tristate.UNKNOWN, isDeleted);
   }
@@ -243,8 +243,8 @@ final class PathMetadataDynamoDBTranslation {
   }
 
   /**
-   * e.g. pathToParentKey(s3a://bucket/path/a) -> /bucket/path/a
-   * @param path
+   * e.g. {@code pathToParentKey(s3a://bucket/path/a) -> /bucket/path/a}
+   * @param path path to convert
    * @return string for parent key
    */
   static String pathToParentKey(Path path) {
