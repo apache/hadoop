@@ -267,7 +267,7 @@ public class AllocationFileLoaderService extends AbstractService {
     Map<FSQueueType, Set<String>> configuredQueues = new HashMap<>();
 
     for (FSQueueType queueType : FSQueueType.values()) {
-      configuredQueues.put(queueType, new HashSet<>());
+      configuredQueues.put(queueType, new HashSet<String>());
     }
 
     // Read and parse the allocations file.
@@ -281,7 +281,7 @@ public class AllocationFileLoaderService extends AbstractService {
       throw new AllocationConfigurationException("Bad fair scheduler config " +
           "file: top-level element not <allocations>");
     NodeList elements = root.getChildNodes();
-    List<Element> queueElements = new ArrayList<>();
+    List<Element> queueElements = new ArrayList<Element>();
     Element placementPolicyElement = null;
     for (int i = 0; i < elements.getLength(); i++) {
       Node node = elements.item(i);
