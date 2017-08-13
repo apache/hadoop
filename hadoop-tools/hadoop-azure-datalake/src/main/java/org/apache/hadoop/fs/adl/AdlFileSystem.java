@@ -35,6 +35,8 @@ import com.microsoft.azure.datalake.store.LatencyTracker;
 import com.microsoft.azure.datalake.store.UserGroupRepresentation;
 import com.microsoft.azure.datalake.store.oauth2.AccessTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.ClientCredsTokenProvider;
+import com.microsoft.azure.datalake.store.oauth2.DeviceCodeTokenProvider;
+import com.microsoft.azure.datalake.store.oauth2.MsiTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.RefreshTokenBasedTokenProvider;
 
 import org.apache.commons.lang.StringUtils;
@@ -255,6 +257,12 @@ public class AdlFileSystem extends FileSystem {
     case ClientCredential:
       tokenProvider = getConfCredentialBasedTokenProvider(conf);
       break;
+    case MSI:
+      tokenProvider = getMsiBasedTokenProvider(conf);
+      break;
+    case DeviceCode:
+      tokenProvider = getDeviceCodeTokenProvider(conf);
+      break;
     case Custom:
     default:
       AzureADTokenProvider azureADTokenProvider = getCustomAccessTokenProvider(
@@ -279,6 +287,19 @@ public class AdlFileSystem extends FileSystem {
     String clientId = getPasswordString(conf, AZURE_AD_CLIENT_ID_KEY);
     String refreshToken = getPasswordString(conf, AZURE_AD_REFRESH_TOKEN_KEY);
     return new RefreshTokenBasedTokenProvider(clientId, refreshToken);
+  }
+
+  private AccessTokenProvider getMsiBasedTokenProvider(
+          Configuration conf) throws IOException {
+    int port = Integer.parseInt(getNonEmptyVal(conf, MSI_PORT));
+    String tenantGuid = getPasswordString(conf, MSI_TENANT_GUID);
+    return new MsiTokenProvider(port, tenantGuid);
+  }
+
+  private AccessTokenProvider getDeviceCodeTokenProvider(
+          Configuration conf) throws IOException {
+    String clientAppId = getNonEmptyVal(conf, DEVICE_CODE_CLIENT_APP_ID);
+    return new DeviceCodeTokenProvider(clientAppId);
   }
 
   @VisibleForTesting
