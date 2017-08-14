@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.jmx.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -132,7 +134,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
  * datanodes and create a container, which then can be used to store data.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
-public class StorageContainerManager
+public class StorageContainerManager extends ServiceRuntimeInfoImpl
     implements StorageContainerDatanodeProtocol,
     StorageContainerLocationProtocol, ScmBlockLocationProtocol, SCMMXBean {
 
@@ -293,8 +295,13 @@ public class StorageContainerManager
   }
 
   private void registerMXBean() {
-    this.scmInfoBeanName = MBeans.register("StorageContainerManager",
-        "StorageContainerManagerInfo", this);
+    Map<String, String> jmxProperties = new HashMap<>();
+    jmxProperties.put("component", "ServerRuntime");
+    this.scmInfoBeanName =
+        MBeans.register("StorageContainerManager",
+            "StorageContainerManagerInfo",
+            jmxProperties,
+            this);
   }
 
   private void unregisterMXBean() {
@@ -564,6 +571,7 @@ public class StorageContainerManager
   public void start() throws IOException {
     LOG.info(buildRpcServerStartMessage(
         "StorageContainerLocationProtocol RPC server", clientRpcAddress));
+    DefaultMetricsSystem.initialize("StorageContainerManager");
     clientRpcServer.start();
     LOG.info(buildRpcServerStartMessage(
         "ScmBlockLocationProtocol RPC server", blockRpcAddress));
@@ -571,9 +579,9 @@ public class StorageContainerManager
     LOG.info(buildRpcServerStartMessage("RPC server for DataNodes",
         datanodeRpcAddress));
     datanodeRpcServer.start();
-
     httpServer.start();
 
+    setStartTime();
 
   }
 

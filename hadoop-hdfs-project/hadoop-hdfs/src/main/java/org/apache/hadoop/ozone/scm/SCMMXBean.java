@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.jmx.ServiceRuntimeInfo;
 
 import java.util.Map;
 
@@ -27,7 +28,7 @@ import java.util.Map;
  * This is the JMX management interface for scm information.
  */
 @InterfaceAudience.Private
-public interface SCMMXBean {
+public interface SCMMXBean extends ServiceRuntimeInfo {
 
   /**
    * Get the number of data nodes that in all states.

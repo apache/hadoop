@@ -75,11 +75,13 @@ public class TestSCMMXBean {
   public void testSCMMXBean() throws Exception {
     ObjectName bean = new ObjectName(
         "Hadoop:service=StorageContainerManager,"
-            + "name=StorageContainerManagerInfo");
+            + "name=StorageContainerManagerInfo,"
+            + "component=ServerRuntime");
 
     String dnRpcPort = (String)mbs.getAttribute(bean,
         "DatanodeRpcPort");
     assertEquals(scm.getDatanodeRpcPort(), dnRpcPort);
+
 
     String clientRpcPort = (String)mbs.getAttribute(bean,
         "ClientRpcPort");

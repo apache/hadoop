@@ -17,37 +17,39 @@
 
 package org.apache.hadoop.jmx;
 
+import org.apache.hadoop.util.VersionInfo;
+
 /**
- * Common runtime information for any service components.
+ * Helper base class to report the standard version and runtime information.
+ *
  */
-public interface ServiceRuntimeInfoMBean {
+public class ServiceRuntimeInfoImpl implements ServiceRuntimeInfo {
 
-  /**
-   * Gets the version of Hadoop.
-   *
-   * @return the version
-   */
-  String getVersion();
+  private long startedTimeInMillis;
 
-  /**
-   * Get the version of software running on the Namenode
-   *
-   * @return a string representing the version
-   */
-  String getSoftwareVersion();
+  @Override
+  public String getVersion() {
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
+  }
 
-  /**
-   * Get the compilation information which contains date, user and branch
-   *
-   * @return the compilation information, as a JSON string.
-   */
-  String getCompileInfo();
+  @Override
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion();
+  }
 
-  /**
-   * Gets the NN start time in milliseconds.
-   *
-   * @return the NN start time in msec
-   */
-  long getStartedTimeInMillis();
+  @Override
+  public String getCompileInfo() {
+    return VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from "
+        + VersionInfo.getBranch();
+  }
+
+  @Override
+  public long getStartedTimeInMillis() {
+    return startedTimeInMillis;
+  }
+
+  public void setStartTime() {
+    startedTimeInMillis = System.currentTimeMillis();
+  }
 
 }
