@@ -74,7 +74,7 @@ public class TestNameNodeProvidedImplementation {
   final Random r = new Random();
   final File fBASE = new File(MiniDFSCluster.getBaseDirectory());
   final Path BASE = new Path(fBASE.toURI().toString());
-  final Path NAMEPATH = new Path(BASE, "providedDir");;
+  final Path NAMEPATH = new Path(BASE, "providedDir");
   final Path NNDIRPATH = new Path(BASE, "nnDir");
   final Path BLOCKFILE = new Path(NNDIRPATH, "blocks.csv");
   final String SINGLEUSER = "usr1";
@@ -116,6 +116,8 @@ public class TestNameNodeProvidedImplementation {
         BLOCKFILE.toString());
     conf.set(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_DELIMITER, ",");
 
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR_PROVIDED,
+        new File(NAMEPATH.toUri()).toString());
     File imageDir = new File(NAMEPATH.toUri());
     if (!imageDir.exists()) {
       LOG.info("Creating directory: " + imageDir);
