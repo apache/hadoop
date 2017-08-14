@@ -104,7 +104,7 @@ public class Resources {
     }
 
     @Override
-    public void setResourceValue(String resource, Long value)
+    public void setResourceValue(String resource, long value)
         throws ResourceNotFoundException {
       throw new RuntimeException(name + " cannot be modified!");
     }
