@@ -273,14 +273,14 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Evolving
-  public void setResourceValue(String resource, Long value)
+  public void setResourceValue(String resource, long value)
       throws ResourceNotFoundException {
     if (resource.equals(MEMORY)) {
       this.setMemorySize(value);
       return;
     }
     if (resource.equals(VCORES)) {
-      this.setVirtualCores(value.intValue());
+      this.setVirtualCores((int)value);
       return;
     }
 
