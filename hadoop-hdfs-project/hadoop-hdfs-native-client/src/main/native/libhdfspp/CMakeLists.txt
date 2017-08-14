@@ -65,6 +65,7 @@ endif (NOT THREAD_LOCAL_SUPPORTED)
 # Check if PROTOC library was compiled with the compatible compiler by trying
 # to compile some dummy code
 unset (PROTOC_IS_COMPATIBLE CACHE)
+set (CMAKE_REQUIRED_INCLUDES ${PROTOBUF_INCLUDE_DIRS})
 set (CMAKE_REQUIRED_LIBRARIES ${PROTOBUF_LIBRARY} ${PROTOBUF_PROTOC_LIBRARY})
 check_cxx_source_compiles(
     "#include <google/protobuf/io/printer.h>
@@ -77,8 +78,8 @@ check_cxx_source_compiles(
     }"
     PROTOC_IS_COMPATIBLE)
 if (NOT PROTOC_IS_COMPATIBLE)
-  message(FATAL_ERROR
-  "FATAL ERROR: the Protocol Buffers Library and the Libhdfs++ Library must both be compiled \
+  message(WARNING
+  "WARNING: the Protocol Buffers Library and the Libhdfs++ Library must both be compiled \
   with the same (or compatible) compiler. Normally only the same major versions of the same \
   compiler are compatible with each other.")
 endif (NOT PROTOC_IS_COMPATIBLE)
