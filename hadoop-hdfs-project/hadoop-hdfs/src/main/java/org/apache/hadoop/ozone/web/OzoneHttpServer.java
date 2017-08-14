@@ -138,8 +138,8 @@ public abstract class OzoneHttpServer {
       String realAddress = NetUtils.getHostPortString(httpAddress);
       conf.set(getHttpAddressKey(), realAddress);
       LOG.info(
-          String.format("HTTP server of SCM is listening at http://%s",
-              realAddress));
+          String.format("HTTP server of %s is listening at http://%s",
+              name.toUpperCase(), realAddress));
     }
 
     if (policy.isHttpsEnabled()) {
@@ -147,8 +147,8 @@ public abstract class OzoneHttpServer {
       String realAddress = NetUtils.getHostPortString(httpsAddress);
       conf.set(getHttpsAddressKey(), realAddress);
       LOG.info(
-          String.format("HTTP server of SCM is listening at https://%s",
-              realAddress));
+          String.format("HTTP server of %s is listening at https://%s",
+              name.toUpperCase(), realAddress));
     }
   }
 

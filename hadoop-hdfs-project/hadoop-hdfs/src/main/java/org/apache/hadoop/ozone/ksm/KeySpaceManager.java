@@ -23,7 +23,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.jmx.ServiceRuntimeInfo;
+import org.apache.hadoop.jmx.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
@@ -52,7 +52,9 @@ import org.slf4j.LoggerFactory;
 import javax.management.ObjectName;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_ADDRESS_KEY;
@@ -69,7 +71,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
  * Ozone Keyspace manager is the metadata manager of ozone.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
-public class KeySpaceManager extends ServiceRuntimeInfo
+public class KeySpaceManager extends ServiceRuntimeInfoImpl
     implements KeySpaceManagerProtocol, KSMMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(KeySpaceManager.class);
@@ -557,8 +559,13 @@ public class KeySpaceManager extends ServiceRuntimeInfo
   }
 
   private void registerMXBean() {
+    Map<String, String> jmxProperties = new HashMap<String, String>();
+    jmxProperties.put("component", "ServerRuntime");
     this.ksmInfoBeanName =
-        MBeans.register("KeySpaceManager", "KeySpaceManagerInfo", this);
+        MBeans.register("KeySpaceManager",
+            "KeySpaceManagerInfo",
+            jmxProperties,
+            this);
   }
 
   private void unregisterMXBean() {

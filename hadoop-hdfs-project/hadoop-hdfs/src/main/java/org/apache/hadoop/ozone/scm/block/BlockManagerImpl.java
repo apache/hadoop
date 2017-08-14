@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm.block;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.container.Mapping;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
@@ -35,13 +36,14 @@ import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
 import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -68,7 +70,7 @@ import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
 /**
  * Block Manager manages the block access for SCM.
  */
-public class BlockManagerImpl implements BlockManager {
+public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockManagerImpl.class);
 
@@ -84,6 +86,8 @@ public class BlockManagerImpl implements BlockManager {
   private Map<String, Long> openContainers;
   private final int containerProvisionBatchSize;
   private final Random rand;
+  private final ObjectName mxBean;
+
 
   /**
    * Constructor.
@@ -122,7 +126,7 @@ public class BlockManagerImpl implements BlockManager {
         .setCacheSize(this.cacheSize * OzoneConsts.MB)
         .build();
 
-    openContainers = new HashMap<>();
+    openContainers = new ConcurrentHashMap<>();
     loadOpenContainers();
 
     this.containerProvisionBatchSize = conf.getInt(
@@ -130,6 +134,8 @@ public class BlockManagerImpl implements BlockManager {
         ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT);
     rand = new Random();
     this.lock = new ReentrantLock();
+
+    mxBean = MBeans.register("BlockManager", "BlockManagerImpl", this);
   }
 
   // TODO: close full (or almost full) containers with a separate thread.
@@ -361,5 +367,12 @@ public class BlockManagerImpl implements BlockManager {
     if (openContainerStore != null) {
       openContainerStore.close();
     }
+
+    MBeans.unregister(mxBean);
+  }
+
+  @Override
+  public int getOpenContainersNo() {
+    return openContainers.size();
   }
 }

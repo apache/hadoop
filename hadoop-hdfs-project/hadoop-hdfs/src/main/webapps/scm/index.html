@@ -28,14 +28,15 @@
 
     <link href="/static/bootstrap-3.0.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/hadoop.css" rel="stylesheet">
+    <link href="/static/nvd3-1.8.5.min.css" rel="stylesheet">
 
     <link href="/main.css" rel="stylesheet">
 
 </head>
 
-<body>
+<body ng-app="scm">
 
-<nav class="navbar navbar-inverse navbar-fixed-top">
+<header class="navbar navbar-inverse navbar-fixed-top bs-docs-nav">
     <div class="container">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
@@ -47,29 +48,29 @@
             </button>
             <a class="navbar-brand" href="#">HDFS SCM</a>
         </div>
-        <div id="navbar" class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="#">Home</a></li>
-                <li><a href="/jmx">JMX</a></li>
-                <li><a href="/conf">Config</a></li>
-                <li><a href="/stacks">Stacks</a></li>
-                <li><a href="/logLevel">Log levels</a></li>
-
-            </ul>
-        </div><!--/.nav-collapse -->
+        <common-tools></common-tools>
     </div>
-</nav>
+</header>
 
 <div class="container">
 
-    <div class="starter-template">
-        <h1>HDFS SCM</h1>
-    </div>
+    <overview>
+        <scm-overview>
+        </scm-overview>
+    </overview>
+    <rpc-metrics></rpc-metrics>
+
 
 </div><!-- /.container -->
 
-
 <script src="/static/jquery-1.10.2.min.js"></script>
-<script src="/static/bootstrap-3.0.2//js/bootstrap.min.js"></script>
+<script src="/static/angular-1.6.4.min.js"></script>
+<script src="/static/angular-route-1.6.4.min.js"></script>
+<script src="/static/d3-3.5.17.min.js"></script>
+<script src="/static/nvd3-1.8.5.min.js"></script>
+<script src="/static/angular-nvd3-1.0.9.min.js"></script>
+<script src="/static/ozone.js"></script>
+<script src="/scm.js"></script>
+<script src="/static/bootstrap-3.0.2/js/bootstrap.min.js"></script>
 </body>
 </html>

@@ -48,32 +48,7 @@
             </button>
             <a class="navbar-brand" href="#">HDFS KSM</a>
         </div>
-        <div id="navbar" class="collapse navbar-collapse">
-            <ul class="nav navbar-nav" id="ui-tabs">
-                <li>
-                    <a class="dropdown-toggle" id="toolsMenu"
-                       data-toggle="dropdown" aria-haspopup="true"
-                       aria-expanded="true" href="#">
-                        External tools
-                        <span class="caret"></span>
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="toolsMenu">
-                        <li><a href="/jmx">JMX <span
-                                class="glyphicon glyphicon-new-window"
-                                aria-hidden="true"></span></a></li>
-                        <li><a href="/conf">Config <span
-                                class="glyphicon glyphicon-new-window"
-                                aria-hidden="true"></a></li>
-                        <li><a href="/stacks">Stacks <span
-                                class="glyphicon glyphicon-new-window"
-                                aria-hidden="true"></a></li>
-                        <li><a href="/logLevel">Log levels <span
-                                class="glyphicon glyphicon-new-window"
-                                aria-hidden="true"></a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div><!--/.nav-collapse -->
+        <common-tools></common-tools>
     </div>
 </header>
 
@@ -92,6 +67,7 @@
 <script src="/static/d3-3.5.17.min.js"></script>
 <script src="/static/nvd3-1.8.5.min.js"></script>
 <script src="/static/angular-nvd3-1.0.9.min.js"></script>
+<script src="/static/ozone.js"></script>
 <script src="/ksm.js"></script>
 <script src="/static/bootstrap-3.0.2/js/bootstrap.min.js"></script>
 </body>

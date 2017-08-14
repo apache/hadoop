@@ -17,38 +17,48 @@
 
 package org.apache.hadoop.jmx;
 
-import org.apache.hadoop.util.VersionInfo;
-
 /**
- * Helper base class to report the standard version and runtime information.
+ * Common runtime information for any service components.
+ *
+ * Note: it's intentional to not use MXBean or MBean as a suffix  of the name.
+ *
+ * Most of the services extends the ServiceRuntimeInfoImpl class and also
+ * implements a specific MXBean interface which extends this interface.
+ *
+ * This inheritance from multiple path could confuse the jmx system and
+ * some jmx properties could be disappeared.
+ *
+ * The solution is to always extend this interface and use the jmx naming
+ * convention in the new interface..
  */
-public class ServiceRuntimeInfo implements ServiceRuntimeInfoMBean {
+public interface ServiceRuntimeInfo {
 
-  private long startedTimeInMillis;
+  /**
+   * Gets the version of Hadoop.
+   *
+   * @return the version
+   */
+  String getVersion();
 
-  @Override
-  public String getVersion() {
-    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
-  }
+  /**
+   * Get the version of software running on the Namenode
+   *
+   * @return a string representing the version
+   */
+  String getSoftwareVersion();
 
-  @Override
-  public String getSoftwareVersion() {
-    return VersionInfo.getVersion();
-  }
+  /**
+   * Get the compilation information which contains date, user and branch
+   *
+   * @return the compilation information, as a JSON string.
+   */
+  String getCompileInfo();
 
-  @Override
-  public String getCompileInfo() {
-    return VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from "
-        + VersionInfo.getBranch();
-  }
-
-  @Override
-  public long getStartedTimeInMillis() {
-    return System.currentTimeMillis() - startedTimeInMillis;
-  }
-
-  public void setStartTime() {
-    startedTimeInMillis = System.currentTimeMillis();
-  }
+  /**
+   * Gets the NN start time in milliseconds.
+   *
+   * @return the NN start time in msec
+   */
+  long getStartedTimeInMillis();
 
 }

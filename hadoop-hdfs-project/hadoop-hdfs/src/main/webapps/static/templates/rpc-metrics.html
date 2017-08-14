@@ -14,10 +14,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-
-<h1>RPC Metrics (port: {{$ctrl.jmxdata['tag.port']}})</h1>
-
-<div ng-hide="$ctrl.metrics.percentiles.length" class="alert alert-info">
+<div ng-hide="$ctrl.metrics.percentiles" class="alert alert-info">
     Please set <b>rpc.metrics.quantile.enable</b> to <b>true</b> and define the
     intervals in seconds with setting <b>rpc.metrics.percentiles.intervals</b>
     (eg. set to <b>60,300</b>) in your hdfs-site.xml

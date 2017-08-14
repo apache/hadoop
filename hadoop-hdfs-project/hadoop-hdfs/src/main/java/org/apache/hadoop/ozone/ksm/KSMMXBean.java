@@ -19,15 +19,13 @@
 package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.jmx.ServiceRuntimeInfoMBean;
-
-import java.util.Map;
+import org.apache.hadoop.jmx.ServiceRuntimeInfo;
 
 /**
  * This is the JMX management interface for ksm information.
  */
 @InterfaceAudience.Private
-public interface KSMMXBean extends ServiceRuntimeInfoMBean {
+public interface KSMMXBean extends ServiceRuntimeInfo {
 
   String getRpcPort();
 }
