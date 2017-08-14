@@ -310,11 +310,6 @@ public class LeafQueue extends AbstractCSQueue {
     allUsersTimesWeights = sumAllUsersTimesWeights();
   }
 
-  @Override
-  public String getQueuePath() {
-    return getParent().getQueuePath() + "." + getQueueName();
-  }
-
   /**
    * Used only by tests.
    */
