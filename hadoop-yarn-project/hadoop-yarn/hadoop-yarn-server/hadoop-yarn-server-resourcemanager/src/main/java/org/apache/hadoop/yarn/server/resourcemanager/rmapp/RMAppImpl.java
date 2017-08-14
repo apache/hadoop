@@ -888,7 +888,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         /* keep the master in sync with the state machine */
         this.stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.error("Can't handle this event at current state", e);
+        LOG.error("App: " + appID
+            + " can't handle this event at current state", e);
         /* TODO fail the application on the failed transition */
       }
 
