@@ -20,13 +20,16 @@ package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import org.apache.slider.common.SliderKeys;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.Arguments;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.UsageException;
 import org.apache.slider.core.registry.docstore.ConfigFormat;
 
-import static org.apache.slider.common.params.SliderActions.ACTION_REGISTRY;
-import static org.apache.slider.common.params.SliderActions.DESCRIBE_ACTION_REGISTRY;
+import static org.apache.hadoop.yarn.service.client.params.SliderActions.ACTION_REGISTRY;
+import static org.apache.hadoop.yarn.service.client.params.SliderActions.DESCRIBE_ACTION_REGISTRY;
 import java.io.File;
 
 /**

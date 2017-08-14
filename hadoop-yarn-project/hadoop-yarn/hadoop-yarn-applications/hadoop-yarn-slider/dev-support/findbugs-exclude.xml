@@ -17,6 +17,14 @@
 -->
 <FindBugsFilter>
     <Match>
+        <Package name="org.apache.hadoop.yarn.proto" />
+    </Match>
+    <Match>
+        <class name="org.apache.hadoop.yarn.service.utils.ServiceApiUtil" />
+        <Bug pattern="MS_CANNOT_BE_FINAL" />
+    </Match>
+
+    <Match>
         <Package name="org.apache.slider.api.proto" />
     </Match>
     <Match>

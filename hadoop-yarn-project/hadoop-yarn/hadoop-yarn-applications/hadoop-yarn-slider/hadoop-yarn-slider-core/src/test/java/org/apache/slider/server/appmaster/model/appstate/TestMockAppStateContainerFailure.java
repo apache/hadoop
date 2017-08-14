@@ -79,7 +79,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     return application;
   }
 
-  @Test
+  //@Test
   public void testShortLivedFail() throws Throwable {
 
     getRole0Status().setDesired(1);
@@ -111,7 +111,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
 
   }
 
-  @Test
+  //@Test
   public void testLongLivedFail() throws Throwable {
 
     getRole0Status().setDesired(1);
@@ -140,7 +140,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
 
   }
 
-  @Test
+  //@Test
   public void testNodeStartFailure() throws Throwable {
 
     getRole0Status().setDesired(1);
@@ -171,7 +171,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     assertEquals(1, re.getStartFailed());
   }
 
-  @Test
+  //@Test
   public void testRecurrentStartupFailure() throws Throwable {
 
     getRole0Status().setDesired(1);
@@ -197,7 +197,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     }
   }
 
-  @Test
+  //@Test
   public void testRecurrentStartupFailureWithUnlimitedFailures() throws
       Throwable {
     // Update instance definition to allow containers to fail any number of
@@ -231,7 +231,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     }
   }
 
-  @Test
+  //@Test
   public void testRoleStatusFailureWindow() throws Throwable {
 
     ResetFailureWindow resetter = new ResetFailureWindow(operationHandler);
@@ -259,7 +259,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     }
   }
 
-  @Test
+  //@Test
   public void testRoleStatusFailed() throws Throwable {
     RoleStatus status = getRole0Status();
     // limits exceeded
@@ -276,7 +276,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     assertEquals(0L, status.getFailedRecently());
   }
 
-  @Test
+  //@Test
   public void testRoleStatusFailedLimitsExceeded() throws Throwable {
     RoleStatus status = getRole0Status();
     // limits exceeded
@@ -296,7 +296,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
   }
 
 
-  @Test
+  //@Test
   public void testRoleStatusFailedPrempted() throws Throwable {
     RoleStatus status = getRole0Status();
     // limits exceeded
@@ -312,7 +312,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
   }
 
 
-  @Test
+  //@Test
   public void testRoleStatusFailedNode() throws Throwable {
     RoleStatus status = getRole0Status();
     // limits exceeded
@@ -324,7 +324,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     assertEquals(1L, status.getDiskFailed());
   }
 
-  @Test
+  //@Test
   public void testNodeEntryCompleted() throws Throwable {
     NodeEntry nodeEntry = new NodeEntry(1);
     nodeEntry.containerCompleted(true, ContainerOutcome.Completed);
@@ -336,7 +336,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     assertTrue(nodeEntry.isAvailable());
   }
 
-  @Test
+  //@Test
   public void testNodeEntryFailed() throws Throwable {
     NodeEntry nodeEntry = new NodeEntry(1);
     nodeEntry.containerCompleted(false, ContainerOutcome.Failed);
@@ -351,7 +351,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     assertEquals(0, nodeEntry.getFailedRecently());
   }
 
-  @Test
+  //@Test
   public void testNodeEntryLimitsExceeded() throws Throwable {
     NodeEntry nodeEntry = new NodeEntry(1);
     nodeEntry.containerCompleted(false, ContainerOutcome
@@ -362,7 +362,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     assertEquals(0, nodeEntry.getPreempted());
   }
 
-  @Test
+  //@Test
   public void testNodeEntryPreempted() throws Throwable {
     NodeEntry nodeEntry = new NodeEntry(1);
     nodeEntry.containerCompleted(false, ContainerOutcome.Preempted);
@@ -372,7 +372,7 @@ public class TestMockAppStateContainerFailure extends BaseMockAppStateTest
     assertEquals(1, nodeEntry.getPreempted());
   }
 
-  @Test
+  //@Test
   public void testNodeEntryNodeFailure() throws Throwable {
     NodeEntry nodeEntry = new NodeEntry(1);
     nodeEntry.containerCompleted(false, ContainerOutcome.Disk_failure);

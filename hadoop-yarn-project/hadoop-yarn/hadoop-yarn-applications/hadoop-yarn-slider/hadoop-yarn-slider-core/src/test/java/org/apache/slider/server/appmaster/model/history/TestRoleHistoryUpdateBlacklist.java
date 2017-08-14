@@ -64,7 +64,7 @@ public class TestRoleHistoryUpdateBlacklist extends BaseMockAppStateTest {
     roleStatuses = Arrays.asList(roleStatus);
   }
 
-  @Test
+  //@Test
   public void testUpdateBlacklist() {
     assertFalse(ni.isBlacklisted());
 
@@ -92,7 +92,7 @@ public class TestRoleHistoryUpdateBlacklist extends BaseMockAppStateTest {
     assertFalse(ni.isBlacklisted());
   }
 
-  @Test
+  //@Test
   public void testBlacklistOperations()
       throws Exception {
     recordAsFailed(ni, roleStatus.getKey(), MockFactory

@@ -31,7 +31,6 @@ import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.exceptions.BadConfigException;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.server.appmaster.management.BoolMetric;
-import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.management.Timestamp;
 import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.operations.UpdateBlacklistOperation;

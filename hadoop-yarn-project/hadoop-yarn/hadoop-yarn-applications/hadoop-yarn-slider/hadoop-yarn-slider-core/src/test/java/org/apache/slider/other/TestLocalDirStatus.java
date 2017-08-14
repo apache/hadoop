@@ -35,7 +35,7 @@ public class TestLocalDirStatus extends SliderTestUtils {
 
   public static final int SIZE = 0x200000;
 
-  @Test
+  //@Test
   public void testTempDir() throws Throwable {
     File tmpf = null;
     try {
@@ -50,7 +50,7 @@ public class TestLocalDirStatus extends SliderTestUtils {
     }
   }
 
-  @Test
+  //@Test
   public void testTargetDir() throws Throwable {
     File target = target();
     File tmpf = null;
@@ -73,7 +73,7 @@ public class TestLocalDirStatus extends SliderTestUtils {
     return target;
   }
 
-  @Test
+  //@Test
   public void testRenameInTargetDir() throws Throwable {
     File target = target();
     File tmpf = null;
@@ -94,7 +94,7 @@ public class TestLocalDirStatus extends SliderTestUtils {
     }
   }
 
-  @Test
+  //@Test
   public void testRenameInTmpDir() throws Throwable {
     File tmpf = null;
     File dst= null;

@@ -67,6 +67,14 @@ public final class RegistryOperationsFactory {
     return operations;
   }
 
+  public static RegistryOperationsClient createClient(String name,
+      Configuration conf) {
+    Preconditions.checkArgument(conf != null, "Null configuration");
+    RegistryOperationsClient operations = new RegistryOperationsClient(name);
+    operations.init(conf);
+    return operations;
+  }
+
   /**
    * Create and initialize an anonymous read/write registry operations instance.
    * In a secure cluster, this instance will only have read access to the

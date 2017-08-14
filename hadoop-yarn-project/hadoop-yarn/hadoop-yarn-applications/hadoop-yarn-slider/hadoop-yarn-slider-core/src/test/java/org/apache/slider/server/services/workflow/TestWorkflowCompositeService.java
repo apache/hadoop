@@ -29,20 +29,20 @@ public class TestWorkflowCompositeService extends ParentWorkflowTestBase {
   private static final Logger
       log = LoggerFactory.getLogger(TestWorkflowCompositeService.class);
 
-  @Test
+  //@Test
   public void testSingleChild() throws Throwable {
     Service parent = startService(new MockService());
     parent.stop();
   }
 
-  @Test
+  //@Test
   public void testSingleChildTerminating() throws Throwable {
     ServiceParent parent =
         startService(new MockService("1", false, 100));
     waitForParentToStop(parent);
   }
 
-  @Test
+  //@Test
   public void testSingleChildFailing() throws Throwable {
     ServiceParent parent =
         startService(new MockService("1", true, 100));
@@ -50,7 +50,7 @@ public class TestWorkflowCompositeService extends ParentWorkflowTestBase {
     assert parent.getFailureCause() != null;
   }
 
-  @Test
+  //@Test
   public void testTwoChildren() throws Throwable {
     MockService one = new MockService("one", false, 100);
     MockService two = new MockService("two", false, 100);
@@ -60,7 +60,7 @@ public class TestWorkflowCompositeService extends ParentWorkflowTestBase {
     assertStopped(two);
   }
 
-  @Test
+  //@Test
   public void testCallableChild() throws Throwable {
 
     MockService one = new MockService("one", false, 100);
@@ -78,7 +78,7 @@ public class TestWorkflowCompositeService extends ParentWorkflowTestBase {
     assertEquals("hello", s);
   }
 
-  @Test
+  //@Test
   public void testNestedComposite() throws Throwable {
     MockService one = new MockService("one", false, 100);
     MockService two = new MockService("two", false, 100);
@@ -89,7 +89,7 @@ public class TestWorkflowCompositeService extends ParentWorkflowTestBase {
     assertStopped(two);
   }
 
-  @Test
+  //@Test
   public void testFailingComposite() throws Throwable {
     MockService one = new MockService("one", true, 10);
     MockService two = new MockService("two", false, 1000);

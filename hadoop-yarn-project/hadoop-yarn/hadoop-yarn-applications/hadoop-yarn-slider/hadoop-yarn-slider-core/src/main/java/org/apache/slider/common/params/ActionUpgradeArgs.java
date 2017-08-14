@@ -18,11 +18,8 @@
 
 package org.apache.slider.common.params;
 
-import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 
 @Parameters(commandNames = { SliderActions.ACTION_UPGRADE },
             commandDescription = SliderActions.DESCRIBE_ACTION_UPGRADE)

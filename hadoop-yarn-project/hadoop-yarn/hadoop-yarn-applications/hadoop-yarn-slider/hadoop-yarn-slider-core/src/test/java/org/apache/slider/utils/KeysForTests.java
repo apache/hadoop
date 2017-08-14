@@ -18,7 +18,7 @@
 
 package org.apache.slider.utils;
 
-import org.apache.slider.common.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
 import org.apache.slider.common.SliderXMLConfKeysForTesting;
 
 /**

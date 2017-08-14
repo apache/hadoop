@@ -24,7 +24,7 @@ import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.exceptions.NoRecordException;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
-import org.apache.slider.common.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.NotFoundException;
 import org.apache.slider.core.exceptions.SliderException;

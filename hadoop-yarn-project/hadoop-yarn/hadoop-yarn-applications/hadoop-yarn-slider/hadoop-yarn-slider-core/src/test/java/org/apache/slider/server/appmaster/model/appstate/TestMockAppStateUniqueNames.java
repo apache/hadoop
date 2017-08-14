@@ -107,7 +107,7 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
     }
   }
 
-  @Test
+  //@Test
   public void testDynamicFlexDown() throws Throwable {
     createAndStartNodes();
     List<RoleInstance> instances = appState.cloneOwnedContainerList();
@@ -130,7 +130,7 @@ public class TestMockAppStateUniqueNames extends BaseMockAppStateTest
     verifyInstances(instances, "group1", "group10", "group11", "group12");
   }
 
-  @Test
+  //@Test
   public void testDynamicFlexUp() throws Throwable {
     createAndStartNodes();
     List<RoleInstance> instances = appState.cloneOwnedContainerList();

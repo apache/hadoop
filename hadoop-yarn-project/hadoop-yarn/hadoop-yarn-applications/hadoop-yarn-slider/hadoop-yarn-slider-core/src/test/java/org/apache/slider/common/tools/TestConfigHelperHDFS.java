@@ -36,7 +36,7 @@ public class TestConfigHelperHDFS extends YarnMiniClusterTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestConfigHelperHDFS.class);
 
-  @Test
+  //@Test
   public void testConfigHelperHDFS() throws Throwable {
     YarnConfiguration config = getConfiguration();
     createMiniHDFSCluster("testConfigHelperHDFS", config);

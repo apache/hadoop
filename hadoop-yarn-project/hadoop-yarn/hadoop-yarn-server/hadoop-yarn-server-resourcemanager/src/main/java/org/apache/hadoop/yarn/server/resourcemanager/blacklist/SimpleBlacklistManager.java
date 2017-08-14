@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.blacklist;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 
 /**
  * Maintains a list of failed nodes and returns that as long as number of

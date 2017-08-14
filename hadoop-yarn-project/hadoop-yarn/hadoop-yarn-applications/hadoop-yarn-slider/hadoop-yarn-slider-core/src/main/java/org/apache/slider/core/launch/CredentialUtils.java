@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.slider.common.SliderXmlConfKeys;
+import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

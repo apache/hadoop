@@ -20,12 +20,14 @@ package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.UsageException;
 
 import java.io.File;
 
-@Parameters(commandNames = {SliderActions.ACTION_TOKENS},
+@Parameters(commandNames = { SliderActions.ACTION_TOKENS},
             commandDescription = "save tokens to a file or list tokens in a file")
 public class ActionTokensArgs extends AbstractActionArgs {
 

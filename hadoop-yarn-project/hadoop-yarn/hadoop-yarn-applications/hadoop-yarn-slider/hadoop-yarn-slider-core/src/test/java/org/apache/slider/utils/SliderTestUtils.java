@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Container;
 import org.apache.slider.client.SliderClient;
-import org.apache.slider.common.params.Arguments;
+import org.apache.hadoop.yarn.service.client.params.Arguments;
 import org.apache.slider.common.tools.Duration;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.main.LauncherExitCodes;
@@ -65,7 +65,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.slider.common.params.Arguments.ARG_OPTION;
+import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_OPTION;
 
 /**
  * Static utils for tests in this package and in other test projects.

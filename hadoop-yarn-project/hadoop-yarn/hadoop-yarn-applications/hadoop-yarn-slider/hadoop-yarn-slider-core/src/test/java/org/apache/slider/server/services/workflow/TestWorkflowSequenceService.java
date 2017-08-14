@@ -28,19 +28,19 @@ public class TestWorkflowSequenceService extends ParentWorkflowTestBase {
   private static final Logger
       log = LoggerFactory.getLogger(TestWorkflowSequenceService.class);
 
-  @Test
+  //@Test
   public void testSingleSequence() throws Throwable {
     ServiceParent parent = startService(new MockService());
     parent.stop();
   }
 
-  @Test
+  //@Test
   public void testEmptySequence() throws Throwable {
     ServiceParent parent = startService();
     waitForParentToStop(parent);
   }
 
-  @Test
+  //@Test
   public void testSequence() throws Throwable {
     MockService one = new MockService("one", false, 100);
     MockService two = new MockService("two", false, 100);
@@ -51,7 +51,7 @@ public class TestWorkflowSequenceService extends ParentWorkflowTestBase {
     assert ((WorkflowSequenceService) parent).getPreviousService().equals(two);
   }
 
-  @Test
+  //@Test
   public void testCallableChild() throws Throwable {
 
     MockService one = new MockService("one", false, 100);
@@ -70,7 +70,7 @@ public class TestWorkflowSequenceService extends ParentWorkflowTestBase {
   }
 
 
-  @Test
+  //@Test
   public void testFailingSequence() throws Throwable {
     MockService one = new MockService("one", true, 100);
     MockService two = new MockService("two", false, 100);
@@ -83,7 +83,7 @@ public class TestWorkflowSequenceService extends ParentWorkflowTestBase {
   }
 
 
-  @Test
+  //@Test
   public void testFailInStartNext() throws Throwable {
     MockService one = new MockService("one", false, 100);
     MockService two = new MockService("two", true, 0);
@@ -100,7 +100,7 @@ public class TestWorkflowSequenceService extends ParentWorkflowTestBase {
     assertInState(three, Service.STATE.NOTINITED);
   }
 
-  @Test
+  //@Test
   public void testSequenceInSequence() throws Throwable {
     MockService one = new MockService("one", false, 100);
     MockService two = new MockService("two", false, 100);
@@ -111,7 +111,7 @@ public class TestWorkflowSequenceService extends ParentWorkflowTestBase {
     assertStopped(two);
   }
 
-  @Test
+  //@Test
   public void testVarargsConstructor() throws Throwable {
     MockService one = new MockService("one", false, 100);
     MockService two = new MockService("two", false, 100);
@@ -124,7 +124,7 @@ public class TestWorkflowSequenceService extends ParentWorkflowTestBase {
   }
 
 
-  @Test
+  //@Test
   public void testAddChild() throws Throwable {
     MockService one = new MockService("one", false, 5000);
     MockService two = new MockService("two", false, 100);

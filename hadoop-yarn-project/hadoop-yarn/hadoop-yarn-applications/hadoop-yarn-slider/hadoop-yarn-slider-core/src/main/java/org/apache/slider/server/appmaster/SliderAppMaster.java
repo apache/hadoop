@@ -76,6 +76,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
+import org.apache.hadoop.yarn.service.provider.ProviderService;
+import org.apache.hadoop.yarn.service.provider.ProviderFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -87,12 +89,12 @@ import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.proto.SliderClusterAPI;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
-import org.apache.slider.common.SliderExitCodes;
-import org.apache.slider.common.SliderKeys;
-import org.apache.slider.common.params.AbstractActionArgs;
-import org.apache.slider.common.params.SliderAMArgs;
-import org.apache.slider.common.params.SliderAMCreateAction;
-import org.apache.slider.common.params.SliderActions;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderAMArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderAMCreateAction;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 import org.apache.slider.common.tools.ConfigHelper;
 import org.apache.slider.common.tools.PortScanner;
 import org.apache.slider.common.tools.SliderFileSystem;
@@ -109,8 +111,6 @@ import org.apache.slider.core.main.RunService;
 import org.apache.slider.core.main.ServiceLauncher;
 import org.apache.slider.core.registry.info.CustomRegistryConstants;
 import org.apache.slider.providers.ProviderCompleted;
-import org.apache.slider.providers.ProviderService;
-import org.apache.slider.providers.SliderProviderFactory;
 import org.apache.slider.server.appmaster.actions.ActionHalt;
 import org.apache.slider.server.appmaster.actions.ActionRegisterServiceInstance;
 import org.apache.slider.server.appmaster.actions.ActionStopSlider;
@@ -142,8 +142,8 @@ import org.apache.slider.server.appmaster.state.ContainerAssignment;
 import org.apache.slider.server.appmaster.state.MostRecentContainerReleaseSelector;
 import org.apache.slider.server.appmaster.state.ProviderAppState;
 import org.apache.slider.server.appmaster.state.RoleInstance;
-import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
-import org.apache.slider.server.appmaster.timelineservice.SliderMetricsSink;
+import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
+import org.apache.hadoop.yarn.service.timelineservice.ServiceMetricsSink;
 import org.apache.slider.server.appmaster.web.SliderAMWebApp;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.apache.slider.server.appmaster.web.WebAppApiImpl;
@@ -157,7 +157,7 @@ import org.apache.slider.server.services.workflow.ServiceThreadFactory;
 import org.apache.slider.server.services.workflow.WorkflowExecutorService;
 import org.apache.slider.server.services.workflow.WorkflowRpcService;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
-import org.apache.slider.util.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -584,7 +584,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * @throws Throwable on a failure
    */
   private int createAndRunCluster(String appName) throws Throwable {
-    Path appDir = new Path((serviceArgs.getAppDefDir()));
+    Path appDir = new Path((serviceArgs.getAppDefPath()));
     SliderFileSystem fs = getClusterFS();
     fs.setAppDir(appDir);
     application = ServiceApiUtil.loadApplication(fs, appName);
@@ -597,11 +597,11 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     // initialize our providers
     for (Component component : application.getComponents()) {
-      SliderProviderFactory factory = SliderProviderFactory
+      ProviderFactory factory = ProviderFactory
           .createSliderProviderFactory(component.getArtifact());
       ProviderService providerService = factory.createServerProvider();
       // init the provider BUT DO NOT START IT YET
-      initAndAddService(providerService);
+//      initAndAddService(providerService);
       providers.add(providerService);
     }
 
@@ -663,7 +663,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         serviceTimelinePublisher.start();
 
         for (ProviderService providerService : providers) {
-          providerService.setServiceTimelinePublisher(serviceTimelinePublisher);
         }
         appState.setServiceTimelinePublisher(serviceTimelinePublisher);
         log.info("ServiceTimelinePublisher started.");
@@ -798,10 +797,10 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       liveContainers = amRegistrationData.getContainersFromPreviousAttempts();
       DefaultMetricsSystem.initialize("SliderAppMaster");
       if (timelineServiceEnabled) {
-        DefaultMetricsSystem.instance().register("SliderMetricsSink",
+        DefaultMetricsSystem.instance().register("ServiceMetricsSink",
             "For processing metrics to ATS",
-            new SliderMetricsSink(serviceTimelinePublisher));
-        log.info("SliderMetricsSink registered.");
+            new ServiceMetricsSink(serviceTimelinePublisher));
+        log.info("ServiceMetricsSink registered.");
       }
 
       //determine the location for the role history data
@@ -809,7 +808,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
       //build the instance
       AppStateBindingInfo binding = new AppStateBindingInfo();
-      binding.serviceConfig = serviceConf;
+      binding.serviceConfig = null;
       binding.fs = fs.getFileSystem();
       binding.historyPath = historyDir;
       binding.liveContainers = liveContainers;
@@ -847,7 +846,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
     //Give the provider access to the state, and AM
     for (ProviderService providerService : providers) {
-      providerService.setAMState(stateForProviders);
+//      providerService.setAMState(stateForProviders);
     }
 
     // chaos monkey
@@ -1115,7 +1114,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         instanceName,
         appAttemptID);
     for (ProviderService providerService : providers) {
-      providerService.bindToYarnRegistry(yarnRegistryOperations);
+//      providerService.bindToYarnRegistry(yarnRegistryOperations);
     }
 
     // Yarn registry
@@ -1150,7 +1149,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
           true);
     }
     if (timelineServiceEnabled) {
-      serviceTimelinePublisher.serviceAttemptRegistered(appState);
+      serviceTimelinePublisher.serviceAttemptRegistered(application);
     }
   }
 
@@ -1185,15 +1184,14 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         new org.apache.slider.api.resource.Container();
     container.setId(id.toString());
     container.setLaunchTime(new Date());
-    container.setState(org.apache.slider.api.resource.ContainerState.INIT);
+    container.setState(org.apache.slider.api.resource.ContainerState.RUNNING_BUT_UNREADY);
     container.setBareHost(instance.host);
     // TODO differentiate component name and component instance name ?
     container.setComponentName(roleInstance.getCompInstanceName());
     instance.providerRole.component.addContainer(container);
 
     if (timelineServiceEnabled) {
-      serviceTimelinePublisher.componentInstanceStarted(container,
-          instance.providerRole.component.getName());
+      serviceTimelinePublisher.componentInstanceStarted(container, null);
     }
     return true;
   }
@@ -1226,11 +1224,11 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       return;
     }
     String cid = RegistryPathUtils.encodeYarnID(containerId.toString());
-    try {
-      yarnRegistryOperations.deleteComponent(cid);
-    } catch (IOException e) {
-      log.warn("Failed to delete container {} : {}", containerId, e, e);
-    }
+//    try {
+//      yarnRegistryOperations.deleteComponent(cid);
+//    } catch (IOException e) {
+//      log.warn("Failed to delete container {} : {}", containerId, e, e);
+//    }
 
     // remove component instance dir
     try {
@@ -1879,7 +1877,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       throws IOException, SliderException {
     // didn't start, so don't register
     for (ProviderService providerService : providers) {
-      providerService.start();
+//      providerService.start();
     }
     // and send the started event ourselves
     eventCallbackEvent(null);
@@ -1902,27 +1900,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     }
   }
 
-  /**
-   * report container loss. If this isn't already known about, react
-   *
-   * @param containerId       id of the container which has failed
-   * @throws SliderException
-   */
-  public synchronized void providerLostContainer(
-      ContainerId containerId)
-      throws SliderException {
-    log.info("containerLostContactWithProvider: container {} lost",
-        containerId);
-    RoleInstance activeContainer = appState.getOwnedContainer(containerId);
-    if (activeContainer != null) {
-      execute(appState.releaseContainer(containerId));
-      // ask for more containers if needed
-      log.info("Container released; triggering review");
-      reviewRequestAndReleaseNodes("Loss of container");
-    } else {
-      log.info("Container not in active set - ignoring");
-    }
-  }
 
   /**
    *  Async start container request
@@ -1985,30 +1962,29 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       LOG_YARN.error("Owned container not found for {}", containerId);
       return;
     }
-    ProviderService providerService = SliderProviderFactory
+    ProviderService providerService = ProviderFactory
         .getProviderService(cinfo.providerRole.component.getArtifact());
-    if (providerService.processContainerStatus(containerId, containerStatus)) {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-      }
-      LOG_YARN.info("Re-requesting status for role {}, {}",
-          cinfo.role, containerId);
-      //trigger another async container status
-      nmClientAsync.getContainerStatusAsync(containerId,
-          cinfo.container.getNodeId());
-    } else if (timelineServiceEnabled) {
-      RoleInstance instance = appState.getOwnedContainer(containerId);
-      if (instance != null) {
-        org.apache.slider.api.resource.Container container =
-            instance.providerRole.component
-                .getContainer(containerId.toString());
-        if (container != null) {
-          serviceTimelinePublisher.componentInstanceUpdated(container,
-              instance.providerRole.component.getName());
-        }
-      }
-    }
+//    if (providerService.processContainerStatus(containerId, containerStatus)) {
+//      try {
+//        Thread.sleep(1000);
+//      } catch (InterruptedException e) {
+//      }
+//      LOG_YARN.info("Re-requesting status for role {}, {}",
+//          cinfo.role, containerId);
+//      //trigger another async container status
+//      nmClientAsync.getContainerStatusAsync(containerId,
+//          cinfo.container.getNodeId());
+//    } else if (timelineServiceEnabled) {
+//      RoleInstance instance = appState.getOwnedContainer(containerId);
+//      if (instance != null) {
+//        org.apache.slider.api.resource.Container container =
+//            instance.providerRole.component
+//                .getContainer(containerId.toString());
+//        if (container != null) {
+//          serviceTimelinePublisher.componentInstanceUpdated(container);
+//        }
+//      }
+//    }
   }
 
   @Override //  NMClientAsync.CallbackHandler 

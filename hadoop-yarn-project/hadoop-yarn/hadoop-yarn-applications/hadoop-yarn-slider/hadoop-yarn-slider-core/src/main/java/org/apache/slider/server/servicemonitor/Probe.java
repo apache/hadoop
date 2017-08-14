@@ -19,6 +19,7 @@ package org.apache.slider.server.servicemonitor;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 
 import java.io.IOException;
@@ -93,9 +94,8 @@ public abstract class Probe implements MonitorKeys {
    * Ping the endpoint. All exceptions must be caught and included in the
    * (failure) status.
    *
-   * @param roleInstance instance to ping
+   * @param instance instance to ping
    * @return the status
    */
-  public abstract ProbeStatus ping(RoleInstance roleInstance);
-
+  public abstract ProbeStatus ping(ComponentInstance instance);
 }

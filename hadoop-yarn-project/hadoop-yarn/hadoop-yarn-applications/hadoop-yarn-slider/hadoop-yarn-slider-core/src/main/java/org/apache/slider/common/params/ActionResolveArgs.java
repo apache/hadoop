@@ -21,13 +21,15 @@ package org.apache.slider.common.params;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.UsageException;
 
 import java.io.File;
 
-import static org.apache.slider.common.params.SliderActions.ACTION_RESOLVE;
-import static org.apache.slider.common.params.SliderActions.DESCRIBE_ACTION_REGISTRY;
+import static org.apache.hadoop.yarn.service.client.params.SliderActions.ACTION_RESOLVE;
+import static org.apache.hadoop.yarn.service.client.params.SliderActions.DESCRIBE_ACTION_REGISTRY;
 
 /**
  * Resolve registry entries

@@ -50,7 +50,7 @@ public class TestMockAppStateRoleRelease extends BaseMockAppStateTest
     return new MockYarnEngine(4, 4);
   }
 
-  @Test
+  //@Test
   public void testAllocateReleaseRealloc() throws Throwable {
     /**
      * Allocate to all nodes

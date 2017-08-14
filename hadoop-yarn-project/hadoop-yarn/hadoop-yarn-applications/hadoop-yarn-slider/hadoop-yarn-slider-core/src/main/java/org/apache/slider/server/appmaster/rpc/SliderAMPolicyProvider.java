@@ -19,7 +19,7 @@ package org.apache.slider.server.appmaster.rpc;
 
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
-import org.apache.slider.common.SliderXmlConfKeys;
+import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
 
 /**
  * {@link PolicyProvider} for Slider protocols.

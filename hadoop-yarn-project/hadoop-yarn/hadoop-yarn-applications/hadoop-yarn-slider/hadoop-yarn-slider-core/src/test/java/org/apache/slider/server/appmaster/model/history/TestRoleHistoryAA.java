@@ -63,13 +63,13 @@ public class TestRoleHistoryAA extends SliderTestBase {
     gpuNodeMap = createNodeMap(hostnames, NodeState.RUNNING, "GPU");
   }
 
-  @Test
+  //@Test
   public void testFindNodesInFullCluster() throws Throwable {
     // all three will surface at first
     verifyResultSize(3, nodeMap.findAllNodesForRole(1, ""));
   }
 
-  @Test
+  //@Test
   public void testFindNodesInUnhealthyCluster() throws Throwable {
     // all three will surface at first
     markNodeOneUnhealthy();
@@ -85,13 +85,13 @@ public class TestRoleHistoryAA extends SliderTestBase {
         state, ""));
   }
 
-  @Test
+  //@Test
   public void testFindNoNodesWrongLabel() throws Throwable {
     // all three will surface at first
     verifyResultSize(0, nodeMap.findAllNodesForRole(1, "GPU"));
   }
 
-  @Test
+  //@Test
   public void testFindSomeNodesSomeLabel() throws Throwable {
     // all three will surface at first
     update(nodeMap,
@@ -107,19 +107,19 @@ public class TestRoleHistoryAA extends SliderTestBase {
 
   }
 
-  @Test
+  //@Test
   public void testFindNoNodesRightLabel() throws Throwable {
     // all three will surface at first
     verifyResultSize(3, gpuNodeMap.findAllNodesForRole(1, "GPU"));
   }
 
-  @Test
+  //@Test
   public void testFindNoNodesNoLabel() throws Throwable {
     // all three will surface at first
     verifyResultSize(3, gpuNodeMap.findAllNodesForRole(1, ""));
   }
 
-  @Test
+  //@Test
   public void testFindNoNodesClusterRequested() throws Throwable {
     // all three will surface at first
     for (NodeInstance ni : nodeMap.values()) {
@@ -128,7 +128,7 @@ public class TestRoleHistoryAA extends SliderTestBase {
     assertNoAvailableNodes(1);
   }
 
-  @Test
+  //@Test
   public void testFindNoNodesClusterBusy() throws Throwable {
     // all three will surface at first
     for (NodeInstance ni : nodeMap.values()) {
@@ -141,7 +141,7 @@ public class TestRoleHistoryAA extends SliderTestBase {
    * Tag all nodes as starting, then walk one through a bit
    * more of its lifecycle.
    */
-  @Test
+  //@Test
   public void testFindNoNodesLifecycle() throws Throwable {
     // all three will surface at first
     for (NodeInstance ni : nodeMap.values()) {
@@ -166,7 +166,7 @@ public class TestRoleHistoryAA extends SliderTestBase {
     assertNoAvailableNodes(1);
   }
 
-  @Test
+  //@Test
   public void testRolesIndependent() throws Throwable {
     NodeInstance node1 = nodeMap.get("1");
     NodeEntry role1 = node1.getOrCreate(1);
@@ -186,7 +186,7 @@ public class TestRoleHistoryAA extends SliderTestBase {
     assertTrue(node1.canHost(2, ""));
   }
 
-  @Test
+  //@Test
   public void testNodeEntryAvailablity() throws Throwable {
     NodeEntry entry = new NodeEntry(1);
     assertTrue(entry.isAvailable());
@@ -202,7 +202,7 @@ public class TestRoleHistoryAA extends SliderTestBase {
     assertTrue(entry.isAvailable());
   }
 
-  @Test
+  //@Test
   public void testNodeInstanceSerialization() throws Throwable {
     MockRoleHistory rh2 = new MockRoleHistory(new ArrayList<>());
     rh2.getOrCreateNodeInstance("localhost");
@@ -231,7 +231,7 @@ public class TestRoleHistoryAA extends SliderTestBase {
 
   }
 
-  @Test
+  //@Test
   public void testBuildRolenames() throws Throwable {
 
   }

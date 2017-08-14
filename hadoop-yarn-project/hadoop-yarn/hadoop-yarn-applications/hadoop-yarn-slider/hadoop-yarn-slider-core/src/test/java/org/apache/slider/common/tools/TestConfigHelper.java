@@ -31,7 +31,7 @@ import java.util.Map;
  */
 public class TestConfigHelper extends YarnMiniClusterTestBase {
 
-  @Test
+  //@Test
   public void testConfigLoaderIteration() throws Throwable {
 
     String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" " +
@@ -48,7 +48,7 @@ public class TestConfigHelper extends YarnMiniClusterTestBase {
 
   }
 
-  @Test
+  //@Test
   public void testConfigDeprecation() throws Throwable {
     ConfigHelper.registerDeprecatedConfigItems();
     Configuration conf = new Configuration(false);

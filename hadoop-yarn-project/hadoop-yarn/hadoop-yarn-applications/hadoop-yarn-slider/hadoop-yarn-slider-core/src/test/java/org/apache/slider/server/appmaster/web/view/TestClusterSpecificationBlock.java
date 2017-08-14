@@ -59,7 +59,7 @@ public class TestClusterSpecificationBlock extends BaseMockAppStateTest {
     clusterSpecBlock = injector.getInstance(ClusterSpecificationBlock.class);
   }
 
-  @Test
+  //@Test
   public void testJsonGeneration() {
     StringWriter sw = new StringWriter(64);
     PrintWriter pw = new PrintWriter(sw);

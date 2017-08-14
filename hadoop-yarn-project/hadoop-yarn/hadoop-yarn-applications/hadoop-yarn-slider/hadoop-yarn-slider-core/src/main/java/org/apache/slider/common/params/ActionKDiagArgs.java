@@ -20,6 +20,8 @@ package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.UsageException;
@@ -28,7 +30,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-@Parameters(commandNames = {SliderActions.ACTION_KDIAG},
+@Parameters(commandNames = { SliderActions.ACTION_KDIAG},
             commandDescription = SliderActions.DESCRIBE_ACTION_KDIAG)
 
 public class ActionKDiagArgs extends AbstractActionArgs {

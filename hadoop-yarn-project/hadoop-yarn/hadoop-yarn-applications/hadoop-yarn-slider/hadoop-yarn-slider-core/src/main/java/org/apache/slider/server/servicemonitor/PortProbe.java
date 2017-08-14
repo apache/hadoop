@@ -18,6 +18,8 @@
 package org.apache.slider.server.servicemonitor;
 
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
+import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,30 +61,34 @@ public class PortProbe extends Probe {
   /**
    * Try to connect to the (host,port); a failure to connect within
    * the specified timeout is a failure.
-   * @param roleInstance role instance
+   * @param instance role instance
    * @return the outcome
    */
   @Override
-  public ProbeStatus ping(RoleInstance roleInstance) {
+  public ProbeStatus ping(ComponentInstance instance) {
     ProbeStatus status = new ProbeStatus();
 
-    String ip = roleInstance.ip;
-    if (ip == null) {
-      status.fail(this, new IOException("IP is not available yet"));
+    if (instance.getContainerStatus() == null || SliderUtils
+        .isEmpty(instance.getContainerStatus().getIPs())) {
+      status.fail(this, new IOException(
+          instance.getCompInstanceName() + ": IP is not available yet"));
       return status;
     }
 
+    String ip = instance.getContainerStatus().getIPs().get(0);
     InetSocketAddress sockAddr = new InetSocketAddress(ip, port);
     Socket socket = new Socket();
     try {
       if (log.isDebugEnabled()) {
-        log.debug("Connecting to " + sockAddr.toString() + "timeout=" +
-            MonitorUtils.millisToHumanTime(timeout));
+        log.debug(instance.getCompInstanceName() + ": Connecting " + sockAddr
+            .toString() + ", timeout=" + MonitorUtils
+            .millisToHumanTime(timeout));
       }
       socket.connect(sockAddr, timeout);
       status.succeed(this);
     } catch (Throwable e) {
-      String error = "Probe " + sockAddr + " failed: " + e;
+      String error =
+          instance.getCompInstanceName() + ": Probe " + sockAddr + " failed";
       log.debug(error, e);
       status.fail(this, new IOException(error, e));
     } finally {

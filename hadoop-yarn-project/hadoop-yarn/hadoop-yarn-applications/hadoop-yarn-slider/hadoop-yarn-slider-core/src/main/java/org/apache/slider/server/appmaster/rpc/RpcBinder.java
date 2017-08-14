@@ -42,15 +42,12 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.slider.api.SliderClusterProtocol;
-import org.apache.slider.common.SliderExitCodes;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.slider.common.tools.Duration;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.exceptions.BadClusterStateException;
 import org.apache.slider.core.exceptions.ErrorStrings;
-import org.apache.slider.core.exceptions.ServiceNotReadyException;
 import org.apache.slider.core.exceptions.SliderException;
-
-import static org.apache.slider.common.SliderXmlConfKeys.*; 
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -19,7 +19,7 @@
 package org.apache.slider.server.appmaster.monkey;
 
 import com.google.common.base.Preconditions;
-import org.apache.slider.common.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
 import org.apache.slider.server.appmaster.actions.ActionKillContainer;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.operations.RMOperationHandler;

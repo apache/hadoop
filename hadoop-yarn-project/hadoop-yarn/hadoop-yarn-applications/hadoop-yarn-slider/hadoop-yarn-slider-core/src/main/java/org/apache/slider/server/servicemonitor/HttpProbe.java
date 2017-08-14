@@ -17,8 +17,11 @@
 
 package org.apache.slider.server.servicemonitor;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.slider.server.appmaster.state.RoleInstance;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
+import org.apache.slider.common.tools.SliderUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,16 +70,18 @@ public class HttpProbe extends Probe {
     connection.setConnectTimeout(timeout);
     return connection;
   }
-  
+
   @Override
-  public ProbeStatus ping(RoleInstance roleInstance) {
+  public ProbeStatus ping(ComponentInstance instance) {
     ProbeStatus status = new ProbeStatus();
-    String ip = roleInstance.ip;
-    if (ip == null) {
+    ContainerStatus containerStatus = instance.getContainerStatus();
+    if (containerStatus == null || SliderUtils.isEmpty(containerStatus.getIPs())
+        || StringUtils.isEmpty(containerStatus.getHost())) {
       status.fail(this, new IOException("IP is not available yet"));
       return status;
     }
 
+    String ip = containerStatus.getIPs().get(0);
     HttpURLConnection connection = null;
     try {
       URL url = new URL(urlString.replace(HOST_TOKEN, ip));
@@ -86,7 +91,7 @@ public class HttpProbe extends Probe {
         String error = "Probe " + url + " error code: " + rc;
         log.info(error);
         status.fail(this,
-                    new IOException(error));
+            new IOException(error));
       } else {
         status.succeed(this);
       }
@@ -94,7 +99,7 @@ public class HttpProbe extends Probe {
       String error = "Probe " + urlString + " failed for IP " + ip + ": " + e;
       log.info(error, e);
       status.fail(this,
-                  new IOException(error, e));
+          new IOException(error, e));
     } finally {
       if (connection != null) {
         connection.disconnect();
@@ -102,5 +107,4 @@ public class HttpProbe extends Probe {
     }
     return status;
   }
-
 }

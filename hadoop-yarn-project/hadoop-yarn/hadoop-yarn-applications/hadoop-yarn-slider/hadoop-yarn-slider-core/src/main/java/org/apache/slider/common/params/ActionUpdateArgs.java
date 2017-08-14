@@ -19,8 +19,9 @@
 package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 
-@Parameters(commandNames = {SliderActions.ACTION_UPDATE},
+@Parameters(commandNames = { SliderActions.ACTION_UPDATE},
             commandDescription = SliderActions.DESCRIBE_ACTION_UPDATE)
 
 public class ActionUpdateArgs extends AbstractClusterBuildingActionArgs {

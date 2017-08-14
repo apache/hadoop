@@ -21,10 +21,12 @@ package org.apache.slider.common.params;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 
 import java.io.File;
 
-@Parameters(commandNames = {SliderActions.ACTION_START },
+@Parameters(commandNames = { SliderActions.ACTION_START },
             commandDescription = SliderActions.DESCRIBE_ACTION_THAW)
 public class ActionThawArgs extends AbstractActionArgs implements
                                                        WaitTimeAccessor,

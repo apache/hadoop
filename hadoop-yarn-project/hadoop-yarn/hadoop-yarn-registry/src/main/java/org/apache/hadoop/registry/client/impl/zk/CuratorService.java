@@ -261,10 +261,9 @@ public class CuratorService extends CompositeService
     int retryCeiling = conf.getInt(KEY_REGISTRY_ZK_RETRY_CEILING,
         DEFAULT_ZK_RETRY_CEILING);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating CuratorService with connection {}",
+    LOG.info("Creating CuratorService with connection {}",
           connectionDescription);
-    }
+
     CuratorFramework framework;
 
     synchronized (CuratorService.class) {

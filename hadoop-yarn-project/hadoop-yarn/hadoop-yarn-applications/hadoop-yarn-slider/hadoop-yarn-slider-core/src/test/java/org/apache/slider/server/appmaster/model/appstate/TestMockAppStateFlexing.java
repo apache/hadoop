@@ -49,7 +49,7 @@ public class TestMockAppStateFlexing extends BaseMockAppStateTest implements
     return "TestMockAppStateFlexing";
   }
 
-  @Test
+  //@Test
   public void testFlexDuringLaunchPhase() throws Throwable {
 
     // ask for one instance of role0
@@ -90,7 +90,7 @@ public class TestMockAppStateFlexing extends BaseMockAppStateTest implements
     appState.innerOnNodeManagerContainerStarted(target.getId());
   }
 
-  @Test
+  //@Test
   public void testFlexBeforeAllocationPhase() throws Throwable {
     getRole0Status().setDesired(1);
 
@@ -116,7 +116,7 @@ public class TestMockAppStateFlexing extends BaseMockAppStateTest implements
   }
 
 
-  @Test
+  //@Test
   public void testFlexDownTwice() throws Throwable {
     int r0 = 6;
     int r1 = 0;
@@ -155,7 +155,7 @@ public class TestMockAppStateFlexing extends BaseMockAppStateTest implements
 
   }
 
-  @Test
+  //@Test
   public void testFlexNegative() throws Throwable {
     int r0 = 6;
     int r1 = 0;
@@ -178,7 +178,7 @@ public class TestMockAppStateFlexing extends BaseMockAppStateTest implements
 
   }
 
-  @Test
+  //@Test
   public void testCancelWithRequestsOutstanding() throws Throwable {
     // flex cluster size before the original set were allocated
 

@@ -30,37 +30,37 @@ public class TestExecutionEnvironment extends SliderTestBase {
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestExecutionEnvironment.class);
 
-  @Test
+  //@Test
   public void testClientEnv() throws Throwable {
     SliderUtils.validateSliderClientEnvironment(LOG);
   }
 
-  @Test
+  //@Test
   public void testWinutils() throws Throwable {
     SliderUtils.maybeVerifyWinUtilsValid();
   }
 
-  @Test
+  //@Test
   public void testServerEnv() throws Throwable {
     SliderUtils.validateSliderServerEnvironment(LOG, true);
   }
 
-  @Test
+  //@Test
   public void testServerEnvNoDependencies() throws Throwable {
     SliderUtils.validateSliderServerEnvironment(LOG, false);
   }
 
-  @Test
+  //@Test
   public void testopenSSLEnv() throws Throwable {
     SliderUtils.validateOpenSSLEnv(LOG);
   }
 
-  @Test
+  //@Test
   public void testValidatePythonEnv() throws Throwable {
     SliderUtils.validatePythonEnv(LOG);
   }
 
-  @Test
+  //@Test
   public void testNativeLibs() throws Throwable {
     assertNativeLibrariesPresent();
   }

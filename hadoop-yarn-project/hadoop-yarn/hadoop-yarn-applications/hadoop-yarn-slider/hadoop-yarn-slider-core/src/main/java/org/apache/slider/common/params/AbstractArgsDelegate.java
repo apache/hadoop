@@ -18,6 +18,8 @@
 
 package org.apache.slider.common.params;
 
+import org.apache.hadoop.yarn.service.client.params.ArgOps;
+import org.apache.hadoop.yarn.service.client.params.Arguments;
 
 /**
  * Base class for all the delegates

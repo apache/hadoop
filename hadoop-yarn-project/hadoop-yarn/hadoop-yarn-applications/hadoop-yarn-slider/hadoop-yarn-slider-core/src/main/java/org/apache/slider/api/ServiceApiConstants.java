@@ -21,7 +21,7 @@ package org.apache.slider.api;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import static org.apache.slider.util.ServiceApiUtil.$;
+import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.$;
 
 /**
  * This class defines constants that can be used in input spec for

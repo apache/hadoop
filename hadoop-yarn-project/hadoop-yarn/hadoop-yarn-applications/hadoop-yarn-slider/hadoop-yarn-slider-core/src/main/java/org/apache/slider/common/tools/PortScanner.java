@@ -16,7 +16,7 @@
  */
 package org.apache.slider.common.tools;
 
-import org.apache.slider.common.SliderExitCodes;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.slider.core.exceptions.BadConfigException;
 import org.apache.slider.core.exceptions.SliderException;
 

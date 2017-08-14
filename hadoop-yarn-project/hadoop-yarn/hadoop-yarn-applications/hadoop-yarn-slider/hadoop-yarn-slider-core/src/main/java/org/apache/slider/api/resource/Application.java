@@ -226,7 +226,7 @@ public class Application extends BaseResource {
 
   /**
    * Life time (in seconds) of the application from the time it reaches the
-   * STARTED state (after which it is automatically destroyed by YARN). For
+   * RUNNING_BUT_UNREADY state (after which it is automatically destroyed by YARN). For
    * unlimited lifetime do not set a lifetime value.
    **/
   public Application lifetime(Long lifetime) {
@@ -234,7 +234,7 @@ public class Application extends BaseResource {
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Life time (in seconds) of the application from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.")
+  @ApiModelProperty(example = "null", value = "Life time (in seconds) of the application from the time it reaches the RUNNING_BUT_UNREADY state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.")
   @JsonProperty("lifetime")
   public Long getLifetime() {
     return lifetime;

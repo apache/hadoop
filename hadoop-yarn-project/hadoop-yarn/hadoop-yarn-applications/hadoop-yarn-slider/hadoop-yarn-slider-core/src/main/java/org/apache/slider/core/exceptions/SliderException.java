@@ -18,7 +18,7 @@
 
 package org.apache.slider.core.exceptions;
 
-import org.apache.slider.common.SliderExitCodes;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.slider.core.main.ServiceLaunchException;
 
 public class SliderException extends ServiceLaunchException implements

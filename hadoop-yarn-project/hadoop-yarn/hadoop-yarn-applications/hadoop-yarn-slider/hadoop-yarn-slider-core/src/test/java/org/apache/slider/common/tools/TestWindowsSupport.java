@@ -64,17 +64,17 @@ public class TestWindowsSupport extends YarnMiniClusterTestBase {
     }
   }
 
-  @Test
+  //@Test
   public void testHasWindowsDrive() throws Throwable {
     assertTrue(hasWindowsDrive(WINDOWS_FILE));
   }
 
-  @Test
+  //@Test
   public void testStartPosition() throws Throwable {
     assertEquals(2, startPositionWithoutWindowsDrive(WINDOWS_FILE));
   }
 
-  @Test
+  //@Test
   public void testPathHandling() throws Throwable {
     assumeWindows();
 
@@ -101,7 +101,7 @@ public class TestWindowsSupport extends YarnMiniClusterTestBase {
     }
   }
 
-  @Test
+  //@Test
   public void testExecNonexistentBinary() throws Throwable {
     assumeWindows();
     List<String> commands = Arrays.asList("undefined-application", "--version");
@@ -114,14 +114,14 @@ public class TestWindowsSupport extends YarnMiniClusterTestBase {
       }
     }
   }
-  @Test
+  //@Test
   public void testExecNonexistentBinary2() throws Throwable {
     assumeWindows();
     assertFalse(doesAppExist(Arrays.asList("undefined-application",
         "--version")));
   }
 
-  @Test
+  //@Test
   public void testEmitKillCommand() throws Throwable {
 
     int result = killJavaProcesses("regionserver", 9);
@@ -129,20 +129,20 @@ public class TestWindowsSupport extends YarnMiniClusterTestBase {
     assertTrue(getKillSupported() || result == -1);
   }
 
-  @Test
+  //@Test
   public void testHadoopHomeDefined() throws Throwable {
     assumeWindows();
     String hadoopHome = Shell.getHadoopHome();
     LOG.info("HADOOP_HOME={}", hadoopHome);
   }
 
-  @Test
+  //@Test
   public void testHasWinutils() throws Throwable {
     assumeWindows();
     SliderUtils.maybeVerifyWinUtilsValid();
   }
 
-  @Test
+  //@Test
   public void testExecWinutils() throws Throwable {
     assumeWindows();
     String winUtilsPath = Shell.getWinUtilsPath();
@@ -153,19 +153,19 @@ public class TestWindowsSupport extends YarnMiniClusterTestBase {
     exec(0, Arrays.asList(winUtilsPath, "systeminfo"));
   }
 
-  @Test
+  //@Test
   public void testPath() throws Throwable {
     String path = extractPath();
     LOG.info("Path value = {}", path);
   }
 
-  @Test
+  //@Test
   public void testFindJavac() throws Throwable {
     String name = Shell.WINDOWS ? "javac.exe" : "javac";
     assertNotNull(locateExecutable(name));
   }
 
-  @Test
+  //@Test
   public void testHadoopDLL() throws Throwable {
     assumeWindows();
     // split the path

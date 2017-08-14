@@ -29,7 +29,7 @@ import java.net.InetSocketAddress;
 
 public class TestWorkflowRpcService extends WorkflowServiceTestBase {
 
-  @Test
+  //@Test
   public void testCreateMockRPCService() throws Throwable {
     MockRPC rpc = new MockRPC();
     rpc.start();
@@ -39,7 +39,7 @@ public class TestWorkflowRpcService extends WorkflowServiceTestBase {
     assertTrue(rpc.stopped);
   }
 
-  @Test
+  //@Test
   public void testLifecycle() throws Throwable {
     MockRPC rpc = new MockRPC();
     WorkflowRpcService svc = new WorkflowRpcService("test", rpc);
@@ -50,7 +50,7 @@ public class TestWorkflowRpcService extends WorkflowServiceTestBase {
     assertTrue(rpc.stopped);
   }
 
-  @Test
+  //@Test
   public void testStartFailure() throws Throwable {
     MockRPC rpc = new MockRPC();
     rpc.failOnStart = true;

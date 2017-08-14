@@ -28,7 +28,7 @@ import org.junit.internal.AssumptionViolatedException;
  */
 public class TestSliderTestUtils extends SliderTestUtils {
 
-  @Test
+  //@Test
   public void testAssumeTrue() throws Throwable {
 
     try {
@@ -38,7 +38,7 @@ public class TestSliderTestUtils extends SliderTestUtils {
     }
   }
 
-  @Test
+  //@Test
   public void testAssumeFalse() throws Throwable {
 
     try {
@@ -49,7 +49,7 @@ public class TestSliderTestUtils extends SliderTestUtils {
     }
   }
 
-  @Test
+  //@Test
   public void testAssumeBoolOptionSetInConf() throws Throwable {
     Configuration conf = new Configuration(false);
     conf.set("key", "true");
@@ -60,7 +60,7 @@ public class TestSliderTestUtils extends SliderTestUtils {
     }
   }
 
-  @Test
+  //@Test
   public void testAssumeBoolOptionUnsetInConf() throws Throwable {
     Configuration conf = new Configuration(false);
     try {
@@ -71,7 +71,7 @@ public class TestSliderTestUtils extends SliderTestUtils {
   }
 
 
-  @Test
+  //@Test
   public void testAssumeBoolOptionFalseInConf() throws Throwable {
     Configuration conf = new Configuration(false);
     conf.set("key", "false");
@@ -83,7 +83,7 @@ public class TestSliderTestUtils extends SliderTestUtils {
     }
   }
 
-  @Test
+  //@Test
   public void testAssumeBoolOptionFalseUnsetInConf() throws Throwable {
     Configuration conf = new Configuration(false);
     try {

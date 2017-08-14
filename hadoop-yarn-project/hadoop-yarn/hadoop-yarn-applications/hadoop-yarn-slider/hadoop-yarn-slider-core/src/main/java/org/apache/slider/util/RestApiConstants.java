@@ -27,7 +27,7 @@ public interface RestApiConstants {
   String COMPONENT_TYPE_YARN_DOCKER = "yarn_docker";
 
   String DEFAULT_START_CMD = "/bootstrap/privileged-centos6-sshd";
-  String DEFAULT_COMPONENT_NAME = "DEFAULT";
+  String DEFAULT_COMPONENT_NAME = "default";
   String DEFAULT_IMAGE = "centos:centos6";
   String DEFAULT_NETWORK = "bridge";
   String DEFAULT_COMMAND_PATH = "/usr/bin/docker";
@@ -52,7 +52,7 @@ public interface RestApiConstants {
   String PROPERTY_DNS_DEPENDENCY = "site.global.dns.dependency";
 
   String COMMAND_ORDER_SUFFIX_START = "-START";
-  String COMMAND_ORDER_SUFFIX_STARTED = "-STARTED";
+  String COMMAND_ORDER_SUFFIX_STARTED = "-RUNNING_BUT_UNREADY";
   String EXPORT_GROUP_NAME = "QuickLinks";
 
   Integer ERROR_CODE_APP_DOES_NOT_EXIST = 404001;
