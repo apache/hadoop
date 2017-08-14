@@ -61,10 +61,10 @@ public class TestTextInputFormat {
       throw new RuntimeException("init failure", e);
     }
   }
-  @SuppressWarnings("deprecation")
-  private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestTextInputFormat").makeQualified(localFs);
+
+  private static Path workDir = localFs.makeQualified(new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      "TestTextInputFormat"));
 
   @Test (timeout=500000)
   public void testFormat() throws Exception {

@@ -295,8 +295,8 @@ public class FileUtil {
                                         Path dst)
                                         throws IOException {
     if (srcFS == dstFS) {
-      String srcq = src.makeQualified(srcFS).toString() + Path.SEPARATOR;
-      String dstq = dst.makeQualified(dstFS).toString() + Path.SEPARATOR;
+      String srcq = srcFS.makeQualified(src).toString() + Path.SEPARATOR;
+      String dstq = dstFS.makeQualified(dst).toString() + Path.SEPARATOR;
       if (dstq.startsWith(srcq)) {
         if (srcq.length() == dstq.length()) {
           throw new IOException("Cannot copy " + src + " to itself.");

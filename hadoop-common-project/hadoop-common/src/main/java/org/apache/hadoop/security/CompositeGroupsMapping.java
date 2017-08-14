@@ -74,7 +74,9 @@ public class CompositeGroupsMapping
       try {
         groups = provider.getGroups(user);
       } catch (Exception e) {
-        //LOG.warn("Exception trying to get groups for user " + user, e);      
+        LOG.warn("Unable to get groups for user {} via {} because: {}",
+            user, provider.getClass().getSimpleName(), e.toString());
+        LOG.debug("Stacktrace: ", e);
       }        
       if (groups != null && ! groups.isEmpty()) {
         groupSet.addAll(groups);

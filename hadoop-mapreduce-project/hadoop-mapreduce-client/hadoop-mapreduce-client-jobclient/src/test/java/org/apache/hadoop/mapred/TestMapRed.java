@@ -342,8 +342,8 @@ public class TestMapRed extends Configured implements Tool {
       values.add(m);
       m = m.replace((char)('A' + i - 1), (char)('A' + i));
     }
-    Path testdir = new Path(
-        System.getProperty("test.build.data","/tmp")).makeQualified(fs);
+    Path testdir = fs.makeQualified(new Path(
+        System.getProperty("test.build.data","/tmp")));
     fs.delete(testdir, true);
     Path inFile = new Path(testdir, "nullin/blah");
     SequenceFile.Writer w = SequenceFile.createWriter(fs, conf, inFile,

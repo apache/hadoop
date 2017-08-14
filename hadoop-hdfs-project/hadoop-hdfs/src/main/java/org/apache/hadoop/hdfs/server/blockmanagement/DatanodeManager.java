@@ -212,8 +212,6 @@ public class DatanodeManager {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
 
-    // TODO: Enables DFSNetworkTopology by default after more stress
-    // testings/validations.
     this.useDfsNetworkTopology = conf.getBoolean(
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);

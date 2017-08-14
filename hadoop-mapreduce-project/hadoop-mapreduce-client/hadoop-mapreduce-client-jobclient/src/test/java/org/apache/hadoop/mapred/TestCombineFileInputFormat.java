@@ -47,9 +47,9 @@ public class TestCombineFileInputFormat {
       throw new RuntimeException("init failure", e);
     }
   }
-  private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestCombineFileInputFormat").makeQualified(localFs);
+  private static Path workDir = localFs.makeQualified(new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      "TestCombineFileInputFormat"));
 
   private static void writeFile(FileSystem fs, Path name, 
                                 String contents) throws IOException {

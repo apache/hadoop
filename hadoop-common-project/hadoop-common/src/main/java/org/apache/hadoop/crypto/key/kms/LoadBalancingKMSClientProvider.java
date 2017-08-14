@@ -292,7 +292,9 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     }
   }
 
-  public EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion ekv)
+  @Override
+  public EncryptedKeyVersion reencryptEncryptedKey(
+      final EncryptedKeyVersion ekv)
       throws IOException, GeneralSecurityException {
     try {
       return doOp(new ProviderCallable<EncryptedKeyVersion>() {
