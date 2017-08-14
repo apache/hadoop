@@ -199,12 +199,6 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   @Override
-  public String getQueuePath() {
-    String parentPath = ((parent == null) ? "" : (parent.getQueuePath() + "."));
-    return parentPath + getQueueName();
-  }
-
-  @Override
   public QueueInfo getQueueInfo(
       boolean includeChildQueues, boolean recursive) {
     try {
