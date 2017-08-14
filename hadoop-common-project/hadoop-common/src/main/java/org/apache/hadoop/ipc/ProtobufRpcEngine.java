@@ -190,7 +190,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         throws ServiceException {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = Time.now();
+        startTime = Time.monotonicNow();
       }
       
       if (args.length != 2) { // RpcController + Message
@@ -244,7 +244,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       }
 
       if (LOG.isDebugEnabled()) {
-        long callTime = Time.now() - startTime;
+        long callTime = Time.monotonicNow() - startTime;
         LOG.debug("Call: " + method.getName() + " took " + callTime + "ms");
       }
       
@@ -372,19 +372,19 @@ public class ProtobufRpcEngine implements RpcEngine {
         this.server = currentCallInfo.get().server;
         this.call = Server.getCurCall().get();
         this.methodName = currentCallInfo.get().methodName;
-        this.setupTime = Time.now();
+        this.setupTime = Time.monotonicNow();
       }
 
       @Override
       public void setResponse(Message message) {
-        long processingTime = Time.now() - setupTime;
+        long processingTime = Time.monotonicNow() - setupTime;
         call.setDeferredResponse(RpcWritable.wrap(message));
         server.updateDeferredMetrics(methodName, processingTime);
       }
 
       @Override
       public void error(Throwable t) {
-        long processingTime = Time.now() - setupTime;
+        long processingTime = Time.monotonicNow() - setupTime;
         String detailedMetricsName = t.getClass().getSimpleName();
         server.updateDeferredMetrics(detailedMetricsName, processingTime);
         call.setDeferredError(t);
@@ -493,7 +493,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         Message param = request.getValue(prototype);
 
         Message result;
-        long startTime = Time.now();
+        long startTime = Time.monotonicNow();
         int qTime = (int) (startTime - receiveTime);
         Exception exception = null;
         boolean isDeferred = false;
@@ -517,7 +517,7 @@ public class ProtobufRpcEngine implements RpcEngine {
           throw e;
         } finally {
           currentCallInfo.set(null);
-          int processingTime = (int) (Time.now() - startTime);
+          int processingTime = (int) (Time.monotonicNow() - startTime);
           if (LOG.isDebugEnabled()) {
             String msg =
                 "Served: " + methodName + (isDeferred ? ", deferred" : "") +
