@@ -60,6 +60,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);  
   CSQueue parent;
   final String queueName;
+  private final String queuePath;
   volatile int numContainers;
   
   final Resource minimumAllocation;
@@ -95,6 +96,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.labelManager = cs.getRMContext().getNodeLabelManager();
     this.parent = parent;
     this.queueName = queueName;
+    this.queuePath =
+      ((parent == null) ? "" : (parent.getQueuePath() + ".")) + this.queueName;
     this.resourceCalculator = cs.getResourceCalculator();
     
     // must be called after parent and queueName is set
@@ -120,6 +123,11 @@ public abstract class AbstractCSQueue implements CSQueue {
         csContext.getConfiguration(), 
         queueCapacities,
         parent == null ? null : parent.getQueueCapacities());
+  }
+
+  @Override
+  public String getQueuePath() {
+    return queuePath;
   }
   
   @Override

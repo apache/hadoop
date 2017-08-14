@@ -279,11 +279,6 @@ public class LeafQueue extends AbstractCSQueue {
         "defaultAppPriorityPerQueue = " + defaultAppPriorityPerQueue);
   }
 
-  @Override
-  public String getQueuePath() {
-    return getParent().getQueuePath() + "." + getQueueName();
-  }
-
   /**
    * Used only by tests.
    */
