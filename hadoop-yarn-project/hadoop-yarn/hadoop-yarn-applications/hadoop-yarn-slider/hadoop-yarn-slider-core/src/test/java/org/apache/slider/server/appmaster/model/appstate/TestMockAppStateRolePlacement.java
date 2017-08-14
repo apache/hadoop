@@ -50,7 +50,7 @@ public class TestMockAppStateRolePlacement extends BaseMockAppStateTest
   }
 
 
-  @Test
+  //@Test
   public void testAllocateReleaseRealloc() throws Throwable {
     getRole0Status().setDesired(1);
 

@@ -38,35 +38,11 @@ import java.net.InetSocketAddress;
 public class ContainerLauncher extends AbstractLauncher {
   private static final Logger log =
     LoggerFactory.getLogger(ContainerLauncher.class);
-  // Allocated container
-  public final Container container;
 
   public ContainerLauncher(Configuration conf,
       CoreFileSystem coreFileSystem,
       Container container,
       Credentials credentials) {
-    super(conf, coreFileSystem, credentials);
-    this.container = container;
+    super(coreFileSystem, credentials);
   }
-
-  /**
-   * This code is in the dist shell examples -it's been moved here
-   * so that if it is needed, it's still here
-   * @return a remote user with a token to access the container.
-   */
-  public UserGroupInformation setupUGI() {
-    UserGroupInformation user =
-      UserGroupInformation.createRemoteUser(container.getId().toString());
-    String cmIpPortStr = container.getNodeId().getHost() + ":" + container.getNodeId().getPort();
-    final InetSocketAddress cmAddress = NetUtils.createSocketAddr(cmIpPortStr);
-
-    org.apache.hadoop.yarn.api.records.Token containerToken = container.getContainerToken();
-    if (containerToken != null) {
-      Token<ContainerTokenIdentifier> token =
-        ConverterUtils.convertFromYarn(containerToken, cmAddress);
-      user.addToken(token);
-    }
-    return user;
-  }
-
 }

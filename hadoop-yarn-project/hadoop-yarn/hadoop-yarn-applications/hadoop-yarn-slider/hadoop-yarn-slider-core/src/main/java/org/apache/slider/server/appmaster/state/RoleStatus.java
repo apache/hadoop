@@ -27,7 +27,7 @@ import org.apache.slider.api.types.RoleStatistics;
 import org.apache.slider.providers.PlacementPolicy;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.server.appmaster.management.BoolMetricPredicate;
-import org.apache.slider.server.appmaster.metrics.SliderMetrics;
+import org.apache.hadoop.yarn.service.metrics.ServiceMetrics;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -54,7 +54,7 @@ public final class RoleStatus implements MetricSet {
 
   /** resource requirements */
   private Resource resourceRequirements;
-  private SliderMetrics componentMetrics;
+  private ServiceMetrics componentMetrics;
 
   /** any pending AA request */
   private volatile OutstandingRequest outstandingAArequest = null;
@@ -67,12 +67,12 @@ public final class RoleStatus implements MetricSet {
     this.name = providerRole.name;
     this.key = providerRole.id;
     componentMetrics =
-        SliderMetrics.register(this.name, "Metrics for component " + this.name);
+        ServiceMetrics.register(this.name, "Metrics for component " + this.name);
     componentMetrics
         .tag("type", "Metrics type [component or service]", "component");
   }
 
-  public SliderMetrics getComponentMetrics() {
+  public ServiceMetrics getComponentMetrics() {
     return this.componentMetrics;
   }
 
@@ -235,14 +235,15 @@ public final class RoleStatus implements MetricSet {
   }
 
   public long getFailedRecently() {
-    return componentMetrics.failedSinceLastThreshold.value();
+//    return componentMetrics.failedSinceLastThreshold.value();
+    return 0;
   }
 
   public long resetFailedRecently() {
-    long count =
-        componentMetrics.failedSinceLastThreshold.value();
-    componentMetrics.failedSinceLastThreshold.set(0);
-    return count;
+//    long count =
+//        componentMetrics.failedSinceLastThreshold.value();
+//    componentMetrics.failedSinceLastThreshold.set(0);
+    return 0;
   }
 
   public long getFailed() {

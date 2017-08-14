@@ -19,11 +19,13 @@
 package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 
 /**
  * The Help command
  */
-@Parameters(commandNames = {SliderActions.ACTION_HELP},
+@Parameters(commandNames = { SliderActions.ACTION_HELP},
             commandDescription = SliderActions.DESCRIBE_ACTION_HELP)
 public class ActionHelpArgs extends AbstractActionArgs {
   @Override

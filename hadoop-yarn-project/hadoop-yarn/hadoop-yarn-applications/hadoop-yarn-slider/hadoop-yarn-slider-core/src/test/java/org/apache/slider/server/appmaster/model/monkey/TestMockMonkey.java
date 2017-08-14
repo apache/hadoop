@@ -64,13 +64,13 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     monkey.init(configuration);
   }
 
-  @Test
+  //@Test
   public void testMonkeyStart() throws Throwable {
     monkey.start();
     monkey.stop();
   }
 
-  @Test
+  //@Test
   public void testMonkeyPlay() throws Throwable {
     ChaosCounter counter = new ChaosCounter();
     monkey.addTarget("target", counter, InternalKeys.PROBABILITY_PERCENT_100);
@@ -79,7 +79,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     assertEquals(1, counter.count);
   }
 
-  @Test
+  //@Test
   public void testMonkeySchedule() throws Throwable {
     ChaosCounter counter = new ChaosCounter();
     assertEquals(0, monkey.getTargetCount());
@@ -89,7 +89,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     assertEquals(1, queues.scheduledActions.size());
   }
 
-  @Test
+  //@Test
   public void testMonkeyDoesntAddProb0Actions() throws Throwable {
     ChaosCounter counter = new ChaosCounter();
     monkey.addTarget("target", counter, 0);
@@ -98,7 +98,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     assertEquals(0, counter.count);
   }
 
-  @Test
+  //@Test
   public void testMonkeyScheduleProb0Actions() throws Throwable {
     ChaosCounter counter = new ChaosCounter();
     monkey.addTarget("target", counter, 0);
@@ -106,7 +106,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     assertEquals(0, queues.scheduledActions.size());
   }
 
-  @Test
+  //@Test
   public void testMonkeyPlaySometimes() throws Throwable {
     ChaosCounter counter = new ChaosCounter();
     ChaosCounter counter2 = new ChaosCounter();
@@ -127,7 +127,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     assertTrue(counter2.count < counter.count);
   }
 
-  @Test
+  //@Test
   public void testAMKiller() throws Throwable {
 
     ChaosKillAM chaos = new ChaosKillAM(queues, -1);
@@ -137,7 +137,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     assertTrue(action instanceof ActionHalt);
   }
 
-  @Test
+  //@Test
   public void testContainerKillerEmptyApp() throws Throwable {
 
 
@@ -149,7 +149,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
   }
 
   @Ignore
-  @Test
+  //@Test
   public void testContainerKillerIgnoresAM() throws Throwable {
     // TODO: AM needed in live container list?
     addAppMastertoAppState();
@@ -162,7 +162,7 @@ public class TestMockMonkey extends BaseMockAppStateTest {
     assertEquals(0, queues.scheduledActions.size());
   }
 
-  @Test
+  //@Test
   public void testContainerKiller() throws Throwable {
     MockRMOperationHandler ops = new MockRMOperationHandler();
     getRole0Status().setDesired(1);

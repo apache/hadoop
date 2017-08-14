@@ -100,6 +100,13 @@ public class Resource extends BaseResource implements Cloneable {
     this.memory = memory;
   }
 
+  public long getMemoryMB() {
+    if (this.memory == null) {
+      return 0;
+    }
+    return Long.valueOf(memory);
+  }
+
   @Override
   public boolean equals(java.lang.Object o) {
     if (this == o) {

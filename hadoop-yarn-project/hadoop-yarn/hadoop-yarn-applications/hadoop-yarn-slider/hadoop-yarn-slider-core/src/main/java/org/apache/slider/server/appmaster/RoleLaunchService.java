@@ -23,27 +23,25 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.api.resource.Application;
+import org.apache.slider.api.resource.Component;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.launch.ContainerLauncher;
-import org.apache.slider.providers.ProviderRole;
-import org.apache.slider.providers.ProviderService;
-import org.apache.slider.providers.SliderProviderFactory;
-import org.apache.slider.server.appmaster.actions.ActionStartContainer;
+import org.apache.hadoop.yarn.service.provider.ProviderService;
+import org.apache.hadoop.yarn.service.provider.ProviderFactory;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
 import org.apache.slider.server.appmaster.state.ContainerAssignment;
-import org.apache.slider.server.appmaster.state.RoleInstance;
-import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.services.workflow.ServiceThreadFactory;
 import org.apache.slider.server.services.workflow.WorkflowExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
-import static org.apache.slider.common.SliderKeys.KEY_CONTAINER_LAUNCH_DELAY;
+import static org.apache.hadoop.yarn.service.conf.SliderKeys.KEY_CONTAINER_LAUNCH_DELAY;
 
 /**
  * A service for launching containers
@@ -59,15 +57,15 @@ public class RoleLaunchService
   /**
    * Queue submission API
    */
-  private final QueueAccess actionQueue;
+  private  QueueAccess actionQueue;
 
   /**
    * Filesystem to use for the launch
    */
-  private final SliderFileSystem fs;
+  private  SliderFileSystem fs;
 
 
-  private Map<String, String> envVars;
+  private Map<String, String> envVars = new HashMap<>();
 
   /**
    * Construct an instance of the launcher
@@ -81,6 +79,11 @@ public class RoleLaunchService
     this.actionQueue = queueAccess;
     this.fs = fs;
     this.envVars = envVars;
+  }
+
+  public RoleLaunchService(SliderFileSystem fs) {
+    super(ROLE_LAUNCH_SERVICE);
+    this.fs = fs;
   }
 
   @Override
@@ -97,9 +100,13 @@ public class RoleLaunchService
    */
   public void launchRole(ContainerAssignment assignment,
       Application application, Credentials credentials) {
+  }
+
+  public void launchComponent(Application application,
+      ComponentInstance instance, Container container) {
     RoleLaunchService.RoleLauncher launcher =
-        new RoleLaunchService.RoleLauncher(assignment, application,
-            credentials);
+        new RoleLaunchService.RoleLauncher(application, instance,
+            container);
     execute(launcher);
   }
 
@@ -107,67 +114,34 @@ public class RoleLaunchService
    * Thread that runs on the AM to launch a container
    */
   private class RoleLauncher implements Runnable {
-
-    private final ContainerAssignment assignment;
     // Allocated container
     public final Container container;
     public final Application application;
-    public final ProviderRole role;
-    private final Credentials credentials;
+    public ComponentInstance instance;
 
-    public RoleLauncher(ContainerAssignment assignment,
+    public RoleLauncher(
         Application application,
-        Credentials credentials) {
-      this.assignment = assignment;
-      this.credentials = credentials;
-      this.container = assignment.container;
-      RoleStatus roleStatus = assignment.role;
-      ProviderRole providerRole = roleStatus.getProviderRole();
-      this.role = providerRole;
+        ComponentInstance instance, Container container) {
+      this.container = container;
       this.application = application;
-
-    }
-
-    @Override
-    public String toString() {
-      return "RoleLauncher{" +
-             "container=" + container.getId() +
-             ", containerRole='" + role.name + '\'' +
-             '}';
+      this.instance = instance;
     }
 
     @Override
     public void run() {
       try {
         ContainerLauncher containerLauncher =
-            new ContainerLauncher(getConfig(), fs, container, credentials);
-        containerLauncher.setupUGI();
+            new ContainerLauncher(null, fs, container, null);
         containerLauncher.putEnv(envVars);
 
-        RoleInstance failedInstance = role.failedInstances.poll();
-        RoleInstance instance;
-        if (failedInstance != null) {
-          instance = new RoleInstance(container, failedInstance);
-        } else {
-          instance = new RoleInstance(container, role);
-        }
-        String[] envDescription = containerLauncher.dumpEnvToString();
-        String commandsAsString = containerLauncher.getCommandsAsString();
-        log.info("Launching container {} for component instance = {}",
-            container.getId(), instance.getCompInstanceName());
-        log.info("Starting container with command: {}", commandsAsString);
-        instance.command = commandsAsString;
-        instance.role = role.name;
-        instance.roleId = role.id;
-        instance.environment = envDescription;
-
-        ProviderService provider = SliderProviderFactory.getProviderService(
-            role.component.getArtifact());
+        Component compSpec = instance.getCompSpec();
+        ProviderService provider = ProviderFactory.getProviderService(
+            compSpec.getArtifact());
         provider.buildContainerLaunchContext(containerLauncher, application,
-            container, role, fs, instance);
+            instance, fs);
 
-        long delay = role.component.getConfiguration()
-            .getPropertyLong(KEY_CONTAINER_LAUNCH_DELAY, 0);
+        long delay = compSpec.getConfiguration()
+                .getPropertyLong(KEY_CONTAINER_LAUNCH_DELAY, 0);
         long maxDelay = getConfig()
             .getLong(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
                 YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);
@@ -177,14 +151,15 @@ public class RoleLaunchService
                    delay, maxDelay/1000);
           delay = 0;
         }
-        log.info("Container launch delay for {} set to {} seconds", role.name,
-            delay);
-        actionQueue.schedule(
-            new ActionStartContainer("starting " + role.name, container,
-                containerLauncher.completeContainerLaunch(), instance, delay,
-                TimeUnit.SECONDS));
+        if (delay > 0) {
+          Thread.sleep(delay * 1000);
+        }
+        instance.getComponent().getScheduler().getNmClient()
+            .startContainerAsync(container,
+                containerLauncher.completeContainerLaunch());
       } catch (Exception e) {
-        log.error("Exception thrown while trying to start " + role.name
+        log.error("Exception thrown while trying to start " + instance
+            .getCompInstanceName()
             + " container = " + container.getId() + " on host " + container
             .getNodeId(), e);
       }

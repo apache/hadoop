@@ -23,8 +23,10 @@ import java.util.Set;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 
-@Parameters(commandNames = {SliderActions.ACTION_LIST},
+@Parameters(commandNames = { SliderActions.ACTION_LIST},
             commandDescription = SliderActions.DESCRIBE_ACTION_LIST)
 
 public class ActionListArgs extends AbstractActionArgs {

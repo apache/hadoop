@@ -25,13 +25,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.slider.api.resource.Application;
-import org.apache.slider.common.tools.CoreFileSystem;
 import org.apache.slider.providers.ProviderRole;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Binding information for application states; designed to be extensible

@@ -21,5 +21,5 @@ package org.apache.slider.api.resource;
  * The current state of the container of an application.
  **/
 public enum ContainerState {
-  INIT, READY;
+  RUNNING_BUT_UNREADY, READY, STOPPED
 }

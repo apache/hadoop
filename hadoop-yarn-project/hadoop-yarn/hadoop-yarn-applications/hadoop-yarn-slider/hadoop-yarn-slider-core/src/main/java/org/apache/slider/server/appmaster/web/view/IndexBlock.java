@@ -27,7 +27,7 @@ import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.registry.docstore.ExportEntry;
 import org.apache.slider.core.registry.docstore.PublishedExports;
 import org.apache.slider.core.registry.docstore.PublishedExportsSet;
-import org.apache.slider.server.appmaster.metrics.SliderMetrics;
+import org.apache.hadoop.yarn.service.metrics.ServiceMetrics;
 import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.slf4j.Logger;
@@ -160,7 +160,7 @@ public class IndexBlock extends SliderHamletBlock {
           roleWithOpenRequest ++;
         }
       }
-      SliderMetrics metrics = status.getComponentMetrics();
+      ServiceMetrics metrics = status.getComponentMetrics();
       table.tr()
         .td().a(nameUrl, roleName)._()
         .td(String.format("%d", metrics.containersDesired.value()))

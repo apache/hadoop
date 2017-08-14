@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestRegistryPaths {
 
-  @Test
+  //@Test
   public void testHomedirKerberos() throws Throwable {
     String home = RegistryUtils.homePathForUser("hbase@HADOOP.APACHE.ORG");
     try {
@@ -42,7 +42,7 @@ public class TestRegistryPaths {
     }
   }
 
-  @Test
+  //@Test
   public void testHomedirKerberosHost() throws Throwable {
     String home = RegistryUtils.homePathForUser("hbase/localhost@HADOOP" +
         ".APACHE.ORG");
@@ -54,13 +54,13 @@ public class TestRegistryPaths {
     }
   }
 
-  @Test
+  //@Test
   public void testRegistryPathForInstance() throws Throwable {
     String path = SliderRegistryUtils.registryPathForInstance("instance");
     assertTrue(path.endsWith("/instance"));
   }
 
-  @Test
+  //@Test
   public void testPathResolution() throws Throwable {
     String home = RegistryUtils.homePathForCurrentUser();
     assertEquals(home, SliderRegistryUtils.resolvePath("~"));

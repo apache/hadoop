@@ -20,7 +20,7 @@ package org.apache.slider.core.registry;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
-import org.apache.slider.common.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
 
 /**
  * Miscellaneous methods to assist slider registry work

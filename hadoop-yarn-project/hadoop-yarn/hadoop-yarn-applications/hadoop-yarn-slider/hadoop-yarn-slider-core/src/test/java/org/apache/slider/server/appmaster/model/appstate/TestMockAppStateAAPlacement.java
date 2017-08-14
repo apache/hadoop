@@ -74,7 +74,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
    * This is the simplest AA allocation: no labels, so allocate anywhere.
    * @throws Throwable
    */
-  @Test
+  //@Test
   public void testAllocateAANoLabel() throws Throwable {
     RoleStatus aaRole = getAaRole();
 
@@ -156,7 +156,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
     assertEquals(1, nodeInformation.entries.get(name).live);
   }
 
-  @Test
+  //@Test
   public void testAllocateFlexUp() throws Throwable {
     RoleStatus aaRole = getAaRole();
 
@@ -201,7 +201,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
 
   }
 
-  @Test
+  //@Test
   public void testAllocateFlexDownDecrementsPending() throws Throwable {
     RoleStatus aaRole = getAaRole();
 
@@ -233,7 +233,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
    * The outstanding flex should be cancelled
    * @throws Throwable
    */
-  @Test
+  //@Test
   public void testAllocateFlexDownForcesCancel() throws Throwable {
     RoleStatus aaRole = getAaRole();
 
@@ -268,7 +268,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
    *
    * @throws Throwable
    */
-  @Test
+  //@Test
   public void testAskForTooMany() throws Throwable {
     RoleStatus aaRole = getAaRole();
 
@@ -321,7 +321,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
         .RUNNING, "gpu"));
   }
 
-  @Test
+  //@Test
   public void testClusterSizeChangesDuringRequestSequence() throws Throwable {
     RoleStatus aaRole = getAaRole();
     describe("Change the cluster size where the cluster size changes during " +
@@ -338,7 +338,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
     assertEquals(1, appState.reviewRequestAndReleaseNodes().size());
   }
 
-  @Test
+  //@Test
   public void testBindingInfoMustHaveNodeMap() throws Throwable {
     AppStateBindingInfo bindingInfo = buildBindingInfo();
     bindingInfo.nodeReports = null;
@@ -349,7 +349,7 @@ public class TestMockAppStateAAPlacement extends BaseMockAppStateAATest
     }
   }
 
-  @Test
+  //@Test
   public void testAMRestart() throws Throwable {
     int desiredAA = 3;
     getAaRole().setDesired(desiredAA);

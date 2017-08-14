@@ -20,8 +20,10 @@ package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 
-@Parameters(commandNames = {SliderActions.ACTION_KEYTAB},
+@Parameters(commandNames = { SliderActions.ACTION_KEYTAB},
             commandDescription = SliderActions.DESCRIBE_ACTION_KEYTAB)
 
 public class ActionKeytabArgs extends AbstractActionArgs {

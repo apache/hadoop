@@ -107,7 +107,7 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
     return new MockContainerId(applicationAttemptId, count);
   }
 
-  @Test
+  //@Test
   public void testGetContainerInstances() {
     List<RoleInstance> roles = Arrays.asList(
         new RoleInstance(cont1),
@@ -124,7 +124,7 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
     assertEquals(map.get("mockcontainer_1"), roles.get(1));
   }
 
-  @Test
+  //@Test
   public void testGenerateRoleDetailsWithTwoColumns() {
     StringWriter sw = new StringWriter(64);
     PrintWriter pw = new PrintWriter(sw);
@@ -150,7 +150,7 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
     assertEquals(levelPrior, hamlet.nestLevel());
   }
 
-  @Test
+  //@Test
   public void testGenerateRoleDetailsWithOneColumn() {
     StringWriter sw = new StringWriter(64);
     PrintWriter pw = new PrintWriter(sw);
@@ -174,7 +174,7 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
     assertEquals(levelPrior, hamlet.nestLevel());
   }
 
-  @Test
+  //@Test
   public void testGenerateRoleDetailsWithNoData() {
     StringWriter sw = new StringWriter(64);
     PrintWriter pw = new PrintWriter(sw);
@@ -197,7 +197,7 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
     assertEquals(levelPrior, hamlet.nestLevel());
   }
 
-  @Test
+  //@Test
   public void testClusterNodeNameComparator() {
     ClusterNode n1 = new ClusterNode(mockContainerId(1)),
         n2 = new ClusterNode(mockContainerId(2)),
@@ -217,7 +217,7 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
     }
   }
 
-  @Test
+  //@Test
   public void testTableContent() {
     StringWriter sw = new StringWriter(64);
     PrintWriter pw = new PrintWriter(sw);
@@ -233,7 +233,7 @@ public class TestContainerStatsBlock extends BaseMockAppStateTest {
     assertEquals(prevLevel, hamlet.nestLevel());
   }
 
-  @Test
+  //@Test
   public void testTableAnchorContent() {
     StringWriter sw = new StringWriter(64);
     PrintWriter pw = new PrintWriter(sw);

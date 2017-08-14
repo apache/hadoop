@@ -213,6 +213,9 @@ public class Component implements Serializable {
     this.containers.add(container);
   }
 
+  public void removeContainer(Container container) {
+    containers.remove(container);
+  }
   public Container getContainer(String id) {
     for (Container container : containers) {
       if (container.getId().equals(id)) {

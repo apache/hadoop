@@ -190,7 +190,7 @@ public class TestMockAppStateDynamicHistory extends BaseMockAppStateTest
     assertTrue(SliderUtils.isNotEmpty(request1.getNodes()));
   }
 
-  @Test(expected = BadConfigException.class)
+  //@Test(expected = BadConfigException.class)
   public void testRoleHistoryRoleAdditions() throws Throwable {
     MockRoleHistory roleHistory = new MockRoleHistory(new ArrayList<>());
     roleHistory.addNewRole(new RoleStatus(new ProviderRole("one", 1)));
@@ -198,7 +198,7 @@ public class TestMockAppStateDynamicHistory extends BaseMockAppStateTest
     roleHistory.dump();
   }
 
-  @Test(expected = BadConfigException.class)
+  //@Test(expected = BadConfigException.class)
   public void testRoleHistoryRoleStartupConflict() throws Throwable {
     MockRoleHistory roleHistory = new MockRoleHistory(Arrays.asList(
         new ProviderRole("one", 1), new ProviderRole("two", 1)

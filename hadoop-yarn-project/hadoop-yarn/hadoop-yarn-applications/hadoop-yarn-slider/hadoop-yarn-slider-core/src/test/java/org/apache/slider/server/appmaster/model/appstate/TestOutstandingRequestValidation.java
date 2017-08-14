@@ -34,22 +34,22 @@ public class TestOutstandingRequestValidation extends SliderTestBase {
 
   private static final String[] H1 = hosts("one");
 
-  @Test
+  //@Test
   public void testRelaxedNohostsOrLabels() throws Throwable {
     createAndValidate(null, null, true);
   }
 
-  @Test
+  //@Test
   public void testRelaxedLabels() throws Throwable {
     createAndValidate(null, "gpu", true);
   }
 
-  @Test
+  //@Test
   public void testNonRelaxedLabels() throws Throwable {
     expectCreationFailure(null, "gpu", false);
   }
 
-  @Test
+  //@Test
   public void testRelaxedHostNoLabel() throws Throwable {
     createAndValidate(H1, "", true);
   }

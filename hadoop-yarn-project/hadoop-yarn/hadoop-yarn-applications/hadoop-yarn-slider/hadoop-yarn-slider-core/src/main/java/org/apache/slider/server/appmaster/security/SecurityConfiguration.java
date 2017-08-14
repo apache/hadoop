@@ -23,8 +23,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import static org.apache.slider.core.main.LauncherExitCodes.EXIT_UNAUTHORIZED;
 
 import org.apache.slider.api.resource.Application;
-import org.apache.slider.common.SliderKeys;
-import org.apache.slider.common.SliderXmlConfKeys;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.exceptions.SliderException;
 import org.slf4j.Logger;

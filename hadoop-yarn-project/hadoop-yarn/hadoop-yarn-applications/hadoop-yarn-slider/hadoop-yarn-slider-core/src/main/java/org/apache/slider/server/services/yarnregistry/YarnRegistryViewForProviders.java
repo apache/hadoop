@@ -19,6 +19,8 @@
 package org.apache.slider.server.services.yarnregistry;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -28,6 +30,8 @@ import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 
 import org.apache.hadoop.registry.client.types.ServiceRecord;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceId;
 import org.apache.slider.common.tools.SliderUtils;
 
 import java.io.IOException;
@@ -40,14 +44,13 @@ import static org.apache.hadoop.registry.client.binding.RegistryPathUtils.join;
  * is registered, offers access to the record and other things.
  */
 public class YarnRegistryViewForProviders {
+  private static final Log LOG =
+      LogFactory.getLog(YarnRegistryViewForProviders.class);
 
   private final RegistryOperations registryOperations;
-
   private final String user;
-
   private final String sliderServiceClass;
   private final String instanceName;
-  private final ApplicationAttemptId applicationAttemptId;
   /**
    * Record used where the service registered itself.
    * Null until the service is registered
@@ -78,32 +81,12 @@ public class YarnRegistryViewForProviders {
     this.user = user;
     this.sliderServiceClass = sliderServiceClass;
     this.instanceName = instanceName;
-    this.applicationAttemptId = applicationAttemptId;
-  }
-
-  public ApplicationAttemptId getApplicationAttemptId() {
-    return applicationAttemptId;
   }
 
   public String getUser() {
     return user;
   }
 
-  public String getSliderServiceClass() {
-    return sliderServiceClass;
-  }
-
-  public String getInstanceName() {
-    return instanceName;
-  }
-
-  public RegistryOperations getRegistryOperations() {
-    return registryOperations;
-  }
-
-  public ServiceRecord getSelfRegistration() {
-    return selfRegistration;
-  }
 
   private void setSelfRegistration(ServiceRecord selfRegistration) {
     this.selfRegistration = selfRegistration;
@@ -192,24 +175,6 @@ public class YarnRegistryViewForProviders {
 
   /**
    * Add a service under a path for the current user
-   * @param serviceClass service class to use under ~user
-   * @param serviceName name of the service
-   * @param record service record
-   * @param deleteTreeFirst perform recursive delete of the path first
-   * @return the path the service was created at
-   * @throws IOException
-   */
-  public String putService(
-      String serviceClass,
-      String serviceName,
-      ServiceRecord record,
-      boolean deleteTreeFirst) throws IOException {
-    return putService(user, serviceClass, serviceName, record, deleteTreeFirst);
-  }
-
-
-  /**
-   * Add a service under a path for the current user
    * @param record service record
    * @param deleteTreeFirst perform recursive delete of the path first
    * @return the path the service was created at
@@ -225,23 +190,16 @@ public class YarnRegistryViewForProviders {
   }
 
   /**
-   * Update the self record by pushing out the latest version of the service
-   * registration record. 
-   * @throws IOException any failure.
-   */
-  public void updateSelf() throws IOException {
-    putService(user, sliderServiceClass, instanceName, selfRegistration, false);
-  }
-    
-  /**
    * Delete a component
-   * @param componentName component name
+   * @param containerId component name
    * @throws IOException
    */
-  public void deleteComponent(String componentName) throws IOException {
+  public void deleteComponent(ComponentInstanceId instanceId,
+      String containerId) throws IOException {
     String path = RegistryUtils.componentPath(
         user, sliderServiceClass, instanceName,
-        componentName);
+        containerId);
+    LOG.info(instanceId + ": Deleting registry path " + path);
     registryOperations.delete(path, false);
   }
 

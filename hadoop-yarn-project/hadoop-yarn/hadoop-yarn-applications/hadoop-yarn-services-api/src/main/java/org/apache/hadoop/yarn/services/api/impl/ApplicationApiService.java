@@ -18,23 +18,21 @@
 package org.apache.hadoop.yarn.services.api.impl;
 
 import com.google.inject.Singleton;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.ApplicationState;
 import org.apache.slider.api.resource.ApplicationStatus;
 import org.apache.slider.api.resource.Component;
-import org.apache.slider.util.ServiceApiUtil;
-import org.apache.slider.client.SliderClient;
-import org.apache.slider.common.params.ActionFreezeArgs;
 import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.common.tools.SliderVersionInfo;
-import org.apache.slider.core.buildutils.BuildHelper;
-import org.apache.slider.core.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +49,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.slider.util.RestApiConstants.*;
@@ -61,51 +58,39 @@ import static org.apache.slider.util.RestApiConstants.*;
 @Consumes({ MediaType.APPLICATION_JSON })
 @Produces({ MediaType.APPLICATION_JSON })
 public class ApplicationApiService {
-  private static final Logger logger =
+  private static final Logger LOG =
       LoggerFactory.getLogger(ApplicationApiService.class);
-  private static org.apache.hadoop.conf.Configuration SLIDER_CONFIG =
-      new YarnConfiguration();
-  private static SliderClient SLIDER_CLIENT;
-  private static Response SLIDER_VERSION;
-  private static final ActionFreezeArgs ACTION_FREEZE_ARGS = new ActionFreezeArgs();
+  private static Configuration YARN_CONFIG = new YarnConfiguration();
+  private static ServiceClient SERVICE_CLIENT;
 
   static {
     init();
   }
 
   // initialize all the common resources - order is important
-  protected static void init() {
-    SLIDER_CLIENT = createSliderClient();
-    SLIDER_VERSION = initSliderVersion();
+  private static void init() {
+    SERVICE_CLIENT = new ServiceClient();
+    SERVICE_CLIENT.init(YARN_CONFIG);
+    SERVICE_CLIENT.start();
   }
 
   @GET
-  @Path("/versions/slider-version")
+  @Path("/versions/yarn-service-version")
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON }) public Response getSliderVersion() {
-    logger.info("GET: getSliderVersion");
-    return SLIDER_VERSION;
-  }
-
-  private static Response initSliderVersion() {
-    Map<String, Object> metadata = new HashMap<>();
-    BuildHelper.addBuildMetadata(metadata, "org.apache.hadoop.yarn.services");
-    String sliderVersion = metadata.toString();
-    logger.info("Slider version = {}", sliderVersion);
-    String hadoopVersion = SliderVersionInfo.getHadoopVersionString();
-    logger.info("Hadoop version = {}", hadoopVersion);
-    return Response.ok("{ \"slider_version\": \"" + sliderVersion
-        + "\", \"hadoop_version\": \"" + hadoopVersion + "\"}").build();
+    String version = VersionInfo.getBuildVersion();
+    LOG.info(version);
+    return Response.ok(version).build();
   }
 
   @POST @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
   public Response createApplication(Application application) {
-    logger.info("POST: createApplication = {}", application);
+    LOG.info("POST: createApplication = {}", application);
     ApplicationStatus applicationStatus = new ApplicationStatus();
     try {
-      ApplicationId applicationId = SLIDER_CLIENT.actionCreate(application);
-      logger.info("Successfully created application " + application.getName()
+      ApplicationId applicationId = SERVICE_CLIENT.actionCreate(application);
+      LOG.info("Successfully created application " + application.getName()
           + " applicationId = " + applicationId);
       applicationStatus.setState(ApplicationState.ACCEPTED);
       applicationStatus.setUri(
@@ -118,58 +103,18 @@ public class ApplicationApiService {
           .build();
     } catch (Exception e) {
       String message = "Failed to create application " + application.getName();
-      logger.error(message, e);
+      LOG.error(message, e);
       applicationStatus.setDiagnostics(message + ": " + e.getMessage());
       return Response.status(Status.INTERNAL_SERVER_ERROR)
           .entity(applicationStatus).build();
     }
   }
 
-  protected static SliderClient createSliderClient() {
-    if (SLIDER_CLIENT != null) {
-      return SLIDER_CLIENT;
-    }
-    org.apache.hadoop.conf.Configuration sliderClientConfiguration =
-        SLIDER_CONFIG;
-    SliderClient client = new SliderClient() {
-      @Override public void init(org.apache.hadoop.conf.Configuration conf) {
-        super.init(conf);
-        try {
-          initHadoopBinding();
-        } catch (SliderException | IOException e) {
-          throw new RuntimeException(
-              "Unable to automatically init Hadoop binding", e);
-        }
-      }
-    };
-    try {
-      logger
-          .debug("Slider Client configuration: {}", sliderClientConfiguration);
-      sliderClientConfiguration = client.bindArgs(sliderClientConfiguration, new String[] { "help" });
-      client.init(sliderClientConfiguration);
-      client.start();
-    } catch (Exception e) {
-      logger.error("Unable to create SliderClient", e);
-      throw new RuntimeException(e.getMessage(), e);
-    }
-    return client;
-  }
-
-  // The information this REST endpoint currently returned can be retrieved from
-  // RM web services
-  // Probably the data from AM is more important. Do that later.
-//  @GET @Consumes({ MediaType.APPLICATION_JSON })
-//  @Produces({ MediaType.APPLICATION_JSON })
-//  public Response getApplications(@QueryParam("state") String state) {
-//    logger.info("GET: getApplications with param state = {}", state);
-//    return null;
-//  }
-
   @GET @Path("/{app_name}")
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
   public Response getApplication(@PathParam("app_name") String appName) {
-    logger.info("GET: getApplication for appName = {}", appName);
+    LOG.info("GET: getApplication for appName = {}", appName);
     ApplicationStatus applicationStatus = new ApplicationStatus();
 
     // app name validation
@@ -181,24 +126,25 @@ public class ApplicationApiService {
     }
 
     try {
-      Application app = SLIDER_CLIENT.actionStatus(appName);
-      ApplicationReport report = SLIDER_CLIENT.findInstance(appName);
-      if (app != null && report != null) {
+      Application app = SERVICE_CLIENT.getStatus(appName);
+      ApplicationReport report = SERVICE_CLIENT.getYarnClient()
+          .getApplicationReport(ApplicationId.fromString(app.getId()));
+      if (report != null) {
         app.setLifetime(
             report.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME)
                 .getRemainingTime());
-        logger.info("Application = {}", app);
+        LOG.info("Application = {}", app);
         return Response.ok(app).build();
       } else {
         String message = "Application " + appName + " does not exist.";
-        logger.info(message);
+        LOG.info(message);
         applicationStatus.setCode(ERROR_CODE_APP_DOES_NOT_EXIST);
         applicationStatus.setDiagnostics(message);
         return Response.status(Status.NOT_FOUND).entity(applicationStatus)
             .build();
       }
     } catch (Exception e) {
-      logger.error("Get application failed", e);
+      LOG.error("Get application failed", e);
       applicationStatus
           .setDiagnostics("Failed to retrieve application: " + e.getMessage());
       return Response.status(Status.INTERNAL_SERVER_ERROR)
@@ -211,18 +157,18 @@ public class ApplicationApiService {
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
   public Response deleteApplication(@PathParam("app_name") String appName) {
-    logger.info("DELETE: deleteApplication for appName = {}", appName);
+    LOG.info("DELETE: deleteApplication for appName = {}", appName);
     return stopApplication(appName, true);
   }
 
   private Response stopApplication(String appName, boolean destroy) {
     try {
-      SLIDER_CLIENT.actionStop(appName, ACTION_FREEZE_ARGS);
+      SERVICE_CLIENT.actionStop(appName);
       if (destroy) {
-        SLIDER_CLIENT.actionDestroy(appName);
-        logger.info("Successfully deleted application {}", appName);
+        SERVICE_CLIENT.actionDestroy(appName);
+        LOG.info("Successfully deleted application {}", appName);
       } else {
-        logger.info("Successfully stopped application {}", appName);
+        LOG.info("Successfully stopped application {}", appName);
       }
       return Response.status(Status.NO_CONTENT).build();
     } catch (ApplicationNotFoundException e) {
@@ -252,8 +198,8 @@ public class ApplicationApiService {
               .getNumberOfContainers()).build();
     }
     try {
-      Map<String, Long> original = SLIDER_CLIENT.flex(appName, Collections
-          .singletonMap(component.getName(),
+      Map<String, Long> original = SERVICE_CLIENT.flexByRestService(appName,
+          Collections.singletonMap(component.getName(),
               component.getNumberOfContainers()));
       return Response.ok().entity("Updating " + componentName + " size from "
           + original.get(componentName) + " to "
@@ -271,7 +217,7 @@ public class ApplicationApiService {
   @Produces({ MediaType.APPLICATION_JSON })
   public Response updateApplication(@PathParam("app_name") String appName,
       Application updateAppData) {
-    logger.info("PUT: updateApplication for app = {} with data = {}", appName,
+    LOG.info("PUT: updateApplication for app = {} with data = {}", appName,
         updateAppData);
 
     // Ignore the app name provided in updateAppData and always use appName
@@ -314,14 +260,14 @@ public class ApplicationApiService {
   private Response updateLifetime(String appName, Application updateAppData) {
     try {
       String newLifeTime =
-          SLIDER_CLIENT.updateLifetime(appName, updateAppData.getLifetime());
+          SERVICE_CLIENT.updateLifetime(appName, updateAppData.getLifetime());
       return Response.ok("Application " + appName + " lifeTime is successfully updated to "
           + updateAppData.getLifetime() + " seconds from now: " + newLifeTime).build();
     } catch (Exception e) {
       String message =
           "Failed to update application (" + appName + ") lifetime ("
               + updateAppData.getLifetime() + ")";
-      logger.error(message, e);
+      LOG.error(message, e);
       return Response.status(Status.INTERNAL_SERVER_ERROR)
           .entity(message + " : " + e.getMessage()).build();
     }
@@ -329,17 +275,12 @@ public class ApplicationApiService {
 
   private Response startApplication(String appName) {
     try {
-      int ret = SLIDER_CLIENT.actionList(appName);
-      if (ret == 0) {
-        return Response.ok()
-            .entity("Application " + appName + " is already alive.").build();
-      }
-      SLIDER_CLIENT.actionStart(appName, null);
-      logger.info("Successfully started application " + appName);
+      SERVICE_CLIENT.actionStart(appName);
+      LOG.info("Successfully started application " + appName);
       return Response.ok("Application " + appName + " is successfully started").build();
     } catch (Exception e) {
       String message = "Failed to start application " + appName;
-      logger.info(message, e);
+      LOG.info(message, e);
       return Response.status(Status.INTERNAL_SERVER_ERROR)
           .entity(message + ": " + e.getMessage()).build();
     }

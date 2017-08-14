@@ -43,7 +43,7 @@ public class TestMockContainerResourceAllocations extends BaseMockAppStateTest {
     return factory.newApplication(1, 0, 0).name(getValidTestName());
   }
 
-  @Test
+  //@Test
   public void testNormalAllocations() throws Throwable {
     Component role0 = appState.getClusterStatus().getComponent(MockRoles.ROLE0);
     role0.resource(new org.apache.slider.api.resource.Resource().memory("512")
@@ -65,7 +65,7 @@ public class TestMockContainerResourceAllocations extends BaseMockAppStateTest {
   }
 
   //TODO replace with resource profile feature in yarn
-  @Test
+  //@Test
   public void testMaxMemAllocations() throws Throwable {
     // max core allocations no longer supported
     Component role0 = appState.getClusterStatus().getComponent(MockRoles.ROLE0);
@@ -86,7 +86,7 @@ public class TestMockContainerResourceAllocations extends BaseMockAppStateTest {
     assertEquals(2, requirements.getVirtualCores());
   }
 
-  @Test
+  //@Test
   public void testMaxDefaultAllocations() throws Throwable {
     List<AbstractRMOperation> ops = appState.reviewRequestAndReleaseNodes();
     assertEquals(ops.size(), 1);

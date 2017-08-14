@@ -100,7 +100,7 @@ public class TestMockAppStateFlexDynamicRoles extends BaseMockAppStateTest
     appState.lookupRoleStatus("dynamicAdd7");
   }
 
-  @Test
+  //@Test
   public void testDynamicFlexDropRole() throws Throwable {
     appState.updateComponents(Collections.singletonMap("dynamic-6", 0L));
     //status is retained for future
@@ -108,7 +108,7 @@ public class TestMockAppStateFlexDynamicRoles extends BaseMockAppStateTest
   }
 
 
-  @Test
+  //@Test
   public void testHistorySaveFlexLoad() throws Throwable {
     Application application = appState.getClusterStatus();
     RoleHistory roleHistory = appState.getRoleHistory();
@@ -126,7 +126,7 @@ public class TestMockAppStateFlexDynamicRoles extends BaseMockAppStateTest
     assertEquals(0, appState.getRoleHistory().rebuild(loadedRoleHistory));
   }
 
-  @Test
+  //@Test
   public void testHistoryFlexSaveResetLoad() throws Throwable {
     Application application = appState.getClusterStatus();
     Component component = new Component().name("HistoryFlexSaveLoad")

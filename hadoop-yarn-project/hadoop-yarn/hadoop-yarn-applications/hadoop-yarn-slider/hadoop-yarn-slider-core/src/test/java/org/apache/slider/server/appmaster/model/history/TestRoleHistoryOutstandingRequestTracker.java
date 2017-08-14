@@ -78,7 +78,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     return application;
   }
 
-  @Test
+  //@Test
   public void testAddRetrieveEntry() throws Throwable {
     OutstandingRequest request = tracker.newRequest(host1, 0);
     assertEquals(tracker.lookupPlacedRequest(0, "host1"), request);
@@ -86,7 +86,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertNull(tracker.lookupPlacedRequest(0, "host1"));
   }
 
-  @Test
+  //@Test
   public void testAddCompleteEntry() throws Throwable {
     OutstandingRequest req1 = tracker.newRequest(host1, 0);
     req1.buildContainerRequest(resource, getRole0Status(), 0);
@@ -105,7 +105,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertNotNull(tracker.lookupPlacedRequest(0, "host1"));
   }
 
-  @Test
+  //@Test
   public void testResetOpenRequests() throws Throwable {
     OutstandingRequest req1 = tracker.newRequest(null, 0);
     assertFalse(req1.isLocated());
@@ -117,7 +117,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertTrue(tracker.listPlacedRequests().isEmpty());
   }
 
-  @Test
+  //@Test
   public void testRemoveOpenRequestUnissued() throws Throwable {
     OutstandingRequest req1 = tracker.newRequest(null, 0);
     req1.buildContainerRequest(resource, getRole0Status(), 0);
@@ -133,7 +133,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertEquals(1, tracker.listOpenRequests().size());
   }
 
-  @Test
+  //@Test
   public void testIssuedOpenRequest() throws Throwable {
     OutstandingRequest req1 = tracker.newRequest(null, 0);
     req1.buildContainerRequest(resource, getRole0Status(), 0);
@@ -161,7 +161,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertEquals(allocation.origin, req1);
   }
 
-  @Test
+  //@Test
   public void testResetEntries() throws Throwable {
     tracker.newRequest(host1, 0);
     tracker.newRequest(host2, 0);
@@ -177,7 +177,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertEquals(1, tracker.resetOutstandingRequests(1).size());
   }
 
-  @Test
+  //@Test
   public void testEscalation() throws Throwable {
     // first request: default placement
     assertEquals(getRole0Status().getPlacementPolicy(), PlacementPolicy
@@ -265,7 +265,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
    * retains the node list, but sets relaxLocality==true
    * @throws Throwable
    */
-  @Test
+  //@Test
   public void testRequestLabelledPlacement() throws Throwable {
     NodeInstance ni = new NodeInstance("host1", 0);
     OutstandingRequest req1 = tracker.newRequest(ni, 0);
@@ -291,7 +291,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
    * retains the node list, but sets relaxLocality==true.
    * @throws Throwable
    */
-  @Test
+  //@Test
   public void testRequestUnlabelledPlacement() throws Throwable {
     NodeInstance ni = new NodeInstance("host1", 0);
     OutstandingRequest req1 = tracker.newRequest(ni, 0);
@@ -308,12 +308,12 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertTrue(yarnRequest2.getRelaxLocality());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  //@Test(expected = IllegalArgumentException.class)
   public void testAARequestNoNodes() throws Throwable {
     tracker.newAARequest(getRole0Status().getKey(), new ArrayList<>(), "");
   }
 
-  @Test
+  //@Test
   public void testAARequest() throws Throwable {
     int role0 = getRole0Status().getKey();
     OutstandingRequest request = tracker.newAARequest(role0, Arrays
@@ -322,7 +322,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertFalse(request.isLocated());
   }
 
-  @Test
+  //@Test
   public void testAARequestPair() throws Throwable {
     int role0 = getRole0Status().getKey();
     OutstandingRequest request = tracker.newAARequest(role0, Arrays.asList(
@@ -339,7 +339,7 @@ public class TestRoleHistoryOutstandingRequestTracker extends
     assertEquals(2, yarnRequest.getNodes().size());
   }
 
-  @Test
+  //@Test
   public void testBuildResourceRequirements() throws Throwable {
     // Store original values
     Application application = appState.getClusterStatus();

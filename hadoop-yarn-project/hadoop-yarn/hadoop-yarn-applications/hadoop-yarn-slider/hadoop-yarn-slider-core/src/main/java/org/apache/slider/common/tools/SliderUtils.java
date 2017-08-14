@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ExitUtil;
@@ -50,10 +49,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.Slider;
 import org.apache.slider.api.RoleKeys;
 import org.apache.slider.api.types.ContainerInformation;
-import org.apache.slider.common.SliderKeys;
-import org.apache.slider.common.SliderXmlConfKeys;
-import org.apache.slider.common.params.Arguments;
-import org.apache.slider.common.params.SliderActions;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
+import org.apache.hadoop.yarn.service.client.params.Arguments;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 import org.apache.slider.core.exceptions.BadClusterStateException;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.BadConfigException;
@@ -111,7 +110,7 @@ import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static org.apache.slider.common.SliderKeys.COMPONENT_SEPARATOR;
+import static org.apache.hadoop.yarn.service.conf.SliderKeys.COMPONENT_SEPARATOR;
 
 /**
  * These are slider-specific Util methods
@@ -372,6 +371,13 @@ public final class SliderUtils {
 
   private static final PatternValidator clusternamePattern
       = new PatternValidator("[a-z][a-z0-9_-]*");
+
+  private static final PatternValidator compNamePattern
+      = new PatternValidator("[a-z][a-z0-9-]*");
+
+  public static void validateCompName(String compName) {
+    compNamePattern.validate(compName);
+  }
 
   /**
    * Normalize a cluster name then verify that it is valid

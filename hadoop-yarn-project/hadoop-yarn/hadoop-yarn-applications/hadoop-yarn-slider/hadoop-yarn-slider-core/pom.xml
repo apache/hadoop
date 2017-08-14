@@ -61,6 +61,7 @@
                 <includes>
                   <include>SliderClusterMessages.proto</include>
                   <include>SliderClusterProtocol.proto</include>
+                  <include>ClientAMProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

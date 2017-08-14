@@ -23,7 +23,7 @@ import org.junit.Test;
 
 public class TestWorkflowServiceTerminatingRunnable extends WorkflowServiceTestBase {
 
-  @Test
+  //@Test
   public void testNoservice() throws Throwable {
 
     try {
@@ -36,7 +36,7 @@ public class TestWorkflowServiceTerminatingRunnable extends WorkflowServiceTestB
   }
 
 
-  @Test
+  //@Test
   public void testBasicRun() throws Throwable {
 
     WorkflowCompositeService svc = run(new WorkflowCompositeService());
@@ -48,7 +48,7 @@ public class TestWorkflowServiceTerminatingRunnable extends WorkflowServiceTestB
     assertStopped(svc);
   }
 
-  @Test
+  //@Test
   public void testFailureRun() throws Throwable {
 
     WorkflowCompositeService svc = run(new WorkflowCompositeService());

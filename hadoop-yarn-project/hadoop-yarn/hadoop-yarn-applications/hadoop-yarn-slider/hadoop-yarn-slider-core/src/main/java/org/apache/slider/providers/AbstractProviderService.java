@@ -23,10 +23,13 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.provider.ProviderService;
+import org.apache.hadoop.yarn.service.provider.ProviderUtils;
+import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
 import org.apache.slider.api.resource.ContainerState;
-import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.exceptions.SliderException;
@@ -35,7 +38,6 @@ import org.apache.slider.core.launch.ContainerLauncher;
 import org.apache.slider.core.registry.docstore.PublishedConfiguration;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,14 +46,14 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static org.apache.slider.util.ServiceApiUtil.$;
+import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.$;
 
 public abstract class AbstractProviderService extends AbstractService
     implements ProviderService, SliderKeys {
 
   protected static final Logger log =
       LoggerFactory.getLogger(AbstractProviderService.class);
-  private static final ProviderUtils providerUtils = new ProviderUtils(log);
+  private static final ProviderUtils providerUtils = new ProviderUtils();
   protected StateAccessForProviders amState;
   protected YarnRegistryViewForProviders yarnRegistry;
   private ServiceTimelinePublisher serviceTimelinePublisher;
@@ -64,15 +66,6 @@ public abstract class AbstractProviderService extends AbstractService
       Application application, RoleInstance roleInstance,
       SliderFileSystem fileSystem) throws IOException;
 
-  @Override
-  public void setAMState(StateAccessForProviders stateAccessor) {
-    this.amState = stateAccessor;
-  }
-
-  @Override
-  public void bindToYarnRegistry(YarnRegistryViewForProviders yarnRegistry) {
-    this.yarnRegistry = yarnRegistry;
-  }
 
   public void buildContainerLaunchContext(ContainerLauncher launcher,
       Application application, Container container, ProviderRole providerRole,
@@ -85,7 +78,7 @@ public abstract class AbstractProviderService extends AbstractService
     // Get pre-defined tokens
     Map<String, String> globalTokens = amState.getGlobalSubstitutionTokens();
     Map<String, String> tokensForSubstitution = providerUtils
-        .initCompTokensForSubstitute(roleInstance);
+        .initCompTokensForSubstitute(null);
     tokensForSubstitution.putAll(globalTokens);
     // Set the environment variables in launcher
     launcher.putEnv(SliderUtils
@@ -105,8 +98,6 @@ public abstract class AbstractProviderService extends AbstractService
     providerUtils.addComponentHostTokens(tokensForSubstitution, amState);
 
     // create config file on hdfs and add local resource
-    providerUtils.createConfigFileAndAddLocalResource(launcher, fileSystem,
-        component, tokensForSubstitution, roleInstance, amState);
 
     // substitute launch command
     String launchCommand = ProviderUtils
@@ -141,15 +132,6 @@ public abstract class AbstractProviderService extends AbstractService
       return false;
     }
 
-    try {
-      providerUtils.updateServiceRecord(amState, yarnRegistry,
-          containerId.toString(), instance.role, status.getIPs(), status.getHost());
-    } catch (IOException e) {
-      // could not write service record to ZK, log and retry
-      log.warn("Error updating container {} service record in registry, " +
-          "retrying", containerId, e);
-      return true;
-    }
     // TODO publish ip and host
     org.apache.slider.api.resource.Container container =
         instance.providerRole.component.getContainer(containerId.toString());
@@ -163,8 +145,4 @@ public abstract class AbstractProviderService extends AbstractService
     return false;
   }
 
-  @Override
-  public void setServiceTimelinePublisher(ServiceTimelinePublisher publisher) {
-    this.serviceTimelinePublisher = publisher;
-  }
 }

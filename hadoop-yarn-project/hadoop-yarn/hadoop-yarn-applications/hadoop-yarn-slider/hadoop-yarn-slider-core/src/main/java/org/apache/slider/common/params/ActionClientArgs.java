@@ -20,10 +20,12 @@ package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.SliderActions;
 
 import java.io.File;
 
-@Parameters(commandNames = {SliderActions.ACTION_CLIENT},
+@Parameters(commandNames = { SliderActions.ACTION_CLIENT},
     commandDescription = SliderActions.DESCRIBE_ACTION_CLIENT)
 
 public class ActionClientArgs extends AbstractActionArgs {

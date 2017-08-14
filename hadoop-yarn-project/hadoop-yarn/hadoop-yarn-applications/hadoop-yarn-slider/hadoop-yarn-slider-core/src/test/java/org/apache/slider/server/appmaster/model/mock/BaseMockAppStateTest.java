@@ -51,7 +51,7 @@ import org.apache.slider.server.appmaster.state.ProviderAppState;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.util.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.slider.utils.SliderTestBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

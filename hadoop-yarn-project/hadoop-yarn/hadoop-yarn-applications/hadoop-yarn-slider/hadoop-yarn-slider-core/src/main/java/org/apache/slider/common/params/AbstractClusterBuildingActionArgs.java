@@ -21,6 +21,8 @@ package org.apache.slider.common.params;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.client.params.ComponentArgsDelegate;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 
 import java.io.File;

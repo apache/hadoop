@@ -64,7 +64,7 @@ public class TestFilesystemPermissions extends YarnMiniClusterTestBase {
     }
   }
 
-  @Test
+  //@Test
   public void testJavaFSOperations() throws Throwable {
     assertNativeLibrariesPresent();
     File subdir = testDir();
@@ -75,7 +75,7 @@ public class TestFilesystemPermissions extends YarnMiniClusterTestBase {
     assertTrue(FileUtil.canExecute(subdir));
   }
 
-  @Test
+  //@Test
   public void testDiskCheckerOperations() throws Throwable {
     assertNativeLibrariesPresent();
     File subdir = testDir();
@@ -84,7 +84,7 @@ public class TestFilesystemPermissions extends YarnMiniClusterTestBase {
     checker.checkDir(subdir);
   }
 
-  @Test
+  //@Test
   public void testDiskCheckerMkdir() throws Throwable {
     assertNativeLibrariesPresent();
     File subdir = testDir();
@@ -106,7 +106,7 @@ public class TestFilesystemPermissions extends YarnMiniClusterTestBase {
   }
 
 
-  @Test
+  //@Test
   public void testPermsMap() throws Throwable {
     File dir = testDir();
     String diruri = dir.toURI().toString();
@@ -114,7 +114,7 @@ public class TestFilesystemPermissions extends YarnMiniClusterTestBase {
     getLocalDirsPathPermissionsMap(lfs, diruri);
   }
 
-  @Test
+  //@Test
   public void testInitLocaldir() throws Throwable {
     File dir = testDir();
     String diruri = dir.toURI().toString();
@@ -126,7 +126,7 @@ public class TestFilesystemPermissions extends YarnMiniClusterTestBase {
   }
 
 
-  @Test
+  //@Test
   public void testValidateMiniclusterPerms() throws Throwable {
     int numLocal = 1;
     String cluster = createMiniCluster("", getConfiguration(), 1, numLocal, 1,

@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class TestWorkflowExecutorService extends WorkflowServiceTestBase {
 
-  @Test
+  //@Test
   public void testAsyncRun() throws Throwable {
 
     ExecutorSvc svc = run(new ExecutorSvc());
@@ -41,7 +41,7 @@ public class TestWorkflowExecutorService extends WorkflowServiceTestBase {
     assertStopped(svc);
   }
 
-  @Test
+  //@Test
   public void testFailureRun() throws Throwable {
 
     ExecutorSvc svc = run(new ExecutorSvc());

@@ -34,9 +34,9 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.slider.common.SliderExitCodes;
-import org.apache.slider.common.SliderKeys;
-import org.apache.slider.common.SliderXmlConfKeys;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
 import org.apache.slider.core.exceptions.BadClusterStateException;
 import org.apache.slider.core.exceptions.ErrorStrings;
 import org.apache.slider.core.exceptions.SliderException;
@@ -52,8 +52,8 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.slider.common.SliderXmlConfKeys.CLUSTER_DIRECTORY_PERMISSIONS;
-import static org.apache.slider.common.SliderXmlConfKeys.DEFAULT_CLUSTER_DIRECTORY_PERMISSIONS;
+import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.CLUSTER_DIRECTORY_PERMISSIONS;
+import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.DEFAULT_CLUSTER_DIRECTORY_PERMISSIONS;
 
 public class CoreFileSystem {
   private static final Logger
@@ -77,7 +77,7 @@ public class CoreFileSystem {
     Preconditions.checkNotNull(configuration,
                                "Cannot create a CoreFileSystem with a null Configuration");
     this.fileSystem = FileSystem.get(configuration);
-    this.configuration = fileSystem.getConf();
+    this.configuration = configuration;
   }
   
   /**

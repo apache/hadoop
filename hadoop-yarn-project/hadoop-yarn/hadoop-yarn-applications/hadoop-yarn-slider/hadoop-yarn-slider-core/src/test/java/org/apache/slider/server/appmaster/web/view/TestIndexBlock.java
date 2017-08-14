@@ -87,7 +87,7 @@ public class TestIndexBlock extends BaseMockAppStateAATest {
     cont2.setResource(new MockResource(0, 0));
   }
 
-  @Test
+  //@Test
   public void testIndex() {
     RoleStatus role0 = getRole0Status();
     RoleStatus role1 = getRole1Status();

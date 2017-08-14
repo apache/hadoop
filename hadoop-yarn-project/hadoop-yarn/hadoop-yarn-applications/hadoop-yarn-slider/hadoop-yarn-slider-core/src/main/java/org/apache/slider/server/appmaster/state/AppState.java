@@ -53,8 +53,8 @@ import org.apache.slider.api.resource.ConfigFile;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.RoleStatistics;
-import org.apache.slider.common.SliderExitCodes;
-import org.apache.slider.common.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.exceptions.BadClusterStateException;
 import org.apache.slider.core.exceptions.BadConfigException;
@@ -67,13 +67,13 @@ import org.apache.slider.providers.PlacementPolicy;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.management.MetricsConstants;
-import org.apache.slider.server.appmaster.metrics.SliderMetrics;
+import org.apache.hadoop.yarn.service.metrics.ServiceMetrics;
 import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.operations.ContainerReleaseOperation;
 import org.apache.slider.server.appmaster.operations.ContainerRequestOperation;
 import org.apache.slider.server.appmaster.operations.UpdateBlacklistOperation;
-import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
-import org.apache.slider.util.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -216,7 +216,7 @@ public class AppState {
   private Resource minResource;
   private Resource maxResource;
 
-  private SliderMetrics appMetrics;
+  private ServiceMetrics appMetrics;
 
   private ServiceTimelinePublisher serviceTimelinePublisher;
 
@@ -330,7 +330,7 @@ public class AppState {
     // set the cluster specification (once its dependency the client properties
     // is out the way
     this.app = binding.application;
-    appMetrics = SliderMetrics.register(app.getName(),
+    appMetrics = ServiceMetrics.register(app.getName(),
         "Metrics for service");
     appMetrics.tag("type", "Metrics type [component or service]", "service");
     appMetrics.tag("appId", "Application id for service", app.getId());
@@ -1013,8 +1013,8 @@ public class AppState {
   }
 
   private void incCompletedContainers(RoleStatus role) {
-    role.getComponentMetrics().containersCompleted.incr();
-    appMetrics.containersCompleted.incr();
+    role.getComponentMetrics().containersSucceeded.incr();
+    appMetrics.containersSucceeded.incr();
   }
 
   @VisibleForTesting
@@ -1030,26 +1030,26 @@ public class AppState {
       role.getComponentMetrics().containersDiskFailure.incr();
       role.getComponentMetrics().containersFailed.incr();
       break;
-    case Failed:
-      appMetrics.failedSinceLastThreshold.incr();
-      appMetrics.containersFailed.incr();
-      role.getComponentMetrics().failedSinceLastThreshold.incr();
-      role.getComponentMetrics().containersFailed.incr();
-      break;
-    case Failed_limits_exceeded:
-      appMetrics.containersLimitsExceeded.incr();
-      appMetrics.failedSinceLastThreshold.incr();
-      appMetrics.containersFailed.incr();
-      role.getComponentMetrics().containersLimitsExceeded.incr();
-      role.getComponentMetrics().failedSinceLastThreshold.incr();
-      role.getComponentMetrics().containersFailed.incr();
-      break;
-    default:
-      appMetrics.failedSinceLastThreshold.incr();
-      appMetrics.containersFailed.incr();
-      role.getComponentMetrics().failedSinceLastThreshold.incr();
-      role.getComponentMetrics().containersFailed.incr();
-      break;
+//    case Failed:
+//      appMetrics.failedSinceLastThreshold.incr();
+//      appMetrics.containersFailed.incr();
+//      role.getComponentMetrics().failedSinceLastThreshold.incr();
+//      role.getComponentMetrics().containersFailed.incr();
+//      break;
+//    case Failed_limits_exceeded:
+//      appMetrics.containersLimitsExceeded.incr();
+//      appMetrics.failedSinceLastThreshold.incr();
+//      appMetrics.containersFailed.incr();
+//      role.getComponentMetrics().containersLimitsExceeded.incr();
+//      role.getComponentMetrics().failedSinceLastThreshold.incr();
+//      role.getComponentMetrics().containersFailed.incr();
+//      break;
+//    default:
+//      appMetrics.failedSinceLastThreshold.incr();
+//      appMetrics.containersFailed.incr();
+//      role.getComponentMetrics().failedSinceLastThreshold.incr();
+//      role.getComponentMetrics().containersFailed.incr();
+//      break;
     }
   }
 
@@ -1308,7 +1308,7 @@ public class AppState {
       log.info("decrementing role count for role {} to {}; completed={}",
           roleStatus.getName(),
           roleStatus.getComponentMetrics().containersRunning.value(),
-          roleStatus.getComponentMetrics().containersCompleted.value());
+          roleStatus.getComponentMetrics().containersSucceeded.value());
       result.outcome = ContainerOutcome.Completed;
       roleHistory.onReleaseCompleted(container);
 
@@ -1671,7 +1671,7 @@ public class AppState {
       if (instance.providerRole.probe == null) {
         continue;
       }
-      boolean ready = instance.providerRole.probe.ping(instance).isSuccess();
+      boolean ready = instance.providerRole.probe.ping(null).isSuccess();
       if (ready) {
         if (instance.state != STATE_READY) {
           instance.state = STATE_READY;

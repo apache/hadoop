@@ -92,14 +92,14 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     roleStatus.setResourceRequirements(Resource.newInstance(1, 1));
   }
 
-  @Test
+  //@Test
   public void testAvailableListBuiltForRoles() throws Throwable {
     List<NodeInstance> available0 = roleHistory.cloneRecentNodeList(
         roleStatus.getKey());
     assertListEquals(Arrays.asList(age3Active0, age2Active0), available0);
   }
 
-  @Test
+  //@Test
   public void testRequestedNodeOffList() throws Throwable {
     NodeInstance ni = roleHistory.findRecentNodeForNewInstance(roleStatus);
     assertEquals(age3Active0, ni);
@@ -111,7 +111,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     );
   }
 
-  @Test
+  //@Test
   public void testRequestedNodeOffListWithFailures() throws Throwable {
     assertFalse(roleHistory.cloneRecentNodeList(roleStatus.getKey()).isEmpty());
 
@@ -152,7 +152,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
    * irrespective of their failed status.
    * @throws Throwable
    */
-  @Test
+  //@Test
   public void testStrictPlacementIgnoresFailures() throws Throwable {
 
     RoleStatus targetRole = getRole1Status();
@@ -184,7 +184,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     assertNotEquals(ni, ni2);
   }
 
-  @Test
+  //@Test
   public void testFindAndRequestNode() throws Throwable {
     AMRMClient.ContainerRequest req = requestContainer(roleStatus);
 
@@ -194,7 +194,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     assertListEquals(Arrays.asList(age2Active0), a2);
   }
 
-  @Test
+  //@Test
   public void testRequestedNodeIntoReqList() throws Throwable {
     requestContainer(roleStatus);
     List<OutstandingRequest> requests = roleHistory.listPlacedRequests();
@@ -202,7 +202,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     assertEquals(age3Active0.hostname, requests.get(0).hostname);
   }
 
-  @Test
+  //@Test
   public void testCompletedRequestDropsNode() throws Throwable {
     AMRMClient.ContainerRequest req = requestContainer(roleStatus);
     List<OutstandingRequest> requests = roleHistory.listPlacedRequests();
@@ -233,7 +233,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     assertEquals(i, roleHistory.listPlacedRequests().size());
   }
 
-  @Test
+  //@Test
   public void testTwoRequests() throws Throwable {
     AMRMClient.ContainerRequest req = requestContainer(roleStatus);
     AMRMClient.ContainerRequest req2 = requestContainer(roleStatus);
@@ -247,7 +247,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     assertNoOutstandingPlacedRequests();
   }
 
-  @Test
+  //@Test
   public void testThreeRequestsOneUnsatisified() throws Throwable {
     AMRMClient.ContainerRequest req = requestContainer(roleStatus);
     AMRMClient.ContainerRequest req2 = requestContainer(roleStatus);
@@ -277,7 +277,7 @@ public class TestRoleHistoryRequestTracking extends BaseMockAppStateTest {
     assertListEquals(Arrays.asList(age2Active0), a2);
   }
 
-  @Test
+  //@Test
   public void testThreeRequests() throws Throwable {
     AMRMClient.ContainerRequest req = requestContainer(roleStatus);
     AMRMClient.ContainerRequest req2 = requestContainer(roleStatus);

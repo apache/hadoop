@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusRequestProto;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
@@ -60,9 +62,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.resource.Application;
@@ -71,17 +75,17 @@ import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.api.types.NodeInformationList;
 import org.apache.slider.client.ipc.SliderClusterOperations;
 import org.apache.slider.common.Constants;
-import org.apache.slider.common.SliderExitCodes;
-import org.apache.slider.common.SliderKeys;
-import org.apache.slider.common.SliderXmlConfKeys;
-import org.apache.slider.common.params.AbstractActionArgs;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
+import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
 import org.apache.slider.common.params.AbstractClusterBuildingActionArgs;
 import org.apache.slider.common.params.ActionAMSuicideArgs;
 import org.apache.slider.common.params.ActionClientArgs;
-import org.apache.slider.common.params.ActionDependencyArgs;
+import org.apache.hadoop.yarn.service.client.params.ActionDependencyArgs;
 import org.apache.slider.common.params.ActionDiagnosticArgs;
 import org.apache.slider.common.params.ActionExistsArgs;
-import org.apache.slider.common.params.ActionFlexArgs;
+import org.apache.hadoop.yarn.service.client.params.ActionFlexArgs;
 import org.apache.slider.common.params.ActionFreezeArgs;
 import org.apache.slider.common.params.ActionKDiagArgs;
 import org.apache.slider.common.params.ActionKeytabArgs;
@@ -96,9 +100,9 @@ import org.apache.slider.common.params.ActionStatusArgs;
 import org.apache.slider.common.params.ActionThawArgs;
 import org.apache.slider.common.params.ActionTokensArgs;
 import org.apache.slider.common.params.ActionUpgradeArgs;
-import org.apache.slider.common.params.Arguments;
-import org.apache.slider.common.params.ClientArgs;
-import org.apache.slider.common.params.CommonArgs;
+import org.apache.hadoop.yarn.service.client.params.Arguments;
+import org.apache.hadoop.yarn.service.client.params.ClientArgs;
+import org.apache.hadoop.yarn.service.client.params.CommonArgs;
 import org.apache.slider.common.tools.ConfigHelper;
 import org.apache.slider.common.tools.Duration;
 import org.apache.slider.common.tools.SliderFileSystem;
@@ -131,12 +135,14 @@ import org.apache.slider.core.registry.docstore.PublishedExportsSet;
 import org.apache.slider.core.registry.retrieve.RegistryRetriever;
 import org.apache.slider.core.zk.BlockingZKWatcher;
 import org.apache.slider.core.zk.ZKIntegration;
-import org.apache.slider.providers.AbstractClientProvider;
-import org.apache.slider.providers.ProviderUtils;
-import org.apache.slider.server.appmaster.SliderAppMaster;
+import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
+import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
+import org.apache.hadoop.yarn.service.ClientAMProtocol;
+import org.apache.hadoop.yarn.service.client.ClientAMProxy;
+import org.apache.hadoop.yarn.service.ServiceMaster;
 import org.apache.slider.server.services.utility.AbstractSliderLaunchedService;
-import org.apache.slider.util.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -153,6 +159,7 @@ import java.io.InterruptedIOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -170,9 +177,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.registry.client.binding.RegistryUtils.*;
+import static org.apache.hadoop.yarn.api.records.YarnApplicationState.*;
 import static org.apache.slider.common.Constants.HADOOP_JAAS_DEBUG;
-import static org.apache.slider.common.params.SliderActions.*;
+import static org.apache.hadoop.yarn.service.client.params.SliderActions.*;
 import static org.apache.slider.common.tools.SliderUtils.*;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusResponseProto;
 
 /**
  * Client service for Slider
@@ -217,22 +226,24 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   private SliderClusterOperations sliderClusterOperations;
 
   protected SliderFileSystem sliderFileSystem;
-
+  private YarnRPC rpc;
   /**
    * Yarn client service
    */
   private SliderYarnClientImpl yarnClient;
   private YarnAppListClient yarnAppListClient;
-
+  ResourceCalculator calculator;
   /**
    * The YARN registry service
    */
   @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
   private RegistryOperations registryOperations;
 
-  private static EnumSet<YarnApplicationState> terminatedStates = EnumSet
-      .of(YarnApplicationState.FINISHED, YarnApplicationState.FAILED,
-          YarnApplicationState.KILLED);
+  private static EnumSet<YarnApplicationState> terminatedStates =
+      EnumSet.of(FINISHED, FAILED, KILLED);
+  private static EnumSet<YarnApplicationState> waitingStates =
+      EnumSet.of(NEW, NEW_SAVING, SUBMITTED, RUNNING);
+
   /**
    * Constructor
    */
@@ -277,7 +288,18 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     if (coreAction.getHadoopServicesRequired()) {
       initHadoopBinding();
     }
+    rpc = YarnRPC.create(conf);
     super.serviceInit(conf);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    super.serviceStop();
   }
 
   /**
@@ -668,9 +690,13 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     Path appRootDir = sliderFileSystem.buildClusterDirPath(app.getName());
     deployedClusterName = appName;
 
-    YarnClientApplication yarnApp =  yarnClient.createApplication();
+    YarnClientApplication yarnApp = yarnClient.createApplication();
     ApplicationSubmissionContext submissionContext =
         yarnApp.getApplicationSubmissionContext();
+    ServiceApiUtil.validateCompResourceSize(
+        yarnApp.getNewApplicationResponse().getMaximumResourceCapability(),
+        app);
+
     applicationId = submissionContext.getApplicationId();
     submissionContext.setKeepContainersAcrossApplicationAttempts(true);
     if (app.getLifetime() > 0) {
@@ -769,11 +795,11 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       CLI.sysprop(SYSPROP_LOG4J_CONFIGURATION, LOG4J_SERVER_PROP_FILENAME);
       CLI.sysprop(SYSPROP_LOG_DIR, ApplicationConstants.LOG_DIR_EXPANSION_VAR);
     }
-    CLI.add(SliderAppMaster.SERVICE_CLASSNAME);
+    CLI.add(ServiceMaster.class.getCanonicalName());
     CLI.add(ACTION_CREATE, appName);
     //TODO debugAM CLI.add(Arguments.ARG_DEBUG)
-    CLI.add(Arguments.ARG_CLUSTER_URI, appRootDir.toUri());
-//    InetSocketAddress rmSchedulerAddress = getRmSchedulerAddress(conf);
+    CLI.add(Arguments.ARG_CLUSTER_URI, new Path(appRootDir, appName + ".json"));
+    //    InetSocketAddress rmSchedulerAddress = getRmSchedulerAddress(conf);
 //    String rmAddr = NetUtils.getHostPortString(rmSchedulerAddress);
 //    CLI.add(Arguments.ARG_RM_ADDR, rmAddr);
     // pass the registry binding
@@ -825,12 +851,12 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return env;
   }
 
-  private Path addJarResource(String appName,
+  protected Path addJarResource(String appName,
       Map<String, LocalResource> localResources)
       throws IOException, SliderException {
     Path libPath = sliderFileSystem.buildClusterDirPath(appName);
     ProviderUtils
-        .addProviderJar(localResources, SliderAppMaster.class, SLIDER_JAR,
+        .addProviderJar(localResources, ServiceMaster.class, SLIDER_JAR,
             sliderFileSystem, libPath, "lib", false);
     Path dependencyLibTarGzip = sliderFileSystem.getDependencyTarGzip();
     if (sliderFileSystem.isFile(dependencyLibTarGzip)) {
@@ -1162,8 +1188,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   public String updateLifetime(String appName, long lifetime)
       throws YarnException, IOException {
-    EnumSet<YarnApplicationState> appStates = EnumSet.range(
-        YarnApplicationState.NEW, YarnApplicationState.RUNNING);
+    EnumSet<YarnApplicationState> appStates = EnumSet.range(NEW, RUNNING);
     ApplicationReport report = findInstance(appName, appStates);
     if (report == null) {
       throw new YarnException("Application not found for " + appName);
@@ -1381,14 +1406,14 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
     YarnApplicationState min, max;
     if (live) {
-      min = YarnApplicationState.NEW;
-      max = YarnApplicationState.RUNNING;
+      min = NEW;
+      max = RUNNING;
     } else if (!state.isEmpty()) {
       YarnApplicationState stateVal = extractYarnApplicationState(state);
       min = max = stateVal;
     } else {
-      min = YarnApplicationState.NEW;
-      max = YarnApplicationState.KILLED;
+      min = NEW;
+      max = KILLED;
     }
     // get the complete list of persistent instances
     Map<String, Path> persistentInstances = sliderFileSystem.listPersistentInstances();
@@ -1478,14 +1503,14 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     }
     return stateVal;
   }
-  
+
   /**
    * Is an application active: accepted or running
    * @param report the application report
    * @return true if it is running or scheduled to run.
    */
   public boolean isApplicationActive(ApplicationReport report) {
-    return report.getYarnApplicationState() == YarnApplicationState.RUNNING
+    return report.getYarnApplicationState() == RUNNING
                 || report.getYarnApplicationState() == YarnApplicationState.ACCEPTED;
   }
 
@@ -1547,8 +1572,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       // the app exists, check that it is not in any terminated state
       YarnApplicationState appstate = instance.getYarnApplicationState();
       log.debug(" current app state = {}", appstate);
-      inDesiredState =
-            appstate.ordinal() < YarnApplicationState.FINISHED.ordinal();
+      inDesiredState = appstate.ordinal() < FINISHED.ordinal();
     } else {
       // scan for instance in single --state state
       state = state.toUpperCase(Locale.ENGLISH);
@@ -1850,6 +1874,72 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
         createClusterOperations(appName);
     return clusterOperations.getApplication();
   }
+
+  private ClientAMProtocol connectToAM(String appName)
+      throws IOException, YarnException {
+    if (applicationId == null) {
+      Application persistedApp = ServiceApiUtil.loadApplication(sliderFileSystem,
+          appName);
+      if (persistedApp == null) {
+        throw new YarnException("Application " + appName
+            + " doesn't exist on hdfs. Please check if the app exists in RM");
+      }
+      applicationId = ApplicationId.fromString(persistedApp.getId());
+    }
+    // Wait until app becomes running.
+    long startTime = System.currentTimeMillis();
+    int pollCount = 0;
+    ApplicationReport appReport = null;
+    while (true) {
+      appReport = yarnClient.getApplicationReport(applicationId);
+      YarnApplicationState state = appReport.getYarnApplicationState();
+      if (state == RUNNING) {
+        break;
+      }
+      if (terminatedStates.contains(state)) {
+        throw new YarnException(
+            "Failed to getStatus " + applicationId + ": " + appReport
+                .getDiagnostics());
+      }
+      long elapsedMillis = System.currentTimeMillis() - startTime;
+      // if over 5 min, quit
+      if (elapsedMillis >= 300000) {
+        throw new YarnException(
+            "Timed out while waiting for application " + applicationId
+                + " to be running");
+      }
+
+      if (++pollCount % 10 == 0) {
+        log.info("Waiting for application {} to be running, current state is {}",
+            applicationId, state);
+      }
+      try {
+        Thread.sleep(3000);
+      } catch (InterruptedException ie) {
+        String msg =
+            "Interrupted while waiting for application " + applicationId
+                + " to be running.";
+        throw new YarnException(msg, ie);
+      }
+    }
+
+    // Make the connection
+    InetSocketAddress address = NetUtils
+        .createSocketAddrForHost(appReport.getHost(), appReport.getRpcPort());
+    return ClientAMProxy
+        .createProxy(getConfig(), ClientAMProtocol.class,
+            UserGroupInformation.getCurrentUser(), rpc, address);
+  }
+
+  public Application getStatus(String appName)
+      throws IOException, YarnException {
+    ClientAMProtocol proxy = connectToAM(appName);
+    GetStatusResponseProto response =
+        proxy.getStatus(GetStatusRequestProto.newBuilder().build());
+    Application app = jsonSerDeser.fromJson(response.getStatus());
+    return app;
+  }
+
 
   /**
    * Bond to a running cluster
@@ -2160,7 +2250,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           builder.append(entry.getKey()).append("=")
                  .append(entry.getValue()).append("\n");
         }
-        
+
         println(builder.toString());
 
         // then the config
@@ -2470,7 +2560,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
         serviceclassPath(currentUser(), SliderKeys.APP_TYPE));
     return recordMap;
   }
-  
+
   /**
    * List instances in the registry
    * @return the instance IDs
@@ -2686,8 +2776,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   @VisibleForTesting
   public ApplicationReport monitorAppToRunning(Duration duration)
       throws YarnException, IOException {
-    return yarnClient.monitorAppToState(applicationId, YarnApplicationState
-        .RUNNING, duration);
+    return yarnClient.monitorAppToState(applicationId, RUNNING, duration);
   }
 }
 

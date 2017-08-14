@@ -76,7 +76,7 @@ public class TestZKIntegration extends YarnZKMiniClusterTestBase implements
     return zki;
   }
 
-  @Test
+  //@Test
   public void testListUserClustersWithoutAnyClusters() throws Throwable {
     assertHasZKCluster();
     initZKI();
@@ -85,7 +85,7 @@ public class TestZKIntegration extends YarnZKMiniClusterTestBase implements
     assertTrue(SliderUtils.isEmpty(clusters));
   }
 
-  @Test
+  //@Test
   public void testListUserClustersWithOneCluster() throws Throwable {
     assertHasZKCluster();
 
@@ -100,7 +100,7 @@ public class TestZKIntegration extends YarnZKMiniClusterTestBase implements
     assertTrue(fullPath.endsWith(clusters.get(0)));
   }
 
-  @Test
+  //@Test
   public void testListUserClustersWithTwoCluster() throws Throwable {
     initZKI();
     String userPath = ZKIntegration.mkSliderUserPath(USER);
@@ -114,7 +114,7 @@ public class TestZKIntegration extends YarnZKMiniClusterTestBase implements
         (c1.endsWith(clusters.get(1)) && c2.endsWith(clusters.get(0))));
   }
 
-  @Test
+  //@Test
   public void testCreateAndDeleteDefaultZKPath() throws Throwable {
     MockSliderClient client = new MockSliderClient();
 

@@ -55,7 +55,7 @@ public class TestMockAppStateAAOvercapacity extends BaseMockAppStateAATest
    *
    * @throws Throwable
    */
-  @Test
+  //@Test
   public void testOvercapacityRecovery() throws Throwable {
     RoleStatus aaRole = getAaRole();
 

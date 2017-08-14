@@ -45,7 +45,7 @@ public class TestMockAppStateRebuildOnAMRestart extends BaseMockAppStateTest
     return "TestMockAppStateRebuildOnAMRestart";
   }
 
-  @Test
+  //@Test
   public void testRebuild() throws Throwable {
 
     int r0 = 1;

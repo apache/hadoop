@@ -56,23 +56,23 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
     return "TestMockAppStateRMOperations";
   }
 
-  @Test
+  //@Test
   public void testPriorityOnly() throws Throwable {
     assertEquals(5, extractRole(buildPriority(5, false)));
   }
 
-  @Test
+  //@Test
   public void testPriorityRoundTrip() throws Throwable {
     assertEquals(5, extractRole(buildPriority(5, false)));
   }
 
-  @Test
+  //@Test
   public void testPriorityRoundTripWithRequest() throws Throwable {
     int priority = buildPriority(5, false);
     assertEquals(5, extractRole(priority));
   }
 
-  @Test
+  //@Test
   public void testMockAddOp() throws Throwable {
     getRole0Status().setDesired(1);
     List<AbstractRMOperation> ops = appState.reviewRequestAndReleaseNodes();
@@ -97,7 +97,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
    *   <li>assert this generates 2 cancel requests</li>
    * </ol>
    */
-  @Test
+  //@Test
   public void testRequestThenCancelOps() throws Throwable {
     RoleStatus role0 = getRole0Status();
     role0.setDesired(5);
@@ -147,7 +147,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
     assertEquals(1, role0.getRequested());
   }
 
-  @Test
+  //@Test
   public void testCancelNoActualContainers() throws Throwable {
     RoleStatus role0 = getRole0Status();
     role0.setDesired(5);
@@ -162,7 +162,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
   }
 
 
-  @Test
+  //@Test
   public void testFlexDownOutstandingRequests() throws Throwable {
     // engine only has two nodes, so > 2 will be outstanding
     engine = new MockYarnEngine(1, 2);
@@ -198,7 +198,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
 //    assertEquals(1, role0.getReleasing());
   }
 
-  @Test
+  //@Test
   public void testCancelAllOutstandingRequests() throws Throwable {
 
     // role: desired = 2, requested = 1, actual=1
@@ -227,7 +227,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
   }
 
 
-  @Test
+  //@Test
   public void testFlexUpOutstandingRequests() throws Throwable {
 
     List<AbstractRMOperation> ops;
@@ -252,7 +252,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
     assertEquals(3, role0.getRequested());
   }
 
-  @Test
+  //@Test
   public void testFlexUpNoSpace() throws Throwable {
     // engine only has two nodes, so > 2 will be outstanding
     engine = new MockYarnEngine(1, 2);
@@ -270,7 +270,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
   }
 
 
-  @Test
+  //@Test
   public void testAllocateReleaseOp() throws Throwable {
     getRole0Status().setDesired(1);
 
@@ -308,7 +308,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
     assertEquals(release.getContainerId(), cont.getId());
   }
 
-  @Test
+  //@Test
   public void testComplexAllocation() throws Throwable {
     getRole0Status().setDesired(1);
     getRole1Status().setDesired(3);
@@ -346,7 +346,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
     assertTrue(releases.isEmpty());
   }
 
-  @Test
+  //@Test
   public void testDoubleNodeManagerStartEvent() throws Throwable {
     getRole0Status().setDesired(1);
 
@@ -379,7 +379,7 @@ public class TestMockAppStateRMOperations extends BaseMockAppStateTest
     assertNull(ri3);
   }
 
-  @Test
+  //@Test
   public void testDoubleAllocate() throws Throwable {
     getRole0Status().setDesired(1);
 

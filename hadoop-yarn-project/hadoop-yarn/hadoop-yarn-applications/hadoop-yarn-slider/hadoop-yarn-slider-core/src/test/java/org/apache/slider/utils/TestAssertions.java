@@ -30,14 +30,14 @@ public class TestAssertions {
 
   public static final String CLUSTER_JSON = "json/cluster.json";
 
-  @Test
+  //@Test
   public void testNoInstances() throws Throwable {
     Application application = new Application();
     application.setContainers(null);
     SliderTestUtils.assertContainersLive(application, "example", 0);
   }
 
-  @Test
+  //@Test
   public void testEmptyInstances() throws Throwable {
     Application application = new Application();
     application.setContainers(Collections.emptyList());
@@ -45,7 +45,7 @@ public class TestAssertions {
   }
 
 // TODO test metrics retrieval
-//  @Test
+//  //@Test
 //  public void testLiveInstances() throws Throwable {
 //    InputStream stream = getClass().getClassLoader().getResourceAsStream(
 //        CLUSTER_JSON);
