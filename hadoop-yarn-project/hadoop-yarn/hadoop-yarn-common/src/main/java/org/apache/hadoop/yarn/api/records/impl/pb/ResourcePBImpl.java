@@ -31,8 +31,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceInformationProto;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -174,7 +174,7 @@ public class ResourcePBImpl extends BaseResource {
   }
 
   @Override
-  public void setResourceValue(String resource, Long value)
+  public void setResourceValue(String resource, long value)
       throws ResourceNotFoundException {
     maybeInitBuilder();
     if (resource == null) {
