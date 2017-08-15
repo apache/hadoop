@@ -2258,6 +2258,37 @@ public class YarnConfiguration extends Configuration {
       + "hbase.configuration.file";
 
   /**
+   * The name for setting that enables or disables authentication checks
+   * for reading timeline service v2 data.
+   */
+  public static final String TIMELINE_SERVICE_READ_AUTH_ENABLED =
+      TIMELINE_SERVICE_PREFIX + "read.authentication.enabled";
+
+  /**
+   * The default setting for authentication checks for reading timeline
+   * service v2 data.
+   */
+  public static final Boolean DEFAULT_TIMELINE_SERVICE_READ_AUTH_ENABLED =
+      false;
+
+  /**
+   * The name for setting that lists the users and groups who are allowed
+   * to read timeline service v2 data. It is a comma separated list of
+   * user, followed by space, then comma separated list of groups.
+   * It will allow this list of users and groups to read the data
+   * and reject everyone else.
+   */
+  public static final String TIMELINE_SERVICE_READ_ALLOWED_USERS =
+      TIMELINE_SERVICE_PREFIX + "read.allowed.users";
+
+  /**
+   * The default value for list of the users who are allowed to read
+   * timeline service v2 data.
+   */
+  public static final String DEFAULT_TIMELINE_SERVICE_READ_ALLOWED_USERS =
+      "";
+
+  /**
    * The setting that controls how long the final value of a metric of a
    * completed app is retained before merging into the flow sum. Up to this time
    * after an application is completed out-of-order values that arrive can be
