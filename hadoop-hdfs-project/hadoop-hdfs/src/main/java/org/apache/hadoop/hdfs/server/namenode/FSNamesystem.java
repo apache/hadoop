@@ -7113,6 +7113,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     writeLock();
     try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot remove erasure coding policy "
+          + ecPolicyName);
       FSDirErasureCodingOp.removeErasureCodePolicy(this, ecPolicyName);
       success = true;
     } finally {

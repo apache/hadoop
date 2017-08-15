@@ -482,6 +482,15 @@ public class TestSafeMode {
       // expected
     }
 
+    try {
+      dfs.removeErasureCodingPolicy("testECName");
+      fail("RemoveErasureCodingPolicy should have failed.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "Cannot remove erasure coding policy", ioe);
+      // expected
+    }
+
     assertFalse("Could not leave SM",
         dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE));
   }
