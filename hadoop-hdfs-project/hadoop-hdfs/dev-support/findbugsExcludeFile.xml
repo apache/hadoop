@@ -264,4 +264,30 @@
         <Field name="locations" />
         <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED" />
     </Match>
+    <Match>
+       <Class name="org.apache.hadoop.hdfs.server.namenode.NNUpgradeUtil$1" />
+       <Method name="visitFile" />
+       <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+     </Match>
+     <!-- Ignore warnings for not changing the startup option parsing behavior. -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.common.HdfsServerConstants$StartupOption" />
+       <Method name="setClusterId" />
+       <Bug pattern="ME_ENUM_FIELD_SETTER" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.common.HdfsServerConstants$StartupOption" />
+       <Method name="setForce" />
+       <Bug pattern="ME_ENUM_FIELD_SETTER" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.common.HdfsServerConstants$StartupOption" />
+       <Method name="setForceFormat" />
+       <Bug pattern="ME_ENUM_FIELD_SETTER" />
+     </Match>
+     <Match>
+      <Class name="org.apache.hadoop.hdfs.server.common.HdfsServerConstants$StartupOption" />
+      <Method name="setInteractiveFormat" />
+      <Bug pattern="ME_ENUM_FIELD_SETTER" />
+    </Match>
  </FindBugsFilter>
