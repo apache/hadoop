@@ -174,9 +174,9 @@ public class AsyncBlockWriter {
         long startTime = Time.monotonicNow();
         client = parentCache.getClientManager()
             .acquireClient(parentCache.getPipeline(block.getBlockID()));
-        // BUG: fix the trace ID.
         ContainerProtocolCalls.writeSmallFile(client, containerName,
-            Long.toString(block.getBlockID()), block.getData().array(), "");
+            Long.toString(block.getBlockID()), block.getData().array(),
+            parentCache.getTraceID(block.getBlockID()));
         long endTime = Time.monotonicNow();
         if (parentCache.isTraceEnabled()) {
           String datahash = DigestUtils.sha256Hex(block.getData().array());

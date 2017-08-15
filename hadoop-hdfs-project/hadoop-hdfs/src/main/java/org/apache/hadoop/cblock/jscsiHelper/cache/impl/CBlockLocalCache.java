@@ -27,23 +27,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.cblock.jscsiHelper.CBlockTargetMetrics;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_DISK_CACHE_PATH_DEFAULT;
@@ -74,7 +70,7 @@ public class CBlockLocalCache implements CacheModule {
   private final LevelDBStore cacheDB;
 
   /**
-   * Asyncblock writer updates the cacheDB and writes the blocks async to
+   * AsyncBlock writer updates the cacheDB and writes the blocks async to
    * remote containers.
    */
   private final AsyncBlockWriter blockWriter;
@@ -85,17 +81,8 @@ public class CBlockLocalCache implements CacheModule {
    * update the cacheDB.
    */
   private final SyncBlockReader blockReader;
-  /**
-   * We create a trace ID to make it easy to debug issues.
-   * A trace ID is in the following format. IPAddress:VolumeName:blockID:second
-   * <p>
-   * This will get written down on the data node if we get any failures, so
-   * with this trace ID we can correlate cBlock failures across machines.
-   */
   private final String userName;
   private final String volumeName;
-  private final String ipAddressString;
-  private final String tracePrefix;
 
   /**
    * From a block ID we are able to get the pipeline by indexing this array.
@@ -160,8 +147,6 @@ public class CBlockLocalCache implements CacheModule {
     cacheDB = flusher.getCacheDB(dbPath.toString());
     this.containerList = containerPipelines.toArray(new
         Pipeline[containerPipelines.size()]);
-    this.ipAddressString = getHostIP();
-    this.tracePrefix = ipAddressString + ":" + this.volumeName;
     this.volumeSize = volumeSize;
 
     blockWriter = new AsyncBlockWriter(conf, this);
@@ -325,22 +310,6 @@ public class CBlockLocalCache implements CacheModule {
     return false;
   }
 
-
-  /**
-   * Tries to get the local host IP Address for creating trace IDs.
-   */
-  private String getHostIP() {
-    String tmp;
-    try {
-      tmp = InetAddress.getLocalHost().toString();
-    } catch (UnknownHostException ex) {
-      tmp = UUID.randomUUID().toString();
-      LOG.error("Unable to read the host address. Using a GUID for " +
-          "hostname:{} ", tmp, ex);
-    }
-    return tmp;
-  }
-
   /**
    * Returns the local cache DB.
    *
@@ -397,18 +366,8 @@ public class CBlockLocalCache implements CacheModule {
     return containerList[containerIdx];
   }
 
-  /**
-   * Returns a traceID based in Block ID.
-   * The format is HostIP:VolumeName:BlockID:timeStamp, in case of error this
-   * will be logged on the container side.
-   *
-   * @param blockID - Block ID
-   * @return trace ID
-   */
   String getTraceID(long blockID) {
-    // mapping to seconds to make the string smaller.
-    return this.tracePrefix + ":" + blockID + ":"
-        + Time.monotonicNow() / 1000;
+    return flusher.getTraceID(dbPath, blockID);
   }
 
   /**
