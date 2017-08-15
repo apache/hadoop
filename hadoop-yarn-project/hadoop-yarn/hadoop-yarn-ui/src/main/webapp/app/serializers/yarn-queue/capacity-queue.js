@@ -53,7 +53,6 @@ export default DS.JSONAPISerializer.extend({
         });
       }
 
-
       var fixedPayload = {
         id: id,
         type: primaryModelClass.modelName, // yarn-queue
@@ -73,6 +72,7 @@ export default DS.JSONAPISerializer.extend({
           preemptionDisabled: payload.preemptionDisabled,
           numPendingApplications: payload.numPendingApplications,
           numActiveApplications: payload.numActiveApplications,
+          type: "capacity",
         },
         // Relationships
         relationships: {
@@ -81,7 +81,6 @@ export default DS.JSONAPISerializer.extend({
           }
         }
       };
-
       return {
         queue: this._super(store, primaryModelClass, fixedPayload, id, requestType),
         includedData: includedData
