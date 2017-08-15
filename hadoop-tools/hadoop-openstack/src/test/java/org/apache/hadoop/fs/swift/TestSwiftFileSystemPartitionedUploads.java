@@ -228,7 +228,7 @@ public class TestSwiftFileSystemPartitionedUploads extends
                  status.getLen());
     String fileInfo = qualifiedPath + "  " + status;
     assertFalse("File claims to be a directory " + fileInfo,
-                status.isDir());
+                status.isDirectory());
 
     FileStatus listedFileStat = resolveChild(parentDirListing, qualifiedPath);
     assertNotNull("Did not find " + path + " in " + parentDirLS,

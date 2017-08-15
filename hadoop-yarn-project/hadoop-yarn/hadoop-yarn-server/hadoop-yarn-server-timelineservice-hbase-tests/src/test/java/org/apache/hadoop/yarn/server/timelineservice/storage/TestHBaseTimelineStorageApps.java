@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnName;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnNameConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
@@ -493,7 +494,8 @@ public class TestHBaseTimelineStorageApps {
     event.addInfo(expKey, expVal);
 
     final TimelineEntity entity = new ApplicationEntity();
-    entity.setId(ApplicationId.newInstance(0, 1).toString());
+    entity.setId(HBaseTimelineStorageUtils.convertApplicationIdToString(
+        ApplicationId.newInstance(0, 1)));
     entity.addEvent(event);
 
     TimelineEntities entities = new TimelineEntities();

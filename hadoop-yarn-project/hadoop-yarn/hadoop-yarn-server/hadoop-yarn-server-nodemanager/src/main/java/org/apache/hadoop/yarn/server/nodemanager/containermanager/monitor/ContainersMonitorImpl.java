@@ -741,19 +741,6 @@ public class ContainersMonitorImpl extends AbstractService implements
     }
   }
 
-  private void changeContainerResource(
-      ContainerId containerId, Resource resource) {
-    Container container = context.getContainers().get(containerId);
-    // Check container existence
-    if (container == null) {
-      LOG.warn("Container " + containerId.toString() + "does not exist");
-      return;
-    }
-    // YARN-5860: Route this through the ContainerScheduler to
-    //       fix containerAllocation
-    container.setResource(resource);
-  }
-
   private void updateContainerMetrics(ContainersMonitorEvent monitoringEvent) {
     if (!containerMetricsEnabled || monitoringEvent == null) {
       return;
@@ -902,8 +889,6 @@ public class ContainersMonitorImpl extends AbstractService implements
       int cpuVcores = changeEvent.getResource().getVirtualCores();
       processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);
     }
-
-    changeContainerResource(containerId, changeEvent.getResource());
   }
 
   private void onStopMonitoringContainer(

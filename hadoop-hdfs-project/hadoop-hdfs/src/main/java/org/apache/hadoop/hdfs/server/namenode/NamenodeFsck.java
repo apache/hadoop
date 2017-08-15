@@ -471,7 +471,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   void check(String parent, HdfsFileStatus file, Result replRes, Result ecRes)
       throws IOException {
     String path = file.getFullName(parent);
-    if (file.isDir()) {
+    if (file.isDirectory()) {
       checkDir(path, replRes, ecRes);
       return;
     }
@@ -1115,7 +1115,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       if (lfStatus == null) { // not exists
         lfInitedOk = dfs.mkdirs(lfName, null, true);
         lostFound = lfName;
-      } else if (!lfStatus.isDir()) { // exists but not a directory
+      } else if (!lfStatus.isDirectory()) { // exists but not a directory
         LOG.warn("Cannot use /lost+found : a regular file with this name exists.");
         lfInitedOk = false;
       }  else { // exists and is a directory

@@ -578,7 +578,7 @@ public class SwiftNativeFileSystemStore {
 
     //enum the child entries and everything underneath
     List<FileStatus> childStats = listDirectory(srcObject, true, true);
-    boolean srcIsFile = !srcMetadata.isDir();
+    boolean srcIsFile = !srcMetadata.isDirectory();
     if (srcIsFile) {
 
       //source is a simple file OR a partitioned file
@@ -945,7 +945,7 @@ public class SwiftNativeFileSystemStore {
     //>1 entry implies directory with children. Run through them,
     // but first check for the recursive flag and reject it *unless it looks
     // like a partitioned file (len > 0 && has children)
-    if (!fileStatus.isDir()) {
+    if (!fileStatus.isDirectory()) {
       LOG.debug("Multiple child entries but entry has data: assume partitioned");
     } else if (!recursive) {
       //if there are children, unless this is a recursive operation, fail immediately

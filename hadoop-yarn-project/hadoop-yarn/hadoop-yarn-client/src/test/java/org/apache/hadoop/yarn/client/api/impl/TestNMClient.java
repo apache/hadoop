@@ -301,7 +301,6 @@ public class TestNMClient {
         assertTrue("The thrown exception is not expected",
             e.getMessage().contains("is not handled by this NodeManager"));
       }
-
       // increaseContainerResource shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       try {
@@ -475,10 +474,10 @@ public class TestNMClient {
     try {
       nmClient.increaseContainerResource(container);
     } catch (YarnException e) {
-      // NM container will only be in SCHEDULED state, so expect the increase
-      // action to fail.
+      // NM container increase container resource should fail without a version
+      // increase action to fail.
       if (!e.getMessage().contains(
-          "can only be changed when a container is in RUNNING state")) {
+          container.getId() + " has update version ")) {
         throw (AssertionError)
             (new AssertionError("Exception is not expected: " + e)
                 .initCause(e));

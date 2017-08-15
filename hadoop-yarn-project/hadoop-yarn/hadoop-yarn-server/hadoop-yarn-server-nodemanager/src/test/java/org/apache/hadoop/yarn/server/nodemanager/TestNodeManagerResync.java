@@ -682,7 +682,7 @@ public class TestNodeManagerResync {
         try{
           try {
             updateBarrier.await();
-            increaseTokens.add(getContainerToken(targetResource));
+            increaseTokens.add(getContainerToken(targetResource, 1));
             ContainerUpdateRequest updateRequest =
                 ContainerUpdateRequest.newInstance(increaseTokens);
             ContainerUpdateResponse updateResponse =
@@ -707,6 +707,15 @@ public class TestNodeManagerResync {
       ContainerId cId = TestContainerManager.createContainerId(0);
       return TestContainerManager.createContainerToken(
           cId, DUMMY_RM_IDENTIFIER,
+          getNMContext().getNodeId(), user, resource,
+          getNMContext().getContainerTokenSecretManager(), null);
+    }
+
+    private Token getContainerToken(Resource resource, int version)
+        throws IOException {
+      ContainerId cId = TestContainerManager.createContainerId(0);
+      return TestContainerManager.createContainerToken(
+          cId, version, DUMMY_RM_IDENTIFIER,
           getNMContext().getNodeId(), user, resource,
           getNMContext().getContainerTokenSecretManager(), null);
     }

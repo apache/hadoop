@@ -2095,7 +2095,7 @@ public class PBHelperClient {
     if (fs == null)
       return null;
     FileType fType = FileType.IS_FILE;
-    if (fs.isDir()) {
+    if (fs.isDirectory()) {
       fType = FileType.IS_DIR;
     } else if (fs.isSymlink()) {
       fType = FileType.IS_SYMLINK;

@@ -194,14 +194,6 @@
                       <outputDirectory>${project.build.directory}</outputDirectory>
                       <destFileName>hadoop-annotations.jar</destFileName>
                     </artifactItem>
-                    <artifactItem>
-                      <groupId>xerces</groupId>
-                      <artifactId>xercesImpl</artifactId>
-                      <version>${xerces.jdiff.version}</version>
-                      <overWrite>false</overWrite>
-                      <outputDirectory>${project.build.directory}</outputDirectory>
-                      <destFileName>xerces.jar</destFileName>
-                    </artifactItem>
                   </artifactItems>
                 </configuration>
               </execution>
@@ -267,7 +259,7 @@
                              sourceFiles="${basedir}/dev-support/jdiff/Null.java"
                              maxmemory="${jdiff.javadoc.maxmemory}">
                       <doclet name="org.apache.hadoop.classification.tools.IncludePublicAnnotationsJDiffDoclet"
-                              path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar:${project.build.directory}/xerces.jar">
+                              path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar">
                         <param name="-oldapi" value="${project.name} ${jdiff.stable.api}"/>
                         <param name="-newapi" value="${project.name} ${project.version}"/>
                         <param name="-oldapidir" value="${basedir}/dev-support/jdiff"/>
