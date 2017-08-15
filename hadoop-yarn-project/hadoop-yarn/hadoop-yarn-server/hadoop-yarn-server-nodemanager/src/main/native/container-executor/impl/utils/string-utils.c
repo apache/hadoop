@@ -44,8 +44,7 @@ int validate_container_id(const char* input) {
    * container_e17_1410901177871_0001_01_000005
    * container_1410901177871_0001_01_000005
    */
-  char* input_cpy = malloc(strlen(input));
-  strcpy(input_cpy, input);
+  char* input_cpy = strdup(input);
   char* p = strtok(input_cpy, "_");
   int idx = 0;
   while (p != NULL) {
