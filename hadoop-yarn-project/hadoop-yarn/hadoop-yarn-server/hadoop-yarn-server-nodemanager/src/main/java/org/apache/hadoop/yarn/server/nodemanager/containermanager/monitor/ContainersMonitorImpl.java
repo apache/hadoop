@@ -618,19 +618,6 @@ public class ContainersMonitorImpl extends AbstractService implements
     }
   }
 
-  private void changeContainerResource(
-      ContainerId containerId, Resource resource) {
-    Container container = context.getContainers().get(containerId);
-    // Check container existence
-    if (container == null) {
-      LOG.warn("Container " + containerId.toString() + "does not exist");
-      return;
-    }
-    // YARN-5860: Route this through the ContainerScheduler to
-    //       fix containerAllocation
-    container.setResource(resource);
-  }
-
   private void updateContainerMetrics(ContainersMonitorEvent monitoringEvent) {
     if (!containerMetricsEnabled || monitoringEvent == null) {
       return;
@@ -743,16 +730,6 @@ public class ContainersMonitorImpl extends AbstractService implements
   @SuppressWarnings("unchecked")
   public void handle(ContainersMonitorEvent monitoringEvent) {
     ContainerId containerId = monitoringEvent.getContainerId();
-    if (!containersMonitorEnabled) {
-      if (monitoringEvent.getType() == ContainersMonitorEventType
-          .CHANGE_MONITORING_CONTAINER_RESOURCE) {
-        // Nothing to enforce. Update container resource immediately.
-        ChangeMonitoringContainerResourceEvent changeEvent =
-            (ChangeMonitoringContainerResourceEvent) monitoringEvent;
-        changeContainerResource(containerId, changeEvent.getResource());
-      }
-      return;
-    }
 
     switch (monitoringEvent.getType()) {
     case START_MONITORING_CONTAINER:
@@ -786,7 +763,6 @@ public class ContainersMonitorImpl extends AbstractService implements
     long vmemLimit = (long) (pmemLimit * vmemRatio);
     int cpuVcores = changeEvent.getResource().getVirtualCores();
     processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);
-    changeContainerResource(containerId, changeEvent.getResource());
   }
 
   protected void onStopMonitoringContainer(

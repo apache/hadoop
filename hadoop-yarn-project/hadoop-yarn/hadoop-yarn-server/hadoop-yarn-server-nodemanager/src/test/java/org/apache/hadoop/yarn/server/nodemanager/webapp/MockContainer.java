@@ -139,7 +139,7 @@ public class MockContainer implements Container {
   }
 
   @Override
-  public void setResource(Resource targetResource) {
+  public void setContainerTokenIdentifier(ContainerTokenIdentifier token) {
   }
 
   @Override
