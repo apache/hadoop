@@ -28,7 +28,7 @@ export default AbstractRoute.extend({
         {
           state: "RUNNING"
         }),
-      queues: this.store.query('yarn-queue', {}),
+      queues: this.store.query('yarn-queue.yarn-queue', {}),
     });
   },
 
@@ -39,6 +39,6 @@ export default AbstractRoute.extend({
   unloadAll() {
     this.store.unloadAll('ClusterMetric');
     this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-queue');
+    this.store.unloadAll('yarn-queue.yarn-queue');
   }
 });

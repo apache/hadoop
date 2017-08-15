@@ -35,6 +35,7 @@ export default DS.Model.extend({
   numPendingApplications: DS.attr('number'),
   numActiveApplications: DS.attr('number'),
   users: DS.hasMany('YarnUser'),
+  type: DS.attr('string'),
 
   isLeafQueue: function() {
     var len = this.get("children.length");
@@ -59,7 +60,7 @@ export default DS.Model.extend({
         value: this.get("name") === "root" ? 100 : this.get("absMaxCapacity")
       }
     ];
-  }.property("absCapacity", "absUsedCapacity", "absMaxCapacity"),
+  }.property("absCapacity", "usedCapacity", "absMaxCapacity"),
 
   userUsagesDonutChartData: function() {
     var data = [];
@@ -90,5 +91,5 @@ export default DS.Model.extend({
         value: this.get("numActiveApplications") || 0
       }
     ];
-  }.property()
+  }.property("numPendingApplications", "numActiveApplications")
 });

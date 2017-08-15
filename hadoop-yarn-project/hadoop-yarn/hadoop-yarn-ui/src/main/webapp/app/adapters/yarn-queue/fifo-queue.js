@@ -16,15 +16,8 @@
  * limitations under the License.
  */
 
-import AbstractAdapter from './abstract';
+import YarnQueueAdapter from './yarn-queue';
 
-export default AbstractAdapter.extend({
-  address: "rmWebAddress",
-  restNameSpace: "cluster",
-  serverName: "RM",
-
-  pathForType(/*modelName*/) {
-    return 'scheduler'; // move to some common place, return path by modelname.
-  }
+export default YarnQueueAdapter.extend({
 
 });

@@ -1,4 +1,4 @@
-{{!
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,12 +14,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-}}
+ */
 
-{{#if (eq model.queues.firstObject.type "capacity")}}
-  {{yarn-queue.capacity-queue-info model=model}}
-{{else if (eq model.queues.firstObject.type "fair")}}
-  {{yarn-queue.fair-queue-info model=model}}
-{{else}}
-  {{yarn-queue.fifo-queue-info model=model}}
-{{/if}}
+import DS from 'ember-data';
+
+export default DS.Model.extend({
+  type: DS.attr('string')
+});

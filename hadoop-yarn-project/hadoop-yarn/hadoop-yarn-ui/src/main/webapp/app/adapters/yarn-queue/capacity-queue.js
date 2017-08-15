@@ -16,10 +16,8 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import YarnQueueAdapter from './yarn-queue';
 
-export default Ember.Route.extend({
-  beforeModel() {
-    this.transitionTo('yarn-queues.root');
-  }
+export default YarnQueueAdapter.extend({
+
 });

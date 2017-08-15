@@ -55,7 +55,6 @@ export default {
       }
     }
 
-    console.log(colors);
     return colors;
   },
 

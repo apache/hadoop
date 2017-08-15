@@ -39,6 +39,9 @@ export default Ember.Component.extend({
   // mainSvg
   mainSvg: undefined,
 
+  used: undefined,
+  max: undefined,
+
   // Init data
   initData: function() {
     this.map = { };
@@ -52,7 +55,8 @@ export default Ember.Component.extend({
       }.bind(this));
 
     // var selected = this.get("selected");
-
+    this.used = this.get("used");
+    this.max = this.get("max");
     this.initQueue("root", 1, this.treeData);
   },
 
@@ -81,7 +85,6 @@ export default Ember.Component.extend({
       // Queue is not existed
       return;
     }
-
     if (depth > this.maxDepth) {
       this.maxDepth = this.maxDepth + 1;
     }
@@ -149,7 +152,9 @@ export default Ember.Component.extend({
     nodeEnter.append("circle")
       .attr("r", 1e-6)
       .style("fill", function(d) {
-        var usedCap = d.queueData.get("usedCapacity");
+        var maxCap = d.queueData.get(this.max);
+        maxCap = maxCap == undefined ? 100 : maxCap;
+        var usedCap = d.queueData.get(this.used) / maxCap * 100.0;
         if (usedCap <= 60.0) {
           return "LimeGreen";
         } else if (usedCap <= 100.0) {
@@ -157,7 +162,7 @@ export default Ember.Component.extend({
         } else {
           return "LightCoral";
         }
-      });
+      }.bind(this));
 
     // append percentage
     nodeEnter.append("text")
@@ -166,13 +171,15 @@ export default Ember.Component.extend({
       .attr("fill", "white")
       .attr("text-anchor", function() { return "middle"; })
       .text(function(d) {
-        var usedCap = d.queueData.get("usedCapacity");
+        var maxCap = d.queueData.get(this.max);
+        maxCap = maxCap == undefined ? 100 : maxCap;
+        var usedCap = d.queueData.get(this.used) / maxCap * 100.0;
         if (usedCap >= 100.0) {
           return usedCap.toFixed(0) + "%";
         } else {
           return usedCap.toFixed(1) + "%";
         }
-      })
+      }.bind(this))
       .style("fill-opacity", 1e-6);
 
     // append queue name
