@@ -132,7 +132,7 @@ public final class CBlockConfigKeys {
   public static final String DFS_CBLOCK_JSCSI_SERVER_ADDRESS_KEY =
       "dfs.cblock.jscsi.server.address";
   public static final String DFS_CBLOCK_JSCSI_SERVER_ADDRESS_DEFAULT =
-      "127.0.0.1";
+      "0.0.0.0";
   public static final String DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_KEY =
       "dfs.cblock.jscsi.cblock.server.address";
   public static final String DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_DEFAULT =
