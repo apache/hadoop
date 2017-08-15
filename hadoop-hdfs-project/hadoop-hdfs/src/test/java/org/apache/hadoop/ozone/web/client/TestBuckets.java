@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -35,10 +36,12 @@ import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.text.ParseException;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestBuckets {
@@ -90,12 +93,12 @@ public class TestBuckets {
   }
 
   @Test
-  public void testCreateBucket() throws OzoneException, IOException {
+  public void testCreateBucket() throws Exception {
     runTestCreateBucket(ozoneRestClient);
   }
 
   static void runTestCreateBucket(OzoneRestClient client)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -103,10 +106,15 @@ public class TestBuckets {
 
     // create 10 buckets under same volume
     for (int x = 0; x < 10; x++) {
+      long currentTime = Time.now();
       String bucketName = OzoneUtils.getRequestID().toLowerCase();
       OzoneBucket bucket =
           vol.createBucket(bucketName, acls, StorageType.DEFAULT);
       assertEquals(bucket.getBucketName(), bucketName);
+
+      // verify the bucket creation time
+      assertTrue((OzoneUtils.formatDate(bucket.getCreatedOn())
+          / 1000) >= (currentTime / 1000));
     }
     client.close();
 
@@ -118,12 +126,12 @@ public class TestBuckets {
   }
 
   @Test
-  public void testAddBucketAcls() throws OzoneException, IOException {
+  public void testAddBucketAcls() throws Exception {
     runTestAddBucketAcls(ozoneRestClient);
   }
 
   static void runTestAddBucketAcls(OzoneRestClient client)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -133,16 +141,19 @@ public class TestBuckets {
     vol.addAcls(bucketName, acls);
     OzoneBucket updatedBucket = vol.getBucket(bucketName);
     assertEquals(updatedBucket.getAcls().size(), 2);
+    // verify if the creation time is missing after update operation
+    assertTrue(
+        (OzoneUtils.formatDate(updatedBucket.getCreatedOn()) / 1000) >= 0);
     client.close();
   }
 
   @Test
-  public void testRemoveBucketAcls() throws OzoneException, IOException {
+  public void testRemoveBucketAcls() throws Exception {
     runTestRemoveBucketAcls(ozoneRestClient);
   }
 
   static void runTestRemoveBucketAcls(OzoneRestClient client)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -155,6 +166,9 @@ public class TestBuckets {
 
     // We removed all acls
     assertEquals(updatedBucket.getAcls().size(), 0);
+    // verify if the creation time is missing after update operation
+    assertTrue(
+        (OzoneUtils.formatDate(updatedBucket.getCreatedOn()) / 1000) >= 0);
     client.close();
   }
 
@@ -183,22 +197,29 @@ public class TestBuckets {
   }
 
   @Test
-  public void testListBucket() throws OzoneException, IOException {
+  public void testListBucket() throws Exception {
     runTestListBucket(ozoneRestClient);
   }
 
   static void runTestListBucket(OzoneRestClient client)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth("hdfs");
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
+
+    long currentTime = Time.now();
     for (int x = 0; x < 10; x++) {
       String bucketName = "listbucket-test-" + x;
       vol.createBucket(bucketName, acls);
     }
     List<OzoneBucket> bucketList = vol.listBuckets("100", null, null);
     assertEquals(bucketList.size(), 10);
+
+    for (OzoneBucket bucket : bucketList) {
+      assertTrue((OzoneUtils.formatDate(bucket.getCreatedOn())
+          / 1000) >= (currentTime / 1000));
+    }
 
     bucketList = vol.listBuckets("3", null, null);
     assertEquals(bucketList.size(), 3);

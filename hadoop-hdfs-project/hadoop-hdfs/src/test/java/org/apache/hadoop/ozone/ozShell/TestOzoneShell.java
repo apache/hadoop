@@ -408,7 +408,11 @@ public class TestOzoneShell {
     String[] args = new String[] {"-infoBucket",
         url + "/" + vol.getVolumeName() + "/" + bucketName};
     assertEquals(0, ToolRunner.run(shell, args));
-    assertTrue(out.toString().contains(bucketName));
+
+    String output = out.toString();
+    assertTrue(output.contains(bucketName));
+    assertTrue(output.contains("createdOn")
+        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
 
     // test get info from a non-exist bucket
     args = new String[] {"-infoBucket",
@@ -429,6 +433,9 @@ public class TestOzoneShell {
         url + "/" + vol.getVolumeName() + "/" + bucketName, "-addAcl",
         "user:frodo:rw,group:samwise:r"};
     assertEquals(0, ToolRunner.run(shell, args));
+    String output = out.toString();
+    assertTrue(output.contains("createdOn")
+        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
 
     bucket = vol.getBucket(bucketName);
     assertEquals(2, bucket.getAcls().size());
@@ -480,8 +487,11 @@ public class TestOzoneShell {
 
     List<String> volumes = getValueLines("volumeName", out.toString());
     List<String> buckets = getValueLines("bucketName", out.toString());
+    List<String> creationTimes = getValueLines("createdOn", out.toString());
     assertEquals(11, volumes.size());
     assertEquals(11, buckets.size());
+    assertEquals(11, creationTimes.size());
+
     // sort bucket names since the return buckets isn't in created order
     Collections.sort(bucketNames);
     // return bucket names should be [test-bucket0, test-bucket1,
@@ -489,6 +499,7 @@ public class TestOzoneShell {
     for (int i = 0; i < buckets.size(); i++) {
       assertTrue(buckets.get(i).contains(bucketNames.get(i)));
       assertTrue(volumes.get(i).contains(vol.getVolumeName()));
+      assertTrue(creationTimes.get(i).contains(OzoneConsts.OZONE_TIME_ZONE));
     }
 
     out.reset();

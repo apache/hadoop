@@ -49,17 +49,17 @@ public class TestBucketsRatis {
   }
 
   @Test
-  public void testCreateBucket() throws OzoneException, IOException {
+  public void testCreateBucket() throws Exception {
     TestBuckets.runTestCreateBucket(ozoneRestClient);
   }
 
   @Test
-  public void testAddBucketAcls() throws OzoneException, IOException {
+  public void testAddBucketAcls() throws Exception {
     TestBuckets.runTestAddBucketAcls(ozoneRestClient);
   }
 
   @Test
-  public void testRemoveBucketAcls() throws OzoneException, IOException {
+  public void testRemoveBucketAcls() throws Exception {
     TestBuckets.runTestRemoveBucketAcls(ozoneRestClient);
   }
 
@@ -69,7 +69,7 @@ public class TestBucketsRatis {
   }
 
   @Test
-  public void testListBucket() throws OzoneException, IOException {
+  public void testListBucket() throws Exception {
     TestBuckets.runTestListBucket(ozoneRestClient);
   }
 }

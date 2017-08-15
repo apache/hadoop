@@ -62,12 +62,12 @@ public class TestVolumeRatis {
   }
 
   @Test
-  public void testChangeOwnerOnVolume() throws OzoneException {
+  public void testChangeOwnerOnVolume() throws Exception {
     TestVolume.runTestChangeOwnerOnVolume(ozoneClient);
   }
 
   @Test
-  public void testChangeQuotaOnVolume() throws OzoneException, IOException {
+  public void testChangeQuotaOnVolume() throws Exception {
     TestVolume.runTestChangeQuotaOnVolume(ozoneClient);
   }
 

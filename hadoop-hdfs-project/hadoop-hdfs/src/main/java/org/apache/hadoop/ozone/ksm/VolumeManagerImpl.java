@@ -180,6 +180,7 @@ public class VolumeManagerImpl implements VolumeManager {
               .setAdminName(volumeArgs.getAdminName())
               .setOwnerName(owner)
               .setQuotaInBytes(volumeArgs.getQuotaInBytes())
+              .setCreationTime(volumeArgs.getCreationTime())
               .build();
 
       VolumeInfo newVolumeInfo = newVolumeArgs.getProtobuf();
@@ -221,6 +222,7 @@ public class VolumeManagerImpl implements VolumeManager {
               .setAdminName(volumeArgs.getAdminName())
               .setOwnerName(volumeArgs.getOwnerName())
               .setQuotaInBytes(quota)
+              .setCreationTime(volumeArgs.getCreationTime())
               .build();
 
       VolumeInfo newVolumeInfo = newVolumeArgs.getProtobuf();

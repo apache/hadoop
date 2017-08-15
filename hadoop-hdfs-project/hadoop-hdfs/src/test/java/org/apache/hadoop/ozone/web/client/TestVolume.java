@@ -160,27 +160,29 @@ public class TestVolume {
   }
 
   @Test
-  public void testChangeOwnerOnVolume() throws OzoneException {
+  public void testChangeOwnerOnVolume() throws Exception {
     runTestChangeOwnerOnVolume(ozoneRestClient);
   }
 
   static void runTestChangeOwnerOnVolume(OzoneRestClient client)
-      throws OzoneException {
+      throws OzoneException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
     client.setVolumeOwner(volumeName, "frodo");
     OzoneVolume newVol = client.getVolume(volumeName);
     assertEquals(newVol.getOwnerName(), "frodo");
+    // verify if the creation time is missing after setting owner operation
+    assertTrue(OzoneUtils.formatDate(newVol.getCreatedOn()) > 0);
   }
 
   @Test
-  public void testChangeQuotaOnVolume() throws OzoneException, IOException {
+  public void testChangeQuotaOnVolume() throws Exception {
     runTestChangeQuotaOnVolume(ozoneRestClient);
   }
 
   static void runTestChangeQuotaOnVolume(OzoneRestClient client)
-      throws OzoneException, IOException {
+      throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
@@ -188,6 +190,8 @@ public class TestVolume {
     OzoneVolume newVol = client.getVolume(volumeName);
     assertEquals(newVol.getQuota().getSize(), 1000);
     assertEquals(newVol.getQuota().getUnit(), OzoneQuota.Units.MB);
+    // verify if the creation time is missing after setting quota operation
+    assertTrue(OzoneUtils.formatDate(newVol.getCreatedOn()) > 0);
   }
 
   @Test

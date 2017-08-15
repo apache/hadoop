@@ -62,6 +62,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
 
   private String volumeName;
   private String bucketName;
+  private String createdOn;
   private List<OzoneAcl> acls;
   private OzoneConsts.Versioning versioning;
   private StorageType storageType;
@@ -171,6 +172,24 @@ public class BucketInfo implements Comparable<BucketInfo> {
    */
   public void setBucketName(String bucketName) {
     this.bucketName = bucketName;
+  }
+
+  /**
+   * Sets creation time of the bucket.
+   *
+   * @param creationTime - Date String
+   */
+  public void setCreatedOn(String creationTime) {
+    this.createdOn = creationTime;
+  }
+
+  /**
+   * Returns creation time.
+   *
+   * @return creation time of bucket.
+   */
+  public String getCreatedOn() {
+    return createdOn;
   }
 
   /**

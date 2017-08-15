@@ -239,6 +239,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       builder.setIsVersionEnabled(getBucketVersioningProtobuf(
           args.getVersioning()));
     }
+    builder.setCreationTime(Time.now());
     keySpaceManagerClient.createBucket(builder.build());
   }
 
@@ -349,6 +350,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         bk.setBucketName(bucketInfo.getBucketName());
         bk.setStorageType(bucketInfo.getStorageType());
         bk.setAcls(bucketInfo.getAcls());
+        bk.setCreatedOn(OzoneUtils.formatTime(bucketInfo.getCreationTime()));
         result.addBucket(bk);
       }
       return result;
@@ -375,6 +377,8 @@ public final class DistributedStorageHandler implements StorageHandler {
     }
     bucketInfo.setStorageType(ksmBucketInfo.getStorageType());
     bucketInfo.setAcls(ksmBucketInfo.getAcls());
+    bucketInfo.setCreatedOn(
+        OzoneUtils.formatTime(ksmBucketInfo.getCreationTime()));
     return bucketInfo;
   }
 

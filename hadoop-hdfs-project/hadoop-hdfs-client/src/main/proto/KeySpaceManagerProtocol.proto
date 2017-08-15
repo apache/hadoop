@@ -162,6 +162,7 @@ message BucketInfo {
     repeated OzoneAclInfo acls = 3;
     required bool isVersionEnabled = 4 [default = false];
     required StorageTypeProto storageType = 5 [default = DISK];
+    required uint64 creationTime = 6;
 }
 
 message BucketArgs {
