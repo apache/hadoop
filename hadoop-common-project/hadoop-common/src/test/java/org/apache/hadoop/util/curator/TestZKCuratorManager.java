@@ -67,7 +67,7 @@ public class TestZKCuratorManager {
     curator.create(testZNode);
     assertTrue(curator.exists(testZNode));
     curator.setData(testZNode, expectedString, -1);
-    String testString = curator.getSringData("/test");
+    String testString = curator.getStringData("/test");
     assertEquals(expectedString, testString);
   }
 

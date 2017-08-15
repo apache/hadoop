@@ -33,8 +33,11 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Helper class that provides utility methods specific to ZK operations.
@@ -179,7 +182,6 @@ public final class ZKCuratorManager {
   /**
    * Get the data in a ZNode.
    * @param path Path of the ZNode.
-   * @param stat Output statistics of the ZNode.
    * @return The data in the ZNode.
    * @throws Exception If it cannot contact Zookeeper.
    */
@@ -190,12 +192,34 @@ public final class ZKCuratorManager {
   /**
    * Get the data in a ZNode.
    * @param path Path of the ZNode.
+   * @param stat
+   * @return The data in the ZNode.
+   * @throws Exception If it cannot contact Zookeeper.
+   */
+  public byte[] getData(final String path, Stat stat) throws Exception {
+    return curator.getData().storingStatIn(stat).forPath(path);
+  }
+
+  /**
+   * Get the data in a ZNode.
+   * @param path Path of the ZNode.
+   * @return The data in the ZNode.
+   * @throws Exception If it cannot contact Zookeeper.
+   */
+  public String getStringData(final String path) throws Exception {
+    byte[] bytes = getData(path);
+    return new String(bytes, Charset.forName("UTF-8"));
+  }
+
+  /**
+   * Get the data in a ZNode.
+   * @param path Path of the ZNode.
    * @param stat Output statistics of the ZNode.
    * @return The data in the ZNode.
    * @throws Exception If it cannot contact Zookeeper.
    */
-  public String getSringData(final String path) throws Exception {
-    byte[] bytes = getData(path);
+  public String getStringData(final String path, Stat stat) throws Exception {
+    byte[] bytes = getData(path, stat);
     return new String(bytes, Charset.forName("UTF-8"));
   }
 
@@ -272,14 +296,36 @@ public final class ZKCuratorManager {
   }
 
   /**
+   * Utility function to ensure that the configured base znode exists.
+   * This recursively creates the znode as well as all of its parents.
+   * @param path Path of the znode to create.
+   * @throws Exception If it cannot create the file.
+   */
+  public void createRootDirRecursively(String path) throws Exception {
+    String[] pathParts = path.split("/");
+    Preconditions.checkArgument(
+        pathParts.length >= 1 && pathParts[0].isEmpty(),
+        "Invalid path: %s", path);
+    StringBuilder sb = new StringBuilder();
+
+    for (int i = 1; i < pathParts.length; i++) {
+      sb.append("/").append(pathParts[i]);
+      create(sb.toString());
+    }
+  }
+
+  /**
    * Delete a ZNode.
    * @param path Path of the ZNode.
+   * @return If the znode was deleted.
    * @throws Exception If it cannot contact ZooKeeper.
    */
-  public void delete(final String path) throws Exception {
+  public boolean delete(final String path) throws Exception {
     if (exists(path)) {
       curator.delete().deletingChildrenIfNeeded().forPath(path);
+      return true;
     }
+    return false;
   }
 
   /**
