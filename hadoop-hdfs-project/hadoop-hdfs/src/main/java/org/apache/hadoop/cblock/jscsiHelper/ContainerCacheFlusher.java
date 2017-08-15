@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.iq80.leveldb.Options;
 import org.slf4j.Logger;
@@ -37,6 +38,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
@@ -45,6 +48,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -103,6 +107,7 @@ public class ContainerCacheFlusher implements Runnable {
   private AtomicBoolean shutdown;
   private final long levelDBCacheSize;
   private final int maxRetryCount;
+  private final String tracePrefix;
 
   private final ConcurrentMap<String, FinishCounter> finishCountMap;
 
@@ -158,6 +163,7 @@ public class ContainerCacheFlusher implements Runnable {
     this.maxRetryCount =
         config.getInt(CBlockConfigKeys.DFS_CBLOCK_CACHE_MAX_RETRY_KEY,
             CBlockConfigKeys.DFS_CBLOCK_CACHE_MAX_RETRY_DEFAULT);
+    this.tracePrefix = getTracePrefix();
   }
 
   private void checkExistingLog(String prefixFileName, File dbPath) {
@@ -434,6 +440,40 @@ public class ContainerCacheFlusher implements Runnable {
       }
     }
     LOG.info("Exiting flusher");
+  }
+
+  /**
+   * Tries to get the local host IP Address as trace prefix
+   * for creating trace IDs, otherwise uses a random UUID for it.
+   */
+  private static String getTracePrefix() {
+    String tmp;
+    try {
+      tmp = InetAddress.getLocalHost().getHostAddress();
+    } catch (UnknownHostException ex) {
+      tmp = UUID.randomUUID().toString();
+      LOG.error("Unable to read the host address. Using a GUID for " +
+          "hostname:{} ", tmp, ex);
+    }
+    return tmp;
+  }
+
+  /**
+   * We create a trace ID to make it easy to debug issues.
+   * A trace ID is in IPAddress:UserName:VolumeName:blockID:second format.
+   *
+   * This will get written down on the data node if we get any failures, so
+   * with this trace ID we can correlate cBlock failures across machines.
+   *
+   * @param blockID - Block ID
+   * @return trace ID
+   */
+  public String getTraceID(File dbPath, long blockID) {
+    String volumeName = dbPath.getName();
+    String userName = dbPath.getParentFile().getName();
+    // mapping to seconds to make the string smaller.
+    return tracePrefix + ":" + userName + ":" + volumeName
+        + ":" + blockID + ":" + Time.monotonicNow() / 1000;
   }
 
   /**

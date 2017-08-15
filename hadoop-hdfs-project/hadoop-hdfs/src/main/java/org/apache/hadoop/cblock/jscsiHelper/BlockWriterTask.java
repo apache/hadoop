@@ -93,9 +93,9 @@ public class BlockWriterTask implements Runnable {
       long endTime = Time.monotonicNow();
       Preconditions.checkState(data.length > 0, "Block data is zero length");
       startTime = Time.monotonicNow();
-      // BUG: fix the trace ID.
       ContainerProtocolCalls.writeSmallFile(client, containerName,
-          Long.toString(block.getBlockID()), data, "");
+          Long.toString(block.getBlockID()), data,
+          flusher.getTraceID(new File(dbPath), block.getBlockID()));
       endTime = Time.monotonicNow();
       flusher.getTargetMetrics().updateContainerWriteLatency(
           endTime - startTime);
