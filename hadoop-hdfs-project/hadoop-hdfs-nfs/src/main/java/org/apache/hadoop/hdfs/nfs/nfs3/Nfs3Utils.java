@@ -65,7 +65,9 @@ public class Nfs3Utils {
      * client takes only the lower 32bit of the fileId and treats it as signed
      * int. When the 32th bit is 1, the client considers it invalid.
      */
-    NfsFileType fileType = fs.isDir() ? NfsFileType.NFSDIR : NfsFileType.NFSREG;
+    NfsFileType fileType = fs.isDirectory()
+        ? NfsFileType.NFSDIR
+        : NfsFileType.NFSREG;
     fileType = fs.isSymlink() ? NfsFileType.NFSLNK : fileType;
     int nlink = (fileType == NfsFileType.NFSDIR) ? fs.getChildrenNum() + 2 : 1;
     long size = (fileType == NfsFileType.NFSDIR) ? getDirSize(fs
@@ -98,7 +100,7 @@ public class Nfs3Utils {
       return null;
     }
 
-    long size = fstat.isDir() ? getDirSize(fstat.getChildrenNum()) : fstat
+    long size = fstat.isDirectory() ? getDirSize(fstat.getChildrenNum()) : fstat
         .getLen();
     return new WccAttr(size, new NfsTime(fstat.getModificationTime()),
         new NfsTime(fstat.getModificationTime()));

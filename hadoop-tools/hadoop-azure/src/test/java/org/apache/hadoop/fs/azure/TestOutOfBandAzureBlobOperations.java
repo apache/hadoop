@@ -73,20 +73,20 @@ public class TestOutOfBandAzureBlobOperations {
     FileStatus[] obtained = fs.listStatus(new Path("/root/b"));
     assertNotNull(obtained);
     assertEquals(1, obtained.length);
-    assertFalse(obtained[0].isDir());
+    assertFalse(obtained[0].isDirectory());
     assertEquals("/root/b", obtained[0].getPath().toUri().getPath());
 
     // List the directory
     obtained = fs.listStatus(new Path("/root"));
     assertNotNull(obtained);
     assertEquals(1, obtained.length);
-    assertFalse(obtained[0].isDir());
+    assertFalse(obtained[0].isDirectory());
     assertEquals("/root/b", obtained[0].getPath().toUri().getPath());
 
     // Get the directory's file status
     FileStatus dirStatus = fs.getFileStatus(new Path("/root"));
     assertNotNull(dirStatus);
-    assertTrue(dirStatus.isDir());
+    assertTrue(dirStatus.isDirectory());
     assertEquals("/root", dirStatus.getPath().toUri().getPath());
   }
 
@@ -114,7 +114,7 @@ public class TestOutOfBandAzureBlobOperations {
     FileStatus[] listResult = fs.listStatus(new Path("/root/b"));
     // File should win.
     assertEquals(1, listResult.length);
-    assertFalse(listResult[0].isDir());
+    assertFalse(listResult[0].isDirectory());
     try {
       // Trying to delete root/b/c would cause a dilemma for WASB, so
       // it should throw.
