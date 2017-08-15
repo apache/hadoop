@@ -202,6 +202,7 @@ public class BucketManagerImpl implements BucketManager {
         bucketInfoBuilder.setIsVersionEnabled(
             oldBucketInfo.getIsVersionEnabled());
       }
+      bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
       metadataManager.put(bucketKey, bucketInfoBuilder.build()
           .getProtobuf().toByteArray());

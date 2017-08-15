@@ -54,6 +54,10 @@ public final class KsmBucketInfo {
    * [RAM_DISK, SSD, DISK, ARCHIVE]
    */
   private StorageType storageType;
+  /**
+   * Creation time of bucket.
+   */
+  private final long creationTime;
 
   /**
    * Private constructor, constructed via builder.
@@ -62,15 +66,17 @@ public final class KsmBucketInfo {
    * @param acls - list of ACLs.
    * @param isVersionEnabled - Bucket version flag.
    * @param storageType - Storage type to be used.
+   * @param creationTime - Bucket creation time.
    */
   private KsmBucketInfo(String volumeName, String bucketName,
                         List<OzoneAcl> acls, boolean isVersionEnabled,
-                        StorageType storageType) {
+                        StorageType storageType, long creationTime) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.acls = acls;
     this.isVersionEnabled = isVersionEnabled;
     this.storageType = storageType;
+    this.creationTime = creationTime;
   }
 
   /**
@@ -114,6 +120,15 @@ public final class KsmBucketInfo {
   }
 
   /**
+   * Returns creation time.
+   *
+   * @return long
+   */
+  public long getCreationTime() {
+    return creationTime;
+  }
+
+  /**
    * Returns new builder class that builds a KsmBucketInfo.
    *
    * @return Builder
@@ -131,6 +146,7 @@ public final class KsmBucketInfo {
     private List<OzoneAcl> acls;
     private Boolean isVersionEnabled;
     private StorageType storageType;
+    private long creationTime;
 
     Builder() {
       //Default values
@@ -164,6 +180,11 @@ public final class KsmBucketInfo {
       return this;
     }
 
+    public Builder setCreationTime(long createdOn) {
+      this.creationTime = createdOn;
+      return this;
+    }
+
     /**
      * Constructs the KsmBucketInfo.
      * @return instance of KsmBucketInfo.
@@ -174,8 +195,9 @@ public final class KsmBucketInfo {
       Preconditions.checkNotNull(acls);
       Preconditions.checkNotNull(isVersionEnabled);
       Preconditions.checkNotNull(storageType);
+
       return new KsmBucketInfo(volumeName, bucketName, acls,
-          isVersionEnabled, storageType);
+          isVersionEnabled, storageType, creationTime);
     }
   }
 
@@ -191,6 +213,7 @@ public final class KsmBucketInfo {
         .setIsVersionEnabled(isVersionEnabled)
         .setStorageType(PBHelperClient.convertStorageType(
             storageType))
+        .setCreationTime(creationTime)
         .build();
   }
 
@@ -207,6 +230,6 @@ public final class KsmBucketInfo {
             KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
         bucketInfo.getIsVersionEnabled(),
         PBHelperClient.convertStorageType(
-            bucketInfo.getStorageType()));
+            bucketInfo.getStorageType()), bucketInfo.getCreationTime());
   }
 }

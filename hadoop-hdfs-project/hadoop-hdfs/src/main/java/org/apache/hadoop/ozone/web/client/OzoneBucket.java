@@ -147,6 +147,15 @@ public class OzoneBucket {
   }
 
   /**
+   * Gets the creation time of the bucket.
+   *
+   * @return String
+   */
+  public String getCreatedOn() {
+    return bucketInfo.getCreatedOn();
+  }
+
+  /**
    * Puts an Object in Ozone bucket.
    *
    * @param keyName - Name of the key
