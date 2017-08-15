@@ -187,6 +187,31 @@ public class RMContainerTokenSecretManager extends
   }
 
   /**
+   * Helper function for creating ContainerTokens.
+   *
+   * @param containerId containerId.
+   * @param containerVersion containerVersion.
+   * @param nodeId nodeId.
+   * @param appSubmitter appSubmitter.
+   * @param capability capability.
+   * @param priority priority.
+   * @param createTime createTime.
+   * @param logAggregationContext logAggregationContext.
+   * @param nodeLabelExpression nodeLabelExpression.
+   * @param containerType containerType.
+   * @return the container-token.
+   */
+  public Token createContainerToken(ContainerId containerId,
+      int containerVersion, NodeId nodeId, String appSubmitter,
+      Resource capability, Priority priority, long createTime,
+      LogAggregationContext logAggregationContext, String nodeLabelExpression,
+      ContainerType containerType) {
+    return createContainerToken(containerId, containerVersion, nodeId,
+        appSubmitter, capability, priority, createTime, null, null,
+        ContainerType.TASK, ExecutionType.GUARANTEED);
+  }
+
+  /**
    * Helper function for creating ContainerTokens
    *
    * @param containerId Container Id
@@ -199,13 +224,14 @@ public class RMContainerTokenSecretManager extends
    * @param logAggregationContext Log Aggregation Context
    * @param nodeLabelExpression Node Label Expression
    * @param containerType Container Type
+   * @param execType Execution Type
    * @return the container-token
    */
   public Token createContainerToken(ContainerId containerId,
       int containerVersion, NodeId nodeId, String appSubmitter,
       Resource capability, Priority priority, long createTime,
       LogAggregationContext logAggregationContext, String nodeLabelExpression,
-      ContainerType containerType) {
+      ContainerType containerType, ExecutionType execType) {
     byte[] password;
     ContainerTokenIdentifier tokenIdentifier;
     long expiryTimeStamp =
@@ -220,7 +246,7 @@ public class RMContainerTokenSecretManager extends
               this.currentMasterKey.getMasterKey().getKeyId(),
               ResourceManager.getClusterTimeStamp(), priority, createTime,
               logAggregationContext, nodeLabelExpression, containerType,
-              ExecutionType.GUARANTEED);
+              execType);
       password = this.createPassword(tokenIdentifier);
 
     } finally {
