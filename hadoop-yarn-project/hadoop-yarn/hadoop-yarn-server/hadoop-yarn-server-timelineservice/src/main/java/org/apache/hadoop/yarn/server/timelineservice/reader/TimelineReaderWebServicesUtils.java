@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import java.security.Principal;
 import java.util.EnumSet;
 
 import javax.servlet.http.HttpServletRequest;
@@ -31,7 +32,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Fiel
 /**
  * Set of utility methods to be used by timeline reader web services.
  */
-final class TimelineReaderWebServicesUtils {
+public final class TimelineReaderWebServicesUtils {
 
   private TimelineReaderWebServicesUtils() {
   }
@@ -248,16 +249,36 @@ final class TimelineReaderWebServicesUtils {
   }
 
   /**
-   * Get UGI from HTTP request.
+   * Get UGI based on the remote user in the HTTP request.
+   *
    * @param req HTTP request.
    * @return UGI.
    */
-  static UserGroupInformation getUser(HttpServletRequest req) {
-    String remoteUser = req.getRemoteUser();
+  public static UserGroupInformation getUser(HttpServletRequest req) {
+    return getCallerUserGroupInformation(req, false);
+  }
+
+  /**
+   * Get UGI from the HTTP request.
+   *
+   * @param hsr HTTP request.
+   * @param usePrincipal if true, use principal name else use remote user name
+   * @return UGI.
+   */
+  public static UserGroupInformation getCallerUserGroupInformation(
+      HttpServletRequest hsr, boolean usePrincipal) {
+
+    String remoteUser = hsr.getRemoteUser();
+    if (usePrincipal) {
+      Principal princ = hsr.getUserPrincipal();
+      remoteUser = princ == null ? null : princ.getName();
+    }
+
     UserGroupInformation callerUGI = null;
     if (remoteUser != null) {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
+
     return callerUGI;
   }
 
