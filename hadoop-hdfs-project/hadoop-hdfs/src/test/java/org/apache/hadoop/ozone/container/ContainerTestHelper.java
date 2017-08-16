@@ -206,6 +206,8 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.WriteChunk);
     request.setWriteChunk(writeRequest);
+    request.setTraceID(UUID.randomUUID().toString());
+
     return request.build();
   }
 
@@ -266,6 +268,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.GetSmallFile);
     request.setGetSmallFile(smallFileRequest);
+    request.setTraceID(UUID.randomUUID().toString());
     return request.build();
   }
 
@@ -295,6 +298,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     newRequest.setCmdType(ContainerProtos.Type.ReadChunk);
     newRequest.setReadChunk(readRequest);
+    newRequest.setTraceID(UUID.randomUUID().toString());
     return newRequest.build();
   }
 
@@ -325,6 +329,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteChunk);
     request.setDeleteChunk(deleteRequest);
+    request.setTraceID(UUID.randomUUID().toString());
     return request.build();
   }
 
@@ -353,6 +358,8 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.CreateContainer);
     request.setCreateContainer(createRequest);
+    request.setTraceID(UUID.randomUUID().toString());
+
     return request.build();
   }
 
@@ -391,6 +398,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.UpdateContainer);
     request.setUpdateContainer(updateRequestBuilder.build());
+    request.setTraceID(UUID.randomUUID().toString());
     return request.build();
   }
   /**
@@ -439,6 +447,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.PutKey);
     request.setPutKey(putRequest);
+    request.setTraceID(UUID.randomUUID().toString());
     return request.build();
   }
 
@@ -466,6 +475,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.GetKey);
     request.setGetKey(getRequest);
+    request.setTraceID(UUID.randomUUID().toString());
     return request.build();
   }
 
@@ -502,6 +512,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteKey);
     request.setDeleteKey(delRequest);
+    request.setTraceID(UUID.randomUUID().toString());
     return request.build();
   }
 
@@ -513,13 +524,33 @@ public final class ContainerTestHelper {
   public static ContainerCommandRequestProto getCloseContainer(
       Pipeline pipeline) {
     Preconditions.checkNotNull(pipeline);
-    ContainerProtos.CloseContainerRequestProto closeReqeuest =
+    ContainerProtos.CloseContainerRequestProto closeRequest =
         ContainerProtos.CloseContainerRequestProto.newBuilder().setPipeline(
             pipeline.getProtobufMessage()).build();
     ContainerProtos.ContainerCommandRequestProto cmd =
         ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
-            .Type.CloseContainer).setCloseContainer(closeReqeuest)
+            .Type.CloseContainer).setCloseContainer(closeRequest)
+            .setTraceID(UUID.randomUUID().toString())
             .build();
+
+    return cmd;
+  }
+
+  /**
+   * Returns a simple request without traceId.
+   * @param pipeline - pipeline
+   * @return ContainerCommandRequestProto without traceId.
+   */
+  public static ContainerCommandRequestProto getRequestWithoutTraceId(
+          Pipeline pipeline) {
+    Preconditions.checkNotNull(pipeline);
+    ContainerProtos.CloseContainerRequestProto closeRequest =
+            ContainerProtos.CloseContainerRequestProto.newBuilder().setPipeline(
+                    pipeline.getProtobufMessage()).build();
+    ContainerProtos.ContainerCommandRequestProto cmd =
+            ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
+                    .Type.CloseContainer).setCloseContainer(closeRequest)
+                    .build();
     return cmd;
   }
 
@@ -538,6 +569,7 @@ public final class ContainerTestHelper {
     return ContainerCommandRequestProto.newBuilder()
         .setCmdType(ContainerProtos.Type.DeleteContainer)
         .setDeleteContainer(deleteRequest)
+        .setTraceID(UUID.randomUUID().toString())
         .build();
   }
 }
