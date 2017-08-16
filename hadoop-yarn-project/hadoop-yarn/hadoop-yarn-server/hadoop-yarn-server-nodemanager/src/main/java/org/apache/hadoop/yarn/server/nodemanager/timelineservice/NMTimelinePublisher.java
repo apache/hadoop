@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -77,6 +79,8 @@ public class NMTimelinePublisher extends CompositeService {
 
   private String httpAddress;
 
+  private UserGroupInformation nmLoginUGI;
+
   private final Map<ApplicationId, TimelineV2Client> appToClientMap;
 
   public NMTimelinePublisher(Context context) {
@@ -91,6 +95,9 @@ public class NMTimelinePublisher extends CompositeService {
     dispatcher.register(NMTimelineEventType.class,
         new ForwardingEventHandler());
     addIfService(dispatcher);
+    this.nmLoginUGI =  UserGroupInformation.isSecurityEnabled() ?
+        UserGroupInformation.getLoginUser() :
+        UserGroupInformation.getCurrentUser();
     super.serviceInit(conf);
   }
 
@@ -398,11 +405,23 @@ public class NMTimelinePublisher extends CompositeService {
 
   public void createTimelineClient(ApplicationId appId) {
     if (!appToClientMap.containsKey(appId)) {
-      TimelineV2Client timelineClient =
-          TimelineV2Client.createTimelineClient(appId);
-      timelineClient.init(getConfig());
-      timelineClient.start();
-      appToClientMap.put(appId, timelineClient);
+      try {
+        TimelineV2Client timelineClient =
+            nmLoginUGI.doAs(new PrivilegedExceptionAction<TimelineV2Client>() {
+              @Override
+              public TimelineV2Client run() throws Exception {
+                TimelineV2Client timelineClient =
+                    TimelineV2Client.createTimelineClient(appId);
+                timelineClient.init(getConfig());
+                timelineClient.start();
+                return timelineClient;
+              }
+            });
+        appToClientMap.put(appId, timelineClient);
+      } catch (IOException | InterruptedException | RuntimeException |
+          Error e) {
+        LOG.warn("Unable to create timeline client for app " + appId, e);
+      }
     }
   }
 
