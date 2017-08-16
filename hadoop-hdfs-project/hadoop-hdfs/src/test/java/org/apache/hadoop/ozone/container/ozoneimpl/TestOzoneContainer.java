@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -148,7 +149,8 @@ public class TestOzoneContainer {
       response = client.sendCommand(putKeyRequest);
       Assert.assertNotNull(response);
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      Assert
+          .assertTrue(putKeyRequest.getTraceID().equals(response.getTraceID()));
 
       // Get Key
       request = ContainerTestHelper.getKeyRequest(putKeyRequest.getPutKey());
@@ -298,7 +300,8 @@ public class TestOzoneContainer {
       Assert.assertNotNull(response);
       Assert.assertEquals(ContainerProtos.Result.CLOSED_CONTAINER_IO,
           response.getResult());
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      Assert.assertTrue(
+          writeChunkRequest.getTraceID().equals(response.getTraceID()));
 
       // Read chunk must work on a closed container.
       request = ContainerTestHelper.getReadChunkRequest(writeChunkRequest
@@ -314,7 +317,8 @@ public class TestOzoneContainer {
       Assert.assertNotNull(response);
       Assert.assertEquals(ContainerProtos.Result.CLOSED_CONTAINER_IO,
           response.getResult());
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      Assert
+          .assertTrue(putKeyRequest.getTraceID().equals(response.getTraceID()));
 
       // Get key must work on the closed container.
       request = ContainerTestHelper.getKeyRequest(putKeyRequest.getPutKey());
@@ -477,6 +481,34 @@ public class TestOzoneContainer {
     }
   }
 
+  @Test
+  public void testInvalidRequest() throws Exception {
+    MiniOzoneCluster cluster = null;
+    XceiverClient client;
+    ContainerProtos.ContainerCommandRequestProto request;
+    try {
+      OzoneConfiguration conf = newOzoneConfiguration();
+
+      client = createClientForTesting(conf);
+      cluster = new MiniOzoneCluster.Builder(conf)
+              .setRandomContainerPort(false)
+              .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+      client.connect();
+
+      // Send a request without traceId.
+      request = ContainerTestHelper
+          .getRequestWithoutTraceId(client.getPipeline());
+      client.sendCommand(request);
+      Assert.fail("IllegalArgumentException expected");
+    } catch(IllegalArgumentException iae){
+      GenericTestUtils.assertExceptionContains("Invalid trace ID", iae);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
 
   private static XceiverClient createClientForTesting(OzoneConfiguration conf)
       throws Exception {
@@ -518,4 +550,31 @@ public class TestOzoneContainer {
     Assert.assertTrue(response.getTraceID().equals(response.getTraceID()));
     return writeChunkRequest;
   }
+
+  static void runRequestWithoutTraceId(
+          String containerName, XceiverClientSpi client) throws Exception {
+    try {
+      client.connect();
+
+      createContainerForTesting(client, containerName);
+
+      String keyName = OzoneUtils.getRequestID();
+      final ContainerProtos.ContainerCommandRequestProto smallFileRequest
+              = ContainerTestHelper.getWriteSmallFileRequest(
+              client.getPipeline(), containerName, keyName, 1024);
+
+      ContainerProtos.ContainerCommandResponseProto response
+              = client.sendCommand(smallFileRequest);
+      Assert.assertNotNull(response);
+      Assert.assertTrue(smallFileRequest.getTraceID()
+              .equals(response.getTraceID()));
+
+
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+    }
+  }
+
 }

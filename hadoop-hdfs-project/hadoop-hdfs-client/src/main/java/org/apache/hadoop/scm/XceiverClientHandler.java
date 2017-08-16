@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
@@ -124,6 +125,12 @@ public class XceiverClientHandler extends
    */
   public CompletableFuture<ContainerCommandResponseProto>
     sendCommandAsync(ContainerProtos.ContainerCommandRequestProto request) {
+
+    // Throw an exception of request doesn't have traceId
+    if(StringUtils.isEmpty(request.getTraceID())) {
+      throw new IllegalArgumentException("Invalid trace ID");
+    }
+
     CompletableFuture<ContainerCommandResponseProto> response =
         new CompletableFuture<>();
 
