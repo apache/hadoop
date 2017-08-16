@@ -173,17 +173,17 @@ public class Resources {
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
-    for (ResourceInformation entry : lhs.getResources()) {
-      String name = entry.getName();
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
       try {
-        ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry;
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
 
         long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
             ? rhsValue.getValue()
             : UnitsConversionUtil.convert(rhsValue.getUnits(),
                 lhsValue.getUnits(), rhsValue.getValue());
-        lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
+        lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
@@ -197,17 +197,17 @@ public class Resources {
   }
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
-    for (ResourceInformation entry : lhs.getResources()) {
-      String name = entry.getName();
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
       try {
-        ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry;
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
 
         long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
             ? rhsValue.getValue()
             : UnitsConversionUtil.convert(rhsValue.getUnits(),
                 lhsValue.getUnits(), rhsValue.getValue());
-        lhs.setResourceValue(name, lhsValue.getValue() - convertedRhs);
+        lhs.setResourceValue(i, lhsValue.getValue() - convertedRhs);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
@@ -243,10 +243,15 @@ public class Resources {
   }
 
   public static Resource multiplyTo(Resource lhs, double by) {
-    for (ResourceInformation entry : lhs.getResources()) {
-      String name = entry.getName();
-      ResourceInformation lhsValue = entry;
-      lhs.setResourceValue(name, (long) (lhsValue.getValue() * by));
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+        lhs.setResourceValue(i, (long) (lhsValue.getValue() * by));
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
     }
     return lhs;
   }
@@ -261,11 +266,11 @@ public class Resources {
    */
   public static Resource multiplyAndAddTo(
       Resource lhs, Resource rhs, double by) {
-    for (ResourceInformation entry : lhs.getResources()) {
-      String name = entry.getName();
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
       try {
-        ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry;
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
 
         long convertedRhs = (long) (((rhsValue.getUnits()
             .equals(lhsValue.getUnits()))
@@ -273,7 +278,7 @@ public class Resources {
                 : UnitsConversionUtil.convert(rhsValue.getUnits(),
                     lhsValue.getUnits(), rhsValue.getValue()))
             * by);
-        lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
+        lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
@@ -294,10 +299,15 @@ public class Resources {
   
   public static Resource multiplyAndRoundDown(Resource lhs, double by) {
     Resource out = clone(lhs);
-    for (ResourceInformation entry : out.getResources()) {
-      String name = entry.getName();
-      ResourceInformation lhsValue = entry;
-      out.setResourceValue(name, (long) (lhsValue.getValue() * by));
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+        out.setResourceValue(i, (long) (lhsValue.getValue() * by));
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
     }
     return out;
   }
@@ -398,22 +408,22 @@ public class Resources {
   }
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
-    for (ResourceInformation entry : smaller.getResources()) {
-      String name = entry.getName();
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
       try {
-        ResourceInformation rhsValue = bigger.getResourceInformation(name);
-        ResourceInformation lhsValue = entry;
+        ResourceInformation rhsValue = bigger.getResourceInformation(i);
+        ResourceInformation lhsValue = smaller.getResourceInformation(i);
 
         long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
             ? rhsValue.getValue()
             : UnitsConversionUtil.convert(rhsValue.getUnits(),
                 lhsValue.getUnits(), rhsValue.getValue());
-        if(lhsValue.getValue() > convertedRhs) {
+        if (lhsValue.getValue() > convertedRhs) {
           return false;
         }
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        return false;
+        continue;
       }
     }
     return true;
@@ -426,19 +436,20 @@ public class Resources {
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     Resource ret = createResource(0);
-    for (ResourceInformation entry : lhs.getResources()) {
-      String name = entry.getName();
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
       try {
-        ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry;
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
 
         long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
             ? rhsValue.getValue()
             : UnitsConversionUtil.convert(rhsValue.getUnits(),
                 lhsValue.getUnits(), rhsValue.getValue());
-        ResourceInformation outInfo =
-            lhsValue.getValue() < convertedRhs ? lhsValue : rhsValue;
-        ret.setResourceInformation(name, outInfo);
+        ResourceInformation outInfo = lhsValue.getValue() < convertedRhs
+            ? lhsValue
+            : rhsValue;
+        ret.setResourceInformation(i, outInfo);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
@@ -449,19 +460,20 @@ public class Resources {
   
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
     Resource ret = createResource(0);
-    for (ResourceInformation entry : lhs.getResources()) {
-      String name = entry.getName();
+    int maxLength = ResourceUtils.getResourceTypesArray().length;
+    for (int i = 0; i < maxLength; i++) {
       try {
-        ResourceInformation rhsValue = rhs.getResourceInformation(name);
-        ResourceInformation lhsValue = entry;
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
 
         long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
             ? rhsValue.getValue()
             : UnitsConversionUtil.convert(rhsValue.getUnits(),
                 lhsValue.getUnits(), rhsValue.getValue());
-        ResourceInformation outInfo =
-            lhsValue.getValue() > convertedRhs ? lhsValue : rhsValue;
-        ret.setResourceInformation(name, outInfo);
+        ResourceInformation outInfo = lhsValue.getValue() > convertedRhs
+            ? lhsValue
+            : rhsValue;
+        ret.setResourceInformation(i, outInfo);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
