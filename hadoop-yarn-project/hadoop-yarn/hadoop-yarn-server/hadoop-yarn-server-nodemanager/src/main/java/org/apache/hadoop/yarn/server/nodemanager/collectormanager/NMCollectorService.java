@@ -73,13 +73,13 @@ public class NMCollectorService extends CompositeService implements
 
     Configuration serverConf = new Configuration(conf);
 
-    // TODO Security settings.
     YarnRPC rpc = YarnRPC.create(conf);
 
+    // Kerberos based authentication to be used for CollectorNodemanager
+    // protocol if security is enabled.
     server =
         rpc.getServer(CollectorNodemanagerProtocol.class, this,
-            collectorServerAddress, serverConf,
-            this.context.getNMTokenSecretManager(),
+            collectorServerAddress, serverConf, null,
             conf.getInt(YarnConfiguration.NM_COLLECTOR_SERVICE_THREAD_COUNT,
                 YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_THREAD_COUNT));
 
@@ -93,7 +93,6 @@ public class NMCollectorService extends CompositeService implements
     super.serviceStart();
     LOG.info("NMCollectorService started at " + collectorServerAddress);
   }
-
 
   @Override
   public void serviceStop() throws Exception {
