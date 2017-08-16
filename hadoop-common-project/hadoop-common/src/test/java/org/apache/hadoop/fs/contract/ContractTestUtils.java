@@ -1502,10 +1502,18 @@ public class ContractTestUtils extends Assert {
    * printing some useful results in the process.
    */
   public static final class NanoTimer {
-    private final long startTime;
+    private long startTime;
     private long endTime;
 
     public NanoTimer() {
+      startTime = now();
+    }
+
+    /**
+     * Reset the timer.  Equivalent to the reset button of a stopwatch.
+     */
+    public void reset() {
+      endTime = 0;
       startTime = now();
     }
 

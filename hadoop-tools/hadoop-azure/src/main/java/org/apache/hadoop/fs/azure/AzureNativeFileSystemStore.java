@@ -158,6 +158,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final String KEY_SELF_THROTTLE_READ_FACTOR = "fs.azure.selfthrottling.read.factor";
   private static final String KEY_SELF_THROTTLE_WRITE_FACTOR = "fs.azure.selfthrottling.write.factor";
 
+  private static final String KEY_AUTO_THROTTLE_ENABLE = "fs.azure.autothrottling.enable";
+
   private static final String KEY_ENABLE_STORAGE_CLIENT_LOGGING = "fs.azure.storage.client.logging";
 
   /**
@@ -239,10 +241,10 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   // Retry parameter defaults.
   //
 
-  private static final int DEFAULT_MIN_BACKOFF_INTERVAL = 1 * 1000; // 1s
+  private static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000; // 1s
   private static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000; // 30s
-  private static final int DEFAULT_BACKOFF_INTERVAL = 1 * 1000; // 1s
-  private static final int DEFAULT_MAX_RETRY_ATTEMPTS = 15;
+  private static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000; // 1s
+  private static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
 
   private static final int DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL = 3  * 1000;
   private static final int DEFAULT_COPYBLOB_MAX_BACKOFF_INTERVAL = 90 * 1000;
@@ -255,6 +257,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final boolean DEFAULT_SELF_THROTTLE_ENABLE = true;
   private static final float DEFAULT_SELF_THROTTLE_READ_FACTOR = 1.0f;
   private static final float DEFAULT_SELF_THROTTLE_WRITE_FACTOR = 1.0f;
+
+  private static final boolean DEFAULT_AUTO_THROTTLE_ENABLE = false;
 
   private static final int STORAGE_CONNECTION_TIMEOUT_DEFAULT = 90;
 
@@ -283,7 +287,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private boolean connectingUsingSAS = false;
   private AzureFileSystemInstrumentation instrumentation;
   private BandwidthGaugeUpdater bandwidthGaugeUpdater;
-  private final static JSON PERMISSION_JSON_SERIALIZER = createPermissionJsonSerializer();
+  private static final JSON PERMISSION_JSON_SERIALIZER = createPermissionJsonSerializer();
 
   private boolean suppressRetryPolicy = false;
   private boolean canCreateOrModifyContainer = false;
@@ -307,6 +311,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private boolean selfThrottlingEnabled;
   private float selfThrottlingReadFactor;
   private float selfThrottlingWriteFactor;
+
+  private boolean autoThrottlingEnabled;
 
   private TestHookOperationContext testHookOperationContext = null;
 
@@ -481,7 +487,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           "Cannot initialize WASB file system, conf is null");
     }
 
-    if(!conf.getBoolean(
+    if (!conf.getBoolean(
         NativeAzureFileSystem.SKIP_AZURE_METRICS_PROPERTY_NAME, false)) {
       //If not skip azure metrics, create bandwidthGaugeUpdater
       this.bandwidthGaugeUpdater = new BandwidthGaugeUpdater(instrumentation);
@@ -664,9 +670,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private String getHTTPScheme() {
     String sessionScheme = sessionUri.getScheme();
     // Check if we're on a secure URI scheme: wasbs or the legacy asvs scheme.
-    if (sessionScheme != null &&
-        (sessionScheme.equalsIgnoreCase("asvs") ||
-         sessionScheme.equalsIgnoreCase("wasbs"))) {
+    if (sessionScheme != null
+        && (sessionScheme.equalsIgnoreCase("asvs")
+         || sessionScheme.equalsIgnoreCase("wasbs"))) {
       return HTTPS_SCHEME;
     } else {
       // At this point the scheme should be either null or asv or wasb.
@@ -766,6 +772,18 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     selfThrottlingWriteFactor = sessionConfiguration.getFloat(
         KEY_SELF_THROTTLE_WRITE_FACTOR, DEFAULT_SELF_THROTTLE_WRITE_FACTOR);
 
+    if (!selfThrottlingEnabled) {
+      autoThrottlingEnabled = sessionConfiguration.getBoolean(
+          KEY_AUTO_THROTTLE_ENABLE,
+          DEFAULT_AUTO_THROTTLE_ENABLE);
+      if (autoThrottlingEnabled) {
+        ClientThrottlingIntercept.initializeSingleton();
+      }
+    } else {
+      // cannot enable both self-throttling and client-throttling
+      autoThrottlingEnabled = false;
+    }
+
     OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
         getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
 
@@ -839,8 +857,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           CloudStorageAccount.getDevelopmentStorageAccount();
       storageInteractionLayer.createBlobClient(account);
     } else {
-      blobEndPoint = new URI(getHTTPScheme() + "://" +
-          accountName);
+      blobEndPoint = new URI(getHTTPScheme() + "://" + accountName);
       storageInteractionLayer.createBlobClient(blobEndPoint, credentials);
     }
     suppressRetryPolicyInClientIfNeeded();
@@ -951,7 +968,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * @throws AzureException
    * @throws IOException
    */
-  private void createAzureStorageSession ()
+  private void createAzureStorageSession()
       throws AzureException, IOException {
 
     // Make sure this object was properly initialized with references to
@@ -1128,8 +1145,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         myDir = verifyAndConvertToStandardFormat(currentDir);
       } catch (URISyntaxException ex) {
         throw new AzureException(String.format(
-            "The directory %s specified in the configuration entry %s is not" +
-            " a valid URI.",
+            "The directory %s specified in the configuration entry %s is not"
+            + " a valid URI.",
             currentDir, configVar));
       }
       if (myDir != null) {
@@ -1159,8 +1176,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   public boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
     String defaultFS = FileSystem.getDefaultUri(sessionConfiguration).toString();
     for (String dir : dirSet) {
-      if (dir.isEmpty() ||
-          key.startsWith(dir + "/")) {
+      if (dir.isEmpty() || key.startsWith(dir + "/")) {
         return true;
       }
 
@@ -1168,7 +1184,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // system.
       //
       try {
-        URI uriPageBlobDir = new URI (dir);
+        URI uriPageBlobDir = new URI(dir);
         if (null == uriPageBlobDir.getAuthority()) {
           // Concatenate the default file system prefix with the relative
           // page blob directory path.
@@ -1424,7 +1440,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       throws StorageException {
     if (blob instanceof CloudPageBlobWrapper){
       return new PageBlobOutputStream(
-          (CloudPageBlobWrapper)blob, getInstrumentedContext(), sessionConfiguration);
+          (CloudPageBlobWrapper) blob, getInstrumentedContext(), sessionConfiguration);
     } else {
 
       // Handle both ClouldBlockBlobWrapperImpl and (only for the test code path)
@@ -1739,12 +1755,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private Iterable<ListBlobItem> listRootBlobs(boolean includeMetadata,
       boolean useFlatBlobListing) throws StorageException, URISyntaxException {
     return rootDirectory.listBlobs(
-        null, useFlatBlobListing,
-        includeMetadata ?
-            EnumSet.of(BlobListingDetails.METADATA) :
-              EnumSet.noneOf(BlobListingDetails.class),
         null,
-              getInstrumentedContext());
+        useFlatBlobListing,
+        includeMetadata
+            ? EnumSet.of(BlobListingDetails.METADATA)
+            : EnumSet.noneOf(BlobListingDetails.class),
+        null,
+        getInstrumentedContext());
   }
 
   /**
@@ -1771,11 +1788,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
     Iterable<ListBlobItem> list = rootDirectory.listBlobs(aPrefix,
         useFlatBlobListing,
-        includeMetadata ?
-            EnumSet.of(BlobListingDetails.METADATA) :
-              EnumSet.noneOf(BlobListingDetails.class),
-              null,
-              getInstrumentedContext());
+        includeMetadata
+            ? EnumSet.of(BlobListingDetails.METADATA)
+            : EnumSet.noneOf(BlobListingDetails.class),
+        null,
+        getInstrumentedContext());
     return list;
   }
 
@@ -1941,9 +1958,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     if (selfThrottlingEnabled) {
       SelfThrottlingIntercept.hook(operationContext, selfThrottlingReadFactor,
           selfThrottlingWriteFactor);
+    } else if (autoThrottlingEnabled) {
+      ClientThrottlingIntercept.hook(operationContext);
     }
 
-    if(bandwidthGaugeUpdater != null) {
+    if (bandwidthGaugeUpdater != null) {
       //bandwidthGaugeUpdater is null when we config to skip azure metrics
       ResponseReceivedMetricUpdater.hook(
          operationContext,
@@ -2446,10 +2465,10 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // 1. It's a BlobNotFound exception AND
       // 2. It got there after one-or-more retries THEN
       // we swallow the exception.
-      if (e.getErrorCode() != null &&
-          "BlobNotFound".equals(e.getErrorCode()) &&
-          operationContext.getRequestResults().size() > 1 &&
-          operationContext.getRequestResults().get(0).getException() != null) {
+      if (e.getErrorCode() != null
+          && "BlobNotFound".equals(e.getErrorCode())
+          && operationContext.getRequestResults().size() > 1
+          && operationContext.getRequestResults().get(0).getException() != null) {
         LOG.debug("Swallowing delete exception on retry: {}", e.getMessage());
         return;
       } else {
@@ -2496,7 +2515,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       return delete(key, null);
     } catch (IOException e) {
       Throwable t = e.getCause();
-      if(t != null && t instanceof StorageException) {
+      if (t != null && t instanceof StorageException) {
         StorageException se = (StorageException) t;
         if ("LeaseIdMissing".equals(se.getErrorCode())){
           SelfRenewingLease lease = null;
@@ -2509,7 +2528,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
             throw e3;
           } finally {
             try {
-              if(lease != null){
+              if (lease != null){
                 lease.free();
               }
             } catch (Exception e4){
@@ -2561,8 +2580,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
       srcBlob = getBlobReference(srcKey);
       if (!srcBlob.exists(getInstrumentedContext())) {
-        throw new AzureException ("Source blob " + srcKey +
-            " does not exist.");
+        throw new AzureException("Source blob " + srcKey + " does not exist.");
       }
 
       /**
@@ -2600,19 +2618,19 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         if (se.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
           int copyBlobMinBackoff = sessionConfiguration.getInt(
             KEY_COPYBLOB_MIN_BACKOFF_INTERVAL,
-			DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL);
+            DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL);
 
           int copyBlobMaxBackoff = sessionConfiguration.getInt(
             KEY_COPYBLOB_MAX_BACKOFF_INTERVAL,
-			DEFAULT_COPYBLOB_MAX_BACKOFF_INTERVAL);
+            DEFAULT_COPYBLOB_MAX_BACKOFF_INTERVAL);
 
           int copyBlobDeltaBackoff = sessionConfiguration.getInt(
             KEY_COPYBLOB_BACKOFF_INTERVAL,
-			DEFAULT_COPYBLOB_BACKOFF_INTERVAL);
+            DEFAULT_COPYBLOB_BACKOFF_INTERVAL);
 
           int copyBlobMaxRetries = sessionConfiguration.getInt(
             KEY_COPYBLOB_MAX_IO_RETRIES,
-			DEFAULT_COPYBLOB_MAX_RETRY_ATTEMPTS);
+            DEFAULT_COPYBLOB_MAX_RETRY_ATTEMPTS);
 
           BlobRequestOptions options = new BlobRequestOptions();
           options.setRetryPolicyFactory(new RetryExponentialRetry(
@@ -2631,7 +2649,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         InputStream ipStream = null;
         OutputStream opStream = null;
         try {
-          if(srcBlob.getProperties().getBlobType() == BlobType.PAGE_BLOB){
+          if (srcBlob.getProperties().getBlobType() == BlobType.PAGE_BLOB){
             ipStream = openInputStream(srcBlob);
             opStream = openOutputStream(dstBlob);
             byte[] buffer = new byte[PageBlobFormatHelpers.PAGE_SIZE];
@@ -2817,7 +2835,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void close() {
-    if(bandwidthGaugeUpdater != null) {
+    if (bandwidthGaugeUpdater != null) {
       bandwidthGaugeUpdater.close();
       bandwidthGaugeUpdater = null;
     }
