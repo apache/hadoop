@@ -87,7 +87,6 @@ public class FairSchedulerQueueInfo {
     steadyFairResources = new ResourceInfo(queue.getSteadyFairShare());
     fairResources = new ResourceInfo(queue.getFairShare());
     minResources = new ResourceInfo(queue.getMinShare());
-    maxResources = new ResourceInfo(queue.getMaxShare());
     maxResources = new ResourceInfo(
         Resources.componentwiseMin(queue.getMaxShare(),
             scheduler.getClusterResource()));
