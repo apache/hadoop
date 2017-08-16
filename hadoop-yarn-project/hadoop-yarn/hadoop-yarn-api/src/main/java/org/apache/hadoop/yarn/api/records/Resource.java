@@ -164,7 +164,6 @@ public abstract class Resource implements Comparable<Resource> {
         "This method is implemented by ResourcePBImpl");
   }
 
-
   /**
    * Get <em>number of virtual cpu cores</em> of the resource.
    * 
@@ -179,7 +178,7 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Evolving
   public abstract int getVirtualCores();
-  
+
   /**
    * Set <em>number of virtual cpu cores</em> of the resource.
    * 
@@ -225,6 +224,27 @@ public abstract class Resource implements Comparable<Resource> {
   }
 
   /**
+   * Get ResourceInformation for a specified resource from a given index.
+   *
+   * @param index
+   *          of the resource
+   * @return the ResourceInformation object for the resource
+   * @throws ResourceNotFoundException
+   *           if the resource can't be found
+   */
+  @Public
+  @Evolving
+  public ResourceInformation getResourceInformation(int index)
+      throws ResourceNotFoundException {
+    ResourceInformation[] resources = getResources();
+    if (index < 0 || index >= resources.length) {
+      throw new ResourceNotFoundException("Unknown resource at index '" + index
+          + "'. Vaid resources are: " + Arrays.toString(resources));
+    }
+    return resources[index];
+  }
+
+  /**
    * Get the value for a specified resource. No information about the units is
    * returned.
    *
@@ -264,6 +284,29 @@ public abstract class Resource implements Comparable<Resource> {
   }
 
   /**
+   * Set the ResourceInformation object for a particular resource.
+   *
+   * @param index
+   *          the resource index for which the ResourceInformation is provided
+   * @param resourceInformation
+   *          ResourceInformation object
+   * @throws ResourceNotFoundException
+   *           if the resource is not found
+   */
+  @Public
+  @Evolving
+  public void setResourceInformation(int index,
+      ResourceInformation resourceInformation)
+      throws ResourceNotFoundException {
+    ResourceInformation[] resources = getResources();
+    if (index < 0 || index >= resources.length) {
+      throw new ResourceNotFoundException("Unknown resource at index '" + index
+          + "'. Valid resources are " + Arrays.toString(resources));
+    }
+    ResourceInformation.copy(resourceInformation, resources[index]);
+  }
+
+  /**
    * Set the value of a resource in the ResourceInformation object. The unit of
    * the value is assumed to be the one in the ResourceInformation object.
    *
@@ -286,6 +329,29 @@ public abstract class Resource implements Comparable<Resource> {
 
     ResourceInformation storedResourceInfo = getResourceInformation(resource);
     storedResourceInfo.setValue(value);
+  }
+
+  /**
+   * Set the value of a resource in the ResourceInformation object. The unit of
+   * the value is assumed to be the one in the ResourceInformation object.
+   *
+   * @param index
+   *          the resource index for which the value is provided.
+   * @param value
+   *          the value to set
+   * @throws ResourceNotFoundException
+   *           if the resource is not found
+   */
+  @Public
+  @Evolving
+  public void setResourceValue(int index, long value)
+      throws ResourceNotFoundException {
+    ResourceInformation[] resources = getResources();
+    if (index < 0 || index >= resources.length) {
+      throw new ResourceNotFoundException("Unknown resource at index '" + index
+          + "'. Valid resources are " + Arrays.toString(resources));
+    }
+    resources[index].setValue(value);
   }
 
   @Override
