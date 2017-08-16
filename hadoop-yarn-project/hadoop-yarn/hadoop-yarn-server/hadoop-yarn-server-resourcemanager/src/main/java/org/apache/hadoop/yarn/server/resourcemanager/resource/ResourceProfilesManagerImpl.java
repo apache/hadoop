@@ -56,6 +56,7 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   private static final String[] MANDATORY_PROFILES =
       { DEFAULT_PROFILE, MINIMUM_PROFILE, MAXIMUM_PROFILE };
 
+  @Override
   public void init(Configuration config) throws IOException {
     conf = config;
     loadProfiles();
@@ -146,28 +147,34 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
     return resource;
   }
 
+  @Override
   public Resource getProfile(String profile) {
     return Resources.clone(profiles.get(profile));
   }
 
+  @Override
   public Map<String, Resource> getResourceProfiles() {
     return Collections.unmodifiableMap(profiles);
   }
 
+  @Override
   @VisibleForTesting
   public void reloadProfiles() throws IOException {
     profiles.clear();
     loadProfiles();
   }
 
+  @Override
   public Resource getDefaultProfile() {
     return getProfile(DEFAULT_PROFILE);
   }
 
+  @Override
   public Resource getMinimumProfile() {
     return getProfile(MINIMUM_PROFILE);
   }
 
+  @Override
   public Resource getMaximumProfile() {
     return getProfile(MAXIMUM_PROFILE);
   }

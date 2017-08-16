@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resource;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 
@@ -28,19 +30,51 @@ import java.util.Map;
  * Interface for the resource profiles manager. Provides an interface to get
  * the list of available profiles and some helper functions.
  */
+@Public
+@Unstable
 public interface ResourceProfilesManager {
 
+  /**
+   * Method to handle all initialization steps for ResourceProfilesManager.
+   * @param config Configuration object
+   * @throws IOException when invalid resource profile names are loaded
+   */
   void init(Configuration config) throws IOException;
 
+  /**
+   * Get the resource capability associated with given profile name.
+   * @param profile name of resource profile
+   * @return resource capability for given profile
+   */
   Resource getProfile(String profile);
 
+  /**
+   * Get all supported resource profiles.
+   * @return a map of resource objects associated with each profile
+   */
   Map<String, Resource> getResourceProfiles();
 
+  /**
+   * Reload profiles based on updated configuration.
+   * @throws IOException when invalid resource profile names are loaded
+   */
   void reloadProfiles() throws IOException;
 
+  /**
+   * Get default supported resource profile.
+   * @return resource object which is default
+   */
   Resource getDefaultProfile();
 
+  /**
+   * Get minimum supported resource profile.
+   * @return resource object which is minimum
+   */
   Resource getMinimumProfile();
 
+  /**
+   * Get maximum supported resource profile.
+   * @return resource object which is maximum
+   */
   Resource getMaximumProfile();
 }
