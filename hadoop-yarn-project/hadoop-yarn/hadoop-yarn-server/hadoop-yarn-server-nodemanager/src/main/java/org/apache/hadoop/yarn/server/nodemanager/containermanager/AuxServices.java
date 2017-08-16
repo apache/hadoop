@@ -244,7 +244,8 @@ public class AuxServices extends AbstractService
         for (AuxiliaryService serv : serviceMap.values()) {
           try {
             serv.initializeContainer(new ContainerInitializationContext(
-                event.getUser(), event.getContainer().getContainerId(),
+                event.getContainer().getUser(),
+                event.getContainer().getContainerId(),
                 event.getContainer().getResource(), event.getContainer()
                 .getContainerTokenIdentifier().getContainerType()));
           } catch (Throwable th) {
