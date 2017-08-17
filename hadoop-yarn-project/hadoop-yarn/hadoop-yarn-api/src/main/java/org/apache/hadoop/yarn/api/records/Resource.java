@@ -65,7 +65,7 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores) {
-    if (ResourceUtils.getResourceTypesArray().length > 2) {
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
       Resource ret = Records.newRecord(Resource.class);
       ret.setMemorySize(memory);
       ret.setVirtualCores(vCores);
@@ -77,7 +77,7 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(long memory, int vCores) {
-    if (ResourceUtils.getResourceTypesArray().length > 2) {
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
       Resource ret = Records.newRecord(Resource.class);
       ret.setMemorySize(memory);
       ret.setVirtualCores(vCores);
@@ -91,7 +91,7 @@ public abstract class Resource implements Comparable<Resource> {
   public static Resource newInstance(Resource resource) {
     Resource ret = Resource.newInstance(resource.getMemorySize(),
         resource.getVirtualCores());
-    if (ResourceUtils.getResourceTypesArray().length > 2) {
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
       Resource.copy(resource, ret);
     }
     return ret;
