@@ -33,7 +33,6 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -441,7 +440,7 @@ public class ECAdmin extends Configured implements Tool {
 
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
-        HashMap<String, String> codecs =
+        Map<String, String> codecs =
             dfs.getAllErasureCodingCodecs();
         if (codecs.isEmpty()) {
           System.out.println("No erasure coding codecs are supported on the " +

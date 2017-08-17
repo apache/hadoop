@@ -26,6 +26,7 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -1760,11 +1761,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  public Map<String, String> getErasureCodingCodecs() throws IOException {
     try {
       GetErasureCodingCodecsResponseProto response = rpcProxy
           .getErasureCodingCodecs(null, VOID_GET_EC_CODEC_REQUEST);
-      HashMap<String, String> ecCodecs = new HashMap<String, String>();
+      Map<String, String> ecCodecs = new HashMap<>();
       for (CodecProto codec : response.getCodecList()) {
         ecCodecs.put(codec.getCodec(), codec.getCoders());
       }

@@ -7255,14 +7255,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get available erasure coding codecs and corresponding coders.
    */
-  HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  Map<String, String> getErasureCodingCodecs() throws IOException {
     final String operationName = "getErasureCodingCodecs";
     boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      final HashMap<String, String> ret =
+      final Map<String, String> ret =
           FSDirErasureCodingOp.getErasureCodingCodecs(this);
       success = true;
       return ret;

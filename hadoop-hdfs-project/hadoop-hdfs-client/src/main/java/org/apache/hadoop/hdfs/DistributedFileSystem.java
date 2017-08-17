@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -2585,7 +2584,7 @@ public class DistributedFileSystem extends FileSystem {
    * @return all erasure coding codecs and coders supported by this file system.
    * @throws IOException
    */
-  public HashMap<String, String> getAllErasureCodingCodecs()
+  public Map<String, String> getAllErasureCodingCodecs()
       throws IOException {
     return dfs.getErasureCodingCodecs();
   }
