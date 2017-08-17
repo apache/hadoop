@@ -17,12 +17,18 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Arrays;
 
 /**
  * A {@link ResourceCalculator} which uses the concept of
@@ -48,6 +54,7 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 @Private
 @Unstable
 public class DominantResourceCalculator extends ResourceCalculator {
+  static final Log LOG = LogFactory.getLog(DominantResourceCalculator.class);
 
   public DominantResourceCalculator() {
   }
@@ -92,7 +99,6 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public int compare(Resource clusterResource, Resource lhs, Resource rhs,
       boolean singleType) {
-    
     if (lhs.equals(rhs)) {
       return 0;
     }
@@ -101,55 +107,232 @@ public class DominantResourceCalculator extends ResourceCalculator {
       return this.compare(lhs, rhs);
     }
 
-    float l = getResourceAsValue(clusterResource, lhs, true);
-    float r = getResourceAsValue(clusterResource, rhs, true);
+    // We have to calculate the shares for all resource types for both
+    // resources and then look for which resource has the biggest
+    // share overall.
+    ResourceInformation[] clusterRes = clusterResource.getResources();
+    // If array creation shows up as a time sink, these arrays could be cached
+    // because they're always the same length.
+    double[] lhsShares = new double[clusterRes.length];
+    double[] rhsShares = new double[clusterRes.length];
+    double diff;
 
-    if (l < r) {
-      return -1;
-    } else if (l > r) {
-      return 1;
-    } else if (!singleType) {
-      l = getResourceAsValue(clusterResource, lhs, false);
-      r = getResourceAsValue(clusterResource, rhs, false);
+    try {
+      if (singleType) {
+        double[] max = new double[2];
 
-      if (l < r) {
-        return -1;
-      } else if (l > r) {
-        return 1;
+        calculateShares(clusterRes, lhs, rhs, lhsShares, rhsShares, max);
+
+        diff = max[0] - max[1];
+      } else if (clusterRes.length == 2) {
+        // Special case to handle the common scenario of only CPU and memory
+        // so the we can optimize for performance
+        diff = calculateSharesForMandatoryResources(clusterRes, lhs, rhs,
+            lhsShares, rhsShares);
+      } else {
+        calculateShares(clusterRes, lhs, rhs, lhsShares, rhsShares);
+
+        Arrays.sort(lhsShares);
+        Arrays.sort(rhsShares);
+
+        diff = compareShares(lhsShares, rhsShares);
       }
+    } catch (ArrayIndexOutOfBoundsException ex) {
+      StringWriter out = new StringWriter(); // No need to close a StringWriter
+      ex.printStackTrace(new PrintWriter(out));
+
+      LOG.error("A problem was encountered while calculating resource "
+          + "availability that should not occur under normal circumstances. "
+          + "Please report this error to the Hadoop community by opening a "
+          + "JIRA ticket at http://issues.apache.org/jira and including the "
+          + "following information:\n* Exception encountered: " + out + "* "
+          + "Cluster resources: " + Arrays.toString(clusterRes) + "\n* "
+          + "LHS resource: " + Arrays.toString(lhs.getResources()) + "\n* "
+          + "RHS resource: " + Arrays.toString(rhs.getResources()));
+      LOG.error("The resource manager is in an inconsistent state. It is safe "
+          + "for the resource manager to be restarted as the error encountered "
+          + "should be transitive. If high availability is enabled, failing "
+          + "over to a standby resource manager is also safe.");
+      throw new YarnRuntimeException("A problem was encountered while "
+          + "calculating resource availability that should not occur under "
+          + "normal circumstances. Please see the log for more information.",
+          ex);
     }
 
-    return 0;
+    return (int) Math.signum(diff);
   }
 
   /**
-   * Use 'dominant' for now since we only have 2 resources - gives us a slight
-   * performance boost.
-   * <p></p>
-   * Once we add more resources, we'll need a more complicated (and slightly
-   * less performant algorithm).
+   * Calculate the shares for {@code first} and {@code second} according to
+   * {@code clusterRes}, and store the results in {@code firstShares} and
+   * {@code secondShares}, respectively. All parameters must be non-null.
+   * @param clusterRes the array of ResourceInformation instances that
+   * represents the cluster's maximum resources
+   * @param first the first resource to compare
+   * @param second the second resource to compare
+   * @param firstShares an array to store the shares for the first resource
+   * @param secondShares an array to store the shares for the second resource
+   * @return -1.0, 0.0, or 1.0, depending on whether the max share of the first
+   * resource is less than, equal to, or greater than the max share of the
+   * second resource, respectively
+   * @throws NullPointerException if any parameter is null
    */
-  protected float getResourceAsValue(Resource clusterResource,
-      Resource resource, boolean dominant) {
+  private void calculateShares(ResourceInformation[] clusterRes, Resource first,
+      Resource second, double[] firstShares, double[] secondShares) {
+    ResourceInformation[] firstRes = first.getResources();
+    ResourceInformation[] secondRes = second.getResources();
 
-    float min = Float.MAX_VALUE;
-    float max = 0.0f;
-    int maxLength = ResourceUtils.getResourceTypesArray().length;
-    for (int i = 0; i < maxLength; i++) {
-      ResourceInformation clusterResourceResourceInformation = clusterResource
-          .getResourceInformation(i);
-      ResourceInformation resourceInformation = resource
-          .getResourceInformation(i);
-      long resourceValue = UnitsConversionUtil.convert(
-          resourceInformation.getUnits(),
-          clusterResourceResourceInformation.getUnits(),
-          resourceInformation.getValue());
-      float tmp = (float) resourceValue
-          / (float) clusterResourceResourceInformation.getValue();
-      min = min < tmp ? min : tmp;
-      max = max > tmp ? max : tmp;
+    for (int i = 0; i < clusterRes.length; i++) {
+      firstShares[i] = calculateShare(clusterRes[i], firstRes[i]);
+      secondShares[i] = calculateShare(clusterRes[i], secondRes[i]);
     }
-    return (dominant) ? max : min;
+  }
+
+  /**
+   * Calculate the shares for {@code first} and {@code second} according to
+   * {@code clusterRes}, and store the results in {@code firstShares} and
+   * {@code secondShares}, respectively. All parameters must be non-null.
+   * This method assumes that the length of {@code clusterRes} is exactly 2 and
+   * makes performance optimizations based on that assumption.
+   * @param clusterRes the array of ResourceInformation instances that
+   * represents the cluster's maximum resources
+   * @param first the first resource to compare
+   * @param second the second resource to compare
+   * @param firstShares an array to store the shares for the first resource
+   * @param secondShares an array to store the shares for the second resource
+   * @return -1.0, 0.0, or 1.0, depending on whether the max share of the first
+   * resource is less than, equal to, or greater than the max share of the
+   * second resource, respectively
+   * @throws NullPointerException if any parameter is null
+   */
+  private int calculateSharesForMandatoryResources(
+      ResourceInformation[] clusterRes, Resource first, Resource second,
+      double[] firstShares, double[] secondShares) {
+    ResourceInformation[] firstRes = first.getResources();
+    ResourceInformation[] secondRes = second.getResources();
+    int firstDom = 0;
+    int secondDom = 0;
+    int firstSub = 0;
+    int secondSub = 0;
+
+    for (int i = 0; i < clusterRes.length; i++) {
+      firstShares[i] = calculateShare(clusterRes[i], firstRes[i]);
+      secondShares[i] = calculateShare(clusterRes[i], secondRes[i]);
+
+      if (firstShares[i] > firstShares[firstDom]) {
+        firstDom = i;
+      }
+
+      if (firstShares[i] < firstShares[firstSub]) {
+        firstSub = i;
+      }
+
+      if (secondShares[i] > secondShares[secondDom]) {
+        secondDom = i;
+      }
+
+      if (secondShares[i] < secondShares[secondSub]) {
+        secondSub = i;
+      }
+    }
+
+    if (firstShares[firstDom] > secondShares[secondDom]) {
+      return 1;
+    } else if (firstShares[firstDom] < secondShares[secondDom]) {
+      return -1;
+    } else if (firstShares[firstSub] > secondShares[secondSub]) {
+      return 1;
+    } else if (firstShares[firstSub] < secondShares[secondSub]) {
+      return -1;
+    } else {
+      return 0;
+    }
+  }
+
+  /**
+   * Calculate the shares for {@code first} and {@code second} according to
+   * {@code clusterRes}, and store the results in {@code firstShares} and
+   * {@code secondShares}, respectively. {@code max} will be populated with
+   * the max shares from {@code firstShare} and {@code secondShare} in the
+   * first and second indices, respectively. All parameters must be non-null,
+   * and {@code max} must have a length of at least 2.
+   * @param clusterRes the array of ResourceInformation instances that
+   * represents the cluster's maximum resources
+   * @param first the first resource to compare
+   * @param second the second resource to compare
+   * @param firstShares an array to store the shares for the first resource
+   * @param secondShares an array to store the shares for the second resource
+   * @param max an array to store the max shares of the first and second
+   * resources
+   * @return -1.0, 0.0, or 1.0, depending on whether the max share of the first
+   * resource is less than, equal to, or greater than the max share of the
+   * second resource, respectively
+   * @throws NullPointerException if any parameter is null
+   * @throws ArrayIndexOutOfBoundsException if the length of {@code max} is
+   * less than 2
+   */
+  private void calculateShares(ResourceInformation[] clusterRes, Resource first,
+      Resource second, double[] firstShares, double[] secondShares,
+      double[] max) {
+    ResourceInformation[] firstRes = first.getResources();
+    ResourceInformation[] secondRes = second.getResources();
+
+    max[0] = 0.0;
+    max[1] = 0.0;
+
+    for (int i = 0; i < clusterRes.length; i++) {
+      firstShares[i] = calculateShare(clusterRes[i], firstRes[i]);
+      secondShares[i] = calculateShare(clusterRes[i], secondRes[i]);
+
+      if (firstShares[i] > max[0]) {
+        max[0] = firstShares[i];
+      }
+
+      if (secondShares[i] > max[1]) {
+        max[1] = secondShares[i];
+      }
+    }
+  }
+
+  /**
+   * Calculate the share for a resource type.
+   * @param clusterRes the resource type for the cluster maximum
+   * @param res the resource type for which to calculate the share
+   * @return the share
+   */
+  private double calculateShare(ResourceInformation clusterRes,
+      ResourceInformation res) {
+      // Convert the resources' units into the cluster resource's units
+    long value = UnitsConversionUtil.convert(res.getUnits(),
+          clusterRes.getUnits(), res.getValue());
+
+    return (double) value / clusterRes.getValue();
+  }
+
+  /**
+   * Compare the two shares arrays by comparing the largest elements, then the
+   * next largest if the previous were equal, etc. The share arrays must be
+   * sorted in ascending order.
+   * @param lhsShares the first share array to compare
+   * @param rhsShares the second share array to compare
+   * @return a number that is less than 0 if the first array is less than the
+   * second, equal to 0 if the arrays are equal, and greater than 0 if the
+   * first array is greater than the second
+   */
+  private double compareShares(double[] lhsShares, double[] rhsShares) {
+    double diff = 0.0;
+
+    // lhsShares and rhsShares must necessarily have the same length, because
+    // everyone uses the same master resource list.
+    for (int i = lhsShares.length - 1; i >= 0; i--) {
+      diff = lhsShares[i] - rhsShares[i];
+
+      if (diff != 0.0) {
+        break;
+      }
+    }
+
+    return diff;
   }
 
   @Override
@@ -175,9 +358,19 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public float divide(Resource clusterResource,
       Resource numerator, Resource denominator) {
-    return
-        getResourceAsValue(clusterResource, numerator, true) /
-        getResourceAsValue(clusterResource, denominator, true);
+    ResourceInformation[] clusterRes = clusterResource.getResources();
+    // We have to provide the calculateShares() method with somewhere to store
+    // the shares. We don't actually need these shares afterwards.
+    double[] numeratorShares = new double[clusterRes.length];
+    double[] denominatorShares = new double[clusterRes.length];
+    // We also have to provide a place for calculateShares() to store the max
+    // shares so that we can use them.
+    double[] max = new double[2];
+
+    calculateShares(clusterRes, numerator, denominator, numeratorShares,
+        denominatorShares, max);
+
+    return (float) (max[0] / max[1]);
   }
 
   @Override
