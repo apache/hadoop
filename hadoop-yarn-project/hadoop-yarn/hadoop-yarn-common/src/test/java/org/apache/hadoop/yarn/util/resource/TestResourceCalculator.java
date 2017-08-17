@@ -24,7 +24,7 @@ import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,13 +44,18 @@ public class TestResourceCalculator {
         { new DominantResourceCalculator() } });
   }
 
-  @BeforeClass
-  public static void setup() {
+  @Before
+  public void setupNoExtraResource() {
+    // This has to run before each test because we don't know when
+    // setupExtraResource() might be called
+    ResourceUtils.resetResourceTypes(new Configuration());
+  }
+
+  private static void setupExtraResource() {
     Configuration conf = new Configuration();
 
     conf.set(YarnConfiguration.RESOURCE_TYPES, "test");
     ResourceUtils.resetResourceTypes(conf);
-    ResourceUtils.getResourceTypes();
   }
 
   public TestResourceCalculator(ResourceCalculator rs) {
@@ -86,8 +91,14 @@ public class TestResourceCalculator {
     }
   }
 
-  private Resource newResource(long memory, int cpu, int test) {
+  private Resource newResource(long memory, int cpu) {
     Resource res = Resource.newInstance(memory, cpu);
+
+    return res;
+  }
+
+  private Resource newResource(long memory, int cpu, int test) {
+    Resource res = newResource(memory, cpu);
 
     res.setResourceValue("test", test);
 
@@ -123,28 +134,48 @@ public class TestResourceCalculator {
   }
 
   @Test
-  public void testCompare2() {
-    // Keep cluster resources even so that the numbers are easy to understand
-    Resource cluster = Resource.newInstance(4, 4);
+  public void testCompareWithOnlyMandatory() {
+    // This test is necessary because there are optimizations that are only
+    // triggered when only the mandatory resources are configured.
 
-    assertComparison(cluster, Resource.newInstance(1, 1),
-        Resource.newInstance(1, 1), 0);
-    assertComparison(cluster, Resource.newInstance(0, 0),
-        Resource.newInstance(0, 0), 0);
-    assertComparison(cluster, Resource.newInstance(2, 2),
-        Resource.newInstance(1, 1), 1);
-    assertComparison(cluster, Resource.newInstance(2, 2),
-        Resource.newInstance(0, 0), 1);
+    // Keep cluster resources even so that the numbers are easy to understand
+    Resource cluster = newResource(4, 4);
+
+    assertComparison(cluster, newResource(1, 1), newResource(1, 1), 0);
+    assertComparison(cluster, newResource(0, 0), newResource(0, 0), 0);
+    assertComparison(cluster, newResource(2, 2), newResource(1, 1), 1);
+    assertComparison(cluster, newResource(2, 2), newResource(0, 0), 1);
 
     if (resourceCalculator instanceof DefaultResourceCalculator) {
-      testCompareDefault2(cluster);
+      testCompareDefaultWithOnlyMandatory(cluster);
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
-      testCompareDominant2(cluster);
+      testCompareDominantWithOnlyMandatory(cluster);
     }
+  }
+
+  private void testCompareDefaultWithOnlyMandatory(Resource cluster) {
+    assertComparison(cluster, newResource(1, 1), newResource(1, 1), 0);
+    assertComparison(cluster, newResource(1, 2), newResource(1, 1), 0);
+    assertComparison(cluster, newResource(1, 1), newResource(1, 0), 0);
+    assertComparison(cluster, newResource(2, 1), newResource(1, 1), 1);
+    assertComparison(cluster, newResource(2, 1), newResource(1, 2), 1);
+    assertComparison(cluster, newResource(2, 1), newResource(1, 0), 1);
+  }
+
+  private void testCompareDominantWithOnlyMandatory(Resource cluster) {
+    assertComparison(cluster, newResource(2, 1), newResource(2, 1), 0);
+    assertComparison(cluster, newResource(2, 1), newResource(1, 2), 0);
+    assertComparison(cluster, newResource(2, 1), newResource(1, 1), 1);
+    assertComparison(cluster, newResource(2, 2), newResource(2, 1), 1);
+    assertComparison(cluster, newResource(2, 2), newResource(1, 2), 1);
+    assertComparison(cluster, newResource(3, 1), newResource(3, 0), 1);
   }
 
   @Test
   public void testCompare() {
+    // Test with 3 resources
+    setupExtraResource();
+
     // Keep cluster resources even so that the numbers are easy to understand
     Resource cluster = newResource(4L, 4, 4);
 
@@ -158,36 +189,6 @@ public class TestResourceCalculator {
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
       testCompareDominant(cluster);
     }
-  }
-
-  private void testCompareDefault2(Resource cluster) {
-    assertComparison(cluster, Resource.newInstance(1, 1),
-        Resource.newInstance(1, 1), 0);
-    assertComparison(cluster, Resource.newInstance(1, 2),
-        Resource.newInstance(1, 1), 0);
-    assertComparison(cluster, Resource.newInstance(1, 1),
-        Resource.newInstance(1, 0), 0);
-    assertComparison(cluster, Resource.newInstance(2, 1),
-        Resource.newInstance(1, 1), 1);
-    assertComparison(cluster, Resource.newInstance(2, 1),
-        Resource.newInstance(1, 2), 1);
-    assertComparison(cluster, Resource.newInstance(2, 1),
-        Resource.newInstance(1, 0), 1);
-  }
-
-  private void testCompareDominant2(Resource cluster) {
-    assertComparison(cluster, Resource.newInstance(2, 1),
-        Resource.newInstance(2, 1), 0);
-    assertComparison(cluster, Resource.newInstance(2, 1),
-        Resource.newInstance(1, 2), 0);
-    assertComparison(cluster, Resource.newInstance(2, 1),
-        Resource.newInstance(1, 1), 1);
-    assertComparison(cluster, Resource.newInstance(2, 2),
-        Resource.newInstance(2, 1), 1);
-    assertComparison(cluster, Resource.newInstance(2, 2),
-        Resource.newInstance(1, 2), 1);
-    assertComparison(cluster, Resource.newInstance(3, 1),
-        Resource.newInstance(3, 0), 1);
   }
 
   private void testCompareDefault(Resource cluster) {
