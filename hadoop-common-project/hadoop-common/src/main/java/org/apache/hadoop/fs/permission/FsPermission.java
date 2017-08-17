@@ -163,7 +163,7 @@ public class FsPermission implements Writable, Serializable,
    */
   public static FsPermission read(DataInput in) throws IOException {
     FsPermission p = new FsPermission();
-    p.readFields(in);
+    p.fromShort(in.readShort());
     return p;
   }
 

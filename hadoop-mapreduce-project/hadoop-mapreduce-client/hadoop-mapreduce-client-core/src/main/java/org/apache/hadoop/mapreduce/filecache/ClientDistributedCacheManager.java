@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
@@ -293,7 +292,6 @@ public class ClientDistributedCacheManager {
   private static boolean checkPermissionOfOther(FileSystem fs, Path path,
       FsAction action, Map<URI, FileStatus> statCache) throws IOException {
     FileStatus status = getFileStatus(fs, path.toUri(), statCache);
-    FsPermission perms = status.getPermission();
 
     // Encrypted files are always treated as private. This stance has two
     // important side effects.  The first is that the encrypted files will be
@@ -302,8 +300,8 @@ public class ClientDistributedCacheManager {
     // world readable permissions that is stored in an encryption zone from
     // being localized as a publicly shared file with world readable
     // permissions.
-    if (!perms.getEncryptedBit()) {
-      FsAction otherAction = perms.getOtherAction();
+    if (!status.isEncrypted()) {
+      FsAction otherAction = status.getPermission().getOtherAction();
       if (otherAction.implies(action)) {
         return true;
       }
