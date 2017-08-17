@@ -63,6 +63,11 @@ public class BaseResource extends Resource {
   protected ResourceInformation[] resources = null;
   protected ResourceInformation[] readOnlyResources = null;
 
+  // Number of mandatory resources, this is added to avoid invoke
+  // MandatoryResources.values().length, since values() internally will
+  // copy array, etc.
+  private static final int NUM_MANDATORY_RESOURCES = 2;
+
   protected enum MandatoryResources {
     MEMORY(0), VCORES(1);
 
@@ -86,9 +91,8 @@ public class BaseResource extends Resource {
         ResourceInformation.MEMORY_MB.getUnits(), memory);
     this.vcoresResInfo = ResourceInformation.newInstance(VCORES, "", vcores);
 
-    resources = new ResourceInformation[MandatoryResources.values().length];
-    readOnlyResources = new ResourceInformation[MandatoryResources
-        .values().length];
+    resources = new ResourceInformation[NUM_MANDATORY_RESOURCES];
+    readOnlyResources = new ResourceInformation[NUM_MANDATORY_RESOURCES];
     resources[MandatoryResources.MEMORY.id] = memoryResInfo;
     resources[MandatoryResources.VCORES.id] = vcoresResInfo;
     readOnlyResources = Arrays.copyOf(resources, resources.length);
