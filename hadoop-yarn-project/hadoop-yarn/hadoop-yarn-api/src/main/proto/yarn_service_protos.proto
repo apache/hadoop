@@ -295,6 +295,13 @@ message GetResourceProfileResponseProto {
   required ResourceProto resources = 1;
 }
 
+message GetAllResourceTypeInfoRequestProto {
+}
+
+message GetAllResourceTypeInfoResponseProto {
+  repeated ResourceTypeInfoProto resource_type_info = 1;
+}
+
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////
 //////////////////////////////////////////////////////

@@ -67,6 +67,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -625,5 +627,18 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   GetResourceProfileResponse getResourceProfile(
       GetResourceProfileRequest request) throws YarnException, IOException;
 
-
+  /**
+   * <p>
+   * The interface to get the details for a specific resource profile.
+   * </p>
+   * @param request request to get the details of a resource profile
+   * @return Response containing the details for a particular resource profile
+   * @throws YarnException if resource profiles are not enabled on the RM or
+   *         the profile cannot be found
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetAllResourceTypeInfoResponse getResourceTypeInfo(
+      GetAllResourceTypeInfoRequest request) throws YarnException, IOException;
 }

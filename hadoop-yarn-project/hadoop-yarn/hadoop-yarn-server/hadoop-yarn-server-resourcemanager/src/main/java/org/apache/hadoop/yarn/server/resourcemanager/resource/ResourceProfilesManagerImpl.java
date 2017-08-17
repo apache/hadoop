@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -32,11 +33,15 @@ import org.codehaus.jackson.map.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
 
@@ -44,6 +49,8 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
       LogFactory.getLog(ResourceProfilesManagerImpl.class);
 
   private final Map<String, Resource> profiles = new ConcurrentHashMap<>();
+  private List<ResourceTypeInfo> resourceTypeInfo =
+      new ArrayList<ResourceTypeInfo>();
   private Configuration conf;
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
@@ -53,13 +60,41 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   public static final String MINIMUM_PROFILE = "minimum";
   public static final String MAXIMUM_PROFILE = "maximum";
 
+  protected final ReentrantReadWriteLock.ReadLock readLock;
+  protected final ReentrantReadWriteLock.WriteLock writeLock;
+
   private static final String[] MANDATORY_PROFILES =
       { DEFAULT_PROFILE, MINIMUM_PROFILE, MAXIMUM_PROFILE };
 
-  @Override
+  public ResourceProfilesManagerImpl() {
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    readLock = lock.readLock();
+    writeLock = lock.writeLock();
+  }
+
   public void init(Configuration config) throws IOException {
     conf = config;
     loadProfiles();
+
+    // Load resource types, this should be done even if resource profile is
+    // disabled, since we have mandatory resource types like vcores/memory.
+    loadResourceTypes();
+  }
+
+  private void loadResourceTypes() {
+    // Add all resource types
+    try {
+      writeLock.lock();
+      Collection<ResourceInformation> resourcesInfo = ResourceUtils
+          .getResourceTypes().values();
+      for (ResourceInformation resourceInfo : resourcesInfo) {
+        resourceTypeInfo
+            .add(ResourceTypeInfo.newInstance(resourceInfo.getName(),
+                resourceInfo.getUnits(), resourceInfo.getResourceType()));
+      }
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   private void loadProfiles() throws IOException {
@@ -184,5 +219,14 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
     Long resourceValue =
         Long.valueOf(value.substring(0, value.length() - units.length()));
     return ResourceInformation.newInstance(name, units, resourceValue);
+  }
+
+  public List<ResourceTypeInfo> getAllResourceTypeInfo() {
+    try {
+      readLock.lock();
+      return Collections.unmodifiableList(resourceTypeInfo);
+    } finally {
+      readLock.unlock();
+    }
   }
 }
