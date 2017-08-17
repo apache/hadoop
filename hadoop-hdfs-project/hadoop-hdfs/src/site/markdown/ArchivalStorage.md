@@ -108,7 +108,7 @@ Following 2 options will allow users to move the blocks based on new policy set.
 When user changes the storage policy on a file/directory, user can call `HdfsAdmin` API `satisfyStoragePolicy()` to move the blocks as per the new policy set.
 The SPS daemon thread runs along with namenode and periodically scans for the storage mismatches between new policy set and the physical blocks placed. This will only track the files/directories for which user invoked satisfyStoragePolicy. If SPS identifies some blocks to be moved for a file, then it will schedule block movement tasks to datanodes. A Coordinator DataNode(C-DN) will track all block movements associated to a file and notify to namenode about movement success/failure. If there are any failures in movement, the SPS will re-attempt by sending new block movement task.
 
-SPS can be activated and deactivated dynamically without restarting the Namenode.
+SPS can be enabled and disabled dynamically without restarting the Namenode.
 
 Detailed design documentation can be found at [Storage Policy Satisfier(SPS) (HDFS-10285)](https://issues.apache.org/jira/browse/HDFS-10285)
 
@@ -125,8 +125,8 @@ Detailed design documentation can be found at [Storage Policy Satisfier(SPS) (HD
 
 ####Configurations:
 
-*   **dfs.storage.policy.satisfier.activate** - Used to activate or deactivate SPS. Configuring true represents SPS is
-   activated and vice versa.
+*   **dfs.storage.policy.satisfier.enabled** - Used to enable or disable SPS. Configuring true represents SPS is
+   enabled and vice versa.
 
 *   **dfs.storage.policy.satisfier.recheck.timeout.millis** - A timeout to re-check the processed block storage movement
    command results from Co-ordinator Datanode.
@@ -153,7 +153,7 @@ Note that, when both -p and -f options are omitted, the default path is the root
 
 ####Administrator notes:
 
-`StoragePolicySatisfier` and `Mover tool` cannot run simultaneously. If a Mover instance is already triggered and running, SPS will be deactivated while starting. In that case, administrator should make sure, Mover execution finished and then activate SPS again. Similarly when SPS activated already, Mover cannot be run. If administrator is looking to run Mover tool explicitly, then he/she should make sure to deactivate SPS first and then run Mover. Please look at the commands section to know how to activate or deactivate SPS dynamically.
+`StoragePolicySatisfier` and `Mover tool` cannot run simultaneously. If a Mover instance is already triggered and running, SPS will be disabled while starting. In that case, administrator should make sure, Mover execution finished and then enable SPS again. Similarly when SPS enabled already, Mover cannot be run. If administrator is looking to run Mover tool explicitly, then he/she should make sure to disable SPS first and then run Mover. Please look at the commands section to know how to enable or disable SPS dynamically.
 
 Storage Policy Commands
 -----------------------
@@ -232,10 +232,10 @@ Check the running status of Storage Policy Satisfier in namenode. If it is runni
 
 * Command:
 
-        hdfs storagepolicies -isSPSRunning
+        hdfs storagepolicies -isSatisfierRunning
 
-### Activate or Deactivate SPS without restarting Namenode
-If administrator wants to activate or deactivate SPS feature while Namenode is running, first he/she needs to update the desired value(true or false) for the configuration item `dfs.storage.policy.satisfier.activate` in configuration file (`hdfs-site.xml`) and then run the following Namenode reconfig command
+### Enable or Disable SPS without restarting Namenode
+If administrator wants to enable or disable SPS feature while Namenode is running, first he/she needs to update the desired value(true or false) for the configuration item `dfs.storage.policy.satisfier.enabled` in configuration file (`hdfs-site.xml`) and then run the following Namenode reconfig command
 
 +       hdfs dfsadmin -reconfig namenode <host:ipc_port> start
 

@@ -40,7 +40,7 @@ public class BlocksStorageMovementResult {
    * IN_PROGRESS - If all or some of the blocks associated to track id are
    * still moving.
    */
-  public static enum Status {
+  public enum Status {
     SUCCESS, FAILURE, IN_PROGRESS;
   }
 

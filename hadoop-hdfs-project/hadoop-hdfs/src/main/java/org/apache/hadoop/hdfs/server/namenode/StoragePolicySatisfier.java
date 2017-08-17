@@ -138,7 +138,7 @@ public class StoragePolicySatisfier implements Runnable {
     }
     if (reconfigStart) {
       LOG.info("Starting StoragePolicySatisfier, as admin requested to "
-          + "activate it.");
+          + "start it.");
     } else {
       LOG.info("Starting StoragePolicySatisfier.");
     }
@@ -154,23 +154,21 @@ public class StoragePolicySatisfier implements Runnable {
   }
 
   /**
-   * Deactivates storage policy satisfier by stopping its services.
+   * Disables storage policy satisfier by stopping its services.
    *
-   * @param reconfig
-   *          true represents deactivating SPS service as requested by admin,
-   *          false otherwise
+   * @param forceStop
+   *          true represents that it should stop SPS service by clearing all
+   *          pending SPS work
    */
-  public synchronized void deactivate(boolean reconfig) {
+  public synchronized void disable(boolean forceStop) {
     isRunning = false;
     if (storagePolicySatisfierThread == null) {
       return;
     }
 
     storagePolicySatisfierThread.interrupt();
-    this.storageMovementsMonitor.deactivate();
-    if (reconfig) {
-      LOG.info("Stopping StoragePolicySatisfier, as admin requested to "
-          + "deactivate it.");
+    this.storageMovementsMonitor.stop();
+    if (forceStop) {
       this.clearQueuesWithNotification();
       addDropSPSWorkCommandsToAllDNs();
     } else {
@@ -183,7 +181,7 @@ public class StoragePolicySatisfier implements Runnable {
    */
   public synchronized void stopGracefully() {
     if (isRunning) {
-      deactivate(true);
+      disable(true);
     }
     this.storageMovementsMonitor.stopGracefully();
     if (storagePolicySatisfierThread == null) {

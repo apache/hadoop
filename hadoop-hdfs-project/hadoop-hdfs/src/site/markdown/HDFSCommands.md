@@ -616,7 +616,7 @@ Usage:
           [-getStoragePolicy -path <path>]
           [-unsetStoragePolicy -path <path>]
           [-satisfyStoragePolicy -path <path>]
-          [-isSPSRunning]
+          [-isSatisfierRunning]
           [-help <command-name>]
 
 Lists out all/Gets/sets/unsets storage policies. See the [HDFS Storage Policy Documentation](./ArchivalStorage.html) for more information.

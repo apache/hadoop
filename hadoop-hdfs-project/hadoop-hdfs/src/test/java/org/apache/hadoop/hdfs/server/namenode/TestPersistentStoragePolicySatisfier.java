@@ -96,6 +96,8 @@ public class TestPersistentStoragePolicySatisfier {
     conf.set(
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
         "3000");
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+        true);
     final int dnNumber = storageTypes.length;
     final short replication = 3;
     MiniDFSCluster.Builder clusterBuilder = new MiniDFSCluster.Builder(conf)
@@ -282,6 +284,8 @@ public class TestPersistentStoragePolicySatisfier {
     MiniDFSCluster haCluster = null;
     try {
       conf = new HdfsConfiguration();
+      conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+          true);
       haCluster = new MiniDFSCluster
           .Builder(conf)
           .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
@@ -376,7 +380,7 @@ public class TestPersistentStoragePolicySatisfier {
       fs.setStoragePolicy(testFile, ONE_SSD);
       fs.satisfyStoragePolicy(testFile);
 
-      cluster.getNamesystem().getBlockManager().deactivateSPS();
+      cluster.getNamesystem().getBlockManager().disableSPS();
 
       // Make sure satisfy xattr has been removed.
       DFSTestUtil.waitForXattrRemoved(testFileName,

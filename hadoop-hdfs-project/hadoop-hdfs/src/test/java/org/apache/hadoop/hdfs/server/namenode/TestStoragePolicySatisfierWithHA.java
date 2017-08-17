@@ -65,6 +65,8 @@ public class TestStoragePolicySatisfierWithHA {
 
   private void createCluster() throws IOException {
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+        true);
     startCluster(config, allDiskTypes, numOfDatanodes, storagesPerDatanode,
         capacity);
     dfs = cluster.getFileSystem(nnIndex);
@@ -131,15 +133,15 @@ public class TestStoragePolicySatisfierWithHA {
 
       try {
         cluster.getNameNode(0).reconfigurePropertyImpl(
-            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, "false");
-        Assert.fail("It's not allowed to activate or deactivate"
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "false");
+        Assert.fail("It's not allowed to enable or disable"
             + " StoragePolicySatisfier on Standby NameNode");
       } catch (ReconfigurationException e) {
         GenericTestUtils.assertExceptionContains("Could not change property "
-            + DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY
+            + DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY
             + " from 'true' to 'false'", e);
         GenericTestUtils.assertExceptionContains(
-            "Activating or deactivating storage policy satisfier service on "
+            "Enabling or disabling storage policy satisfier service on "
                 + "standby NameNode is not allowed", e.getCause());
       }
     } finally {

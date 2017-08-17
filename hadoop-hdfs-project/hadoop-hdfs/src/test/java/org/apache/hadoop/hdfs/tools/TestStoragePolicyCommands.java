@@ -48,6 +48,8 @@ public class TestStoragePolicyCommands {
   @Before
   public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+        true);
     StorageType[][] newtypes = new StorageType[][] {
         {StorageType.ARCHIVE, StorageType.DISK}};
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL)
@@ -164,7 +166,7 @@ public class TestStoragePolicyCommands {
         "File/Directory does not exist: /fooz");
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testStoragePolicySatisfierCommand() throws Exception {
     final String file = "/testStoragePolicySatisfierCommand";
     DFSTestUtil.createFile(fs, new Path(file), SIZE, REPL, 0);
@@ -185,18 +187,21 @@ public class TestStoragePolicyCommands {
         fs);
   }
 
-  @Test
-  public void testIsSPSRunningCommand() throws Exception {
-    final String file = "/testIsSPSRunningCommand";
+  @Test(timeout = 30000)
+  public void testIsSatisfierRunningCommand() throws Exception {
+    final String file = "/testIsSatisfierRunningCommand";
     DFSTestUtil.createFile(fs, new Path(file), SIZE, REPL, 0);
     final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
-    DFSTestUtil.toolRun(admin, "-isSPSRunning", 0, "yes");
+    DFSTestUtil.toolRun(admin, "-isSatisfierRunning", 0, "yes");
+
     cluster.getNameNode().reconfigureProperty(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, "false");
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "false");
     cluster.waitActive();
-    DFSTestUtil.toolRun(admin, "-isSPSRunning", 0, "no");
+
+    DFSTestUtil.toolRun(admin, "-isSatisfierRunning", 0, "no");
+
     // Test with unnecessary args
-    DFSTestUtil.toolRun(admin, "-isSPSRunning status", 1,
+    DFSTestUtil.toolRun(admin, "-isSatisfierRunning status", 1,
         "Can't understand arguments: ");
   }
 }

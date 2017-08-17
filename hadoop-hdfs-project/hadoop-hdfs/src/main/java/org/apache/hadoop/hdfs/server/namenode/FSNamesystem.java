@@ -1291,7 +1291,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             edekCacheLoaderDelay, edekCacheLoaderInterval);
       }
 
-      blockManager.activateSPS();
+      blockManager.startSPS();
     } finally {
       startingActiveService = false;
       blockManager.checkSafeMode();
@@ -1322,7 +1322,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       if (blockManager != null) {
-        blockManager.deactivateSPS();
+        blockManager.stopSPS(true);
       }
       stopSecretManager();
       leaseManager.stopMonitor();
@@ -2241,6 +2241,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void satisfyStoragePolicy(String src, boolean logRetryCache)
       throws IOException {
+    final String operationName = "satisfyStoragePolicy";
+    FileStatus auditStat;
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -2258,16 +2260,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           || !blockManager.getStoragePolicySatisfier().isRunning()) {
         throw new UnsupportedActionException(
             "Cannot request to satisfy storage policy "
-                + "when storage policy satisfier feature has been deactivated"
-                + " by admin. Seek for an admin help to activate it "
+                + "when storage policy satisfier feature has been disabled"
+                + " by admin. Seek for an admin help to enable it "
                 + "or use Mover tool.");
       }
-      FSDirSatisfyStoragePolicyOp.satisfyStoragePolicy(dir, blockManager, src,
-          logRetryCache);
+      auditStat = FSDirSatisfyStoragePolicyOp.satisfyStoragePolicy(
+          dir, blockManager, src, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
     } finally {
-      writeUnlock();
+      writeUnlock(operationName);
     }
     getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
   }
 
   /**

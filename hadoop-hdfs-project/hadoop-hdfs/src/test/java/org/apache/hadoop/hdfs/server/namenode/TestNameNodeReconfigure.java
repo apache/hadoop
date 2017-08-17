@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
@@ -44,8 +45,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT;
 
@@ -223,63 +224,99 @@ public class TestNameNodeReconfigure {
   }
 
   /**
-   * Tests activate/deactivate Storage Policy Satisfier dynamically.
+   * Tests enable/disable Storage Policy Satisfier dynamically when
+   * "dfs.storage.policy.enabled" feature is disabled.
+   *
+   * @throws ReconfigurationException
+   * @throws IOException
    */
   @Test(timeout = 30000)
-  public void testReconfigureStoragePolicySatisfierActivated()
+  public void testReconfigureSPSWithStoragePolicyDisabled()
+      throws ReconfigurationException, IOException {
+    // shutdown cluster
+    cluster.shutdown();
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+
+    final NameNode nameNode = cluster.getNameNode();
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+
+    // enable SPS
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+        "true");
+
+    // Since DFS_STORAGE_POLICY_ENABLED_KEY is disabled, SPS can't be enabled.
+    assertEquals("SPS shouldn't start as "
+        + DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY + " is disabled", false,
+            nameNode.getNamesystem().getBlockManager()
+            .isStoragePolicySatisfierRunning());
+
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY + " has wrong value",
+        true, nameNode.getConf()
+            .getBoolean(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+            DFS_STORAGE_POLICY_SATISFIER_ENABLED_DEFAULT));
+  }
+
+  /**
+   * Tests enable/disable Storage Policy Satisfier dynamically.
+   */
+  @Test(timeout = 30000)
+  public void testReconfigureStoragePolicySatisfierEnabled()
       throws ReconfigurationException {
     final NameNode nameNode = cluster.getNameNode();
 
-    verifySPSActivated(nameNode, DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
-        true);
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+        false);
     // try invalid values
     try {
-      nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+      nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
           "text");
       fail("ReconfigurationException expected");
     } catch (ReconfigurationException e) {
       GenericTestUtils.assertExceptionContains(
-          "For activating or deactivating storage policy satisfier, "
+          "For enabling or disabling storage policy satisfier, "
               + "we must pass true/false only",
           e.getCause());
     }
 
     // enable SPS
-    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         "true");
 
-    verifySPSActivated(nameNode, DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         true);
 
     // disable SPS
-    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         "false");
-    verifySPSActivated(nameNode, DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         false);
 
-    // revert to default
-    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    // enable SPS
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         "true");
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY + " has wrong value",
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY + " has wrong value",
         true, nameNode.getNamesystem().getBlockManager()
             .isStoragePolicySatisfierRunning());
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY + " has wrong value",
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY + " has wrong value",
         true, nameNode.getConf()
-            .getBoolean(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, false));
+            .getBoolean(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false));
   }
 
   /**
-   * Test to satisfy storage policy after deactivating storage policy satisfier.
+   * Test to satisfy storage policy after disabled storage policy satisfier.
    */
   @Test(timeout = 30000)
-  public void testSatisfyStoragePolicyAfterSatisfierDeactivated()
+  public void testSatisfyStoragePolicyAfterSatisfierDisabled()
       throws ReconfigurationException, IOException {
     final NameNode nameNode = cluster.getNameNode();
 
-    // deactivate SPS
-    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    // disable SPS
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         "false");
-    verifySPSActivated(nameNode, DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         false);
 
     Path filePath = new Path("/testSPS");
@@ -288,32 +325,32 @@ public class TestNameNodeReconfigure {
     fileSystem.setStoragePolicy(filePath, "COLD");
     try {
       fileSystem.satisfyStoragePolicy(filePath);
-      fail("Expected to fail, as storage policy feature has deactivated.");
+      fail("Expected to fail, as storage policy feature has disabled.");
     } catch (RemoteException e) {
       GenericTestUtils
           .assertExceptionContains("Cannot request to satisfy storage policy "
-              + "when storage policy satisfier feature has been deactivated"
-              + " by admin. Seek for an admin help to activate it "
+              + "when storage policy satisfier feature has been disabled"
+              + " by admin. Seek for an admin help to enable it "
               + "or use Mover tool.", e);
     }
 
     // revert to default
-    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
+    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         "true");
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY + " has wrong value",
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY + " has wrong value",
         true, nameNode.getNamesystem().getBlockManager()
             .isStoragePolicySatisfierRunning());
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY + " has wrong value",
+    assertEquals(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY + " has wrong value",
         true, nameNode.getConf()
-            .getBoolean(DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, false));
+            .getBoolean(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false));
   }
 
-  void verifySPSActivated(final NameNode nameNode, String property,
+  void verifySPSEnabled(final NameNode nameNode, String property,
       boolean expected) {
     assertEquals(property + " has wrong value", expected, nameNode
         .getNamesystem().getBlockManager().isStoragePolicySatisfierRunning());
     assertEquals(property + " has wrong value", expected, nameNode.getConf()
-        .getBoolean(property, DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_DEFAULT));
+        .getBoolean(property, DFS_STORAGE_POLICY_SATISFIER_ENABLED_DEFAULT));
   }
 
   @Test

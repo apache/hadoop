@@ -4496,13 +4496,13 @@
 </property>
 
 <property>
-  <name>dfs.storage.policy.satisfier.activate</name>
-  <value>true</value>
+  <name>dfs.storage.policy.satisfier.enabled</name>
+  <value>false</value>
   <description>
     If true, StoragePolicySatisfier will be started along with active namenode.
-    By default, StoragePolicySatisfier is activated.
-    Administrator can dynamically activate or deactivate StoragePolicySatisfier by using reconfiguration option.
-    Dynamic activation/deactivation option can be achieved in the following way.
+    By default, StoragePolicySatisfier is disabled.
+    Administrator can dynamically enable or disable StoragePolicySatisfier by using reconfiguration option.
+    Dynamic enabling/disabling option can be achieved in the following way.
     1. Edit/update this configuration property values in hdfs-site.xml
     2. Execute the reconfig command on hadoop command line prompt.
        For example:$hdfs -reconfig namenode nn_host:port start

@@ -136,7 +136,7 @@ public class BlockStorageMovementAttemptedItems {
    * Sets running flag to false. Also, this will interrupt monitor thread and
    * clear all the queued up tasks.
    */
-  public synchronized void deactivate() {
+  public synchronized void stop() {
     monitorRunning = false;
     if (timerThread != null) {
       timerThread.interrupt();
@@ -152,7 +152,7 @@ public class BlockStorageMovementAttemptedItems {
       return;
     }
     if (monitorRunning) {
-      deactivate();
+      stop();
     }
     try {
       timerThread.join(3000);
