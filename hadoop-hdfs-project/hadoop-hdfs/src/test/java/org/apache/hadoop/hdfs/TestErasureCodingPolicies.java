@@ -732,4 +732,85 @@ public class TestErasureCodingPolicies {
       }
     });
   }
+
+  @Test
+  public void testReplicationPolicy() throws Exception {
+    ErasureCodingPolicy replicaPolicy =
+        SystemErasureCodingPolicies.getReplicationPolicy();
+
+    final Path rootDir = new Path("/striped");
+    final Path replicaDir = new Path(rootDir, "replica");
+    final Path subReplicaDir = new Path(replicaDir, "replica");
+    final Path replicaFile = new Path(replicaDir, "file");
+    final Path subReplicaFile = new Path(subReplicaDir, "file");
+
+    fs.mkdirs(rootDir);
+    fs.setErasureCodingPolicy(rootDir, ecPolicy.getName());
+
+    // 1. At first, child directory will inherit parent's EC policy
+    fs.mkdirs(replicaDir);
+    fs.createFile(replicaFile).build().close();
+    HdfsFileStatus fileStatus = (HdfsFileStatus)fs.getFileStatus(replicaFile);
+    assertEquals("File should inherit EC policy.", ecPolicy, fileStatus
+        .getErasureCodingPolicy());
+    assertEquals("File should be a EC file.", true, fileStatus
+        .isErasureCoded());
+    assertEquals("File should have the same EC policy as its ancestor.",
+        ecPolicy, fs.getErasureCodingPolicy(replicaFile));
+    fs.delete(replicaFile, false);
+
+    // 2. Set replication policy on child directory, then get back the policy
+    fs.setErasureCodingPolicy(replicaDir, replicaPolicy.getName());
+    ErasureCodingPolicy temp = fs.getErasureCodingPolicy(replicaDir);
+    assertEquals("Directory should hide replication EC policy.",
+        null, temp);
+
+    // 3. New file will be replication file. Please be noted that replication
+    //    policy only set on directory, not on file
+    fs.createFile(replicaFile).build().close();
+    assertEquals("Replication file should have default replication factor.",
+        fs.getDefaultReplication(),
+        fs.getFileStatus(replicaFile).getReplication());
+    fs.setReplication(replicaFile, (short) 2);
+    assertEquals("File should have replication factor as expected.",
+        2, fs.getFileStatus(replicaFile).getReplication());
+    fileStatus = (HdfsFileStatus)fs.getFileStatus(replicaFile);
+    assertEquals("File should not have EC policy.", null, fileStatus
+        .getErasureCodingPolicy());
+    assertEquals("File should not be a EC file.", false,
+        fileStatus.isErasureCoded());
+    ErasureCodingPolicy ecPolicyOnFile = fs.getErasureCodingPolicy(replicaFile);
+    assertEquals("File should not have EC policy.", null, ecPolicyOnFile);
+    fs.delete(replicaFile, false);
+
+    // 4. New directory under replication directory, is also replication
+    // directory
+    fs.mkdirs(subReplicaDir);
+    assertEquals("Directory should inherit hiding replication EC policy.",
+        null, fs.getErasureCodingPolicy(subReplicaDir));
+    fs.createFile(subReplicaFile).build().close();
+    assertEquals("File should have default replication factor.",
+        fs.getDefaultReplication(),
+        fs.getFileStatus(subReplicaFile).getReplication());
+    fileStatus = (HdfsFileStatus)fs.getFileStatus(subReplicaFile);
+    assertEquals("File should not have EC policy.", null,
+        fileStatus.getErasureCodingPolicy());
+    assertEquals("File should not be a EC file.", false,
+        fileStatus.isErasureCoded());
+    assertEquals("File should not have EC policy.", null,
+        fs.getErasureCodingPolicy(subReplicaFile));
+    fs.delete(subReplicaFile, false);
+
+    // 5. Unset replication policy on directory, new file will be EC file
+    fs.unsetErasureCodingPolicy(replicaDir);
+    fs.createFile(subReplicaFile).build().close();
+    fileStatus = (HdfsFileStatus)fs.getFileStatus(subReplicaFile);
+    assertEquals("File should inherit EC policy.", ecPolicy,
+        fileStatus.getErasureCodingPolicy());
+    assertEquals("File should be a EC file.", true,
+        fileStatus.isErasureCoded());
+    assertEquals("File should have the same EC policy as its ancestor",
+        ecPolicy, fs.getErasureCodingPolicy(subReplicaFile));
+    fs.delete(subReplicaFile, false);
+  }
 }

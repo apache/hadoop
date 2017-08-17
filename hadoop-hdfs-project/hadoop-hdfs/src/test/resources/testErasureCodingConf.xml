@@ -101,7 +101,7 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>[-setPolicy -path &lt;path&gt; -policy &lt;policy&gt;]</expected-output>
+          <expected-output>[-setPolicy -path &lt;path&gt; [-policy &lt;policy&gt;] [-replicate]]</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -233,6 +233,29 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>Set erasure coding policy RS-6-3-64k on /ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : set replication policy on a directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir/replica</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -replicate -path /ecdir/replica</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/replica/file</command>
+        <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir/replica/file</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /ecdir/replica/file</command>
+        <command>-fs NAMENODE -rmdir /ecdir/replica</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>is unspecified</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -453,7 +476,7 @@
 
 <!-- Test illegal parameters -->
     <test>
-      <description>setPolicy : illegal parameters - path is missing</description>
+      <description>setPolicy : illegal parameters - path option is missing</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy</ec-admin-command>
@@ -470,7 +493,7 @@
     </test>
 
     <test>
-      <description>setPolicy : illegal parameters - policy name is missing</description>
+      <description>setPolicy : illegal parameters - path name is missing</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy -path</ec-admin-command>
@@ -487,10 +510,27 @@
     </test>
 
     <test>
-      <description>setPolicy : illegal parameters - too many arguments</description>
+      <description>setPolicy : illegal parameters - too many arguments case 1</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir1 -policy RS-3-2-64k /ecdir2</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-setPolicy: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - too many arguments case 2</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir1 -policy RS-3-2-64k -replicate /ecdir2</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /ecdir</command>
@@ -548,6 +588,36 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>Path not found: /ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - wrong spelling replicate </description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -replica</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-setPolicy: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - replicate and policy coexist</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy RS-3-2-64k -replicate</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-replicate and -policy cannot been used at the same time</expected-output>
         </comparator>
       </comparators>
     </test>

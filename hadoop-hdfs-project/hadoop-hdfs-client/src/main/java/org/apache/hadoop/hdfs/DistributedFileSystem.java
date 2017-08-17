@@ -2540,7 +2540,8 @@ public class DistributedFileSystem extends FileSystem {
    *
    * @param path The path of the file or directory
    * @return Returns the policy information if file or directory on the path
-   * is erasure coded, null otherwise
+   * is erasure coded, null otherwise. Null will be returned if directory or
+   * file has REPLICATION policy.
    * @throws IOException
    */
   public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
@@ -2567,7 +2568,8 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Retrieve all the erasure coding policies supported by this file system.
+   * Retrieve all the erasure coding policies supported by this file system,
+   * excluding REPLICATION policy.
    *
    * @return all erasure coding policies supported by this file system.
    * @throws IOException

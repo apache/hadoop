@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.util.ECPolicyLoader;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -309,7 +310,8 @@ public class ECAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " -path <path> -policy <policy>]\n";
+      return "[" + getName() +
+          " -path <path> [-policy <policy>] [-replicate]]\n";
     }
 
     @Override
@@ -318,9 +320,13 @@ public class ECAdmin extends Configured implements Tool {
       listing.addRow("<path>", "The path of the file/directory to set " +
           "the erasure coding policy");
       listing.addRow("<policy>", "The name of the erasure coding policy");
+      listing.addRow("-replicate",
+          "force 3x replication scheme on the directory");
       return getShortUsage() + "\n" +
           "Set the erasure coding policy for a file/directory.\n\n" +
-          listing.toString();
+          listing.toString() + "\n" +
+          "-replicate and -policy are optional arguments. They cannot been " +
+          "used at the same time";
     }
 
     @Override
@@ -332,12 +338,22 @@ public class ECAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final String ecPolicyName = StringUtils.popOptionWithArgument("-policy",
+      String ecPolicyName = StringUtils.popOptionWithArgument("-policy",
           args);
+      final boolean replicate = StringUtils.popOption("-replicate", args);
 
       if (args.size() > 0) {
         System.err.println(getName() + ": Too many arguments");
         return 1;
+      }
+
+      if (replicate) {
+        if (ecPolicyName != null) {
+          System.err.println(getName() +
+              ": -replicate and -policy cannot been used at the same time");
+          return 2;
+        }
+        ecPolicyName = ErasureCodeConstants.REPLICATION_POLICY_NAME;
       }
 
       final Path p = new Path(path);
@@ -353,7 +369,7 @@ public class ECAdmin extends Configured implements Tool {
         }
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
-        return 2;
+        return 3;
       }
       return 0;
     }

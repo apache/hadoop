@@ -723,4 +723,91 @@ public class TestFSImage {
         .getBlockType());
     assertEquals(defaultBlockType, BlockType.CONTIGUOUS);
   }
+
+  /**
+   * Test if a INodeFile under a replication EC policy directory
+   * can be saved by FSImageSerialization and loaded by FSImageFormat#Loader.
+   */
+  @Test
+  public void testSaveAndLoadFileUnderReplicationPolicyDir()
+      throws IOException {
+    Configuration conf = new Configuration();
+    DFSTestUtil.enableAllECPolicies(conf);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      FSNamesystem fsn = cluster.getNamesystem();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      ErasureCodingPolicy replicaPolicy =
+          SystemErasureCodingPolicies.getReplicationPolicy();
+      ErasureCodingPolicy defaultEcPolicy =
+          StripedFileTestUtil.getDefaultECPolicy();
+
+      final Path ecDir = new Path("/ec");
+      final Path replicaDir = new Path(ecDir, "replica");
+      final Path replicaFile1 = new Path(replicaDir, "f1");
+      final Path replicaFile2 = new Path(replicaDir, "f2");
+
+      // create root directory
+      fs.mkdir(ecDir, null);
+      fs.setErasureCodingPolicy(ecDir, defaultEcPolicy.getName());
+
+      // create directory, and set replication Policy
+      fs.mkdir(replicaDir, null);
+      fs.setErasureCodingPolicy(replicaDir, replicaPolicy.getName());
+
+      // create an empty file f1
+      fs.create(replicaFile1).close();
+
+      // create an under-construction file f2
+      FSDataOutputStream out = fs.create(replicaFile2, (short) 2);
+      out.writeBytes("hello");
+      ((DFSOutputStream) out.getWrappedStream()).hsync(EnumSet
+          .of(SyncFlag.UPDATE_LENGTH));
+
+      // checkpoint
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      cluster.restartNameNode();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+
+      assertTrue(fs.getFileStatus(ecDir).isDirectory());
+      assertTrue(fs.getFileStatus(replicaDir).isDirectory());
+      assertTrue(fs.exists(replicaFile1));
+      assertTrue(fs.exists(replicaFile2));
+
+      // check directories
+      assertEquals("Directory should have default EC policy.",
+          defaultEcPolicy, fs.getErasureCodingPolicy(ecDir));
+      assertEquals("Directory should hide replication EC policy.",
+          null, fs.getErasureCodingPolicy(replicaDir));
+
+      // check file1
+      assertEquals("File should not have EC policy.", null,
+          fs.getErasureCodingPolicy(replicaFile1));
+      // check internals of file2
+      INodeFile file2Node =
+          fsn.dir.getINode4Write(replicaFile2.toString()).asFile();
+      assertEquals("hello".length(), file2Node.computeFileSize());
+      assertTrue(file2Node.isUnderConstruction());
+      BlockInfo[] blks = file2Node.getBlocks();
+      assertEquals(1, blks.length);
+      assertEquals(BlockUCState.UNDER_CONSTRUCTION, blks[0].getBlockUCState());
+      assertEquals("File should return expected replication factor.",
+          2, blks[0].getReplication());
+      assertEquals("File should not have EC policy.", null,
+          fs.getErasureCodingPolicy(replicaFile2));
+      // check lease manager
+      Lease lease = fsn.leaseManager.getLease(file2Node);
+      Assert.assertNotNull(lease);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

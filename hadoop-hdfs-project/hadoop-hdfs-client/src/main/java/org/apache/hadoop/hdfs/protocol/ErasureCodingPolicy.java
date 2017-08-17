@@ -25,6 +25,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 
 /**
  * A policy about how to write/read/code an erasure coding file.
@@ -105,6 +106,10 @@ public final class ErasureCodingPolicy implements Serializable {
 
   public void setId(byte id) {
     this.id = id;
+  }
+
+  public boolean isReplicationPolicy() {
+    return (id == ErasureCodeConstants.REPLICATION_POLICY_ID);
   }
 
   @Override

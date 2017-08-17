@@ -3044,7 +3044,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    * @param src path to get the information for
    * @return Returns the policy information if file or directory on the path is
-   * erasure coded, null otherwise
+   * erasure coded, null otherwise. Null will be returned if directory or file
+   * has REPLICATION policy.
    * @throws IOException
    */
 

@@ -1588,7 +1588,8 @@ public interface ClientProtocol {
 
 
   /**
-   * Get the erasure coding policies loaded in Namenode.
+   * Get the erasure coding policies loaded in Namenode, excluding REPLICATION
+   * policy.
    *
    * @throws IOException
    */
@@ -1604,7 +1605,8 @@ public interface ClientProtocol {
   Map<String, String> getErasureCodingCodecs() throws IOException;
 
   /**
-   * Get the information about the EC policy for the path.
+   * Get the information about the EC policy for the path. Null will be returned
+   * if directory or file has REPLICATION policy.
    *
    * @param src path to get the info for
    * @throws IOException
