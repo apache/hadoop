@@ -74,6 +74,7 @@ public class ResourceUtils {
   private static volatile ResourceInformation[] resourceTypesArray;
   private static volatile boolean initializedNodeResources = false;
   private static volatile Map<String, ResourceInformation> readOnlyNodeResources;
+  private static volatile int numKnownResourceTypes = -1;
 
   static final Log LOG = LogFactory.getLog(ResourceUtils.class);
 
@@ -308,13 +309,23 @@ public class ResourceUtils {
    * @return resourceNamesArray
    */
   public static String[] getResourceNamesArray() {
-    getResourceTypes(null, YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    initializeResourceTypesIfNeeded(null,
+        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
     return resourceNamesArray;
   }
 
   public static ResourceInformation[] getResourceTypesArray() {
-    getResourceTypes(null, YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    initializeResourceTypesIfNeeded(null,
+        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
     return resourceTypesArray;
+  }
+
+  public static int getNumberOfKnownResourceTypes() {
+    if (numKnownResourceTypes < 0) {
+      initializeResourceTypesIfNeeded(null,
+          YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    }
+    return numKnownResourceTypes;
   }
 
   private static Map<String, ResourceInformation> getResourceTypes(
@@ -323,8 +334,8 @@ public class ResourceUtils {
         YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
   }
 
-  private static Map<String, ResourceInformation> getResourceTypes(
-      Configuration conf, String resourceFile) {
+  private static void initializeResourceTypesIfNeeded(Configuration conf,
+      String resourceFile) {
     if (!initializedResources) {
       synchronized (ResourceUtils.class) {
         if (!initializedResources) {
@@ -346,6 +357,12 @@ public class ResourceUtils {
         }
       }
     }
+    numKnownResourceTypes = resourceTypes.size();
+  }
+
+  private static Map<String, ResourceInformation> getResourceTypes(
+      Configuration conf, String resourceFile) {
+    initializeResourceTypesIfNeeded(conf, resourceFile);
     return resourceTypes;
   }
 
