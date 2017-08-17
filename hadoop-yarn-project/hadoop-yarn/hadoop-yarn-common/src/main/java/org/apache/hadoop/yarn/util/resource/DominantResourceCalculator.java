@@ -126,7 +126,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         diff = max[0] - max[1];
       } else if (clusterRes.length == 2) {
         // Special case to handle the common scenario of only CPU and memory
-        // so the we can optimize for performance
+        // so that we can optimize for performance
         diff = calculateSharesForMandatoryResources(clusterRes, lhs, rhs,
             lhsShares, rhsShares);
       } else {
