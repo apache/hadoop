@@ -114,6 +114,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -1794,8 +1796,7 @@ public class ClientRMService extends AbstractService implements
     }
     GetResourceProfileResponse response =
         GetResourceProfileResponse.newInstance();
-    response.setResource(
-        resourceProfilesManager.getProfile(request.getProfileName()));
+    response.setResource(profiles.get(request.getProfileName()));
     return response;
   }
 
@@ -1808,5 +1809,15 @@ public class ClientRMService extends AbstractService implements
           "Resource profiles are not enabled");
     }
     return resourceProfilesManager.getResourceProfiles();
+  }
+
+  @Override
+  public GetAllResourceTypeInfoResponse getResourceTypeInfo(
+      GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
+    GetAllResourceTypeInfoResponse response =
+        GetAllResourceTypeInfoResponse.newInstance();
+    response.setResourceTypeInfo(
+        resourceProfilesManager.getAllResourceTypeInfo());
+    return response;
   }
 }

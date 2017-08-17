@@ -22,8 +22,10 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -77,4 +79,10 @@ public interface ResourceProfilesManager {
    * @return resource object which is maximum
    */
   Resource getMaximumProfile();
+
+  /**
+   * List of ResourceTypeInfo objects which carry all resources supported by RM.
+   * @return list of ResourceTypeInfo objects
+   */
+  List<ResourceTypeInfo> getAllResourceTypeInfo();
 }
