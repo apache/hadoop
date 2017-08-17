@@ -61,6 +61,8 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -855,4 +857,18 @@ public abstract class YarnClient extends AbstractService {
     throw new UnsupportedOperationException("The sub-class extending "
         + YarnClient.class.getName() + " is expected to implement this !");
   }
+
+  /**
+   * <p>
+   * Get available resource types supported by RM.
+   * </p>
+   * @return list of supported resource types with detailed information
+   * @throws YarnException if resource profiles are not enabled or the profile
+   *         cannot be found
+   * @throws IOException in case of other others
+   */
+  @Public
+  @Unstable
+  public abstract List<ResourceTypeInfo> getResourceTypeInfo()
+      throws YarnException, IOException;
 }
