@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,6 +26,7 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -85,9 +86,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
   static final int INVALID_ARGUMENT = 1;
   static final int ERROR = 99;
 
-  protected S3AFileSystem s3a;
-  protected MetadataStore ms;
-  protected CommandFormat commandFormat;
+  private S3AFileSystem filesystem;
+  private MetadataStore store;
+  private final CommandFormat commandFormat;
 
   private static final String META_FLAG = "meta";
   private static final String DAYS_FLAG = "days";
@@ -118,11 +119,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   abstract String getName();
 
-  @VisibleForTesting
-  public MetadataStore getMetadataStore() {
-    return ms;
-  }
-
   /**
    * Parse DynamoDB region from either -m option or a S3 path.
    *
@@ -135,7 +131,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   boolean parseDynamoDBRegion(List<String> paths) throws IOException {
     Configuration conf = getConf();
-    String fromCli = commandFormat.getOptValue(REGION_FLAG);
+    String fromCli = getCommandFormat().getOptValue(REGION_FLAG);
     String fromConf = conf.get(S3GUARD_DDB_REGION_KEY);
     boolean hasS3Path = !paths.isEmpty();
 
@@ -181,26 +177,26 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * @return a initialized metadata store.
    */
   MetadataStore initMetadataStore(boolean forceCreate) throws IOException {
-    if (ms != null) {
-      return ms;
+    if (getStore() != null) {
+      return getStore();
     }
     Configuration conf;
-    if (s3a == null) {
+    if (filesystem == null) {
       conf = getConf();
     } else {
-      conf = s3a.getConf();
+      conf = filesystem.getConf();
     }
-    String metaURI = commandFormat.getOptValue(META_FLAG);
+    String metaURI = getCommandFormat().getOptValue(META_FLAG);
     if (metaURI != null && !metaURI.isEmpty()) {
       URI uri = URI.create(metaURI);
       LOG.info("create metadata store: {}", uri + " scheme: "
           + uri.getScheme());
-      switch (uri.getScheme().toLowerCase()) {
+      switch (uri.getScheme().toLowerCase(Locale.ENGLISH)) {
       case "local":
-        ms = new LocalMetadataStore();
+        setStore(new LocalMetadataStore());
         break;
       case "dynamodb":
-        ms = new DynamoDBMetadataStore();
+        setStore(new DynamoDBMetadataStore());
         conf.set(S3GUARD_DDB_TABLE_NAME_KEY, uri.getAuthority());
         if (forceCreate) {
           conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
@@ -213,19 +209,19 @@ public abstract class S3GuardTool extends Configured implements Tool {
     } else {
       // CLI does not specify metadata store URI, it uses default metadata store
       // DynamoDB instead.
-      ms = new DynamoDBMetadataStore();
+      setStore(new DynamoDBMetadataStore());
       if (forceCreate) {
         conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
       }
     }
 
-    if (s3a == null) {
-      ms.initialize(conf);
+    if (filesystem == null) {
+      getStore().initialize(conf);
     } else {
-      ms.initialize(s3a);
+      getStore().initialize(filesystem);
     }
-    LOG.info("Metadata store {} is initialized.", ms);
-    return ms;
+    LOG.info("Metadata store {} is initialized.", getStore());
+    return getStore();
   }
 
   /**
@@ -252,7 +248,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
           String.format("URI %s is not a S3A file system: %s", uri,
               fs.getClass().getName()));
     }
-    s3a = (S3AFileSystem) fs;
+    filesystem = (S3AFileSystem) fs;
   }
 
   /**
@@ -263,7 +259,30 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * @return the position arguments from CLI.
    */
   List<String> parseArgs(String[] args) {
-    return commandFormat.parse(args, 1);
+    return getCommandFormat().parse(args, 1);
+  }
+
+  protected S3AFileSystem getFilesystem() {
+    return filesystem;
+  }
+
+  protected void setFilesystem(S3AFileSystem filesystem) {
+    this.filesystem = filesystem;
+  }
+
+  @VisibleForTesting
+  public MetadataStore getStore() {
+    return store;
+  }
+
+  @VisibleForTesting
+  protected void setStore(MetadataStore store) {
+    Preconditions.checkNotNull(store);
+    this.store = store;
+  }
+
+  protected CommandFormat getCommandFormat() {
+    return commandFormat;
   }
 
   /**
@@ -290,9 +309,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
     Init(Configuration conf) {
       super(conf);
       // read capacity.
-      commandFormat.addOptionWithValue(READ_FLAG);
+      getCommandFormat().addOptionWithValue(READ_FLAG);
       // write capacity.
-      commandFormat.addOptionWithValue(WRITE_FLAG);
+      getCommandFormat().addOptionWithValue(WRITE_FLAG);
     }
 
     @Override
@@ -309,12 +328,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args) throws IOException {
       List<String> paths = parseArgs(args);
 
-      String readCap = commandFormat.getOptValue(READ_FLAG);
+      String readCap = getCommandFormat().getOptValue(READ_FLAG);
       if (readCap != null && !readCap.isEmpty()) {
         int readCapacity = Integer.parseInt(readCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, readCapacity);
       }
-      String writeCap = commandFormat.getOptValue(WRITE_FLAG);
+      String writeCap = getCommandFormat().getOptValue(WRITE_FLAG);
       if (writeCap != null && !writeCap.isEmpty()) {
         int writeCapacity = Integer.parseInt(writeCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, writeCapacity);
@@ -380,9 +399,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
         return SUCCESS;
       }
 
-      Preconditions.checkState(ms != null, "Metadata Store is not initialized");
+      Preconditions.checkState(getStore() != null,
+          "Metadata Store is not initialized");
 
-      ms.destroy();
+      getStore().destroy();
       LOG.info("Metadata store is deleted.");
       return SUCCESS;
     }
@@ -414,12 +434,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
       super(conf);
     }
 
-    // temporary: for metadata store.
-    @VisibleForTesting
-    void setMetadataStore(MetadataStore ms) {
-      this.ms = ms;
-    }
-
     @Override
     String getName() {
       return NAME;
@@ -445,7 +459,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         }
         FileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
             f.getOwner());
-        ms.put(new PathMetadata(dir));
+        getStore().put(new PathMetadata(dir));
         dirCache.add(parent);
         parent = parent.getParent();
       }
@@ -458,8 +472,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
-      RemoteIterator<LocatedFileStatus> it =
-          s3a.listFilesAndEmptyDirectories(status.getPath(), true);
+      RemoteIterator<LocatedFileStatus> it = getFilesystem()
+          .listFilesAndEmptyDirectories(status.getPath(), true);
       long items = 0;
 
       while (it.hasNext()) {
@@ -477,7 +491,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getOwner());
         }
         putParentsIfNotPresent(child);
-        ms.put(new PathMetadata(child));
+        getStore().put(new PathMetadata(child));
         items++;
       }
       return items;
@@ -506,14 +520,14 @@ public abstract class S3GuardTool extends Configured implements Tool {
         filePath = "/";
       }
       Path path = new Path(filePath);
-      FileStatus status = s3a.getFileStatus(path);
+      FileStatus status = getFilesystem().getFileStatus(path);
 
       initMetadataStore(false);
 
       long items = 1;
       if (status.isFile()) {
         PathMetadata meta = new PathMetadata(status);
-        ms.put(meta);
+        getStore().put(meta);
       } else {
         items = importDir(status);
       }
@@ -550,12 +564,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     Diff(Configuration conf) {
       super(conf);
-    }
-
-    @VisibleForTesting
-    void setMetadataStore(MetadataStore ms) {
-      Preconditions.checkNotNull(ms);
-      this.ms = ms;
     }
 
     @Override
@@ -651,7 +659,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       Map<Path, FileStatus> s3Children = new HashMap<>();
       if (s3Dir != null && s3Dir.isDirectory()) {
-        for (FileStatus status : s3a.listStatus(s3Dir.getPath())) {
+        for (FileStatus status : getFilesystem().listStatus(s3Dir.getPath())) {
           s3Children.put(status.getPath(), status);
         }
       }
@@ -659,7 +667,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       Map<Path, FileStatus> msChildren = new HashMap<>();
       if (msDir != null && msDir.isDirectory()) {
         DirListingMetadata dirMeta =
-            ms.listChildren(msDir.getPath());
+            getStore().listChildren(msDir.getPath());
 
         if (dirMeta != null) {
           for (PathMetadata meta : dirMeta.getListing()) {
@@ -692,13 +700,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @throws IOException on I/O errors.
      */
     private void compareRoot(Path path, PrintStream out) throws IOException {
-      Path qualified = s3a.qualify(path);
+      Path qualified = getFilesystem().qualify(path);
       FileStatus s3Status = null;
       try {
-        s3Status = s3a.getFileStatus(qualified);
+        s3Status = getFilesystem().getFileStatus(qualified);
       } catch (FileNotFoundException e) {
       }
-      PathMetadata meta = ms.get(qualified);
+      PathMetadata meta = getStore().get(qualified);
       FileStatus msStatus = (meta != null && !meta.isDeleted()) ?
           meta.getFileStatus() : null;
       compareDir(msStatus, s3Status, out);
@@ -727,7 +735,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       } else {
         root = new Path(uri.getPath());
       }
-      root = s3a.qualify(root);
+      root = getFilesystem().qualify(root);
       compareRoot(root, out);
       out.flush();
       return SUCCESS;
@@ -763,16 +771,17 @@ public abstract class S3GuardTool extends Configured implements Tool {
     Prune(Configuration conf) {
       super(conf);
 
-      commandFormat.addOptionWithValue(DAYS_FLAG);
-      commandFormat.addOptionWithValue(HOURS_FLAG);
-      commandFormat.addOptionWithValue(MINUTES_FLAG);
-      commandFormat.addOptionWithValue(SECONDS_FLAG);
+      CommandFormat format = getCommandFormat();
+      format.addOptionWithValue(DAYS_FLAG);
+      format.addOptionWithValue(HOURS_FLAG);
+      format.addOptionWithValue(MINUTES_FLAG);
+      format.addOptionWithValue(SECONDS_FLAG);
     }
 
     @VisibleForTesting
     void setMetadataStore(MetadataStore ms) {
       Preconditions.checkNotNull(ms);
-      this.ms = ms;
+      this.setStore(ms);
     }
 
     @Override
@@ -786,7 +795,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
 
     private long getDeltaComponent(TimeUnit unit, String arg) {
-      String raw = commandFormat.getOptValue(arg);
+      String raw = getCommandFormat().getOptValue(arg);
       if (raw == null || raw.isEmpty()) {
         return 0;
       }
@@ -827,7 +836,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       long now = System.currentTimeMillis();
       long divide = now - delta;
 
-      ms.prune(divide);
+      getStore().prune(divide);
 
       out.flush();
       return SUCCESS;
@@ -839,15 +848,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
   }
 
-  private static S3GuardTool cmd;
+  private static S3GuardTool command;
 
   private static void printHelp() {
-    if (cmd == null) {
+    if (command == null) {
       System.err.println("Usage: hadoop " + USAGE);
       System.err.println("\tperform S3Guard metadata store " +
           "administrative commands.");
     } else {
-      System.err.println("Usage: hadoop " + cmd.getUsage());
+      System.err.println("Usage: hadoop " + command.getUsage());
     }
     System.err.println();
     System.err.println(COMMON_USAGE);
@@ -874,25 +883,25 @@ public abstract class S3GuardTool extends Configured implements Tool {
     final String subCommand = otherArgs[0];
     switch (subCommand) {
     case Init.NAME:
-      cmd = new Init(conf);
+      command = new Init(conf);
       break;
     case Destroy.NAME:
-      cmd = new Destroy(conf);
+      command = new Destroy(conf);
       break;
     case Import.NAME:
-      cmd = new Import(conf);
+      command = new Import(conf);
       break;
     case Diff.NAME:
-      cmd = new Diff(conf);
+      command = new Diff(conf);
       break;
     case Prune.NAME:
-      cmd = new Prune(conf);
+      command = new Prune(conf);
       break;
     default:
       printHelp();
       return INVALID_ARGUMENT;
     }
-    return ToolRunner.run(conf, cmd, otherArgs);
+    return ToolRunner.run(conf, command, otherArgs);
   }
 
   /**

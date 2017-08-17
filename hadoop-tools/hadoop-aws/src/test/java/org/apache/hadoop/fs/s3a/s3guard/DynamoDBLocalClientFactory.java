@@ -124,13 +124,14 @@ public class DynamoDBLocalClientFactory extends Configured
     try {
       // Start an in-memory local DynamoDB instance
       final String port = String.valueOf(ServerSocketUtil.getPort(0, 100));
+      ddbEndpoint = "http://localhost:" + port;
       dynamoDBLocalServer = ServerRunner.createServerFromCommandLineArgs(
           new String[]{"-inMemory", "-port", port});
       dynamoDBLocalServer.start();
-      ddbEndpoint = "http://localhost:" + port;
       LOG.info("DynamoDBLocal singleton server was started at {}", ddbEndpoint);
-    } catch (Throwable t) {
-      String msg = "Error starting DynamoDBLocal server at " + ddbEndpoint;
+    } catch (Exception t) {
+      String msg = "Error starting DynamoDBLocal server at " + ddbEndpoint
+          + " " + t;
       LOG.error(msg, t);
       throw new IOException(msg, t);
     }

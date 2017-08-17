@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
+import java.util.concurrent.Callable;
 
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
@@ -193,7 +194,12 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
   @Test
   public void testPathToKey() throws Exception {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        () -> pathToKey(new Path("/")));
+        new Callable<PrimaryKey>() {
+          @Override
+          public PrimaryKey call() throws Exception {
+            return pathToKey(new Path("/"));
+          }
+        });
     doTestPathToKey(TEST_DIR_PATH);
     doTestPathToKey(TEST_FILE_PATH);
   }

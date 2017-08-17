@@ -34,7 +34,6 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void initialize(FileSystem fs) throws IOException {
-    return;
   }
 
   @Override

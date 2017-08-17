@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
@@ -105,7 +106,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
           + "server is not configured correctly. ";
       LOG.error(msg, e);
       // fail fast if the DynamoDBLocal server can not work
-      fail(msg + e.getMessage());
+      throw e;
     }
   }
 
@@ -274,14 +275,14 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     ms.put(new PathMetadata(basicFileStatus(oldDir, 0, true)));
     ms.put(new PathMetadata(basicFileStatus(newDir, 0, true)));
 
-    final Collection<PathMetadata> oldMetas =
-        numDelete < 0 ? null : new ArrayList<>(numDelete);
+    final List<PathMetadata> oldMetas =
+        numDelete < 0 ? null : new ArrayList<PathMetadata>(numDelete);
     for (int i = 0; i < numDelete; i++) {
       oldMetas.add(new PathMetadata(
           basicFileStatus(new Path(oldDir, "child" + i), i, true)));
     }
-    final Collection<PathMetadata> newMetas =
-        numPut < 0 ? null : new ArrayList<>(numPut);
+    final List<PathMetadata> newMetas =
+        numPut < 0 ? null : new ArrayList<PathMetadata>(numPut);
     for (int i = 0; i < numPut; i++) {
       newMetas.add(new PathMetadata(
           basicFileStatus(new Path(newDir, "child" + i), i, false)));
@@ -336,9 +337,14 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testItemLacksVersion() throws Throwable {
     intercept(IOException.class, E_NOT_VERSION_MARKER,
-        () -> verifyVersionCompatibility("table",
-            new Item().withPrimaryKey(
-                createVersionMarkerPrimaryKey(VERSION_MARKER))));
+        new VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            verifyVersionCompatibility("table",
+                new Item().withPrimaryKey(
+                    createVersionMarkerPrimaryKey(VERSION_MARKER)));
+          }
+        });
   }
 
   /**
@@ -358,7 +364,12 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     // create existing table
     intercept(IOException.class, E_NO_VERSION_MARKER,
-        () -> ddbms.initTable());
+        new VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            ddbms.initTable();
+          }
+        });
 
     conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
   }
@@ -378,7 +389,13 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     table.putItem(v200);
 
     // create existing table
-    intercept(IOException.class, E_INCOMPATIBLE_VERSION, ddbms::initTable);
+    intercept(IOException.class, E_INCOMPATIBLE_VERSION,
+        new VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            ddbms.initTable();
+          }
+        });
   }
 
   /**

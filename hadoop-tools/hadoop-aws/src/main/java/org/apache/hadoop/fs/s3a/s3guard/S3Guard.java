@@ -310,7 +310,6 @@ public final class S3Guard {
       ms.put(pathMetas);
     } catch (IOException ioe) {
       LOG.error("MetadataStore#put() failure:", ioe);
-      return;
     }
   }
 
@@ -429,8 +428,9 @@ public final class S3Guard {
   }
 
   private static void addMoveStatus(Collection<Path> srcPaths,
-      Collection<PathMetadata> dstMetas, Path srcPath, FileStatus dstStatus)
-  {
+      Collection<PathMetadata> dstMetas,
+      Path srcPath,
+      FileStatus dstStatus) {
     srcPaths.add(srcPath);
     dstMetas.add(new PathMetadata(dstStatus));
   }
@@ -446,7 +446,7 @@ public final class S3Guard {
     // multiple S3AFileSystem instances
     Preconditions.checkNotNull(uri.getHost(), "Null host in " + uri);
 
-    // I believe this should never fail, since there is a host?
+    // This should never fail, but is retained for completeness.
     Preconditions.checkNotNull(uri.getScheme(), "Null scheme in " + uri);
   }
 

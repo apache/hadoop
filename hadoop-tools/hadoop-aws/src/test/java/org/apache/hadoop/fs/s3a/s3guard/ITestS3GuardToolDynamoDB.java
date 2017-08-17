@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,9 +59,9 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
   @Test
   public void testInvalidRegion() throws Exception {
     final String testTableName = "testInvalidRegion" + new Random().nextInt();
-    String testRegion = "invalidRegion";
+    final String testRegion = "invalidRegion";
     // Initialize MetadataStore
-    Init initCmd = new Init(getFileSystem().getConf());
+    final Init initCmd = new Init(getFileSystem().getConf());
     LambdaTestUtils.intercept(IOException.class,
         new Callable<String>() {
           @Override

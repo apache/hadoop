@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Diff;
 
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 
-
 /**
  * Test S3Guard related CLI commands against a LocalMetadataStore.
  */
@@ -65,7 +64,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
     }
 
     S3GuardTool.Import cmd = new S3GuardTool.Import(fs.getConf());
-    cmd.setMetadataStore(ms);
+    cmd.setStore(ms);
 
     expectSuccess("Import command did not exit successfully - see output",
         cmd,
@@ -111,7 +110,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
     ByteArrayOutputStream buf = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(buf);
     Diff cmd = new Diff(fs.getConf());
-    cmd.setMetadataStore(ms);
+    cmd.setStore(ms);
     assertEquals("Diff command did not exit successfully - see output", SUCCESS,
         cmd.run(new String[]{"diff", "-meta", "local://metadata",
             testPath.toString()}, out));

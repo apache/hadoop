@@ -26,6 +26,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
+import java.util.concurrent.Callable;
 
 /**
  * Tests behavior of a FileNotFound error that happens after open(), i.e. on
@@ -45,11 +46,17 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
     Path p = path("some-file");
     ContractTestUtils.createFile(fs, p, false, new byte[] {20, 21, 22});
 
-    FSDataInputStream in = fs.open(p);
+    final FSDataInputStream in = fs.open(p);
     assertDeleted(p, false);
 
     // This should fail since we deleted after the open.
-    LambdaTestUtils.intercept(FileNotFoundException.class, () -> in.read());
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        new Callable<Integer>() {
+          @Override
+          public Integer call() throws Exception {
+            return in.read();
+          }
+        });
   }
 
 }

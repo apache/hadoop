@@ -80,7 +80,7 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
 
   @Test
   public void testConcurrentTableCreations() throws Exception {
-    Configuration conf = getConfiguration();
+    final Configuration conf = getConfiguration();
     Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard",
         conf.get(Constants.S3_METADATA_STORE_IMPL).equals(
             Constants.S3GUARD_METASTORE_DYNAMO));
@@ -121,7 +121,8 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
           @Override
           public Exception call() throws Exception {
 
-            ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
+            ContractTestUtils.NanoTimer timer =
+                new ContractTestUtils.NanoTimer();
 
             Exception result = null;
             try (DynamoDBMetadataStore store = new DynamoDBMetadataStore()) {

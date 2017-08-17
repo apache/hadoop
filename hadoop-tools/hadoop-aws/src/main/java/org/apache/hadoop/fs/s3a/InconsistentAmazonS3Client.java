@@ -168,9 +168,8 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
 
   @Override
   public DeleteObjectsResult deleteObjects(DeleteObjectsRequest
-      deleteObjectsRequest) throws AmazonClientException,
-      AmazonServiceException
-  {
+      deleteObjectsRequest)
+      throws AmazonClientException, AmazonServiceException {
     for (DeleteObjectsRequest.KeyVersion keyVersion :
         deleteObjectsRequest.getKeys()) {
       registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest
@@ -404,8 +403,9 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     private final List<S3ObjectSummary> customListing;
     private final List<String> customPrefixes;
 
-    public CustomObjectListing(ObjectListing rawListing,
-        List<S3ObjectSummary> customListing, List<String> customPrefixes) {
+    CustomObjectListing(ObjectListing rawListing,
+        List<S3ObjectSummary> customListing,
+        List<String> customPrefixes) {
       super();
       this.customListing = customListing;
       this.customPrefixes = customPrefixes;

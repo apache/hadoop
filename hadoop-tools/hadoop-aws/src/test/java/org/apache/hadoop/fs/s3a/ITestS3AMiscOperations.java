@@ -26,11 +26,13 @@ import org.apache.hadoop.test.LambdaTestUtils;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 /**
  * Tests of the S3A FileSystem which don't have a specific home and can share
@@ -62,7 +64,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
 
   @Test
   public void testPutObjectDirect() throws Throwable {
-    S3AFileSystem fs = getFileSystem();
+    final S3AFileSystem fs = getFileSystem();
     ObjectMetadata metadata = fs.newObjectMetadata(-1);
     metadata.setContentLength(-1);
     Path path = path("putDirect");
@@ -71,7 +73,12 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
         new ByteArrayInputStream("PUT".getBytes()),
         metadata);
     LambdaTestUtils.intercept(IllegalStateException.class,
-        () -> fs.putObjectDirect(put));
+        new Callable<PutObjectResult>() {
+          @Override
+          public PutObjectResult call() throws Exception {
+            return fs.putObjectDirect(put);
+          }
+        });
     assertPathDoesNotExist("put object was created", path);
   }
 

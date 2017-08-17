@@ -481,8 +481,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
         parent = parent.getParent();
       }
     }
-     return ancestry.values();
-   }
+    return ancestry.values();
+  }
 
   @Override
   public void move(Collection<Path> pathsToDelete,
@@ -893,10 +893,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /**
    * Wait for table being active.
+   * @param t table to block on.
+   * @throws IOException IO problems
+   * @throws InterruptedIOException if the wait was interrupted
    */
-  private void waitForTableActive(Table table) throws IOException {
+  private void waitForTableActive(Table t) throws IOException {
     try {
-      table.waitForActive();
+      t.waitForActive();
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while waiting for table {} in region {} active",
           tableName, region, e);
@@ -910,7 +913,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * Create a table, wait for it to become active, then add the version
    * marker.
    * @param capacity capacity to provision
-   * @throws IOException on an failure.
+   * @throws IOException on any failure.
+   * @throws InterruptedIOException if the wait was interrupted
    */
   private void createTable(ProvisionedThroughput capacity) throws IOException {
     try {

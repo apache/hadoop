@@ -115,12 +115,12 @@ public interface DynamoDBClientFactory extends Configurable {
     }
 
     private static String validRegionsString() {
-      final String DELIMITER = ", ";
+      final String delimiter = ", ";
       Regions[] regions = Regions.values();
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < regions.length; i++) {
         if (i > 0) {
-          sb.append(DELIMITER);
+          sb.append(delimiter);
         }
         sb.append(regions[i].getName());
       }

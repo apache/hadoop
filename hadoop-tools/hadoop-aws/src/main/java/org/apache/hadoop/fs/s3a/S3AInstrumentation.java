@@ -345,7 +345,7 @@ public class S3AInstrumentation {
   public MutableQuantiles lookupQuantiles(String name) {
     MutableMetric metric = lookupMetric(name);
     if (metric == null) {
-        LOG.debug("No quantiles {}", name);
+      LOG.debug("No quantiles {}", name);
     }
     return (MutableQuantiles) metric;
   }

@@ -751,7 +751,7 @@ public abstract class FileSystemContractBaseTest {
    * renames empty dirs doesn't cause any regressions.
    */
   public void testRenameEmptyToDirWithSamePrefixAllowed() throws Throwable {
-    if (!renameSupported()) return;
+    assumeTrue(renameSupported());
     Path parentdir = path("testRenameEmptyToDirWithSamePrefixAllowed");
     fs.mkdirs(parentdir);
     Path dest = path("testRenameEmptyToDirWithSamePrefixAllowedDest");

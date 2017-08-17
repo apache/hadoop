@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.junit.Rule;
@@ -63,7 +63,8 @@ public class TestDirListingMetadata {
   public void testEmptyListing() {
     Path path = new Path("/path");
     DirListingMetadata meta = new DirListingMetadata(path,
-        Collections.emptyList(), false);
+        new ArrayList<PathMetadata>(0),
+        false);
     assertEquals(path, meta.getPath());
     assertNotNull(meta.getListing());
     assertTrue(meta.getListing().isEmpty());
@@ -294,7 +295,8 @@ public class TestDirListingMetadata {
     PathMetadata pathMeta2 = new PathMetadata(
         new S3AFileStatus(true, new Path(parent, "dir2"), TEST_OWNER));
     PathMetadata pathMeta3 = new PathMetadata(
-        new S3AFileStatus(123, 456, new Path(parent, "file1"), 8192, TEST_OWNER));
+        new S3AFileStatus(123, 456, new Path(parent, "file1"), 8192,
+            TEST_OWNER));
     List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
     return new DirListingMetadata(parent, listing, false);
   }
