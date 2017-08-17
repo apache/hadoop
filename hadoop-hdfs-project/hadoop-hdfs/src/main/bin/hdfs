@@ -31,7 +31,6 @@ function hadoop_usage
   hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
   hadoop_add_option "--workers" "turn on worker mode"
 
-<<<<<<< HEAD
   hadoop_add_subcommand "balancer" daemon "run a cluster balancing utility"
   hadoop_add_subcommand "cacheadmin" admin "configure the HDFS cache"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
