@@ -64,6 +64,12 @@ message ResourceInformationProto {
   optional ResourceTypesProto type = 4;
 }
 
+message ResourceTypeInfoProto {
+  required string name = 1;
+  optional string units = 2;
+  optional ResourceTypesProto type = 3;
+}
+
 message ResourceProto {
   optional int64 memory = 1;
   optional int32 virtual_cores = 2;
