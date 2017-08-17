@@ -21,21 +21,36 @@ package org.apache.hadoop.yarn.util.resource;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.junit.Assert;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 @RunWith(Parameterized.class)
 public class TestResourceCalculator {
-  private ResourceCalculator resourceCalculator;
+  private final ResourceCalculator resourceCalculator;
 
   @Parameterized.Parameters
   public static Collection<ResourceCalculator[]> getParameters() {
     return Arrays.asList(new ResourceCalculator[][] {
         { new DefaultResourceCalculator() },
         { new DominantResourceCalculator() } });
+  }
+
+  @BeforeClass
+  public static void setup() {
+    Configuration conf = new Configuration();
+
+    conf.set(YarnConfiguration.RESOURCE_TYPES, "test");
+    ResourceUtils.resetResourceTypes(conf);
+    ResourceUtils.getResourceTypes();
   }
 
   public TestResourceCalculator(ResourceCalculator rs) {
@@ -47,32 +62,181 @@ public class TestResourceCalculator {
     Resource cluster = Resource.newInstance(1024, 1);
 
     if (resourceCalculator instanceof DefaultResourceCalculator) {
-      Assert.assertTrue(resourceCalculator.fitsIn(cluster,
+      assertTrue(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(2, 1)));
-      Assert.assertTrue(resourceCalculator.fitsIn(cluster,
+      assertTrue(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(2, 2)));
-      Assert.assertTrue(resourceCalculator.fitsIn(cluster,
+      assertTrue(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(1, 2)));
-      Assert.assertTrue(resourceCalculator.fitsIn(cluster,
+      assertTrue(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(1, 1)));
-      Assert.assertFalse(resourceCalculator.fitsIn(cluster,
+      assertFalse(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(2, 1), Resource.newInstance(1, 2)));
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
-      Assert.assertFalse(resourceCalculator.fitsIn(cluster,
+      assertFalse(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(2, 1)));
-      Assert.assertTrue(resourceCalculator.fitsIn(cluster,
+      assertTrue(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(2, 2)));
-      Assert.assertTrue(resourceCalculator.fitsIn(cluster,
+      assertTrue(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(1, 2)));
-      Assert.assertFalse(resourceCalculator.fitsIn(cluster,
+      assertFalse(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(1, 2), Resource.newInstance(1, 1)));
-      Assert.assertFalse(resourceCalculator.fitsIn(cluster,
+      assertFalse(resourceCalculator.fitsIn(cluster,
           Resource.newInstance(2, 1), Resource.newInstance(1, 2)));
     }
   }
 
+  private Resource newResource(long memory, int cpu, int test) {
+    Resource res = Resource.newInstance(memory, cpu);
+
+    res.setResourceValue("test", test);
+
+    return res;
+  }
+
+  /**
+   * Test that the compare() method returns the expected result (0, -1, or 1).
+   * If the expected result is not 0, this method will also test the resources
+   * in the opposite order and check for the negative of the expected result.
+   *
+   * @param cluster the cluster resource
+   * @param res1 the LHS resource
+   * @param res2 the RHS resource
+   * @param expected the expected result
+   */
+  private void assertComparison(Resource cluster, Resource res1, Resource res2,
+      int expected) {
+    int actual = resourceCalculator.compare(cluster, res1, res2);
+
+    assertEquals(String.format("Resource comparison did not give the expected "
+        + "result for %s v/s %s", res1.toString(), res2.toString()),
+        expected, actual);
+
+    if (expected != 0) {
+      // Try again with args in the opposite order and the negative of the
+      // expected result.
+      actual = resourceCalculator.compare(cluster, res2, res1);
+      assertEquals(String.format("Resource comparison did not give the "
+          + "expected result for %s v/s %s", res2.toString(), res1.toString()),
+          expected * -1, actual);
+    }
+  }
+
+  @Test
+  public void testCompare2() {
+    // Keep cluster resources even so that the numbers are easy to understand
+    Resource cluster = Resource.newInstance(4, 4);
+
+    assertComparison(cluster, Resource.newInstance(1, 1),
+        Resource.newInstance(1, 1), 0);
+    assertComparison(cluster, Resource.newInstance(0, 0),
+        Resource.newInstance(0, 0), 0);
+    assertComparison(cluster, Resource.newInstance(2, 2),
+        Resource.newInstance(1, 1), 1);
+    assertComparison(cluster, Resource.newInstance(2, 2),
+        Resource.newInstance(0, 0), 1);
+
+    if (resourceCalculator instanceof DefaultResourceCalculator) {
+      testCompareDefault2(cluster);
+    } else if (resourceCalculator instanceof DominantResourceCalculator) {
+      testCompareDominant2(cluster);
+    }
+  }
+
+  @Test
+  public void testCompare() {
+    // Keep cluster resources even so that the numbers are easy to understand
+    Resource cluster = newResource(4L, 4, 4);
+
+    assertComparison(cluster, newResource(1, 1, 1), newResource(1, 1, 1), 0);
+    assertComparison(cluster, newResource(0, 0, 0), newResource(0, 0, 0), 0);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(1, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(0, 0, 0), 1);
+
+    if (resourceCalculator instanceof DefaultResourceCalculator) {
+      testCompareDefault(cluster);
+    } else if (resourceCalculator instanceof DominantResourceCalculator) {
+      testCompareDominant(cluster);
+    }
+  }
+
+  private void testCompareDefault2(Resource cluster) {
+    assertComparison(cluster, Resource.newInstance(1, 1),
+        Resource.newInstance(1, 1), 0);
+    assertComparison(cluster, Resource.newInstance(1, 2),
+        Resource.newInstance(1, 1), 0);
+    assertComparison(cluster, Resource.newInstance(1, 1),
+        Resource.newInstance(1, 0), 0);
+    assertComparison(cluster, Resource.newInstance(2, 1),
+        Resource.newInstance(1, 1), 1);
+    assertComparison(cluster, Resource.newInstance(2, 1),
+        Resource.newInstance(1, 2), 1);
+    assertComparison(cluster, Resource.newInstance(2, 1),
+        Resource.newInstance(1, 0), 1);
+  }
+
+  private void testCompareDominant2(Resource cluster) {
+    assertComparison(cluster, Resource.newInstance(2, 1),
+        Resource.newInstance(2, 1), 0);
+    assertComparison(cluster, Resource.newInstance(2, 1),
+        Resource.newInstance(1, 2), 0);
+    assertComparison(cluster, Resource.newInstance(2, 1),
+        Resource.newInstance(1, 1), 1);
+    assertComparison(cluster, Resource.newInstance(2, 2),
+        Resource.newInstance(2, 1), 1);
+    assertComparison(cluster, Resource.newInstance(2, 2),
+        Resource.newInstance(1, 2), 1);
+    assertComparison(cluster, Resource.newInstance(3, 1),
+        Resource.newInstance(3, 0), 1);
+  }
+
+  private void testCompareDefault(Resource cluster) {
+    assertComparison(cluster, newResource(1, 1, 2), newResource(1, 1, 1), 0);
+    assertComparison(cluster, newResource(1, 2, 1), newResource(1, 1, 1), 0);
+    assertComparison(cluster, newResource(1, 2, 2), newResource(1, 1, 1), 0);
+    assertComparison(cluster, newResource(1, 2, 2), newResource(1, 0, 0), 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 2, 1), 1);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 2), 1);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 2, 2), 1);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 0, 0), 1);
+  }
+
+  private void testCompareDominant(Resource cluster) {
+    assertComparison(cluster, newResource(2, 1, 1), newResource(2, 1, 1), 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 2, 1), 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 2), 0);
+    assertComparison(cluster, newResource(2, 1, 0), newResource(0, 1, 2), 0);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(1, 2, 2), 0);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(2, 1, 2), 0);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(2, 2, 1), 0);
+    assertComparison(cluster, newResource(2, 2, 0), newResource(2, 0, 2), 0);
+    assertComparison(cluster, newResource(3, 2, 1), newResource(3, 2, 1), 0);
+    assertComparison(cluster, newResource(3, 2, 1), newResource(3, 1, 2), 0);
+    assertComparison(cluster, newResource(3, 2, 1), newResource(1, 2, 3), 0);
+    assertComparison(cluster, newResource(3, 2, 1), newResource(1, 3, 2), 0);
+    assertComparison(cluster, newResource(3, 2, 1), newResource(2, 1, 3), 0);
+    assertComparison(cluster, newResource(3, 2, 1), newResource(2, 3, 1), 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 0), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(2, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(1, 2, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(1, 1, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(0, 2, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(2, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(1, 2, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(1, 1, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(2, 2, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(2, 1, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(1, 2, 2), 1);
+    assertComparison(cluster, newResource(3, 2, 1), newResource(2, 2, 2), 1);
+    assertComparison(cluster, newResource(3, 1, 1), newResource(2, 2, 2), 1);
+    assertComparison(cluster, newResource(3, 1, 1), newResource(3, 1, 0), 1);
+    assertComparison(cluster, newResource(3, 1, 1), newResource(3, 0, 0), 1);
+  }
+
   @Test(timeout = 10000)
-  public void testResourceCalculatorCompareMethod() {
+  public void testCompareWithEmptyCluster() {
     Resource clusterResource = Resource.newInstance(0, 0);
 
     // For lhs == rhs
@@ -126,27 +290,27 @@ public class TestResourceCalculator {
       boolean greaterThan, boolean greaterThanOrEqual, Resource max,
       Resource min) {
 
-    Assert.assertEquals("Less Than operation is wrongly calculated.", lessThan,
+    assertEquals("Less Than operation is wrongly calculated.", lessThan,
         Resources.lessThan(resourceCalculator, clusterResource, lhs, rhs));
 
-    Assert.assertEquals(
+    assertEquals(
         "Less Than Or Equal To operation is wrongly calculated.",
         lessThanOrEqual, Resources.lessThanOrEqual(resourceCalculator,
             clusterResource, lhs, rhs));
 
-    Assert.assertEquals("Greater Than operation is wrongly calculated.",
+    assertEquals("Greater Than operation is wrongly calculated.",
         greaterThan,
         Resources.greaterThan(resourceCalculator, clusterResource, lhs, rhs));
 
-    Assert.assertEquals(
+    assertEquals(
         "Greater Than Or Equal To operation is wrongly calculated.",
         greaterThanOrEqual, Resources.greaterThanOrEqual(resourceCalculator,
             clusterResource, lhs, rhs));
 
-    Assert.assertEquals("Max(value) Operation wrongly calculated.", max,
+    assertEquals("Max(value) Operation wrongly calculated.", max,
         Resources.max(resourceCalculator, clusterResource, lhs, rhs));
 
-    Assert.assertEquals("Min(value) operation is wrongly calculated.", min,
+    assertEquals("Min(value) operation is wrongly calculated.", min,
         Resources.min(resourceCalculator, clusterResource, lhs, rhs));
   }
 
@@ -164,13 +328,13 @@ public class TestResourceCalculator {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(2 * 1024, result.getMemorySize());
+      assertEquals(2 * 1024, result.getMemorySize());
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(2 * 1024, result.getMemorySize());
-      Assert.assertEquals(4, result.getVirtualCores());
+      assertEquals(2 * 1024, result.getMemorySize());
+      assertEquals(4, result.getVirtualCores());
     }
 
     // if resources asked are less than minimum resource, then normalize it to
@@ -183,13 +347,13 @@ public class TestResourceCalculator {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(2 * 1024, result.getMemorySize());
+      assertEquals(2 * 1024, result.getMemorySize());
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(2 * 1024, result.getMemorySize());
-      Assert.assertEquals(2, result.getVirtualCores());
+      assertEquals(2 * 1024, result.getMemorySize());
+      assertEquals(2, result.getVirtualCores());
     }
 
     // if resources asked are larger than maximum resource, then normalize it to
@@ -202,13 +366,13 @@ public class TestResourceCalculator {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(8 * 1024, result.getMemorySize());
+      assertEquals(8 * 1024, result.getMemorySize());
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(8 * 1024, result.getMemorySize());
-      Assert.assertEquals(8, result.getVirtualCores());
+      assertEquals(8 * 1024, result.getMemorySize());
+      assertEquals(8, result.getVirtualCores());
     }
 
     // if increment is 0, use minimum resource as the increment resource.
@@ -220,13 +384,13 @@ public class TestResourceCalculator {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(2 * 1024, result.getMemorySize());
+      assertEquals(2 * 1024, result.getMemorySize());
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
       Resource result = Resources.normalize(resourceCalculator,
           ask, min, max, increment);
 
-      Assert.assertEquals(2 * 1024, result.getMemorySize());
-      Assert.assertEquals(2, result.getVirtualCores());
+      assertEquals(2 * 1024, result.getMemorySize());
+      assertEquals(2, result.getVirtualCores());
     }
   }
 }
