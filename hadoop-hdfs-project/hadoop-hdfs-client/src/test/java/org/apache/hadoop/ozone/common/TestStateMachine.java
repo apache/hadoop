@@ -15,11 +15,11 @@
  * the License.
  */
 
-package org.apache.hadoop.scm;
+package org.apache.hadoop.ozone.common;
 
 import org.apache.commons.collections.SetUtils;
-import org.apache.hadoop.scm.container.common.helpers.StateMachine.InvalidStateTransitionException;
-import org.apache.hadoop.scm.container.common.helpers.StateMachine.StateMachine;
+import org.apache.hadoop.ozone.common.statemachine.InvalidStateTransitionException;
+import org.apache.hadoop.ozone.common.statemachine.StateMachine;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,17 +28,26 @@ import org.junit.rules.ExpectedException;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.apache.hadoop.scm.TestStateMachine.STATES.INIT;
-import static org.apache.hadoop.scm.TestStateMachine.STATES.CREATING;
-import static org.apache.hadoop.scm.TestStateMachine.STATES.OPERATIONAL;
-import static org.apache.hadoop.scm.TestStateMachine.STATES.CLOSED;
-import static org.apache.hadoop.scm.TestStateMachine.STATES.CLEANUP;
-import static org.apache.hadoop.scm.TestStateMachine.STATES.FINAL;
+import static org.apache.hadoop.ozone.common.TestStateMachine.STATES.INIT;
+import static org.apache.hadoop.ozone.common.TestStateMachine.STATES.CREATING;
+import static org.apache.hadoop.ozone.common.TestStateMachine.STATES.OPERATIONAL;
+import static org.apache.hadoop.ozone.common.TestStateMachine.STATES.CLOSED;
+import static org.apache.hadoop.ozone.common.TestStateMachine.STATES.CLEANUP;
+import static org.apache.hadoop.ozone.common.TestStateMachine.STATES.FINAL;
 
+/**
+ * This class is to test ozone common state machine.
+ */
 public class TestStateMachine {
 
+  /**
+   * STATES used by the test state machine.
+   */
   public enum STATES {INIT, CREATING, OPERATIONAL, CLOSED, CLEANUP, FINAL};
 
+  /**
+   * EVENTS used by the test state machine.
+   */
   public enum EVENTS {ALLOCATE, CREATE, UPDATE, CLOSE, DELETE, TIMEOUT};
 
   @Rule
@@ -75,7 +84,7 @@ public class TestStateMachine {
         CLEANUP, stateMachine.getNextState(CREATING, EVENTS.TIMEOUT));
     Assert.assertEquals("STATE should be CLOSED after being closed",
         CLOSED, stateMachine.getNextState(OPERATIONAL, EVENTS.CLOSE));
-    
+
     // Negative cases: invalid transition
     expectException();
     stateMachine.getNextState(OPERATIONAL, EVENTS.CREATE);

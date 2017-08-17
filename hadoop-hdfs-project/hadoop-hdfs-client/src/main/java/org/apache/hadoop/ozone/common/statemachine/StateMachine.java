@@ -16,12 +16,12 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.scm.container.common.helpers.StateMachine;
+package org.apache.hadoop.ozone.common.statemachine;
 
 import com.google.common.base.Supplier;
-import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,7 +36,7 @@ public class StateMachine<STATE extends Enum<?>, EVENT extends Enum<?>> {
   private STATE initialState;
   private Set<STATE> finalStates;
 
-  private final Cache<EVENT, Map<STATE, STATE>> transitions =
+  private final LoadingCache<EVENT, Map<STATE, STATE>> transitions =
       CacheBuilder.newBuilder().build(
           CacheLoader.from((Supplier<Map<STATE, STATE>>) () -> new HashMap()));
 
@@ -62,8 +62,7 @@ public class StateMachine<STATE extends Enum<?>, EVENT extends Enum<?>> {
     return target;
   }
 
-  public void addTransition(STATE from, STATE to, EVENT e)
-      throws InvalidStateTransitionException {
+  public void addTransition(STATE from, STATE to, EVENT e) {
     transitions.getUnchecked(e).put(from, to);
   }
 }

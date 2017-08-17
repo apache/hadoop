@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.scm.container.common.helpers.StateMachine;
+package org.apache.hadoop.ozone.common.statemachine;
 
 /**
  * Class wraps invalid state transition exception.
