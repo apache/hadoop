@@ -56,6 +56,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -116,6 +118,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -2142,5 +2145,47 @@ public class TestClientRMService {
     assertEquals("Incorrect number of applications for user", 0,
         rmService.getApplications(request).getApplicationList().size());
     rmService.setDisplayPerUserApps(false);
+  }
+
+  public void testGetResourceTypesInfoWhenResourceProfileDisabled()
+      throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    MockRM rm = new MockRM(conf) {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+            this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
+            this.getRMContext().getRMDelegationTokenSecretManager());
+      }
+    };
+    rm.start();
+
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc
+            .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+
+    // Make call
+    GetAllResourceTypeInfoRequest request =
+        GetAllResourceTypeInfoRequest.newInstance();
+    GetAllResourceTypeInfoResponse response = client.getResourceTypeInfo(request);
+
+    Assert.assertEquals(2, response.getResourceTypeInfo().size());
+
+    // Check memory
+    Assert.assertEquals(ResourceInformation.MEMORY_MB.getName(),
+        response.getResourceTypeInfo().get(0).getName());
+    Assert.assertEquals(ResourceInformation.MEMORY_MB.getUnits(),
+        response.getResourceTypeInfo().get(0).getDefaultUnit());
+
+    // Check vcores
+    Assert.assertEquals(ResourceInformation.VCORES.getName(),
+        response.getResourceTypeInfo().get(1).getName());
+    Assert.assertEquals(ResourceInformation.VCORES.getUnits(),
+        response.getResourceTypeInfo().get(1).getDefaultUnit());
+
+    rm.stop();
+    rpc.stopProxy(client, conf);
   }
 }

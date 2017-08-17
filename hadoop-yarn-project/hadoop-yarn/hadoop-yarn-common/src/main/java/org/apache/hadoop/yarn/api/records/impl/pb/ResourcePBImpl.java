@@ -63,6 +63,7 @@ public class ResourcePBImpl extends BaseResource {
 
   public ResourcePBImpl() {
     builder = ResourceProto.newBuilder();
+    initResources();
   }
 
   public ResourcePBImpl(ResourceProto proto) {
@@ -94,7 +95,6 @@ public class ResourcePBImpl extends BaseResource {
   @Override
   public long getMemorySize() {
     // memory should always be present
-    initResources();
     ResourceInformation ri = resources[MandatoryResources.MEMORY.getId()];
 
     if (ri.getUnits().isEmpty()) {
@@ -119,7 +119,6 @@ public class ResourcePBImpl extends BaseResource {
   @Override
   public int getVirtualCores() {
     // vcores should always be present
-    initResources();
     return (int) resources[MandatoryResources.VCORES.getId()].getValue();
   }
 
@@ -140,7 +139,11 @@ public class ResourcePBImpl extends BaseResource {
       ResourceTypes type =
           entry.hasType() ? ProtoUtils.convertFromProtoFormat(entry.getType()) :
               ResourceTypes.COUNTABLE;
-      String units = entry.hasUnits() ? entry.getUnits() : "";
+
+      // When unit not specified in proto, use the default unit.
+      String units =
+          entry.hasUnits() ? entry.getUnits() : ResourceUtils.getDefaultUnit(
+              entry.getKey());
       long value = entry.hasValue() ? entry.getValue() : 0L;
       ResourceInformation ri = ResourceInformation
           .newInstance(entry.getKey(), units, value, type, 0L, Long.MAX_VALUE);
@@ -185,21 +188,18 @@ public class ResourcePBImpl extends BaseResource {
 
   @Override
   public ResourceInformation[] getResources() {
-    initResources();
     return super.getResources();
   }
 
   @Override
   public ResourceInformation getResourceInformation(String resource)
       throws ResourceNotFoundException {
-    initResources();
     return super.getResourceInformation(resource);
   }
 
   @Override
   public long getResourceValue(String resource)
       throws ResourceNotFoundException {
-    initResources();
     return super.getResourceValue(resource);
   }
 
