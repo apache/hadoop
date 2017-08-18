@@ -183,8 +183,9 @@ public class TestResourceUtils {
             YarnConfiguration.RESOURCE_TYPES + "." + resources[0] + ".units";
         conf.set(name, resources[1]);
       }
-      Map<String, ResourceInformation> ret = new HashMap<>();
-      ResourceUtils.initializeResourcesMap(conf, ret);
+      Map<String, ResourceInformation> ret =
+          ResourceUtils.resetResourceTypes(conf);
+
       // for test1, 4 - length will be 1, 4
       // for the others, len will be 3
       int len = 3;
@@ -248,9 +249,8 @@ public class TestResourceUtils {
             YarnConfiguration.RESOURCE_TYPES + "." + resources[0] + ".units";
         conf.set(name, resources[1]);
       }
-      Map<String, ResourceInformation> ret = new HashMap<>();
       try {
-        ResourceUtils.initializeResourcesMap(conf, ret);
+        ResourceUtils.initializeResourcesMap(conf);
         Assert.fail("resource map initialization should fail");
       } catch (Exception e) {
         // do nothing
