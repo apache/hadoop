@@ -201,9 +201,9 @@ public class ResourceUtils {
   }
 
   @VisibleForTesting
-  static void initializeResourcesMap(Configuration conf,
-      Map<String, ResourceInformation> resourceInformationMap) {
+  static void initializeResourcesMap(Configuration conf) {
 
+    Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
     String[] resourceNames = conf.getStrings(YarnConfiguration.RESOURCE_TYPES);
 
     if (resourceNames != null && resourceNames.length != 0) {
@@ -339,19 +339,18 @@ public class ResourceUtils {
     if (!initializedResources) {
       synchronized (ResourceUtils.class) {
         if (!initializedResources) {
-          Map<String, ResourceInformation> resources = new HashMap<>();
           if (conf == null) {
             conf = new YarnConfiguration();
           }
           try {
             addResourcesFileToConf(resourceFile, conf);
             LOG.debug("Found " + resourceFile + ", adding to configuration");
-            initializeResourcesMap(conf, resources);
+            initializeResourcesMap(conf);
             initializedResources = true;
           } catch (FileNotFoundException fe) {
             LOG.info("Unable to find '" + resourceFile
                 + "'. Falling back to memory and vcores as resources", fe);
-            initializeResourcesMap(conf, resources);
+            initializeResourcesMap(conf);
             initializedResources = true;
           }
         }
@@ -414,11 +413,12 @@ public class ResourceUtils {
   }
 
   @VisibleForTesting
-  public static void resetResourceTypes(Configuration conf) {
+  public static Map<String, ResourceInformation>
+      resetResourceTypes(Configuration conf) {
     synchronized (ResourceUtils.class) {
       initializedResources = false;
     }
-    getResourceTypes(conf);
+    return getResourceTypes(conf);
   }
 
   public static String getUnits(String resourceValue) {
