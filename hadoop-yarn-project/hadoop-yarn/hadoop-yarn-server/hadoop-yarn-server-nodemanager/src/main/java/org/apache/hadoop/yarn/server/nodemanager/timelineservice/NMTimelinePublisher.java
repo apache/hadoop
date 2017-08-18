@@ -403,7 +403,7 @@ public class NMTimelinePublisher extends CompositeService {
     }
   }
 
-  public void createTimelineClient(ApplicationId appId) {
+  public void createTimelineClient(final ApplicationId appId) {
     if (!appToClientMap.containsKey(appId)) {
       try {
         TimelineV2Client timelineClient =
