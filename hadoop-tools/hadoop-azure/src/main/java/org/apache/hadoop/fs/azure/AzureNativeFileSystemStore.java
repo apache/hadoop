@@ -2459,8 +2459,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     try {
       blob.delete(operationContext, lease);
     } catch (StorageException e) {
-      LOG.error("Encountered Storage Exception for delete on Blob: {}, Exception Details: {} Error Code: {}",
-          blob.getUri(), e.getMessage(), e.getErrorCode());
+      if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
+        LOG.error("Encountered Storage Exception for delete on Blob: {}"
+            + ", Exception Details: {} Error Code: {}",
+            blob.getUri(), e.getMessage(), e.getErrorCode());
+      }
       // On exception, check that if:
       // 1. It's a BlobNotFound exception AND
       // 2. It got there after one-or-more retries THEN
@@ -2491,17 +2494,17 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         // Container doesn't exist, no need to do anything
         return true;
       }
-
       // Get the blob reference and delete it.
       CloudBlobWrapper blob = getBlobReference(key);
-      if (blob.exists(getInstrumentedContext())) {
-        safeDelete(blob, lease);
-        return true;
-      } else {
+      safeDelete(blob, lease);
+      return true;
+    } catch (Exception e) {
+      if (e instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException(
+              (StorageException) e)) {
+        // the file or directory does not exist
         return false;
       }
-    } catch (Exception e) {
-      // Re-throw as an Azure storage exception.
       throw new AzureException(e);
     }
   }
