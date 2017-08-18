@@ -55,12 +55,11 @@ public class TestCompareResourceCalculators {
     Assume.assumeNotNull(module);
 
     Random random = new Random();
+    String cgroup = Long.toString(random.nextLong());
     cgroupCPU = ResourceHandlerModule.getCGroupsHandler()
-        .getControllerPath(CGroupsHandler.CGroupController.CPU) +
-        "/" + Long.toString(random.nextLong());
+        .getPathForCGroup(CGroupsHandler.CGroupController.CPU, cgroup);
     cgroupMemory = ResourceHandlerModule.getCGroupsHandler()
-        .getControllerPath(CGroupsHandler.CGroupController.MEMORY) +
-        "/" + Long.toString(random.nextLong());
+        .getPathForCGroup(CGroupsHandler.CGroupController.MEMORY, cgroup);
   }
 
   @After
@@ -125,9 +124,9 @@ public class TestCompareResourceCalculators {
   private void startTestProcess() throws IOException {
     ProcessBuilder builder = new ProcessBuilder();
     String script =
-        "mkdir " + cgroupCPU + ";" +
+        "mkdir -p " + cgroupCPU + ";" +
         "echo $$ >" + cgroupCPU + "/tasks;" +
-        "mkdir " + cgroupMemory + ";" +
+        "mkdir -p " + cgroupMemory + ";" +
         "echo $$ >" + cgroupMemory + "/tasks;" +
         "dd if=/dev/zero of=/dev/null bs=1k;";
     builder.command("bash", "-c", script);
