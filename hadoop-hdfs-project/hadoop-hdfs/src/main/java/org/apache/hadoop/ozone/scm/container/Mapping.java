@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.scm.container;
 
 
-import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
@@ -57,14 +57,6 @@ public interface Mapping extends Closeable {
   List<Pipeline> listContainer(String startName, String prefixName, int count)
       throws IOException;
 
-  /**
-   * Allocates a new container for a given keyName.
-   *
-   * @param containerName - Name
-   * @return - Pipeline that makes up this container.
-   * @throws IOException
-   */
-  Pipeline allocateContainer(String containerName) throws IOException;
 
   /**
    * Allocates a new container for a given keyName and replication factor.
@@ -74,8 +66,9 @@ public interface Mapping extends Closeable {
    * @return - Pipeline that makes up this container.
    * @throws IOException
    */
-  Pipeline allocateContainer(String containerName,
-      ScmClient.ReplicationFactor replicationFactor) throws IOException;
+  Pipeline allocateContainer(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor replicationFactor,
+      String containerName) throws IOException;
 
   /**
    * Deletes a container from SCM.

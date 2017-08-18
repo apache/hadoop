@@ -29,6 +29,7 @@ import io.netty.handler.logging.LoggingHandler;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +80,16 @@ public final class XceiverServer implements XceiverServerSpi {
   @Override
   public int getIPCPort() {
     return this.port;
+  }
+
+  /**
+   * Returns the Replication type supported by this end-point.
+   *
+   * @return enum -- {Stand_Alone, Ratis, Chained}
+   */
+  @Override
+  public OzoneProtos.ReplicationType getServerType() {
+    return OzoneProtos.ReplicationType.STAND_ALONE;
   }
 
   @Override

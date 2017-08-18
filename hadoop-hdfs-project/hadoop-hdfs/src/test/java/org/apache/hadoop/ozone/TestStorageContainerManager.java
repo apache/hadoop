@@ -21,8 +21,9 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
-import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.junit.Rule;
 import org.junit.Assert;
@@ -37,6 +38,9 @@ import org.mockito.Mockito;
  * Test class that exercises the StorageContainerManager.
  */
 public class TestStorageContainerManager {
+  private static XceiverClientManager xceiverClientManager =
+      new XceiverClientManager(
+      new OzoneConfiguration());
   /**
    * Set the timeout for every test.
    */
@@ -94,7 +98,9 @@ public class TestStorageContainerManager {
       }
 
       try {
-        Pipeline pipeLine2 = mockScm.allocateContainer("container2");
+        Pipeline pipeLine2 = mockScm.allocateContainer(
+            xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, "container2");
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
         } else {
@@ -105,8 +111,10 @@ public class TestStorageContainerManager {
       }
 
       try {
-        Pipeline pipeLine3 = mockScm.allocateContainer("container3",
-            ScmClient.ReplicationFactor.ONE);
+        Pipeline pipeLine3 = mockScm.allocateContainer(
+            xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, "container3");
+
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
         } else {

@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
+import org.apache.hadoop.ozone.container.common.transport.server
+    .XceiverServerSpi;
+
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
@@ -34,7 +39,9 @@ import org.apache.ratis.server.RaftServerConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Collections;
 import java.util.Objects;
 
@@ -44,37 +51,6 @@ import java.util.Objects;
  */
 public final class XceiverServerRatis implements XceiverServerSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverServerRatis.class);
-
-  static RaftProperties newRaftProperties(
-      RpcType rpc, int port, String storageDir) {
-    final RaftProperties properties = new RaftProperties();
-    RaftServerConfigKeys.setStorageDir(properties, storageDir);
-    RaftConfigKeys.Rpc.setType(properties, rpc);
-    if (rpc == SupportedRpcType.GRPC) {
-      GrpcConfigKeys.Server.setPort(properties, port);
-    } else if (rpc == SupportedRpcType.NETTY) {
-      NettyConfigKeys.Server.setPort(properties, port);
-    }
-    return properties;
-  }
-
-  public static XceiverServerRatis newXceiverServerRatis(
-      Configuration ozoneConf, ContainerDispatcher dispatcher)
-      throws IOException {
-    final String id = ozoneConf.get(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_SERVER_ID);
-    final int port = ozoneConf.getInt(
-        OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-        OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
-    final String storageDir = ozoneConf.get(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR);
-    final String rpcType = ozoneConf.get(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
-    final RpcType rpc = SupportedRpcType.valueOfIgnoreCase(rpcType);
-    return new XceiverServerRatis(id, port, storageDir, dispatcher, rpc);
-  }
-
   private final int port;
   private final RaftServer server;
 
@@ -90,6 +66,69 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         .setProperties(newRaftProperties(rpcType, port, storageDir))
         .setStateMachine(new ContainerStateMachine(dispatcher))
         .build();
+  }
+
+  static RaftProperties newRaftProperties(
+      RpcType rpc, int port, String storageDir) {
+    final RaftProperties properties = new RaftProperties();
+    RaftServerConfigKeys.setStorageDir(properties, storageDir);
+    RaftConfigKeys.Rpc.setType(properties, rpc);
+    if (rpc == SupportedRpcType.GRPC) {
+      GrpcConfigKeys.Server.setPort(properties, port);
+    } else {
+      if (rpc == SupportedRpcType.NETTY) {
+        NettyConfigKeys.Server.setPort(properties, port);
+      }
+    }
+    return properties;
+  }
+
+  public static XceiverServerRatis newXceiverServerRatis(String datanodeID,
+      Configuration ozoneConf, ContainerDispatcher dispatcher)
+      throws IOException {
+    final String ratisDir = File.separator + "ratis";
+    int localPort = ozoneConf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT);
+    String storageDir = ozoneConf.get(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR);
+
+    if (Strings.isNullOrEmpty(storageDir)) {
+      storageDir = ozoneConf.get(OzoneConfigKeys
+          .OZONE_CONTAINER_METADATA_DIRS);
+      Preconditions.checkNotNull(storageDir, "ozone.container.metadata.dirs " +
+          "cannot be null, Please check your configs.");
+      storageDir = storageDir.concat(ratisDir);
+      LOG.warn("Storage directory for Ratis is not configured. Mapping Ratis " +
+              "storage under {}. It is a good idea to map this to an SSD disk.",
+          storageDir);
+    }
+    final String rpcType = ozoneConf.get(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
+    final RpcType rpc = SupportedRpcType.valueOfIgnoreCase(rpcType);
+
+    // Get an available port on current node and
+    // use that as the container port
+    if (ozoneConf.getBoolean(OzoneConfigKeys
+            .DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT_DEFAULT)) {
+      try (ServerSocket socket = new ServerSocket(0)) {
+        socket.setReuseAddress(true);
+        localPort = socket.getLocalPort();
+        LOG.info("Found a free port for the server : {}", localPort);
+        // If we have random local ports configured this means that it
+        // probably running under MiniOzoneCluster. Ratis locks the storage
+        // directories, so we need to pass different local directory for each
+        // local instance. So we map ratis directories under datanode ID.
+        storageDir = storageDir.concat(File.separator + datanodeID);
+      } catch (IOException e) {
+        LOG.error("Unable find a random free port for the server, "
+            + "fallback to use default port {}", localPort, e);
+      }
+    }
+    return new XceiverServerRatis(datanodeID, localPort, storageDir,
+        dispatcher, rpc);
   }
 
   @Override
@@ -111,5 +150,15 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   @Override
   public int getIPCPort() {
     return port;
+  }
+
+  /**
+   * Returns the Replication type supported by this end-point.
+   *
+   * @return enum -- {Stand_Alone, Ratis, Chained}
+   */
+  @Override
+  public OzoneProtos.ReplicationType getServerType() {
+    return OzoneProtos.ReplicationType.RATIS;
   }
 }

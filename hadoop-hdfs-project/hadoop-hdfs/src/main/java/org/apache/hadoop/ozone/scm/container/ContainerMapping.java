@@ -1,4 +1,3 @@
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with this
@@ -22,15 +21,11 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
+import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
@@ -41,8 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,8 +58,7 @@ public class ContainerMapping implements Mapping {
   private final Lock lock;
   private final Charset encoding = Charset.forName("UTF-8");
   private final MetadataStore containerStore;
-  private final ContainerPlacementPolicy placementPolicy;
-  private final long containerSize;
+  private final PipelineSelector pipelineSelector;
 
   /**
    * Constructs a mapping class that creates mapping between container names and
@@ -96,66 +88,10 @@ public class ContainerMapping implements Mapping {
         .build();
 
     this.lock = new ReentrantLock();
-
-    this.containerSize = OzoneConsts.GB * conf.getInt(
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
-    this.placementPolicy = createContainerPlacementPolicy(nodeManager, conf);
+    this.pipelineSelector = new PipelineSelector(nodeManager, conf);
   }
 
-  /**
-   * Create pluggable container placement policy implementation instance.
-   *
-   * @param nodeManager - SCM node manager.
-   * @param conf - configuration.
-   * @return SCM container placement policy implementation instance.
-   */
-  @SuppressWarnings("unchecked")
-  private static ContainerPlacementPolicy createContainerPlacementPolicy(
-      final NodeManager nodeManager, final Configuration conf) {
-    Class<? extends ContainerPlacementPolicy> implClass =
-        (Class<? extends ContainerPlacementPolicy>) conf.getClass(
-            ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-            SCMContainerPlacementRandom.class);
 
-    try {
-      Constructor<? extends ContainerPlacementPolicy> ctor =
-          implClass.getDeclaredConstructor(NodeManager.class,
-              Configuration.class);
-      return ctor.newInstance(nodeManager, conf);
-    } catch (RuntimeException e) {
-      throw e;
-    } catch (InvocationTargetException e) {
-      throw new RuntimeException(implClass.getName()
-          + " could not be constructed.", e.getCause());
-    } catch (Exception e) {
-      LOG.error("Unhandled exception occured, Placement policy will not be " +
-          "functional.");
-      throw new IllegalArgumentException("Unable to load " +
-          "ContainerPlacementPolicy", e);
-    }
-  }
-
-  /**
-   * Translates a list of nodes, ordered such that the first is the leader, into
-   * a corresponding {@link Pipeline} object.
-   * @param nodes - list of datanodes on which we will allocate the container.
-   * The first of the list will be the leader node.
-   * @param containerName container name
-   * @return pipeline corresponding to nodes
-   */
-  private static Pipeline newPipelineFromNodes(final List<DatanodeID> nodes,
-      final String containerName) {
-    Preconditions.checkNotNull(nodes);
-    Preconditions.checkArgument(nodes.size() > 0);
-    String leaderId = nodes.get(0).getDatanodeUuid();
-    Pipeline pipeline = new Pipeline(leaderId);
-    for (DatanodeID node : nodes) {
-      pipeline.addMember(node);
-    }
-    pipeline.setContainerName(containerName);
-    return pipeline;
-  }
 
   /**
    * Returns the Pipeline from the container name.
@@ -192,7 +128,7 @@ public class ContainerMapping implements Mapping {
     List<Pipeline> pipelineList = new ArrayList<>();
     lock.lock();
     try {
-      if(containerStore.isEmpty()) {
+      if (containerStore.isEmpty()) {
         throw new IOException("No container exists in current db");
       }
       MetadataKeyFilter prefixFilter = new KeyPrefixFilter(prefixName);
@@ -217,26 +153,14 @@ public class ContainerMapping implements Mapping {
    * Allocates a new container.
    *
    * @param containerName - Name of the container.
-   * @return - Pipeline that makes up this container.
-   * @throws IOException
-   */
-  @Override
-  public Pipeline allocateContainer(final String containerName)
-      throws IOException {
-    return allocateContainer(containerName, ScmClient.ReplicationFactor.ONE);
-  }
-
-  /**
-   * Allocates a new container.
-   *
-   * @param containerName - Name of the container.
    * @param replicationFactor - replication factor of the container.
    * @return - Pipeline that makes up this container.
-   * @throws IOException
+   * @throws IOException - Exception
    */
   @Override
-  public Pipeline allocateContainer(final String containerName,
-      final ScmClient.ReplicationFactor replicationFactor) throws IOException {
+  public Pipeline allocateContainer(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor replicationFactor,
+      final String containerName) throws IOException {
     Preconditions.checkNotNull(containerName);
     Preconditions.checkState(!containerName.isEmpty());
     Pipeline pipeline = null;
@@ -253,18 +177,10 @@ public class ContainerMapping implements Mapping {
         throw new SCMException("Specified container already exists. key : " +
             containerName, SCMException.ResultCodes.CONTAINER_EXISTS);
       }
-      List<DatanodeID> datanodes = placementPolicy.chooseDatanodes(
-          replicationFactor.getValue(), containerSize);
-      // TODO: handle under replicated container
-      if (datanodes != null && datanodes.size() > 0) {
-        pipeline = newPipelineFromNodes(datanodes, containerName);
-        containerStore.put(containerName.getBytes(encoding),
-            pipeline.getProtobufMessage().toByteArray());
-      } else {
-        LOG.debug("Unable to find enough datanodes for new container. " +
-            "Required {} found {}", replicationFactor,
-            datanodes != null ? datanodes.size(): 0);
-      }
+      pipeline = pipelineSelector.getReplicationPipeline(type,
+          replicationFactor, containerName);
+      containerStore.put(containerName.getBytes(encoding),
+          pipeline.getProtobufMessage().toByteArray());
     } finally {
       lock.unlock();
     }
@@ -275,9 +191,8 @@ public class ContainerMapping implements Mapping {
    * Deletes a container from SCM.
    *
    * @param containerName - Container name
-   * @throws IOException
-   *   if container doesn't exist
-   *   or container store failed to delete the specified key.
+   * @throws IOException if container doesn't exist or container store failed to
+   *                     delete the specified key.
    */
   @Override
   public void deleteContainer(String containerName) throws IOException {
@@ -286,7 +201,7 @@ public class ContainerMapping implements Mapping {
       byte[] dbKey = containerName.getBytes(encoding);
       byte[] pipelineBytes =
           containerStore.get(dbKey);
-      if(pipelineBytes == null) {
+      if (pipelineBytes == null) {
         throw new SCMException("Failed to delete container "
             + containerName + ", reason : container doesn't exist.",
             SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);

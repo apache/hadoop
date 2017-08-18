@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -66,7 +67,8 @@ public class TestOzoneContainer {
           containerName);
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
-      container = new OzoneContainer(conf);
+      container = new OzoneContainer(DFSTestUtil.getLocalDatanodeID(1),
+          conf);
       container.start();
 
       XceiverClient client = new XceiverClient(pipeline, conf);

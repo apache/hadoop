@@ -113,9 +113,11 @@ public class InitDatanodeState implements DatanodeState,
     }
     File idPath = new File(dataNodeIDPath);
     int containerPort = this.context.getContainerPort();
+    int ratisPort = this.context.getRatisPort();
     DatanodeID datanodeID = this.context.getParent().getDatanodeID();
     if (datanodeID != null) {
       datanodeID.setContainerPort(containerPort);
+      datanodeID.setRatisPort(ratisPort);
       ContainerUtils.writeDatanodeIDTo(datanodeID, idPath);
       LOG.info("Datanode ID is persisted to {}", dataNodeIDPath);
     }

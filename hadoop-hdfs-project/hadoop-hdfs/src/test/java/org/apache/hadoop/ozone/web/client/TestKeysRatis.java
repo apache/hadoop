@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -34,6 +35,7 @@ import java.text.ParseException;
 import static org.apache.hadoop.ozone.web.client.TestKeys.*;
 
 /** The same as {@link TestKeys} except that this test is Ratis enabled. */
+@Ignore("Disabling Ratis tests for pipeline work.")
 public class TestKeysRatis {
   @Rule
   public Timeout testTimeout = new Timeout(300000);

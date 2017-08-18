@@ -32,7 +32,7 @@ import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
@@ -61,7 +61,8 @@ import static org.junit.Assert.assertTrue;
 public class TestContainerPlacement {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
-
+  private static XceiverClientManager xceiverClientManager =
+      new XceiverClientManager(new OzoneConfiguration());
   /**
    * Returns a new copy of Configuration.
    *
@@ -151,9 +152,11 @@ public class TestContainerPlacement {
       assertTrue(nodeManager.isOutOfNodeChillMode());
 
       String container1 = UUID.randomUUID().toString();
-      Pipeline pipeline1 = containerManager.allocateContainer(container1,
-          ScmClient.ReplicationFactor.THREE);
-      assertEquals(3, pipeline1.getMachines().size());
+      Pipeline pipeline1 = containerManager.allocateContainer(
+          xceiverClientManager.getType(),
+          xceiverClientManager.getFactor(), container1);
+      assertEquals(xceiverClientManager.getFactor().getNumber(),
+          pipeline1.getMachines().size());
 
       final long newUsed = 7L * OzoneConsts.GB;
       final long newRemaining = capacity - newUsed;
@@ -180,8 +183,8 @@ public class TestContainerPlacement {
           startsWith("Unable to find enough nodes that meet "
               + "the space requirement"));
       String container2 = UUID.randomUUID().toString();
-      containerManager.allocateContainer(container2,
-          ScmClient.ReplicationFactor.THREE);
+      containerManager.allocateContainer(xceiverClientManager.getType(),
+          xceiverClientManager.getFactor(), container2);
     } finally {
       IOUtils.closeQuietly(containerManager);
       IOUtils.closeQuietly(nodeManager);

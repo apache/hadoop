@@ -27,11 +27,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
-import org.apache.hadoop.ozone.scm.ratis.RatisManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -77,8 +75,6 @@ public final class MiniOzoneCluster extends MiniDFSCluster
   private final KeySpaceManager ksm;
   private final Path tempPath;
 
-  private final RatisManager ratisManager;
-
   /**
    * Creates a new MiniOzoneCluster.
    *
@@ -94,34 +90,14 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     this.scm = scm;
     this.ksm = ksm;
     tempPath = Paths.get(builder.getPath(), builder.getRunID());
-
-    final boolean useRatis = conf.getBoolean(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
-    this.ratisManager = useRatis? RatisManager.newRatisManager(conf): null;
   }
 
-  public RatisManager getRatisManager() {
-    return ratisManager;
-  }
 
   @Override
   protected void setupDatanodeAddress(
       int i, Configuration dnConf, boolean setupHostsFile,
       boolean checkDnAddrConf) throws IOException {
     super.setupDatanodeAddress(i, dnConf, setupHostsFile, checkDnAddrConf);
-
-    final boolean useRatis = dnConf.getBoolean(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
-    if (!useRatis) {
-      return;
-    }
-    final String address = ContainerTestHelper.createLocalAddress();
-    setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_SERVER_ID,
-        address);
-    setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-        String.valueOf(NetUtils.createSocketAddr(address).getPort()));
     setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
         getInstanceStorageDir(i, -1).getCanonicalPath());
     String containerMetaDirs = dnConf.get(
@@ -304,8 +280,12 @@ public final class MiniOzoneCluster extends MiniDFSCluster
      */
     public Builder(OzoneConfiguration conf) {
       super(conf);
+      // Mini Ozone cluster will not come up if the port is not true, since
+      // Ratis will exit if the server port cannot be bound. We can remove this
+      // hard coding once we fix the Ratis default behaviour.
+      conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
+          true);
       this.conf = conf;
-
       path = GenericTestUtils.getTempPath(
           MiniOzoneCluster.class.getSimpleName() +
           UUID.randomUUID().toString());

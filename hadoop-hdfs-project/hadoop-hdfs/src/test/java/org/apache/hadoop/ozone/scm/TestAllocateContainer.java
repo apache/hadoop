@@ -22,6 +22,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.junit.AfterClass;
@@ -42,6 +43,7 @@ public class TestAllocateContainer {
   private static OzoneConfiguration conf;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
+  private static XceiverClientManager xceiverClientManager;
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -49,11 +51,12 @@ public class TestAllocateContainer {
   public static void init() throws Exception {
     long datanodeCapacities = 3 * OzoneConsts.TB;
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
+    xceiverClientManager = new XceiverClientManager(conf);
     cluster.waitForHeartbeatProcessed();
   }
 
@@ -68,6 +71,8 @@ public class TestAllocateContainer {
   @Test
   public void testAllocate() throws Exception {
     Pipeline pipeline = storageContainerLocationClient.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(),
         "container0");
     Assert.assertNotNull(pipeline);
     Assert.assertNotNull(pipeline.getLeader());
@@ -77,7 +82,9 @@ public class TestAllocateContainer {
   @Test
   public void testAllocateNull() throws Exception {
     thrown.expect(NullPointerException.class);
-    storageContainerLocationClient.allocateContainer(null);
+    storageContainerLocationClient.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), null);
   }
 
   @Test
@@ -85,7 +92,11 @@ public class TestAllocateContainer {
     String containerName = RandomStringUtils.randomAlphanumeric(10);
     thrown.expect(IOException.class);
     thrown.expectMessage("Specified container already exists");
-    storageContainerLocationClient.allocateContainer(containerName);
-    storageContainerLocationClient.allocateContainer(containerName);
+    storageContainerLocationClient.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), containerName);
+    storageContainerLocationClient.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), containerName);
   }
 }

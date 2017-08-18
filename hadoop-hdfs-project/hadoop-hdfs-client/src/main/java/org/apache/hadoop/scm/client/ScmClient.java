@@ -95,41 +95,16 @@ public interface ScmClient {
   long getContainerSize(Pipeline pipeline) throws IOException;
 
   /**
-   * Replication factors supported by Ozone and SCM.
-   */
-  enum ReplicationFactor{
-    ONE(1),
-    THREE(3);
-
-    private final int value;
-    ReplicationFactor(int value) {
-      this.value = value;
-    }
-
-    public int getValue() {
-      return value;
-    }
-
-    public static ReplicationFactor parseReplicationFactor(int i) {
-      switch (i) {
-      case 1: return ONE;
-      case 3: return THREE;
-      default:
-        throw new IllegalArgumentException("Only replication factor 1 or 3" +
-            " is supported by Ozone/SCM.");
-      }
-    }
-  }
-
-  /**
    * Creates a Container on SCM and returns the pipeline.
-   * @param containerId - String container ID
-   * @param replicationFactor - replication factor (only 1/3 is supported)
+   * @param type - Replication Type.
+   * @param replicationFactor - Replication Factor
+   * @param containerId - Container ID
    * @return Pipeline
-   * @throws IOException
+   * @throws IOException - in case of error.
    */
-  Pipeline createContainer(String containerId,
-      ReplicationFactor replicationFactor) throws IOException;
+  Pipeline createContainer(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor replicationFactor, String containerId)
+      throws IOException;
 
   /**
    * Returns a set of Nodes that meet a query criteria.
@@ -141,4 +116,15 @@ public interface ScmClient {
    */
   OzoneProtos.NodePool queryNode(EnumSet<OzoneProtos.NodeState> nodeStatuses,
       OzoneProtos.QueryScope queryScope, String poolName) throws IOException;
+
+  /**
+   * Creates a specified replication pipeline.
+   * @param type - Type
+   * @param factor - Replication factor
+   * @param nodePool - Set of machines.
+   * @throws IOException
+   */
+  Pipeline createReplicationPipeline(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor factor, OzoneProtos.NodePool nodePool)
+      throws IOException;
 }

@@ -72,10 +72,7 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   /**
-   * Create a container with the given ID as its name.
-   * @param containerId - String container ID
-   * @return A Pipeline object to actually write/read from the container.
-   * @throws IOException
+   * @inheritDoc
    */
   @Override
   public Pipeline createContainer(String containerId)
@@ -83,7 +80,10 @@ public class ContainerOperationClient implements ScmClient {
     XceiverClientSpi client = null;
     try {
       Pipeline pipeline =
-          storageContainerLocationClient.allocateContainer(containerId);
+          storageContainerLocationClient.allocateContainer(
+              xceiverClientManager.getType(),
+              xceiverClientManager.getFactor(), containerId);
+
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ContainerProtocolCalls.createContainer(client, traceID);
@@ -101,21 +101,18 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   /**
-   * Creates a Container on SCM with specified replication factor.
-   * @param containerId - String container ID
-   * @param replicationFactor - replication factor
-   * @return Pipeline
-   * @throws IOException
+   * @inheritDoc
    */
   @Override
-  public Pipeline createContainer(String containerId,
-      ScmClient.ReplicationFactor replicationFactor) throws IOException {
+  public Pipeline createContainer(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor factor,
+      String containerId) throws IOException {
     XceiverClientSpi client = null;
     try {
       // allocate container on SCM.
       Pipeline pipeline =
-          storageContainerLocationClient.allocateContainer(containerId,
-              replicationFactor);
+          storageContainerLocationClient.allocateContainer(type, factor,
+              containerId);
       // connect to pipeline leader and allocate container on leader datanode.
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
@@ -123,7 +120,7 @@ public class ContainerOperationClient implements ScmClient {
       LOG.info("Created container " + containerId +
           " leader:" + pipeline.getLeader() +
           " machines:" + pipeline.getMachines() +
-          " replication factor:" + replicationFactor.getValue());
+          " replication factor:" + factor);
       return pipeline;
     } finally {
       if (client != null) {
@@ -147,6 +144,17 @@ public class ContainerOperationClient implements ScmClient {
       throws IOException {
     return storageContainerLocationClient.queryNode(nodeStatuses, queryScope,
         poolName);
+  }
+
+  /**
+   * Creates a specified replication pipeline.
+   */
+  @Override
+  public Pipeline createReplicationPipeline(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor factor, OzoneProtos.NodePool nodePool)
+      throws IOException {
+    return storageContainerLocationClient.createReplicationPipeline(type,
+        factor, nodePool);
   }
 
   /**

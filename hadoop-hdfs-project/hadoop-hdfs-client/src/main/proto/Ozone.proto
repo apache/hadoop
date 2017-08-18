@@ -35,6 +35,7 @@ message Pipeline {
     required string leaderID = 1;
     repeated DatanodeIDProto members = 2;
     required string containerName = 3;
+    optional LifeCycleStates state = 4 [default = OPERATIONAL];
 }
 
 message KeyValue {
@@ -71,3 +72,22 @@ message NodePool {
     repeated Node nodes = 1;
 }
 
+
+enum ReplicationType {
+    RATIS = 1;
+    STAND_ALONE = 2;
+    CHAINED = 3;
+}
+
+
+enum ReplicationFactor {
+    ONE = 1;
+    THREE = 3;
+}
+
+enum LifeCycleStates {
+    CLIENT_CREATE = 1; // A request to client to create this object
+    OPERATIONAL = 2; // Mostly an update to SCM via HB or client call.
+    TIMED_OUT = 3; // creation has timed out from SCM's View.
+    DELETED = 4; // object is deleted.
+}

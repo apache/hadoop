@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.container.Mapping;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -177,7 +178,12 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       for (int i = 0; i < count; i++) {
         String containerName = UUID.randomUUID().toString();
         try {
-          Pipeline pipeline = containerManager.allocateContainer(containerName);
+          // TODO: Fix this later when Ratis is made the Default.
+          Pipeline pipeline = containerManager.allocateContainer(
+              OzoneProtos.ReplicationType.STAND_ALONE,
+              OzoneProtos.ReplicationFactor.ONE,
+              containerName);
+
           if (pipeline == null) {
             LOG.warn("Unable to allocate container.");
             continue;

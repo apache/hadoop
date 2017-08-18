@@ -41,7 +41,7 @@ public interface RatisHelper {
   Logger LOG = LoggerFactory.getLogger(RatisHelper.class);
 
   static String toRaftPeerIdString(DatanodeID id) {
-    return id.getIpAddr() + ":" + id.getContainerPort();
+    return id.getIpAddr() + ":" + id.getRatisPort();
   }
 
   static RaftPeerId toRaftPeerId(DatanodeID id) {

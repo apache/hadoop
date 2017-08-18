@@ -25,6 +25,7 @@ import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.util.KeyUtil;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
@@ -179,9 +180,10 @@ public class StorageManager {
       long allocatedSize = 0;
       ArrayList<String> containerIds = new ArrayList<>();
       while (allocatedSize < volumeSize) {
-        Pipeline pipeline = storageClient.createContainer(
-            KeyUtil.getContainerName(userName, volumeName, containerIdx),
-            ScmClient.ReplicationFactor.ONE);
+        Pipeline pipeline = storageClient.createContainer(OzoneProtos
+                .ReplicationType.STAND_ALONE,
+            OzoneProtos.ReplicationFactor.ONE,
+            KeyUtil.getContainerName(userName, volumeName, containerIdx));
         ContainerDescriptor container =
             new ContainerDescriptor(pipeline.getContainerName());
         container.setPipeline(pipeline);

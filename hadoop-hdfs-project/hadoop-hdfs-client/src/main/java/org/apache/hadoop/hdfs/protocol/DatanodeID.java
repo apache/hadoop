@@ -52,7 +52,8 @@ public class DatanodeID implements Comparable<DatanodeID> {
   private int infoSecurePort; // info server port
   private int ipcPort;       // IPC server port
   private String xferAddr;
-  private int containerPort; // container server port.
+  private int containerPort; // container Stand_alone Rpc port.
+  private int ratisPort; // Container Ratis RPC Port.
 
   /**
    * UUID identifying a given datanode. For upgraded Datanodes this is the
@@ -78,7 +79,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   }
 
   /**
-   * Create a DatanodeID
+   * Create a DatanodeID.
    * @param ipAddr IP
    * @param hostName hostname
    * @param datanodeUuid data node ID, UUID for new Datanodes, may be the
@@ -296,6 +297,22 @@ public class DatanodeID implements Comparable<DatanodeID> {
   }
 
   /**
+   * Gets the Ratis Port.
+   * @return retis port.
+   */
+  public int getRatisPort() {
+    return ratisPort;
+  }
+
+  /**
+   * Sets the Ratis Port.
+   * @param ratisPort - Ratis port.
+   */
+  public void setRatisPort(int ratisPort) {
+    this.ratisPort = ratisPort;
+  }
+
+  /**
    * Returns a DataNode ID from the protocol buffers.
    *
    * @param datanodeIDProto - protoBuf Message
@@ -308,6 +325,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
         datanodeIDProto.getXferPort(), datanodeIDProto.getInfoPort(),
         datanodeIDProto.getInfoSecurePort(), datanodeIDProto.getIpcPort());
     id.setContainerPort(datanodeIDProto.getContainerPort());
+    id.setRatisPort(datanodeIDProto.getRatisPort());
     return id;
   }
 
@@ -326,6 +344,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
         .setInfoSecurePort(this.getInfoSecurePort())
         .setIpcPort(this.getIpcPort())
         .setContainerPort(this.getContainerPort())
+        .setRatisPort(this.getRatisPort())
         .build();
   }
 

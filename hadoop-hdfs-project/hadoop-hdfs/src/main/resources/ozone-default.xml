@@ -852,4 +852,21 @@
       The default size of a scm block in bytes.
     </description>
   </property>
+
+  <property>
+    <name>dfs.container.ratis.ipc</name>
+    <value>50012</value>
+    <description>
+      The ipc port number of container.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.container.ratis.ipc.random.port</name>
+    <value>false</value>
+    <description>
+      Whether allocates a random free port for ozone ratis port for container.
+    </description>
+  </property>
+
 </configuration>

@@ -76,6 +76,7 @@ public class TestDatanodeStateMachine {
   public void setUp() throws Exception {
     conf = SCMTestUtils.getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500);
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
     serverAddresses = new LinkedList<>();
     scmServers = new LinkedList<>();
     mockServers = new LinkedList<>();
@@ -148,7 +149,7 @@ public class TestDatanodeStateMachine {
   public void testStartStopDatanodeStateMachine() throws IOException,
       InterruptedException, TimeoutException {
     try (DatanodeStateMachine stateMachine =
-        new DatanodeStateMachine(conf)) {
+        new DatanodeStateMachine(DFSTestUtil.getLocalDatanodeID(), conf)) {
       stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
@@ -202,7 +203,8 @@ public class TestDatanodeStateMachine {
     dnID.setContainerPort(ScmConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
     ContainerUtils.writeDatanodeIDTo(dnID, idPath);
 
-    try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf)) {
+    try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
+        DFSTestUtil.getLocalDatanodeID(), conf)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -307,7 +309,6 @@ public class TestDatanodeStateMachine {
   @Test
   public void testDatanodeStateMachineWithInvalidConfiguration()
       throws Exception {
-
     LinkedList<Map.Entry<String, String>> confList =
         new LinkedList<Map.Entry<String, String>>();
     confList.add(Maps.immutableEntry(ScmConfigKeys.OZONE_SCM_NAMES, ""));
@@ -333,8 +334,8 @@ public class TestDatanodeStateMachine {
     confList.forEach((entry) -> {
       Configuration perTestConf = new Configuration(conf);
       perTestConf.setStrings(entry.getKey(), entry.getValue());
-      try (DatanodeStateMachine stateMachine =
-          new DatanodeStateMachine(perTestConf)) {
+      try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
+          DFSTestUtil.getLocalDatanodeID(), perTestConf)) {
         DatanodeStateMachine.DatanodeStates currentState =
             stateMachine.getContext().getState();
         Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,

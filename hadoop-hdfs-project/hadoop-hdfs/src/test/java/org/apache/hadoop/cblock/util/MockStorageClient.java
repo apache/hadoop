@@ -117,8 +117,9 @@ public class MockStorageClient implements ScmClient {
   }
 
   @Override
-  public Pipeline createContainer(String containerId,
-      ScmClient.ReplicationFactor replicationFactor) throws IOException {
+  public Pipeline createContainer(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor replicationFactor, String containerId)
+      throws IOException {
     currentContainerId += 1;
     ContainerLookUpService.addContainer(Long.toString(currentContainerId));
     return ContainerLookUpService.lookUp(Long.toString(currentContainerId))
@@ -136,6 +137,21 @@ public class MockStorageClient implements ScmClient {
   @Override
   public OzoneProtos.NodePool queryNode(EnumSet<OzoneProtos.NodeState>
       nodeStatuses, OzoneProtos.QueryScope queryScope, String poolName)
+      throws IOException {
+    return null;
+  }
+
+  /**
+   * Creates a specified replication pipeline.
+   *
+   * @param type - Type
+   * @param factor - Replication factor
+   * @param nodePool - Set of machines.
+   * @throws IOException
+   */
+  @Override
+  public Pipeline createReplicationPipeline(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor factor, OzoneProtos.NodePool nodePool)
       throws IOException {
     return null;
   }

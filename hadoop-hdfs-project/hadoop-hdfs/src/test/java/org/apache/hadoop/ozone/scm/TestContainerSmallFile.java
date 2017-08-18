@@ -22,6 +22,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.scm.ScmConfigKeys;
@@ -82,7 +83,9 @@ public class TestContainerSmallFile {
     String traceID = UUID.randomUUID().toString();
     String containerName = "container0";
     Pipeline pipeline =
-        storageContainerLocationClient.allocateContainer(containerName);
+        storageContainerLocationClient.allocateContainer(
+            xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, containerName);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
@@ -101,7 +104,9 @@ public class TestContainerSmallFile {
     String traceID = UUID.randomUUID().toString();
     String containerName = "container1";
     Pipeline pipeline =
-        storageContainerLocationClient.allocateContainer(containerName);
+        storageContainerLocationClient.allocateContainer(
+            xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, containerName);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
@@ -121,7 +126,9 @@ public class TestContainerSmallFile {
     String invalidName = "invalidName";
     String containerName = "container2";
     Pipeline pipeline =
-        storageContainerLocationClient.allocateContainer(containerName);
+        storageContainerLocationClient.allocateContainer(
+            xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, containerName);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
     ContainerProtocolCalls.writeSmallFile(client, containerName,

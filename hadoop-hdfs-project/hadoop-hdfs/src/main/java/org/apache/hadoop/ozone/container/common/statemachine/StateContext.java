@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 import static org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState.states
     .noContainerReports;
@@ -90,7 +91,16 @@ public class StateContext {
    */
   public int getContainerPort() {
     return parent == null ?
-        -1 : parent.getContainer().getContainerServerPort();
+        INVALID_PORT : parent.getContainer().getContainerServerPort();
+  }
+
+  /**
+   * Gets the Ratis Port.
+   * @return int , return -1 if not valid.
+   */
+  public int getRatisPort() {
+    return parent == null ?
+        INVALID_PORT : parent.getContainer().getRatisContainerServerPort();
   }
 
   /**
