@@ -94,7 +94,27 @@ public class ResourceHandlerModule {
     return cGroupsHandler;
   }
 
-  private static CGroupsCpuResourceHandlerImpl getCGroupsCpuResourceHandler(
+  public static OutboundBandwidthResourceHandler
+      getNetworkResourceHandler() {
+    return trafficControlBandwidthHandler;
+  }
+
+  public static DiskResourceHandler
+      getDiskResourceHandler() {
+    return cGroupsBlkioResourceHandler;
+  }
+
+  public static MemoryResourceHandler
+      getMemoryResourceHandler() {
+    return cGroupsMemoryResourceHandler;
+  }
+
+  public static CpuResourceHandler
+      getCpuResourceHandler() {
+    return cGroupsCpuResourceHandler;
+  }
+
+  private static CGroupsCpuResourceHandlerImpl initCGroupsCpuResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     boolean cgroupsCpuEnabled =
         conf.getBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED,
@@ -144,12 +164,12 @@ public class ResourceHandlerModule {
   }
 
   public static OutboundBandwidthResourceHandler
-      getOutboundBandwidthResourceHandler(Configuration conf)
-        throws ResourceHandlerException {
+    initOutboundBandwidthResourceHandler(Configuration conf)
+      throws ResourceHandlerException {
     return getTrafficControlBandwidthHandler(conf);
   }
 
-  public static DiskResourceHandler getDiskResourceHandler(Configuration conf)
+  public static DiskResourceHandler initDiskResourceHandler(Configuration conf)
       throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_DISK_RESOURCE_ENABLED)) {
@@ -173,7 +193,7 @@ public class ResourceHandlerModule {
     return cGroupsBlkioResourceHandler;
   }
 
-  public static MemoryResourceHandler getMemoryResourceHandler(
+  public static MemoryResourceHandler initMemoryResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENABLED)) {
@@ -208,10 +228,14 @@ public class ResourceHandlerModule {
       Configuration conf) throws ResourceHandlerException {
     ArrayList<ResourceHandler> handlerList = new ArrayList<>();
 
-    addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getCGroupsCpuResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initOutboundBandwidthResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initDiskResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initMemoryResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initCGroupsCpuResourceHandler(conf));
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 
