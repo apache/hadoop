@@ -35,7 +35,8 @@ import java.util.Random;
  */
 public class TestCompareResourceCalculators {
   private Process target = null;
-  String cgroup = null;
+  String cgroupCPU = null;
+  String cgroupMemory = null;
 
   @Before
   public void setup() throws IOException, YarnException {
@@ -52,10 +53,14 @@ public class TestCompareResourceCalculators {
       throw new YarnException("Cannot access cgroups", e);
     }
     Assume.assumeNotNull(module);
-    String cgroupRoot = ResourceHandlerModule.getCGroupsHandler().getControllerPath(CGroupsHandler.CGroupController.CPU);
 
     Random random = new Random();
-    cgroup = cgroupRoot + "/" + Long.toString(random.nextLong());
+    cgroupCPU = ResourceHandlerModule.getCGroupsHandler()
+        .getControllerPath(CGroupsHandler.CGroupController.CPU) +
+        "/" + Long.toString(random.nextLong());
+    cgroupMemory = ResourceHandlerModule.getCGroupsHandler()
+        .getControllerPath(CGroupsHandler.CGroupController.CPU) +
+        "/" + Long.toString(random.nextLong());
   }
 
   @After
@@ -120,8 +125,10 @@ public class TestCompareResourceCalculators {
   private void startTestProcess() throws IOException {
     ProcessBuilder builder = new ProcessBuilder();
     String script =
-        "mkdir " + cgroup + ";" +
-        "echo $$ >" + cgroup + "/tasks;" +
+        "mkdir " + cgroupCPU + ";" +
+        "echo $$ >" + cgroupCPU + "/tasks;" +
+        "mkdir " + cgroupMemory + ";" +
+        "echo $$ >" + cgroupMemory + "/tasks;" +
         "dd if=/dev/zero of=/dev/null bs=1k;";
     builder.command("bash", "-c", script);
     target = builder.start();
@@ -131,6 +138,15 @@ public class TestCompareResourceCalculators {
     if (target != null) {
       target.destroyForcibly();
       target = null;
+    }
+    try {
+      ProcessBuilder builder = new ProcessBuilder();
+      String script =
+          "rmdir " + cgroupCPU + ";" +
+          "rmdir " + cgroupMemory + ";";
+      builder.command("bash", "-c", script);
+      target = builder.start();
+    } catch (IOException e) {
     }
   }
 
