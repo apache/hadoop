@@ -48,8 +48,6 @@ public class FairSchedulerQueueInfo {
   @XmlTransient
   private float fractionMemFairShare;
   @XmlTransient
-  private float fractionMemMinShare;
-  @XmlTransient
   private float fractionMemMaxShare;
   
   private ResourceInfo minResources;
@@ -63,7 +61,6 @@ public class FairSchedulerQueueInfo {
   private ResourceInfo clusterResources;
   private ResourceInfo reservedResources;
 
-  private long pendingContainers;
   private long allocatedContainers;
   private long reservedContainers;
 
@@ -109,12 +106,10 @@ public class FairSchedulerQueueInfo {
         (float)steadyFairResources.getMemorySize() / clusterResources.getMemorySize();
     fractionMemFairShare = (float) fairResources.getMemorySize()
         / clusterResources.getMemorySize();
-    fractionMemMinShare = (float)minResources.getMemorySize() / clusterResources.getMemorySize();
     fractionMemMaxShare = (float)maxResources.getMemorySize() / clusterResources.getMemorySize();
     
     maxApps = queue.getMaxRunningApps();
 
-    pendingContainers = queue.getMetrics().getPendingContainers();
     allocatedContainers = queue.getMetrics().getAllocatedContainers();
     reservedContainers = queue.getMetrics().getReservedContainers();
 
@@ -125,10 +120,6 @@ public class FairSchedulerQueueInfo {
 
     preemptable = queue.isPreemptable();
     childQueues = getChildQueues(queue, scheduler);
-  }
-
-  public long getPendingContainers() {
-    return pendingContainers;
   }
 
   public long getAllocatedContainers() {
@@ -234,14 +225,6 @@ public class FairSchedulerQueueInfo {
     return demandResources;
   }
 
-  /**
-   * Returns the queue's min share in as a fraction of the entire
-   * cluster capacity.
-   */
-  public float getMinShareMemoryFraction() {
-    return fractionMemMinShare;
-  }
-  
   /**
    * Returns the memory used by this queue as a fraction of the entire 
    * cluster capacity.
