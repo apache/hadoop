@@ -223,4 +223,15 @@
     group list is separated by a blank. For e.g. "alice,bob users,wheel".
     A special value of "*" means all users are allowed.</description>
   </property>
+
+  <property>
+    <name>security.collector-nodemanager.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for CollectorNodemanagerProtocol, used by nodemanager
+    if timeline service v2 is enabled, for the timeline collector and nodemanager
+    to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
 </configuration>
