@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.service.client.params.CommonArgs;
 import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.hadoop.yarn.service.conf.SliderKeys;
 import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -487,10 +488,14 @@ public class ServiceClient extends CompositeService
     // create AM CLI
     String cmdStr =
         buildCommandLine(appName, conf, appRootDir, hasSliderAMLog4j);
-
-    submissionContext.setResource(Resource.newInstance(
-        conf.getLong(KEY_AM_RESOURCE_MEM, DEFAULT_KEY_AM_RESOURCE_MEM), 1));
-    submissionContext.setQueue(conf.get(KEY_YARN_QUEUE, app.getQueue()));
+    submissionContext.setResource(Resource.newInstance(YarnServiceConf
+        .getLong(KEY_AM_RESOURCE_MEM, DEFAULT_KEY_AM_RESOURCE_MEM,
+            app.getConfiguration(), conf), 1));
+    String queue = app.getQueue();
+    if (StringUtils.isEmpty(queue)) {
+      queue = conf.get(KEY_YARN_QUEUE, "default");
+    }
+    submissionContext.setQueue(queue);
     submissionContext.setApplicationName(appName);
     submissionContext.setApplicationType(SliderKeys.APP_TYPE);
     Set<String> appTags =

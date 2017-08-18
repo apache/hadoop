@@ -45,6 +45,7 @@ import org.apache.slider.server.servicemonitor.Probe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -436,6 +437,10 @@ public class Component implements EventHandler<ComponentEvent> {
     return priority;
   }
 
+  public long getAllocateId() {
+    return allocateId;
+  }
+
   public String getName () {
     return componentSpec.getName();
   }
@@ -461,8 +466,8 @@ public class Component implements EventHandler<ComponentEvent> {
       try {
         stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.error("Invalid event " + event.getType() +
-            " at " + oldState + " for component " + componentSpec.getName(), e);
+        LOG.error(MessageFormat.format("[COMPONENT {0}]: Invalid event {1} at {2}",
+            componentSpec.getName(), event.getType(), oldState), e);
       }
       if (oldState != getState()) {
         LOG.info("[COMPONENT {}] Transitioned from {} to {} on {} event.",

@@ -24,7 +24,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.client.ServerProxy;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.service.conf.YarnServiceConfKeys;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 
 import java.net.InetSocketAddress;
 
@@ -35,8 +35,8 @@ public class ClientAMProxy extends ServerProxy{
       final YarnRPC rpc, final InetSocketAddress serverAddress) {
 
     RetryPolicy retryPolicy =
-        createRetryPolicy(conf, YarnServiceConfKeys.CLIENT_AM_RETRY_MAX_WAIT_MS,
-            15 * 60 * 1000, YarnServiceConfKeys.CLIENT_AM_RETRY_MAX_INTERVAL_MS,
+        createRetryPolicy(conf, YarnServiceConf.CLIENT_AM_RETRY_MAX_WAIT_MS,
+            15 * 60 * 1000, YarnServiceConf.CLIENT_AM_RETRY_MAX_INTERVAL_MS,
             2 * 1000);
     Configuration confClone = new Configuration(conf);
     confClone.setInt(
