@@ -59,7 +59,7 @@ public class TestCompareResourceCalculators {
         .getControllerPath(CGroupsHandler.CGroupController.CPU) +
         "/" + Long.toString(random.nextLong());
     cgroupMemory = ResourceHandlerModule.getCGroupsHandler()
-        .getControllerPath(CGroupsHandler.CGroupController.CPU) +
+        .getControllerPath(CGroupsHandler.CGroupController.MEMORY) +
         "/" + Long.toString(random.nextLong());
   }
 
