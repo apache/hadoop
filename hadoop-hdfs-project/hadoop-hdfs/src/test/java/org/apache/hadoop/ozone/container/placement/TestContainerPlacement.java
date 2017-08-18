@@ -31,8 +31,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.Random;
 
-import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
-    .HEALTHY;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
 import static org.junit.Assert.assertEquals;
 
 /**

@@ -107,7 +107,9 @@ public class TestCBlockReadWrite {
       String traceID = "trace" + RandomStringUtils.randomNumeric(4);
       String containerName = "container" + RandomStringUtils.randomNumeric(10);
       Pipeline pipeline =
-          storageContainerLocationClient.allocateContainer(containerName);
+          storageContainerLocationClient.allocateContainer(
+              xceiverClientManager.getType(),
+              xceiverClientManager.getFactor(), containerName);
       XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
       ContainerProtocolCalls.createContainer(client, traceID);
       // This step is needed since we set private data on pipelines, when we

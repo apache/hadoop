@@ -73,7 +73,8 @@ message DatanodeIDProto {
   required uint32 infoPort = 5;  // datanode http port
   required uint32 ipcPort = 6;   // ipc server port
   optional uint32 infoSecurePort = 7 [default = 0]; // datanode https port
-  optional uint32 containerPort = 8 [default = 0]; // Ozone container protocol
+  optional uint32 containerPort = 8 [default = 0]; // Ozone stand_alone protocol
+  optional uint32 ratisPort = 9 [default = 0]; //Ozone ratis port
 }
 
 /**

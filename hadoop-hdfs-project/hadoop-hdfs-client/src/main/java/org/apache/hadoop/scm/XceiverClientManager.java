@@ -31,6 +31,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import static org.apache.hadoop.scm.ScmConfigKeys
@@ -164,4 +165,36 @@ public class XceiverClientManager implements Closeable {
     clientCache.invalidateAll();
     clientCache.cleanUp();
   }
+
+  /**
+   * Tells us if Ratis is enabled for this cluster.
+   * @return True if Ratis is enabled.
+   */
+  public boolean isUseRatis() {
+    return useRatis;
+  }
+
+  /**
+   * Returns hard coded 3 as replication factor.
+   * @return 3
+   */
+  public  OzoneProtos.ReplicationFactor getFactor() {
+    if(isUseRatis()) {
+      return OzoneProtos.ReplicationFactor.THREE;
+    }
+    return OzoneProtos.ReplicationFactor.ONE;
+  }
+
+  /**
+   * Returns the default replication type.
+   * @return Ratis or Standalone
+   */
+  public OzoneProtos.ReplicationType getType() {
+    // TODO : Fix me and make Ratis default before release.
+    if(isUseRatis()) {
+      return OzoneProtos.ReplicationType.RATIS;
+    }
+    return OzoneProtos.ReplicationType.STAND_ALONE;
+  }
+
 }

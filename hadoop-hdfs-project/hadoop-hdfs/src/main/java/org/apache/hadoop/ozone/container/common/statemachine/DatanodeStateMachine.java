@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.CommandDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.ContainerReportHandler;
@@ -72,7 +73,7 @@ public class DatanodeStateMachine implements Closeable {
     context = new StateContext(this.conf, DatanodeStates.getInitState(), this);
     heartbeatFrequency = TimeUnit.SECONDS.toMillis(
         OzoneClientUtils.getScmHeartbeatInterval(conf));
-    container = new OzoneContainer(conf);
+    container = new OzoneContainer(datanodeID, new OzoneConfiguration(conf));
     this.datanodeID = datanodeID;
     nextHB = new AtomicLong(Time.monotonicNow());
 
@@ -85,11 +86,6 @@ public class DatanodeStateMachine implements Closeable {
       .setContainer(container)
       .setContext(context)
       .build();
-  }
-
-  public DatanodeStateMachine(Configuration conf)
-      throws IOException {
-    this(null, conf);
   }
 
   public void setDatanodeID(DatanodeID datanodeID) {

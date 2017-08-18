@@ -43,6 +43,8 @@ import java.util.HashSet;
 import java.util.List;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS;
 import static org.junit.Assert.*;
 
 /**
@@ -60,6 +62,9 @@ public class TestMiniOzoneCluster {
   @BeforeClass
   public static void setup() {
     conf = new OzoneConfiguration();
+    conf.set(OZONE_CONTAINER_METADATA_DIRS,
+        TEST_ROOT.toString());
+    conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
     WRITE_TMP.mkdirs();
     READ_TMP.mkdirs();
     WRITE_TMP.deleteOnExit();
@@ -178,27 +183,44 @@ public class TestMiniOzoneCluster {
     Configuration ozoneConf = SCMTestUtils.getConf();
     File testDir = PathUtils.getTestDir(TestOzoneContainer.class);
     ozoneConf.set(DFS_DATANODE_DATA_DIR_KEY, testDir.getAbsolutePath());
+    ozoneConf.set(OZONE_CONTAINER_METADATA_DIRS,
+        TEST_ROOT.toString());
 
     // Each instance of SM will create an ozone container
     // that bounds to a random port.
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
+    ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
+        true);
     try (
-        DatanodeStateMachine sm1 = new DatanodeStateMachine(ozoneConf);
-        DatanodeStateMachine sm2 = new DatanodeStateMachine(ozoneConf);
-        DatanodeStateMachine sm3 = new DatanodeStateMachine(ozoneConf);
+        DatanodeStateMachine sm1 = new DatanodeStateMachine(
+            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+        DatanodeStateMachine sm2 = new DatanodeStateMachine(
+            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+        DatanodeStateMachine sm3 = new DatanodeStateMachine(
+            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));
       assertTrue(ports.add(sm2.getContainer().getContainerServerPort()));
       assertTrue(ports.add(sm3.getContainer().getContainerServerPort()));
+
+      // Assert that ratis is also on a different port.
+      assertTrue(ports.add(sm1.getContainer().getRatisContainerServerPort()));
+      assertTrue(ports.add(sm2.getContainer().getRatisContainerServerPort()));
+      assertTrue(ports.add(sm3.getContainer().getRatisContainerServerPort()));
+
+
     }
 
     // Turn off the random port flag and test again
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
     try (
-        DatanodeStateMachine sm1 = new DatanodeStateMachine(ozoneConf);
-        DatanodeStateMachine sm2 = new DatanodeStateMachine(ozoneConf);
-        DatanodeStateMachine sm3 = new DatanodeStateMachine(ozoneConf);
+        DatanodeStateMachine sm1 = new DatanodeStateMachine(
+            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+        DatanodeStateMachine sm2 = new DatanodeStateMachine(
+            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+        DatanodeStateMachine sm3 = new DatanodeStateMachine(
+            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));

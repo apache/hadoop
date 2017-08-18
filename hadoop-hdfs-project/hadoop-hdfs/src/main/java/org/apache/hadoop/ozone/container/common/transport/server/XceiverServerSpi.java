@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server;
 
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+
 import java.io.IOException;
 
 /** A server endpoint that acts as the communication layer for Ozone
@@ -31,4 +33,11 @@ public interface XceiverServerSpi {
 
   /** Get server IPC port. */
   int getIPCPort();
+
+  /**
+   * Returns the Replication type supported by this end-point.
+   * @return enum -- {Stand_Alone, Ratis, Chained}
+   */
+  OzoneProtos.ReplicationType getServerType();
+
 }

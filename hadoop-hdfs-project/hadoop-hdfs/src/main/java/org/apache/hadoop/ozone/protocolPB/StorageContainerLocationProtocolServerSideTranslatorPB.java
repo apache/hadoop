@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,22 +31,17 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 
-import static org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.ContainerRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.ContainerResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.GetContainerRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.GetContainerResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.DeleteContainerResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.ListContainerResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerLocationProtocolProtos.ListContainerRequestProto;
+import static org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineRequestProto;
+
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 
@@ -74,7 +70,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ContainerResponseProto allocateContainer(RpcController unused,
       ContainerRequestProto request) throws ServiceException {
     try {
-      Pipeline pipeline = impl.allocateContainer(request.getContainerName());
+      Pipeline pipeline = impl.allocateContainer(request.getReplicationType(),
+          request.getReplicationFactor(), request.getContainerName());
       return ContainerResponseProto.newBuilder()
           .setPipeline(pipeline.getProtobufMessage())
           .setErrorCode(ContainerResponseProto.Error.success)
@@ -160,5 +157,13 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
     } catch (Exception e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public PipelineResponseProto allocatePipeline(
+      RpcController controller, PipelineRequestProto request)
+      throws ServiceException {
+    // TODO : Wiring this up requires one more patch.
+    return null;
   }
 }

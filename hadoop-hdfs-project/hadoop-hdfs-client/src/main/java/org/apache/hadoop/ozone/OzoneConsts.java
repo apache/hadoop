@@ -123,6 +123,8 @@ public final class OzoneConsts {
    */
   public static final int MAX_LISTVOLUMES_SIZE = 1024;
 
+  public static final int INVALID_PORT = -1;
+
   private OzoneConsts() {
     // Never Constructed
   }

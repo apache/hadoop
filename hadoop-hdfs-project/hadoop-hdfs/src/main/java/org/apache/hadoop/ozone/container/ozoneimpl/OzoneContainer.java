@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -33,6 +34,8 @@ import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
+
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
@@ -50,6 +53,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
 /**
  * Ozone main class sets up the network server and initializes the container
@@ -62,7 +66,7 @@ public class OzoneContainer {
   private final Configuration ozoneConfig;
   private final ContainerDispatcher dispatcher;
   private final ContainerManager manager;
-  private final XceiverServerSpi server;
+  private final XceiverServerSpi[] server;
   private final ChunkManager chunkManager;
   private final KeyManager keyManager;
   private final BlockDeletingService blockDeletingService;
@@ -73,8 +77,8 @@ public class OzoneContainer {
    * @param ozoneConfig - Config
    * @throws IOException
    */
-  public OzoneContainer(
-      Configuration ozoneConfig) throws IOException {
+  public OzoneContainer(DatanodeID datanodeID, Configuration ozoneConfig) throws
+      IOException {
     this.ozoneConfig = ozoneConfig;
     List<StorageLocation> locations = new LinkedList<>();
     String[] paths = ozoneConfig.getStrings(
@@ -104,12 +108,11 @@ public class OzoneContainer {
 
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
 
-    final boolean useRatis = ozoneConfig.getBoolean(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
-    server = useRatis?
-        XceiverServerRatis.newXceiverServerRatis(ozoneConfig, dispatcher)
-        : new XceiverServer(this.ozoneConfig, this.dispatcher);
+    server = new XceiverServerSpi[]{
+        new XceiverServer(this.ozoneConfig, this.dispatcher),
+      XceiverServerRatis.newXceiverServerRatis(datanodeID
+          .getDatanodeUuid().toString(), ozoneConfig, dispatcher)
+    };
   }
 
   /**
@@ -118,7 +121,9 @@ public class OzoneContainer {
    * @throws IOException
    */
   public void start() throws IOException {
-    server.start();
+    for (XceiverServerSpi serverinstance : server) {
+      serverinstance.start();
+    }
     blockDeletingService.start();
     dispatcher.init();
   }
@@ -157,7 +162,9 @@ public class OzoneContainer {
    */
   public void stop() {
     LOG.info("Attempting to stop container services.");
-    server.stop();
+    for(XceiverServerSpi serverinstance: server) {
+      serverinstance.stop();
+    }
     dispatcher.shutdown();
 
     try {
@@ -194,13 +201,31 @@ public class OzoneContainer {
     return this.manager.getNodeReport();
   }
 
+  private int getPortbyType(OzoneProtos.ReplicationType replicationType) {
+    for (XceiverServerSpi serverinstance : server) {
+      if (serverinstance.getServerType() == replicationType) {
+        return serverinstance.getIPCPort();
+      }
+    }
+    return INVALID_PORT;
+  }
+
   /**
    * Returns the container server IPC port.
    *
    * @return Container server IPC port.
    */
   public int getContainerServerPort() {
-    return server.getIPCPort();
+    return getPortbyType(OzoneProtos.ReplicationType.STAND_ALONE);
+  }
+
+  /**
+   * Returns the Ratis container Server IPC port.
+   *
+   * @return Ratis port.
+   */
+  public int getRatisContainerServerPort() {
+    return getPortbyType(OzoneProtos.ReplicationType.RATIS);
   }
 
   /**

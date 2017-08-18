@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -31,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.stream.Collectors;
 
 /**
  * Helpers for Ratis tests.
@@ -101,10 +99,10 @@ public interface RatisTestHelper {
     final MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
         .numDataNodes(numDatanodes)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    cluster.getRatisManager().createRatisCluster("ratis0",
-        cluster.getDataNodes().stream()
-            .map(DataNode::getDatanodeId)
-            .collect(Collectors.toList()));
+//    cluster.getRatisManager().createPipeline("ratis0",
+//        cluster.getDataNodes().stream()
+//            .map(DataNode::getDatanodeId)
+//            .collect(Collectors.toList()));
     return cluster;
   }
 

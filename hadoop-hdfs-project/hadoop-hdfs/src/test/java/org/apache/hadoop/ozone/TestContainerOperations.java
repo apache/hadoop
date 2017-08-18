@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.scm.ScmConfigKeys;
@@ -78,7 +79,9 @@ public class TestContainerOperations {
    */
   @Test
   public void testCreate() throws Exception {
-    Pipeline pipeline0 = storageClient.createContainer("container0");
+    Pipeline pipeline0 = storageClient.createContainer(OzoneProtos
+        .ReplicationType.STAND_ALONE, OzoneProtos.ReplicationFactor
+        .ONE, "container0");
     assertEquals("container0", pipeline0.getContainerName());
 
   }

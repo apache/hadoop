@@ -21,12 +21,10 @@ import com.google.common.base.Strings;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
-import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
@@ -37,6 +35,8 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineResponseProto;
 
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
@@ -74,37 +74,27 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
 
   /**
    * Asks SCM where a container should be allocated. SCM responds with the set
-   * of datanodes that should be used creating this container.
-   *
-   * @param containerName - Name of the container.
-   * @return Pipeline.
-   * @throws IOException
-   */
-  @Override
-  public Pipeline allocateContainer(String containerName) throws IOException {
-    return allocateContainer(containerName, ScmClient.ReplicationFactor.ONE);
-  }
-
-  /**
-   * Asks SCM where a container should be allocated. SCM responds with the set
    * of datanodes that should be used creating this container. Ozone/SCM only
    * supports replication factor of either 1 or 3.
-   *
-   * @param containerName - Name of the container.
-   * @param replicationFactor - replication factor.
-   * @return Pipeline.
+   * @param type - Replication Type
+   * @param factor - Replication Count
+   * @param containerName - Name
+   * @return
    * @throws IOException
    */
   @Override
-  public Pipeline allocateContainer(String containerName,
-      ScmClient.ReplicationFactor replicationFactor) throws IOException {
+  public Pipeline allocateContainer(OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor factor, String
+      containerName) throws IOException {
 
     Preconditions.checkNotNull(containerName, "Container Name cannot be Null");
     Preconditions.checkState(!containerName.isEmpty(), "Container name cannot" +
         " be empty");
     ContainerRequestProto request = ContainerRequestProto.newBuilder()
-        .setContainerName(containerName).setReplicationFactor(PBHelperClient
-            .convertReplicationFactor(replicationFactor)).build();
+        .setContainerName(containerName)
+        .setReplicationFactor(factor)
+        .setReplicationType(type)
+        .build();
 
     final ContainerResponseProto response;
     try {
@@ -215,6 +205,42 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       throw  ProtobufHelper.getRemoteException(e);
     }
 
+  }
+
+  /**
+   * Creates a replication pipeline of a specified type.
+   *
+   * @param replicationType - replication type
+   * @param factor - factor 1 or 3
+   * @param nodePool - optional machine list to build a pipeline.
+   * @throws IOException
+   */
+  @Override
+  public Pipeline createReplicationPipeline(OzoneProtos.ReplicationType
+      replicationType, OzoneProtos.ReplicationFactor factor, OzoneProtos
+      .NodePool nodePool) throws IOException {
+    PipelineRequestProto request = PipelineRequestProto.newBuilder()
+        .setNodePool(nodePool)
+        .setReplicationFactor(factor)
+        .setReplicationType(replicationType)
+        .build();
+    try {
+      PipelineResponseProto response =
+          rpcProxy.allocatePipeline(NULL_RPC_CONTROLLER, request);
+      if (response.getErrorCode() ==
+          PipelineResponseProto.Error.success) {
+        Preconditions.checkState(response.hasPipeline(), "With success, " +
+            "must come a pipeline");
+        return Pipeline.getFromProtoBuf(response.getPipeline());
+      } else {
+        String errorMessage = String.format("create replication pipeline " +
+                "failed. code : %s Message: %s", response.getErrorCode(),
+            response.hasErrorMessage() ? response.getErrorMessage() : "");
+        throw new IOException(errorMessage);
+      }
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Override

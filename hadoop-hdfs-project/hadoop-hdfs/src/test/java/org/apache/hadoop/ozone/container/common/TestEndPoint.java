@@ -19,8 +19,10 @@ package org.apache.hadoop.ozone.container.common;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
@@ -61,6 +63,8 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_CONTAINER_METADATA_DIRS;
 import static org.apache.hadoop.ozone.container.common.SCMTestUtils
     .getDatanodeID;
 import static org.apache.hadoop.ozone.protocol.proto
@@ -294,10 +298,17 @@ public class TestEndPoint {
       int rpcTimeout) throws Exception {
     Configuration conf = SCMTestUtils.getConf();
     conf.set(DFS_DATANODE_DATA_DIR_KEY, testDir.getAbsolutePath());
+    conf.set(OZONE_CONTAINER_METADATA_DIRS, testDir.getAbsolutePath());
+    // Mini Ozone cluster will not come up if the port is not true, since
+    // Ratis will exit if the server port cannot be bound. We can remove this
+    // hard coding once we fix the Ratis default behaviour.
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
+
 
     // Create a datanode state machine for stateConext used by endpoint task
-    try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf);
-        EndpointStateMachine rpcEndPoint = SCMTestUtils.createEndpoint(conf,
+    try (DatanodeStateMachine stateMachine =
+             new DatanodeStateMachine(DFSTestUtil.getLocalDatanodeID(), conf);
+         EndpointStateMachine rpcEndPoint = SCMTestUtils.createEndpoint(conf,
             scmAddress, rpcTimeout)) {
     ContainerNodeIDProto containerNodeID = ContainerNodeIDProto.newBuilder()
         .setClusterID(UUID.randomUUID().toString())

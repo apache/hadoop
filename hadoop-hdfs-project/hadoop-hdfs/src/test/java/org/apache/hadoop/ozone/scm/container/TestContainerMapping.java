@@ -20,6 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -43,6 +44,7 @@ public class TestContainerMapping {
   private static ContainerMapping mapping;
   private static MockNodeManager nodeManager;
   private static File testDir;
+  private static XceiverClientManager xceiverClientManager;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -60,6 +62,7 @@ public class TestContainerMapping {
     }
     nodeManager = new MockNodeManager(true, 10);
     mapping = new ContainerMapping(conf, nodeManager, 128);
+    xceiverClientManager = new XceiverClientManager(conf);
   }
 
   @AfterClass
@@ -77,7 +80,10 @@ public class TestContainerMapping {
 
   @Test
   public void testallocateContainer() throws Exception {
-    Pipeline pipeline = mapping.allocateContainer(UUID.randomUUID().toString());
+    Pipeline pipeline = mapping.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(),
+        UUID.randomUUID().toString());
     Assert.assertNotNull(pipeline);
   }
 
@@ -91,8 +97,10 @@ public class TestContainerMapping {
      */
     Set<String> pipelineList = new TreeSet<>();
     for (int x = 0; x < 30; x++) {
-      Pipeline pipeline = mapping.allocateContainer(UUID.randomUUID()
-          .toString());
+      Pipeline pipeline = mapping.allocateContainer(
+          xceiverClientManager.getType(),
+          xceiverClientManager.getFactor(),
+          UUID.randomUUID().toString());
 
       Assert.assertNotNull(pipeline);
       pipelineList.add(pipeline.getLeader().getDatanodeUuid());
@@ -103,7 +111,9 @@ public class TestContainerMapping {
   @Test
   public void testGetContainer() throws IOException {
     String containerName = UUID.randomUUID().toString();
-    Pipeline pipeline = mapping.allocateContainer(containerName);
+    Pipeline pipeline = mapping.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), containerName);
     Assert.assertNotNull(pipeline);
     Pipeline newPipeline = mapping.getContainer(containerName);
     Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
@@ -113,10 +123,13 @@ public class TestContainerMapping {
   @Test
   public void testDuplicateAllocateContainerFails() throws IOException {
     String containerName = UUID.randomUUID().toString();
-    Pipeline pipeline = mapping.allocateContainer(containerName);
+    Pipeline pipeline = mapping.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), containerName);
     Assert.assertNotNull(pipeline);
     thrown.expectMessage("Specified container already exists.");
-    mapping.allocateContainer(containerName);
+    mapping.allocateContainer(xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), containerName);
   }
 
   @Test
@@ -131,6 +144,7 @@ public class TestContainerMapping {
     String containerName = UUID.randomUUID().toString();
     nodeManager.setChillmode(true);
     thrown.expectMessage("Unable to create container while in chill mode");
-    mapping.allocateContainer(containerName);
+    mapping.allocateContainer(xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), containerName);
   }
 }
