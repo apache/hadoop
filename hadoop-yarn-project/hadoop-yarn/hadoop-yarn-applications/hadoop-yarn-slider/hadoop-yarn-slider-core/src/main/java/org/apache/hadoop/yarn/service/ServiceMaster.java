@@ -32,14 +32,17 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.service.client.params.SliderAMArgs;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
-import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.slider.core.exceptions.BadClusterStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Map;
 
 public class ServiceMaster extends CompositeService {
@@ -48,6 +51,7 @@ public class ServiceMaster extends CompositeService {
       LoggerFactory.getLogger(ServiceMaster.class);
 
   private static SliderAMArgs amArgs;
+  protected ServiceContext context;
 
   public ServiceMaster(String name) {
     super(name);
@@ -62,17 +66,15 @@ public class ServiceMaster extends CompositeService {
     }
     LOG.info("Login user is {}", UserGroupInformation.getLoginUser());
 
-    ServiceContext context = new ServiceContext();
-    Path appDir = new Path(amArgs.getAppDefPath()).getParent();
+    context = new ServiceContext();
+    Path appDir = getAppDir();
     SliderFileSystem fs = new SliderFileSystem(conf);
     context.fs = fs;
     fs.setAppDir(appDir);
-    context.application = ServiceApiUtil
-        .loadApplicationFrom(fs, new Path(amArgs.getAppDefPath()));
-    LOG.info(context.application.toString());
-    ContainerId amContainerId = ContainerId.fromString(SliderUtils
-        .mandatoryEnvVariable(
-            ApplicationConstants.Environment.CONTAINER_ID.name()));
+    loadApplicationJson(context, fs);
+
+    ContainerId amContainerId = getAMContainerId();
+
     ApplicationAttemptId attemptId = amContainerId.getApplicationAttemptId();
     LOG.info("Application attemptId: " + attemptId);
     context.attemptId = attemptId;
@@ -88,7 +90,7 @@ public class ServiceMaster extends CompositeService {
     context.clientAMService = clientAMService;
     addService(clientAMService);
 
-    ServiceScheduler scheduler = new ServiceScheduler(context);
+    ServiceScheduler scheduler = createServiceScheduler(context);
     addService(scheduler);
     context.scheduler = scheduler;
 
@@ -98,6 +100,26 @@ public class ServiceMaster extends CompositeService {
     super.serviceInit(conf);
   }
 
+  protected ContainerId getAMContainerId() throws BadClusterStateException {
+    return ContainerId.fromString(SliderUtils.mandatoryEnvVariable(
+        ApplicationConstants.Environment.CONTAINER_ID.name()));
+  }
+
+  protected Path getAppDir() {
+    return new Path(amArgs.getAppDefPath()).getParent();
+  }
+
+  protected ServiceScheduler createServiceScheduler(ServiceContext context)
+      throws IOException, YarnException {
+    return new ServiceScheduler(context);
+  }
+
+  protected void loadApplicationJson(ServiceContext context,
+      SliderFileSystem fs) throws IOException {
+    context.application = ServiceApiUtil
+        .loadApplicationFrom(fs, new Path(amArgs.getAppDefPath()));
+    LOG.info(context.application.toString());
+  }
 
   @Override
   protected void serviceStop() throws Exception {

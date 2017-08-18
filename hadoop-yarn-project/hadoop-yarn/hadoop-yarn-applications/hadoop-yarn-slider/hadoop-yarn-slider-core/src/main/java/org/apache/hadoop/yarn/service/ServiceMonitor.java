@@ -23,6 +23,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.slider.api.InternalKeys;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEvent;
@@ -38,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.yarn.service.compinstance.ComponentInstanceState.RUNNING_BUT_UNREADY;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.FLEX;
 import static org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEventType.BECOME_NOT_READY;
 import static org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEventType.BECOME_READY;
@@ -51,6 +53,7 @@ public class ServiceMonitor extends AbstractService {
   public ScheduledExecutorService executorService;
   private  Map<ContainerId, ComponentInstance> liveInstances = null;
   private ServiceContext context;
+  private Configuration conf;
 
   public ServiceMonitor(String name, ServiceContext context) {
     super(name);
@@ -61,14 +64,17 @@ public class ServiceMonitor extends AbstractService {
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     executorService = Executors.newScheduledThreadPool(1);
+    this.conf = conf;
     super.serviceInit(conf);
   }
 
   @Override
   public void serviceStart() throws Exception {
-    long readinessCheckInterval = context.application.getConfiguration()
-        .getPropertyLong(InternalKeys.MONITOR_INTERVAL,
-            InternalKeys.DEFAULT_MONITOR_INTERVAL);
+    long readinessCheckInterval =
+        YarnServiceConf.getLong(InternalKeys.MONITOR_INTERVAL,
+            InternalKeys.DEFAULT_MONITOR_INTERVAL,
+            context.application.getConfiguration(), conf);
+
     executorService
         .scheduleAtFixedRate(new ReadinessChecker(), readinessCheckInterval,
             readinessCheckInterval, TimeUnit.SECONDS);
@@ -104,7 +110,7 @@ public class ServiceMonitor extends AbstractService {
 
         ProbeStatus status = instance.ping();
         if (status.isSuccess()) {
-          if (instance.getState() != READY) {
+          if (instance.getState() == RUNNING_BUT_UNREADY) {
             // synchronously update the state.
             instance.handle(
                 new ComponentInstanceEvent(entry.getKey(), BECOME_READY));

@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.yarn.service.provider;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
 import org.apache.hadoop.yarn.service.conf.SliderKeys;
@@ -35,6 +37,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_RETRY_INTERVAL;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_RETRY_MAX;
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.$;
 
 public abstract class AbstractProviderService implements ProviderService,
@@ -50,7 +54,8 @@ public abstract class AbstractProviderService implements ProviderService,
 
   public void buildContainerLaunchContext(AbstractLauncher launcher,
       Application application, ComponentInstance instance,
-      SliderFileSystem fileSystem) throws IOException, SliderException {
+      SliderFileSystem fileSystem, Configuration yarnConf)
+      throws IOException, SliderException {
     Component component = instance.getComponent().getComponentSpec();;
     processArtifact(launcher, instance, fileSystem, application);
 
@@ -93,5 +98,12 @@ public abstract class AbstractProviderService implements ProviderService,
     operation.add(launchCommand);
     operation.addOutAndErrFiles(OUT_FILE, ERR_FILE);
     launcher.addCommand(operation.build());
+
+    // By default retry forever every 30 seconds
+    launcher.setRetryContext(YarnServiceConf
+        .getInt(CONTAINER_RETRY_MAX, -1, application.getConfiguration(),
+            yarnConf), YarnServiceConf
+        .getInt(CONTAINER_RETRY_INTERVAL, 30000, application.getConfiguration(),
+            yarnConf));
   }
 }

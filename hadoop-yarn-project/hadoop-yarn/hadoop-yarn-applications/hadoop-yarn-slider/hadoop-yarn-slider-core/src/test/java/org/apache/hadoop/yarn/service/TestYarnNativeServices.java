@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,14 +36,15 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
+import org.apache.slider.api.InternalKeys;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
 import org.apache.slider.api.resource.Container;
 import org.apache.slider.api.resource.ContainerState;
-import org.apache.slider.api.resource.Resource;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.exceptions.SliderException;
 import org.junit.After;
@@ -59,9 +61,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,8 +70,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.FINISHED;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_ENABLED;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
 import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.KEY_AM_RESOURCE_MEM;
 import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.KEY_SLIDER_BASE_PATH;
 
@@ -79,7 +78,7 @@ import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.KEY_SLIDER_B
  * End to end tests to test deploying services with MiniYarnCluster and a in-JVM
  * ZK testing cluster.
  */
-public class TestYarnNativeServices {
+public class TestYarnNativeServices extends ServiceTestUtils{
 
   private static final Log LOG =
       LogFactory.getLog(TestYarnNativeServices.class);
@@ -118,14 +117,16 @@ public class TestYarnNativeServices {
         LinuxResourceCalculatorPlugin.class.getName());
     conf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE,
         ProcfsBasedProcessTree.class.getName());
-    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
     conf.setBoolean(
         YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING, true);
     conf.setBoolean(TIMELINE_SERVICE_ENABLED, false);
     conf.setInt(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE, 100);
     conf.setLong(DEBUG_NM_DELETE_DELAY_SEC, 60000);
-    conf.setLong(KEY_AM_RESOURCE_MEM, 128);
+    conf.setLong(KEY_AM_RESOURCE_MEM, 526);
+    conf.setLong(InternalKeys.MONITOR_INTERVAL, 5);
+    // Disable vmem check to disallow NM killing the container
+    conf.setBoolean(NM_VMEM_CHECK_ENABLED, false);
+    conf.setBoolean(NM_PMEM_CHECK_ENABLED, false);
     // setup zk cluster
     TestingCluster zkCluster;
     zkCluster = new TestingCluster(1);
@@ -233,11 +234,16 @@ public class TestYarnNativeServices {
   // 4. Flex up each component to 2 containers and check the component instance names
   // 5. Stop the service
   // 6. Destroy the service
-  @Test (timeout = 500000)
+  @Test (timeout = 200000)
   public void testCreateFlexStopDestroyService() throws Exception {
     ServiceClient client = createClient();
     Application exampleApp = createExampleApplication();
     client.actionCreate(exampleApp);
+    SliderFileSystem fileSystem = new SliderFileSystem(conf);
+    Path appDir = fileSystem.buildClusterDirPath(exampleApp.getName());
+    // check app.json is persisted.
+    Assert.assertTrue(
+        fs.exists(new Path(appDir, exampleApp.getName() + ".json")));
     waitForAllCompToBeReady(client, exampleApp);
 
     // Flex two components, each from 2 container to 3 containers.
@@ -272,8 +278,6 @@ public class TestYarnNativeServices {
     LOG.info("Destroy the service");
     //destroy the service and check the app dir is deleted from fs.
     client.actionDestroy(exampleApp.getName());
-    SliderFileSystem fileSystem = new SliderFileSystem(conf);
-    Path appDir = fileSystem.buildClusterDirPath(exampleApp.getName());
     // check the application dir on hdfs (in this case, local fs) are deleted.
     Assert.assertFalse(fs.exists(appDir));
   }
@@ -281,7 +285,7 @@ public class TestYarnNativeServices {
   // Create compa with 2 containers
   // Create compb with 2 containers which depends on compa
   // Check containers for compa started before containers for compb
-  @Test (timeout = 500000)
+  @Test (timeout = 200000)
   public void testComponentStartOrder() throws Exception {
     ServiceClient client = createClient();
     Application exampleApp = new Application();
@@ -400,7 +404,7 @@ public class TestYarnNativeServices {
         e.printStackTrace();
         return false;
       }
-    }, 5000, 200000);
+    }, 2000, 200000);
   }
 
   // wait until all the containers for all components become ready state
@@ -442,7 +446,7 @@ public class TestYarnNativeServices {
         e.printStackTrace();
         return false;
       }
-    }, 5000, 900000);
+    }, 2000, 200000);
   }
 
   private ServiceClient createClient() throws Exception {
@@ -466,31 +470,5 @@ public class TestYarnNativeServices {
       totalContainers += component.getNumberOfContainers();
     }
     return totalContainers;
-  }
-  // Example service definition
-  // 2 components, each of which has 2 containers.
-  private Application createExampleApplication() {
-    Application exampleApp = new Application();
-    exampleApp.setName("example-app");
-    exampleApp.addComponent(createComponent("compa"));
-    exampleApp.addComponent(createComponent("compb"));
-    return exampleApp;
-  }
-
-  private Component createComponent(String name) {
-    return createComponent(name, 2L, "sleep 1000");
-  }
-
-  private Component createComponent(String name, long numContainers,
-      String command) {
-    Component comp1 = new Component();
-    comp1.setNumberOfContainers(numContainers);
-    comp1.setLaunchCommand(command);
-    comp1.setName(name);
-    Resource resource = new Resource();
-    comp1.setResource(resource);
-    resource.setMemory("128");
-    resource.setCpus(1);
-    return comp1;
   }
 }

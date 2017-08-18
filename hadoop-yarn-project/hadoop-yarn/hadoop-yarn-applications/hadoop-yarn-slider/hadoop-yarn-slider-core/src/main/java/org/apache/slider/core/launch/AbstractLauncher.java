@@ -22,6 +22,8 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
+import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.service.conf.SliderKeys;
@@ -184,6 +186,13 @@ public class AbstractLauncher {
     }
 
     return containerLaunchContext;
+  }
+
+  public void setRetryContext(int maxRetries, int retryInterval) {
+    ContainerRetryContext retryContext = ContainerRetryContext
+        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, maxRetries,
+            retryInterval);
+    containerLaunchContext.setContainerRetryContext(retryContext);
   }
 
   /**

@@ -54,27 +54,26 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEvent;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEventType;
+import org.apache.hadoop.yarn.service.component.Component;
+import org.apache.hadoop.yarn.service.component.ComponentEvent;
+import org.apache.hadoop.yarn.service.component.ComponentEventType;
+import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.metrics.ServiceMetrics;
+import org.apache.hadoop.yarn.service.provider.ProviderUtils;
+import org.apache.hadoop.yarn.service.timelineservice.ServiceMetricsSink;
+import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.BoundedAppender;
 import org.apache.slider.api.RoleKeys;
 import org.apache.slider.api.ServiceApiConstants;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.ConfigFile;
-import org.apache.hadoop.yarn.service.conf.SliderKeys;
-import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.registry.info.CustomRegistryConstants;
 import org.apache.slider.core.zk.ZKIntegration;
-import org.apache.hadoop.yarn.service.provider.ProviderUtils;
-import org.apache.hadoop.yarn.service.metrics.ServiceMetrics;
-import org.apache.hadoop.yarn.service.component.ComponentEvent;
-import org.apache.hadoop.yarn.service.component.ComponentEventType;
-import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEvent;
-import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEventType;
-import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
-import org.apache.hadoop.yarn.service.timelineservice.ServiceMetricsSink;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
-import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +81,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -93,8 +93,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
-import static org.apache.slider.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
+import static org.apache.slider.api.ServiceApiConstants.*;
 
 /**
  *
@@ -110,7 +110,7 @@ public class ServiceScheduler extends CompositeService {
       new ConcurrentHashMap<>();
 
   // id - > component
-  private final Map<Long, Component> componentsById =
+  protected final Map<Long, Component> componentsById =
       new ConcurrentHashMap<>();
 
   private final Map<ContainerId, ComponentInstance> liveInstances =
@@ -151,6 +151,8 @@ public class ServiceScheduler extends CompositeService {
     RegistryOperations registryClient = RegistryOperationsFactory
         .createInstance("ServiceScheduler", configuration);
     addIfService(registryClient);
+    yarnRegistryOperations =
+        createYarnRegistryOperations(context, registryClient);
 
     // register metrics
     serviceMetrics = ServiceMetrics
@@ -158,11 +160,10 @@ public class ServiceScheduler extends CompositeService {
     serviceMetrics.tag("type", "Metrics type [component or service]", "service");
     serviceMetrics.tag("appId", "Application id for service", app.getId());
 
-    amRMClient =
-        AMRMClientAsync.createAMRMClientAsync(1000, new AMRMClientCallback());
+    amRMClient = createAMRMClient();
     addIfService(amRMClient);
 
-    nmClient = NMClientAsync.createNMClientAsync(new NMClientCallback());
+    nmClient = createNMClient();
     addIfService(nmClient);
 
     dispatcher = new AsyncDispatcher("Component  dispatcher");
@@ -191,16 +192,28 @@ public class ServiceScheduler extends CompositeService {
       LOG.info("Timeline v2 is enabled.");
     }
 
-    yarnRegistryOperations =
-        new YarnRegistryViewForProviders(registryClient,
-            RegistryUtils.currentUser(), SliderKeys.APP_TYPE, app.getName(),
-            context.attemptId);
     initGlobalTokensForSubstitute(context);
     //substitute quicklinks
     ProviderUtils.substituteMapWithTokens(app.getQuicklinks(), globalTokens);
     createConfigFileCache(context.fs.getFileSystem());
 
     createAllComponents();
+  }
+
+  protected YarnRegistryViewForProviders createYarnRegistryOperations(
+      ServiceContext context, RegistryOperations registryClient) {
+    return new YarnRegistryViewForProviders(registryClient,
+        RegistryUtils.currentUser(), SliderKeys.APP_TYPE, app.getName(),
+        context.attemptId);
+  }
+
+  protected NMClientAsync createNMClient() {
+    return NMClientAsync.createNMClientAsync(new NMClientCallback());
+  }
+
+  protected AMRMClientAsync<AMRMClient.ContainerRequest> createAMRMClient() {
+    return AMRMClientAsync
+        .createAMRMClientAsync(1000, new AMRMClientCallback());
   }
 
   @Override
@@ -323,7 +336,7 @@ public class ServiceScheduler extends CompositeService {
     context.configCache = configFileCache;
   }
 
-  private void registerServiceInstance(ApplicationAttemptId attemptId,
+  protected void registerServiceInstance(ApplicationAttemptId attemptId,
       Application application) throws IOException {
     LOG.info("Registering " + attemptId + ", " + application.getName()
         + " into registry");
@@ -413,8 +426,9 @@ public class ServiceScheduler extends CompositeService {
       try {
         component.handle(event);
       } catch (Throwable t) {
-        LOG.error("Error in handling event type " + event.getType()
-            + " for component " + event.getName(), t);
+        LOG.error(MessageFormat
+            .format("[COMPONENT {0}]: Error in handling event type {1}",
+                component.getName(), event.getType()), t);
       }
     }
   }
@@ -432,13 +446,13 @@ public class ServiceScheduler extends CompositeService {
       try {
         instance.handle(event);
       } catch (Throwable t) {
-        LOG.error("Error in handling event type " + event.getType()
-            + " for component instance " + instance.getCompInstanceId(), t);
+        LOG.error(instance.getCompInstanceId() +
+            ": Error in handling event type " + event.getType(), t);
       }
     }
   }
 
-  private class AMRMClientCallback extends AMRMClientAsync.AbstractCallbackHandler {
+  class AMRMClientCallback extends AMRMClientAsync.AbstractCallbackHandler {
 
     @Override
     public void onContainersAllocated(List<Container> containers) {

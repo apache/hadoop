@@ -138,7 +138,7 @@ public class RoleLaunchService
         ProviderService provider = ProviderFactory.getProviderService(
             compSpec.getArtifact());
         provider.buildContainerLaunchContext(containerLauncher, application,
-            instance, fs);
+            instance, fs, getConfig());
 
         long delay = compSpec.getConfiguration()
                 .getPropertyLong(KEY_CONTAINER_LAUNCH_DELAY, 0);

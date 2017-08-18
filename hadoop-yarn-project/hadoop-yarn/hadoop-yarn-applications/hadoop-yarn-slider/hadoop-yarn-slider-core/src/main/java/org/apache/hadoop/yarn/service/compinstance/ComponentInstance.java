@@ -263,8 +263,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       try {
         stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.error("Invalid event " + event.getType() +
-            " at " + oldState + " for component instance " + compInstanceId, e);
+        LOG.error(getCompInstanceId() + ": Invalid event " + event.getType() +
+            " at " + oldState, e);
       }
       if (oldState != getState()) {
         LOG.info(getCompInstanceId() + " Transitioned from " + oldState + " to "
