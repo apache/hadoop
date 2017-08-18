@@ -136,7 +136,7 @@ public class TestCompareResourceCalculators {
 
   private long getPid() throws YarnException {
     Class processClass = target.getClass();
-    if (processClass.getName().equals("java.lang.UnixProcess")) {
+    if (processClass.getName().equals("java.lang.UNIXProcess")) {
       try {
         Field pidField = processClass.getDeclaredField("pid");
         pidField.setAccessible(true);
