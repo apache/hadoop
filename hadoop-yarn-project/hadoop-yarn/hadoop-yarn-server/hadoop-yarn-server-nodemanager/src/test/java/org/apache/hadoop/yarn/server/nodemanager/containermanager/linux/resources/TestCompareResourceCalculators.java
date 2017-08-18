@@ -35,16 +35,19 @@ import java.util.Random;
  */
 public class TestCompareResourceCalculators {
   private Process target = null;
-  String cgroupCPU = null;
-  String cgroupMemory = null;
+  private String cgroupCPU = null;
+  private String cgroupMemory = null;
 
   @Before
   public void setup() throws IOException, YarnException {
     Assume.assumeTrue(SystemUtils.IS_OS_LINUX);
 
     YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "TestCompareResourceCalculators");
     conf.setBoolean(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT, false);
-    conf.setStrings(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, "/sys/fs/cgroup");
+    conf.setStrings(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH,
+        "/sys/fs/cgroup");
     conf.setBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED, true);
     ResourceHandlerChain module = null;
     try {
@@ -129,7 +132,7 @@ public class TestCompareResourceCalculators {
         "mkdir -p " + cgroupMemory + ";" +
         "echo $$ >" + cgroupMemory + "/tasks;" +
         "dd if=/dev/zero of=/dev/null bs=1k;";
-    builder.command("bash", "-c", script);
+    builder.command("bash", "-c", "'" + script + "'");
     target = builder.start();
   }
 
@@ -143,7 +146,7 @@ public class TestCompareResourceCalculators {
       String script =
           "rmdir " + cgroupCPU + ";" +
           "rmdir " + cgroupMemory + ";";
-      builder.command("bash", "-c", script);
+      builder.command("bash", "-c", "'" + script + "'");
       target = builder.start();
     } catch (IOException e) {
     }
