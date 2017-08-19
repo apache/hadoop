@@ -163,9 +163,13 @@ public class AppCollectorDataPBImpl extends AppCollectorData {
   @Override
   public Token getCollectorToken() {
     AppCollectorDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.collectorToken == null && p.hasAppCollectorToken()) {
-      this.collectorToken = new TokenPBImpl(p.getAppCollectorToken());
+    if (this.collectorToken != null) {
+      return this.collectorToken;
     }
+    if (!p.hasAppCollectorToken()) {
+      return null;
+    }
+    this.collectorToken = new TokenPBImpl(p.getAppCollectorToken());
     return this.collectorToken;
   }
 
