@@ -1384,7 +1384,6 @@ char* sanitize_docker_command(const char *line) {
 }
 
 char* parse_docker_command_file(const char* command_file) {
-
   size_t len = 0;
   char *line = NULL;
   ssize_t read;
@@ -2442,4 +2441,13 @@ int traffic_control_read_state(char *command_file) {
  */
 int traffic_control_read_stats(char *command_file) {
   return run_traffic_control(TC_READ_STATS_OPTS, command_file);
+}
+
+/**
+ * FIXME: (wangda) it's better to move executor_cfg out of container-executor.c
+ * Now initialize of executor_cfg and data structures are stored inside
+ * container-executor which is not a good design.
+ */
+struct configuration* get_cfg() {
+  return &CFG;
 }

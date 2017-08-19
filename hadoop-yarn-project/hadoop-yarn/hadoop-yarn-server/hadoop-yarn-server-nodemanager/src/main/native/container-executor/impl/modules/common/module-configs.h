@@ -16,17 +16,18 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <main/native/container-executor/impl/util.h>
-#include <cstdio>
+#ifdef __FreeBSD__
+#define _WITH_GETLINE
+#endif
 
-extern "C" {
-#include "util.h"
-}
+#ifndef _MODULES_COMMON_MODULE_CONFIGS_H_
+#define _MODULES_COMMON_MODULE_CONFIGS_H_
 
-int main(int argc, char **argv) {
-  ERRORFILE = stderr;
-  LOGFILE = stdout;
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+
+/**
+ * check if module enabled given name of module.
+ * return 0 if disabled
+ */
+int module_enabled(const struct section* section_cfg, const char* module_name);
+
+#endif

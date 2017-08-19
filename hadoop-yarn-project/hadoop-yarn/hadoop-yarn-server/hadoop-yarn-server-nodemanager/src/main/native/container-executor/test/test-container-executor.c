@@ -19,6 +19,7 @@
 #include "container-executor.h"
 #include "utils/string-utils.h"
 #include "util.h"
+#include "test/test-container-executor-common.h"
 
 #include <inttypes.h>
 #include <errno.h>
@@ -30,25 +31,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-
-#ifdef __APPLE__
-#include <CoreFoundation/CFString.h>
-#include <CoreFoundation/CFPreferences.h>
-
-#define TMPDIR "/private/tmp"
-#define RELTMPDIR "../.."
-#else
-#define RELTMPDIR ".."
-#define TMPDIR "/tmp"
-#endif
-
-#define TEST_ROOT TMPDIR "/test-container-executor"
-
-#define DONT_TOUCH_FILE "dont-touch-me"
-#define NM_LOCAL_DIRS       TEST_ROOT "/local-1%" TEST_ROOT "/local-2%" \
-               TEST_ROOT "/local-3%" TEST_ROOT "/local-4%" TEST_ROOT "/local-5"
-#define NM_LOG_DIRS         TEST_ROOT "/logs/userlogs"
-#define ARRAY_SIZE 1000
 
 static char* username = NULL;
 static char* yarn_username = NULL;
@@ -1486,10 +1468,7 @@ int main(int argc, char **argv) {
   test_check_user(1);
 #endif
 
-  run("rm -fr " TEST_ROOT);
-
   test_trim_function();
-
   printf("\nFinished tests\n");
 
   free(current_username);
