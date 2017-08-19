@@ -106,8 +106,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private MultiPartUpload multiPartUpload;
 
   /** Closed flag. */
-  private final FSImplementationUtils.CloseChecker closed =
-      new FSImplementationUtils.CloseChecker();
+  private final FSImplementationUtils.CloseChecker closed;
 
   /** Current data block. Null means none currently active */
   private S3ADataBlocks.DataBlock activeBlock;
@@ -165,12 +164,13 @@ class S3ABlockOutputStream extends OutputStream implements
     this.writeOperationHelper = writeOperationHelper;
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
-        "Block size is too small: %d", blockSize);
+        "Block size is too small: %s", blockSize);
     this.executorService = MoreExecutors.listeningDecorator(executorService);
     this.multiPartUpload = null;
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
+    this.closed = new FSImplementationUtils.CloseChecker(key);
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
     createBlockIfNeeded();
