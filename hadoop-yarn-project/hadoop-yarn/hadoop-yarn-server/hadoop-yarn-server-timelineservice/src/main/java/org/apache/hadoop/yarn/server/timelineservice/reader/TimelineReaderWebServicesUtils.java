@@ -57,6 +57,16 @@ public final class TimelineReaderWebServicesUtils {
         parseStr(entityType), parseLongStr(entityIdPrefix), parseStr(entityId));
   }
 
+  static TimelineReaderContext createTimelineReaderContext(String clusterId,
+      String userId, String flowName, String flowRunId, String appId,
+      String entityType, String entityIdPrefix, String entityId,
+      String doAsUser) {
+    return new TimelineReaderContext(parseStr(clusterId), parseStr(userId),
+        parseStr(flowName), parseLongStr(flowRunId), parseStr(appId),
+        parseStr(entityType), parseLongStr(entityIdPrefix), parseStr(entityId),
+        parseStr(doAsUser));
+  }
+
   /**
    * Parse the passed filters represented as strings and convert them into a
    * {@link TimelineEntityFilters} object.
