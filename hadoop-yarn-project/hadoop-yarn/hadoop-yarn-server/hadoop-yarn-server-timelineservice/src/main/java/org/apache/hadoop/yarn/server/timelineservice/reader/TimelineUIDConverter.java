@@ -137,6 +137,41 @@ enum TimelineUIDConverter {
     }
   },
 
+  // Sub Application Entity UID should contain cluster, user, entity type and
+  // entity id
+  SUB_APPLICATION_ENTITY_UID {
+    @Override
+    String encodeUID(TimelineReaderContext context) {
+      if (context == null) {
+        return null;
+      }
+      if (context.getClusterId() == null || context.getDoAsUser() == null
+          || context.getEntityType() == null || context.getEntityId() == null) {
+        return null;
+      }
+      String[] entityTupleArr = {context.getClusterId(), context.getDoAsUser(),
+          context.getEntityType(), context.getEntityIdPrefix().toString(),
+          context.getEntityId()};
+      return joinAndEscapeUIDParts(entityTupleArr);
+    }
+
+    @Override
+    TimelineReaderContext decodeUID(String uId) throws Exception {
+      if (uId == null) {
+        return null;
+      }
+      List<String> entityTupleList = splitUID(uId);
+      if (entityTupleList.size() == 5) {
+        // Flow information exists.
+        return new TimelineReaderContext(entityTupleList.get(0), null, null,
+            null, null, entityTupleList.get(2),
+            Long.parseLong(entityTupleList.get(3)), entityTupleList.get(4),
+            entityTupleList.get(1));
+      }
+      return null;
+    }
+  },
+
   // Generic Entity UID should contain cluster, user, flow name, flowrun id,
   // app id, entity type and entity id OR should contain cluster, appid, entity
   // type and entity id(i.e.without flow context info).
