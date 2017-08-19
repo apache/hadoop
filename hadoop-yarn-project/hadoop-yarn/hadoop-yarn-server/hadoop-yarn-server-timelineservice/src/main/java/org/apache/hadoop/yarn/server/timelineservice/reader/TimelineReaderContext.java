@@ -32,6 +32,7 @@ public class TimelineReaderContext extends TimelineContext {
   private String entityType;
   private String entityId;
   private Long entityIdPrefix;
+  private String doAsUser;
   public TimelineReaderContext(String clusterId, String userId, String flowName,
       Long flowRunId, String appId, String entityType, String entityId) {
     super(clusterId, userId, flowName, flowRunId, appId);
@@ -46,10 +47,18 @@ public class TimelineReaderContext extends TimelineContext {
     this.entityIdPrefix = entityIdPrefix;
   }
 
+  public TimelineReaderContext(String clusterId, String userId, String flowName,
+      Long flowRunId, String appId, String entityType, Long entityIdPrefix,
+      String entityId, String doasUser) {
+    this(clusterId, userId, flowName, flowRunId, appId, entityType, entityId);
+    this.entityIdPrefix = entityIdPrefix;
+    this.doAsUser = doasUser;
+  }
+
   public TimelineReaderContext(TimelineReaderContext other) {
     this(other.getClusterId(), other.getUserId(), other.getFlowName(),
         other.getFlowRunId(), other.getAppId(), other.getEntityType(),
-        other.getEntityIdPrefix(), other.getEntityId());
+        other.getEntityIdPrefix(), other.getEntityId(), other.getDoAsUser());
   }
 
   @Override
@@ -112,5 +121,13 @@ public class TimelineReaderContext extends TimelineContext {
 
   public void setEntityIdPrefix(Long entityIdPrefix) {
     this.entityIdPrefix = entityIdPrefix;
+  }
+
+  public String getDoAsUser() {
+    return doAsUser;
+  }
+
+  public void setDoAsUser(String doAsUser) {
+    this.doAsUser = doAsUser;
   }
 }

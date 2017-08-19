@@ -71,6 +71,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
   private static long ts = System.currentTimeMillis();
   private static long dayTs =
       HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(ts);
+  private static String doAsUser = "remoteuser";
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -337,7 +338,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = getHBaseTestingUtility().getConfiguration();
     UserGroupInformation remoteUser =
-        UserGroupInformation.createRemoteUser(user);
+        UserGroupInformation.createRemoteUser(doAsUser);
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
@@ -2251,58 +2252,67 @@ public class TestTimelineReaderWebServicesHBaseStorage
   public void testGenericEntitiesForPagination() throws Exception {
     Client client = createClient();
     try {
-      int limit = 10;
-      String queryParam = "?limit=" + limit;
       String resourceUri = "http://localhost:" + getServerPort() + "/ws/v2/"
           + "timeline/clusters/cluster1/apps/application_1111111111_1111/"
           + "entities/entitytype";
-      URI uri = URI.create(resourceUri + queryParam);
-
-      ClientResponse resp = getResponse(client, uri);
-      List<TimelineEntity> entities =
-          resp.getEntity(new GenericType<List<TimelineEntity>>() {
-          });
-      // verify for entity-10 to entity-1 in descending order.
-      verifyPaginatedEntites(entities, limit, limit);
-
-      limit = 4;
-      queryParam = "?limit=" + limit;
-      uri = URI.create(resourceUri + queryParam);
-      resp = getResponse(client, uri);
-      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
-      });
-      // verify for entity-10 to entity-7 in descending order.
-      TimelineEntity entity = verifyPaginatedEntites(entities, limit, 10);
-
-      queryParam = "?limit=" + limit + "&fromid="
-          + entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
-      uri = URI.create(resourceUri + queryParam);
-      resp = getResponse(client, uri);
-      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
-      });
-      // verify for entity-7 to entity-4 in descending order.
-      entity = verifyPaginatedEntites(entities, limit, 7);
-
-      queryParam = "?limit=" + limit + "&fromid="
-          + entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
-      uri = URI.create(resourceUri + queryParam);
-      resp = getResponse(client, uri);
-      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
-      });
-      // verify for entity-4 to entity-1 in descending order.
-      entity = verifyPaginatedEntites(entities, limit, 4);
-
-      queryParam = "?limit=" + limit + "&fromid="
-          + entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
-      uri = URI.create(resourceUri + queryParam);
-      resp = getResponse(client, uri);
-      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
-      });
-      // always entity-1 will be retrieved
-      entity = verifyPaginatedEntites(entities, 1, 1);
+      verifyEntitiesForPagination(client, resourceUri);
+      resourceUri = "http://localhost:" + getServerPort() + "/ws/v2/"
+          + "timeline/clusters/cluster1/users/" + doAsUser
+          + "/entities/entitytype";
+      verifyEntitiesForPagination(client, resourceUri);
     } finally {
       client.destroy();
     }
+  }
+
+  private void verifyEntitiesForPagination(Client client, String resourceUri)
+      throws Exception {
+    int limit = 10;
+    String queryParam = "?limit=" + limit;
+    URI uri = URI.create(resourceUri + queryParam);
+
+    ClientResponse resp = getResponse(client, uri);
+    List<TimelineEntity> entities =
+        resp.getEntity(new GenericType<List<TimelineEntity>>() {
+        });
+    // verify for entity-10 to entity-1 in descending order.
+    verifyPaginatedEntites(entities, limit, limit);
+
+    limit = 4;
+    queryParam = "?limit=" + limit;
+    uri = URI.create(resourceUri + queryParam);
+    resp = getResponse(client, uri);
+    entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+    });
+    // verify for entity-10 to entity-7 in descending order.
+    TimelineEntity entity = verifyPaginatedEntites(entities, limit, 10);
+
+    queryParam = "?limit=" + limit + "&fromid="
+        + entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
+    uri = URI.create(resourceUri + queryParam);
+    resp = getResponse(client, uri);
+    entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+    });
+    // verify for entity-7 to entity-4 in descending order.
+    entity = verifyPaginatedEntites(entities, limit, 7);
+
+    queryParam = "?limit=" + limit + "&fromid="
+        + entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
+    uri = URI.create(resourceUri + queryParam);
+    resp = getResponse(client, uri);
+    entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+    });
+    // verify for entity-4 to entity-1 in descending order.
+    entity = verifyPaginatedEntites(entities, limit, 4);
+
+    queryParam = "?limit=" + limit + "&fromid="
+        + entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
+    uri = URI.create(resourceUri + queryParam);
+    resp = getResponse(client, uri);
+    entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+    });
+    // always entity-1 will be retrieved
+    entity = verifyPaginatedEntites(entities, 1, 1);
   }
 
   private TimelineEntity verifyPaginatedEntites(List<TimelineEntity> entities,

@@ -82,6 +82,9 @@ public final class TimelineEntityReaderFactory {
         YARN_FLOW_RUN.matches(context.getEntityType())) {
       return new FlowRunEntityReader(context, filters, dataToRetrieve);
     } else {
+      if (context.getDoAsUser() != null) {
+        return new SubApplicationEntityReader(context, filters, dataToRetrieve);
+      }
       // assume we're dealing with a generic entity read
       return new GenericEntityReader(context, filters, dataToRetrieve);
     }
