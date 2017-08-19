@@ -168,12 +168,17 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
     for (Map.Entry<ApplicationId, AppCollectorData> entry :
         registeringCollectors.entrySet()) {
       AppCollectorData data = entry.getValue();
-      builder.addRegisteringCollectors(AppCollectorDataProto.newBuilder()
-          .setAppId(convertToProtoFormat(entry.getKey()))
-          .setAppCollectorAddr(data.getCollectorAddr())
-          .setAppCollectorToken(convertToProtoFormat(data.getCollectorToken()))
-          .setRmIdentifier(data.getRMIdentifier())
-          .setVersion(data.getVersion()));
+      AppCollectorDataProto.Builder appCollectorDataBuilder =
+          AppCollectorDataProto.newBuilder()
+              .setAppId(convertToProtoFormat(entry.getKey()))
+              .setAppCollectorAddr(data.getCollectorAddr())
+              .setRmIdentifier(data.getRMIdentifier())
+              .setVersion(data.getVersion());
+      if (data.getCollectorToken() != null) {
+        appCollectorDataBuilder.setAppCollectorToken(
+            convertToProtoFormat(data.getCollectorToken()));
+      }
+      builder.addRegisteringCollectors(appCollectorDataBuilder);
     }
   }
 
@@ -274,7 +279,10 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
       this.registeringCollectors = new HashMap<>();
       for (AppCollectorDataProto c : list) {
         ApplicationId appId = convertFromProtoFormat(c.getAppId());
-        Token collectorToken = convertFromProtoFormat(c.getAppCollectorToken());
+        Token collectorToken = null;
+        if (c.hasAppCollectorToken()){
+          collectorToken = convertFromProtoFormat(c.getAppCollectorToken());
+        }
         AppCollectorData data = AppCollectorData.newInstance(appId,
             c.getAppCollectorAddr(), c.getRmIdentifier(), c.getVersion(),
             collectorToken);
