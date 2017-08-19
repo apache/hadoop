@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.junit.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Random;
@@ -35,8 +36,10 @@ import java.util.Random;
  */
 public class TestCompareResourceCalculators {
   private Process target = null;
+  private String cgroup = null;
   private String cgroupCPU = null;
   private String cgroupMemory = null;
+  public static final long SHMEM_KB = 1048576;
 
   @Before
   public void setup() throws IOException, YarnException {
@@ -57,8 +60,8 @@ public class TestCompareResourceCalculators {
     }
     Assume.assumeNotNull(module);
 
-    Random random = new Random();
-    String cgroup = Long.toString(random.nextLong());
+    Random random = new Random(System.currentTimeMillis());
+    cgroup = Long.toString(random.nextLong());
     cgroupCPU = ResourceHandlerModule.getCGroupsHandler()
         .getPathForCGroup(CGroupsHandler.CGroupController.CPU, cgroup);
     cgroupMemory = ResourceHandlerModule.getCGroupsHandler()
@@ -66,7 +69,7 @@ public class TestCompareResourceCalculators {
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws YarnException {
     stopTestProcess();
   }
 
@@ -82,15 +85,16 @@ public class TestCompareResourceCalculators {
     CGroupsResourceCalculator cgroupsCalculator =
         new CGroupsResourceCalculator(Long.toString(getPid()));
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 5; ++i) {
       Thread.sleep(3000);
       compareMetrics(legacyCalculator, cgroupsCalculator);
     }
 
     stopTestProcess();
-    Thread.sleep(3000);
-    compareMetrics(legacyCalculator, cgroupsCalculator);
-
+    for (int i = 0; i < 2; ++i) {
+      Thread.sleep(3000);
+      compareMetrics(legacyCalculator, cgroupsCalculator);
+    }
   }
 
   private void compareMetrics(
@@ -98,30 +102,31 @@ public class TestCompareResourceCalculators {
       ResourceCalculatorProcessTree metric2) {
     metric1.updateProcessTree();
     metric2.updateProcessTree();
-    Assert.assertTrue("pmem Error outside range",
-        Math.abs(
-            metric1.getRssMemorySize(0) -
-                metric2.getRssMemorySize(0)) < 10);
-    Assert.assertTrue("pmem Error outside range",
-        Math.abs(
-            metric1.getRssMemorySize(0) -
-                metric2.getRssMemorySize(0)) < 10);
-    Assert.assertTrue("vmem Error outside range",
-        Math.abs(
-            metric1.getVirtualMemorySize(0) -
-                metric2.getVirtualMemorySize(0)) < 1);
-    Assert.assertTrue("vmem Error outside range",
-        Math.abs(
-            metric1.getVirtualMemorySize(0) -
-                metric2.getVirtualMemorySize(0)) < 1);
-    Assert.assertTrue("CPU% Error outside range",
-        Math.abs(
-            metric1.getCpuUsagePercent() -
-                metric2.getCpuUsagePercent()) < 0.1);
-    Assert.assertTrue("CPU% Error outside range",
-        Math.abs(
-            metric1.getCpuUsagePercent() -
-                metric2.getCpuUsagePercent()) < 0.1);
+    long pmem1 = metric1.getRssMemorySize(0);
+    long pmem2 = metric2.getRssMemorySize(0);
+    // TODO The calculation is different and cgroup
+    // can report a small amount after process stop
+    // This is not an issue since the cgroup is deleted
+    if (pmem1 >= 0) {
+      Assert.assertTrue("pmem Error outside range",
+              Math.abs(pmem1 - (pmem2 - SHMEM_KB * 1024)) < 5000000);
+    }
+    long vmem1 = metric1.getRssMemorySize(0);
+    long vmem2 = metric2.getRssMemorySize(0);
+      // TODO The calculation is different and cgroup
+      // can report a small amount after process stop
+      // This is not an issue since the cgroup is deleted
+    if (vmem1 >= 0) {
+      Assert.assertTrue("vmem Error outside range",
+              Math.abs(vmem1 - (vmem2 - SHMEM_KB * 1024)) < 5000000);
+    }
+    float cpu1 = metric1.getCpuUsagePercent();
+    float cpu2 = metric2.getCpuUsagePercent();
+    if (cpu1 > 0) {
+      // TODO ProcfsBasedProcessTree may report negative on process exit
+      Assert.assertTrue("CPU% Error outside range " + cpu1 + " " + cpu2,
+              Math.abs(cpu2 - cpu1) < 10);
+    }
   }
 
   private void startTestProcess() throws IOException {
@@ -131,12 +136,19 @@ public class TestCompareResourceCalculators {
         "echo $$ >" + cgroupCPU + "/tasks;" +
         "mkdir -p " + cgroupMemory + ";" +
         "echo $$ >" + cgroupMemory + "/tasks;" +
-        "dd if=/dev/zero of=/dev/null bs=1k;";
-    builder.command("bash", "-c", "'" + script + "'");
+        "dd if=/dev/zero of=/dev/shm/" + cgroup + " bs=1k count=" + SHMEM_KB + ";" +
+        "dd if=/dev/zero of=/dev/null bs=1k &" +
+        "echo $! >/tmp/\" + cgroup + \".pid;" +
+        //"echo while [ -f /tmp/" + cgroup + ".pid ]; do sleep 1; done;" +
+        "sleep 10000;" +
+        "echo kill $(jobs -p);";
+    builder.command("bash", "-c", script);
+    builder.redirectError(new File("/tmp/a.txt"));
+    builder.redirectOutput(new File("/tmp/b.txt"));
     target = builder.start();
   }
 
-  private void stopTestProcess() {
+  private void stopTestProcess() throws YarnException {
     if (target != null) {
       target.destroyForcibly();
       target = null;
@@ -144,11 +156,17 @@ public class TestCompareResourceCalculators {
     try {
       ProcessBuilder builder = new ProcessBuilder();
       String script =
-          "rmdir " + cgroupCPU + ";" +
-          "rmdir " + cgroupMemory + ";";
-      builder.command("bash", "-c", "'" + script + "'");
-      target = builder.start();
-    } catch (IOException e) {
+        "rm -f /dev/shm/" + cgroup + ";" +
+        "cat " + cgroupCPU + "/tasks | xargs kill;" +
+        "rm -f /tmp/" + cgroup + ".pid;" +
+        "sleep 4;" +
+        "rmdir " + cgroupCPU + ";" +
+        "rmdir " + cgroupMemory + ";";
+      builder.command("bash", "-c", script);
+      Process cleanup = builder.start();
+      cleanup.waitFor();
+    } catch (IOException|InterruptedException e) {
+      throw new YarnException("Could not clean up", e);
     }
   }
 
