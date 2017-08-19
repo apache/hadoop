@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.timelineservice.security;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
@@ -73,6 +75,9 @@ public class TimelineV2DelegationTokenSecretManagerService extends
   public static class TimelineV2DelegationTokenSecretManager extends
       AbstractDelegationTokenSecretManager<TimelineDelegationTokenIdentifier> {
 
+    private static final Log LOG =
+        LogFactory.getLog(TimelineV2DelegationTokenSecretManager.class);
+
     /**
      * Create a timeline v2 secret manager.
      * @param delegationKeyUpdateInterval the number of milliseconds for rolling
@@ -110,6 +115,12 @@ public class TimelineV2DelegationTokenSecretManagerService extends
     @Override
     public TimelineDelegationTokenIdentifier createIdentifier() {
       return new TimelineDelegationTokenIdentifier();
+    }
+
+    @Override
+    protected void logExpireToken(TimelineDelegationTokenIdentifier ident)
+        throws IOException {
+      LOG.info("Token " + ident + " expired.");
     }
   }
 }

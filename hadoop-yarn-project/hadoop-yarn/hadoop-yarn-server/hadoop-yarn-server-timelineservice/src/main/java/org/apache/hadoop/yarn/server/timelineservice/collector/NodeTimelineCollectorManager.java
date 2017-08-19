@@ -87,6 +87,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
 
   private static final long TIME_BEFORE_RENEW_DATE = 10 * 1000; // 10 seconds.
 
+  private static final long TIME_BEFORE_EXPIRY = 5 * 60 * 1000; // 5 minutes.
+
   static final String COLLECTOR_MANAGER_ATTR_KEY = "collector.manager";
 
   @VisibleForTesting
@@ -176,10 +178,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
   public long renewTokenForAppCollector(
       AppLevelTimelineCollector appCollector) throws IOException {
     if (appCollector.getDelegationTokenForApp() != null) {
-      TimelineDelegationTokenIdentifier identifier =
-          appCollector.getDelegationTokenForApp().decodeIdentifier();
       return tokenMgrService.renewToken(appCollector.getDelegationTokenForApp(),
-          identifier.getRenewer().toString());
+          appCollector.getAppDelegationTokenRenewer());
     } else {
       LOG.info("Delegation token not available for renewal for app " +
           appCollector.getTimelineEntityContext().getAppId());
@@ -196,6 +196,42 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     }
   }
 
+  private long getRenewalDelay(long renewInterval) {
+    return ((renewInterval > TIME_BEFORE_RENEW_DATE) ?
+        renewInterval - TIME_BEFORE_RENEW_DATE : renewInterval);
+  }
+
+  private long getRegenerationDelay(long tokenMaxDate) {
+    long regenerateTime = tokenMaxDate - Time.now();
+    return ((regenerateTime > TIME_BEFORE_EXPIRY) ?
+        regenerateTime - TIME_BEFORE_EXPIRY : regenerateTime);
+  }
+
+  private org.apache.hadoop.yarn.api.records.Token generateTokenAndSetTimer(
+      ApplicationId appId, AppLevelTimelineCollector appCollector)
+      throws IOException {
+    Token<TimelineDelegationTokenIdentifier> timelineToken =
+        generateTokenForAppCollector(appCollector.getAppUser());
+    TimelineDelegationTokenIdentifier tokenId =
+        timelineToken.decodeIdentifier();
+    long renewalDelay = getRenewalDelay(tokenRenewInterval);
+    long regenerationDelay = getRegenerationDelay(tokenId.getMaxDate());
+    if (renewalDelay > 0 || regenerationDelay > 0) {
+      boolean isTimerForRenewal = renewalDelay < regenerationDelay;
+      Future<?> renewalOrRegenerationFuture = tokenRenewalExecutor.schedule(
+          new CollectorTokenRenewer(appId, isTimerForRenewal),
+          isTimerForRenewal? renewalDelay : regenerationDelay,
+          TimeUnit.MILLISECONDS);
+      appCollector.setDelegationTokenAndFutureForApp(timelineToken,
+          renewalOrRegenerationFuture, tokenId.getMaxDate(),
+          tokenId.getRenewer().toString());
+    }
+    LOG.info("Generated a new token " + timelineToken + " for app " + appId);
+    return org.apache.hadoop.yarn.api.records.Token.newInstance(
+        timelineToken.getIdentifier(), timelineToken.getKind().toString(),
+        timelineToken.getPassword(), timelineToken.getService().toString());
+  }
+
   @Override
   protected void doPostPut(ApplicationId appId, TimelineCollector collector) {
     try {
@@ -206,19 +242,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       if (UserGroupInformation.isSecurityEnabled() &&
           collector instanceof AppLevelTimelineCollector) {
         AppLevelTimelineCollector appCollector =
-            (AppLevelTimelineCollector)collector;
-        Token<TimelineDelegationTokenIdentifier> timelineToken =
-            generateTokenForAppCollector(appCollector.getAppUser());
-        long renewalDelay = (tokenRenewInterval > TIME_BEFORE_RENEW_DATE) ?
-            tokenRenewInterval - TIME_BEFORE_RENEW_DATE : tokenRenewInterval;
-        Future<?> renewalFuture =
-            tokenRenewalExecutor.schedule(new CollectorTokenRenewer(appId),
-                renewalDelay, TimeUnit.MILLISECONDS);
-        appCollector.setDelegationTokenAndFutureForApp(timelineToken,
-            renewalFuture);
-        token = org.apache.hadoop.yarn.api.records.Token.newInstance(
-            timelineToken.getIdentifier(), timelineToken.getKind().toString(),
-            timelineToken.getPassword(), timelineToken.getService().toString());
+            (AppLevelTimelineCollector) collector;
+        token = generateTokenAndSetTimer(appId, appCollector);
       }
       // Report to NM if a new collector is added.
       reportNewCollectorInfoToNM(appId, token);
@@ -365,16 +390,54 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
 
   private final class CollectorTokenRenewer implements Runnable {
     private ApplicationId appId;
-    private CollectorTokenRenewer(ApplicationId applicationId) {
+    // Indicates whether timer is for renewal or regeneration of token.
+    private boolean timerForRenewal = true;
+    private CollectorTokenRenewer(ApplicationId applicationId,
+        boolean forRenewal) {
       appId = applicationId;
+      timerForRenewal = forRenewal;
+    }
+
+    private void renewToken(AppLevelTimelineCollector appCollector)
+        throws IOException {
+      long newExpirationTime = renewTokenForAppCollector(appCollector);
+      // Set renewal or regeneration timer based on delay.
+      long renewalDelay = 0;
+      if (newExpirationTime > 0) {
+        LOG.info("Renewed token for " + appId + " with new expiration " +
+            "timestamp = " + newExpirationTime);
+        renewalDelay = getRenewalDelay(newExpirationTime - Time.now());
+      }
+      long regenerationDelay =
+          getRegenerationDelay(appCollector.getAppDelegationTokenMaxDate());
+      if (renewalDelay > 0 || regenerationDelay > 0) {
+        this.timerForRenewal = renewalDelay < regenerationDelay;
+        Future<?> renewalOrRegenerationFuture = tokenRenewalExecutor.schedule(
+            this, timerForRenewal ? renewalDelay : regenerationDelay,
+            TimeUnit.MILLISECONDS);
+        appCollector.setRenewalOrRegenerationFutureForApp(
+            renewalOrRegenerationFuture);
+      }
+    }
+
+    private void regenerateToken(AppLevelTimelineCollector appCollector)
+        throws IOException {
+      org.apache.hadoop.yarn.api.records.Token token =
+          generateTokenAndSetTimer(appId, appCollector);
+      // Report to NM if a new collector is added.
+      try {
+        reportNewCollectorInfoToNM(appId, token);
+      } catch (YarnException e) {
+        LOG.warn("Unable to report regenerated token to NM for " + appId);
+      }
     }
 
     @Override
     public void run() {
       TimelineCollector collector = get(appId);
       if (collector == null) {
-        LOG.info("Cannot find active collector while renewing token for " +
-            appId);
+        LOG.info("Cannot find active collector while " + (timerForRenewal ?
+            "renewing" : "regenerating") + " token for " + appId);
         return;
       }
       AppLevelTimelineCollector appCollector =
@@ -383,19 +446,14 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       synchronized (collector) {
         if (!collector.isStopped()) {
           try {
-            long newExpirationTime = renewTokenForAppCollector(appCollector);
-            if (newExpirationTime > 0) {
-              long renewInterval = newExpirationTime - Time.now();
-              long renewalDelay = (renewInterval > TIME_BEFORE_RENEW_DATE) ?
-                  renewInterval - TIME_BEFORE_RENEW_DATE : renewInterval;
-              LOG.info("Renewed token for " + appId + " with new expiration " +
-                  "timestamp = " + newExpirationTime);
-              Future<?> renewalFuture = tokenRenewalExecutor.schedule(
-                  this, renewalDelay, TimeUnit.MILLISECONDS);
-              appCollector.setRenewalFutureForApp(renewalFuture);
+            if (timerForRenewal) {
+              renewToken(appCollector);
+            } else {
+              regenerateToken(appCollector);
             }
           } catch (Exception e) {
-            LOG.warn("Unable to renew token for " + appId);
+            LOG.warn("Unable to " + (timerForRenewal ? "renew" : "regenerate") +
+                " token for " + appId, e);
           }
         }
       }
