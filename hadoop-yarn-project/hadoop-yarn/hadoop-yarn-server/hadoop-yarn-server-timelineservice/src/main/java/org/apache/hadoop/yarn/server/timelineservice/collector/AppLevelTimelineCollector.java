@@ -51,7 +51,9 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   private final TimelineCollectorContext context;
   private UserGroupInformation currentUser;
   private Token<TimelineDelegationTokenIdentifier> delegationTokenForApp;
-  private Future<?> renewalFuture;
+  private long tokenMaxDate = 0;
+  private String tokenRenewer;
+  private Future<?> renewalOrRegenerationFuture;
 
   public AppLevelTimelineCollector(ApplicationId appId) {
     this(appId, null);
@@ -75,13 +77,32 @@ public class AppLevelTimelineCollector extends TimelineCollector {
 
   void setDelegationTokenAndFutureForApp(
       Token<TimelineDelegationTokenIdentifier> token,
-      Future<?> appRenewalFuture) {
+      Future<?> appRenewalOrRegenerationFuture, long tknMaxDate,
+      String renewer) {
     this.delegationTokenForApp = token;
-    this.renewalFuture = appRenewalFuture;
+    this.tokenMaxDate = tknMaxDate;
+    this.tokenRenewer = renewer;
+    this.renewalOrRegenerationFuture = appRenewalOrRegenerationFuture;
   }
 
-  void setRenewalFutureForApp(Future<?> appRenewalFuture) {
-    this.renewalFuture = appRenewalFuture;
+  void setRenewalOrRegenerationFutureForApp(
+      Future<?> appRenewalOrRegenerationFuture) {
+    this.renewalOrRegenerationFuture = appRenewalOrRegenerationFuture;
+  }
+
+  void cancelRenewalOrRegenerationFutureForApp() {
+    if (renewalOrRegenerationFuture != null &&
+        !renewalOrRegenerationFuture.isDone()) {
+      renewalOrRegenerationFuture.cancel(true);
+    }
+  }
+
+  long getAppDelegationTokenMaxDate() {
+    return tokenMaxDate;
+  }
+
+  String getAppDelegationTokenRenewer() {
+    return tokenRenewer;
   }
 
   @VisibleForTesting
@@ -109,9 +130,7 @@ public class AppLevelTimelineCollector extends TimelineCollector {
 
   @Override
   protected void serviceStop() throws Exception {
-    if (renewalFuture != null && !renewalFuture.isDone()) {
-      renewalFuture.cancel(true);
-    }
+    cancelRenewalOrRegenerationFutureForApp();
     super.serviceStop();
   }
 
