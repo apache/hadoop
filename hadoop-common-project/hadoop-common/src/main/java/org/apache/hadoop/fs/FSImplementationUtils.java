@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import static org.apache.hadoop.fs.FSExceptionMessages.*;
+import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HFLUSH;
+import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HSYNC;
 
 /**
  * Utility classes to help implementing filesystems and streams.
@@ -35,6 +36,17 @@ public class FSImplementationUtils {
 
 
   /**
+   * Check the supplied capabilities for being those required for full
+   * {@code Syncable.hsync()} and {@code Syncable.hflush()} functionality.
+   * @param capability capability string.
+   * @return true if either refers to one of the Syncable operations.
+   */
+  public static boolean hasHSyncCapabilities(String capability) {
+    return capability.equalsIgnoreCase(HSYNC.getValue()) ||
+        capability.equalsIgnoreCase((HFLUSH.getValue()));
+  }
+
+  /**
    * Class to manage close() logic.
    * A simple wrapper around an atomic boolean to guard against
    * calling operations when closed; {@link #checkOpen()}
@@ -43,10 +55,21 @@ public class FSImplementationUtils {
    * open.
    */
   public static class CloseChecker {
+
     /** Closed flag. */
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    public CloseChecker() {
+    /**
+     * Path to use in exception,
+     */
+    private final String path;
+
+    /**
+     * Constructor.
+     * @param path path to use in exception text.
+     */
+    public CloseChecker(String path) {
+      this.path = path;
     }
 
     /**
@@ -60,11 +83,11 @@ public class FSImplementationUtils {
 
     /**
      * Check for the stream being open.
-     * @throws IOException if the stream is closed.
+     * @throws PathIOException if the stream is closed.
      */
-    public void checkOpen() throws IOException {
+    public void checkOpen() throws PathIOException {
       if (isClosed()) {
-        throw new IOException(STREAM_IS_CLOSED);
+        throw new PathIOException(path, STREAM_IS_CLOSED);
       }
     }
 
@@ -79,7 +102,6 @@ public class FSImplementationUtils {
     public boolean isOpen() {
       return !isClosed();
     }
-
 
   }
 }

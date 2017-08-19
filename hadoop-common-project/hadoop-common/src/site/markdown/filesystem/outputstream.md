@@ -14,52 +14,47 @@
 
 # Output Streams
 
+
 With the exception of `FileSystem.copyFromLocalFile()`, 
 all API methods operations which write data to a filesystem is done
-with `OutputStream` subclasses obtained through calls to
-`FileSystem.create()` or `FileSystem.append()`. These return
-instances of `FSDataOutputStream`, through which data can be written.
+through the Java "OutputStreams" API.
+Specifically, through `OutputStream` subclasses obtained through calls to
+`FileSystem.create()`, `FileSystem.append()`,
+or `FSDataOutputStreamBuilder.build()`.
+
+These all return instances of `FSDataOutputStream`, through which data 
+can be written through various `write()` methods.
 After a stream's `close()` method is called, all data written to the 
 stream MUST BE persisted to the fileysystem and visible to oll other
 clients attempting to read data from that path via `FileSystem.open()`
 —until any change happens to that data, such as it being overwritten, deleted,
 or appended to.
 
-As well as operations to write the data, the Hadoop output stream
-subclasses also provide methods to request that the data is written
-back to the filesystem, with two different requirements
-
-* That it is flushed: that the data is written back to the filesystem, and
-that other clients attempting to read from the file MUST be returned the
-newly flushed data.
-
-* That it is persisted: that the data is not only flushed to the FileSystem,
-but that the FS has, to its satisfaction, saved the data to a persistent
-storage medium.
-
-These two guarantees are implemented by the `Syncable` interface.
+As well as operations to write the data, Hadoop's Output Streams
+provide methods to flush buffered data back to the filesystem,
+so as to ensure that the data is reliably persisted and/or visible
+to other callers. This is done via the `Syncable` interface.
 
 
 ## Issues with the Hadoop Output Stream model.
 
 
 There are some known issues with the output stream model as offered by Hadoop,
-specifically about the guarantees about when data is written and persisted by
-different filesystems, and when the metadata is synchronized. These are
-where implementation aspects of HDFS and the "Local" filesystem surface in ways
-which do not match the simple model of the filesystem used in this specification.
+specifically about the guarantees about when data is written and persisted  
+—and when the metadata is synchronized.
+These are where implementation aspects of HDFS and the "Local" filesystem
+do not the simple model of the filesystem used in this specification.
 
-1. HDFS: The metadata on a file, specifically its length and modification time, may lag
+*HDFS*: The metadata on a file, specifically its length and modification time, may lag
 that of the actual data. That is: if a file is opened and read, more data may
 be returned than a call to `getFileStatus()` would indicate. It is only
 once an output stream has been closed that the metadata and data can be guaranteed
 to be consistent.
 
-1. Local: `flush()` does not guaranteed to flush all the data to the local filesystem.
+*Local* `flush()` does not guaranteed to flush all the data to the local filesystem.
 This is because the checksum process needs whole checksummable chunks to scan
 to produce a checksum: only complete chunks are flushed, When the output stream
 is closed via `close()`, then all data is written, even any trailing incomplete chunk.
-
 
 
 Object stores have their own behaviors. some of which may differs significantly
@@ -104,6 +99,111 @@ its semantics are also specified here.
 
 
 
+## Output stream model
+
+An output stream consists of a buffer `buffer: List[byte]`
+
+For this specification, the output stream can be viewed as a list of bytes
+
+```python
+buffer: List[byte]`
+```
+
+the buffer, bonded to a path in its owning filesystem. A flag, `open`
+tracks whether the stream is open: after the stream is closed no more
+data may be written to it
+
+```python
+FS: FileSystem
+path: List[PathElement]
+open: bool
+buffer: List[byte]
+```
+
+
+(Immediately) after `Syncable` operations which flush data to the filesystem, 
+the data at the stream's destination path must match that of
+`buffer`. That is, the following condition holds
+ 
+
+```python
+FS'.Files(path) == buffer
+```
+
+   
+data is flushed, read operations on the filesystem
+should be in sync with the data
+
+```python
+Stream' = (FS', path, open, buffer)
+```
+
+
+### State of Stream and filesystem after `Filesystem.create()`
+
+
+The output stream returned by a `FileSystem.create(path)` call must be empty
+
+```python
+Stream' = (FS, path, true, [])
+```
+
+
+The filesystem `FS'` must contain a 0-byte file at the path:
+ 
+```python
+data(FS', path) == []
+```
+
+Accordingly, the the initial state of `Stream'.buffer` is implicitly
+consistent with the data at the filesystem.
+
+
+### State of Stream and filesystem after `Filesystem.append()`
+
+The output stream returned from a call of
+ `FileSystem.append(path, buffersize, progress)`,
+can be modelled as a stream whose `buffer` is intialized to that of
+the original file:
+
+```python
+Stream' = (FS, path, true, data(FS, path))
+FS ' = FS
+```
+
+
+Again, the the initial state of `Stream'.buffer` is implicitly
+consistent with the data at the filesystem.
+
+
+####  Persisting data to the Filesystem
+
+When the stream writes data back to the Filesystem, be it in any 
+supported flush operation, in the `close()` operation, or at any other
+time the stream chooses to do so, the contents of the file
+are replaced with the current buffer
+
+
+```python
+    Stream'=(FS', path, true, buffer)
+    FS' = FS where data(FS', path) == buffer
+```
+
+
+After a call to `close()`, the stream is closed for all operations other
+than `close()`; they MAY fail with `IOException` or `RuntimeException` instances.
+
+```python
+Stream' =  (FS, path, false, [])
+```
+
+The `close()` operation must become a no-op. That is: subsequent attempts to
+persist data after a failure MUST NOT be made. (alternatively: users of the
+API MUST NOT expect failing `close()` attemps to succeed if retried) 
+
+
+
+
 <!--  ============================================================= -->
 <!--  CLASS: FSDataOutputStream -->
 <!--  ============================================================= -->
@@ -120,16 +220,14 @@ public class FSDataOutputStream
  }
 ```
 
-The `FileSystem.create()` and `FileSystem.append()` calls return an instance
+The `FileSystem.create()`, `FileSystem.append()` and
+`FSDataOutputStreamBuilder.build()` calls return an instance
 of a class `FSDataOutputStream`, a subclass of `java.io.OutputStream`.
 
 The base class wraps an `OutputStream` instance, one which may implement `Streamable`,
 `CanSetDropBehind` and `StreamCapabilities`.
+
 This document covers the requirements of such implementations.
-
-A Java `OutputStream` allows applications to write a sequence of bytes to a destination.
-In a Hadoop filesystem, that destination is the data under a path in the filesystem.
-
 
 HDFS's `FileSystem` implementation, `DistributedFileSystem`, returns an instance
 of `HdfsDataOutputStream`. This implementation has at least two behaviors
@@ -161,83 +259,159 @@ The concurrent `write()` call is the most significant tightening of
 this specification. 
 
 
-
-## Output stream model
-
-An output stream consists of a buffer `buffer: List[byte]`
-
-For this specification, the output stream can be viewed as a list of bytes,
-the buffer, bonded to a path in its owning filesystem. A flag, `open`
-tracks whether the stream is open: after the stream is closed no more
-data may be written to it
-
-    FS: FileSystem
-    path: List[PathElement]
-    open: bool
-    buffer: List[byte]
-
-(Immediately) after `Syncable` operations which flush data to the filesystem, 
-the data at the stream's destination path must match that of
-`buffer`. That is, the following condition holds
- 
-
-    FS'.Files(path) == buffer
-   
-data is flushed, read operations on the filesystem
-should be in sync with the data
-
-    Stream' = (FS', path, open, buffer)
-
-### State of Stream and filesystem after `Filesystem.create()`
+## Class `java.io.OutputStream`
 
 
-The output stream returned by a `FileSystem.create(path)` call must be empty
-
-     Stream' = (FS, path, true, [])
-
-The filesystem `FS'` must contain a 0-byte file at the path:
- 
-    data(FS', path) == []
-
-Accordingly, the the initial state of `Stream'.buffer` is implicitly
-consistent with the data at the filesystem.
+A Java `OutputStream` allows applications to write a sequence of bytes to a destination.
+In a Hadoop filesystem, that destination is the data under a path in the filesystem.
 
 
-### State of Stream and filesystem after `Filesystem.append()`
+```java
+public abstract class OutputStream implements Closeable, Flushable {
+  public abstract void write(int b) throws IOException;
+  public void write(byte b[]) throws IOException;
+  public void write(byte b[], int off, int len) throws IOException;
+  public void flush() throws IOException ;
+  public void close() throws IOException;
+}
+```
 
-The output stream returned from a call of
- `FileSystem.append(path, buffersize, progress)`,
-can be modelled as a stream whose `buffer` is intialized to that of
-the original file:
-
-    Stream' = (FS, path, true, data(FS, path))
-    FS ' = FS
-
-Again, the the initial state of `Stream'.buffer` is implicitly
-consistent with the data at the filesystem.
-
-
-####  Persisting data to the Filesystem
-
-When the stream writes data back to the Filesystem, be it in any 
-supported flush operation, in the `close()` operation, or at any other
-time the stream chooses to do so, the contents of the file
-are replaced with the current buffer
+The 
 
 
-    Stream'=(FS', path, true, buffer)
-    FS' = FS where data(FS', path) == buffer
+### <a name="write(data)"></a>`write(Stream, data)`
+
+#### Preconditions
+
+```python
+Stream.open else raise IOException
+```
+
+#### Postconditions
+
+The buffer has the lower 8 bits of the data argument appended to it.
+
+```python
+Stream'.buffer = Stream.buffer + [data & 0xff]
+```
+
+There may be an explicit limit on the size of cached data, or an implicit
+limit based by the available capacity of the destination filesystem.
+When a limit is reached, `write()` SHOULD fail with an `IOException`.
+
+### <a name="write(buffer,offset,len)"></a>`write(Stream, byte[] data, int offset, int len)`
 
 
-After a call to `close()`, the stream is closed for all operations other
-than `close()`; they MAY fail with `IOException` or `RuntimeException` instances.
+#### Preconditions
 
-    Stream' =  (FS, path, false, [])
+The preconditions are all defined in `OutputStream.write()`
+
+```python
+Stream.open else raise IOException
+data != null else raise NullPointerException
+offset >= 0 else raise IndexOutOfBoundsException
+len >= 0 else raise IndexOutOfBoundsException
+offset < data.length else raise IndexOutOfBoundsException
+offset + len < data.length else raise IndexOutOfBoundsException
+```
 
 
-The `close()` operation must become a no-op. That is: subsequent attempts to
-persist data after a failure MUST NOT be made. (alternatively: users of the
-API MUST NOT expect failing `close()` attemps to succeed if retried) 
+There may be an explicit limit on the size of cached data, or an implicit
+limit based by the available capacity of the destination filesystem.
+When a limit is reached, `write()` SHOULD fail with an `IOException`.
+
+After the operation has returned, the buffer may be re-used. The outcome
+of updates to the buffer while the `write()` operation is in progress is undefined.
+
+#### Postconditions
+
+```python
+Stream'.buffer' = Stream.buffer + data[offset...(offset + len)]
+```
+
+
+
+### <a name="write(buffer)"></a>`write(byte[] data)`
+
+This is defined as the equivalent of
+
+```python
+write(data, 0, data.length)
+```
+
+
+### <a name="flush()"></a>`flush()`
+
+Requests that the data is flushed. The specification of `ObjectStream.flush()`
+declares that this SHOULD write data to the "intended destination".
+
+It explicitly precludes any guarantees about durability.
+
+For that reason, this document doesn't provide any normative
+specifications of behaviour.
+
+#### Preconditions
+
+
+```python
+Stream.open else raise IOException
+```
+
+#### Postconditions
+
+ ```python
+FS' = FS where data(path) == cache
+ ```
+
+Some applications have been known to call `flush()` on a closed stream
+on the assumption that it is harmless. Implementations MAY
+support this behaviour.
+
+### <a name="close"></a>`close()`
+
+The `close()` operation saves all data to the filesystem and
+releases any resources used for writing data.
+All subsequent `write()` calls on the stream MUST then fail with an `IOException`.
+
+The `close()` call is expected to block
+until the write has completed (as with `Syncable.hflush()`), possibly
+until it has been written to durable storage (as HDFS does).
+
+After `close()` completes, the data in a file MUST be visible and consistent
+with the data most recently written. The metadata of the file MUST be consistent
+with the data and the write history itself (i.e. any modification time fields
+updated).
+
+Any locking/leaseholding mechanism is also required to release its lock/lease.
+
+```python
+Stream'.open = false
+FS' = FS where data(path) == cache
+```
+
+The `close()` call MAY fail during its operation.
+
+1. Callers of the API MUST expect for some calls to fail and SHOULD code appropriately.
+Catching and swallowing exceptions, while common, is not always the ideal solution.
+1. Even after a failure, `close()` MUST place the stream into a closed state.
+Follow-on calls to `close()` are ignored, and calls to other methods
+rejected. That is: caller's cannot be expected to call `close()` repeatedly
+until it succeeds.
+1. The duration of the `call()` operation is undefined. Operations which rely
+on acknowledgements from remote systems to meet the persistence guarantees
+implicitly have to await these acknowledgements. Some Object Store output streams
+upload the entire data file in the `close()` operation. This can take a large amount
+of time. The fact that many user applications assume that `close()` is both fast
+and does not fail means that this behavior is dangerous.
+
+Recommendations for safe use by callers
+
+* Do plan for exceptions being raised, either in catching and logging or
+by throwing the exception further up. Catching and silently swallowing exceptions
+may hide serious problems.
+* Heartbeat operations SHOULD take place on a separate thread, so that a long
+delay in `close()` does not block the thread so long that the heartbeat times
+out.
 
 
 ## Interface `StreamCapabilities`
@@ -263,141 +437,9 @@ public boolean hasCapability(String capability) {
   return false;
 }
 ```
+
 Where `HSYNC` and `HFLUSH` are items in the enumeration 
 `org.apache.hadoop.fs.StreamCapabilities.StreamCapability`.
-
-
-
-## Class `java.io.OutputStream`
-```java
-public abstract class OutputStream implements Closeable, Flushable {
-  public abstract void write(int b) throws IOException;
-  public void write(byte b[]) throws IOException;
-  public void write(byte b[], int off, int len) throws IOException;
-  public void flush() throws IOException ;
-  public void close() throws IOException;
-}
-```
-
-
-
-
-### <a name="write(data)"></a>`write(Stream, data)`
-
-#### Preconditions
-
-    Stream.open else raise IOException
-
-#### Postconditions
-
-The buffer has the lower 8 bits of the data argument appended to it.
-
-    Stream'.buffer = Stream.buffer + [data & 0xff]
-
-There may be an explicit limit on the size of cached data, or an implicit
-limit based by the available capacity of the destination filesystem.
-When a limit is reached, `write()` SHOULD fail with an `IOException`.
-
-### <a name="write(buffer,offset,len)"></a>`write(Stream, byte[] data, int offset, int len)`
-
-
-#### Preconditions
-
-The preconditions are all defined in `OutputStream.write()`
-
-    Stream.open else raise IOException
-    data != null else raise NullPointerException
-    offset >= 0 else raise IndexOutOfBoundsException
-    len >= 0 else raise IndexOutOfBoundsException
-    offset < data.length else raise IndexOutOfBoundsException
-    offset + len < data.length else raise IndexOutOfBoundsException
-
-
-There may be an explicit limit on the size of cached data, or an implicit
-limit based by the available capacity of the destination filesystem.
-When a limit is reached, `write()` SHOULD fail with an `IOException`.
-
-After the operation has returned, the buffer may be re-used. The outcome
-of updates to the buffer while the `write()` operation is in progress is undefined.
-
-#### Postconditions
-
-    Stream'.buffer' = Stream.buffer + data[offset...(offset + len)]
-
-
-### <a name="write(buffer)"></a>`write(byte[] data)`
-
-This is defined as the equivalent of
-
-    write(data, 0, data.length)
-
-
-### <a name="flush()"></a>`flush()`
-
-Requests that the data is flushed. The specification of `ObjectStream.flush()`
-declares that this SHOULD write data to the "intended destination".
-
-It explicitly precludes any guarantees about durability.
-
-For that reason, this document doesn't provide any normative
-specifications of behaviour.
-
-#### Preconditions
-
-    Stream.open else raise IOException
-
-#### Postconditions
-
-
-    FS' = FS where data(path) == cache
-
-Some applications have been known to call `flush()` on a closed stream
-on the assumption that it is harmless. Implementations MAY
-support this behaviour.
-
-### <a name="close"></a>`close()`
-
-The `close()` operation saves all data to the filesystem and
-releases any resources used for writing data.
-All subsequent `write()` calls on the stream MUST then fail with an `IOException`.
-
-The `close()` call is expected to block
-until the write has completed (as with `Syncable.hflush()`), possibly
-until it has been written to durable storage (as HDFS does).
-
-After `close()` completes, the data in a file MUST be visible and consistent
-with the data most recently written. The metadata of the file MUST be consistent
-with the data and the write history itself (i.e. any modification time fields
-updated).
-
-Any locking/leaseholding mechanism is also required to release its lock/lease.
-
-    Stream'.open = false
-    FS' = FS where data(path) == cache
-
-The `close()` call MAY fail during its operation.
-
-1. Callers of the API MUST expect for some calls to fail and SHOULD code appropriately.
-Catching and swallowing exceptions, while common, is not always the ideal solution.
-1. Even after a failure, `close()` MUST place the stream into a closed state.
-Follow-on calls to `close()` are ignored, and calls to other methods
-rejected. That is: caller's cannot be expected to call `close()` repeatedly
-until it succeeds.
-1. The duration of the `call()` operation is undefined. Operations which rely
-on acknowledgements from remote systems to meet the persistence guarantees
-implicitly have to await these acknowledgements. Some Object Store output streams
-upload the entire data file in the `close()` operation. This can take a large amount
-of time. The fact that many user applications assume that `close()` is both fast
-and does not fail means that this behavior is dangerous.
-
-Recommendations for safe use by callers
-
-* Do plan for exceptions being raised, either in catching and logging or
-by throwing the exception further up. Catching and silently swallowing exceptions
-may hide serious problems.
-* Heartbeat operations SHOULD take place on a separate thread, so that a long
-delay in `close()` does not block the thread so long that the heartbeat times
-out.
 
 
 ## <a name="syncable"></a>`org.apache.hadoop.fs.Syncable`
@@ -478,12 +520,19 @@ Thus implementations may cache the written data in memory
 
 #### Preconditions
 
-    Stream.open else raise IOException
+```python
+hasCapability(Stream. "hflush") else raise UnsupportedOperationException
+
+Stream.open else raise IOException
+```
+
 
 #### Postconditions
 
+```python
+FS' = FS where data(path) == cache
+```
 
-    FS' = FS where data(path) == cache
 
 After the call returns, the data MUST be visible to all new callers
 of `FileSystem.open`.
@@ -493,6 +542,15 @@ There is no requirement or guarantee that clients with an existing
 data, nor is there a guarantee that they *will not* in a current or subsequent
 read. 
 
+Implementation note: as a correct `hsync()` implementation must also
+offer all the semantics of an `hflush()` call, implementations of `hflush()`
+may just invoke `hsync()`:
+
+```java
+public void hflush() throws IOException {
+  hsync();
+}
+``` 
 
 ### <a name="Syncable.hsync"></a>`Syncable.hsync()`
 
@@ -504,13 +562,16 @@ the disk hardware itself, where it is expected to be durable.
 
 #### Preconditions
 
-    Stream.open else raise IOException
+```python
+hasCapability(Stream, "hsync") else raise UnsupportedOperationException
+Stream.open else raise IOException
+```
 
 #### Postconditions
 
-    FS' = FS where data(path) == buffer
-
-
+```python
+FS' = FS where data(path) == buffer
+```
 
 The reference implementation, `DFSOutputStream` will block
 until an acknowledgement is received from the datanodes: That is, all hosts
@@ -534,17 +595,34 @@ From the javadocs of `DFSOutputStream.hsync(EnumSet<SyncFlag> syncFlags)`
 
 
 In virtual machines, the notion of "disk hardware" is really that of
-another software abstraction. There can be no durability guarantees in such
-environments.
-
-
-
-### <a name="Syncable.hflush"></a>`Syncable.hflush()`
-
-Deprecated: replaced by `hsync()`
+another software abstraction: there are guarantees.
 
 
 ## `interface CanSetDropBehind` 
+
+```java
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface CanSetDropBehind {
+  /**
+   * Configure whether the stream should drop the cache.
+   *
+   * @param dropCache     Whether to drop the cache.  null means to use the
+   *                      default value.
+   * @throws IOException  If there was an error changing the dropBehind
+   *                      setting.
+   *         UnsupportedOperationException  If this stream doesn't support
+   *                                        setting the drop-behind.
+   */
+  void setDropBehind(Boolean dropCache)
+      throws IOException, UnsupportedOperationException;
+}
+```
+
+This interface allows callers to change policies used inside HDFS. 
+They are currently unimplemented by any stream other than those in HDFS. 
+
+
 
 ## Durability, Concurrency, Consistency and Visibility of stream output.
 
@@ -627,11 +705,17 @@ timestamp MAY be updated while a file is being written, especially after a
 1. After the contents of an output stream have been persisted (`hflush()/hsync()`)
 all new `open(FS, Path)` operations MUST return the updated data.
 
-1. After `close()` has been invoked on an output stream returned from a call
-to `FileSystem.create(Path,...)`, a call to `getFileStatus(path)` MUST return the
-final metadata of the written file, including length and modification time.
+1. After `close()` has been invoked on an output stream,
+a call to `getFileStatus(path)` MUST return the final metadata of the written file,
+including length and modification time.
 The metadata of the file returned in any of the FileSystem `list` operations
 MUST be consistent with this metadata.
+
+1. The value of `getFileStatus(path).getModificationTime()` is not defined.
+It may be the time the file was initially created (in a `create()` call),
+or the time data was last written to it.
+It is *likely* to be in the time and time zone of the filesystem, rather
+than that of the client.
 
 ### HDFS
 
@@ -646,7 +730,7 @@ that the size of the file as listed in the metadata may be less than or equal
 to the number of available bytes —but never larger. This is a guarantee which
 is also held
 
-The standard technique to determine whether a file is updated is:
+One Algorithm to determine whether a file in HDFS is updated is:
 
 1. Remember the last read position `pos` in the file, using `0` if this is the initial
 read.
@@ -659,9 +743,9 @@ recorded in the metadata.
     1. If `read() != -1`, there is new data.
 
 This algorithm works for filesystems which are consistent with metadata and
-data, as well as HDFS. What is important to know is that even if the 
-`getFileStatus(path).getLen()==0` holds, 
-in HDFS there may be data, but the metadata is not up to date"
+data, as well as HDFS. What is important to know is that, in HDFS 
+`getFileStatus(FS, path).getLen()==0` does not imply that `data(FS, path)` is
+empty.
 
 ### Local Filesystem, `file:`
 
@@ -674,8 +758,8 @@ local data as can be written to full checksummed blocks of data.
 That is, the flush operations are not guaranteed to write all the pending
 data until the file is finally closed.
 
-That is, `sync()` and `hsync()` cannot be guaranteed to persist the data currently
-buffered locally.
+That is, `sync()`, `hsync()` and `hflush` may not persist all data written
+to the stream.
 
 For anyone thinking "this is a violation of this specification" —they are correct.
 The local filesystem is intended for testing, rather than production use.
