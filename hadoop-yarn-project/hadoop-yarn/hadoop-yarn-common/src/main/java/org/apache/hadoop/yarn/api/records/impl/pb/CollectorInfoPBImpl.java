@@ -114,9 +114,13 @@ public class CollectorInfoPBImpl extends CollectorInfo {
   @Override
   public Token getCollectorToken() {
     CollectorInfoProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.collectorToken == null && p.hasCollectorToken()) {
-      this.collectorToken = convertFromProtoFormat(p.getCollectorToken());
+    if (this.collectorToken != null) {
+      return this.collectorToken;
     }
+    if (!p.hasCollectorToken()) {
+      return null;
+    }
+    this.collectorToken = convertFromProtoFormat(p.getCollectorToken());
     return this.collectorToken;
   }
 
