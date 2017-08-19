@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
@@ -68,6 +69,7 @@ import org.mortbay.jetty.webapp.WebAppContext;
 
 import com.google.common.collect.Maps;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
 public class TestHttpFSServer extends HFSTestCase {
@@ -332,6 +334,20 @@ public class TestHttpFSServer extends HFSTestCase {
    */
   private void putCmd(String filename, String command,
                       String params) throws Exception {
+    Assert.assertEquals(HttpURLConnection.HTTP_OK,
+            putCmdWithReturn(filename, command, params).getResponseCode());
+  }
+
+  /**
+   * General-purpose http PUT command to the httpfs server,
+   * which returns relted HttpURLConnection instance.
+   * @param filename The file to operate upon
+   * @param command The command to perform (SETACL, etc)
+   * @param params Parameters, like "aclspec=..."
+   * @return HttpURLConnection the HttpURLConnection instance for the given PUT
+   */
+  private HttpURLConnection putCmdWithReturn(String filename, String command,
+                      String params) throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
     if ( filename.charAt(0) == '/' ) {
@@ -345,7 +361,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
     conn.connect();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    return conn;
   }
 
   /**
@@ -836,4 +852,125 @@ public class TestHttpFSServer extends HFSTestCase {
         conn.getResponseCode());
   }
 
+  private HttpURLConnection snapshotTestPreconditions(String httpMethod,
+                                                      String snapOperation,
+                                                      String additionalParams)
+      throws Exception {
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1/tmp/tmp-snap-test/subdir?user.name={0}&op=MKDIRS",
+        user));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    conn.connect();
+
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+
+    //needed to make the given dir snapshottable
+    Path snapshottablePath = new Path("/tmp/tmp-snap-test");
+    DistributedFileSystem dfs =
+        (DistributedFileSystem) FileSystem.get(snapshottablePath.toUri(),
+        TestHdfsHelper.getHdfsConf());
+    dfs.allowSnapshot(snapshottablePath);
+
+    //Try to create snapshot passing snapshot name
+    url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1/tmp/tmp-snap-test?user.name={0}&op={1}&{2}", user,
+        snapOperation, additionalParams));
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(httpMethod);
+    conn.connect();
+    return conn;
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testCreateSnapshot() throws Exception {
+    createHttpFSServer(false);
+    final HttpURLConnection conn = snapshotTestPreconditions("PUT",
+        "CREATESNAPSHOT",
+        "snapshotname=snap-with-name");
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    final BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    String result = reader.readLine();
+    //Validates if the content format is correct
+    Assert.assertTrue(result.
+        equals("{\"Path\":\"/tmp/tmp-snap-test/.snapshot/snap-with-name\"}"));
+    //Validates if the snapshot is properly created under .snapshot folder
+    result = getStatus("/tmp/tmp-snap-test/.snapshot",
+        "LISTSTATUS");
+    Assert.assertTrue(result.contains("snap-with-name"));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testCreateSnapshotNoSnapshotName() throws Exception {
+    createHttpFSServer(false);
+    final HttpURLConnection conn = snapshotTestPreconditions("PUT",
+        "CREATESNAPSHOT",
+        "");
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(conn.getInputStream()));
+    String result = reader.readLine();
+    //Validates if the content format is correct
+    Assert.assertTrue(Pattern.matches(
+        "(\\{\\\"Path\\\"\\:\\\"/tmp/tmp-snap-test/.snapshot/s)" +
+            "(\\d{8})(-)(\\d{6})(\\.)(\\d{3})(\\\"\\})", result));
+    //Validates if the snapshot is properly created under .snapshot folder
+    result = getStatus("/tmp/tmp-snap-test/.snapshot",
+        "LISTSTATUS");
+
+    Assert.assertTrue(Pattern.matches("(.+)(\\\"pathSuffix\\\":\\\"s)" +
+            "(\\d{8})(-)(\\d{6})(\\.)(\\d{3})(\\\")(.+)",
+        result));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testRenameSnapshot() throws Exception {
+    createHttpFSServer(false);
+    HttpURLConnection conn = snapshotTestPreconditions("PUT",
+        "CREATESNAPSHOT",
+        "snapshotname=snap-to-rename");
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    conn = snapshotTestPreconditions("PUT",
+        "RENAMESNAPSHOT",
+        "oldsnapshotname=snap-to-rename" +
+            "&snapshotname=snap-renamed");
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    //Validates the snapshot is properly renamed under .snapshot folder
+    String result = getStatus("/tmp/tmp-snap-test/.snapshot",
+        "LISTSTATUS");
+    Assert.assertTrue(result.contains("snap-renamed"));
+    //There should be no snapshot named snap-to-rename now
+    Assert.assertFalse(result.contains("snap-to-rename"));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testDeleteSnapshot() throws Exception {
+    createHttpFSServer(false);
+    HttpURLConnection conn = snapshotTestPreconditions("PUT",
+        "CREATESNAPSHOT",
+        "snapshotname=snap-to-delete");
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    conn = snapshotTestPreconditions("DELETE",
+        "DELETESNAPSHOT",
+        "snapshotname=snap-to-delete");
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    //Validates the snapshot is not under .snapshot folder anymore
+    String result = getStatus("/tmp/tmp-snap-test/.snapshot",
+        "LISTSTATUS");
+    Assert.assertFalse(result.contains("snap-to-delete"));
+  }
 }
