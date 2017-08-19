@@ -34,7 +34,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.SocketAddress;
 
 /**
  * Creates a netty server endpoint that acts as the communication layer for
@@ -65,8 +67,10 @@ public final class XceiverServer implements XceiverServerSpi {
     // use that as the container port
     if (conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
         OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT_DEFAULT)) {
-      try (ServerSocket socket = new ServerSocket(0)) {
+      try (ServerSocket socket = new ServerSocket()) {
         socket.setReuseAddress(true);
+        SocketAddress address = new InetSocketAddress(0);
+        socket.bind(address);
         this.port = socket.getLocalPort();
         LOG.info("Found a free port for the server : {}", this.port);
       } catch (IOException e) {

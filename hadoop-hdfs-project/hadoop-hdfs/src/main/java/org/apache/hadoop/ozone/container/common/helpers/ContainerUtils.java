@@ -126,7 +126,8 @@ public final class ContainerUtils {
   public static ContainerProtos.ContainerCommandResponseProto logAndReturnError(
       Logger log, StorageContainerException ex,
       ContainerProtos.ContainerCommandRequestProto msg) {
-    log.info("Trace ID: {} : Message: {} : Result: {}", msg.getTraceID(),
+    log.info("Operation: {} : Trace ID: {} : Message: {} : Result: {}",
+        msg.getCmdType().name(), msg.getTraceID(),
         ex.getMessage(), ex.getResult().getValueDescriptor().getName());
     return getContainerResponse(msg, ex.getResult(), ex.getMessage()).build();
   }
@@ -142,7 +143,8 @@ public final class ContainerUtils {
   public static ContainerProtos.ContainerCommandResponseProto logAndReturnError(
       Logger log, RuntimeException ex,
       ContainerProtos.ContainerCommandRequestProto msg) {
-    log.info("Trace ID: {} : Message: {} ", msg.getTraceID(), ex.getMessage());
+    log.info("Operation: {} : Trace ID: {} : Message: {} ",
+        msg.getCmdType().name(), msg.getTraceID(), ex.getMessage());
     return getContainerResponse(msg, INVALID_ARGUMENT, ex.getMessage()).build();
   }
 

@@ -65,8 +65,9 @@ public class TestKeys {
   public Timeout testTimeout = new Timeout(300000);
 
   private static MiniOzoneCluster ozoneCluster = null;
-  static private String path;
+  private static String path;
   private static OzoneRestClient ozoneRestClient = null;
+  private static long currentTime;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -93,6 +94,7 @@ public class TestKeys {
     final int port = dataNode.getInfoPort();
     ozoneRestClient = new OzoneRestClient(
         String.format("http://localhost:%d", port));
+    currentTime = Time.now();
   }
 
   /**
@@ -405,7 +407,6 @@ public class TestKeys {
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
-    long currentTime = Time.now();
     // add keys [list-key0, list-key1, ..., list-key9]
     for (int x = 0; x < 10; x++) {
       String newkeyName = "list-key" + x;
@@ -490,7 +491,6 @@ public class TestKeys {
 
   static void runTestGetKeyInfo(PutHelper helper)
       throws OzoneException, ParseException {
-    long currentTime = Time.now();
     String keyName = helper.putKey();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());

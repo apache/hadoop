@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.utils;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.collections.MapIterator;
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,6 +64,42 @@ public final class ContainerCache extends LRUMap {
   }
 
   /**
+   * Closes a db instance.
+   *
+   * @param container - name of the container to be closed.
+   * @param db - db instance to close.
+   */
+  private void closeDB(String container, MetadataStore db) {
+    if (db != null) {
+      try {
+        db.close();
+      } catch (IOException e) {
+        LOG.error("Error closing DB. Container: " + container, e);
+      }
+    }
+  }
+
+  /**
+   * Closes all the db instances and resets the cache.
+   */
+  public void shutdownCache() {
+    lock.lock();
+    try {
+      // iterate the cache and close each db
+      MapIterator iterator = cache.mapIterator();
+      while (iterator.hasNext()) {
+        iterator.next();
+        MetadataStore db = (MetadataStore) iterator.getValue();
+        closeDB(iterator.getKey().toString(), db);
+      }
+      // reset the cache
+      cache.clear();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
@@ -70,9 +107,7 @@ public final class ContainerCache extends LRUMap {
     lock.lock();
     try {
       MetadataStore db = (MetadataStore) entry.getValue();
-      db.close();
-    } catch (IOException e) {
-      LOG.error("Error closing DB. Container: " + entry.getKey().toString(), e);
+      closeDB(entry.getKey().toString(), db);
     } finally {
       lock.unlock();
     }
@@ -107,13 +142,7 @@ public final class ContainerCache extends LRUMap {
     lock.lock();
     try {
       MetadataStore db = this.getDB(containerName);
-      if (db != null) {
-        try {
-          db.close();
-        } catch (IOException e) {
-          LOG.warn("There is some issue to stop an unused DB handler.", e);
-        }
-      }
+      closeDB(containerName, db);
       this.remove(containerName);
     } finally {
       lock.unlock();

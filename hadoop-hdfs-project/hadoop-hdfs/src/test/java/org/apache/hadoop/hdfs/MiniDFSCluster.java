@@ -556,6 +556,14 @@ public class MiniDFSCluster implements AutoCloseable {
       this.ipcPort = ipcPort;
     }
 
+    public Configuration getConf() {
+      return conf;
+    }
+
+    public DataNode getDatanode() {
+      return datanode;
+    }
+
     public void setDnArgs(String ... args) {
       dnArgs = args;
     }
@@ -2370,7 +2378,7 @@ public class MiniDFSCluster implements AutoCloseable {
       conf.set(DFS_DATANODE_ADDRESS_KEY, 
           addr.getAddress().getHostAddress() + ":" + addr.getPort());
       conf.set(DFS_DATANODE_IPC_ADDRESS_KEY,
-          addr.getAddress().getHostAddress() + ":" + dnprop.ipcPort); 
+          addr.getAddress().getHostAddress() + ":" + dnprop.ipcPort);
     }
     final DataNode newDn = DataNode.createDataNode(args, conf, secureResources);
 

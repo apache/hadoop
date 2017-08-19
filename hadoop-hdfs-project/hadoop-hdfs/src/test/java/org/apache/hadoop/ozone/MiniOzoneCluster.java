@@ -53,6 +53,10 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_IPC_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_IPC_RANDOM_PORT;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
     .HEALTHY;
 import static org.junit.Assert.assertFalse;
@@ -133,6 +137,26 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     } catch (IOException e) {
       LOG.error("Cleaning up local storage failed", e);
     }
+  }
+
+  public boolean restartDataNode(int i) throws IOException {
+    return restartDataNode(i, true);
+  }
+  /*
+   * Restart a particular datanode, wait for it to become active
+   */
+  public boolean restartDataNode(int i, boolean keepPort) throws IOException {
+    if (keepPort) {
+      DataNodeProperties dnProp = dataNodes.get(i);
+      int currentPort = dnProp.getDatanode().getOzoneContainerManager()
+          .getContainerServerPort();
+      Configuration config = dnProp.getConf();
+      config.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
+      config.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
+    }
+    boolean status =  super.restartDataNode(i, true);
+    this.waitActive();
+    return status;
   }
 
   @Override
