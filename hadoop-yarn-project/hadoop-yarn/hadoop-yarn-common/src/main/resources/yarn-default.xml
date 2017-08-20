@@ -73,6 +73,14 @@
   </property>
 
   <property>
+    <description>
+      If set to true, then ALL container updates will be automatically sent to
+      the NM in the next heartbeat</description>
+    <name>yarn.resourcemanager.auto-update.containers</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The number of threads used to handle applications manager requests.</description>
     <name>yarn.resourcemanager.client.thread-count</name>
     <value>50</value>

@@ -111,11 +111,14 @@ message NodeHeartbeatResponseProto {
   repeated ContainerIdProto containers_to_be_removed_from_nm = 9;
   repeated SystemCredentialsForAppsProto system_credentials_for_apps = 10;
   optional bool areNodeLabelsAcceptedByRM = 11 [default = false];
+  // to be deprecated in favour of containers_to_update
   repeated ContainerProto containers_to_decrease = 12;
   repeated SignalContainerRequestProto containers_to_signal = 13;
   optional ResourceProto resource = 14;
   optional ContainerQueuingLimitProto container_queuing_limit = 15;
   repeated AppCollectorsMapProto app_collectors_map = 16;
+  // to be used in place of containers_to_decrease
+  repeated ContainerProto containers_to_update = 17;
 }
 
 message ContainerQueuingLimitProto {

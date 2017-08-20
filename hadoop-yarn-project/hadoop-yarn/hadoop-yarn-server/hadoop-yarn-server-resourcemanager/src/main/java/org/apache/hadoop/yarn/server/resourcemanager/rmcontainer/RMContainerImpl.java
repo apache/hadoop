@@ -51,8 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode
-    .RMNodeDecreaseContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -284,7 +283,6 @@ public class RMContainerImpl implements RMContainer {
   @Override
   public RMContainerState getState() {
     this.readLock.lock();
-
     try {
       return this.stateMachine.getCurrentState();
     } finally {
@@ -598,7 +596,7 @@ public class RMContainerImpl implements RMContainer {
       RMContainerUpdatesAcquiredEvent acquiredEvent =
           (RMContainerUpdatesAcquiredEvent) event;
       if (acquiredEvent.isIncreasedContainer()) {
-        // If container is increased but not acquired by AM, we will start
+        // If container is increased but not started by AM, we will start
         // containerAllocationExpirer for this container in this transition. 
         container.containerAllocationExpirer.register(
             new AllocationExpirationInfo(event.getContainerId(), true));
@@ -641,7 +639,7 @@ public class RMContainerImpl implements RMContainer {
         container.lastConfirmedResource = rmContainerResource;
         container.containerAllocationExpirer.unregister(
             new AllocationExpirationInfo(event.getContainerId()));
-        container.eventHandler.handle(new RMNodeDecreaseContainerEvent(
+        container.eventHandler.handle(new RMNodeUpdateContainerEvent(
             container.nodeId,
             Collections.singletonList(container.getContainer())));
       } else if (Resources.fitsIn(nmContainerResource, rmContainerResource)) {

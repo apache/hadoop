@@ -104,10 +104,10 @@ public abstract class NodeHeartbeatResponse {
 
   public abstract void setResource(Resource resource);
 
-  public abstract List<Container> getContainersToDecrease();
+  public abstract List<Container> getContainersToUpdate();
 
-  public abstract void addAllContainersToDecrease(
-      Collection<Container> containersToDecrease);
+  public abstract void addAllContainersToUpdate(
+      Collection<Container> containersToUpdate);
 
   public abstract ContainerQueuingLimit getContainerQueuingLimit();
 

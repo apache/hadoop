@@ -551,7 +551,7 @@ public class ResourceTrackerService extends AbstractService implements
             getResponseId() + 1, NodeAction.NORMAL, null, null, null, null,
             nextHeartBeatInterval);
     rmNode.updateNodeHeartbeatResponseForCleanup(nodeHeartBeatResponse);
-    rmNode.updateNodeHeartbeatResponseForContainersDecreasing(
+    rmNode.updateNodeHeartbeatResponseForUpdatedContainers(
         nodeHeartBeatResponse);
 
     populateKeys(request, nodeHeartBeatResponse);

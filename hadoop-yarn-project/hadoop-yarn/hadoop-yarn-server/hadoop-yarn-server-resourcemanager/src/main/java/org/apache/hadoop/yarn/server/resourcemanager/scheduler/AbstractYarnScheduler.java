@@ -150,6 +150,10 @@ public abstract class AbstractYarnScheduler
    */
   protected final ReentrantReadWriteLock.WriteLock writeLock;
 
+  // If set to true, then ALL container updates will be automatically sent to
+  // the NM in the next heartbeat.
+  private boolean autoUpdateContainers = false;
+
   /**
    * Construct the service.
    *
@@ -178,6 +182,9 @@ public abstract class AbstractYarnScheduler
         configuredMaximumAllocationWaitTime);
     maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
     createReleaseCache();
+    autoUpdateContainers =
+        conf.getBoolean(YarnConfiguration.RM_AUTO_UPDATE_CONTAINERS,
+            YarnConfiguration.DEFAULT_RM_AUTO_UPDATE_CONTAINERS);
     super.serviceInit(conf);
   }
 
@@ -233,6 +240,10 @@ public abstract class AbstractYarnScheduler
       }
     };
     return nodeTracker.getNodes(nodeFilter);
+  }
+
+  public boolean shouldContainersBeAutoUpdated() {
+    return this.autoUpdateContainers;
   }
 
   @Override

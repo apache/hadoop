@@ -167,6 +167,10 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
 
+  public static final String RM_AUTO_UPDATE_CONTAINERS =
+      RM_PREFIX + "auto-update.containers";
+  public static final boolean DEFAULT_RM_AUTO_UPDATE_CONTAINERS = false;
+
   /** The actual bind address for the RM.*/
   public static final String RM_BIND_HOST =
     RM_PREFIX + "bind-host";
