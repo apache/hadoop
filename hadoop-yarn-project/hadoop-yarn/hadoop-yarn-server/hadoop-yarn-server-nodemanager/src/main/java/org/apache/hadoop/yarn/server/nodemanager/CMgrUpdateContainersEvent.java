@@ -21,17 +21,28 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import org.apache.hadoop.yarn.api.records.Container;
 import java.util.List;
 
-public class CMgrDecreaseContainersResourceEvent extends ContainerManagerEvent {
+/**
+ * Event used by the NodeStatusUpdater to notify the ContainerManager of
+ * container update commands it received from the RM.
+ */
+public class CMgrUpdateContainersEvent extends ContainerManagerEvent {
 
-  private final List<Container> containersToDecrease;
+  private final List<Container> containersToUpdate;
 
-  public CMgrDecreaseContainersResourceEvent(List<Container>
-      containersToDecrease) {
-    super(ContainerManagerEventType.DECREASE_CONTAINERS_RESOURCE);
-    this.containersToDecrease = containersToDecrease;
+  /**
+   * Create event.
+   * @param containersToUpdate Container to update.
+   */
+  public CMgrUpdateContainersEvent(List<Container> containersToUpdate) {
+    super(ContainerManagerEventType.UPDATE_CONTAINERS);
+    this.containersToUpdate = containersToUpdate;
   }
 
-  public List<Container> getContainersToDecrease() {
-    return this.containersToDecrease;
+  /**
+   * Get containers to update.
+   * @return List of containers to update.
+   */
+  public List<Container> getContainersToUpdate() {
+    return this.containersToUpdate;
   }
 }

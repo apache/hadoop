@@ -834,12 +834,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     parseCredentials(systemCredentials));
               }
               List<org.apache.hadoop.yarn.api.records.Container>
-                  containersToDecrease = response.getContainersToUpdate();
-              if (!containersToDecrease.isEmpty()) {
+                  containersToUpdate = response.getContainersToUpdate();
+              if (!containersToUpdate.isEmpty()) {
                 dispatcher.getEventHandler().handle(
-                    new CMgrDecreaseContainersResourceEvent(
-                        containersToDecrease)
-                );
+                    new CMgrUpdateContainersEvent(containersToUpdate));
               }
 
               // SignalContainer request originally comes from end users via

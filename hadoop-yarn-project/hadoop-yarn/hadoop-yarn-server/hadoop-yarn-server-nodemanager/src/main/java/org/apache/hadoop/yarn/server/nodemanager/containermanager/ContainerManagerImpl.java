@@ -95,7 +95,7 @@ import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedContainersEvent;
-import org.apache.hadoop.yarn.server.nodemanager.CMgrDecreaseContainersResourceEvent;
+import org.apache.hadoop.yarn.server.nodemanager.CMgrUpdateContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrSignalContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerManagerEvent;
@@ -1512,11 +1512,11 @@ public class ContainerManagerImpl extends CompositeService implements
                   "Container Killed by ResourceManager"));
       }
       break;
-    case DECREASE_CONTAINERS_RESOURCE:
-      CMgrDecreaseContainersResourceEvent containersDecreasedEvent =
-          (CMgrDecreaseContainersResourceEvent) event;
+    case UPDATE_CONTAINERS:
+      CMgrUpdateContainersEvent containersDecreasedEvent =
+          (CMgrUpdateContainersEvent) event;
       for (org.apache.hadoop.yarn.api.records.Container container
-          : containersDecreasedEvent.getContainersToDecrease()) {
+          : containersDecreasedEvent.getContainersToUpdate()) {
         try {
           ContainerTokenIdentifier containerTokenIdentifier =
               BuilderUtils.newContainerTokenIdentifier(
