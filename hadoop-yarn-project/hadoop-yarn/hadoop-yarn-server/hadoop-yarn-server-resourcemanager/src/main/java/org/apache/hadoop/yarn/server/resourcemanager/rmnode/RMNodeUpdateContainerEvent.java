@@ -23,17 +23,22 @@ import java.util.List;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 
-public class RMNodeDecreaseContainerEvent extends RMNodeEvent {
-  final List<Container> toBeDecreasedContainers;
+/**
+ * This class is used to create update container event
+ * for the containers running on a node.
+ *
+ */
+public class RMNodeUpdateContainerEvent extends RMNodeEvent {
+  private List<Container> toBeUpdatedContainers;
 
-  public RMNodeDecreaseContainerEvent(NodeId nodeId,
-      List<Container> toBeDecreasedContainers) {
-    super(nodeId, RMNodeEventType.DECREASE_CONTAINER);
-    
-    this.toBeDecreasedContainers = toBeDecreasedContainers;
+  public RMNodeUpdateContainerEvent(NodeId nodeId,
+      List<Container> toBeUpdatedContainers) {
+    super(nodeId, RMNodeEventType.UPDATE_CONTAINER);
+
+    this.toBeUpdatedContainers = toBeUpdatedContainers;
   }
-  
-  public List<Container> getToBeDecreasedContainers() {
-    return toBeDecreasedContainers;
+
+  public List<Container> getToBeUpdatedContainers() {
+    return toBeUpdatedContainers;
   }
 }

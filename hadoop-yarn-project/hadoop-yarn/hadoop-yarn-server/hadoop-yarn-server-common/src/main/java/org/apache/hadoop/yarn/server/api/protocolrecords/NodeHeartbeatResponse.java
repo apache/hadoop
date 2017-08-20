@@ -75,14 +75,19 @@ public interface NodeHeartbeatResponse {
   void setSystemCredentialsForApps(
       Map<ApplicationId, ByteBuffer> systemCredentials);
   
-  boolean getAreNodeLabelsAcceptedByRM();
-  void setAreNodeLabelsAcceptedByRM(boolean areNodeLabelsAcceptedByRM);
+  public abstract boolean getAreNodeLabelsAcceptedByRM();
 
-  Resource getResource();
-  void setResource(Resource resource);
+  public abstract void setAreNodeLabelsAcceptedByRM(
+      boolean areNodeLabelsAcceptedByRM);
 
-  List<Container> getContainersToDecrease();
-  void addAllContainersToDecrease(Collection<Container> containersToDecrease);
+  public abstract Resource getResource();
+
+  public abstract void setResource(Resource resource);
+
+  public abstract List<Container> getContainersToUpdate();
+
+  public abstract void addAllContainersToUpdate(
+      Collection<Container> containersToUpdate);
 
   ContainerQueuingLimit getContainerQueuingLimit();
   void setContainerQueuingLimit(ContainerQueuingLimit containerQueuingLimit);

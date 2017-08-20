@@ -834,7 +834,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     parseCredentials(systemCredentials));
               }
               List<org.apache.hadoop.yarn.api.records.Container>
-                  containersToDecrease = response.getContainersToDecrease();
+                  containersToDecrease = response.getContainersToUpdate();
               if (!containersToDecrease.isEmpty()) {
                 dispatcher.getEventHandler().handle(
                     new CMgrDecreaseContainersResourceEvent(

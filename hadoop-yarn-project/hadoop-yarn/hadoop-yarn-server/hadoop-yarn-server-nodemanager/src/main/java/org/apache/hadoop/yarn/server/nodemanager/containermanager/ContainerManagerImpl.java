@@ -161,6 +161,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1180,10 +1181,19 @@ public class ContainerManagerImpl extends CompositeService implements
     org.apache.hadoop.yarn.server.nodemanager.
         containermanager.container.ContainerState currentState =
         container.getContainerState();
-    if (currentState != org.apache.hadoop.yarn.server.
-            nodemanager.containermanager.container.ContainerState.RUNNING &&
-        currentState != org.apache.hadoop.yarn.server.
-            nodemanager.containermanager.container.ContainerState.SCHEDULED) {
+    EnumSet<org.apache.hadoop.yarn.server.nodemanager.containermanager
+        .container.ContainerState> allowedStates = EnumSet.of(
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+            .ContainerState.RUNNING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+            .ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+            .ContainerState.LOCALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+            .ContainerState.REINITIALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+            .ContainerState.RELAUNCHING);
+    if (!allowedStates.contains(currentState)) {
       throw RPCUtil.getRemoteException("Container " + containerId.toString()
           + " is in " + currentState.name() + " state."
           + " Resource can only be changed when a container is in"
@@ -1218,17 +1228,12 @@ public class ContainerManagerImpl extends CompositeService implements
             org.apache.hadoop.yarn.api.records.Container.newInstance(
                 containerId, null, null, targetResource, null, null,
                 currentExecType);
-      } else {
-        increasedContainer =
-            org.apache.hadoop.yarn.api.records.Container.newInstance(
-                containerId, null, null, currentResource, null, null,
-                targetExecType);
-      }
-      if (context.getIncreasedContainers().putIfAbsent(containerId,
-          increasedContainer) != null){
-        throw RPCUtil.getRemoteException("Container " + containerId.toString()
-            + " resource is being increased -or- " +
-            "is undergoing ExecutionType promoted.");
+        if (context.getIncreasedContainers().putIfAbsent(containerId,
+            increasedContainer) != null){
+          throw RPCUtil.getRemoteException("Container " + containerId.toString()
+              + " resource is being increased -or- " +
+              "is undergoing ExecutionType promoted.");
+        }
       }
     }
     this.readLock.lock();
