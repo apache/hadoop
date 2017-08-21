@@ -89,7 +89,7 @@ public class TestStateStoreDriverBase {
   }
 
   private String generateRandomString() {
-    String randomString = "/randomString-" + RANDOM.nextInt();
+    String randomString = "randomString-" + RANDOM.nextInt();
     return randomString;
   }
 
