@@ -2312,6 +2312,8 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_NUMBER_OF_ASYNC_ENTITIES_TO_MERGE = 10;
 
+  /** default version for any flow. */
+  public static final String DEFAULT_FLOW_VERSION = "1";
 
   /**
    * The time period for which timeline v2 client will wait for draining
