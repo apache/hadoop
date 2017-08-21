@@ -327,8 +327,10 @@ public class SFTPFileSystem extends FileSystem {
         String parentDir = parent.toUri().getPath();
         boolean succeeded = true;
         try {
+          final String previousCwd = client.pwd();
           client.cd(parentDir);
           client.mkdir(pathName);
+          client.cd(previousCwd);
         } catch (SftpException e) {
           throw new IOException(String.format(E_MAKE_DIR_FORPATH, pathName,
               parentDir));
@@ -475,8 +477,10 @@ public class SFTPFileSystem extends FileSystem {
     }
     boolean renamed = true;
     try {
+      final String previousCwd = channel.pwd();
       channel.cd("/");
       channel.rename(src.toUri().getPath(), dst.toUri().getPath());
+      channel.cd(previousCwd);
     } catch (SftpException e) {
       renamed = false;
     }
@@ -559,8 +563,10 @@ public class SFTPFileSystem extends FileSystem {
     }
     OutputStream os;
     try {
+      final String previousCwd = client.pwd();
       client.cd(parent.toUri().getPath());
       os = client.put(f.getName());
+      client.cd(previousCwd);
     } catch (SftpException e) {
       throw new IOException(e);
     }
