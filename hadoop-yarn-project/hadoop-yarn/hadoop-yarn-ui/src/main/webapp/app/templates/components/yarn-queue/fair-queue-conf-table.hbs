@@ -25,30 +25,28 @@
   </thead>
   <tbody>
     <tr>
-      <td>Configured Capacity</td>
-      <td>{{queue.capacity}}</td>
+      <td>Fair Memory, VCores</td>
+      <td>{{queue.fairResources.memory}} MB, {{queue.fairResources.vCores}}</td>
     </tr>
     <tr>
-      <td>Configured Max Capacity</td>
-      <td>{{queue.maxCapacity}}</td>
+      <td>Minimum Memory, VCores</td>
+      <td>{{queue.minResources.memory}} MB, {{queue.minResources.vCores}}</td>
     </tr>
     <tr>
-      <td>State</td>
-      <td>{{queue.state}}</td>
-    </tr>
-  {{#if queue.isLeafQueue}}
-    <tr>
-      <td>User Limit Percent</td>
-      <td>{{queue.userLimit}}</td>
+      <td>Cluster Memory, VCores</td>
+      <td>{{queue.clusterResources.memory}} MB, {{queue.clusterResources.vCores}}</td>
     </tr>
     <tr>
-      <td>User Limit Factor</td>
-      <td>{{queue.userLimitFactor}}</td>
+      <td>Pending, Allocated, Reserved Containers</td>
+      <td>{{queue.pendingContainers}} , {{queue.allocatedContainers}} , {{queue.reservedContainers}}</td>
     </tr>
     <tr>
-      <td>Preemption Disabled</td>
-      <td>{{queue.preemptionDisabled}}</td>
+      <td>Scheduling Policy</td>
+      <td>{{queue.schedulingPolicy}}</td>
     </tr>
-  {{/if}}
+    <tr>
+      <td>Preemption Enabled</td>
+      <td>{{queue.preemptable}}</td>
+    </tr>
   </tbody>
 </table>

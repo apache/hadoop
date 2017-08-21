@@ -629,12 +629,6 @@
                       </excludes>
                     </filter>
                     <filter>
-                      <artifact>xerces:xercesImpl</artifact>
-                      <excludes>
-                        <exclude>**/*</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
                       <artifact>org.apache.hadoop:hadoop-mapreduce-client-jobclient:*</artifact>
                       <excludes>
                         <exclude>testjar/*</exclude>

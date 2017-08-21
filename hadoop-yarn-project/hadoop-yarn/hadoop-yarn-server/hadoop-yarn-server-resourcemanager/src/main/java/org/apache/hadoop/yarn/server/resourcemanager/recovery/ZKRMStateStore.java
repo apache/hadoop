@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.CuratorFramework;
@@ -31,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ZKUtil;
+import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.RMZKUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
@@ -201,8 +200,8 @@ public class ZKRMStateStore extends RMStateStore {
   private final String zkRootNodeAuthScheme =
       new DigestAuthenticationProvider().getScheme();
 
-  @VisibleForTesting
-  protected CuratorFramework curatorFramework;
+  /** Manager for the ZooKeeper connection. */
+  private ZKCuratorManager zkManager;
 
   /*
    * Indicates different app attempt state store operations.
@@ -298,12 +297,11 @@ public class ZKRMStateStore extends RMStateStore {
       appIdNodeSplitIndex = YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX;
     }
 
-    zkAcl = RMZKUtils.getZKAcls(conf);
+    zkAcl = ZKCuratorManager.getZKAcls(conf);
 
     if (HAUtil.isHAEnabled(conf)) {
       String zkRootNodeAclConf = HAUtil.getConfValueForRMInstance
           (YarnConfiguration.ZK_RM_STATE_STORE_ROOT_NODE_ACL, conf);
-
       if (zkRootNodeAclConf != null) {
         zkRootNodeAclConf = ZKUtil.resolveConfIndirection(zkRootNodeAclConf);
 
@@ -330,17 +328,16 @@ public class ZKRMStateStore extends RMStateStore {
     amrmTokenSecretManagerRoot =
         getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = getNodePath(zkRootNodePath, RESERVATION_SYSTEM_ROOT);
-    curatorFramework = resourceManager.getCurator();
-
-    if (curatorFramework == null) {
-      curatorFramework = resourceManager.createAndStartCurator(conf);
+    zkManager = resourceManager.getZKManager();
+    if (zkManager == null) {
+      zkManager = resourceManager.createAndStartZKManager(conf);
     }
   }
 
   @Override
   public synchronized void startInternal() throws Exception {
     // ensure root dirs exist
-    createRootDirRecursively(znodeWorkingPath);
+    zkManager.createRootDirRecursively(znodeWorkingPath);
     create(zkRootNodePath);
     setRootNodeAcls();
     delete(fencingNodePath);
@@ -382,6 +379,7 @@ public class ZKRMStateStore extends RMStateStore {
       logRootNodeAcls("Before setting ACLs'\n");
     }
 
+    CuratorFramework curatorFramework = zkManager.getCurator();
     if (HAUtil.isHAEnabled(getConfig())) {
       curatorFramework.setACL().withACL(zkRootNodeAcl).forPath(zkRootNodePath);
     } else {
@@ -401,6 +399,7 @@ public class ZKRMStateStore extends RMStateStore {
     }
 
     if (!HAUtil.isHAEnabled(getConfig())) {
+      CuratorFramework curatorFramework = zkManager.getCurator();
       IOUtils.closeStream(curatorFramework);
     }
   }
@@ -936,6 +935,7 @@ public class ZKRMStateStore extends RMStateStore {
       }
       safeDelete(appIdRemovePath);
     } else {
+      CuratorFramework curatorFramework = zkManager.getCurator();
       curatorFramework.delete().deletingChildrenIfNeeded().
           forPath(appIdRemovePath);
     }
@@ -1146,22 +1146,6 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   /**
-   * Utility function to ensure that the configured base znode exists.
-   * This recursively creates the znode as well as all of its parents.
-   */
-  private void createRootDirRecursively(String path) throws Exception {
-    String pathParts[] = path.split("/");
-    Preconditions.checkArgument(pathParts.length >= 1 && pathParts[0].isEmpty(),
-        "Invalid path: %s", path);
-    StringBuilder sb = new StringBuilder();
-
-    for (int i = 1; i < pathParts.length; i++) {
-      sb.append("/").append(pathParts[i]);
-      create(sb.toString());
-    }
-  }
-
-  /**
    * Get alternate path for app id if path according to configured split index
    * does not exist. We look for path based on all possible split indices.
    * @param appId
@@ -1236,38 +1220,32 @@ public class ZKRMStateStore extends RMStateStore {
 
   @VisibleForTesting
   byte[] getData(final String path) throws Exception {
-    return curatorFramework.getData().forPath(path);
+    return zkManager.getData(path);
   }
 
   @VisibleForTesting
   List<ACL> getACL(final String path) throws Exception {
-    return curatorFramework.getACL().forPath(path);
+    return zkManager.getACL(path);
   }
 
   @VisibleForTesting
   List<String> getChildren(final String path) throws Exception {
-    return curatorFramework.getChildren().forPath(path);
+    return zkManager.getChildren(path);
   }
 
   @VisibleForTesting
   boolean exists(final String path) throws Exception {
-    return curatorFramework.checkExists().forPath(path) != null;
+    return zkManager.exists(path);
   }
 
   @VisibleForTesting
   void create(final String path) throws Exception {
-    if (!exists(path)) {
-      curatorFramework.create()
-          .withMode(CreateMode.PERSISTENT).withACL(zkAcl)
-          .forPath(path, null);
-    }
+    zkManager.create(path, zkAcl);
   }
 
   @VisibleForTesting
   void delete(final String path) throws Exception {
-    if (exists(path)) {
-      curatorFramework.delete().deletingChildrenIfNeeded().forPath(path);
-    }
+    zkManager.delete(path);
   }
 
   private void safeCreate(String path, byte[] data, List<ACL> acl,
@@ -1310,6 +1288,7 @@ public class ZKRMStateStore extends RMStateStore {
     private CuratorTransactionFinal transactionFinal;
 
     SafeTransaction() throws Exception {
+      CuratorFramework curatorFramework = zkManager.getCurator();
       CuratorTransaction transaction = curatorFramework.inTransaction();
       transactionFinal = transaction.create()
           .withMode(CreateMode.PERSISTENT).withACL(zkAcl)

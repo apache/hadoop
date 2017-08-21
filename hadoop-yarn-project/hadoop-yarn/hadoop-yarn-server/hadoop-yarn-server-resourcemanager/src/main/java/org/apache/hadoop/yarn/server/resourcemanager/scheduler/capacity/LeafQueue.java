@@ -299,11 +299,6 @@ public class LeafQueue extends AbstractCSQueue {
     }
   }
 
-  @Override
-  public String getQueuePath() {
-    return getParent().getQueuePath() + "." + getQueueName();
-  }
-
   /**
    * Used only by tests.
    */

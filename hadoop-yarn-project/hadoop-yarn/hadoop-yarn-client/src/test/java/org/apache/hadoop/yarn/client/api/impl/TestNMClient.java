@@ -301,7 +301,6 @@ public class TestNMClient {
         assertTrue("The thrown exception is not expected",
             e.getMessage().contains("is not handled by this NodeManager"));
       }
-
       // increaseContainerResource shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       try {
@@ -398,6 +397,8 @@ public class TestNMClient {
               "will be Rolled-back", Arrays.asList(new Integer[] {-1000}));
           testCommitContainer(container.getId(), true);
           testReInitializeContainer(container.getId(), clc, false);
+          testGetContainerStatus(container, i, ContainerState.RUNNING,
+              "will be Re-initialized", Arrays.asList(new Integer[] {-1000}));
           testCommitContainer(container.getId(), false);
         } else {
           testReInitializeContainer(container.getId(), clc, true);
@@ -449,24 +450,21 @@ public class TestNMClient {
       ContainerState state, String diagnostics, List<Integer> exitStatuses)
           throws YarnException, IOException {
     while (true) {
-      try {
-        ContainerStatus status = nmClient.getContainerStatus(
-            container.getId(), container.getNodeId());
-        // NodeManager may still need some time to get the stable
-        // container status
-        if (status.getState() == state) {
-          assertEquals(container.getId(), status.getContainerId());
-          assertTrue("" + index + ": " + status.getDiagnostics(),
-              status.getDiagnostics().contains(diagnostics));
-          
-          assertTrue("Exit Statuses are supposed to be in: " + exitStatuses +
-              ", but the actual exit status code is: " + status.getExitStatus(),
-              exitStatuses.contains(status.getExitStatus()));
-          break;
-        }
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
+      sleep(250);
+      ContainerStatus status = nmClient.getContainerStatus(
+          container.getId(), container.getNodeId());
+      // NodeManager may still need some time to get the stable
+      // container status
+      if (status.getState() == state) {
+        assertEquals(container.getId(), status.getContainerId());
+        assertTrue("" + index + ": " + status.getDiagnostics(),
+            status.getDiagnostics().contains(diagnostics));
+
+        assertTrue("Exit Statuses are supposed to be in: " + exitStatuses +
+                ", but the actual exit status code is: " +
+                status.getExitStatus(),
+            exitStatuses.contains(status.getExitStatus()));
+        break;
       }
     }
   }
@@ -476,10 +474,10 @@ public class TestNMClient {
     try {
       nmClient.increaseContainerResource(container);
     } catch (YarnException e) {
-      // NM container will only be in SCHEDULED state, so expect the increase
-      // action to fail.
+      // NM container increase container resource should fail without a version
+      // increase action to fail.
       if (!e.getMessage().contains(
-          "can only be changed when a container is in RUNNING state")) {
+          container.getId() + " has update version ")) {
         throw (AssertionError)
             (new AssertionError("Exception is not expected: " + e)
                 .initCause(e));
@@ -559,9 +557,7 @@ public class TestNMClient {
       ContainerLaunchContext clc, boolean autoCommit)
       throws YarnException, IOException {
     try {
-      sleep(250);
       nmClient.reInitializeContainer(containerId, clc, autoCommit);
-      sleep(250);
     } catch (YarnException e) {
       // NM container will only be in SCHEDULED state, so expect the increase
       // action to fail.

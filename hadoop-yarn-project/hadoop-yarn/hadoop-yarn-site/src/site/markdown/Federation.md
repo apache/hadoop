@@ -129,6 +129,7 @@ AMRMProxy, Global Policy Generator (GPG) and Router work together to make this h
 
 
 The figure shows a sequence diagram for the following job execution flow:
+
 1. The Router receives an application submission request that is complaint to the YARN Application Client Protocol.
 2. The router interrogates a routing table / policy to choose the “home RM” for the job (the policy configuration is received from the state-store on heartbeat).
 3. The router queries the membership state to determine the endpoint of the home RM.
@@ -160,15 +161,50 @@ These are common configurations that should appear in the **conf/yarn-site.xml**
 | Property | Example | Description |
 |:---- |:---- |
 |`yarn.federation.enabled` | `true` | Whether federation is enabled or not |
+|`yarn.resourcemanager.cluster-id` | `<unique-subcluster-id>` | The unique subcluster identifier for this RM (same as the one used for HA). |
+
+####State-Store:
+
+Currently, we support ZooKeeper and SQL based implementations of the state-store.
+
+**Note:** The State-Store implementation must always be overwritten with one of the below.
+
+ZooKeeper: one must set the ZooKeeper settings for Hadoop:
+
+| Property | Example | Description |
+|:---- |:---- |
+|`yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore` | The type of state-store to use. |
+|`hadoop.zk.address` | `host:port` | The address for the ZooKeeper ensemble. |
+
+SQL: one must setup the following parameters:
+
+| Property | Example | Description |
+|:---- |:---- |
 |`yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore` | The type of state-store to use. |
 |`yarn.federation.state-store.sql.url` | `jdbc:mysql://<host>:<port>/FederationStateStore` | For SQLFederationStateStore the name of the DB where the state is stored. |
 |`yarn.federation.state-store.sql.jdbc-class` | `com.mysql.jdbc.jdbc2.optional.MysqlDataSource` | For SQLFederationStateStore the jdbc class to use. |
 |`yarn.federation.state-store.sql.username` | `<dbuser>` | For SQLFederationStateStore the username for the DB connection. |
 |`yarn.federation.state-store.sql.password` | `<dbpass>` | For SQLFederationStateStore the password for the DB connection. |
-|`yarn.resourcemanager.cluster-id` | `<unique-subcluster-id>` | The unique subcluster identifier for this RM (same as the one used for HA). |
+
+We provide scripts for MySQL and Microsoft SQL Server.
+
+For MySQL, one must download the latest jar version 5.x from [MVN Repository](https://mvnrepository.com/artifact/mysql/mysql-connector-java) and add it to the CLASSPATH.
+Then the DB schema is created by executing the following SQL scripts in the database:
+
+1. **sbin/FederationStateStore/MySQL/FederationStateStoreDatabase.sql**.
+2. **sbin/FederationStateStore/MySQL/FederationStateStoreUser.sql**.
+3. **sbin/FederationStateStore/MySQL/FederationStateStoreTables.sql**.
+4. **sbin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql**.
+
+In the same directory we provide scripts to drop the Stored Procedures, the Tables, the User and the Database.
+
+**Note:** the FederationStateStoreUser.sql defines a default user/password for the DB that you are **highly encouraged** to set this to a proper strong password.
+
+For SQL-Server, the process is similar, but the jdbc driver is already included.
+SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 
 
-Optional:
+####Optional:
 
 | Property | Example | Description |
 |:---- |:---- |
@@ -216,7 +252,7 @@ Optional:
 |`yarn.router.submit.retry` | `3` | The number of retries in the router before we give up. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
-
+|`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-seperated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
 
 ###ON NMs:
 
@@ -235,22 +271,6 @@ Optional:
 |:---- |:---- |
 |`yarn.federation.statestore.max-connections` | `1` | The maximum number of parallel connections from each AMRMProxy to the state-store. This value is typically lower than the router one, since we have many AMRMProxy that could burn-through many DB connections quickly. |
 |`yarn.federation.cache-ttl.secs` | `300` | The time to leave for the AMRMProxy cache. Typically larger than at the router, as the number of AMRMProxy is large, and we want to limit the load to the centralized state-store. |
-
-###State-Store:
-
-Currently, we support only SQL based implementation of state-store (ZooKeeper is in the works), i.e. either MySQL or Microsoft SQL Server.
-
-For MySQL, one must download the latest jar version 5.x from [MVN Repository](https://mvnrepository.com/artifact/mysql/mysql-connector-java) and add it to the CLASSPATH.
-Then the DB schema is created by executing the following SQL scripts in the database:
-1. **sbin/FederationStateStore/MySQL/FederationStateStoreDatabase.sql**.
-2. **sbin/FederationStateStore/MySQL/FederationStateStoreUser.sql**.
-3. **sbin/FederationStateStore/MySQL/FederationStateStoreTables.sql**.
-4. **sbin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql**.
-In the same directory we provide scripts to drop the Stored Procedures, the Tables, the User and the Database.
-**Note:** the FederationStateStoreUser.sql defines a default user/password for the DB that you are **highly encouraged** to set this to a proper strong password.
-
-For SQL-Server, the process is similar, but the jdbc driver is already included in the pom (license allows it).
-SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 
 Running a Sample Job
 --------------------

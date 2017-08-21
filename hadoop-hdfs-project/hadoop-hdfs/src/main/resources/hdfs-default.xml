@@ -459,7 +459,7 @@
 
   <property>
     <name>dfs.namenode.posix.acl.inheritance.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <description>
       Set to true to enable POSIX style ACL inheritance. When it is enabled
       and the create request comes from a compatible client, the NameNode
@@ -2545,13 +2545,14 @@
 
 <property>
   <name>dfs.client.socket.send.buffer.size</name>
-  <value>131072</value>
+  <value>0</value>
   <description>
     Socket send buffer size for a write pipeline in DFSClient side.
     This may affect TCP connection throughput.
     If it is set to zero or negative value,
     no buffer size will be set explicitly,
     thus enable tcp auto-tuning on some system.
+    The default value is 0.
   </description>
 </property>
 
@@ -2975,6 +2976,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.ec.system.default.policy</name>
+  <value>RS-6-3-64k</value>
+  <description>The default erasure coding policy name will be used
+    on the path if no policy name is passed.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.ec.policies.max.cellsize</name>
   <value>4194304</value>
   <description>The maximum cell size of erasure coding policy. Default is 4MB.
@@ -3025,23 +3034,25 @@
 
 <property>
   <name>dfs.datanode.transfer.socket.send.buffer.size</name>
-  <value>131072</value>
+  <value>0</value>
   <description>
     Socket send buffer size for DataXceiver (mirroring packets to downstream
     in pipeline). This may affect TCP connection throughput.
     If it is set to zero or negative value, no buffer size will be set
     explicitly, thus enable tcp auto-tuning on some system.
+    The default value is 0.
   </description>
 </property>
 
 <property>
   <name>dfs.datanode.transfer.socket.recv.buffer.size</name>
-  <value>131072</value>
+  <value>0</value>
   <description>
     Socket receive buffer size for DataXceiver (receiving packets from client
     during block writing). This may affect TCP connection throughput.
     If it is set to zero or negative value, no buffer size will be set
     explicitly, thus enable tcp auto-tuning on some system.
+    The default value is 0.
   </description>
 </property>
 

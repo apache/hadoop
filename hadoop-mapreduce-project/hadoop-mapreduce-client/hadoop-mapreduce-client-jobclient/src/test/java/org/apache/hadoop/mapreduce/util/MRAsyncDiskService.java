@@ -330,7 +330,7 @@ public class MRAsyncDiskService {
    * Returns the normalized path of a path.
    */
   private String normalizePath(String path) {
-    return (new Path(path)).makeQualified(this.localFileSystem)
+    return this.localFileSystem.makeQualified(new Path(path))
         .toUri().getPath();
   }
   

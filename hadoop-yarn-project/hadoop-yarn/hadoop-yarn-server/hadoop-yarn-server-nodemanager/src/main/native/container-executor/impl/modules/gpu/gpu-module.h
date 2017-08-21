@@ -16,10 +16,30 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+#ifdef __FreeBSD__
+#define _WITH_GETLINE
+#endif
 
-export default Ember.Route.extend({
-  model() {
-    return this.store.findAll('yarn-queue');
-  },
-});
+#ifndef _MODULES_GPU_GPU_MUDULE_H_
+#define _MODULES_GPU_GPU_MUDULE_H_
+
+#define GPU_MAJOR_NUMBER_CONFIG_KEY "gpu.major-device-number"
+#define GPU_ALLOWED_DEVICES_MINOR_NUMBERS "gpu.allowed-device-minor-numbers"
+#define GPU_MODULE_SECTION_NAME "gpu"
+
+// For unit test stubbing
+typedef int (*update_cgroups_parameters_func)(const char*, const char*,
+   const char*, const char*);
+
+/**
+ * Handle gpu requests
+ */
+int handle_gpu_request(update_cgroups_parameters_func func,
+   const char* module_name, int module_argc, char** module_argv);
+
+/**
+ * Reload config from filesystem, visible for testing.
+ */
+void reload_gpu_configuration();
+
+#endif

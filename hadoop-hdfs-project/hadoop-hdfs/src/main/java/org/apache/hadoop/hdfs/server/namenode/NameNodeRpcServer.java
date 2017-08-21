@@ -37,9 +37,9 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -251,13 +251,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   
   private final String minimumDataNodeVersion;
 
+  private final String defaultECPolicyName;
+
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
     this.nn = nn;
     this.namesystem = nn.getNamesystem();
     this.retryCache = namesystem.getRetryCache();
     this.metrics = NameNode.getNameNodeMetrics();
-    
+
     int handlerCount = 
       conf.getInt(DFS_NAMENODE_HANDLER_COUNT_KEY, 
                   DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
@@ -489,6 +491,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     minimumDataNodeVersion = conf.get(
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY,
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_DEFAULT);
+
+    defaultECPolicyName = conf.get(
+        DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
+        DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
 
     // Set terse exception whose stack trace won't be logged
     clientRpcServer.addTerseExceptions(SafeModeException.class,
@@ -2055,6 +2061,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     boolean success = false;
     try {
+      if (ecPolicyName == null) {
+        ecPolicyName = defaultECPolicyName;
+        LOG.trace("No policy name is specified, " +
+            "set the default policy name instead");
+      }
+      LOG.trace("Set erasure coding policy " + ecPolicyName + " on " + src);
       namesystem.setErasureCodingPolicy(src, ecPolicyName, cacheEntry != null);
       success = true;
     } finally {
@@ -2266,7 +2278,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  public Map<String, String> getErasureCodingCodecs() throws IOException {
     checkNNStartup();
     return namesystem.getErasureCodingCodecs();
   }

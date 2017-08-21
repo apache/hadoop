@@ -60,7 +60,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   int[] physMemKbytes;
   private static final Counters EMPTY_COUNTERS = new Counters();
 
-  /** 
+  /**
    * Create an event to record the unsuccessful completion of attempts
    * @param id Attempt ID
    * @param taskType Type of the task
@@ -74,7 +74,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
    * @param allSplits the "splits", or a pixelated graph of various
    *        measurable worker node state variables against progress.
    *        Currently there are four; wallclock time, CPU time,
-   *        virtual memory and physical memory.  
+   *        virtual memory and physical memory.
    */
   public TaskAttemptUnsuccessfulCompletionEvent
        (TaskAttemptID id, TaskType taskType,
@@ -101,7 +101,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
         ProgressSplitsBlock.arrayGetPhysMemKbytes(allSplits);
   }
 
-  /** 
+  /**
    * @deprecated please use the constructor with an additional
    *              argument, an array of splits arrays instead.  See
    *              {@link org.apache.hadoop.mapred.ProgressSplitsBlock}
@@ -117,19 +117,19 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
    */
   public TaskAttemptUnsuccessfulCompletionEvent
        (TaskAttemptID id, TaskType taskType,
-        String status, long finishTime, 
+        String status, long finishTime,
         String hostname, String error) {
     this(id, taskType, status, finishTime, hostname, -1, "",
         error, EMPTY_COUNTERS, null);
   }
-  
+
   public TaskAttemptUnsuccessfulCompletionEvent
       (TaskAttemptID id, TaskType taskType,
        String status, long finishTime,
        String hostname, int port, String rackName,
        String error, int[][] allSplits) {
     this(id, taskType, status, finishTime, hostname, port,
-        rackName, error, EMPTY_COUNTERS, null);
+        rackName, error, EMPTY_COUNTERS, allSplits);
   }
 
   TaskAttemptUnsuccessfulCompletionEvent() {}
@@ -162,9 +162,9 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
     }
     return datum;
   }
-  
-  
-  
+
+
+
   public void setDatum(Object odatum) {
     this.datum =
         (TaskAttemptUnsuccessfulCompletion)odatum;
@@ -208,12 +208,12 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   public String getHostname() { return hostname; }
   /** Get the rpc port for the host where the attempt executed */
   public int getPort() { return port; }
-  
+
   /** Get the rack name of the node where the attempt ran */
   public String getRackName() {
     return rackName == null ? null : rackName.toString();
   }
-  
+
   /** Get the error string */
   public String getError() { return error.toString(); }
   /** Get the task status */
@@ -224,12 +224,12 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   Counters getCounters() { return counters; }
   /** Get the event type */
   public EventType getEventType() {
-    // Note that the task type can be setup/map/reduce/cleanup but the 
+    // Note that the task type can be setup/map/reduce/cleanup but the
     // attempt-type can only be map/reduce.
     // find out if the task failed or got killed
     boolean failed = TaskStatus.State.FAILED.toString().equals(getTaskStatus());
-    return getTaskId().getTaskType() == TaskType.MAP 
-           ? (failed 
+    return getTaskId().getTaskType() == TaskType.MAP
+           ? (failed
               ? EventType.MAP_ATTEMPT_FAILED
               : EventType.MAP_ATTEMPT_KILLED)
            : (failed

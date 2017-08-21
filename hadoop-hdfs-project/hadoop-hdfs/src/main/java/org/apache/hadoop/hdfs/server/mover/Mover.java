@@ -348,7 +348,7 @@ public class Mover {
     private void processRecursively(String parent, HdfsFileStatus status,
         Result result) {
       String fullPath = status.getFullName(parent);
-      if (status.isDir()) {
+      if (status.isDirectory()) {
         if (!fullPath.endsWith(Path.SEPARATOR)) {
           fullPath = fullPath + Path.SEPARATOR;
         }

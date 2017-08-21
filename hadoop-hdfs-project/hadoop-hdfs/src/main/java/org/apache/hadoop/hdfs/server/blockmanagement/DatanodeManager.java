@@ -212,8 +212,6 @@ public class DatanodeManager {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
 
-    // TODO: Enables DFSNetworkTopology by default after more stress
-    // testings/validations.
     this.useDfsNetworkTopology = conf.getBoolean(
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
@@ -1665,21 +1663,38 @@ public class DatanodeManager {
     }
 
     final List<DatanodeCommand> cmds = new ArrayList<>();
-    // check pending replication
-    List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
-        maxTransfers);
-    if (pendingList != null) {
-      cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
-          pendingList));
-      maxTransfers -= pendingList.size();
+    // Allocate _approximately_ maxTransfers pending tasks to DataNode.
+    // NN chooses pending tasks based on the ratio between the lengths of
+    // replication and erasure-coded block queues.
+    int totalReplicateBlocks = nodeinfo.getNumberOfReplicateBlocks();
+    int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
+    int totalBlocks = totalReplicateBlocks + totalECBlocks;
+    if (totalBlocks > 0) {
+      int numReplicationTasks = (int) Math.ceil(
+          (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
+      int numECTasks = (int) Math.ceil(
+          (double) (totalECBlocks * maxTransfers) / totalBlocks);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Pending replication tasks: " + numReplicationTasks
+            + " erasure-coded tasks: " + numECTasks);
+      }
+      // check pending replication tasks
+      List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
+          numReplicationTasks);
+      if (pendingList != null && !pendingList.isEmpty()) {
+        cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
+            pendingList));
+      }
+      // check pending erasure coding tasks
+      List<BlockECReconstructionInfo> pendingECList = nodeinfo
+          .getErasureCodeCommand(numECTasks);
+      if (pendingECList != null && !pendingECList.isEmpty()) {
+        cmds.add(new BlockECReconstructionCommand(
+            DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));
+      }
     }
-    // check pending erasure coding tasks
-    List<BlockECReconstructionInfo> pendingECList = nodeinfo
-        .getErasureCodeCommand(maxTransfers);
-    if (pendingECList != null) {
-      cmds.add(new BlockECReconstructionCommand(
-          DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));
-    }
+
     // check block invalidation
     Block[] blks = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
     if (blks != null) {

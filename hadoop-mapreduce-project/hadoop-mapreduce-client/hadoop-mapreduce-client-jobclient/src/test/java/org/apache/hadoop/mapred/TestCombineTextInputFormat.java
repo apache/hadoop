@@ -60,10 +60,9 @@ public class TestCombineTextInputFormat {
     }
   }
 
-  @SuppressWarnings("deprecation")
-  private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestCombineTextInputFormat").makeQualified(localFs);
+  private static Path workDir = localFs.makeQualified(new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      "TestCombineTextInputFormat"));
 
   // A reporter that does nothing
   private static final Reporter voidReporter = Reporter.NULL;

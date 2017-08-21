@@ -705,17 +705,36 @@ public class BlockManager implements BlockStatsMXBean {
     datanodeManager.fetchDatanodes(live, dead, false);
     out.println("Live Datanodes: " + live.size());
     out.println("Dead Datanodes: " + dead.size());
+
     //
-    // Dump contents of neededReconstruction
+    // Need to iterate over all queues from neededReplications
+    // except for the QUEUE_WITH_CORRUPT_BLOCKS)
     //
     synchronized (neededReconstruction) {
       out.println("Metasave: Blocks waiting for reconstruction: "
-          + neededReconstruction.size());
-      for (Block block : neededReconstruction) {
+          + neededReconstruction.getLowRedundancyBlockCount());
+      for (int i = 0; i < neededReconstruction.LEVEL; i++) {
+        if (i != neededReconstruction.QUEUE_WITH_CORRUPT_BLOCKS) {
+          for (Iterator<BlockInfo> it = neededReconstruction.iterator(i);
+               it.hasNext();) {
+            Block block = it.next();
+            dumpBlockMeta(block, out);
+          }
+        }
+      }
+      //
+      // Now prints corrupt blocks separately
+      //
+      out.println("Metasave: Blocks currently missing: " +
+          neededReconstruction.getCorruptBlockSize());
+      for (Iterator<BlockInfo> it = neededReconstruction.
+          iterator(neededReconstruction.QUEUE_WITH_CORRUPT_BLOCKS);
+           it.hasNext();) {
+        Block block = it.next();
         dumpBlockMeta(block, out);
       }
     }
-    
+
     // Dump any postponed over-replicated blocks
     out.println("Mis-replicated blocks that have been postponed:");
     for (Block block : postponedMisreplicatedBlocks) {

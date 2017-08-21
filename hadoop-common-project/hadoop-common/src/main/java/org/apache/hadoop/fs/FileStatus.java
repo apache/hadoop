@@ -172,7 +172,7 @@ public class FileStatus implements Writable, Comparable<Object>,
    * @return true if this is a file
    */
   public boolean isFile() {
-    return !isdir && !isSymlink();
+    return !isDirectory() && !isSymlink();
   }
 
   /**
@@ -182,20 +182,20 @@ public class FileStatus implements Writable, Comparable<Object>,
   public boolean isDirectory() {
     return isdir;
   }
-  
+
   /**
-   * Old interface, instead use the explicit {@link FileStatus#isFile()}, 
-   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * Old interface, instead use the explicit {@link FileStatus#isFile()},
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()}
    * @return true if this is a directory.
-   * @deprecated Use {@link FileStatus#isFile()},  
-   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * @deprecated Use {@link FileStatus#isFile()},
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()}
    * instead.
    */
   @Deprecated
-  public boolean isDir() {
-    return isdir;
+  public final boolean isDir() {
+    return isDirectory();
   }
-  
+
   /**
    * Is this a symbolic link?
    * @return true if this is a symbolic link
@@ -448,7 +448,6 @@ public class FileStatus implements Writable, Comparable<Object>,
     FileStatus other = PBHelper.convert(proto);
     isdir = other.isDirectory();
     length = other.getLen();
-    isdir = other.isDirectory();
     block_replication = other.getReplication();
     blocksize = other.getBlockSize();
     modification_time = other.getModificationTime();

@@ -319,7 +319,7 @@ public class TestIncreaseAllocationExpirer {
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 16 * GB);
     // Verify NM receives the decrease message (3G)
     List<Container> containersToDecrease =
-        nm1.nodeHeartbeat(true).getContainersToDecrease();
+        nm1.nodeHeartbeat(true).getContainersToUpdate();
     Assert.assertEquals(1, containersToDecrease.size());
     Assert.assertEquals(
         3 * GB, containersToDecrease.get(0).getResource().getMemorySize());
@@ -435,7 +435,7 @@ public class TestIncreaseAllocationExpirer {
             .getAllocatedResource().getMemorySize());
     // Verify NM receives 2 decrease message
     List<Container> containersToDecrease =
-        nm1.nodeHeartbeat(true).getContainersToDecrease();
+        nm1.nodeHeartbeat(true).getContainersToUpdate();
     Assert.assertEquals(2, containersToDecrease.size());
     // Sort the list to make sure containerId3 is the first
     Collections.sort(containersToDecrease);

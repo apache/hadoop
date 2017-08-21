@@ -553,7 +553,7 @@ on a path that exists and is a file. Instead the operation returns false.
        FS' = FS
        result = False
 
-### `FSDataOutputStream create(Path, ...)`
+### <a name='FileSystem.create'></a> `FSDataOutputStream create(Path, ...)`
 
 
     FSDataOutputStream create(Path p,
@@ -616,7 +616,24 @@ this precondition fails.
 
 * Not covered: symlinks. The resolved path of the symlink is used as the final path argument to the `create()` operation
 
-### `FSDataOutputStream append(Path p, int bufferSize, Progressable progress)`
+### `FSDataOutputStreamBuilder createFile(Path p)`
+
+Make a `FSDataOutputStreamBuilder` to specify the parameters to create a file.
+
+#### Implementation Notes
+
+`createFile(p)` returns a `FSDataOutputStreamBuilder` only and does not make
+change on filesystem immediately. When `build()` is invoked on the `FSDataOutputStreamBuilder`,
+the builder parameters are verified and [`create(Path p)`](#FileSystem.create)
+is invoked on the underlying filesystem. `build()` has the same preconditions
+and postconditions as [`create(Path p)`](#FileSystem.create).
+
+* Similar to [`create(Path p)`](#FileSystem.create), files are overwritten
+by default, unless specify `builder.overwrite(false)`.
+* Unlike [`create(Path p)`](#FileSystem.create), missing parent directories are
+not created by default, unless specify `builder.recursive()`.
+
+### <a name='FileSystem.append'></a> `FSDataOutputStream append(Path p, int bufferSize, Progressable progress)`
 
 Implementations without a compliant call SHOULD throw `UnsupportedOperationException`.
 
@@ -634,6 +651,18 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 Return: `FSDataOutputStream`, which can update the entry `FS.Files[p]`
 by appending data to the existing list.
 
+### `FSDataOutputStreamBuilder appendFile(Path p)`
+
+Make a `FSDataOutputStreamBuilder` to specify the parameters to append to an
+existing file.
+
+#### Implementation Notes
+
+`appendFile(p)` returns a `FSDataOutputStreamBuilder` only and does not make
+change on filesystem immediately. When `build()` is invoked on the `FSDataOutputStreamBuilder`,
+the builder parameters are verified and [`append()`](#FileSystem.append) is
+invoked on the underlying filesystem. `build()` has the same preconditions and
+postconditions as [`append()`](#FileSystem.append).
 
 ### `FSDataInputStream open(Path f, int bufferSize)`
 

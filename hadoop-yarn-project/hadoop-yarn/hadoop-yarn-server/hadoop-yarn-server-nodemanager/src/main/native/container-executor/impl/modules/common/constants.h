@@ -16,22 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager;
+/* FreeBSD protects the getline() prototype. See getline(3) for more */
+#ifdef __FreeBSD__
+#define _WITH_GETLINE
+#endif
 
-import org.apache.hadoop.yarn.api.records.Container;
-import java.util.List;
+#ifndef _MODULES_COMMON_CONSTANTS_H_
+#define _MODULES_COMMON_CONSTANTS_H_
 
-public class CMgrDecreaseContainersResourceEvent extends ContainerManagerEvent {
+#define CONFIGS_MODULES_PREFIX "yarn.container-executor.modules."
 
-  private final List<Container> containersToDecrease;
-
-  public CMgrDecreaseContainersResourceEvent(List<Container>
-      containersToDecrease) {
-    super(ContainerManagerEventType.DECREASE_CONTAINERS_RESOURCE);
-    this.containersToDecrease = containersToDecrease;
-  }
-
-  public List<Container> getContainersToDecrease() {
-    return this.containersToDecrease;
-  }
-}
+#endif

@@ -53,10 +53,9 @@ public class TestCombineSequenceFileInputFormat {
     }
   }
 
-  @SuppressWarnings("deprecation")
-  private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestCombineSequenceFileInputFormat").makeQualified(localFs);
+  private static Path workDir = localFs.makeQualified(new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      "TestCombineSequenceFileInputFormat"));
 
   @Test(timeout=10000)
   public void testFormat() throws Exception {

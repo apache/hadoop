@@ -45,8 +45,6 @@
     <!-- These 2 versions are defined here because they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
     <jdiff.version>1.0.9</jdiff.version>
-    <!-- Version number for xerces used by JDiff -->
-    <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
 
     <kafka.version>0.8.2.1</kafka.version>
     <hbase.version>1.2.6</hbase.version>
@@ -98,7 +96,7 @@
     <apacheds.version>2.0.0-M21</apacheds.version>
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
-    <jcache.version>1.0.0</jcache.version>
+    <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
@@ -126,7 +124,7 @@
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
     <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
-    <maven-war-plugin.version>2.4</maven-war-plugin.version>
+    <maven-war-plugin.version>3.1.0</maven-war-plugin.version>
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
     <maven-pdf-plugin.version>1.2</maven-pdf-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
@@ -1156,12 +1154,6 @@
      </dependency>
 
      <dependency>
-       <groupId>xerces</groupId>
-       <artifactId>xercesImpl</artifactId>
-       <version>2.9.1</version>
-     </dependency>
-
-     <dependency>
        <groupId>org.apache.curator</groupId>
        <artifactId>curator-recipes</artifactId>
        <version>${curator.version}</version>
@@ -1284,8 +1276,8 @@
           <version>1.0.0</version>
         </dependency>
         <dependency>
-          <groupId>javax.cache</groupId>
-          <artifactId>cache-api</artifactId>
+          <groupId>org.apache.geronimo.specs</groupId>
+          <artifactId>geronimo-jcache_1.0_spec</artifactId>
           <version>${jcache.version}</version>
         </dependency>
         <dependency>

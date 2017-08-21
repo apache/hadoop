@@ -25,8 +25,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -48,12 +46,15 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Main class for Timeline Reader. */
 @Private
 @Unstable
 public class TimelineReaderServer extends CompositeService {
-  private static final Log LOG = LogFactory.getLog(TimelineReaderServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineReaderServer.class);
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
   static final String TIMELINE_READER_MANAGER_ATTR =
       "timeline.reader.manager";
@@ -203,7 +204,7 @@ public class TimelineReaderServer extends CompositeService {
       timelineReaderServer.init(conf);
       timelineReaderServer.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting TimelineReaderWebServer", t);
+      LOG.error("Error starting TimelineReaderWebServer", t);
       ExitUtil.terminate(-1, "Error starting TimelineReaderWebServer");
     }
     return timelineReaderServer;

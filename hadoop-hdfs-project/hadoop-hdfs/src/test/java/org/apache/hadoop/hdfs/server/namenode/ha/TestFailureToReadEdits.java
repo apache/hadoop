@@ -205,7 +205,7 @@ public class TestFailureToReadEdits {
         TEST_DIR1, false));
     // Should have been successfully created.
     assertTrue(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR2, false).isDir());
+        TEST_DIR2, false).isDirectory());
     // Null because it hasn't been created yet.
     assertNull(NameNodeAdapter.getFileInfo(nn1,
         TEST_DIR3, false));
@@ -219,10 +219,10 @@ public class TestFailureToReadEdits {
         TEST_DIR1, false));
     // Should have been successfully created.
     assertTrue(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR2, false).isDir());
+        TEST_DIR2, false).isDirectory());
     // Should now have been successfully created.
     assertTrue(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR3, false).isDir());
+        TEST_DIR3, false).isDirectory());
   }
   
   /**

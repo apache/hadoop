@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -87,7 +88,17 @@ public class YarnConfiguration extends Configuration {
     });
     Configuration.addDeprecations(new DeprecationDelta[] {
         new DeprecationDelta(RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
-            SYSTEM_METRICS_PUBLISHER_ENABLED)
+            SYSTEM_METRICS_PUBLISHER_ENABLED),
+        new DeprecationDelta(RM_ZK_ACL, CommonConfigurationKeys.ZK_ACL),
+        new DeprecationDelta(RM_ZK_AUTH, CommonConfigurationKeys.ZK_AUTH),
+        new DeprecationDelta(RM_ZK_ADDRESS,
+            CommonConfigurationKeys.ZK_ADDRESS),
+        new DeprecationDelta(RM_ZK_NUM_RETRIES,
+            CommonConfigurationKeys.ZK_NUM_RETRIES),
+        new DeprecationDelta(RM_ZK_TIMEOUT_MS,
+            CommonConfigurationKeys.ZK_TIMEOUT_MS),
+        new DeprecationDelta(RM_ZK_RETRY_INTERVAL_MS,
+            CommonConfigurationKeys.ZK_RETRY_INTERVAL_MS),
     });
   }
 
@@ -155,6 +166,10 @@ public class YarnConfiguration extends Configuration {
 
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
+
+  public static final String RM_AUTO_UPDATE_CONTAINERS =
+      RM_PREFIX + "auto-update.containers";
+  public static final boolean DEFAULT_RM_AUTO_UPDATE_CONTAINERS = false;
 
   /** The actual bind address for the RM.*/
   public static final String RM_BIND_HOST =
@@ -2618,6 +2633,14 @@ public class YarnConfiguration extends Configuration {
 
   public static final String DEFAULT_FEDERATION_POLICY_MANAGER_PARAMS = "";
 
+  public static final String FEDERATION_STATESTORE_ZK_PREFIX =
+      FEDERATION_PREFIX + "zk-state-store.";
+  /** Parent znode path under which ZKRMStateStore will create znodes. */
+  public static final String FEDERATION_STATESTORE_ZK_PARENT_PATH =
+      FEDERATION_STATESTORE_ZK_PREFIX + "parent-path";
+  public static final String DEFAULT_FEDERATION_STATESTORE_ZK_PARENT_PATH =
+      "/federationstore";
+
   private static final String FEDERATION_STATESTORE_SQL_PREFIX =
       FEDERATION_PREFIX + "state-store.sql.";
 
@@ -2707,6 +2730,16 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE =
       ROUTER_WEBAPP_PREFIX + "interceptor-class.pipeline";
   public static final String DEFAULT_ROUTER_WEBAPP_INTERCEPTOR_CLASS =
+      "org.apache.hadoop.yarn.server.router.webapp."
+          + "DefaultRequestInterceptorREST";
+
+  /**
+   * The interceptor class used in FederationInterceptorREST to communicate with
+   * each SubCluster.
+   */
+  public static final String ROUTER_WEBAPP_DEFAULT_INTERCEPTOR_CLASS =
+      ROUTER_WEBAPP_PREFIX + "default-interceptor-class";
+  public static final String DEFAULT_ROUTER_WEBAPP_DEFAULT_INTERCEPTOR_CLASS =
       "org.apache.hadoop.yarn.server.router.webapp."
           + "DefaultRequestInterceptorREST";
 

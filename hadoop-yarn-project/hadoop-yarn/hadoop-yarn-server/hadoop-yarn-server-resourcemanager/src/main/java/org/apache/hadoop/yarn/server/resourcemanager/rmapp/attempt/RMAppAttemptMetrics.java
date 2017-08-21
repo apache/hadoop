@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -125,14 +126,16 @@ public class RMAppAttemptMetrics {
     long vcoreSeconds = finishedVcoreSeconds.get();
 
     // Only add in the running containers if this is the active attempt.
-    RMAppAttempt currentAttempt = rmContext.getRMApps()
-                   .get(attemptId.getApplicationId()).getCurrentAppAttempt();
-    if (currentAttempt.getAppAttemptId().equals(attemptId)) {
-      ApplicationResourceUsageReport appResUsageReport = rmContext
-            .getScheduler().getAppResourceUsageReport(attemptId);
-      if (appResUsageReport != null) {
-        memorySeconds += appResUsageReport.getMemorySeconds();
-        vcoreSeconds += appResUsageReport.getVcoreSeconds();
+    RMApp rmApp = rmContext.getRMApps().get(attemptId.getApplicationId());
+    if (null != rmApp) {
+      RMAppAttempt currentAttempt = rmApp.getCurrentAppAttempt();
+      if (currentAttempt.getAppAttemptId().equals(attemptId)) {
+        ApplicationResourceUsageReport appResUsageReport = rmContext
+                .getScheduler().getAppResourceUsageReport(attemptId);
+        if (appResUsageReport != null) {
+          memorySeconds += appResUsageReport.getMemorySeconds();
+          vcoreSeconds += appResUsageReport.getVcoreSeconds();
+        }
       }
     }
     return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds);

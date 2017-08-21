@@ -16,10 +16,17 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+#include <gtest/gtest.h>
+#include <main/native/container-executor/impl/util.h>
+#include <cstdio>
 
-export default Ember.Route.extend({
-  beforeModel() {
-    this.transitionTo('yarn-queues.root');
-  }
-});
+extern "C" {
+#include "util.h"
+}
+
+int main(int argc, char **argv) {
+  ERRORFILE = stderr;
+  LOGFILE = stdout;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

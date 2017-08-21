@@ -310,13 +310,13 @@ public abstract class BaseContainerManagerTest {
         new HashSet<>(finalStates);
     int timeoutSecs = 0;
     do {
-      Thread.sleep(2000);
+      Thread.sleep(1000);
       containerStatus =
           containerManager.getContainerStatuses(request)
               .getContainerStatuses().get(0);
       LOG.info("Waiting for container to get into one of states " + fStates
           + ". Current state is " + containerStatus.getState());
-      timeoutSecs += 2;
+      timeoutSecs += 1;
     } while (!fStates.contains(containerStatus.getState())
         && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + containerStatus.getState());
@@ -371,7 +371,7 @@ public abstract class BaseContainerManagerTest {
         .containermanager.container.ContainerState currentState = null;
     int timeoutSecs = 0;
     do {
-      Thread.sleep(2000);
+      Thread.sleep(1000);
       container =
           containerManager.getContext().getContainers().get(containerID);
       if (container != null) {
@@ -381,9 +381,9 @@ public abstract class BaseContainerManagerTest {
         LOG.info("Waiting for NM container to get into one of the following " +
             "states: " + finalStates + ". Current state is " + currentState);
       }
-      timeoutSecs += 2;
+      timeoutSecs += 1;
     } while (!finalStates.contains(currentState)
-        && timeoutSecs++ < timeOutMax);
+        && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + currentState);
     Assert.assertTrue("ContainerState is not correct (timedout)",
         finalStates.contains(currentState));
@@ -421,6 +421,20 @@ public abstract class BaseContainerManagerTest {
             containerTokenIdentifier);
   }
 
+  public static Token createContainerToken(ContainerId cId, int version,
+      long rmIdentifier, NodeId nodeId, String user, Resource resource,
+      NMContainerTokenSecretManager containerTokenSecretManager,
+      LogAggregationContext logAggregationContext) throws IOException {
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier(cId, version, nodeId.toString(), user,
+            resource, System.currentTimeMillis() + 100000L, 123, rmIdentifier,
+            Priority.newInstance(0), 0, logAggregationContext, null,
+            ContainerType.TASK, ExecutionType.GUARANTEED);
+    return BuilderUtils.newContainerToken(nodeId,
+        containerTokenSecretManager.retrievePassword(containerTokenIdentifier),
+        containerTokenIdentifier);
+  }
+
   public static Token createContainerToken(ContainerId cId, long rmIdentifier,
       NodeId nodeId, String user, Resource resource,
       NMContainerTokenSecretManager containerTokenSecretManager,
@@ -431,8 +445,23 @@ public abstract class BaseContainerManagerTest {
             System.currentTimeMillis() + 100000L, 123, rmIdentifier,
             Priority.newInstance(0), 0, logAggregationContext, null,
             ContainerType.TASK, executionType);
-    return BuilderUtils.newContainerToken(nodeId, containerTokenSecretManager
-            .retrievePassword(containerTokenIdentifier),
+    return BuilderUtils.newContainerToken(nodeId,
+        containerTokenSecretManager.retrievePassword(containerTokenIdentifier),
+        containerTokenIdentifier);
+  }
+
+  public static Token createContainerToken(ContainerId cId, int version,
+      long rmIdentifier, NodeId nodeId, String user, Resource resource,
+      NMContainerTokenSecretManager containerTokenSecretManager,
+      LogAggregationContext logAggregationContext, ExecutionType executionType)
+      throws IOException {
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier(cId, version, nodeId.toString(), user,
+            resource, System.currentTimeMillis() + 100000L, 123, rmIdentifier,
+            Priority.newInstance(0), 0, logAggregationContext, null,
+            ContainerType.TASK, executionType);
+    return BuilderUtils.newContainerToken(nodeId,
+        containerTokenSecretManager.retrievePassword(containerTokenIdentifier),
         containerTokenIdentifier);
   }
 

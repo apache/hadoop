@@ -39,6 +39,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Tests the Native Azure file system (WASB) using parallel threads for rename and delete operations.
@@ -529,30 +531,65 @@ public class TestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
   }
 
   /*
-   * Test case for delete operation with multiple threads and flat listing enabled.
+   * Validate that when a directory is deleted recursively, the operation succeeds
+   * even if a child directory delete fails because the directory does not exist.
+   * This can happen if a child directory is deleted by an external agent while
+   * the parent is in progress of being deleted recursively.
    */
   @Test
-  public void testDeleteSingleDeleteFailure() throws Exception {
+  public void testRecursiveDirectoryDeleteWhenChildDirectoryDeleted()
+      throws Exception {
+    testRecusiveDirectoryDelete(true);
+  }
 
+  /*
+   * Validate that when a directory is deleted recursively, the operation succeeds
+   * even if a file delete fails because it does not exist.
+   * This can happen if a file is deleted by an external agent while
+   * the parent directory is in progress of being deleted.
+   */
+  @Test
+  public void testRecursiveDirectoryDeleteWhenDeletingChildFileReturnsFalse()
+      throws Exception {
+    testRecusiveDirectoryDelete(false);
+  }
+
+  private void testRecusiveDirectoryDelete(boolean useDir) throws Exception {
+    String childPathToBeDeletedByExternalAgent = (useDir)
+        ? "root/0"
+        : "root/0/fileToRename";
     // Spy azure file system object and return false for deleting one file
-    LOG.info("testDeleteSingleDeleteFailure");
     NativeAzureFileSystem mockFs = Mockito.spy((NativeAzureFileSystem) fs);
-    String path = mockFs.pathToKey(mockFs.makeAbsolute(new Path("root/0")));
-    Mockito.when(mockFs.deleteFile(path, true)).thenReturn(false);
+    String path = mockFs.pathToKey(mockFs.makeAbsolute(new Path(
+        childPathToBeDeletedByExternalAgent)));
+
+    Answer<Boolean> answer = new Answer<Boolean>() {
+      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+        String path = (String) invocation.getArguments()[0];
+        boolean isDir = (boolean) invocation.getArguments()[1];
+        boolean realResult = fs.deleteFile(path, isDir);
+        assertTrue(realResult);
+        boolean fakeResult = false;
+        return fakeResult;
+      }
+    };
+
+    Mockito.when(mockFs.deleteFile(path, useDir)).thenAnswer(answer);
 
     createFolder(mockFs, "root");
     Path sourceFolder = new Path("root");
-    assertFalse(mockFs.delete(sourceFolder, true));
-    assertTrue(mockFs.exists(sourceFolder));
 
-    // Validate from logs that threads are enabled and delete operation failed.
+    assertTrue(mockFs.delete(sourceFolder, true));
+    assertFalse(mockFs.exists(sourceFolder));
+
+    // Validate from logs that threads are enabled, that a child directory was
+    // deleted by an external caller, and the parent delete operation still
+    // succeeds.
     String content = logs.getOutput();
     assertInLog(content,
         "Using thread pool for Delete operation with threads");
-    assertInLog(content, "Delete operation failed for file " + path);
-    assertInLog(content,
-        "Terminating execution of Delete operation now as some other thread already got exception or operation failed");
-    assertInLog(content, "Failed to delete files / subfolders in blob");
+    assertInLog(content, String.format("Attempt to delete non-existent %s %s",
+        useDir ? "directory" : "file", path));
   }
 
   /*

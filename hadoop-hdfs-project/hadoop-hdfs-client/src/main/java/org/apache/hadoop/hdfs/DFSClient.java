@@ -2764,7 +2764,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  public Map<String, String> getErasureCodingCodecs() throws IOException {
     checkOpen();
     try (TraceScope ignored = tracer.newScope("getErasureCodingCodecs")) {
       return namenode.getErasureCodingCodecs();
@@ -2901,9 +2901,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     synchronized (DFSClient.class) {
       if (STRIPED_READ_THREAD_POOL == null) {
-        STRIPED_READ_THREAD_POOL = DFSUtilClient.getThreadPoolExecutor(1,
+        // Only after thread pool is fully constructed then save it to
+        // volatile field.
+        ThreadPoolExecutor threadPool = DFSUtilClient.getThreadPoolExecutor(1,
             numThreads, 60, "StripedRead-", true);
-        STRIPED_READ_THREAD_POOL.allowCoreThreadTimeOut(true);
+        threadPool.allowCoreThreadTimeOut(true);
+        STRIPED_READ_THREAD_POOL = threadPool;
       }
     }
   }
@@ -3041,7 +3044,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    * @param src path to get the information for
    * @return Returns the policy information if file or directory on the path is
-   * erasure coded, null otherwise
+   * erasure coded, null otherwise. Null will be returned if directory or file
+   * has REPLICATION policy.
    * @throws IOException
    */
 

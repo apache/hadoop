@@ -46,7 +46,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.4</version>
         <dependencies>
           <dependency>
             <groupId>org.codehaus.mojo</groupId>

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -1488,7 +1487,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, SetErasureCodingPolicyRequestProto req)
       throws ServiceException {
     try {
-      server.setErasureCodingPolicy(req.getSrc(), req.getEcPolicyName());
+      String ecPolicyName = req.hasEcPolicyName() ?
+          req.getEcPolicyName() : null;
+      server.setErasureCodingPolicy(req.getSrc(), ecPolicyName);
       return SetErasureCodingPolicyResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1662,7 +1663,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetErasureCodingCodecsRequestProto request)
       throws ServiceException {
     try {
-      HashMap<String, String> codecs = server.getErasureCodingCodecs();
+      Map<String, String> codecs = server.getErasureCodingCodecs();
       GetErasureCodingCodecsResponseProto.Builder resBuilder =
           GetErasureCodingCodecsResponseProto.newBuilder();
       for (Map.Entry<String, String> codec : codecs.entrySet()) {

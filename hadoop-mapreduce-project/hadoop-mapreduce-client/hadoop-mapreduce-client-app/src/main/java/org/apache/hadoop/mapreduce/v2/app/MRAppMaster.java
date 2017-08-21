@@ -1078,6 +1078,7 @@ public class MRAppMaster extends CompositeService {
     private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
     private TimelineClient timelineClient = null;
     private TimelineV2Client timelineV2Client = null;
+    private String historyUrl = null;
 
     private final TaskAttemptFinishingMonitor taskAttemptFinishingMonitor;
 
@@ -1196,6 +1197,16 @@ public class MRAppMaster extends CompositeService {
     // Get Timeline Collector's address (get sync from RM)
     public TimelineV2Client getTimelineV2Client() {
       return timelineV2Client;
+    }
+
+    @Override
+    public String getHistoryUrl() {
+      return historyUrl;
+    }
+
+    @Override
+    public void setHistoryUrl(String historyUrl) {
+      this.historyUrl = historyUrl;
     }
   }
 

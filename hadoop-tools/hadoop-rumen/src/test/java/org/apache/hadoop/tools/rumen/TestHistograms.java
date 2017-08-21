@@ -57,8 +57,8 @@ public class TestHistograms {
   public void testHistograms() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem lfs = FileSystem.getLocal(conf);
-    final Path rootInputDir = new Path(
-        System.getProperty("test.tools.input.dir", "")).makeQualified(lfs);
+    final Path rootInputDir = lfs.makeQualified(new Path(
+        System.getProperty("test.tools.input.dir", "target/input")));
     final Path rootInputFile = new Path(rootInputDir, "rumen/histogram-tests");
 
 
@@ -132,7 +132,7 @@ public class TestHistograms {
     final FileSystem lfs = FileSystem.getLocal(conf);
 
     for (String arg : args) {
-      Path filePath = new Path(arg).makeQualified(lfs);
+      Path filePath = lfs.makeQualified(new Path(arg));
       String fileName = filePath.getName();
       if (fileName.startsWith("input")) {
         LoggedDiscreteCDF newResult = histogramFileToCDF(filePath, lfs);

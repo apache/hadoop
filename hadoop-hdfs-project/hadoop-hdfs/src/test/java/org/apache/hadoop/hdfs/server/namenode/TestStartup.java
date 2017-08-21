@@ -450,7 +450,7 @@ public class TestStartup {
     namenode.getNamesystem().mkdirs("/test",
         new PermissionStatus("hairong", null, FsPermission.getDefault()), true);
     NamenodeProtocols nnRpc = namenode.getRpcServer();
-    assertTrue(nnRpc.getFileInfo("/test").isDir());
+    assertTrue(nnRpc.getFileInfo("/test").isDirectory());
     nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     nnRpc.saveNamespace(0, 0);
     namenode.stop();
@@ -481,7 +481,7 @@ public class TestStartup {
   private void checkNameSpace(Configuration conf) throws IOException {
     NameNode namenode = new NameNode(conf);
     NamenodeProtocols nnRpc = namenode.getRpcServer();
-    assertTrue(nnRpc.getFileInfo("/test").isDir());
+    assertTrue(nnRpc.getFileInfo("/test").isDirectory());
     nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     nnRpc.saveNamespace(0, 0);
     namenode.stop();

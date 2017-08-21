@@ -29,10 +29,13 @@
     </property>
   -->
 
-  <property>
-    <name>fs.azure.secure.mode</name>
-    <value>true</value>
-  </property>
+  <!-- uncomment to test in Azure secure mode -->
+  <!--
+    <property>
+      <name>fs.azure.secure.mode</name>
+      <value>true</value>
+    </property>
+  -->
 
   <property>
     <name>fs.azure.user.agent.prefix</name>

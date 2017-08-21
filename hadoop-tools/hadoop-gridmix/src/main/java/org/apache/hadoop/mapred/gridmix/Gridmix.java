@@ -447,7 +447,7 @@ public class Gridmix extends Configured implements Tool {
 
     // Create <ioPath> with 777 permissions
     final FileSystem inputFs = ioPath.getFileSystem(conf);
-    ioPath = ioPath.makeQualified(inputFs);
+    ioPath = inputFs.makeQualified(ioPath);
     boolean succeeded = false;
     try {
       succeeded = FileSystem.mkdirs(inputFs, ioPath,

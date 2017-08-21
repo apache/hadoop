@@ -25,6 +25,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -500,46 +501,93 @@ public class TestDatanodeManager {
         "127.0.0.1:23456", bothAgain.get(1).getInfoAddr());
   }
 
-  @Test
-  public void testPendingRecoveryTasks() throws IOException {
+  /**
+   * Verify the correctness of pending recovery process.
+   *
+   * @param numReplicationBlocks the number of replication blocks in the queue.
+   * @param numECBlocks number of EC blocks in the queue.
+   * @param maxTransfers the maxTransfer value.
+   * @param numReplicationTasks the number of replication tasks polled from
+   *                            the queue.
+   * @param numECTasks the number of EC tasks polled from the queue.
+   *
+   * @throws IOException
+   */
+  private void verifyPendingRecoveryTasks(
+      int numReplicationBlocks, int numECBlocks,
+      int maxTransfers, int numReplicationTasks, int numECTasks)
+      throws IOException {
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
     Configuration conf = new Configuration();
     DatanodeManager dm = Mockito.spy(mockDatanodeManager(fsn, conf));
-
-    int maxTransfers = 20;
-    int numPendingTasks = 7;
-    int numECTasks = maxTransfers - numPendingTasks;
 
     DatanodeDescriptor nodeInfo = Mockito.mock(DatanodeDescriptor.class);
     Mockito.when(nodeInfo.isRegistered()).thenReturn(true);
     Mockito.when(nodeInfo.getStorageInfos())
         .thenReturn(new DatanodeStorageInfo[0]);
 
-    List<BlockTargetPair> pendingList =
-        Collections.nCopies(numPendingTasks, new BlockTargetPair(null, null));
-    Mockito.when(nodeInfo.getReplicationCommand(maxTransfers))
-        .thenReturn(pendingList);
-    List<BlockECReconstructionInfo> ecPendingList =
-        Collections.nCopies(numECTasks, null);
+    if (numReplicationBlocks > 0) {
+      Mockito.when(nodeInfo.getNumberOfReplicateBlocks())
+          .thenReturn(numReplicationBlocks);
 
-    Mockito.when(nodeInfo.getErasureCodeCommand(numECTasks))
-        .thenReturn(ecPendingList);
+      List<BlockTargetPair> tasks =
+          Collections.nCopies(
+              Math.min(numReplicationTasks, numReplicationBlocks),
+              new BlockTargetPair(null, null));
+      Mockito.when(nodeInfo.getReplicationCommand(numReplicationTasks))
+          .thenReturn(tasks);
+    }
+
+    if (numECBlocks > 0) {
+      Mockito.when(nodeInfo.getNumberOfBlocksToBeErasureCoded())
+          .thenReturn(numECBlocks);
+
+      List<BlockECReconstructionInfo> tasks =
+          Collections.nCopies(numECTasks, null);
+      Mockito.when(nodeInfo.getErasureCodeCommand(numECTasks))
+          .thenReturn(tasks);
+    }
+
     DatanodeRegistration dnReg = Mockito.mock(DatanodeRegistration.class);
     Mockito.when(dm.getDatanode(dnReg)).thenReturn(nodeInfo);
-
     DatanodeCommand[] cmds = dm.handleHeartbeat(
         dnReg, new StorageReport[1], "bp-123", 0, 0, 10, maxTransfers, 0, null,
         SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
 
-    assertEquals(2, cmds.length);
-    assertTrue(cmds[0] instanceof BlockCommand);
-    BlockCommand replicaCmd = (BlockCommand) cmds[0];
-    assertEquals(numPendingTasks, replicaCmd.getBlocks().length);
-    assertEquals(numPendingTasks, replicaCmd.getTargets().length);
-    assertTrue(cmds[1] instanceof BlockECReconstructionCommand);
-    BlockECReconstructionCommand ecRecoveryCmd =
-        (BlockECReconstructionCommand) cmds[1];
-    assertEquals(numECTasks, ecRecoveryCmd.getECTasks().size());
+    long expectedNumCmds = Arrays.stream(
+        new int[]{numReplicationTasks, numECTasks})
+        .filter(x -> x > 0)
+        .count();
+    assertEquals(expectedNumCmds, cmds.length);
+
+    int idx = 0;
+    if (numReplicationTasks > 0) {
+      assertTrue(cmds[idx] instanceof BlockCommand);
+      BlockCommand cmd = (BlockCommand) cmds[0];
+      assertEquals(numReplicationTasks, cmd.getBlocks().length);
+      assertEquals(numReplicationTasks, cmd.getTargets().length);
+      idx++;
+    }
+
+    if (numECTasks > 0) {
+      assertTrue(cmds[idx] instanceof BlockECReconstructionCommand);
+      BlockECReconstructionCommand cmd =
+          (BlockECReconstructionCommand) cmds[idx];
+      assertEquals(numECTasks, cmd.getECTasks().size());
+    }
+
+    Mockito.verify(nodeInfo).getReplicationCommand(numReplicationTasks);
+    Mockito.verify(nodeInfo).getErasureCodeCommand(numECTasks);
+  }
+
+  @Test
+  public void testPendingRecoveryTasks() throws IOException {
+    // Tasks are slitted according to the ratio between queue lengths.
+    verifyPendingRecoveryTasks(20, 20, 20, 10, 10);
+    verifyPendingRecoveryTasks(40, 10, 20, 16, 4);
+
+    // Approximately load tasks if the ratio between queue length is large.
+    verifyPendingRecoveryTasks(400, 1, 20, 20, 1);
   }
 }

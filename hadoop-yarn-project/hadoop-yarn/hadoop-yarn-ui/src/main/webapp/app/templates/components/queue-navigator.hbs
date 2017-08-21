@@ -20,7 +20,10 @@
 <div class="row">
   <div class="col-md-12 container-fluid">
     <div class="panel panel-default" id="tree-selector-container">
-     {{tree-selector model=model parentId="tree-selector-container" selected=selected}}
+      <div class="panel-heading">
+        Scheduler: {{model.firstObject.type}}
+      </div>
+     {{tree-selector model=model parentId="tree-selector-container" selected=selected used=used max=max}}
     </div>
   </div>
 </div>

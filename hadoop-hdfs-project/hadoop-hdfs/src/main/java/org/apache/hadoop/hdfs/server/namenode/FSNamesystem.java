@@ -7081,6 +7081,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       for (ErasureCodingPolicy policy : policies) {
         try {
+          checkOperation(OperationCategory.WRITE);
+          checkNameNodeSafeMode("Cannot add erasure coding policy");
           ErasureCodingPolicy newPolicy =
               FSDirErasureCodingOp.addErasureCodePolicy(this, policy);
           addECPolicyName = newPolicy.getName();
@@ -7111,6 +7113,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     writeLock();
     try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot remove erasure coding policy "
+          + ecPolicyName);
       FSDirErasureCodingOp.removeErasureCodePolicy(this, ecPolicyName);
       success = true;
     } finally {
@@ -7250,14 +7255,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get available erasure coding codecs and corresponding coders.
    */
-  HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  Map<String, String> getErasureCodingCodecs() throws IOException {
     final String operationName = "getErasureCodingCodecs";
     boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      final HashMap<String, String> ret =
+      final Map<String, String> ret =
           FSDirErasureCodingOp.getErasureCodingCodecs(this);
       success = true;
       return ret;

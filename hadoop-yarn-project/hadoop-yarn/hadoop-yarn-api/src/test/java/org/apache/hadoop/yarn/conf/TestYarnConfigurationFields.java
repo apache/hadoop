@@ -81,6 +81,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.ROUTER_CLIENTRM_ADDRESS);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.ROUTER_RMADMIN_ADDRESS);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.ROUTER_WEBAPP_DEFAULT_INTERCEPTOR_CLASS);
 
     // Federation policies configs to be ignored
     configurationPropsToSkipCompare
@@ -93,6 +95,10 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER_PARAMS);
+
+    // Federation StateStore ZK implementation configs to be ignored
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH);
 
     // Federation StateStore SQL implementation configs to be ignored
     configurationPropsToSkipCompare
@@ -120,6 +126,15 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     // skip deprecated RM_SYSTEM_METRICS_PUBLISHER_ENABLED
     configurationPropsToSkipCompare
         .add(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED);
+
+    // skip deprecated ZooKeeper settings
+    configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_ADDRESS);
+    configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_NUM_RETRIES);
+    configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_TIMEOUT_MS);
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS);
+    configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_AUTH);
+    configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_ACL);
 
     // Used as Java command line properties, not XML
     configurationPrefixToSkipCompare.add("yarn.app.container");

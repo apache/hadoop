@@ -18,6 +18,9 @@
 
 #include "configuration.h"
 #include "container-executor.h"
+#include "utils/string-utils.h"
+#include "util.h"
+#include "config.h"
 
 #include <inttypes.h>
 #include <libgen.h>
@@ -40,8 +43,7 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <getopt.h>
-
-#include "config.h"
+#include <regex.h>
 
 #ifndef HAVE_FCHMODAT
 #include "compat/fchmodat.h"
@@ -79,13 +81,19 @@ static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
 //struct to store the user details
 struct passwd *user_detail = NULL;
 
+//Docker container related constants.
+static const char* DOCKER_CONTAINER_NAME_PREFIX = "container_";
+static const char* DOCKER_CLIENT_CONFIG_ARG = "--config=";
+static const char* DOCKER_PULL_COMMAND = "pull";
+
 FILE* LOGFILE = NULL;
 FILE* ERRORFILE = NULL;
 
 static uid_t nm_uid = -1;
 static gid_t nm_gid = -1;
 
-struct configuration executor_cfg = {.size=0, .confdetails=NULL};
+struct configuration CFG = {.size=0, .sections=NULL};
+struct section executor_cfg = {.size=0, .kv_pairs=NULL};
 
 char *concatenate(char *concat_pattern, char *return_path_name,
    int numArgs, ...);
@@ -96,18 +104,25 @@ void set_nm_uid(uid_t user, gid_t group) {
 }
 
 //function used to load the configurations present in the secure config
-void read_executor_config(const char* file_name) {
-    read_config(file_name, &executor_cfg);
+void read_executor_config(const char *file_name) {
+  const struct section *tmp = NULL;
+  int ret = read_config(file_name, &CFG);
+  if (ret == 0) {
+    tmp = get_configuration_section("", &CFG);
+    if (tmp != NULL) {
+      executor_cfg = *tmp;
+    }
+  }
 }
 
 //function used to free executor configuration data
 void free_executor_configurations() {
-    free_configurations(&executor_cfg);
+    free_configuration(&CFG);
 }
 
 //Lookup nodemanager group from container executor configuration.
 char *get_nodemanager_group() {
-    return get_value(NM_GROUP_KEY, &executor_cfg);
+    return get_section_value(NM_GROUP_KEY, &executor_cfg);
 }
 
 int check_executor_permissions(char *executable_file) {
@@ -424,8 +439,8 @@ int change_user(uid_t user, gid_t group) {
 }
 
 int is_feature_enabled(const char* feature_key, int default_value,
-                              struct configuration *cfg) {
-    char *enabled_str = get_value(feature_key, cfg);
+                              struct section *cfg) {
+    char *enabled_str = get_section_value(feature_key, cfg);
     int enabled = default_value;
 
     if (enabled_str != NULL) {
@@ -746,7 +761,7 @@ static struct passwd* get_user_info(const char* user) {
 }
 
 int is_whitelisted(const char *user) {
-  char **whitelist = get_values(ALLOWED_SYSTEM_USERS_KEY, &executor_cfg);
+  char **whitelist = get_section_values(ALLOWED_SYSTEM_USERS_KEY, &executor_cfg);
   char **users = whitelist;
   if (whitelist != NULL) {
     for(; *users; ++users) {
@@ -774,7 +789,7 @@ struct passwd* check_user(const char *user) {
     fflush(LOGFILE);
     return NULL;
   }
-  char *min_uid_str = get_value(MIN_USERID_KEY, &executor_cfg);
+  char *min_uid_str = get_section_value(MIN_USERID_KEY, &executor_cfg);
   int min_uid = DEFAULT_MIN_USERID;
   if (min_uid_str != NULL) {
     char *end_ptr = NULL;
@@ -801,7 +816,7 @@ struct passwd* check_user(const char *user) {
     free(user_info);
     return NULL;
   }
-  char **banned_users = get_values(BANNED_USERS_KEY, &executor_cfg);
+  char **banned_users = get_section_values(BANNED_USERS_KEY, &executor_cfg);
   banned_users = banned_users == NULL ?
     (char**) DEFAULT_BANNED_USERS : banned_users;
   char **banned_user = banned_users;
@@ -1187,7 +1202,6 @@ char** tokenize_docker_command(const char *input, int *split_counter) {
   char *line = (char *)calloc(strlen(input) + 1, sizeof(char));
   char **linesplit = (char **) malloc(sizeof(char *));
   char *p = NULL;
-  int c = 0;
   *split_counter = 0;
   strncpy(line, input, strlen(input));
 
@@ -1208,6 +1222,27 @@ char** tokenize_docker_command(const char *input, int *split_counter) {
   return linesplit;
 }
 
+int execute_regex_match(const char *regex_str, const char *input) {
+  regex_t regex;
+  int regex_match;
+  if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
+    fprintf(LOGFILE, "Unable to compile regex.");
+    fflush(LOGFILE);
+    exit(ERROR_COMPILING_REGEX);
+  }
+  regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);
+  regfree(&regex);
+  if(0 == regex_match) {
+    return 0;
+  }
+  return 1;
+}
+
+int validate_docker_image_name(const char *image_name) {
+  char *regex_str = "^(([a-zA-Z0-9.-]+)(:[0-9]+)?/)?([a-z0-9_./-]+)(:[a-zA-Z0-9_.-]+)?$";
+  return execute_regex_match(regex_str, image_name);
+}
+
 char* sanitize_docker_command(const char *line) {
   static struct option long_options[] = {
     {"name", required_argument, 0, 'n' },
@@ -1222,6 +1257,7 @@ char* sanitize_docker_command(const char *line) {
     {"cap-drop", required_argument, 0, 'o' },
     {"device", required_argument, 0, 'i' },
     {"detach", required_argument, 0, 't' },
+    {"format", required_argument, 0, 'f' },
     {0, 0, 0, 0}
   };
 
@@ -1240,6 +1276,35 @@ char* sanitize_docker_command(const char *line) {
   if(output == NULL) {
     exit(OUT_OF_MEMORY);
   }
+
+  // Handle docker client config option.
+  if(0 == strncmp(linesplit[0], DOCKER_CLIENT_CONFIG_ARG, strlen(DOCKER_CLIENT_CONFIG_ARG))) {
+    strcat(output, linesplit[0]);
+    strcat(output, " ");
+    long index = 0;
+    while(index < split_counter) {
+      linesplit[index] = linesplit[index + 1];
+      if (linesplit[index] == NULL) {
+        split_counter--;
+        break;
+      }
+      index++;
+    }
+  }
+
+  // Handle docker pull and image name validation.
+  if (0 == strncmp(linesplit[0], DOCKER_PULL_COMMAND, strlen(DOCKER_PULL_COMMAND))) {
+    if (0 != validate_docker_image_name(linesplit[1])) {
+      fprintf(ERRORFILE, "Invalid Docker image name, exiting.");
+      fflush(ERRORFILE);
+      exit(DOCKER_IMAGE_INVALID);
+    }
+    strcat(output, linesplit[0]);
+    strcat(output, " ");
+    strcat(output, linesplit[1]);
+    return output;
+  }
+
   strcat(output, linesplit[0]);
   strcat(output, " ");
   optind = 1;
@@ -1287,6 +1352,11 @@ char* sanitize_docker_command(const char *line) {
       case 't':
         quote_and_append_arg(&output, &output_size, "--detach=", optarg);
         break;
+      case 'f':
+        strcat(output, "--format=");
+        strcat(output, optarg);
+        strcat(output, " ");
+        break;
       default:
         fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);
         fflush(LOGFILE);
@@ -1297,7 +1367,16 @@ char* sanitize_docker_command(const char *line) {
 
   if(optind < split_counter) {
     while(optind < split_counter) {
-      quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+      if (0 == strncmp(linesplit[optind], DOCKER_CONTAINER_NAME_PREFIX, strlen(DOCKER_CONTAINER_NAME_PREFIX))) {
+        if (1 != validate_container_id(linesplit[optind])) {
+          fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", linesplit[optind]);
+          fflush(ERRORFILE);
+          exit(DOCKER_CONTAINER_NAME_INVALID);
+        }
+        strcat(output, linesplit[optind++]);
+      } else {
+        quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
+      }
     }
   }
 
@@ -1305,7 +1384,6 @@ char* sanitize_docker_command(const char *line) {
 }
 
 char* parse_docker_command_file(const char* command_file) {
-
   size_t len = 0;
   char *line = NULL;
   ssize_t read;
@@ -1328,20 +1406,21 @@ char* parse_docker_command_file(const char* command_file) {
   if(ret == NULL) {
     exit(ERROR_SANITIZING_DOCKER_COMMAND);
   }
-  fprintf(LOGFILE, "Using command %s\n", ret);
-  fflush(LOGFILE);
+  fprintf(ERRORFILE, "Using command %s\n", ret);
+  fflush(ERRORFILE);
 
   return ret;
 }
 
 int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
-  char* docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  char* docker_binary = get_section_value(DOCKER_BINARY_KEY, &executor_cfg);
   docker_binary = check_docker_binary(docker_binary);
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
-  char* docker_command_with_binary = calloc(sizeof(char), EXECUTOR_PATH_MAX);
-  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
-  char **args = extract_values_delim(docker_command_with_binary, " ");
+  char* docker_command_with_binary = calloc(sizeof(char), command_size);
+  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
+  char **args = split_delimiter(docker_command_with_binary, " ");
 
   int exit_code = -1;
   if (execvp(docker_binary, args) != 0) {
@@ -1488,21 +1567,29 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-  char docker_command_with_binary[EXECUTOR_PATH_MAX];
-  char docker_wait_command[EXECUTOR_PATH_MAX];
-  char docker_logs_command[EXECUTOR_PATH_MAX];
-  char docker_inspect_command[EXECUTOR_PATH_MAX];
-  char docker_rm_command[EXECUTOR_PATH_MAX];
+  char *docker_command_with_binary = NULL;
+  char *docker_wait_command = NULL;
+  char *docker_logs_command = NULL;
+  char *docker_inspect_command = NULL;
+  char *docker_rm_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
   int BUFFER_SIZE = 4096;
   char buffer[BUFFER_SIZE];
 
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
+
+  docker_command_with_binary = calloc(sizeof(char), command_size);
+  docker_wait_command = calloc(sizeof(char), command_size);
+  docker_logs_command = calloc(sizeof(char), command_size);
+  docker_inspect_command = calloc(sizeof(char), command_size);
+  docker_rm_command = calloc(sizeof(char), command_size);
+
   gid_t user_gid = getegid();
   uid_t prev_uid = geteuid();
 
   char *docker_command = parse_docker_command_file(command_file);
-  char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  char *docker_binary = get_section_value(DOCKER_BINARY_KEY, &executor_cfg);
   docker_binary = check_docker_binary(docker_binary);
 
   fprintf(LOGFILE, "Creating script paths...\n");
@@ -1542,7 +1629,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
+  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
 
   fprintf(LOGFILE, "Launching docker container...\n");
   FILE* start_docker = popen(docker_command_with_binary, "r");
@@ -1555,7 +1642,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_inspect_command, EXECUTOR_PATH_MAX,
+  snprintf(docker_inspect_command, command_size,
     "%s inspect --format {{.State.Pid}} %s",
     docker_binary, container_id);
 
@@ -1600,7 +1687,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       goto cleanup;
     }
 
-    snprintf(docker_wait_command, EXECUTOR_PATH_MAX,
+    snprintf(docker_wait_command, command_size,
       "%s wait %s", docker_binary, container_id);
 
     fprintf(LOGFILE, "Waiting for docker container to finish...\n");
@@ -1614,7 +1701,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     if(exit_code != 0) {
       fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
       exit_code);
-      snprintf(docker_logs_command, EXECUTOR_PATH_MAX, "%s logs --tail=250 %s",
+      snprintf(docker_logs_command, command_size, "%s logs --tail=250 %s",
         docker_binary, container_id);
       FILE* logs = popen(docker_logs_command, "r");
       if(logs != NULL) {
@@ -1644,7 +1731,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
   fprintf(LOGFILE, "Removing docker container post-exit...\n");
-  snprintf(docker_rm_command, EXECUTOR_PATH_MAX,
+  snprintf(docker_rm_command, command_size,
     "%s rm %s", docker_binary, container_id);
   FILE* rm_docker = popen(docker_rm_command, "w");
   if (pclose (rm_docker) != 0)
@@ -1684,6 +1771,11 @@ cleanup:
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
+  free(docker_command_with_binary);
+  free(docker_wait_command);
+  free(docker_logs_command);
+  free(docker_inspect_command);
+  free(docker_rm_command);
   return exit_code;
 }
 
@@ -2349,4 +2441,13 @@ int traffic_control_read_state(char *command_file) {
  */
 int traffic_control_read_stats(char *command_file) {
   return run_traffic_control(TC_READ_STATS_OPTS, command_file);
+}
+
+/**
+ * FIXME: (wangda) it's better to move executor_cfg out of container-executor.c
+ * Now initialize of executor_cfg and data structures are stored inside
+ * container-executor which is not a good design.
+ */
+struct configuration* get_cfg() {
+  return &CFG;
 }

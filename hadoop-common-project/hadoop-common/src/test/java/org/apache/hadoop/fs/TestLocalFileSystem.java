@@ -218,8 +218,8 @@ public class TestLocalFileSystem {
 
   @Test
   public void testHomeDirectory() throws IOException {
-    Path home = new Path(System.getProperty("user.home"))
-      .makeQualified(fileSys);
+    Path home = fileSys.makeQualified(
+        new Path(System.getProperty("user.home")));
     Path fsHome = fileSys.getHomeDirectory();
     assertEquals(home, fsHome);
   }
@@ -229,7 +229,7 @@ public class TestLocalFileSystem {
     Path path = new Path(TEST_ROOT_DIR, "foo%bar");
     writeFile(fileSys, path, 1);
     FileStatus status = fileSys.getFileStatus(path);
-    assertEquals(path.makeQualified(fileSys), status.getPath());
+    assertEquals(fileSys.makeQualified(path), status.getPath());
     cleanupFile(fileSys, path);
   }
   

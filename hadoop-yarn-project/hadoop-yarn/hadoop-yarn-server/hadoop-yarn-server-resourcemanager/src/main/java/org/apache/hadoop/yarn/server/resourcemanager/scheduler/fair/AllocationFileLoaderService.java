@@ -266,7 +266,7 @@ public class AllocationFileLoaderService extends AbstractService {
     Map<FSQueueType, Set<String>> configuredQueues = new HashMap<>();
 
     for (FSQueueType queueType : FSQueueType.values()) {
-      configuredQueues.put(queueType, new HashSet<String>());
+      configuredQueues.put(queueType, new HashSet<>());
     }
 
     // Read and parse the allocations file.
@@ -280,7 +280,7 @@ public class AllocationFileLoaderService extends AbstractService {
       throw new AllocationConfigurationException("Bad fair scheduler config " +
           "file: top-level element not <allocations>");
     NodeList elements = root.getChildNodes();
-    List<Element> queueElements = new ArrayList<Element>();
+    List<Element> queueElements = new ArrayList<>();
     Element placementPolicyElement = null;
     for (int i = 0; i < elements.getLength(); i++) {
       Node node = elements.item(i);
@@ -294,8 +294,9 @@ public class AllocationFileLoaderService extends AbstractService {
           NodeList fields = element.getChildNodes();
           for (int j = 0; j < fields.getLength(); j++) {
             Node fieldNode = fields.item(j);
-            if (!(fieldNode instanceof Element))
+            if (!(fieldNode instanceof Element)) {
               continue;
+            }
             Element field = (Element) fieldNode;
             if ("maxRunningApps".equals(field.getTagName())) {
               String text = ((Text)field.getFirstChild()).getData().trim();
@@ -490,8 +491,9 @@ public class AllocationFileLoaderService extends AbstractService {
 
     for (int j = 0; j < fields.getLength(); j++) {
       Node fieldNode = fields.item(j);
-      if (!(fieldNode instanceof Element))
+      if (!(fieldNode instanceof Element)) {
         continue;
+      }
       Element field = (Element) fieldNode;
       if ("minResources".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();

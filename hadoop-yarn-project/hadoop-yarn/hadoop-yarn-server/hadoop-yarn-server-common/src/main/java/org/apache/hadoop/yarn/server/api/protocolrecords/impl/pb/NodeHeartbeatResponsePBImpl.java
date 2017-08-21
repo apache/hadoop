@@ -75,7 +75,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
   private ContainerQueuingLimit containerQueuingLimit = null;
-  private List<Container> containersToDecrease = null;
+  private List<Container> containersToUpdate = null;
   private List<SignalContainerRequest> containersToSignal = null;
 
   public NodeHeartbeatResponsePBImpl() {
@@ -119,8 +119,8 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
     if (this.systemCredentials != null) {
       addSystemCredentialsToProto();
     }
-    if (this.containersToDecrease != null) {
-      addContainersToDecreaseToProto();
+    if (this.containersToUpdate != null) {
+      addContainersToUpdateToProto();
     }
     if (this.containersToSignal != null) {
       addContainersToSignalToProto();
@@ -499,39 +499,39 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
     builder.addAllApplicationsToCleanup(iterable);
   }
 
-  private void initContainersToDecrease() {
-    if (this.containersToDecrease != null) {
+  private void initContainersToUpdate() {
+    if (this.containersToUpdate != null) {
       return;
     }
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<ContainerProto> list = p.getContainersToDecreaseList();
-    this.containersToDecrease = new ArrayList<>();
+    List<ContainerProto> list = p.getContainersToUpdateList();
+    this.containersToUpdate = new ArrayList<>();
 
     for (ContainerProto c : list) {
-      this.containersToDecrease.add(convertFromProtoFormat(c));
+      this.containersToUpdate.add(convertFromProtoFormat(c));
     }
   }
 
   @Override
-  public List<Container> getContainersToDecrease() {
-    initContainersToDecrease();
-    return this.containersToDecrease;
+  public List<Container> getContainersToUpdate() {
+    initContainersToUpdate();
+    return this.containersToUpdate;
   }
 
   @Override
-  public void addAllContainersToDecrease(
-      final Collection<Container> containersToDecrease) {
-    if (containersToDecrease == null) {
+  public void addAllContainersToUpdate(
+      final Collection<Container> containersToBeUpdated) {
+    if (containersToBeUpdated == null) {
       return;
     }
-    initContainersToDecrease();
-    this.containersToDecrease.addAll(containersToDecrease);
+    initContainersToUpdate();
+    this.containersToUpdate.addAll(containersToBeUpdated);
   }
 
-  private void addContainersToDecreaseToProto() {
+  private void addContainersToUpdateToProto() {
     maybeInitBuilder();
-    builder.clearContainersToDecrease();
-    if (this.containersToDecrease == null) {
+    builder.clearContainersToUpdate();
+    if (this.containersToUpdate == null) {
       return;
     }
     Iterable<ContainerProto> iterable = new
@@ -539,7 +539,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
       @Override
       public Iterator<ContainerProto> iterator() {
         return new Iterator<ContainerProto>() {
-          private Iterator<Container> iter = containersToDecrease.iterator();
+          private Iterator<Container> iter = containersToUpdate.iterator();
           @Override
           public boolean hasNext() {
             return iter.hasNext();
@@ -555,7 +555,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
         };
       }
     };
-    builder.addAllContainersToDecrease(iterable);
+    builder.addAllContainersToUpdate(iterable);
   }
 
   @Override

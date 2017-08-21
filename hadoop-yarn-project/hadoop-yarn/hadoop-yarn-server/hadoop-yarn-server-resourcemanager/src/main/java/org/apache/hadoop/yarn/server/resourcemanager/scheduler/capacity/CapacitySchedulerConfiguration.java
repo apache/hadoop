@@ -301,6 +301,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final boolean DEFAULT_LAZY_PREEMPTION_ENABLED = false;
 
+  @Private
+  public static final String ASSIGN_MULTIPLE_ENABLED = PREFIX
+      + "per-node-heartbeat.multiple-assignments-enabled";
+
+  @Private
+  public static final boolean DEFAULT_ASSIGN_MULTIPLE_ENABLED = true;
+
+  /** Maximum number of containers to assign on each check-in. */
+  @Private
+  public static final String MAX_ASSIGN_PER_HEARTBEAT = PREFIX
+      + "per-node-heartbeat.maximum-container-assignments";
+
+  @Private
+  public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = -1;
+
   AppPriorityACLConfigurationParser priorityACLConfig = new AppPriorityACLConfigurationParser();
 
   public CapacitySchedulerConfiguration() {
@@ -1472,5 +1487,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       }
     }
     return userWeights;
+  }
+
+  public boolean getAssignMultipleEnabled() {
+    return getBoolean(ASSIGN_MULTIPLE_ENABLED, DEFAULT_ASSIGN_MULTIPLE_ENABLED);
+  }
+
+  public int getMaxAssignPerHeartbeat() {
+    return getInt(MAX_ASSIGN_PER_HEARTBEAT, DEFAULT_MAX_ASSIGN_PER_HEARTBEAT);
   }
 }

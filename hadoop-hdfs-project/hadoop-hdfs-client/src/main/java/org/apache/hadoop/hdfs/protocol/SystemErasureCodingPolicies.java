@@ -68,6 +68,13 @@ public final class SystemErasureCodingPolicies {
       new ErasureCodingPolicy(ErasureCodeConstants.RS_10_4_SCHEMA,
           DEFAULT_CELLSIZE, RS_10_4_POLICY_ID);
 
+  // REPLICATION policy is always enabled.
+  private static final ErasureCodingPolicy REPLICATION_POLICY =
+      new ErasureCodingPolicy(ErasureCodeConstants.REPLICATION_POLICY_NAME,
+          ErasureCodeConstants.REPLICATION_1_2_SCHEMA,
+          DEFAULT_CELLSIZE,
+          ErasureCodeConstants.REPLICATION_POLICY_ID);
+
   private static final List<ErasureCodingPolicy> SYS_POLICIES =
       Collections.unmodifiableList(Arrays.asList(
           SYS_POLICY1, SYS_POLICY2, SYS_POLICY3, SYS_POLICY4,
@@ -117,5 +124,12 @@ public final class SystemErasureCodingPolicies {
    */
   public static ErasureCodingPolicy getByName(String name) {
     return SYSTEM_POLICIES_BY_NAME.get(name);
+  }
+
+  /**
+   * Get the special REPLICATION policy.
+   */
+  public static ErasureCodingPolicy  getReplicationPolicy() {
+    return REPLICATION_POLICY;
   }
 }
