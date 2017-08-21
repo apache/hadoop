@@ -129,6 +129,10 @@ public class AliyunOSSFileSystemStore {
     }
 
     String endPoint = conf.getTrimmed(ENDPOINT_KEY, "");
+    if (StringUtils.isEmpty(endPoint)) {
+      throw new IllegalArgumentException("Aliyun OSS endpoint should not be " +
+        "null or empty. Please set proper endpoint with 'fs.oss.endpoint'.");
+    }
     CredentialsProvider provider =
         AliyunOSSUtils.getCredentialsProvider(conf);
     ossClient = new OSSClient(endPoint, provider, clientConf);
