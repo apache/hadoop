@@ -47,15 +47,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-<<<<<<< HEAD
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
-=======
 import org.apache.hadoop.fs.FSImplementationUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
->>>>>>> HADOOP-13227 StreamCapabilities, plus an attempt to factor some stuff out. About to move to trunk
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
