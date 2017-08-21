@@ -15,14 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.net;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.net.Node;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -30,6 +33,8 @@ import org.junit.rules.Timeout;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -62,9 +67,9 @@ public class TestDFSNetworkTopology {
         "/l2/d4/r1", "/l2/d4/r1"};
     final String[] hosts = {
         "host1", "host2", "host3", "host4", "host5",
-        "host6", "host7", "host8", "host9", "host10",
-        "host11", "host12", "host13", "host14", "host15",
-        "host16", "host17", "host18", "host19", "host20"};
+        "host6", "host7", "host8",
+        "host9", "host10", "host11", "host12", "host13",
+        "host14", "host15", "host16", "host17", "host18", "host19", "host20"};
     final StorageType[] types = {
         StorageType.ARCHIVE, StorageType.DISK, StorageType.ARCHIVE,
         StorageType.DISK, StorageType.DISK,
@@ -256,5 +261,189 @@ public class TestDFSNetworkTopology {
     assertEquals(1, (int)l1info.get("d2").get(StorageType.SSD));
 
     assertNull(CLUSTER.getNode("/l1/d3"));
+  }
+
+  @Test
+  public void testChooseRandomWithStorageType() throws Exception {
+    Node n;
+    DatanodeDescriptor dd;
+    // test the choose random can return desired storage type nodes without
+    // exclude
+    Set<String> diskUnderL1 =
+        Sets.newHashSet("host2", "host4", "host5", "host6");
+    Set<String> archiveUnderL1 = Sets.newHashSet("host1", "host3");
+    Set<String> ramdiskUnderL1 = Sets.newHashSet("host7");
+    Set<String> ssdUnderL1 = Sets.newHashSet("host8");
+    for (int i = 0; i < 10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType("/l1", null, null,
+          StorageType.DISK);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(diskUnderL1.contains(dd.getHostName()));
+
+      n = CLUSTER.chooseRandomWithStorageType("/l1", null, null,
+          StorageType.RAM_DISK);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(ramdiskUnderL1.contains(dd.getHostName()));
+
+      n = CLUSTER.chooseRandomWithStorageType("/l1", null, null,
+          StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(archiveUnderL1.contains(dd.getHostName()));
+
+      n = CLUSTER.chooseRandomWithStorageType("/l1", null, null,
+          StorageType.SSD);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(ssdUnderL1.contains(dd.getHostName()));
+    }
+  }
+
+  @Test
+  public void testChooseRandomWithStorageTypeWithExcluded() throws Exception {
+    Node n;
+    DatanodeDescriptor dd;
+    // below test choose random with exclude, for /l2/d3, every rack has exactly
+    // one host
+    // /l2/d3 has five racks r[1~5] but only r4 and r5 have ARCHIVE
+    // host12 is the one under "/l2/d3/r4", host13 is the one under "/l2/d3/r5"
+    n = CLUSTER.chooseRandomWithStorageType("/l2/d3/r4", null, null,
+        StorageType.ARCHIVE);
+    HashSet<Node> excluded = new HashSet<>();
+    // exclude the host on r4 (since there is only one host, no randomness here)
+    excluded.add(n);
+
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType("/l2/d3", null, null,
+          StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host12") ||
+          dd.getHostName().equals("host13"));
+    }
+
+    // test exclude nodes
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType("/l2/d3", null, excluded,
+          StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host13"));
+    }
+
+    // test exclude scope
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType("/l2/d3", "/l2/d3/r4", null,
+          StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host13"));
+    }
+
+    // test exclude scope + excluded node with expected null return node
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType("/l2/d3", "/l2/d3/r5", excluded,
+          StorageType.ARCHIVE);
+      assertNull(n);
+    }
+
+    // test exclude scope + excluded node with expected non-null return node
+    n = CLUSTER.chooseRandomWithStorageType("/l1/d2", null, null,
+        StorageType.DISK);
+    dd = (DatanodeDescriptor)n;
+    assertEquals("host6", dd.getHostName());
+    // exclude the host on r4 (since there is only one host, no randomness here)
+    excluded.add(n);
+    Set<String> expectedSet = Sets.newHashSet("host4", "host5");
+    for (int i = 0; i<10; i++) {
+      // under l1, there are four hosts with DISK:
+      // /l1/d1/r1/host2, /l1/d1/r2/host4, /l1/d1/r2/host5 and /l1/d2/r3/host6
+      // host6 is excludedNode, host2 is under excluded range scope /l1/d1/r1
+      // so should always return r4 or r5
+      n = CLUSTER.chooseRandomWithStorageType(
+          "/l1", "/l1/d1/r1", excluded, StorageType.DISK);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(expectedSet.contains(dd.getHostName()));
+    }
+  }
+
+
+  /**
+   * This test tests the wrapper method. The wrapper method only takes one scope
+   * where if it starts with a ~, it is an excluded scope, and searching always
+   * from root. Otherwise it is a scope.
+   * @throws Exception throws exception.
+   */
+  @Test
+  public void testChooseRandomWithStorageTypeWrapper() throws Exception {
+    Node n;
+    DatanodeDescriptor dd;
+    n = CLUSTER.chooseRandomWithStorageType("/l2/d3/r4", null, null,
+        StorageType.ARCHIVE);
+    HashSet<Node> excluded = new HashSet<>();
+    // exclude the host on r4 (since there is only one host, no randomness here)
+    excluded.add(n);
+
+    // search with given scope being desired scope
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType(
+          "/l2/d3", null, StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host12") ||
+          dd.getHostName().equals("host13"));
+    }
+
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType(
+          "/l2/d3", excluded, StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host13"));
+    }
+
+    // search with given scope being exclude scope
+
+    // a total of 4 ramdisk nodes:
+    // /l1/d2/r3/host7, /l2/d3/r2/host10, /l2/d4/r1/host7 and /l2/d4/r1/host10
+    // so if we exclude /l2/d4/r1, if should be always either host7 or host10
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType(
+          "~/l2/d4", null, StorageType.RAM_DISK);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host7") ||
+          dd.getHostName().equals("host10"));
+    }
+
+    // similar to above, except that we also exclude host10 here. so it should
+    // always be host7
+    n = CLUSTER.chooseRandomWithStorageType("/l2/d3/r2", null, null,
+        StorageType.RAM_DISK);
+    // add host10 to exclude
+    excluded.add(n);
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageType(
+          "~/l2/d4", excluded, StorageType.RAM_DISK);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host7"));
+    }
+  }
+
+  @Test
+  public void testNonExistingNode() throws Exception {
+    Node n;
+    n = CLUSTER.chooseRandomWithStorageType(
+        "/l100", null, null, StorageType.DISK);
+    assertNull(n);
+    n = CLUSTER.chooseRandomWithStorageType(
+        "/l100/d100", null, null, StorageType.DISK);
+    assertNull(n);
+    n = CLUSTER.chooseRandomWithStorageType(
+        "/l100/d100/r100", null, null, StorageType.DISK);
+    assertNull(n);
   }
 }

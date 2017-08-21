@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.net;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.StorageType;
@@ -27,6 +27,7 @@ import org.apache.hadoop.net.Node;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The HDFS-specific representation of a network topology inner node. The
@@ -84,6 +85,17 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
       String name, String location, InnerNode parent, int level) {
     super(name, location, parent, level);
     childrenStorageInfo = new HashMap<>();
+  }
+
+  public int getSubtreeStorageCount(StorageType type) {
+    int res = 0;
+    for (Map.Entry<String, EnumMap<StorageType, Integer>> entry :
+        childrenStorageInfo.entrySet()) {
+      if (entry.getValue().containsKey(type)) {
+        res += entry.getValue().get(type);
+      }
+    }
+    return res;
   }
 
   int getNumOfChildren() {
@@ -178,6 +190,16 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
   private DFSTopologyNodeImpl createParentNode(String parentName) {
     return new DFSTopologyNodeImpl(
         parentName, getPath(this), this, this.getLevel() + 1);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 
   @Override
