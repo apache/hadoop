@@ -41,7 +41,7 @@ public class FSImplementationUtils {
    * @param capability capability string.
    * @return true if either refers to one of the Syncable operations.
    */
-  public static boolean hasHSyncCapabilities(String capability) {
+  public static boolean supportsSyncable(String capability) {
     return capability.equalsIgnoreCase(HSYNC.getValue()) ||
         capability.equalsIgnoreCase((HFLUSH.getValue()));
   }

@@ -272,7 +272,7 @@ public abstract class AbstractFSContractTestBase extends Assert
     if (getContract().isSupported(SUPPORTS_STRICT_EXCEPTIONS, false)) {
       throw e;
     }
-    LOG.warn("The expected exception {}  was not the exception class" +
+    LOG.warn("The expected exception {} was not the exception class" +
              " raised on {}: {}", action , e.getClass(), expectedException, e);
   }
 
@@ -374,5 +374,14 @@ public abstract class AbstractFSContractTestBase extends Assert
       destDirLS = destDirLS + "\n" + ContractTestUtils.ls(fs, dst);
     }
     return destDirLS;
+  }
+
+  /**
+   * Get a path from the name of the current test case.
+   * @return a path based on the test method being executed.
+   * @throws IOException IO problem
+   */
+  protected Path methodPath() throws IOException {
+    return path(methodName.getMethodName());
   }
 }
