@@ -136,7 +136,8 @@ public class TestCompareResourceCalculators {
         "echo $$ >" + cgroupCPU + "/tasks;" +
         "mkdir -p " + cgroupMemory + ";" +
         "echo $$ >" + cgroupMemory + "/tasks;" +
-        "dd if=/dev/zero of=/dev/shm/" + cgroup + " bs=1k count=" + SHMEM_KB + ";" +
+        "dd if=/dev/zero of=/dev/shm/" +
+            cgroup + " bs=1k count=" + SHMEM_KB + ";" +
         "dd if=/dev/zero of=/dev/null bs=1k &" +
         "echo $! >/tmp/\" + cgroup + \".pid;" +
         //"echo while [ -f /tmp/" + cgroup + ".pid ]; do sleep 1; done;" +
@@ -156,12 +157,12 @@ public class TestCompareResourceCalculators {
     try {
       ProcessBuilder builder = new ProcessBuilder();
       String script =
-        "rm -f /dev/shm/" + cgroup + ";" +
-        "cat " + cgroupCPU + "/tasks | xargs kill;" +
-        "rm -f /tmp/" + cgroup + ".pid;" +
-        "sleep 4;" +
-        "rmdir " + cgroupCPU + ";" +
-        "rmdir " + cgroupMemory + ";";
+          "rm -f /dev/shm/" + cgroup + ";" +
+          "cat " + cgroupCPU + "/tasks | xargs kill;" +
+          "rm -f /tmp/" + cgroup + ".pid;" +
+          "sleep 4;" +
+          "rmdir " + cgroupCPU + ";" +
+          "rmdir " + cgroupMemory + ";";
       builder.command("bash", "-c", script);
       Process cleanup = builder.start();
       cleanup.waitFor();
