@@ -30,6 +30,11 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
  */
 public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
+  /** Mark for slashes in path names. */
+  protected static final String SLASH_MARK = "0SLASH0";
+  /** Mark for colon in path names. */
+  protected static final String COLON_MARK = "_";
+
   /** Default serializer for this driver. */
   private StateStoreSerializer serializer;
 
@@ -73,5 +78,19 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
   protected <T extends BaseRecord> T newRecord(
       String data, Class<T> clazz, boolean includeDates) throws IOException {
     return serializer.deserialize(data, clazz);
+  }
+
+  /**
+   * Get the primary key for a record. If we don't want to store in folders, we
+   * need to remove / from the name.
+   *
+   * @param record Record to get the primary key for.
+   * @return Primary key for the record.
+   */
+  protected static String getPrimaryKey(BaseRecord record) {
+    String primaryKey = record.getPrimaryKey();
+    primaryKey = primaryKey.replaceAll("/", SLASH_MARK);
+    primaryKey = primaryKey.replaceAll(":", COLON_MARK);
+    return primaryKey;
   }
 }
