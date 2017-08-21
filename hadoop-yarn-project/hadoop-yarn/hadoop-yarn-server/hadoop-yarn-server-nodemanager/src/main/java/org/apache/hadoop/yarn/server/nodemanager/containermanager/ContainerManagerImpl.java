@@ -410,6 +410,16 @@ public class ContainerManagerImpl extends CompositeService implements
         LOG.debug(
             "Recovering Flow context: " + fc + " for an application " + appId);
       }
+    } else {
+      // in upgrade situations, where there is no prior existing flow context,
+      // default would be used.
+      fc = new FlowContext(TimelineUtils.generateDefaultFlowName(null, appId),
+          YarnConfiguration.DEFAULT_FLOW_VERSION, appId.getClusterTimestamp());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "No prior existing flow context found. Using default Flow context: "
+                + fc + " for an application " + appId);
+      }
     }
 
     LOG.info("Recovering application " + appId);
