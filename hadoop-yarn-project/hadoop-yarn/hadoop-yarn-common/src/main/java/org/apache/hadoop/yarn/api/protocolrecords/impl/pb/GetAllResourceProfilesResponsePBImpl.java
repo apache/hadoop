@@ -134,9 +134,4 @@ public class GetAllResourceProfilesResponsePBImpl
     r.setVirtualCores(res.getVirtualCores());
     return r.getProto();
   }
-
-  @Override
-  public int hashCode() {
-    return getProto().hashCode();
-  }
 }

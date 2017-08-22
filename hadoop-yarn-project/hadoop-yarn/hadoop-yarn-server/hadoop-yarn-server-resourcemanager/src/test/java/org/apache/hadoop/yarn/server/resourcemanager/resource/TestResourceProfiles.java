@@ -29,6 +29,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Common test class for resource profile related tests.
+ */
 public class TestResourceProfiles {
 
   @Test
@@ -86,9 +89,8 @@ public class TestResourceProfiles {
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
 
-    String[] badProfiles = { "profiles/illegal-profiles-1.json",
-        "profiles/illegal-profiles-2.json",
-        "profiles/illegal-profiles-3.json" };
+    String[] badProfiles = {"profiles/illegal-profiles-1.json",
+        "profiles/illegal-profiles-2.json", "profiles/illegal-profiles-3.json"};
     for (String file : badProfiles) {
       ResourceProfilesManager manager = new ResourceProfilesManagerImpl();
       conf.set(YarnConfiguration.RM_RESOURCE_PROFILES_SOURCE_FILE, file);

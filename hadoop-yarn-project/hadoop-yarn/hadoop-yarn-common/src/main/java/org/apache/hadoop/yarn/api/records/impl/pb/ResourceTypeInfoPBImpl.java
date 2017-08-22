@@ -26,8 +26,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypeInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypesProto;
 
-import com.google.common.base.Preconditions;
-
 /**
  * {@code ResourceTypeInfoPBImpl} which implements the
  * {@link ResourceTypeInfo} class which represents different resource types

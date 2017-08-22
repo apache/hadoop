@@ -93,9 +93,4 @@ public class GetResourceProfileRequestPBImpl extends GetResourceProfileRequest {
     }
     return profile;
   }
-
-  @Override
-  public int hashCode() {
-    return getProto().hashCode();
-  }
 }
