@@ -187,8 +187,7 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     if (collectorAddr == null || collectorAddr.isEmpty()) {
       collectorAddr = timelineServiceAddress;
     }
-    // Token need not be updated if either address or token service does not
-    // exist.
+    // Token need not be updated if both address and token service do not exist.
     String service = delegationToken.getService();
     if ((service == null || service.isEmpty()) &&
         (collectorAddr == null || collectorAddr.isEmpty())) {
