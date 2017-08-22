@@ -153,8 +153,11 @@ public abstract class ResourceTypeInfo implements Comparable<ResourceTypeInfo> {
 
   @Override
   public String toString() {
-    return "name: " + this.getName() + ", units: " + this.getDefaultUnit()
-        + ", type: " + getResourceType();
+    StringBuilder sb = new StringBuilder();
+    sb.append("<name=").append(this.getName()).append(" default-unit=").append(
+        this.getDefaultUnit()).append(" type=" + getResourceType()).append(
+        ">");
+    return sb.toString();
   }
 
   @Override
