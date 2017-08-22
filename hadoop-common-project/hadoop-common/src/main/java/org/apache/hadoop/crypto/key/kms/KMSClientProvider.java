@@ -32,8 +32,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
@@ -596,17 +594,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         return call(conn, jsonOutput, expectedResponse, klass,
             authRetryCount - 1);
       }
-    }
-    try {
-      AuthenticatedURL.extractToken(conn, authToken);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Extracted token, authToken={}, its dt={}", authToken,
-            authToken.getDelegationToken());
-      }
-    } catch (AuthenticationException e) {
-      // Ignore the AuthExceptions.. since we are just using the method to
-      // extract and set the authToken.. (Workaround till we actually fix
-      // AuthenticatedURL properly to set authToken post initialization)
     }
     HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (conn.getContentType() != null
