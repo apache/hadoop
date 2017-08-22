@@ -98,6 +98,14 @@ enum operations {
 #define TC_SUPPORT_ENABLED_KEY "feature.tc.enabled"
 #define TMP_DIR "tmp"
 
+/* Macros for min/max. */
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif /* MIN */
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif  /* MAX */
+
 extern struct passwd *user_detail;
 
 // the log file for messages
