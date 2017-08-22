@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
@@ -74,6 +75,9 @@ public class TestRMDelegationTokens {
     Configuration conf = new Configuration(testConf);
     conf.set("hadoop.security.authentication", "kerberos");
     UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.getLoginUser()
+        .setAuthenticationMethod(AuthenticationMethod.KERBEROS);
+
     MemoryRMStateStore memStore = new MockRMMemoryStateStore();
     memStore.init(conf);
     RMState rmState = memStore.getState();
