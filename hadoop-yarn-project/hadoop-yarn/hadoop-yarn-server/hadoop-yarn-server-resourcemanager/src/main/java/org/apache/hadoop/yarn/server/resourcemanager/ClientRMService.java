@@ -178,6 +178,7 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
@@ -1806,8 +1807,7 @@ public class ClientRMService extends AbstractService implements
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
     GetAllResourceTypeInfoResponse response =
         GetAllResourceTypeInfoResponse.newInstance();
-    response.setResourceTypeInfo(
-        resourceProfilesManager.getAllResourceTypeInfo());
+    response.setResourceTypeInfo(ResourceUtils.getResourcesTypeInfo());
     return response;
   }
 }
