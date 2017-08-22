@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
 import com.google.protobuf.TextFormat;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Private

@@ -22,6 +22,9 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Test class to verify various resource informations in a given resource.
+ */
 public class TestResourceInformation {
 
   @Test

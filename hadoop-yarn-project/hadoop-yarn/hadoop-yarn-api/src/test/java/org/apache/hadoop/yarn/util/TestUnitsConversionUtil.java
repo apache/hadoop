@@ -21,6 +21,10 @@ package org.apache.hadoop.yarn.util;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Test class to handle all test cases needed to verify basic unit conversion
+ * scenarios.
+ */
 public class TestUnitsConversionUtil {
 
   @Test
@@ -87,13 +91,13 @@ public class TestUnitsConversionUtil {
       UnitsConversionUtil.convert("P", "p", test);
       Assert.fail("this operation should result in an overflow");
     } catch (IllegalArgumentException ie) {
-      ; // do nothing
+      // do nothing
     }
     try {
       UnitsConversionUtil.convert("m", "p", Long.MAX_VALUE - 1);
       Assert.fail("this operation should result in an overflow");
     } catch (IllegalArgumentException ie) {
-      ; // do nothing
+      // do nothing
     }
   }
 

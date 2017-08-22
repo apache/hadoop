@@ -15,6 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * Package org.apache.hadoop.yarn.util.resource contains classes
+ * which is used as utility class for resource profile computations.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 package org.apache.hadoop.yarn.util.resource;
