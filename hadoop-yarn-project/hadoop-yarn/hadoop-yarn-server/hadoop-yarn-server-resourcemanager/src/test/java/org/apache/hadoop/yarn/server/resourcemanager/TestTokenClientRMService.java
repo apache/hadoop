@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -80,6 +81,8 @@ public class TestTokenClientRMService {
     conf.set("hadoop.security.authentication", "kerberos");
     conf.set("hadoop.security.auth_to_local", kerberosRule);
     UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.getLoginUser()
+       .setAuthenticationMethod(AuthenticationMethod.KERBEROS);
   }
 
   @AfterClass
