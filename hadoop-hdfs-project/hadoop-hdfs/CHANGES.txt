@@ -13,6 +13,7 @@ Release 2.7.5 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     HDFS-12157. Do fsyncDirectory(..) outside of FSDataset lock.
     (Vinayakumar B. via kihwal)
 
