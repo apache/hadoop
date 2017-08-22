@@ -466,8 +466,8 @@ public class ResourceUtils {
     return readOnlyNodeResources;
   }
 
-  private static Map<String, ResourceInformation>
-  initializeNodeResourceInformation(Configuration conf) {
+  private static Map<String, ResourceInformation> initializeNodeResourceInformation(
+      Configuration conf) {
     Map<String, ResourceInformation> nodeResources = new HashMap<>();
     try {
       addResourcesFileToConf(

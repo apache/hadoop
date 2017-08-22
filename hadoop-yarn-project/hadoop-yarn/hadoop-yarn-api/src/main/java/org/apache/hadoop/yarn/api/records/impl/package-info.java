@@ -15,6 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * Package org.apache.hadoop.yarn.api.records.impl contains classes
+ * which define basic resources.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 package org.apache.hadoop.yarn.api.records.impl;

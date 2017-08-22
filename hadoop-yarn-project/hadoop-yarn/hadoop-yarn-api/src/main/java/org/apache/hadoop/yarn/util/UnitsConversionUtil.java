@@ -45,9 +45,8 @@ public class UnitsConversionUtil {
     }
   }
 
-  private static final String[] UNITS =
-      { "p", "n", "u", "m", "", "k", "M", "G", "T", "P", "Ki", "Mi", "Gi", "Ti",
-          "Pi" };
+  private static final String[] UNITS = {"p", "n", "u", "m", "", "k", "M", "G",
+      "T", "P", "Ki", "Mi", "Gi", "Ti", "Pi"};
   private static final List<String> SORTED_UNITS = Arrays.asList(UNITS);
   public static final Set<String> KNOWN_UNITS = createKnownUnitsSet();
   private static final Converter PICO =
