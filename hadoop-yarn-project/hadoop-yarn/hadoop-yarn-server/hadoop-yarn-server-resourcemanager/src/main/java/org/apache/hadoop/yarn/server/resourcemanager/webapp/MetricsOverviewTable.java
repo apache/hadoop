@@ -19,16 +19,20 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
 
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
+
+import java.util.Arrays;
 
 /**
  * Provides an table with an overview of many cluster wide metrics and if
@@ -168,8 +172,8 @@ public class MetricsOverviewTable extends HtmlBlock {
         
       }
     }
-    
-    SchedulerInfo schedulerInfo=new SchedulerInfo(this.rm);
+
+    SchedulerInfo schedulerInfo = new SchedulerInfo(this.rm);
     
     div.h3("Scheduler Metrics").
     table("#schedulermetricsoverview").
@@ -186,7 +190,8 @@ public class MetricsOverviewTable extends HtmlBlock {
     tbody().$class("ui-widget-content").
       tr().
         td(String.valueOf(schedulerInfo.getSchedulerType())).
-        td(String.valueOf(schedulerInfo.getSchedulerResourceTypes())).
+        td(String.valueOf(Arrays.toString(ResourceUtils.getResourcesTypeInfo()
+            .toArray(new ResourceTypeInfo[0])))).
         td(schedulerInfo.getMinAllocation().toString()).
         td(schedulerInfo.getMaxAllocation().toString()).
         td(String.valueOf(schedulerInfo.getMaxClusterLevelAppPriority())).
