@@ -111,7 +111,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   public void registerApplicationMaster(
       ApplicationAttemptId applicationAttemptId,
       RegisterApplicationMasterRequest request,
-      RegisterApplicationMasterResponse response) throws IOException {
+      RegisterApplicationMasterResponse response)
+      throws IOException, YarnException {
 
     RMApp app = getRmContext().getRMApps().get(
         applicationAttemptId.getApplicationId());
