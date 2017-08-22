@@ -3247,7 +3247,7 @@ public class TimelineReaderWebServices {
 
   @GET
   @Path("/users/{userid}/entities/{entitytype}")
-  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getSubAppEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -3278,7 +3278,7 @@ public class TimelineReaderWebServices {
 
   @GET
   @Path("/clusters/{clusterid}/users/{userid}/entities/{entitytype}")
-  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getSubAppEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -3339,7 +3339,7 @@ public class TimelineReaderWebServices {
 
   @GET
   @Path("/users/{userid}/entities/{entitytype}/{entityid}")
-  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getSubAppEntities(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("userid") String userId,
       @PathParam("entitytype") String entityType,
@@ -3358,7 +3358,7 @@ public class TimelineReaderWebServices {
 
   @GET
   @Path("/clusters/{clusterid}/users/{userid}/entities/{entitytype}/{entityid}")
-  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getSubAppEntities(@Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("clusterid") String clusterId,
