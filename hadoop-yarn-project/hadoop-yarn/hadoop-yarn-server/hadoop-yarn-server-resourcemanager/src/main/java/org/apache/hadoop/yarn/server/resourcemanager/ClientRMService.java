@@ -143,7 +143,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
-import org.apache.hadoop.yarn.exceptions.ResourceProfilesNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -183,6 +182,7 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
@@ -1779,33 +1779,18 @@ public class ClientRMService extends AbstractService implements
       GetAllResourceProfilesRequest request) throws YarnException, IOException {
     GetAllResourceProfilesResponse response =
         GetAllResourceProfilesResponse.newInstance();
-    response.setResourceProfiles(getResourceProfiles());
+    response.setResourceProfiles(resourceProfilesManager.getResourceProfiles());
     return response;
   }
 
   @Override
   public GetResourceProfileResponse getResourceProfile(
       GetResourceProfileRequest request) throws YarnException, IOException {
-    Map<String, Resource> profiles = getResourceProfiles();
-    if (!profiles.containsKey(request.getProfileName())) {
-      throw new YarnException(
-          "Resource profile '" + request.getProfileName() + "' not found");
-    }
     GetResourceProfileResponse response =
         GetResourceProfileResponse.newInstance();
-    response.setResource(profiles.get(request.getProfileName()));
+    response.setResource(
+        resourceProfilesManager.getProfile(request.getProfileName()));
     return response;
-  }
-
-  private Map<String, Resource> getResourceProfiles() throws YarnException {
-    boolean resourceProfilesEnabled = getConfig()
-        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
-            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
-    if (!resourceProfilesEnabled) {
-      throw new ResourceProfilesNotEnabledException(
-          "Resource profiles are not enabled");
-    }
-    return resourceProfilesManager.getResourceProfiles();
   }
 
   @Override
@@ -1813,8 +1798,7 @@ public class ClientRMService extends AbstractService implements
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
     GetAllResourceTypeInfoResponse response =
         GetAllResourceTypeInfoResponse.newInstance();
-    response.setResourceTypeInfo(
-        resourceProfilesManager.getAllResourceTypeInfo());
+    response.setResourceTypeInfo(ResourceUtils.getResourcesTypeInfo());
     return response;
   }
 }

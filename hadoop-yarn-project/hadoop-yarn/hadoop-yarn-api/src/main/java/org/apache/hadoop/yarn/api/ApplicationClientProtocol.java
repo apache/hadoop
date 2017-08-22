@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 
 /**
  * <p>The protocol between clients and the <code>ResourceManager</code>
@@ -604,7 +605,8 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    * @param request request to get all the resource profiles
    * @return Response containing a map of the profile name to Resource
    *         capabilities
-   * @throws YarnException if resource profiles are not enabled on the RM
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
    * @throws IOException in case of other errors
    */
   @Public
@@ -618,8 +620,8 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    * </p>
    * @param request request to get the details of a resource profile
    * @return Response containing the details for a particular resource profile
-   * @throws YarnException if resource profiles are not enabled on the RM or
-   *         the profile cannot be found
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
    * @throws IOException in case of other errors
    */
   @Public
@@ -633,8 +635,7 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    * </p>
    * @param request request to get the details of a resource profile
    * @return Response containing the details for a particular resource profile
-   * @throws YarnException if resource profiles are not enabled on the RM or
-   *         the profile cannot be found
+   * @throws YarnException if any error happens inside YARN
    * @throws IOException in case of other errors
    */
   @Public

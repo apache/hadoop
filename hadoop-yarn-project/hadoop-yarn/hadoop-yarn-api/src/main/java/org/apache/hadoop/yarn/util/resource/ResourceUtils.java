@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,9 +38,12 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -560,5 +564,22 @@ public class ResourceUtils {
       return ri.getUnits();
     }
     return "";
+  }
+
+  /**
+   * Get all resource types information from known resource types.
+   * @return List of ResourceTypeInfo
+   */
+  public static List<ResourceTypeInfo> getResourcesTypeInfo() {
+    List<ResourceTypeInfo> array = new ArrayList<>();
+    // Add all resource types
+    Collection<ResourceInformation> resourcesInfo =
+        ResourceUtils.getResourceTypes().values();
+    for (ResourceInformation resourceInfo : resourcesInfo) {
+      array.add(ResourceTypeInfo
+          .newInstance(resourceInfo.getName(), resourceInfo.getUnits(),
+              resourceInfo.getResourceType()));
+    }
+    return array;
   }
 }

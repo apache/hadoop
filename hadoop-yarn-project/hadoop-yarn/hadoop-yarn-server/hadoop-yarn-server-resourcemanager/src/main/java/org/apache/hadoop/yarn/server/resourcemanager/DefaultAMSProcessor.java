@@ -114,7 +114,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   public void registerApplicationMaster(
       ApplicationAttemptId applicationAttemptId,
       RegisterApplicationMasterRequest request,
-      RegisterApplicationMasterResponse response) throws IOException {
+      RegisterApplicationMasterResponse response)
+      throws IOException, YarnException {
 
     RMApp app = getRmContext().getRMApps().get(
         applicationAttemptId.getApplicationId());
@@ -174,10 +175,11 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setSchedulerResourceTypes(getScheduler()
         .getSchedulingResourceTypes());
-    if (getRmContext().getYarnConfiguration().getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
-          YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED)) {
-      response
-          .setResourceProfiles(resourceProfilesManager.getResourceProfiles());
+    if (getRmContext().getYarnConfiguration().getBoolean(
+        YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED)) {
+      response.setResourceProfiles(
+          resourceProfilesManager.getResourceProfiles());
     }
   }
 

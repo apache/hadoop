@@ -18,22 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resource;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 /**
  * Interface for the resource profiles manager. Provides an interface to get
  * the list of available profiles and some helper functions.
  */
-@Public
-@Unstable
 public interface ResourceProfilesManager {
 
   /**
@@ -47,14 +43,19 @@ public interface ResourceProfilesManager {
    * Get the resource capability associated with given profile name.
    * @param profile name of resource profile
    * @return resource capability for given profile
+   *
+   * @throws YarnException when any invalid profile name or feature is disabled
    */
-  Resource getProfile(String profile);
+  Resource getProfile(String profile) throws YarnException;
 
   /**
    * Get all supported resource profiles.
    * @return a map of resource objects associated with each profile
+   *
+   * @throws YARNFeatureNotEnabledException when feature is disabled
    */
-  Map<String, Resource> getResourceProfiles();
+  Map<String, Resource> getResourceProfiles() throws
+      YARNFeatureNotEnabledException;
 
   /**
    * Reload profiles based on updated configuration.
@@ -65,24 +66,21 @@ public interface ResourceProfilesManager {
   /**
    * Get default supported resource profile.
    * @return resource object which is default
+   * @throws YarnException when any invalid profile name or feature is disabled
    */
-  Resource getDefaultProfile();
+  Resource getDefaultProfile() throws YarnException;
 
   /**
    * Get minimum supported resource profile.
    * @return resource object which is minimum
+   * @throws YarnException when any invalid profile name or feature is disabled
    */
-  Resource getMinimumProfile();
+  Resource getMinimumProfile() throws YarnException;
 
   /**
    * Get maximum supported resource profile.
    * @return resource object which is maximum
+   * @throws YarnException when any invalid profile name or feature is disabled
    */
-  Resource getMaximumProfile();
-
-  /**
-   * List of ResourceTypeInfo objects which carry all resources supported by RM.
-   * @return list of ResourceTypeInfo objects
-   */
-  List<ResourceTypeInfo> getAllResourceTypeInfo();
+  Resource getMaximumProfile() throws YarnException;
 }

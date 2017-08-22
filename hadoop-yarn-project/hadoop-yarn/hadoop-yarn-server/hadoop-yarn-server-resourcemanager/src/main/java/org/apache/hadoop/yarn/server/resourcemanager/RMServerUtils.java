@@ -628,20 +628,6 @@ public class RMServerUtils {
     }
   }
 
-  public static void convertProfileToResourceCapability(
-      List<ResourceRequest> asks, Configuration conf,
-      ResourceProfilesManager resourceProfilesManager) throws YarnException {
-    boolean profilesEnabled =
-        conf.getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
-            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
-    if (!profilesEnabled) {
-      return;
-    }
-    for (ResourceRequest req : asks) {
-      convertProfileToResourceCapability(req, conf, resourceProfilesManager);
-    }
-  }
-
   public static void convertProfileToResourceCapability(ResourceRequest ask,
       Configuration conf, ResourceProfilesManager resourceProfilesManager)
       throws YarnException {

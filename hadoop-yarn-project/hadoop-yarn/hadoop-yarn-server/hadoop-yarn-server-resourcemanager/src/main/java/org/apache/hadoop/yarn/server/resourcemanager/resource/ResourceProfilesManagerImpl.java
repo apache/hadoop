@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -52,6 +54,7 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   private List<ResourceTypeInfo> resourceTypeInfo =
       new ArrayList<ResourceTypeInfo>();
   private Configuration conf;
+  private boolean profileEnabled = false;
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
@@ -65,6 +68,11 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
 
   private static final String[] MANDATORY_PROFILES =
       { DEFAULT_PROFILE, MINIMUM_PROFILE, MAXIMUM_PROFILE };
+  private static final String FEATURE_NOT_ENABLED_MSG =
+      "Resource profile is not enabled, please "
+          + "enable resource profile feature before using its functions."
+          + " (by setting " + YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED
+          + " to true)";
 
   public ResourceProfilesManagerImpl() {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -98,10 +106,10 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   }
 
   private void loadProfiles() throws IOException {
-    boolean profilesEnabled =
+    profileEnabled =
         conf.getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
             YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
-    if (!profilesEnabled) {
+    if (!profileEnabled) {
       return;
     }
     String sourceFile =
@@ -131,14 +139,16 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
       if (entry.getValue() instanceof Map) {
         Map profileInfo = (Map) entry.getValue();
         // ensure memory and vcores are specified
-        if (!profileInfo.containsKey(MEMORY) || !profileInfo.containsKey(VCORES)) {
+        if (!profileInfo.containsKey(MEMORY)
+            || !profileInfo.containsKey(VCORES)) {
           throw new IOException(
               "Illegal resource profile definition; profile '" + profileName
                   + "' must contain '" + MEMORY + "' and '" + VCORES + "'");
         }
         Resource resource = parseResource(profileInfo);
         profiles.put(profileName, resource);
-        LOG.info("Added profile '" + profileName + "' with resources " + resource);
+        LOG.info(
+            "Added profile '" + profileName + "' with resources: " + resource);
       }
     }
     // check to make sure mandatory profiles are present
@@ -149,7 +159,7 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
                 + Arrays.toString(MANDATORY_PROFILES) + " must be present");
       }
     }
-    LOG.info("Loaded profiles " + profiles.keySet());
+    LOG.info("Loaded profiles: " + profiles.keySet());
   }
 
   private Resource parseResource(Map profileInfo) throws IOException {
@@ -182,13 +192,33 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
     return resource;
   }
 
-  @Override
-  public Resource getProfile(String profile) {
-    return Resources.clone(profiles.get(profile));
+  private void checkAndThrowExceptionWhenFeatureDisabled()
+      throws YARNFeatureNotEnabledException {
+    if (!profileEnabled) {
+      throw new YARNFeatureNotEnabledException(FEATURE_NOT_ENABLED_MSG);
+    }
   }
 
   @Override
-  public Map<String, Resource> getResourceProfiles() {
+  public Resource getProfile(String profile) throws YarnException{
+    checkAndThrowExceptionWhenFeatureDisabled();
+
+    if (profile == null) {
+      throw new YarnException("Profile name cannot be null");
+    }
+
+    Resource profileRes = profiles.get(profile);
+    if (profileRes == null) {
+      throw new YarnException(
+          "Resource profile '" + profile + "' not found");
+    }
+    return Resources.clone(profileRes);
+  }
+
+  @Override
+  public Map<String, Resource> getResourceProfiles()
+      throws YARNFeatureNotEnabledException {
+    checkAndThrowExceptionWhenFeatureDisabled();
     return Collections.unmodifiableMap(profiles);
   }
 
@@ -200,17 +230,17 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   }
 
   @Override
-  public Resource getDefaultProfile() {
+  public Resource getDefaultProfile() throws YarnException {
     return getProfile(DEFAULT_PROFILE);
   }
 
   @Override
-  public Resource getMinimumProfile() {
+  public Resource getMinimumProfile() throws YarnException {
     return getProfile(MINIMUM_PROFILE);
   }
 
   @Override
-  public Resource getMaximumProfile() {
+  public Resource getMaximumProfile() throws YarnException {
     return getProfile(MAXIMUM_PROFILE);
   }
 
@@ -219,14 +249,5 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
     Long resourceValue =
         Long.valueOf(value.substring(0, value.length() - units.length()));
     return ResourceInformation.newInstance(name, units, resourceValue);
-  }
-
-  public List<ResourceTypeInfo> getAllResourceTypeInfo() {
-    try {
-      readLock.lock();
-      return Collections.unmodifiableList(resourceTypeInfo);
-    } finally {
-      readLock.unlock();
-    }
   }
 }
