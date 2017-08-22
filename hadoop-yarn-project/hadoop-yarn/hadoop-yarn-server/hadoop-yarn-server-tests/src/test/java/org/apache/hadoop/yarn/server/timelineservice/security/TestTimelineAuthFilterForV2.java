@@ -56,6 +56,7 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -228,7 +229,7 @@ public class TestTimelineAuthFilterForV2 {
     String restBindAddr = collectorManager.getRestServerBindAddress();
     String addr =
         "localhost" + restBindAddr.substring(restBindAddr.indexOf(":"));
-    client.setTimelineServiceAddress(addr);
+    client.setTimelineCollectorInfo(CollectorInfo.newInstance(addr));
     client.init(conf);
     client.start();
     return client;

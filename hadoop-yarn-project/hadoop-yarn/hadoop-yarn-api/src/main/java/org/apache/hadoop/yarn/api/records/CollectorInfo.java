@@ -32,6 +32,10 @@ public abstract class CollectorInfo {
 
   protected static final long DEFAULT_TIMESTAMP_VALUE = -1;
 
+  public static CollectorInfo newInstance(String collectorAddr) {
+    return newInstance(collectorAddr, null);
+  }
+
   public static CollectorInfo newInstance(String collectorAddr, Token token) {
     CollectorInfo amCollectorInfo =
         Records.newRecord(CollectorInfo.class);
