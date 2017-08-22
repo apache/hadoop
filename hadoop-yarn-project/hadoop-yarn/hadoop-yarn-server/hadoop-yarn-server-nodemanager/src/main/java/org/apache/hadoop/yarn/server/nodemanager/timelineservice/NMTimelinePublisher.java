@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -436,7 +437,7 @@ public class NMTimelinePublisher extends CompositeService {
       String collectorAddr) {
     TimelineV2Client client = appToClientMap.get(appId);
     if (client != null) {
-      client.setTimelineServiceAddress(collectorAddr);
+      client.setTimelineCollectorInfo(CollectorInfo.newInstance(collectorAddr));
     }
   }
 
