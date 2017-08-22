@@ -24,7 +24,6 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
