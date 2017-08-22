@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -66,7 +66,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class NMTimelinePublisher extends CompositeService {
 
-  private static final Log LOG = LogFactory.getLog(NMTimelinePublisher.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMTimelinePublisher.class);
 
   private Dispatcher dispatcher;
 

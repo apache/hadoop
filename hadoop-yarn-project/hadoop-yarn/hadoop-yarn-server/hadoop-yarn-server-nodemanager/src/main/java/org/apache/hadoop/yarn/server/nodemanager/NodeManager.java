@@ -26,9 +26,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -105,7 +105,8 @@ public class NodeManager extends CompositeService
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  private static final Log LOG = LogFactory.getLog(NodeManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NodeManager.class);
   private static long nmStartupTime = System.currentTimeMillis();
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
   private JvmPauseMonitor pauseMonitor;
@@ -469,7 +470,7 @@ public class NodeManager extends CompositeService
           ((NodeStatusUpdaterImpl) nodeStatusUpdater)
             .rebootNodeStatusUpdaterAndRegisterWithRM();
         } catch (YarnRuntimeException e) {
-          LOG.fatal("Error while rebooting NodeStatusUpdater.", e);
+          LOG.error("Error while rebooting NodeStatusUpdater.", e);
           shutDown(NodeManagerStatus.EXCEPTION.getExitCode());
         }
       }
@@ -729,7 +730,7 @@ public class NodeManager extends CompositeService
           String message =
               "Failing NodeManager start since we're on a "
                   + "Unix-based system but bash doesn't seem to be available.";
-          LOG.fatal(message);
+          LOG.error(message);
           throw new YarnRuntimeException(message);
         }
       }
@@ -748,7 +749,7 @@ public class NodeManager extends CompositeService
       this.init(conf);
       this.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting NodeManager", t);
+      LOG.error("Error starting NodeManager", t);
       System.exit(-1);
     }
   }

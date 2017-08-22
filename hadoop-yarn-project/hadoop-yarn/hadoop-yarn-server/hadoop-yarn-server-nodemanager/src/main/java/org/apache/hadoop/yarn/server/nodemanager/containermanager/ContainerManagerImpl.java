@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -189,7 +189,8 @@ public class ContainerManagerImpl extends CompositeService implements
    */
   private static final int SHUTDOWN_CLEANUP_SLOP_MS = 1000;
 
-  private static final Log LOG = LogFactory.getLog(ContainerManagerImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerManagerImpl.class);
 
   public static final String INVALID_NMTOKEN_MSG = "Invalid NMToken";
   static final String INVALID_CONTAINERTOKEN_MSG =

@@ -26,9 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -69,7 +69,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class LogAggregationService extends AbstractService implements
     LogHandler {
 
-  private static final Log LOG = LogFactory.getLog(LogAggregationService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(LogAggregationService.class);
   private static final long MIN_LOG_ROLLING_INTERVAL = 3600;
   // This configuration is for debug and test purpose. By setting
   // this configuration as true. We can break the lower bound of

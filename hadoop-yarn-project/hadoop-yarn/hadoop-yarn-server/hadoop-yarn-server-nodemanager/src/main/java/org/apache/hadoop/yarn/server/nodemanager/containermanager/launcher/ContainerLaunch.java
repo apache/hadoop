@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -36,8 +38,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -89,7 +89,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class ContainerLaunch implements Callable<Integer> {
 
-  private static final Log LOG = LogFactory.getLog(ContainerLaunch.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerLaunch.class);
 
   public static final String CONTAINER_SCRIPT =
     Shell.appendScriptExtension("launch_container");
@@ -269,7 +270,8 @@ public class ContainerLaunch implements Callable<Integer> {
         creds.writeTokenStorageToStream(tokensOutStream);
         // /////////// End of writing out container-tokens
       } finally {
-        IOUtils.cleanup(LOG, containerScriptOutStream, tokensOutStream);
+        IOUtils.cleanupWithLogger(LOG, containerScriptOutStream,
+            tokensOutStream);
       }
 
       ret = launchContainer(new ContainerStartContext.Builder()
@@ -518,7 +520,7 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked")
   protected void handleContainerExitWithFailure(ContainerId containerID,
       int ret, Path containerLogDir, StringBuilder diagnosticInfo) {
-    LOG.warn(diagnosticInfo);
+    LOG.warn(diagnosticInfo.toString());
 
     String errorFileNamePattern =
         conf.get(YarnConfiguration.NM_CONTAINER_STDERR_PATTERN,
@@ -569,7 +571,7 @@ public class ContainerLaunch implements Callable<Integer> {
     } catch (IOException e) {
       LOG.error("Failed to get tail of the container's error log file", e);
     } finally {
-      IOUtils.cleanup(LOG, errorFileIS);
+      IOUtils.cleanupWithLogger(LOG, errorFileIS);
     }
 
     this.dispatcher.getEventHandler()

@@ -27,6 +27,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,8 +42,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
@@ -137,8 +137,8 @@ import org.junit.Test;
  * </ol>
  */
 public class TestLinuxContainerExecutor {
-  private static final Log LOG = LogFactory
-    .getLog(TestLinuxContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestLinuxContainerExecutor.class);
 
   private static File workSpace;
   static {

@@ -23,9 +23,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -45,8 +45,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class NMTokenSecretManagerInNM extends BaseNMTokenSecretManager {
 
-  private static final Log LOG = LogFactory
-    .getLog(NMTokenSecretManagerInNM.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMTokenSecretManagerInNM.class);
   
   private MasterKeyData previousMasterKey;
   

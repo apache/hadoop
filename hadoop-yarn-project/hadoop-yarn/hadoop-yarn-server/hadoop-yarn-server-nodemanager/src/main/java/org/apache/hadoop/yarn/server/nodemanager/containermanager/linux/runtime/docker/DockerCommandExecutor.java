@@ -16,13 +16,13 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -30,7 +30,8 @@ import java.util.Map;
  * Utility class for executing common docker operations.
  */
 public final class DockerCommandExecutor {
-  private static final Log LOG = LogFactory.getLog(DockerCommandExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(DockerCommandExecutor.class);
 
   /**
    * Potential states that the docker status can return.

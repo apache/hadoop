@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -110,6 +109,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.slf4j.LoggerFactory;
 
 public class TestContainerManager extends BaseContainerManagerTest {
 
@@ -118,7 +118,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
 
   static {
-    LOG = LogFactory.getLog(TestContainerManager.class);
+    LOG = LoggerFactory.getLogger(TestContainerManager.class);
   }
 
   private boolean delayContainers = false;

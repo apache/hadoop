@@ -33,10 +33,10 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
@@ -174,7 +174,8 @@ public class ContainerImpl implements Container {
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
 
-  private static final Log LOG = LogFactory.getLog(ContainerImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerImpl.class);
 
 
   // whether container has been recovered after a restart

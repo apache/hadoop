@@ -22,9 +22,9 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.service.CompositeService;
@@ -50,7 +50,8 @@ import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePubli
 public class NMCollectorService extends CompositeService implements
     CollectorNodemanagerProtocol {
 
-  private static final Log LOG = LogFactory.getLog(NMCollectorService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMCollectorService.class);
 
   private final Context context;
 

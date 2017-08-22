@@ -33,9 +33,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -87,8 +87,8 @@ import org.junit.Before;
  *
  */
 public abstract class BaseAMRMProxyTest {
-  private static final Log LOG = LogFactory
-      .getLog(BaseAMRMProxyTest.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(BaseAMRMProxyTest.class);
   // The AMRMProxyService instance that will be used by all the test cases
   private MockAMRMProxyService amrmProxyService;
 

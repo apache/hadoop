@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import static org.mockito.Mockito.spy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,8 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -114,8 +114,8 @@ public abstract class BaseContainerManagerTest {
     tmpDir = new File("target", this.getClass().getSimpleName() + "-tmpDir");
   }
 
-  protected static Log LOG = LogFactory
-      .getLog(BaseContainerManagerTest.class);
+  protected static Logger LOG =
+       LoggerFactory.getLogger(BaseContainerManagerTest.class);
 
   protected static final int HTTP_PORT = 5412;
   protected Configuration conf = new YarnConfiguration();

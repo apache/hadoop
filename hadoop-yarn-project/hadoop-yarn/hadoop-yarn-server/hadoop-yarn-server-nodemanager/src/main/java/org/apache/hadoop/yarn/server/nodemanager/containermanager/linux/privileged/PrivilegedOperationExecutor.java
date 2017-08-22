@@ -22,8 +22,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privile
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -46,7 +46,8 @@ import java.util.Map;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class PrivilegedOperationExecutor {
-  private static final Log LOG = LogFactory.getLog(PrivilegedOperationExecutor
+  private static final Logger LOG =
+       LoggerFactory.getLogger(PrivilegedOperationExecutor
       .class);
   private volatile static PrivilegedOperationExecutor instance;
 

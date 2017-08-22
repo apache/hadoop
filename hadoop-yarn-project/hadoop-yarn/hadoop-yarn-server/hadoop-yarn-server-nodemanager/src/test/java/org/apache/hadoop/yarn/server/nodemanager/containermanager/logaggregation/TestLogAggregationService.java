@@ -60,7 +60,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -137,6 +136,7 @@ import org.mockito.Mockito;
 import org.eclipse.jetty.util.MultiException;
 
 import com.google.common.base.Supplier;
+import org.slf4j.LoggerFactory;
 
 //@Ignore
 public class TestLogAggregationService extends BaseContainerManagerTest {
@@ -144,7 +144,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   private Map<ApplicationAccessType, String> acls = createAppAcls();
   
   static {
-    LOG = LogFactory.getLog(TestLogAggregationService.class);
+    LOG = LoggerFactory.getLogger(TestLogAggregationService.class);
   }
 
   private static RecordFactory recordFactory = RecordFactoryProvider

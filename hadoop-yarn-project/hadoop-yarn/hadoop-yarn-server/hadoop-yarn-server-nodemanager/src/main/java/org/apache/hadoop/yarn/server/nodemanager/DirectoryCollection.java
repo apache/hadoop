@@ -33,11 +33,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileContext;
@@ -55,7 +55,8 @@ import com.google.common.annotations.VisibleForTesting;
  * Manages a list of local storage directories.
  */
 public class DirectoryCollection {
-  private static final Log LOG = LogFactory.getLog(DirectoryCollection.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(DirectoryCollection.class);
 
   private final Configuration conf;
   private final DiskValidator diskValidator;
