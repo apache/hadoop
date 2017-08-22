@@ -26,8 +26,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +45,8 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class on the NodeManager side that manages adding and removing collectors and
@@ -55,8 +55,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class NodeTimelineCollectorManager extends TimelineCollectorManager {
-  private static final Log LOG =
-      LogFactory.getLog(NodeTimelineCollectorManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodeTimelineCollectorManager.class);
 
   // REST server for this collector manager.
   private HttpServer2 timelineRestServer;

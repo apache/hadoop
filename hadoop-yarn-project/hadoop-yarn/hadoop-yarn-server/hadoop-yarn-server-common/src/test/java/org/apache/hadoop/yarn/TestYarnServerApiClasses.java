@@ -180,14 +180,14 @@ public class TestYarnServerApiClasses {
   @Test
   public void testNodeHeartbeatResponsePBImplWithDecreasedContainers() {
     NodeHeartbeatResponsePBImpl original = new NodeHeartbeatResponsePBImpl();
-    original.addAllContainersToDecrease(
+    original.addAllContainersToUpdate(
         Arrays.asList(getDecreasedContainer(1, 2, 2048, 2),
             getDecreasedContainer(2, 3, 1024, 1)));
     NodeHeartbeatResponsePBImpl copy =
         new NodeHeartbeatResponsePBImpl(original.getProto());
-    assertEquals(1, copy.getContainersToDecrease().get(0)
+    assertEquals(1, copy.getContainersToUpdate().get(0)
         .getId().getContainerId());
-    assertEquals(1024, copy.getContainersToDecrease().get(1)
+    assertEquals(1024, copy.getContainersToUpdate().get(1)
         .getResource().getMemorySize());
   }
 

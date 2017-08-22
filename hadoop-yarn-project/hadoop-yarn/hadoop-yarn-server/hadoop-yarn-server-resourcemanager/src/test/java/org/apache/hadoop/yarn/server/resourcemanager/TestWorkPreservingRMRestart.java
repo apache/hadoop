@@ -1324,11 +1324,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     nm1.nodeHeartbeat(true);
     List<Container> conts = am0.allocate(new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>()).getAllocatedContainers();
-    while (conts.size() == 0) {
+    while (conts.size() < 2) {
       nm1.nodeHeartbeat(true);
       conts.addAll(am0.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers());
-      Thread.sleep(500);
+      Thread.sleep(100);
     }
 
     // am failed,and relaunch it
@@ -1426,14 +1426,12 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     nm1.nodeHeartbeat(true);
     List<Container> conts = am0.allocate(new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>()).getAllocatedContainers();
-    Assert.assertTrue(conts.isEmpty());
-    while (conts.size() == 0) {
+    while (conts.size() < 2) {
       nm1.nodeHeartbeat(true);
       conts.addAll(am0.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers());
-      Thread.sleep(500);
+      Thread.sleep(100);
     }
-    Assert.assertFalse(conts.isEmpty());
 
     // start new RM
     rm2 = new MockRM(conf, rm1.getRMStateStore());

@@ -27,8 +27,6 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
@@ -54,6 +52,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The base class for reading and deserializing timeline entities from the
@@ -61,7 +61,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn
  * entities that are being requested.
  */
 public abstract class TimelineEntityReader {
-  private static final Log LOG = LogFactory.getLog(TimelineEntityReader.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineEntityReader.class);
 
   private final boolean singleEntityRead;
   private TimelineReaderContext context;

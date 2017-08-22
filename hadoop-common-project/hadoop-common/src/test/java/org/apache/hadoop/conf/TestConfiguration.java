@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -48,6 +49,7 @@ import static org.junit.Assert.assertArrayEquals;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -55,6 +57,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 import org.mockito.Mockito;
 
 public class TestConfiguration extends TestCase {
@@ -78,6 +83,11 @@ public class TestConfiguration extends TestCase {
   /** Four apostrophes. */
   public static final String ESCAPED = "&apos;&#39;&#0039;&#x27;";
 
+  private static final String SENSITIVE_CONFIG_KEYS =
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
+
+  private BufferedWriter out;
+
   @Override
   protected void setUp() throws Exception {
     super.setUp();
@@ -86,6 +96,9 @@ public class TestConfiguration extends TestCase {
   
   @Override
   protected void tearDown() throws Exception {
+    if(out != null) {
+      out.close();
+    }
     super.tearDown();
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
@@ -151,14 +164,187 @@ public class TestConfiguration extends TestCase {
     startConfig();
     declareProperty("prop", "A", "A");
     endConfig();
-    
-    InputStream in1 = new ByteArrayInputStream(writer.toString().getBytes());
+
+    InputStream in1 = Mockito.spy(new ByteArrayInputStream(
+          writer.toString().getBytes()));
     Configuration conf = new Configuration(false);
     conf.addResource(in1);
     assertEquals("A", conf.get("prop"));
+    Mockito.verify(in1, Mockito.times(1)).close();
     InputStream in2 = new ByteArrayInputStream(writer.toString().getBytes());
     conf.addResource(in2);
     assertEquals("A", conf.get("prop"));
+  }
+
+  public void testFinalWarnings() throws Exception {
+    // Make a configuration file with a final property
+    StringWriter writer = new StringWriter();
+    out = new BufferedWriter(writer);
+    startConfig();
+    declareProperty("prop", "A", "A", true);
+    endConfig();
+    byte[] bytes = writer.toString().getBytes();
+    InputStream in1 = new ByteArrayInputStream(bytes);
+
+    // Make a second config file with a final property with a different value
+    writer = new StringWriter();
+    out = new BufferedWriter(writer);
+    startConfig();
+    declareProperty("prop", "BB", "BB", true);
+    endConfig();
+    byte[] bytes2 = writer.toString().getBytes();
+    InputStream in2 = new ByteArrayInputStream(bytes2);
+
+    // Attach our own log appender so we can verify output
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    try {
+      // Add the 2 different resources - this should generate a warning
+      conf.addResource(in1);
+      conf.addResource(in2);
+      assertEquals("should see the first value", "A", conf.get("prop"));
+
+      List<LoggingEvent> events = appender.getLog();
+      assertEquals("overriding a final parameter should cause logging", 1,
+          events.size());
+      LoggingEvent loggingEvent = events.get(0);
+      String renderedMessage = loggingEvent.getRenderedMessage();
+      assertTrue("did not see expected string inside message "+ renderedMessage,
+          renderedMessage.contains("an attempt to override final parameter: "
+              + "prop;  Ignoring."));
+    } finally {
+      // Make sure the appender is removed
+      logger.removeAppender(appender);
+    }
+  }
+
+  public void testNoFinalWarnings() throws Exception {
+    // Make a configuration file with a final property
+    StringWriter writer = new StringWriter();
+    out = new BufferedWriter(writer);
+    startConfig();
+    declareProperty("prop", "A", "A", true);
+    endConfig();
+    byte[] bytes = writer.toString().getBytes();
+    // The 2 input streams both have the same config file
+    InputStream in1 = new ByteArrayInputStream(bytes);
+    InputStream in2 = new ByteArrayInputStream(bytes);
+
+    // Attach our own log appender so we can verify output
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    try {
+      // Add the resource twice from a stream - should not generate warnings
+      conf.addResource(in1);
+      conf.addResource(in2);
+      assertEquals("A", conf.get("prop"));
+
+      List<LoggingEvent> events = appender.getLog();
+      for (LoggingEvent loggingEvent : events) {
+        System.out.println("Event = " + loggingEvent.getRenderedMessage());
+      }
+      assertTrue("adding same resource twice should not cause logging",
+          events.isEmpty());
+    } finally {
+      // Make sure the appender is removed
+      logger.removeAppender(appender);
+    }
+  }
+
+
+
+  public void testFinalWarningsMultiple() throws Exception {
+    // Make a configuration file with a repeated final property
+    StringWriter writer = new StringWriter();
+    out = new BufferedWriter(writer);
+    startConfig();
+    declareProperty("prop", "A", "A", true);
+    declareProperty("prop", "A", "A", true);
+    endConfig();
+    byte[] bytes = writer.toString().getBytes();
+    InputStream in1 = new ByteArrayInputStream(bytes);
+
+    // Attach our own log appender so we can verify output
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    try {
+      // Add the resource - this should not produce a warning
+      conf.addResource(in1);
+      assertEquals("should see the value", "A", conf.get("prop"));
+
+      List<LoggingEvent> events = appender.getLog();
+      for (LoggingEvent loggingEvent : events) {
+        System.out.println("Event = " + loggingEvent.getRenderedMessage());
+      }
+      assertTrue("adding same resource twice should not cause logging",
+          events.isEmpty());
+    } finally {
+      // Make sure the appender is removed
+      logger.removeAppender(appender);
+    }
+  }
+
+  public void testFinalWarningsMultipleOverride() throws Exception {
+    // Make a configuration file with 2 final properties with different values
+    StringWriter writer = new StringWriter();
+    out = new BufferedWriter(writer);
+    startConfig();
+    declareProperty("prop", "A", "A", true);
+    declareProperty("prop", "BB", "BB", true);
+    endConfig();
+    byte[] bytes = writer.toString().getBytes();
+    InputStream in1 = new ByteArrayInputStream(bytes);
+
+    // Attach our own log appender so we can verify output
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    try {
+      // Add the resource - this should produce a warning
+      conf.addResource(in1);
+      assertEquals("should see the value", "A", conf.get("prop"));
+
+      List<LoggingEvent> events = appender.getLog();
+      assertEquals("overriding a final parameter should cause logging", 1,
+          events.size());
+      LoggingEvent loggingEvent = events.get(0);
+      String renderedMessage = loggingEvent.getRenderedMessage();
+      assertTrue("did not see expected string inside message "+ renderedMessage,
+          renderedMessage.contains("an attempt to override final parameter: "
+              + "prop;  Ignoring."));
+    } finally {
+      // Make sure the appender is removed
+      logger.removeAppender(appender);
+    }
+  }
+
+  /**
+   * A simple appender for white box testing.
+   */
+  private static class TestAppender extends AppenderSkeleton {
+    private final List<LoggingEvent> log = new ArrayList<>();
+
+    @Override public boolean requiresLayout() {
+      return false;
+    }
+
+    @Override protected void append(final LoggingEvent loggingEvent) {
+      log.add(loggingEvent);
+    }
+
+    @Override public void close() {
+    }
+
+    public List<LoggingEvent> getLog() {
+      return new ArrayList<>(log);
+    }
   }
 
   /**
@@ -701,8 +887,6 @@ public class TestConfiguration extends TestCase {
     new File(new File(relConfig).getParent()).delete();
   }
 
-  BufferedWriter out;
-	
   public void testIntegerRanges() {
     Configuration conf = new Configuration();
     conf.set("first", "-100");
@@ -1610,8 +1794,41 @@ public class TestConfiguration extends TestCase {
       assertEquals(fileResource.toString(),prop.getResource());
     }
   }
-  
-    
+
+  public void testDumpSensitiveProperty() throws IOException {
+    final String myPassword = "ThisIsMyPassword";
+    Configuration testConf = new Configuration(false);
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.password", myPassword);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    testConf.addResource(fileResource);
+
+    try (StringWriter outWriter = new StringWriter()) {
+      testConf.set(SENSITIVE_CONFIG_KEYS, "password$");
+      Configuration.dumpConfiguration(testConf, "test.password", outWriter);
+      assertFalse(outWriter.toString().contains(myPassword));
+    }
+  }
+
+  public void testDumpSensitiveConfiguration() throws IOException {
+    final String myPassword = "ThisIsMyPassword";
+    Configuration testConf = new Configuration(false);
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.password", myPassword);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    testConf.addResource(fileResource);
+
+    try (StringWriter outWriter = new StringWriter()) {
+      testConf.set(SENSITIVE_CONFIG_KEYS, "password$");
+      Configuration.dumpConfiguration(testConf, outWriter);
+      assertFalse(outWriter.toString().contains(myPassword));
+    }
+  }
+
   public void testGetValByRegex() {
     Configuration conf = new Configuration();
     String key1 = "t.abc.key1";

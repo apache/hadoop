@@ -2764,7 +2764,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  public Map<String, String> getErasureCodingCodecs() throws IOException {
     checkOpen();
     try (TraceScope ignored = tracer.newScope("getErasureCodingCodecs")) {
       return namenode.getErasureCodingCodecs();
@@ -2774,25 +2774,43 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public AddECPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
     checkOpen();
-    return namenode.addErasureCodingPolicies(policies);
+    try (TraceScope ignored = tracer.newScope("addErasureCodingPolicies")) {
+      return namenode.addErasureCodingPolicies(policies);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   public void removeErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     checkOpen();
-    namenode.removeErasureCodingPolicy(ecPolicyName);
+    try (TraceScope ignored = tracer.newScope("removeErasureCodingPolicy")) {
+      namenode.removeErasureCodingPolicy(ecPolicyName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   public void enableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     checkOpen();
-    namenode.enableErasureCodingPolicy(ecPolicyName);
+    try (TraceScope ignored = tracer.newScope("enableErasureCodingPolicy")) {
+      namenode.enableErasureCodingPolicy(ecPolicyName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class);
+    }
   }
 
   public void disableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     checkOpen();
-    namenode.disableErasureCodingPolicy(ecPolicyName);
+    try (TraceScope ignored = tracer.newScope("disableErasureCodingPolicy")) {
+      namenode.disableErasureCodingPolicy(ecPolicyName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class);
+    }
   }
 
   public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
@@ -3026,7 +3044,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    * @param src path to get the information for
    * @return Returns the policy information if file or directory on the path is
-   * erasure coded, null otherwise
+   * erasure coded, null otherwise. Null will be returned if directory or file
+   * has REPLICATION policy.
    * @throws IOException
    */
 

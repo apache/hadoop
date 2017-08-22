@@ -919,15 +919,19 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*of owner \(%u\), modification date \(%y, %Y\).( )*</expected-output>
+          <expected-output>^( |\t)*of owner \(%u\), access date \(%x, %X\).( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*%y shows UTC date as "yyyy-MM-dd HH:mm:ss" and( )*</expected-output>
+          <expected-output>^( |\t)*modification date \(%y, %Y\).( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*%Y shows milliseconds since January 1, 1970 UTC.( )*</expected-output>
+          <expected-output>^( |\t)*%x and %y show UTC date as "yyyy-MM-dd HH:mm:ss" and( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*%X and %Y show milliseconds since January 1, 1970 UTC.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

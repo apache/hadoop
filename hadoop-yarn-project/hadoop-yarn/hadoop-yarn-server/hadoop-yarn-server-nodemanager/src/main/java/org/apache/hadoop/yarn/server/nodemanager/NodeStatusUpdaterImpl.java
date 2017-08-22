@@ -639,7 +639,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   public void removeOrTrackCompletedContainersFromContext(
       List<ContainerId> containerIds) throws IOException {
     Set<ContainerId> removedContainers = new HashSet<ContainerId>();
-    Set<ContainerId> removedNullContainers = new HashSet<ContainerId>();
 
     pendingContainersToRemove.addAll(containerIds);
     Iterator<ContainerId> iter = pendingContainersToRemove.iterator();
@@ -649,7 +648,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       Container nmContainer = context.getContainers().get(containerId);
       if (nmContainer == null) {
         iter.remove();
-        removedNullContainers.add(containerId);
       } else if (nmContainer.getContainerState().equals(
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.DONE)) {
         context.getContainers().remove(containerId);
@@ -712,11 +710,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   public void removeVeryOldStoppedContainersFromCache() {
     synchronized (recentlyStoppedContainers) {
       long currentTime = System.currentTimeMillis();
-      Iterator<ContainerId> i =
-          recentlyStoppedContainers.keySet().iterator();
+      Iterator<Entry<ContainerId, Long>> i =
+          recentlyStoppedContainers.entrySet().iterator();
       while (i.hasNext()) {
-        ContainerId cid = i.next();
-        if (recentlyStoppedContainers.get(cid) < currentTime) {
+        Entry<ContainerId, Long> mapEntry = i.next();
+        ContainerId cid = mapEntry.getKey();
+        if (mapEntry.getValue() < currentTime) {
           if (!context.getContainers().containsKey(cid)) {
             i.remove();
             try {
@@ -1100,12 +1099,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   parseCredentials(systemCredentials));
             }
             List<org.apache.hadoop.yarn.api.records.Container>
-                containersToDecrease = response.getContainersToDecrease();
-            if (!containersToDecrease.isEmpty()) {
+                containersToUpdate = response.getContainersToUpdate();
+            if (!containersToUpdate.isEmpty()) {
               dispatcher.getEventHandler().handle(
-                  new CMgrDecreaseContainersResourceEvent(
-                      containersToDecrease)
-              );
+                  new CMgrUpdateContainersEvent(containersToUpdate));
             }
 
             // SignalContainer request originally comes from end users via

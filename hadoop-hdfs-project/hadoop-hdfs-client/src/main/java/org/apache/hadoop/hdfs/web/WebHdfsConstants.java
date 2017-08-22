@@ -32,7 +32,13 @@ public class WebHdfsConstants {
     FILE, DIRECTORY, SYMLINK;
 
     static PathType valueOf(HdfsFileStatus status) {
-      return status.isDir()? DIRECTORY: status.isSymlink()? SYMLINK: FILE;
+      if (status.isDirectory()) {
+        return DIRECTORY;
+      }
+      if (status.isSymlink()) {
+        return SYMLINK;
+      }
+      return FILE;
     }
   }
 }

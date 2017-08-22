@@ -84,11 +84,11 @@ public class AppController extends Controller implements AMParams {
   public void info() {
     AppInfo info = new AppInfo(app, app.context);
     info("Application Master Overview").
-      _("Application ID:", info.getId()).
-      _("Application Name:", info.getName()).
-      _("User:", info.getUser()).
-      _("Started on:", Times.format(info.getStartTime())).
-      _("Elasped: ", org.apache.hadoop.util.StringUtils.formatTime(
+        __("Application ID:", info.getId()).
+        __("Application Name:", info.getName()).
+        __("User:", info.getUser()).
+        __("Started on:", Times.format(info.getStartTime())).
+        __("Elasped: ", org.apache.hadoop.util.StringUtils.formatTime(
           info.getElapsedTime() ));
     render(InfoPage.class);
   }

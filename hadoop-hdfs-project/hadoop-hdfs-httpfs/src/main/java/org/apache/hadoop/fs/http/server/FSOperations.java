@@ -669,7 +669,7 @@ public class FSOperations {
     /**
      * Creates a list-status executor.
      *
-     * @param path the directory to retrieve the status of its contents.
+     * @param path the directory/file to retrieve the status of its contents.
      * @param filter glob filter to use.
      *
      * @throws IOException thrown if the filter expression is incorrect.
@@ -1492,4 +1492,109 @@ public class FSOperations {
       return JsonUtil.toJsonMap(locations);
     }
   }
+
+  /**
+   *  Executor that performs a createSnapshot FileSystemAccess operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSCreateSnapshot implements
+      FileSystemAccess.FileSystemExecutor<String> {
+
+    private Path path;
+    private String snapshotName;
+
+    /**
+     * Creates a createSnapshot executor.
+     * @param path directory path to be snapshotted.
+     * @param snapshotName the snapshot name.
+     */
+    public FSCreateSnapshot(String path, String snapshotName) {
+      this.path = new Path(path);
+      this.snapshotName = snapshotName;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return <code>Path</code> the complete path for newly created snapshot
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      Path snapshotPath = fs.createSnapshot(path, snapshotName);
+      JSONObject json = toJSON(HttpFSFileSystem.HOME_DIR_JSON,
+          snapshotPath.toString());
+      return json.toJSONString().replaceAll("\\\\", "");
+    }
+  }
+
+  /**
+   *  Executor that performs a deleteSnapshot FileSystemAccess operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSDeleteSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private String snapshotName;
+
+    /**
+     * Creates a deleteSnapshot executor.
+     * @param path path for the snapshot to be deleted.
+     * @param snapshotName snapshot name.
+     */
+    public FSDeleteSnapshot(String path, String snapshotName) {
+      this.path = new Path(path);
+      this.snapshotName = snapshotName;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return void
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.deleteSnapshot(path, snapshotName);
+      return null;
+    }
+  }
+
+  /**
+   *  Executor that performs a renameSnapshot FileSystemAccess operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSRenameSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+    private Path path;
+    private String oldSnapshotName;
+    private String snapshotName;
+
+    /**
+     * Creates a renameSnapshot executor.
+     * @param path directory path of the snapshot to be renamed.
+     * @param oldSnapshotName current snapshot name.
+     * @param snapshotName new snapshot name to be set.
+     */
+    public FSRenameSnapshot(String path, String oldSnapshotName,
+                            String snapshotName) {
+      this.path = new Path(path);
+      this.oldSnapshotName = oldSnapshotName;
+      this.snapshotName = snapshotName;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return void
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.renameSnapshot(path, oldSnapshotName, snapshotName);
+      return null;
+    }
+  }
+
 }

@@ -25,8 +25,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
@@ -62,7 +62,7 @@ final class FSDirErasureCodingOp {
 
   /**
    * Check if the ecPolicyName is valid and enabled, return the corresponding
-   * EC policy if is.
+   * EC policy if is, including the REPLICATION EC policy.
    * @param fsn namespace
    * @param ecPolicyName name of EC policy to be checked
    * @return an erasure coding policy if ecPolicyName is valid and enabled
@@ -295,7 +295,12 @@ final class FSDirErasureCodingOp {
     if (iip.getLastINode() == null) {
       throw new FileNotFoundException("Path not found: " + iip.getPath());
     }
-    return getErasureCodingPolicyForPath(fsd, iip);
+
+    ErasureCodingPolicy ecPolicy = getErasureCodingPolicyForPath(fsd, iip);
+    if (ecPolicy != null && ecPolicy.isReplicationPolicy()) {
+      ecPolicy = null;
+    }
+    return ecPolicy;
   }
 
   /**
@@ -312,7 +317,8 @@ final class FSDirErasureCodingOp {
   }
 
   /**
-   * Get the erasure coding policy. This does not do any permission checking.
+   * Get the erasure coding policy, including the REPLICATION policy. This does
+   * not do any permission checking.
    *
    * @param fsn namespace
    * @param iip inodes in the path containing the file
@@ -344,12 +350,13 @@ final class FSDirErasureCodingOp {
    * @param fsn namespace
    * @return {@link java.util.HashMap} array
    */
-  static HashMap<String, String> getErasureCodingCodecs(final FSNamesystem fsn)
+  static Map<String, String> getErasureCodingCodecs(final FSNamesystem fsn)
       throws IOException {
     assert fsn.hasReadLock();
     return CodecRegistry.getInstance().getCodec2CoderCompactMap();
   }
 
+  //return erasure coding policy for path, including REPLICATION policy
   private static ErasureCodingPolicy getErasureCodingPolicyForPath(
       FSDirectory fsd, INodesInPath iip) throws IOException {
     Preconditions.checkNotNull(iip, "INodes cannot be null");

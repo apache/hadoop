@@ -17,23 +17,28 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.Serializable;
+
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 
 /**
  * A policy about how to write/read/code an erasure coding file.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class ErasureCodingPolicy {
+public final class ErasureCodingPolicy implements Serializable {
 
+  private static final long serialVersionUID = 0x0079fe4e;
+
+  private String name;
   private final ECSchema schema;
   private final int cellSize;
-  private String name;
   private byte id;
 
   public ErasureCodingPolicy(String name, ECSchema schema,
@@ -101,6 +106,10 @@ public final class ErasureCodingPolicy {
 
   public void setId(byte id) {
     this.id = id;
+  }
+
+  public boolean isReplicationPolicy() {
+    return (id == ErasureCodeConstants.REPLICATION_POLICY_ID);
   }
 
   @Override

@@ -541,7 +541,7 @@ class FSDirWriteFileOp {
           ecPolicy = FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
               fsd.getFSNamesystem(), existing);
         }
-        if (ecPolicy != null) {
+        if (ecPolicy != null && (!ecPolicy.isReplicationPolicy())) {
           isStriped = true;
         }
       }

@@ -32,6 +32,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -886,6 +887,11 @@ public abstract class FSAclBaseTest {
     FsPermission perm = inode.getFsPermission();
     assertNotNull(perm);
     assertEquals(0755, perm.toShort());
+    FileStatus stat = fs.getFileStatus(path);
+    assertFalse(stat.hasAcl());
+    assertFalse(stat.isEncrypted());
+    assertFalse(stat.isErasureCoded());
+    // backwards-compat check
     assertEquals(0755, perm.toExtendedShort());
     assertAclFeature(false);
   }
@@ -903,7 +909,7 @@ public abstract class FSAclBaseTest {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "foo", ALL),
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
-    assertPermission(filePath, (short)010640);
+    assertPermission(filePath, (short)010660);
     assertAclFeature(filePath, true);
   }
 
@@ -1003,7 +1009,7 @@ public abstract class FSAclBaseTest {
       aclEntry(DEFAULT, GROUP, READ_EXECUTE),
       aclEntry(DEFAULT, MASK, ALL),
       aclEntry(DEFAULT, OTHER, NONE) }, returned);
-    assertPermission(dirPath, (short)010750);
+    assertPermission(dirPath, (short)010770);
     assertAclFeature(dirPath, true);
   }
 
@@ -1120,7 +1126,7 @@ public abstract class FSAclBaseTest {
     s = fs.getAclStatus(filePath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission(filePath, (short)010640);
+    assertPermission(filePath, (short)010660);
     assertAclFeature(filePath, true);
   }
 
@@ -1149,7 +1155,7 @@ public abstract class FSAclBaseTest {
     s = fs.getAclStatus(subdirPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission(subdirPath, (short)010750);
+    assertPermission(subdirPath, (short)010770);
     assertAclFeature(subdirPath, true);
   }
 

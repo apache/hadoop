@@ -307,7 +307,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           .getConfiguredResourceHandlerChain(conf);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
-            == null));
+            != null));
       }
       if (resourceHandlerChain != null) {
         LOG.debug("Bootstrapping resource handler chain");

@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -2515,8 +2514,6 @@ public class DistributedFileSystem extends FileSystem {
   public void setErasureCodingPolicy(final Path path,
       final String ecPolicyName) throws IOException {
     Path absF = fixRelativePart(path);
-    Preconditions.checkNotNull(ecPolicyName, "Erasure coding policy cannot be" +
-        " null.");
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException {
@@ -2543,7 +2540,8 @@ public class DistributedFileSystem extends FileSystem {
    *
    * @param path The path of the file or directory
    * @return Returns the policy information if file or directory on the path
-   * is erasure coded, null otherwise
+   * is erasure coded, null otherwise. Null will be returned if directory or
+   * file has REPLICATION policy.
    * @throws IOException
    */
   public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
@@ -2570,7 +2568,8 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Retrieve all the erasure coding policies supported by this file system.
+   * Retrieve all the erasure coding policies supported by this file system,
+   * excluding REPLICATION policy.
    *
    * @return all erasure coding policies supported by this file system.
    * @throws IOException
@@ -2587,7 +2586,7 @@ public class DistributedFileSystem extends FileSystem {
    * @return all erasure coding codecs and coders supported by this file system.
    * @throws IOException
    */
-  public HashMap<String, String> getAllErasureCodingCodecs()
+  public Map<String, String> getAllErasureCodingCodecs()
       throws IOException {
     return dfs.getErasureCodingCodecs();
   }
@@ -2892,7 +2891,8 @@ public class DistributedFileSystem extends FileSystem {
      */
     @Override
     public FSDataOutputStream build() throws IOException {
-      if (getFlags().contains(CreateFlag.CREATE)) {
+      if (getFlags().contains(CreateFlag.CREATE) ||
+          getFlags().contains(CreateFlag.OVERWRITE)) {
         if (isRecursive()) {
           return dfs.create(getPath(), getPermission(), getFlags(),
               getBufferSize(), getReplication(), getBlockSize(),

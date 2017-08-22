@@ -42,8 +42,8 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_BLOCK_SIZE;
  * org.apache.hadoop.fs.adl.live testing package.
  */
 public class TestGetFileStatus extends AdlMockWebServer {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestGetFileStatus.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestGetFileStatus.class);
 
   @Test
   public void getFileStatusReturnsAsExpected()
@@ -72,33 +72,31 @@ public class TestGetFileStatus extends AdlMockWebServer {
         fileStatus.isErasureCoded());
   }
 
-    @Test
-    public void getFileStatusAclBit()
-            throws URISyntaxException, IOException {
-        // With ACLBIT set to true
-        getMockServer().enqueue(new MockResponse().setResponseCode(200)
-                .setBody(TestADLResponseData.getGetFileStatusJSONResponse(true)));
-        long startTime = Time.monotonicNow();
-        FileStatus fileStatus = getMockAdlFileSystem()
-                .getFileStatus(new Path("/test1/test2"));
-        long endTime = Time.monotonicNow();
-        LOG.debug("Time : " + (endTime - startTime));
-        Assert.assertTrue(fileStatus.isFile());
-        Assert.assertEquals(true, fileStatus.getPermission().getAclBit());
-        Assert.assertEquals(fileStatus.hasAcl(),
-            fileStatus.getPermission().getAclBit());
+  @Test
+  public void getFileStatusAclBit() throws URISyntaxException, IOException {
+    // With ACLBIT set to true
+    getMockServer().enqueue(new MockResponse().setResponseCode(200)
+            .setBody(TestADLResponseData.getGetFileStatusJSONResponse(true)));
+    long startTime = Time.monotonicNow();
+    FileStatus fileStatus = getMockAdlFileSystem()
+            .getFileStatus(new Path("/test1/test2"));
+    long endTime = Time.monotonicNow();
+    LOG.debug("Time : " + (endTime - startTime));
+    Assert.assertTrue(fileStatus.isFile());
+    Assert.assertTrue(fileStatus.hasAcl());
+    Assert.assertTrue(fileStatus.getPermission().getAclBit());
 
-        // With ACLBIT set to false
-        getMockServer().enqueue(new MockResponse().setResponseCode(200)
-                .setBody(TestADLResponseData.getGetFileStatusJSONResponse(false)));
-        startTime = Time.monotonicNow();
-        fileStatus = getMockAdlFileSystem()
-                .getFileStatus(new Path("/test1/test2"));
-        endTime = Time.monotonicNow();
-        LOG.debug("Time : " + (endTime - startTime));
-        Assert.assertTrue(fileStatus.isFile());
-        Assert.assertEquals(false, fileStatus.getPermission().getAclBit());
-        Assert.assertEquals(fileStatus.hasAcl(),
-            fileStatus.getPermission().getAclBit());
-    }
+    // With ACLBIT set to false
+    getMockServer().enqueue(new MockResponse().setResponseCode(200)
+            .setBody(TestADLResponseData.getGetFileStatusJSONResponse(false)));
+    startTime = Time.monotonicNow();
+    fileStatus = getMockAdlFileSystem()
+            .getFileStatus(new Path("/test1/test2"));
+    endTime = Time.monotonicNow();
+    LOG.debug("Time : " + (endTime - startTime));
+    Assert.assertTrue(fileStatus.isFile());
+    Assert.assertFalse(fileStatus.hasAcl());
+    Assert.assertFalse(fileStatus.getPermission().getAclBit());
+  }
+
 }

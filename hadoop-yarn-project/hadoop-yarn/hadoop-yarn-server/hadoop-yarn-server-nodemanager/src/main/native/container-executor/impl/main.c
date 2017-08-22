@@ -19,6 +19,9 @@
 #include "config.h"
 #include "configuration.h"
 #include "container-executor.h"
+#include "util.h"
+#include "modules/gpu/gpu-module.h"
+#include "modules/cgroups/cgroups-operations.h"
 
 #include <errno.h>
 #include <grp.h>
@@ -252,6 +255,14 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     return INVALID_ARGUMENT_NUMBER;
   }
 
+  /*
+   * Check if it is a known module, if yes, redirect to module
+   */
+  if (strcmp("--module-gpu", argv[1]) == 0) {
+    return handle_gpu_request(&update_cgroups_parameters, "gpu", argc - 1,
+           &argv[1]);
+  }
+
   if (strcmp("--checksetup", argv[1]) == 0) {
     *operation = CHECK_SETUP;
     return 0;
@@ -331,6 +342,7 @@ static int validate_arguments(int argc, char **argv , int *operation) {
         return FEATURE_DISABLED;
     }
   }
+
   /* Now we have to validate 'run as user' operations that don't use
     a 'long option' - we should fix this at some point. The validation/argument
     parsing here is extensive enough that it done in a separate function */
@@ -420,7 +432,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
       cmd_input.resources_key = resources_key;
       cmd_input.resources_value = resources_value;
-      cmd_input.resources_values = extract_values(resources_value);
+      cmd_input.resources_values = split(resources_value);
       *operation = RUN_AS_USER_LAUNCH_DOCKER_CONTAINER;
       return 0;
    } else {
@@ -471,7 +483,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
     cmd_input.resources_key = resources_key;
     cmd_input.resources_value = resources_value;
-    cmd_input.resources_values = extract_values(resources_value);
+    cmd_input.resources_values = split(resources_value);
     *operation = RUN_AS_USER_LAUNCH_CONTAINER;
     return 0;
 
@@ -521,7 +533,7 @@ int main(int argc, char **argv) {
   open_log_files();
   assert_valid_setup(argv[0]);
 
-  int operation;
+  int operation = -1;
   int ret = validate_arguments(argc, argv, &operation);
 
   if (ret != 0) {
@@ -565,8 +577,8 @@ int main(int argc, char **argv) {
     exit_code = initialize_app(cmd_input.yarn_user_name,
                             cmd_input.app_id,
                             cmd_input.cred_file,
-                            extract_values(cmd_input.local_dirs),
-                            extract_values(cmd_input.log_dirs),
+                            split(cmd_input.local_dirs),
+                            split(cmd_input.log_dirs),
                             argv + optind);
     break;
   case RUN_AS_USER_LAUNCH_DOCKER_CONTAINER:
@@ -591,8 +603,8 @@ int main(int argc, char **argv) {
                       cmd_input.script_file,
                       cmd_input.cred_file,
                       cmd_input.pid_file,
-                      extract_values(cmd_input.local_dirs),
-                      extract_values(cmd_input.log_dirs),
+                      split(cmd_input.local_dirs),
+                      split(cmd_input.log_dirs),
                       cmd_input.docker_command_file,
                       cmd_input.resources_key,
                       cmd_input.resources_values);
@@ -619,8 +631,8 @@ int main(int argc, char **argv) {
                     cmd_input.script_file,
                     cmd_input.cred_file,
                     cmd_input.pid_file,
-                    extract_values(cmd_input.local_dirs),
-                    extract_values(cmd_input.log_dirs),
+                    split(cmd_input.local_dirs),
+                    split(cmd_input.log_dirs),
                     cmd_input.resources_key,
                     cmd_input.resources_values);
     free(cmd_input.resources_key);

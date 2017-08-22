@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +30,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -48,7 +48,8 @@ import java.util.concurrent.TimeUnit;
 @Private
 @Unstable
 public class AppLevelTimelineCollector extends TimelineCollector {
-  private static final Log LOG = LogFactory.getLog(TimelineCollector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineCollector.class);
 
   private final static int AGGREGATION_EXECUTOR_NUM_THREADS = 1;
   private final static int AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS = 15;

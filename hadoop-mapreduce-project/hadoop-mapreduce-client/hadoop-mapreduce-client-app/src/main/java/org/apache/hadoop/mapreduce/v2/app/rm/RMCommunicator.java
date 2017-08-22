@@ -215,9 +215,7 @@ public abstract class RMCommunicator extends AbstractService
     }
     LOG.info("Setting job diagnostics to " + sb.toString());
 
-    String historyUrl =
-        MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(getConfig(),
-            context.getApplicationID());
+    String historyUrl = context.getHistoryUrl();
     LOG.info("History url is " + historyUrl);
     FinishApplicationMasterRequest request =
         FinishApplicationMasterRequest.newInstance(finishState,

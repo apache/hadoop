@@ -370,7 +370,7 @@ public class TestNameNodeMXBean {
           cluster.getDataNodes().get(0).getDisplayName());
       fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
 
-      // Wait for the DecommissionManager to complete refresh nodes
+      // Wait for the DatanodeAdminManager to complete refresh nodes
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
         public Boolean get() {
@@ -399,7 +399,7 @@ public class TestNameNodeMXBean {
       assertEquals(0, fsn.getNumDecomLiveDataNodes());
       assertEquals(0, fsn.getNumDecomDeadDataNodes());
 
-      // Wait for the DecommissionManager to complete check
+      // Wait for the DatanodeAdminManager to complete check
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
         public Boolean get() {
@@ -501,7 +501,7 @@ public class TestNameNodeMXBean {
         assertEquals(0, fsn.getNumInMaintenanceDeadDataNodes());
       }
 
-      // Wait for the DecommissionManager to complete check
+      // Wait for the DatanodeAdminManager to complete check
       // and perform state transition
       while (fsn.getNumInMaintenanceLiveDataNodes() != 1) {
         Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
@@ -809,10 +809,10 @@ public class TestNameNodeMXBean {
       long totalMissingBlocks = cluster.getNamesystem().getMissingBlocksCount();
       Long replicaMissingBlocks =
           (Long) mbs.getAttribute(replStateMBeanName,
-              "MissingBlocksStat");
+              "MissingReplicatedBlocks");
       Long ecMissingBlocks =
           (Long) mbs.getAttribute(ecBlkGrpStateMBeanName,
-              "MissingECBlockGroupsStat");
+              "MissingECBlockGroups");
       assertEquals("Unexpected total missing blocks!",
           expectedMissingBlockCount, totalMissingBlocks);
       assertEquals("Unexpected total missing blocks!",
@@ -826,10 +826,10 @@ public class TestNameNodeMXBean {
           cluster.getNamesystem().getCorruptReplicaBlocks();
       Long replicaCorruptBlocks =
           (Long) mbs.getAttribute(replStateMBeanName,
-              "CorruptBlocksStat");
+              "CorruptReplicatedBlocks");
       Long ecCorruptBlocks =
           (Long) mbs.getAttribute(ecBlkGrpStateMBeanName,
-              "CorruptECBlockGroupsStat");
+              "CorruptECBlockGroups");
       assertEquals("Unexpected total corrupt blocks!",
           expectedCorruptBlockCount, totalCorruptBlocks);
       assertEquals("Unexpected total corrupt blocks!",

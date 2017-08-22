@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -149,6 +150,10 @@ public abstract class AbstractYarnScheduler
    */
   protected final ReentrantReadWriteLock.WriteLock writeLock;
 
+  // If set to true, then ALL container updates will be automatically sent to
+  // the NM in the next heartbeat.
+  private boolean autoUpdateContainers = false;
+
   /**
    * Construct the service.
    *
@@ -177,6 +182,9 @@ public abstract class AbstractYarnScheduler
         configuredMaximumAllocationWaitTime);
     maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
     createReleaseCache();
+    autoUpdateContainers =
+        conf.getBoolean(YarnConfiguration.RM_AUTO_UPDATE_CONTAINERS,
+            YarnConfiguration.DEFAULT_RM_AUTO_UPDATE_CONTAINERS);
     super.serviceInit(conf);
   }
 
@@ -232,6 +240,10 @@ public abstract class AbstractYarnScheduler
       }
     };
     return nodeTracker.getNodes(nodeFilter);
+  }
+
+  public boolean shouldContainersBeAutoUpdated() {
+    return this.autoUpdateContainers;
   }
 
   @Override
@@ -322,6 +334,7 @@ public abstract class AbstractYarnScheduler
 
   }
 
+  // TODO: Rename it to getCurrentApplicationAttempt
   public T getApplicationAttempt(ApplicationAttemptId applicationAttemptId) {
     SchedulerApplication<T> app = applications.get(
         applicationAttemptId.getApplicationId());
@@ -518,12 +531,10 @@ public abstract class AbstractYarnScheduler
     container.setVersion(status.getVersion());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
-    RMContainer rmContainer =
-        new RMContainerImpl(container,
-            SchedulerRequestKey.extractFrom(container), attemptId,
-            node.getNodeID(), applications.get(
-            attemptId.getApplicationId()).getUser(), rmContext,
-            status.getCreationTime(), status.getNodeLabelExpression());
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), attemptId, node.getNodeID(),
+        applications.get(attemptId.getApplicationId()).getUser(), rmContext,
+        status.getCreationTime(), status.getNodeLabelExpression());
     return rmContainer;
   }
 

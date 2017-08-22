@@ -242,7 +242,7 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForContainersDecreasing(
+    public void updateNodeHeartbeatResponseForUpdatedContainers(
         NodeHeartbeatResponse response) {
       
     }

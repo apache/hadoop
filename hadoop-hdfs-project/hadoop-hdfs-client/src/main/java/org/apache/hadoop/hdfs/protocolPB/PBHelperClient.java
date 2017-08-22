@@ -104,6 +104,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntrySco
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.FsActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclStatusProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.FsPermissionProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
@@ -149,7 +150,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto.Sto
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FsPermissionProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FsServerDefaultsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.FileType;
@@ -1142,7 +1142,7 @@ public class PBHelperClient {
   }
 
   public static FsPermission convert(FsPermissionProto p) {
-    return new FsPermissionExtension((short)p.getPerm());
+    return new FsPermission((short)p.getPerm());
   }
 
   private static Event.CreateEvent.INodeType createTypeConvert(
@@ -1501,10 +1501,14 @@ public class PBHelperClient {
       return null;
     }
     final HdfsFileStatusProto status = sdirStatusProto.getDirStatus();
+    EnumSet<HdfsFileStatus.Flags> flags = status.hasFlags()
+        ? convertFlags(status.getFlags())
+        : convertFlags(status.getPermission());
     return new SnapshottableDirectoryStatus(
         status.getModificationTime(),
         status.getAccessTime(),
         convert(status.getPermission()),
+        flags,
         status.getOwner(),
         status.getGroup(),
         status.getPath().toByteArray(),
@@ -1546,17 +1550,23 @@ public class PBHelperClient {
   }
 
   public static FsPermissionProto convert(FsPermission p) {
-    return FsPermissionProto.newBuilder().setPerm(p.toExtendedShort()).build();
+    return FsPermissionProto.newBuilder().setPerm(p.toShort()).build();
   }
 
   public static HdfsFileStatus convert(HdfsFileStatusProto fs) {
-    if (fs == null)
+    if (fs == null) {
       return null;
+    }
+    EnumSet<HdfsFileStatus.Flags> flags = fs.hasFlags()
+        ? convertFlags(fs.getFlags())
+        : convertFlags(fs.getPermission());
     return new HdfsLocatedFileStatus(
         fs.getLength(), fs.getFileType().equals(FileType.IS_DIR),
         fs.getBlockReplication(), fs.getBlocksize(),
         fs.getModificationTime(), fs.getAccessTime(),
-        convert(fs.getPermission()), fs.getOwner(), fs.getGroup(),
+        convert(fs.getPermission()),
+        flags,
+        fs.getOwner(), fs.getGroup(),
         fs.getFileType().equals(FileType.IS_SYMLINK) ?
             fs.getSymlink().toByteArray() : null,
         fs.getPath().toByteArray(),
@@ -1567,6 +1577,47 @@ public class PBHelperClient {
         fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
             : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
         fs.hasEcPolicy() ? convertErasureCodingPolicy(fs.getEcPolicy()) : null);
+  }
+
+  private static EnumSet<HdfsFileStatus.Flags> convertFlags(int flags) {
+    EnumSet<HdfsFileStatus.Flags> f =
+        EnumSet.noneOf(HdfsFileStatus.Flags.class);
+    for (HdfsFileStatusProto.Flags pbf : HdfsFileStatusProto.Flags.values()) {
+      if ((pbf.getNumber() & flags) != 0) {
+        switch (pbf) {
+        case HAS_ACL:
+          f.add(HdfsFileStatus.Flags.HAS_ACL);
+          break;
+        case HAS_CRYPT:
+          f.add(HdfsFileStatus.Flags.HAS_CRYPT);
+          break;
+        case HAS_EC:
+          f.add(HdfsFileStatus.Flags.HAS_EC);
+          break;
+        default:
+          // ignore unknown
+          break;
+        }
+      }
+    }
+    return f;
+  }
+
+  private static EnumSet<HdfsFileStatus.Flags> convertFlags(
+      FsPermissionProto pbp) {
+    EnumSet<HdfsFileStatus.Flags> f =
+        EnumSet.noneOf(HdfsFileStatus.Flags.class);
+    FsPermission p = new FsPermissionExtension((short)pbp.getPerm());
+    if (p.getAclBit()) {
+      f.add(HdfsFileStatus.Flags.HAS_ACL);
+    }
+    if (p.getEncryptedBit()) {
+      f.add(HdfsFileStatus.Flags.HAS_CRYPT);
+    }
+    if (p.getErasureCodedBit()) {
+      f.add(HdfsFileStatus.Flags.HAS_EC);
+    }
+    return f;
   }
 
   public static CorruptFileBlocks convert(CorruptFileBlocksProto c) {
@@ -2044,7 +2095,7 @@ public class PBHelperClient {
     if (fs == null)
       return null;
     FileType fType = FileType.IS_FILE;
-    if (fs.isDir()) {
+    if (fs.isDirectory()) {
       fType = FileType.IS_DIR;
     } else if (fs.isSymlink()) {
       fType = FileType.IS_SYMLINK;
@@ -2082,6 +2133,10 @@ public class PBHelperClient {
       builder.setEcPolicy(convertErasureCodingPolicy(
           fs.getErasureCodingPolicy()));
     }
+    int flags = fs.hasAcl()   ? HdfsFileStatusProto.Flags.HAS_ACL_VALUE   : 0;
+    flags |= fs.isEncrypted() ? HdfsFileStatusProto.Flags.HAS_CRYPT_VALUE : 0;
+    flags |= fs.isErasureCoded() ? HdfsFileStatusProto.Flags.HAS_EC_VALUE : 0;
+    builder.setFlags(flags);
     return builder.build();
   }
 

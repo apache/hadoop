@@ -168,6 +168,12 @@ public final class RMWSConsts {
    */
   public static final String APPS_TIMEOUT = "/apps/{appid}/timeout";
 
+  /**
+   * Path for {@code RouterWebServices#getContainer}.
+   */
+  public static final String GET_CONTAINER =
+      "/apps/{appid}/appattempts/{appattemptid}/containers/{containerid}";
+
   // ----------------QueryParams for RMWebServiceProtocol----------------
 
   public static final String TIME = "time";
@@ -194,6 +200,15 @@ public final class RMWSConsts {
   public static final String END_TIME = "end-time";
   public static final String INCLUDE_RESOURCE = "include-resource-allocations";
   public static final String TYPE = "type";
+  public static final String CONTAINERID = "containerid";
+  public static final String APPATTEMPTS = "appattempts";
+  public static final String TIMEOUTS = "timeouts";
+  public static final String PRIORITY = "priority";
+  public static final String TIMEOUT = "timeout";
+  public static final String ATTEMPTS = "appattempts";
+  public static final String GET_LABELS = "get-labels";
+  public static final String DESELECTS = "deSelects";
+  public static final String CONTAINERS = "containers";
 
   private RMWSConsts() {
     // not called

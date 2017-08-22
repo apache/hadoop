@@ -293,7 +293,7 @@ public class IOUtils {
    */
   public static void closeStream(java.io.Closeable stream) {
     if (stream != null) {
-      cleanup(null, stream);
+      cleanupWithLogger(null, stream);
     }
   }
   

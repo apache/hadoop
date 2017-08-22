@@ -27,6 +27,7 @@ import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 
 import java.util.Collection;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -93,7 +94,8 @@ public final class ErasureCodingWorker {
     LOG.debug("Using striped block reconstruction; pool threads={}",
         numThreads);
     stripedReconstructionPool = DFSUtilClient.getThreadPoolExecutor(2,
-        numThreads, 60, "StripedBlockReconstruction-", false);
+        numThreads, 60, new LinkedBlockingQueue<>(),
+        "StripedBlockReconstruction-", false);
     stripedReconstructionPool.allowCoreThreadTimeOut(true);
   }
 
@@ -106,6 +108,7 @@ public final class ErasureCodingWorker {
   public void processErasureCodingTasks(
       Collection<BlockECReconstructionInfo> ecTasks) {
     for (BlockECReconstructionInfo reconInfo : ecTasks) {
+      int xmitsSubmitted = 0;
       try {
         StripedReconstructionInfo stripedReconInfo =
             new StripedReconstructionInfo(
@@ -113,15 +116,25 @@ public final class ErasureCodingWorker {
             reconInfo.getLiveBlockIndices(), reconInfo.getSourceDnInfos(),
             reconInfo.getTargetDnInfos(), reconInfo.getTargetStorageTypes(),
             reconInfo.getTargetStorageIDs());
+        // It may throw IllegalArgumentException from task#stripedReader
+        // constructor.
         final StripedBlockReconstructor task =
             new StripedBlockReconstructor(this, stripedReconInfo);
         if (task.hasValidTargets()) {
+          // See HDFS-12044. We increase xmitsInProgress even the task is only
+          // enqueued, so that
+          //   1) NN will not send more tasks than what DN can execute and
+          //   2) DN will not throw away reconstruction tasks, and instead keeps
+          //      an unbounded number of tasks in the executor's task queue.
+          xmitsSubmitted = task.getXmits();
+          getDatanode().incrementXmitsInProcess(xmitsSubmitted);
           stripedReconstructionPool.submit(task);
         } else {
           LOG.warn("No missing internal block. Skip reconstruction for task:{}",
               reconInfo);
         }
       } catch (Throwable e) {
+        getDatanode().decrementXmitsInProgress(xmitsSubmitted);
         LOG.warn("Failed to reconstruct striped block {}",
             reconInfo.getExtendedBlock().getLocalBlock(), e);
       }

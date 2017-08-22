@@ -17,54 +17,14 @@
 }}
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
-
 <div class="container-fluid">
-  {{queue-navigator model=model.queues selected=model.selected}}
-
-  <div class="row">
-
-    <div class="col-lg-4 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Queue Information: {{model.selected}}
-        </div>
-        {{queue-configuration-table queue=model.selectedQueue}}
-      </div>
-    </div>
-
-    <div class="col-lg-4 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Queue Capacities: {{model.selected}}
-        </div>
-        <div class="container-fluid" id="capacity-bar-chart">
-          <br/>
-          {{bar-chart data=model.selectedQueue.capacitiesBarChartData
-          title=""
-          parentId="capacity-bar-chart"
-          textWidth=150
-          ratio=0.55
-          maxHeight=350}}
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-4 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Running Apps: {{model.selected}}
-        </div>
-        <div class="container-fluid" id="numapplications-donut-chart">
-          {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
-          showLabels=true
-          parentId="numapplications-donut-chart"
-          ratio=0.6
-          maxHeight=350}}
-        </div>
-      </div>
-    </div>
-
-  </div>
+  {{#if (eq model.queues.firstObject.type "capacity")}}
+    {{yarn-queue.capacity-queue model=model}}
+  {{else if (eq model.queues.firstObject.type "fair")}}
+    {{yarn-queue.fair-queue model=model}}
+  {{else}}
+    {{yarn-queue.fifo-queue model=model}}
+  {{/if}}
 </div>
 
 {{outlet}}

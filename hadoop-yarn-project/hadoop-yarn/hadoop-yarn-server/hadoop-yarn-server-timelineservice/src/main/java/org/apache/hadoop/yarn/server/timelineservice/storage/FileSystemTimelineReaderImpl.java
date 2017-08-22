@@ -39,8 +39,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -54,6 +52,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStor
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *  File System based implementation for TimelineReader. This implementation may
@@ -64,8 +64,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class FileSystemTimelineReaderImpl extends AbstractService
     implements TimelineReader {
 
-  private static final Log LOG =
-      LogFactory.getLog(FileSystemTimelineReaderImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileSystemTimelineReaderImpl.class);
 
   private String rootPath;
   private static final String ENTITIES_DIR = "entities";

@@ -50,12 +50,6 @@ class ViewFsLocatedFileStatus extends LocatedFileStatus {
   }
 
   @Override
-  @SuppressWarnings("deprecation")
-  public boolean isDir() {
-    return myFs.isDirectory();
-  }
-
-  @Override
   public boolean isSymlink() {
     return myFs.isSymlink();
   }

@@ -131,4 +131,9 @@ public class TestGenericsUtil extends TestCase {
             GenericClass.class, c2);
   }
 
+  public void testIsLog4jLogger() throws Exception {
+    assertFalse("False if clazz is null", GenericsUtil.isLog4jLogger(null));
+    assertTrue("The implementation is Log4j",
+        GenericsUtil.isLog4jLogger(TestGenericsUtil.class));
+  }
 }
