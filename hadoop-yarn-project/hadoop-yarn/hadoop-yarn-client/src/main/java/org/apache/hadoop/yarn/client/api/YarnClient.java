@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
@@ -863,7 +864,8 @@ public abstract class YarnClient extends AbstractService {
    * Get the resource profiles available in the RM.
    * </p>
    * @return a Map of the resource profile names to their capabilities
-   * @throws YarnException if resource profiles are not enabled
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
    * @throws IOException in case of other errors
    */
   @Public
@@ -876,9 +878,9 @@ public abstract class YarnClient extends AbstractService {
    * Get the details of a specific resource profile from the RM.
    * </p>
    * @param profile the profile name
-   * @return the capabilities of the resource profile
-   * @throws YarnException if resource profiles are not enabled or the profile
-   *         cannot be found
+   * @return resource profile name with its capabilities
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
    * @throws IOException in case of other others
    */
   @Public
@@ -891,8 +893,7 @@ public abstract class YarnClient extends AbstractService {
    * Get available resource types supported by RM.
    * </p>
    * @return list of supported resource types with detailed information
-   * @throws YarnException if resource profiles are not enabled or the profile
-   *         cannot be found
+   * @throws YarnException if any issue happens inside YARN
    * @throws IOException in case of other others
    */
   @Public

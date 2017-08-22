@@ -431,6 +431,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(ApplicationTimeout.class);
     generateByNewInstance(QueueConfigurations.class);
     generateByNewInstance(CollectorInfo.class);
+    generateByNewInstance(ResourceTypeInfo.class);
   }
 
   @Test

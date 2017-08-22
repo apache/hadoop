@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.resource;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,8 +37,13 @@ public class TestResourceProfiles {
     Configuration conf = new Configuration();
     // be default resource profiles should not be enabled
     manager.init(conf);
-    Map<String, Resource> profiles = manager.getResourceProfiles();
-    Assert.assertTrue(profiles.isEmpty());
+    try {
+      manager.getResourceProfiles();
+      Assert
+          .fail("Exception should be thrown as resource profile is not enabled"
+              + " and getResourceProfiles is invoked.");
+    } catch (YarnException ie) {
+    }
     conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
     try {
       manager.init(conf);

@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
@@ -1301,7 +1302,13 @@ public abstract class AbstractYarnScheduler
     if (!profilesEnabled) {
       ret = ResourceUtils.getResourceTypesMinimumAllocation();
     } else {
-      ret = rmContext.getResourceProfilesManager().getMinimumProfile();
+      try {
+        ret = rmContext.getResourceProfilesManager().getMinimumProfile();
+      } catch (YarnException e) {
+        LOG.error(
+            "Exception while getting minimum profile from profile manager:", e);
+        throw new YarnRuntimeException(e);
+      }
     }
     LOG.info("Minimum allocation = " + ret);
     return ret;
@@ -1323,7 +1330,14 @@ public abstract class AbstractYarnScheduler
     if (!profilesEnabled) {
       ret = ResourceUtils.getResourceTypesMaximumAllocation();
     } else {
-      ret = rmContext.getResourceProfilesManager().getMaximumProfile();
+      try {
+        ret = rmContext.getResourceProfilesManager().getMaximumProfile();
+      } catch (YarnException e) {
+        LOG.error(
+            "Exception while getting maximum profile from ResourceProfileManager:",
+            e);
+        throw new YarnRuntimeException(e);
+      }
     }
     LOG.info("Maximum allocation = " + ret);
     return ret;
