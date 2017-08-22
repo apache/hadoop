@@ -528,10 +528,12 @@ public class DominantResourceCalculator extends ResourceCalculator {
       long value;
       if (stepFactorValue != 0) {
         value = roundUp
-            ? roundUp((long) Math.ceil(rValue * by), stepFactorValue)
+            ? roundUp((long) Math.ceil((float) (rValue * by)), stepFactorValue)
             : roundDown((long) (rValue * by), stepFactorValue);
       } else {
-        value = roundUp ? (long) Math.ceil(rValue * by) : (long) (rValue * by);
+        value = roundUp
+            ? (long) Math.ceil((float) (rValue * by))
+            : (long) (rValue * by);
       }
       tmp.setValue(value);
     }

@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
@@ -863,8 +864,7 @@ public abstract class YarnClient extends AbstractService {
    * Get available resource types supported by RM.
    * </p>
    * @return list of supported resource types with detailed information
-   * @throws YarnException if resource profiles are not enabled or the profile
-   *         cannot be found
+   * @throws YarnException if any issue happens inside YARN
    * @throws IOException in case of other others
    */
   @Public

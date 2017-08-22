@@ -424,6 +424,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(ContainerResourceIncreaseRequest.class);
     generateByNewInstance(QueueConfigurations.class);
     generateByNewInstance(CollectorInfo.class);
+    generateByNewInstance(ResourceTypeInfo.class);
   }
 
   @Test
