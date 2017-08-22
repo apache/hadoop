@@ -276,13 +276,11 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppState appState = new AppState("KILLED");
-    try {
-      interceptor.updateAppState(appState, null, appId.toString());
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().equals("Application " + appId + " does not exist"));
-    }
+
+    Response response =
+        interceptor.updateAppState(appState, null, appId.toString());
+    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+
   }
 
   /**
