@@ -184,7 +184,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       new ExpiredTransition();
   private static final AttemptFailedTransition FAILED_TRANSITION =
       new AttemptFailedTransition();
-
+  private static final AMRegisteredTransition REGISTERED_TRANSITION =
+      new AMRegisteredTransition();
+  private static final AMLaunchedTransition LAUNCHED_TRANSITION =
+      new AMLaunchedTransition();
   private RMAppAttemptEvent eventCausingFinalSaving;
   private RMAppAttemptState targetedFinalState;
   private RMAppAttemptState recoveredFinalState;
@@ -314,7 +317,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
        // Transitions from ALLOCATED State
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.LAUNCHED,
-          RMAppAttemptEventType.LAUNCHED, new AMLaunchedTransition())
+          RMAppAttemptEventType.LAUNCHED, LAUNCHED_TRANSITION)
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.LAUNCH_FAILED,
           new FinalSavingTransition(new LaunchFailedTransition(),
@@ -328,6 +331,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptEventType.FAIL,
           new FinalSavingTransition(FAILED_TRANSITION,
               RMAppAttemptState.FAILED))
+      .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.RUNNING,
+          RMAppAttemptEventType.REGISTERED, REGISTERED_TRANSITION)
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.CONTAINER_FINISHED,
           new FinalSavingTransition(
@@ -335,7 +340,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
        // Transitions from LAUNCHED State
       .addTransition(RMAppAttemptState.LAUNCHED, RMAppAttemptState.RUNNING,
-          RMAppAttemptEventType.REGISTERED, new AMRegisteredTransition())
+          RMAppAttemptEventType.REGISTERED, REGISTERED_TRANSITION)
       .addTransition(RMAppAttemptState.LAUNCHED,
           EnumSet.of(RMAppAttemptState.LAUNCHED, RMAppAttemptState.FINAL_SAVING),
           RMAppAttemptEventType.CONTAINER_FINISHED,
@@ -357,6 +362,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               RMAppAttemptState.FAILED))
 
        // Transitions from RUNNING State
+      .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
+          RMAppAttemptEventType.LAUNCHED)
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.UNREGISTERED, new AMUnregisteredTransition())
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
@@ -421,6 +428,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptState.FAILED,
           RMAppAttemptState.FAILED,
           EnumSet.of(
+              RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.KILL,
               RMAppAttemptEventType.FAIL,
@@ -438,6 +446,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           new FinalTransition(RMAppAttemptState.FINISHED))
       .addTransition(RMAppAttemptState.FINISHING, RMAppAttemptState.FINISHING,
           EnumSet.of(
+              RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
@@ -451,6 +460,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptState.FINISHED,
           RMAppAttemptState.FINISHED,
           EnumSet.of(
+              RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
@@ -1291,7 +1301,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
          * 2) OR AMLivelinessMonitor expires this attempt (when am doesn't
          * heart beat back).  
          */
-        (new AMLaunchedTransition()).transition(appAttempt, event);
+        LAUNCHED_TRANSITION.transition(appAttempt, event);
         return RMAppAttemptState.LAUNCHED;
       }
     }
@@ -1516,7 +1526,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
                             RMAppAttemptEvent event) {
-      if (event.getType() == RMAppAttemptEventType.LAUNCHED) {
+      if (event.getType() == RMAppAttemptEventType.LAUNCHED
+          || event.getType() == RMAppAttemptEventType.REGISTERED) {
         appAttempt.launchAMEndTime = System.currentTimeMillis();
         long delay = appAttempt.launchAMEndTime -
             appAttempt.launchAMStartTime;
@@ -1651,6 +1662,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
+      if (!RMAppAttemptState.LAUNCHED.equals(appAttempt.getState())) {
+        // registered received before launch
+        LAUNCHED_TRANSITION.transition(appAttempt, event);
+      }
       long delay = System.currentTimeMillis() - appAttempt.launchAMEndTime;
       ClusterMetrics.getMetrics().addAMRegisterDelay(delay);
       RMAppAttemptRegistrationEvent registrationEvent
