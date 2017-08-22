@@ -167,7 +167,8 @@ class S3ABlockOutputStream extends OutputStream implements
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
-    this.closed = new FSImplementationUtils.CloseChecker(key);
+    this.closed = new FSImplementationUtils.CloseChecker(
+        fs.keyToQualifiedPath(key));
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
     createBlockIfNeeded();

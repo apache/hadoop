@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -32,8 +34,10 @@ import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HSYNC;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class FSImplementationUtils {
+public final class FSImplementationUtils {
 
+  private FSImplementationUtils() {
+  }
 
   /**
    * Check the supplied capabilities for being those required for full
@@ -47,12 +51,25 @@ public class FSImplementationUtils {
   }
 
   /**
-   * Class to manage close() logic.
+   * Class to manage {@code close()} logic.
    * A simple wrapper around an atomic boolean to guard against
    * calling operations when closed; {@link #checkOpen()}
    * will throw an exception when closed ... it should be
    * used in methods which require the stream/filesystem to be
    * open.
+   *
+   * The {@link #enterClose()} call can be used to ensure that
+   * a stream is closed at most once.
+   * It should be the first operation in the {@code close} method,
+   * with the caller exiting immediately if the stream is already closed.
+   * <pre>
+   * @Override public void close() throws IOException {
+   *   if (!closed.enterClose()) {
+   *     return;
+   *   }
+   *   ... close operations
+   * }
+   * </pre>
    */
   public static class CloseChecker {
 
@@ -60,7 +77,8 @@ public class FSImplementationUtils {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
-     * Path to use in exception,
+     * Path; if not empty then a {@link PathIOException} will be raised
+     * containing this path.
      */
     private final String path;
 
@@ -73,7 +91,22 @@ public class FSImplementationUtils {
     }
 
     /**
-     *
+     * Instantiate.
+     * @param path path to use in exception messages.
+     */
+    public CloseChecker(Path path) {
+      this.path = path.toUri().toString();
+    }
+
+    /**
+     * Constructor without a path.
+     */
+    public CloseChecker() {
+      this("");
+    }
+
+    /**
+     * Enter the close call, non-reentrantly
      * @return true if the close() call can continue; false
      * if the state has been reached.
      */
@@ -82,12 +115,19 @@ public class FSImplementationUtils {
     }
 
     /**
-     * Check for the stream being open.
-     * @throws PathIOException if the stream is closed.
+     * Check for the stream being open, throwing an
+     * exception if it is not.
+     * @throws IOException if the stream is closed.
+     * @throws PathIOException if the stream is closed and this checker
+     * was constructed with a path.
      */
-    public void checkOpen() throws PathIOException {
+    public void checkOpen() throws IOException {
       if (isClosed()) {
-        throw new PathIOException(path, STREAM_IS_CLOSED);
+        if (StringUtils.isNotEmpty(path)) {
+          throw new PathIOException(path, STREAM_IS_CLOSED);
+        } else {
+          throw new IOException(STREAM_IS_CLOSED);
+        }
       }
     }
 
