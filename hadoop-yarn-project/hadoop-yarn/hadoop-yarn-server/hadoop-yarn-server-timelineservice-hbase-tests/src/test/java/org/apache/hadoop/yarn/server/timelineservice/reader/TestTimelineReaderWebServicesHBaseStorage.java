@@ -370,7 +370,8 @@ public class TestTimelineReaderWebServicesHBaseStorage
         ApplicationId appId =
             BuilderUtils.newApplicationId(timestamp, count++);
         ApplicationEntity appEntity = new ApplicationEntity();
-        appEntity.setId(appId.toString());
+        appEntity.setId(
+            HBaseTimelineStorageUtils.convertApplicationIdToString(appId));
         appEntity.setCreatedTime(timestamp);
 
         TimelineEvent created = new TimelineEvent();
