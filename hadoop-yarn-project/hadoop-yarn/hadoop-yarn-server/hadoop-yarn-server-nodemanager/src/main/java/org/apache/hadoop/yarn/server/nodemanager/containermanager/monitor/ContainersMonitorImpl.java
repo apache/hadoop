@@ -33,11 +33,13 @@ import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsResourceCalculator;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -518,9 +520,8 @@ public class ContainersMonitorImpl extends AbstractService implements
             LOG.debug("Tracking ProcessTree " + pId + " for the first time");
           }
           ResourceCalculatorProcessTree pt =
-                  ResourceCalculatorProcessTree.
-                        getResourceCalculatorProcessTree(
-                            pId, processTreeClass, conf);
+              getResourceCalculatorProcessTree(
+                  pId);
           ptInfo.setPid(pId);
           ptInfo.setProcessTree(pt);
 
@@ -551,6 +552,33 @@ public class ContainersMonitorImpl extends AbstractService implements
         }
       }
       // End of initializing any uninitialized processTrees
+    }
+
+    /**
+     * Get the best process tree calculator.
+     * @param pId container process id
+     * @return process tree calculator
+     */
+    private ResourceCalculatorProcessTree
+        getResourceCalculatorProcessTree(String pId) {
+      ResourceCalculatorProcessTree pt = null;
+
+      // CGroups is best in performance, so try to use it, if it is enabled
+      if (processTreeClass == null &&
+          CGroupsResourceCalculator.isAvailable()) {
+        try {
+          pt = new CGroupsResourceCalculator(pId);
+        } catch (YarnException e) {
+          LOG.info("CGroupsResourceCalculator cannot be created", e);
+        }
+      }
+
+      if (pt == null) {
+        pt = ResourceCalculatorProcessTree.
+            getResourceCalculatorProcessTree(
+                pId, processTreeClass, conf);
+      }
+      return pt;
     }
 
     /**
