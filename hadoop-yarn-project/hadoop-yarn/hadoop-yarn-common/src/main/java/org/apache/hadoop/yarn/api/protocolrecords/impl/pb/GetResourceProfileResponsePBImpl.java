@@ -104,9 +104,4 @@ public class GetResourceProfileResponsePBImpl
     }
     viaProto = false;
   }
-
-  @Override
-  public int hashCode() {
-    return getProto().hashCode();
-  }
 }

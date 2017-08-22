@@ -81,7 +81,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.ResourceProfilesNotEnabledException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
@@ -553,7 +553,7 @@ public class Client {
     Map<String, Resource> profiles;
     try {
       profiles = yarnClient.getResourceProfiles();
-    } catch (ResourceProfilesNotEnabledException re) {
+    } catch (YARNFeatureNotEnabledException re) {
       profiles = null;
     }
 
@@ -994,15 +994,17 @@ public class Client {
     if (profile.isEmpty()) {
       tmp = "default";
     }
-    if (appContext.getAMContainerResourceRequest() == null) {
-      appContext.setAMContainerResourceRequest(ResourceRequest
-          .newInstance(Priority.newInstance(priority), "*",
+    if (appContext.getAMContainerResourceRequests() == null) {
+      List<ResourceRequest> amResourceRequests = new ArrayList<ResourceRequest>();
+      amResourceRequests
+          .add(ResourceRequest.newInstance(Priority.newInstance(priority), "*",
               Resources.clone(Resources.none()), 1));
+      appContext.setAMContainerResourceRequests(amResourceRequests);
     }
 
-    if (appContext.getAMContainerResourceRequest().getProfileCapability()
-        == null) {
-      appContext.getAMContainerResourceRequest().setProfileCapability(
+    if (appContext.getAMContainerResourceRequests().get(0)
+        .getProfileCapability() == null) {
+      appContext.getAMContainerResourceRequests().get(0).setProfileCapability(
           ProfileCapability.newInstance(tmp, Resource.newInstance(0, 0)));
     }
     Resource capability = Resource.newInstance(0, 0);
@@ -1018,7 +1020,7 @@ public class Client {
       capability.setMemorySize(memory);
       capability.setVirtualCores(vcores);
     }
-    appContext.getAMContainerResourceRequest().getProfileCapability()
+    appContext.getAMContainerResourceRequests().get(0).getProfileCapability()
         .setProfileCapabilityOverride(capability);
   }
 

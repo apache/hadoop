@@ -246,8 +246,8 @@ public class NodeManagerHardwareUtils {
     return cores;
   }
 
-  private static int getConfiguredMemoryMB(Configuration conf) {
-    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB,
+  private static long getConfiguredMemoryMB(Configuration conf) {
+    long memoryMb = conf.getLong(YarnConfiguration.NM_PMEM_MB,
         YarnConfiguration.DEFAULT_NM_PMEM_MB);
     if (memoryMb == -1) {
       memoryMb = YarnConfiguration.DEFAULT_NM_PMEM_MB;
@@ -270,7 +270,7 @@ public class NodeManagerHardwareUtils {
    *          - the configuration for the NodeManager
    * @return the amount of memory that will be used for YARN containers in MB.
    */
-  public static int getContainerMemoryMB(Configuration conf) {
+  public static long getContainerMemoryMB(Configuration conf) {
     if (!isHardwareDetectionEnabled(conf)) {
       return getConfiguredMemoryMB(conf);
     }
@@ -299,7 +299,7 @@ public class NodeManagerHardwareUtils {
    *          - the configuration for the NodeManager
    * @return the amount of memory that will be used for YARN containers in MB.
    */
-  public static int getContainerMemoryMB(ResourceCalculatorPlugin plugin,
+  public static long getContainerMemoryMB(ResourceCalculatorPlugin plugin,
       Configuration conf) {
     if (!isHardwareDetectionEnabled(conf) || plugin == null) {
       return getConfiguredMemoryMB(conf);
@@ -307,26 +307,24 @@ public class NodeManagerHardwareUtils {
     return getContainerMemoryMBInternal(plugin, conf);
   }
 
-  private static int getContainerMemoryMBInternal(ResourceCalculatorPlugin plugin,
+  private static long getContainerMemoryMBInternal(ResourceCalculatorPlugin plugin,
       Configuration conf) {
-    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, -1);
+    long memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, -1);
     if (memoryMb == -1) {
-      int physicalMemoryMB =
-          (int) (plugin.getPhysicalMemorySize() / (1024 * 1024));
-      int hadoopHeapSizeMB =
-          (int) (Runtime.getRuntime().maxMemory() / (1024 * 1024));
-      int containerPhysicalMemoryMB =
-          (int) (0.8f * (physicalMemoryMB - (2 * hadoopHeapSizeMB)));
-      int reservedMemoryMB =
-          conf.getInt(YarnConfiguration.NM_SYSTEM_RESERVED_PMEM_MB, -1);
+      long physicalMemoryMB = (plugin.getPhysicalMemorySize() / (1024 * 1024));
+      long hadoopHeapSizeMB = (Runtime.getRuntime().maxMemory()
+          / (1024 * 1024));
+      long containerPhysicalMemoryMB = (long) (0.8f
+          * (physicalMemoryMB - (2 * hadoopHeapSizeMB)));
+      long reservedMemoryMB = conf
+          .getInt(YarnConfiguration.NM_SYSTEM_RESERVED_PMEM_MB, -1);
       if (reservedMemoryMB != -1) {
         containerPhysicalMemoryMB = physicalMemoryMB - reservedMemoryMB;
       }
-      if(containerPhysicalMemoryMB <= 0) {
+      if (containerPhysicalMemoryMB <= 0) {
         LOG.error("Calculated memory for YARN containers is too low."
             + " Node memory is " + physicalMemoryMB
-            + " MB, system reserved memory is "
-            + reservedMemoryMB + " MB.");
+            + " MB, system reserved memory is " + reservedMemoryMB + " MB.");
       }
       containerPhysicalMemoryMB = Math.max(containerPhysicalMemoryMB, 0);
       memoryMb = containerPhysicalMemoryMB;
@@ -365,8 +363,8 @@ public class NodeManagerHardwareUtils {
       }
       ResourceInformation memResInfo = resourceInformation.get(memory);
       if(memResInfo.getValue() == 0) {
-        ret.setMemory(getContainerMemoryMB(conf));
-        LOG.debug("Set memory to " + ret.getMemory());
+        ret.setMemorySize(getContainerMemoryMB(conf));
+        LOG.debug("Set memory to " + ret.getMemorySize());
       }
     }
     if (resourceInformation.containsKey(vcores)) {

@@ -33,6 +33,9 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Test class to verify all resource utility methods.
+ */
 public class TestResourceUtils {
 
   static class ResourceFileInformation {
@@ -106,8 +109,8 @@ public class TestResourceUtils {
     testFile4.resourceNameUnitsMap.put("resource1", "G");
     testFile4.resourceNameUnitsMap.put("resource2", "m");
 
-    ResourceFileInformation[] tests =
-        { testFile1, testFile2, testFile3, testFile4 };
+    ResourceFileInformation[] tests = {testFile1, testFile2, testFile3,
+        testFile4};
     Map<String, ResourceInformation> res;
     for (ResourceFileInformation testInformation : tests) {
       ResourceUtils.resetResourceTypes();
@@ -134,9 +137,9 @@ public class TestResourceUtils {
   public void testGetResourceTypesConfigErrors() throws Exception {
     Configuration conf = new YarnConfiguration();
 
-    String[] resourceFiles =
-        { "resource-types-error-1.xml", "resource-types-error-2.xml",
-            "resource-types-error-3.xml", "resource-types-error-4.xml" };
+    String[] resourceFiles = {"resource-types-error-1.xml",
+        "resource-types-error-2.xml", "resource-types-error-3.xml",
+        "resource-types-error-4.xml"};
     for (String resourceFile : resourceFiles) {
       ResourceUtils.resetResourceTypes();
       File dest = null;
@@ -159,15 +162,15 @@ public class TestResourceUtils {
 
   @Test
   public void testInitializeResourcesMap() throws Exception {
-    String[] empty = { "", "" };
-    String[] res1 = { "resource1", "m" };
-    String[] res2 = { "resource2", "G" };
-    String[][] test1 = { empty };
-    String[][] test2 = { res1 };
-    String[][] test3 = { res2 };
-    String[][] test4 = { res1, res2 };
+    String[] empty = {"", ""};
+    String[] res1 = {"resource1", "m"};
+    String[] res2 = {"resource2", "G"};
+    String[][] test1 = {empty};
+    String[][] test2 = {res1};
+    String[][] test3 = {res2};
+    String[][] test4 = {res1, res2};
 
-    String[][][] allTests = { test1, test2, test3, test4 };
+    String[][][] allTests = {test1, test2, test3, test4};
 
     for (String[][] test : allTests) {
 
@@ -221,19 +224,19 @@ public class TestResourceUtils {
   @Test
   public void testInitializeResourcesMapErrors() throws Exception {
 
-    String[] mem1 = { "memory-mb", "" };
-    String[] vcores1 = { "vcores", "M" };
+    String[] mem1 = {"memory-mb", ""};
+    String[] vcores1 = {"vcores", "M"};
 
-    String[] mem2 = { "memory-mb", "m" };
-    String[] vcores2 = { "vcores", "G" };
+    String[] mem2 = {"memory-mb", "m"};
+    String[] vcores2 = {"vcores", "G"};
 
-    String[] mem3 = { "memory", "" };
+    String[] mem3 = {"memory", ""};
 
-    String[][] test1 = { mem1, vcores1 };
-    String[][] test2 = { mem2, vcores2 };
-    String[][] test3 = { mem3 };
+    String[][] test1 = {mem1, vcores1};
+    String[][] test2 = {mem2, vcores2};
+    String[][] test3 = {mem3};
 
-    String[][][] allTests = { test1, test2, test3 };
+    String[][][] allTests = {test1, test2, test3};
 
     for (String[][] test : allTests) {
 

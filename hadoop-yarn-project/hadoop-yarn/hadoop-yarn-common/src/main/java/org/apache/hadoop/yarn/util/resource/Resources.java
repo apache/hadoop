@@ -30,6 +30,10 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
 import java.util.Arrays;
 
+/**
+ * Resources is a computation class which provides a set of apis to do
+ * mathematical operations on Resource object.
+ */
 @InterfaceAudience.LimitedPrivate({ "YARN", "MapReduce" })
 @Unstable
 public class Resources {
@@ -47,7 +51,7 @@ public class Resources {
     private String name;
 
     /**
-     * Constructor for a fixed value resource
+     * Constructor for a fixed value resource.
      * @param rName the name of the resource
      * @param value the fixed value to be returned for all resource types
      */

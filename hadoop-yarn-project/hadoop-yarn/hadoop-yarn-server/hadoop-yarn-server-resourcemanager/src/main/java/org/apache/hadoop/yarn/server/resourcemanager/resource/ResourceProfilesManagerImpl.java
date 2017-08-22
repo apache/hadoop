@@ -45,6 +45,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * PBImpl class to handle all proto related implementation for
+ * ResourceProfilesManager.
+ */
 public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
 
   private static final Log LOG =
@@ -66,8 +70,8 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   protected final ReentrantReadWriteLock.ReadLock readLock;
   protected final ReentrantReadWriteLock.WriteLock writeLock;
 
-  private static final String[] MANDATORY_PROFILES =
-      { DEFAULT_PROFILE, MINIMUM_PROFILE, MAXIMUM_PROFILE };
+  private static final String[] MANDATORY_PROFILES = {DEFAULT_PROFILE,
+      MINIMUM_PROFILE, MAXIMUM_PROFILE};
   private static final String FEATURE_NOT_ENABLED_MSG =
       "Resource profile is not enabled, please "
           + "enable resource profile feature before using its functions."

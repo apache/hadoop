@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -111,7 +109,7 @@ public abstract class ResourceTypeInfo implements Comparable<ResourceTypeInfo> {
   }
 
   /**
-   * Create a new instance of ResourceTypeInfo from name, units
+   * Create a new instance of ResourceTypeInfo from name, units.
    *
    * @param name name of resource type
    * @param units units of resource type
@@ -124,7 +122,7 @@ public abstract class ResourceTypeInfo implements Comparable<ResourceTypeInfo> {
   }
 
   /**
-   * Create a new instance of ResourceTypeInfo from name
+   * Create a new instance of ResourceTypeInfo from name.
    *
    * @param name name of resource type
    * @return the new ResourceTypeInfo object
