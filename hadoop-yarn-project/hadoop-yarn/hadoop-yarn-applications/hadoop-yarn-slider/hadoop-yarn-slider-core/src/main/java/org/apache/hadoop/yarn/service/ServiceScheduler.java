@@ -54,26 +54,25 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.service.api.constants.ServiceApiConstants;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEventType;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
-import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
+import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.metrics.ServiceMetrics;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
+import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceMetricsSink;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.util.BoundedAppender;
-import org.apache.slider.api.RoleKeys;
-import org.apache.slider.api.ServiceApiConstants;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.slider.core.registry.info.CustomRegistryConstants;
-import org.apache.slider.core.zk.ZKIntegration;
-import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,8 +92,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
+import static org.apache.hadoop.yarn.service.api.constants.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
-import static org.apache.slider.api.ServiceApiConstants.*;
 
 /**
  *
@@ -203,7 +202,7 @@ public class ServiceScheduler extends CompositeService {
   protected YarnRegistryViewForProviders createYarnRegistryOperations(
       ServiceContext context, RegistryOperations registryClient) {
     return new YarnRegistryViewForProviders(registryClient,
-        RegistryUtils.currentUser(), SliderKeys.APP_TYPE, app.getName(),
+        RegistryUtils.currentUser(), YarnServiceConstants.APP_TYPE, app.getName(),
         context.attemptId);
   }
 
@@ -236,7 +235,8 @@ public class ServiceScheduler extends CompositeService {
 
     DefaultMetricsSystem.shutdown();
     if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
-      serviceTimelinePublisher.serviceAttemptUnregistered(context);
+      serviceTimelinePublisher
+          .serviceAttemptUnregistered(context, diagnostics.toString());
     }
     // Cleanup each component instance. no need to release containers as
     // they will be automatically released by RM
@@ -285,7 +285,7 @@ public class ServiceScheduler extends CompositeService {
       LOG.error("Failed to get user.", e);
     }
     globalTokens
-        .put(SERVICE_ZK_PATH, ZKIntegration.mkClusterPath(user, app.getName()));
+        .put(SERVICE_ZK_PATH, ServiceRegistryUtils.mkClusterPath(user, app.getName()));
 
     globalTokens.put(ServiceApiConstants.USER, user);
     String dnsDomain = getConfig().getTrimmed(KEY_DNS_DOMAIN);
@@ -336,7 +336,7 @@ public class ServiceScheduler extends CompositeService {
     context.configCache = configFileCache;
   }
 
-  protected void registerServiceInstance(ApplicationAttemptId attemptId,
+  private void registerServiceInstance(ApplicationAttemptId attemptId,
       Application application) throws IOException {
     LOG.info("Registering " + attemptId + ", " + application.getName()
         + " into registry");
@@ -345,11 +345,11 @@ public class ServiceScheduler extends CompositeService {
         attemptId.getApplicationId().toString());
     serviceRecord.set(YarnRegistryAttributes.YARN_PERSISTENCE,
         PersistencePolicies.APPLICATION);
-    serviceRecord.description = "Slider Application Master";
+    serviceRecord.description = "Yarn Service Master";
 
     serviceRecord.addExternalEndpoint(RegistryTypeUtils
-        .ipcEndpoint(CustomRegistryConstants.AM_IPC_PROTOCOL,
-            new InetSocketAddress(5000))); // FIXME
+        .ipcEndpoint("classpath:org.apache.hadoop.yarn.service.appmaster.ipc",
+            context.clientAMService.getBindAddress()));
 
     // set any provided attributes
     setUserProvidedServiceRecordAttributes(application.getConfiguration(),
@@ -376,13 +376,13 @@ public class ServiceScheduler extends CompositeService {
       }
     });
     if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
-      serviceTimelinePublisher.serviceAttemptRegistered(app);
+      serviceTimelinePublisher.serviceAttemptRegistered(app, getConfig());
     }
   }
 
   private void setUserProvidedServiceRecordAttributes(
-      org.apache.slider.api.resource.Configuration conf, ServiceRecord record) {
-    String prefix = RoleKeys.SERVICE_RECORD_ATTRIBUTE_PREFIX;
+      org.apache.hadoop.yarn.service.api.records.Configuration conf, ServiceRecord record) {
+    String prefix = "service.record.attribute";
     for (Map.Entry<String, String> entry : conf.getProperties().entrySet()) {
       if (entry.getKey().startsWith(prefix)) {
         String key = entry.getKey().substring(prefix.length() + 1);
@@ -395,10 +395,10 @@ public class ServiceScheduler extends CompositeService {
     long allocateId = 0;
 
     // sort components by dependencies
-    Collection<org.apache.slider.api.resource.Component> sortedComponents =
+    Collection<org.apache.hadoop.yarn.service.api.records.Component> sortedComponents =
         ServiceApiUtil.sortByDependencies(app.getComponents());
 
-    for (org.apache.slider.api.resource.Component compSpec : sortedComponents) {
+    for (org.apache.hadoop.yarn.service.api.records.Component compSpec : sortedComponents) {
       Component component = new Component(compSpec, allocateId, context);
       componentsById.put(allocateId, component);
       componentsByName.put(component.getName(), component);
@@ -517,7 +517,7 @@ public class ServiceScheduler extends CompositeService {
     @Override public float getProgress() {
       // get running containers over desired containers
       long total = 0;
-      for (org.apache.slider.api.resource.Component component : app
+      for (org.apache.hadoop.yarn.service.api.records.Component component : app
           .getComponents()) {
         total += component.getNumberOfContainers();
       }

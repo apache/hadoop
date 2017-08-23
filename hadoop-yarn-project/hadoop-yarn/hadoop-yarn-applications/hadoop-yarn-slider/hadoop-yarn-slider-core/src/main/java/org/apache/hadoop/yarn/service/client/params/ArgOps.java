@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.service.client.params;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
-import org.apache.slider.core.exceptions.ErrorStrings;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

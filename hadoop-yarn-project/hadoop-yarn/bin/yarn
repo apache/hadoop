@@ -49,7 +49,7 @@ function hadoop_usage
   hadoop_add_subcommand "router" daemon "run the Router daemon"
   hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
   hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
-  hadoop_add_subcommand "servicesapi" "run yarn-service rest server"
+  hadoop_add_subcommand "servicesapi" "run yarn-native-service rest server"
   hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
   hadoop_add_subcommand "service" "run a service"
   hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
@@ -155,7 +155,7 @@ function yarncmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider"'/*'
       hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/services-api"'/*'
-      HADOOP_CLASSNAME='org.apache.hadoop.yarn.services.webapp.ApplicationApiWebApp'
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.service.webapp.ApplicationApiWebApp'
       local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
 ${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
 ${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider,\
@@ -164,7 +164,7 @@ ${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
 ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
 ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       hadoop_translate_cygwin_path sld
-      hadoop_add_param HADOOP_OPTS slider.libdir "-Dslider.libdir=${sld}"
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     sharedcachemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
@@ -181,7 +181,7 @@ ${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
 ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
 ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       hadoop_translate_cygwin_path sld
-      hadoop_add_param HADOOP_OPTS slider.libdir "-Dslider.libdir=${sld}"
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"

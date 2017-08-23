@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.service.provider.defaultImpl;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.ConfigFile;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 
 import java.io.IOException;
 import java.nio.file.Paths;

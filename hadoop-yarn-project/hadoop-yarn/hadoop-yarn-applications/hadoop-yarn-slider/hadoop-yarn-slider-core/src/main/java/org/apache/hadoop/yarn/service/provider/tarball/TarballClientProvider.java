@@ -20,17 +20,17 @@ package org.apache.hadoop.yarn.service.provider.tarball;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
-import org.apache.slider.util.RestApiErrorMessages;
+import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 
 public class TarballClientProvider extends AbstractClientProvider
-    implements SliderKeys {
+    implements YarnServiceConstants {
 
   public TarballClientProvider() {
   }

@@ -19,10 +19,10 @@
 package org.apache.hadoop.yarn.service.provider;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.core.exceptions.SliderException;
-import org.apache.slider.core.launch.AbstractLauncher;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
 
 import java.io.IOException;

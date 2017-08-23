@@ -277,9 +277,6 @@ definitions:
         type: integer
         format: int64
         description: Number of containers for this app-component (optional). If not specified, the application level global number_of_containers takes effect.
-      unique_component_support:
-        type: boolean
-        description: Certain applications need to define multiple components using the same artifact and resource profile, differing only in configurations. In such cases, this field helps app owners to avoid creating multiple component definitions with repeated information. The number_of_containers field dictates the initial number of components created. Component names typically differ with a trailing id, but assumptions should not be made on that, as the algorithm can change at any time. Configurations section will be able to use placeholders like ${USER}, ${CLUSTER_NAME} and ${COMPONENT_NAME} to be replaced at runtime with user the app is submitted as, application name and application component name respectively. Launch command can use placeholders like ${APP_COMPONENT_NAME} and ${APP_NAME} to get its component name and app name respectively at runtime. The best part of this feature is that when the component is flexed up, entirely new components (with new trailing ids) are created.
       run_privileged_container:
         type: boolean
         description: Run all containers of this component in privileged mode (YARN-4262).

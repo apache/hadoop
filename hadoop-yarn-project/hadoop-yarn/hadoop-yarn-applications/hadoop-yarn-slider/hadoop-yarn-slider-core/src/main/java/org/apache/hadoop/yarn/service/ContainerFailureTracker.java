@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.slider.api.ResourceKeys.NODE_FAILURE_THRESHOLD;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.NODE_BLACKLIST_THRESHOLD;
 
 /**
  * This tracks the container failures per node. If the failure counter exceeds
@@ -52,7 +52,7 @@ public class ContainerFailureTracker {
     this.context = context;
     this.component = component;
     maxFailurePerNode = component.getComponentSpec().getConfiguration()
-        .getPropertyInt(NODE_FAILURE_THRESHOLD, 3);
+        .getPropertyInt(NODE_BLACKLIST_THRESHOLD, 3);
   }
 
 

@@ -39,9 +39,9 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.server.servicemonitor.MonitorUtils;
-import org.apache.slider.server.servicemonitor.Probe;
+import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.servicemonitor.probe.MonitorUtils;
+import org.apache.hadoop.yarn.service.servicemonitor.probe.Probe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,12 +61,12 @@ import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
 import static org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEventType.STARTED;
 import static org.apache.hadoop.yarn.service.compinstance.ComponentInstanceEventType.STOP;
 import static org.apache.hadoop.yarn.service.component.ComponentState.*;
-import static org.apache.slider.api.ResourceKeys.CONTAINER_FAILURE_THRESHOLD;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_FAILURE_THRESHOLD;
 
 public class Component implements EventHandler<ComponentEvent> {
   private static final Logger LOG = LoggerFactory.getLogger(Component.class);
 
-  private org.apache.slider.api.resource.Component componentSpec;
+  private org.apache.hadoop.yarn.service.api.records.Component componentSpec;
   private long allocateId;
   private Priority priority;
   private ServiceMetrics componentMetrics;
@@ -124,7 +124,8 @@ public class Component implements EventHandler<ComponentEvent> {
               FLEX, new FlexComponentTransition())
           .installTopology();
 
-  public Component(org.apache.slider.api.resource.Component component,
+  public Component(
+      org.apache.hadoop.yarn.service.api.records.Component component,
       long allocateId, ServiceContext context) {
     this.allocateId = allocateId;
     this.priority = Priority.newInstance((int) allocateId);
@@ -418,7 +419,7 @@ public class Component implements EventHandler<ComponentEvent> {
     return compInstances;
   }
 
-  public org.apache.slider.api.resource.Component getComponentSpec() {
+  public org.apache.hadoop.yarn.service.api.records.Component getComponentSpec() {
     return this.componentSpec;
   }
 

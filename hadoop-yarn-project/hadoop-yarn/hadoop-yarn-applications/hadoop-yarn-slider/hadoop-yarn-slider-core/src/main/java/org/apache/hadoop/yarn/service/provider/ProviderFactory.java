@@ -19,8 +19,7 @@
 package org.apache.hadoop.yarn.service.provider;
 
 import org.apache.hadoop.yarn.service.provider.defaultImpl.DefaultProviderFactory;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.core.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.provider.docker.DockerProviderFactory;
 import org.apache.hadoop.yarn.service.provider.tarball.TarballProviderFactory;
 import org.slf4j.Logger;

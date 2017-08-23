@@ -6,7 +6,7 @@
     "properties": {
       "g1": "a",
       "g2": "b",
-      "internal.chaos.monkey.interval.seconds": "60"
+      "yarn.service.failure-count-reset.window": "60"
     }
   },
   "resource": {

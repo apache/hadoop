@@ -36,17 +36,17 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BoundedAppender;
-import org.apache.slider.api.resource.ContainerState;
-import org.apache.slider.common.tools.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.SliderUtils;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
-import org.apache.slider.server.servicemonitor.ProbeStatus;
-import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
+import org.apache.hadoop.yarn.service.servicemonitor.probe.ProbeStatus;
+import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +88,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   private volatile ContainerStatus status;
   private long containerStartedTime = 0;
   // This container object is used for rest API query
-  private org.apache.slider.api.resource.Container containerSpec;
+  private org.apache.hadoop.yarn.service.api.records.Container containerSpec;
 
   private static final StateMachineFactory<ComponentInstance,
       ComponentInstanceState, ComponentInstanceEventType, ComponentInstanceEvent>
@@ -142,11 +142,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
                   compInstance.getContainerId(), compInstance), 0, 1,
               TimeUnit.SECONDS);
 
-      org.apache.slider.api.resource.Container container =
-          new org.apache.slider.api.resource.Container();
+      org.apache.hadoop.yarn.service.api.records.Container container =
+          new org.apache.hadoop.yarn.service.api.records.Container();
       container.setId(compInstance.getContainerId().toString());
       container.setLaunchTime(new Date());
-      container.setState(org.apache.slider.api.resource.ContainerState.RUNNING_BUT_UNREADY);
+      container.setState(ContainerState.RUNNING_BUT_UNREADY);
       container.setBareHost(compInstance.container.getNodeId().getHost());
       container.setComponentName(compInstance.getCompInstanceName());
       if (compInstance.containerSpec != null) {
@@ -290,7 +290,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   public void updateContainerStatus(ContainerStatus status) {
     this.status = status;
-    org.apache.slider.api.resource.Container container =
+    org.apache.hadoop.yarn.service.api.records.Container container =
         getCompSpec().getContainer(getContainerId().toString());
     if (container != null) {
       container.setIp(StringUtils.join(",", status.getIPs()));
@@ -330,7 +330,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     return this.container.getNodeId();
   }
 
-  public org.apache.slider.api.resource.Component getCompSpec() {
+  public org.apache.hadoop.yarn.service.api.records.Component getCompSpec() {
     return component.getComponentSpec();
   }
 

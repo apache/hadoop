@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.service.client.params;
 
 import com.beust.jcommander.Parameter;
-import org.apache.slider.common.params.AbstractArgsDelegate;
-import org.apache.slider.common.params.DontSplitArguments;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.service.client.params;
 
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 
 import java.util.List;
 import java.util.Map;
@@ -47,9 +47,4 @@ public class ActionFlexArgs extends AbstractActionArgs {
       BadCommandArgumentsException {
     return componentDelegate.getComponentMap();
   }
-
-  public List<String> getComponentTuples() {
-    return componentDelegate.getComponentTuples();
-  }
-
 }

@@ -21,10 +21,6 @@ package org.apache.hadoop.yarn.service.client.params;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
-import org.apache.hadoop.yarn.service.client.params.AbstractActionArgs;
-import org.apache.hadoop.yarn.service.client.params.SliderActions;
-import org.apache.slider.common.params.LaunchArgsAccessor;
-import org.apache.slider.common.params.LaunchArgsDelegate;
 
 import java.io.File;
 

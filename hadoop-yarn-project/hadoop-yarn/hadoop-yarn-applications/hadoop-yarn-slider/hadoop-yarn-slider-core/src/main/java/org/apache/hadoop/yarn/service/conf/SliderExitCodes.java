@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
-import org.apache.slider.core.main.LauncherExitCodes;
+import org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes;
 
 public interface SliderExitCodes extends LauncherExitCodes {
 

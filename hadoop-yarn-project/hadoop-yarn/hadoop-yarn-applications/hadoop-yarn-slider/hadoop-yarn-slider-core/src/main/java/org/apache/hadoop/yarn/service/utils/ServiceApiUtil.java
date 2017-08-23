@@ -25,20 +25,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.Configuration;
-import org.apache.slider.api.resource.Resource;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.core.persist.JsonSerDeser;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderFactory;
-import org.apache.slider.server.servicemonitor.MonitorUtils;
-import org.apache.slider.server.services.utility.PatternValidator;
-import org.apache.slider.util.RestApiConstants;
-import org.apache.slider.util.RestApiErrorMessages;
+import org.apache.hadoop.yarn.service.servicemonitor.probe.MonitorUtils;
+import org.apache.hadoop.yarn.service.conf.RestApiConstants;
+import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,9 +123,7 @@ public class ServiceApiUtil {
     List<Component> componentsToAdd = new ArrayList<>();
     for (Component comp : application.getComponents()) {
       int maxCompLength = RegistryConstants.MAX_FQDN_LABEL_LENGTH;
-      if (comp.getUniqueComponentSupport()) {
-        maxCompLength = maxCompLength - Long.toString(Long.MAX_VALUE).length();
-      }
+      maxCompLength = maxCompLength - Long.toString(Long.MAX_VALUE).length();
       if (dnsEnabled && comp.getName().length() > maxCompLength) {
         throw new IllegalArgumentException(String.format(RestApiErrorMessages
             .ERROR_COMPONENT_NAME_INVALID, maxCompLength, comp.getName()));

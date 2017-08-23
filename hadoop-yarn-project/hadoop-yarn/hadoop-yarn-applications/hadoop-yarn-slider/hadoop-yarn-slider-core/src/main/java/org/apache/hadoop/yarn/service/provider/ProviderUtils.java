@@ -24,30 +24,24 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.slider.api.ClusterNode;
-import org.apache.slider.api.ResourceKeys;
-import org.apache.slider.api.RoleKeys;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.slider.api.resource.Configuration;
-import org.apache.hadoop.yarn.service.conf.SliderKeys;
-import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
-import org.apache.slider.core.exceptions.SliderException;
-import org.apache.slider.core.launch.AbstractLauncher;
-import org.apache.slider.core.launch.ContainerLauncher;
-import org.apache.slider.core.registry.docstore.ConfigFormat;
-import org.apache.slider.core.registry.docstore.PublishedConfiguration;
-import org.apache.slider.core.registry.docstore.PublishedConfigurationOutputter;
-import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.slider.server.appmaster.state.StateAccessForProviders;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.api.records.ConfigFormat;
+import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.utils.PublishedConfiguration;
+import org.apache.hadoop.yarn.service.utils.PublishedConfigurationOutputter;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.apache.hadoop.yarn.service.utils.SliderUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,23 +49,18 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
-import static org.apache.slider.api.ServiceApiConstants.*;
-import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.$;
+import static org.apache.hadoop.yarn.service.api.constants.ServiceApiConstants.*;
 
 /**
  * This is a factoring out of methods handy for providers. It's bonded to a log
  * at construction time.
  */
-public class ProviderUtils implements RoleKeys, SliderKeys {
+public class ProviderUtils implements YarnServiceConstants {
 
   protected static final Logger log =
       LoggerFactory.getLogger(ProviderUtils.class);
@@ -174,46 +163,22 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
   }
 
   /**
-   * Get resource requirements from a String value. If value isn't specified,
-   * use the default value. If value is greater than max, use the max value.
-   * @param val string value
-   * @param defVal default value
-   * @param maxVal maximum value
-   * @return int resource requirement
-   */
-  public int getRoleResourceRequirement(String val,
-                                        int defVal,
-                                        int maxVal) {
-    if (val==null) {
-      val = Integer.toString(defVal);
-    }
-    Integer intVal;
-    if (ResourceKeys.YARN_RESOURCE_MAX.equals(val)) {
-      intVal = maxVal;
-    } else {
-      intVal = Integer.decode(val);
-    }
-    return intVal;
-  }
-
-
-  /**
    * Localize the service keytabs for the application.
    * @param launcher container launcher
    * @param fileSystem file system
    * @throws IOException trouble uploading to HDFS
    */
-  public void localizeServiceKeytabs(ContainerLauncher launcher,
+  public void localizeServiceKeytabs(AbstractLauncher launcher,
       SliderFileSystem fileSystem, Application application) throws IOException {
 
     Configuration conf = application.getConfiguration();
     String keytabPathOnHost =
-        conf.getProperty(SliderXmlConfKeys.KEY_AM_KEYTAB_LOCAL_PATH);
+        conf.getProperty(YarnServiceConf.KEY_AM_KEYTAB_LOCAL_PATH);
     if (SliderUtils.isUnset(keytabPathOnHost)) {
       String amKeytabName =
-          conf.getProperty(SliderXmlConfKeys.KEY_AM_LOGIN_KEYTAB_NAME);
+          conf.getProperty(YarnServiceConf.KEY_AM_LOGIN_KEYTAB_NAME);
       String keytabDir =
-          conf.getProperty(SliderXmlConfKeys.KEY_HDFS_KEYTAB_DIR);
+          conf.getProperty(YarnServiceConf.KEY_HDFS_KEYTAB_DIR);
       // we need to localize the keytab files in the directory
       Path keytabDirPath = fileSystem.buildKeytabPath(keytabDir, null,
           application.getName());
@@ -433,39 +398,5 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     tokens.put(COMPONENT_ID,
         String.valueOf(instance.getCompInstanceId().getId()));
     return tokens;
-  }
-
-  /**
-   * Add ROLE_HOST tokens for substitution into config values.
-   * @param tokens existing tokens
-   * @param amState access to AM state
-   */
-  public static void addComponentHostTokens(Map<String, String> tokens,
-      StateAccessForProviders amState) {
-    if (amState == null) {
-      return;
-    }
-    for (Map.Entry<String, Map<String, ClusterNode>> entry :
-        amState.getRoleClusterNodeMapping().entrySet()) {
-      String tokenName = entry.getKey().toUpperCase(Locale.ENGLISH) + "_HOST";
-      String hosts = StringUtils .join(",",
-          getHostsList(entry.getValue().values(), true));
-      tokens.put($(tokenName), hosts);
-    }
-  }
-
-  /**
-   * Return a list of hosts based on current ClusterNodes.
-   * @param values cluster nodes
-   * @param hostOnly whether host or host/server name will be added to list
-   * @return list of hosts
-   */
-  public static Iterable<String> getHostsList(Collection<ClusterNode> values,
-      boolean hostOnly) {
-    List<String> hosts = new ArrayList<>();
-    for (ClusterNode cn : values) {
-      hosts.add(hostOnly ? cn.host : cn.host + "/" + cn.name);
-    }
-    return hosts;
   }
 }
