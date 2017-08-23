@@ -79,9 +79,10 @@ public class BlockDeletingService extends BackgroundService{
   private final static int BLOCK_DELETING_SERVICE_CORE_POOL_SIZE = 10;
 
   public BlockDeletingService(ContainerManager containerManager,
-      int serviceInterval, Configuration conf) {
+      int serviceInterval, long serviceTimeout, Configuration conf) {
     super("BlockDeletingService", serviceInterval,
-        TimeUnit.MILLISECONDS, BLOCK_DELETING_SERVICE_CORE_POOL_SIZE);
+        TimeUnit.MILLISECONDS, BLOCK_DELETING_SERVICE_CORE_POOL_SIZE,
+        serviceTimeout);
     this.containerManager = containerManager;
     this.conf = conf;
     this.blockLimitPerTask = conf.getInt(

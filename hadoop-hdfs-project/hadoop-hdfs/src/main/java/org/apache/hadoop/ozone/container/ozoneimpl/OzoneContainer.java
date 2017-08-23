@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
@@ -54,6 +55,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
 /**
  * Ozone main class sets up the network server and initializes the container
@@ -103,8 +106,11 @@ public class OzoneContainer {
     int svcInterval = ozoneConfig.getInt(
         OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
         OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
+    long serviceTimeout = ozoneConfig.getTimeDuration(
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
     this.blockDeletingService = new BlockDeletingService(manager,
-        svcInterval, ozoneConfig);
+        svcInterval, serviceTimeout, ozoneConfig);
 
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
 

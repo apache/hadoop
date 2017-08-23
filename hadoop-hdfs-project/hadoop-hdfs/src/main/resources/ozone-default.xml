@@ -370,6 +370,19 @@
   </property>
 
   <property>
+    <name>ozone.block.deleting.service.timeout</name>
+    <value>300000ms</value>
+    <description>
+      Timeout value of block deletion service. If this is set greater than 0,
+      the service will stop waiting for the block deleting completion after this
+      time. If timeout happens to a large proportion of block deletion, this needs
+      to be increased with ozone.block.deleting.limit.per.task. This setting supports
+      multiple time unit suffixes as described in dfs.heartbeat.interval. If no suffix
+      is specified then milliseconds is assumed.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.block.deleting.limit.per.task</name>
     <value>1000</value>
     <description>

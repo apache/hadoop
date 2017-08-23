@@ -33,6 +33,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BlockDeletingServiceTestImpl
     extends BlockDeletingService {
 
+  // the service timeout
+  private static final int SERVICE_TIMEOUT_IN_MILLISECONDS = 0;
+
   // tests only
   private CountDownLatch latch;
   private Thread testingThread;
@@ -40,7 +43,8 @@ public class BlockDeletingServiceTestImpl
 
   public BlockDeletingServiceTestImpl(ContainerManager containerManager,
       int serviceInterval, Configuration conf) {
-    super(containerManager, serviceInterval, conf);
+    super(containerManager, serviceInterval,
+        SERVICE_TIMEOUT_IN_MILLISECONDS, conf);
   }
 
   @VisibleForTesting
