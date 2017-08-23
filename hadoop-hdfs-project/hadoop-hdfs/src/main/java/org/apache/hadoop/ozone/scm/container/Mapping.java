@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.scm.container;
 
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
@@ -30,13 +31,13 @@ import java.util.List;
  */
 public interface Mapping extends Closeable {
   /**
-   * Returns the Pipeline from the container name.
+   * Returns the ContainerInfo from the container name.
    *
    * @param containerName - Name
-   * @return - Pipeline that makes up this container.
+   * @return - ContainerInfo such as creation state and the pipeline.
    * @throws IOException
    */
-  Pipeline getContainer(String containerName) throws IOException;
+  ContainerInfo getContainer(String containerName) throws IOException;
 
   /**
    * Returns pipelines under certain conditions.
@@ -57,16 +58,15 @@ public interface Mapping extends Closeable {
   List<Pipeline> listContainer(String startName, String prefixName, int count)
       throws IOException;
 
-
   /**
    * Allocates a new container for a given keyName and replication factor.
    *
    * @param containerName - Name.
    * @param replicationFactor - replication factor of the container.
-   * @return - Pipeline that makes up this container.
+   * @return - Container Info.
    * @throws IOException
    */
-  Pipeline allocateContainer(OzoneProtos.ReplicationType type,
+  ContainerInfo allocateContainer(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor replicationFactor,
       String containerName) throws IOException;
 
@@ -77,4 +77,14 @@ public interface Mapping extends Closeable {
    * @throws IOException
    */
   void deleteContainer(String containerName) throws IOException;
+
+  /**
+   * Update container state.
+   * @param containerName - Container Name
+   * @param event - container life cycle event
+   * @return - new container state
+   * @throws IOException
+   */
+  OzoneProtos.LifeCycleState updateContainerState(String containerName,
+      OzoneProtos.LifeCycleEvent event) throws IOException;
 }

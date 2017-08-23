@@ -20,13 +20,17 @@ package org.apache.hadoop.ozone.scm.container;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.common.statemachine.InvalidStateTransitionException;
+import org.apache.hadoop.ozone.common.statemachine.StateMachine;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.apache.hadoop.utils.MetadataStore;
@@ -38,8 +42,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -59,6 +65,9 @@ public class ContainerMapping implements Mapping {
   private final Charset encoding = Charset.forName("UTF-8");
   private final MetadataStore containerStore;
   private final PipelineSelector pipelineSelector;
+
+  private final StateMachine<OzoneProtos.LifeCycleState,
+        OzoneProtos.LifeCycleEvent> stateMachine;
 
   /**
    * Constructs a mapping class that creates mapping between container names and
@@ -88,31 +97,80 @@ public class ContainerMapping implements Mapping {
         .build();
 
     this.lock = new ReentrantLock();
+
     this.pipelineSelector = new PipelineSelector(nodeManager, conf);
+
+    // Initialize the container state machine.
+    Set<OzoneProtos.LifeCycleState> finalStates = new HashSet();
+    finalStates.add(OzoneProtos.LifeCycleState.OPEN);
+    finalStates.add(OzoneProtos.LifeCycleState.CLOSED);
+    finalStates.add(OzoneProtos.LifeCycleState.DELETED);
+
+    this.stateMachine = new StateMachine<>(
+        OzoneProtos.LifeCycleState.ALLOCATED, finalStates);
+    initializeStateMachine();
   }
 
+  // Client-driven Create State Machine
+  // States: <ALLOCATED>------------->CREATING----------------->[OPEN]
+  // Events:            (BEGIN_CREATE)    |    (COMPLETE_CREATE)
+  //                                      |
+  //                                      |(TIMEOUT)
+  //                                      V
+  //                                  DELETING----------------->[DELETED]
+  //                                           (CLEANUP)
 
+  // SCM Open/Close State Machine
+  // States: OPEN------------------>[CLOSED]
+  // Events:        (CLOSE)
+
+  // Delete State Machine
+  // States: OPEN------------------>DELETING------------------>[DELETED]
+  // Events:         (DELETE)                  (CLEANUP)
+  private void initializeStateMachine() {
+    stateMachine.addTransition(OzoneProtos.LifeCycleState.ALLOCATED,
+        OzoneProtos.LifeCycleState.CREATING,
+        OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+
+    stateMachine.addTransition(OzoneProtos.LifeCycleState.CREATING,
+        OzoneProtos.LifeCycleState.OPEN,
+        OzoneProtos.LifeCycleEvent.COMPLETE_CREATE);
+
+    stateMachine.addTransition(OzoneProtos.LifeCycleState.OPEN,
+        OzoneProtos.LifeCycleState.CLOSED,
+        OzoneProtos.LifeCycleEvent.CLOSE);
+
+    stateMachine.addTransition(OzoneProtos.LifeCycleState.OPEN,
+        OzoneProtos.LifeCycleState.DELETING,
+        OzoneProtos.LifeCycleEvent.DELETE);
+
+    stateMachine.addTransition(OzoneProtos.LifeCycleState.DELETING,
+        OzoneProtos.LifeCycleState.DELETED,
+        OzoneProtos.LifeCycleEvent.CLEANUP);
+
+    // Creating timeout -> Deleting
+    stateMachine.addTransition(OzoneProtos.LifeCycleState.CREATING,
+        OzoneProtos.LifeCycleState.DELETING,
+        OzoneProtos.LifeCycleEvent.TIMEOUT);
+  }
 
   /**
-   * Returns the Pipeline from the container name.
-   *
-   * @param containerName - Name
-   * @return - Pipeline that makes up this container.
+   * {@inheritDoc}
    */
   @Override
-  public Pipeline getContainer(final String containerName) throws IOException {
-    Pipeline pipeline;
+  public ContainerInfo getContainer(final String containerName) throws IOException {
+    ContainerInfo containerInfo;
     lock.lock();
     try {
-      byte[] pipelineBytes =
+      byte[] containerBytes =
           containerStore.get(containerName.getBytes(encoding));
-      if (pipelineBytes == null) {
+      if (containerBytes == null) {
         throw new SCMException("Specified key does not exist. key : " +
             containerName, SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
-      pipeline = Pipeline.getFromProtoBuf(
-          OzoneProtos.Pipeline.PARSER.parseFrom(pipelineBytes));
-      return pipeline;
+      containerInfo = ContainerInfo.fromProtobuf(
+          OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes));
+      return containerInfo;
     } finally {
       lock.unlock();
     }
@@ -138,10 +196,13 @@ public class ContainerMapping implements Mapping {
           containerStore.getRangeKVs(startKey, count, prefixFilter);
 
       // Transform the values into the pipelines.
+      // TODO: return list of ContainerInfo instead of pipelines.
+      // TODO: filter by container state
       for (Map.Entry<byte[], byte[]> entry : range) {
-        Pipeline pipeline = Pipeline.getFromProtoBuf(
-            OzoneProtos.Pipeline.PARSER.parseFrom(entry.getValue()));
-        pipelineList.add(pipeline);
+        ContainerInfo containerInfo =  ContainerInfo.fromProtobuf(
+            OzoneProtos.SCMContainerInfo.PARSER.parseFrom(entry.getValue()));
+        Preconditions.checkNotNull(containerInfo);
+        pipelineList.add(containerInfo.getPipeline());
       }
     } finally {
       lock.unlock();
@@ -158,12 +219,12 @@ public class ContainerMapping implements Mapping {
    * @throws IOException - Exception
    */
   @Override
-  public Pipeline allocateContainer(OzoneProtos.ReplicationType type,
+  public ContainerInfo allocateContainer(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor replicationFactor,
       final String containerName) throws IOException {
     Preconditions.checkNotNull(containerName);
     Preconditions.checkState(!containerName.isEmpty());
-    Pipeline pipeline = null;
+    ContainerInfo containerInfo = null;
     if (!nodeManager.isOutOfNodeChillMode()) {
       throw new SCMException("Unable to create container while in chill mode",
           SCMException.ResultCodes.CHILL_MODE_EXCEPTION);
@@ -171,20 +232,25 @@ public class ContainerMapping implements Mapping {
 
     lock.lock();
     try {
-      byte[] pipelineBytes =
+      byte[] containerBytes =
           containerStore.get(containerName.getBytes(encoding));
-      if (pipelineBytes != null) {
+      if (containerBytes != null) {
         throw new SCMException("Specified container already exists. key : " +
             containerName, SCMException.ResultCodes.CONTAINER_EXISTS);
       }
-      pipeline = pipelineSelector.getReplicationPipeline(type,
+      Pipeline pipeline = pipelineSelector.getReplicationPipeline(type,
           replicationFactor, containerName);
+      containerInfo = new ContainerInfo.Builder()
+          .setState(OzoneProtos.LifeCycleState.ALLOCATED)
+          .setPipeline(pipeline)
+          .setStateEnterTime(Time.monotonicNow())
+          .build();
       containerStore.put(containerName.getBytes(encoding),
-          pipeline.getProtobufMessage().toByteArray());
+          containerInfo.getProtobuf().toByteArray());
     } finally {
       lock.unlock();
     }
-    return pipeline;
+    return containerInfo;
   }
 
   /**
@@ -199,14 +265,52 @@ public class ContainerMapping implements Mapping {
     lock.lock();
     try {
       byte[] dbKey = containerName.getBytes(encoding);
-      byte[] pipelineBytes =
+      byte[] containerBytes =
           containerStore.get(dbKey);
-      if (pipelineBytes == null) {
+      if(containerBytes == null) {
         throw new SCMException("Failed to delete container "
             + containerName + ", reason : container doesn't exist.",
             SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
       containerStore.delete(dbKey);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   * Used by client to update container state on SCM.
+   */
+  @Override
+  public OzoneProtos.LifeCycleState updateContainerState(String containerName,
+      OzoneProtos.LifeCycleEvent event) throws IOException {
+    ContainerInfo containerInfo;
+    lock.lock();
+    try {
+      byte[] dbKey = containerName.getBytes(encoding);
+      byte[] containerBytes =
+          containerStore.get(dbKey);
+      if(containerBytes == null) {
+        throw new SCMException("Failed to update container state"
+            + containerName + ", reason : container doesn't exist.",
+            SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
+      }
+      containerInfo = ContainerInfo.fromProtobuf(
+          OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes));
+
+      OzoneProtos.LifeCycleState newState;
+      try {
+         newState = stateMachine.getNextState(containerInfo.getState(), event);
+      } catch (InvalidStateTransitionException ex) {
+        throw new SCMException("Failed to update container state"
+            + containerName + ", reason : invalid state transition from state: "
+            + containerInfo.getState() + " upon event: " + event + ".",
+            SCMException.ResultCodes.FAILED_TO_CHANGE_CONTAINER_STATE);
+      }
+      containerInfo.setState(newState);
+      containerStore.put(dbKey, containerInfo.getProtobuf().toByteArray());
+      return newState;
     } finally {
       lock.unlock();
     }

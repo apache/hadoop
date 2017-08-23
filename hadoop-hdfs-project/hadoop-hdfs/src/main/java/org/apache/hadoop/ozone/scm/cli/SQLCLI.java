@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm.cli;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -33,8 +34,10 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Buck
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.Pipeline;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.utils.MetadataStore;
@@ -482,10 +485,14 @@ public class SQLCLI  extends Configured implements Tool {
       HashSet<String> uuidChecked = new HashSet<>();
       dbStore.iterate(null, (key, value) -> {
         String containerName = new String(key, encoding);
-        Pipeline pipeline = null;
-        pipeline = Pipeline.parseFrom(value);
+        ContainerInfo containerInfo = null;
+        containerInfo = ContainerInfo.fromProtobuf(
+            OzoneProtos.SCMContainerInfo.PARSER.parseFrom(value));
+        Preconditions.checkNotNull(containerInfo);
         try {
-          insertContainerDB(conn, containerName, pipeline, uuidChecked);
+          //TODO: include container state to sqllite schema
+          insertContainerDB(conn, containerName,
+              containerInfo.getPipeline().getProtobufMessage(), uuidChecked);
           return true;
         } catch (SQLException e) {
           throw new IOException(e);

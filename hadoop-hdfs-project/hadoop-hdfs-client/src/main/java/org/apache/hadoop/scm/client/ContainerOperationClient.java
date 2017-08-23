@@ -20,6 +20,7 @@ package org.apache.hadoop.scm.client;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -86,12 +87,20 @@ public class ContainerOperationClient implements ScmClient {
 
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
+      storageContainerLocationClient.notifyObjectCreationStage(
+          NotifyObjectCreationStageRequestProto.Type.container,
+          containerId,
+          NotifyObjectCreationStageRequestProto.Stage.begin);
       ContainerProtocolCalls.createContainer(client, traceID);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Created container " + containerId
             + " leader:" + pipeline.getLeader()
             + " machines:" + pipeline.getMachines());
       }
+      storageContainerLocationClient.notifyObjectCreationStage(
+          NotifyObjectCreationStageRequestProto.Type.container,
+          containerId,
+          NotifyObjectCreationStageRequestProto.Stage.complete);
       return pipeline;
     } finally {
       if (client != null) {
@@ -116,11 +125,21 @@ public class ContainerOperationClient implements ScmClient {
       // connect to pipeline leader and allocate container on leader datanode.
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
+      storageContainerLocationClient.notifyObjectCreationStage(
+          NotifyObjectCreationStageRequestProto.Type.container,
+          containerId,
+          NotifyObjectCreationStageRequestProto.Stage.begin);
+
       ContainerProtocolCalls.createContainer(client, traceID);
       LOG.info("Created container " + containerId +
           " leader:" + pipeline.getLeader() +
           " machines:" + pipeline.getMachines() +
           " replication factor:" + factor);
+
+      storageContainerLocationClient.notifyObjectCreationStage(
+          NotifyObjectCreationStageRequestProto.Type.container,
+          containerId,
+          NotifyObjectCreationStageRequestProto.Stage.complete);
       return pipeline;
     } finally {
       if (client != null) {

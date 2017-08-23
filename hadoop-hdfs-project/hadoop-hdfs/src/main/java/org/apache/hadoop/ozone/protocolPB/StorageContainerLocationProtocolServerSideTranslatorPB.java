@@ -31,7 +31,7 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 
-import static org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerResponseProto;
@@ -39,9 +39,10 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineRequestProto;
-
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 
@@ -155,6 +156,19 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
           .setDatanodes(datanodes)
           .build();
     } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public NotifyObjectCreationStageResponseProto notifyObjectCreationStage(
+      RpcController controller, NotifyObjectCreationStageRequestProto request)
+      throws ServiceException {
+    try {
+      impl.notifyObjectCreationStage(request.getType(), request.getName(),
+          request.getStage());
+      return NotifyObjectCreationStageResponseProto.newBuilder().build();
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }

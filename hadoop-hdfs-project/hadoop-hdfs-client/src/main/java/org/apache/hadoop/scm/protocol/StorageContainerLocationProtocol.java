@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
@@ -35,8 +36,8 @@ public interface StorageContainerLocationProtocol {
    *
    */
   Pipeline allocateContainer(OzoneProtos.ReplicationType replicationType,
-      OzoneProtos.ReplicationFactor factor,
-      String containerName) throws IOException;
+      OzoneProtos.ReplicationFactor factor, String containerName)
+      throws IOException;
 
   /**
    * Ask SCM the location of the container. SCM responds with a group of
@@ -86,6 +87,18 @@ public interface StorageContainerLocationProtocol {
       OzoneProtos.QueryScope queryScope, String poolName) throws IOException;
 
   /**
+   * Notify from client when begin or finish creating objects like pipeline
+   * or containers on datanodes.
+   * Container will be in Operational state after that.
+   * @param type object type
+   * @param name object name
+   * @param stage creation stage
+   */
+  void notifyObjectCreationStage(
+      NotifyObjectCreationStageRequestProto.Type type, String name,
+      NotifyObjectCreationStageRequestProto.Stage stage) throws IOException;
+
+  /**
    * Creates a replication pipeline of a specified type.
    * @param type - replication type
    * @param factor - factor 1 or 3
@@ -95,5 +108,4 @@ public interface StorageContainerLocationProtocol {
   Pipeline createReplicationPipeline(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor factor, OzoneProtos.NodePool nodePool)
       throws IOException;
-
 }

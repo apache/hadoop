@@ -35,7 +35,7 @@ message Pipeline {
     required string leaderID = 1;
     repeated DatanodeIDProto members = 2;
     required string containerName = 3;
-    optional LifeCycleStates state = 4 [default = OPERATIONAL];
+    optional LifeCycleState state = 4 [default = OPEN];
 }
 
 message KeyValue {
@@ -72,6 +72,45 @@ message NodePool {
     repeated Node nodes = 1;
 }
 
+/**
+ * LifeCycleState for SCM object creation state machine:
+ *    ->Allocated: allocated on SCM but clean has not started creating it yet.
+ *    ->Creating: allocated and assigned to client to create but not ack-ed yet.
+ *    ->Open: allocated on SCM and created on datanodes and ack-ed by a client.
+ *    ->Close: container closed due to space all used or error?
+ *    ->Timeout -> container failed to create on datanodes or ack-ed by client.
+ *    ->Deleting(TBD) -> container will be deleted after timeout
+ * 1. ALLOCATE-ed containers on SCM can't serve key/block related operation
+ *    until ACK-ed explicitly which changes the state to OPEN.
+ * 2. Only OPEN/CLOSED containers can serve key/block related operation.
+ * 3. ALLOCATE-ed containers that are not ACK-ed timely will be TIMEOUT and
+ *    CLEANUP asynchronously.
+ */
+
+enum LifeCycleState {
+    ALLOCATED = 1;
+    CREATING = 2; // Used for container allocated/created by different client.
+    OPEN =3; // Mostly an update to SCM via HB or client call.
+    CLOSED = 4; // !!State after this has not been used yet.
+    DELETING = 5;
+    DELETED = 6; // object is deleted.
+}
+
+enum LifeCycleEvent {
+    BEGIN_CREATE = 1; // A request to client to create this object
+    COMPLETE_CREATE = 2;
+    CLOSE = 3; // !!Event after this has not been used yet.
+    UPDATE = 4;
+    TIMEOUT = 5; // creation has timed out from SCM's View.
+    DELETE = 6;
+    CLEANUP = 7;
+}
+
+message SCMContainerInfo {
+    required LifeCycleState state = 1;
+    required Pipeline pipeline = 2;
+    optional int64 stateEnterTime = 3;
+}
 
 enum ReplicationType {
     RATIS = 1;
@@ -79,15 +118,7 @@ enum ReplicationType {
     CHAINED = 3;
 }
 
-
 enum ReplicationFactor {
     ONE = 1;
     THREE = 3;
-}
-
-enum LifeCycleStates {
-    CLIENT_CREATE = 1; // A request to client to create this object
-    OPERATIONAL = 2; // Mostly an update to SCM via HB or client call.
-    TIMED_OUT = 3; // creation has timed out from SCM's View.
-    DELETED = 4; // object is deleted.
 }
