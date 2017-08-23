@@ -27,7 +27,6 @@ import org.apache.hadoop.net.Node;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * The HDFS-specific representation of a network topology inner node. The
@@ -76,30 +75,56 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
   private final HashMap
       <String, EnumMap<StorageType, Integer>> childrenStorageInfo;
 
+  /**
+   * This map stores storage type counts of the subtree. We can always get this
+   * info by iterate over the childrenStorageInfo variable. But for optimization
+   * purpose, we store this info directly to avoid the iteration.
+   */
+  private final EnumMap<StorageType, Integer> storageTypeCounts;
+
   DFSTopologyNodeImpl(String path) {
     super(path);
     childrenStorageInfo = new HashMap<>();
+    storageTypeCounts = new EnumMap<>(StorageType.class);
   }
 
   DFSTopologyNodeImpl(
       String name, String location, InnerNode parent, int level) {
     super(name, location, parent, level);
     childrenStorageInfo = new HashMap<>();
+    storageTypeCounts = new EnumMap<>(StorageType.class);
   }
 
   public int getSubtreeStorageCount(StorageType type) {
-    int res = 0;
-    for (Map.Entry<String, EnumMap<StorageType, Integer>> entry :
-        childrenStorageInfo.entrySet()) {
-      if (entry.getValue().containsKey(type)) {
-        res += entry.getValue().get(type);
-      }
+    if (storageTypeCounts.containsKey(type)) {
+      return storageTypeCounts.get(type);
+    } else {
+      return 0;
     }
-    return res;
   }
 
   int getNumOfChildren() {
     return children.size();
+  }
+
+  private void incStorageTypeCount(StorageType type) {
+    // no locking because the caller is synchronized already
+    if (storageTypeCounts.containsKey(type)) {
+      storageTypeCounts.put(type, storageTypeCounts.get(type)+1);
+    } else {
+      storageTypeCounts.put(type, 1);
+    }
+  }
+
+  private void decStorageTypeCount(StorageType type) {
+    // no locking because the caller is synchronized already
+    int current = storageTypeCounts.get(type);
+    current -= 1;
+    if (current == 0) {
+      storageTypeCounts.remove(type);
+    } else {
+      storageTypeCounts.put(type, current);
+    }
   }
 
   @Override
@@ -130,15 +155,14 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
       }
       children.add(n);
       numOfLeaves++;
-      synchronized (childrenStorageInfo) {
-        if (!childrenStorageInfo.containsKey(dnDescriptor.getName())) {
-          childrenStorageInfo.put(
-              dnDescriptor.getName(),
-              new EnumMap<StorageType, Integer>(StorageType.class));
-        }
-        for (StorageType st : dnDescriptor.getStorageTypes()) {
-          childrenStorageInfo.get(dnDescriptor.getName()).put(st, 1);
-        }
+      if (!childrenStorageInfo.containsKey(dnDescriptor.getName())) {
+        childrenStorageInfo.put(
+            dnDescriptor.getName(),
+            new EnumMap<StorageType, Integer>(StorageType.class));
+      }
+      for (StorageType st : dnDescriptor.getStorageTypes()) {
+        childrenStorageInfo.get(dnDescriptor.getName()).put(st, 1);
+        incStorageTypeCount(st);
       }
       return true;
     } else {
@@ -154,25 +178,26 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
       // add n to the subtree of the next ancestor node
       if (parentNode.add(n)) {
         numOfLeaves++;
-        synchronized (childrenStorageInfo) {
-          if (!childrenStorageInfo.containsKey(parentNode.getName())) {
-            childrenStorageInfo.put(
-                parentNode.getName(),
-                new EnumMap<StorageType, Integer>(StorageType.class));
-            for (StorageType st : dnDescriptor.getStorageTypes()) {
-              childrenStorageInfo.get(parentNode.getName()).put(st, 1);
-            }
-          } else {
-            EnumMap<StorageType, Integer> currentCount =
-                childrenStorageInfo.get(parentNode.getName());
-            for (StorageType st : dnDescriptor.getStorageTypes()) {
-              if (currentCount.containsKey(st)) {
-                currentCount.put(st, currentCount.get(st) + 1);
-              } else {
-                currentCount.put(st, 1);
-              }
+        if (!childrenStorageInfo.containsKey(parentNode.getName())) {
+          childrenStorageInfo.put(
+              parentNode.getName(),
+              new EnumMap<StorageType, Integer>(StorageType.class));
+          for (StorageType st : dnDescriptor.getStorageTypes()) {
+            childrenStorageInfo.get(parentNode.getName()).put(st, 1);
+          }
+        } else {
+          EnumMap<StorageType, Integer> currentCount =
+              childrenStorageInfo.get(parentNode.getName());
+          for (StorageType st : dnDescriptor.getStorageTypes()) {
+            if (currentCount.containsKey(st)) {
+              currentCount.put(st, currentCount.get(st) + 1);
+            } else {
+              currentCount.put(st, 1);
             }
           }
+        }
+        for (StorageType st : dnDescriptor.getStorageTypes()) {
+          incStorageTypeCount(st);
         }
         return true;
       } else {
@@ -222,8 +247,9 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
           if (children.get(i).getName().equals(n.getName())) {
             children.remove(i);
             childrenMap.remove(n.getName());
-            synchronized (childrenStorageInfo) {
-              childrenStorageInfo.remove(dnDescriptor.getName());
+            childrenStorageInfo.remove(dnDescriptor.getName());
+            for (StorageType st : dnDescriptor.getStorageTypes()) {
+              decStorageTypeCount(st);
             }
             numOfLeaves--;
             n.setParent(null);
@@ -244,20 +270,21 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
       boolean isRemoved = parentNode.remove(n);
       if (isRemoved) {
         // if the parent node has no children, remove the parent node too
-        synchronized (childrenStorageInfo) {
-          EnumMap<StorageType, Integer> currentCount =
-              childrenStorageInfo.get(parentNode.getName());
-          EnumSet<StorageType> toRemove = EnumSet.noneOf(StorageType.class);
-          for (StorageType st : dnDescriptor.getStorageTypes()) {
-            int newCount = currentCount.get(st) - 1;
-            if (newCount == 0) {
-              toRemove.add(st);
-            }
-            currentCount.put(st, newCount);
+        EnumMap<StorageType, Integer> currentCount =
+            childrenStorageInfo.get(parentNode.getName());
+        EnumSet<StorageType> toRemove = EnumSet.noneOf(StorageType.class);
+        for (StorageType st : dnDescriptor.getStorageTypes()) {
+          int newCount = currentCount.get(st) - 1;
+          if (newCount == 0) {
+            toRemove.add(st);
           }
-          for (StorageType st : toRemove) {
-            currentCount.remove(st);
-          }
+          currentCount.put(st, newCount);
+        }
+        for (StorageType st : toRemove) {
+          currentCount.remove(st);
+        }
+        for (StorageType st : dnDescriptor.getStorageTypes()) {
+          decStorageTypeCount(st);
         }
         if (parentNode.getNumOfChildren() == 0) {
           for(int i=0; i < children.size(); i++) {
