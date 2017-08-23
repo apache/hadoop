@@ -71,11 +71,6 @@ public class TestKeys {
 
   /**
    * Create a MiniDFSCluster for testing.
-   *
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local
-   * directory to emulate Ozone backend.
-   *
    * @throws IOException
    */
   @BeforeClass
@@ -83,9 +78,6 @@ public class TestKeys {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-                            OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
     ozoneCluster = new MiniOzoneCluster.Builder(conf)

@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
@@ -57,6 +58,11 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .DFS_CONTAINER_IPC_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .DFS_CONTAINER_IPC_RANDOM_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_RATIS_IPC_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
+
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
     .HEALTHY;
 import static org.junit.Assert.assertFalse;
@@ -148,14 +154,25 @@ public final class MiniOzoneCluster extends MiniDFSCluster
   public boolean restartDataNode(int i, boolean keepPort) throws IOException {
     if (keepPort) {
       DataNodeProperties dnProp = dataNodes.get(i);
-      int currentPort = dnProp.getDatanode().getOzoneContainerManager()
-          .getContainerServerPort();
+      OzoneContainer container =
+          dnProp.getDatanode().getOzoneContainerManager();
       Configuration config = dnProp.getConf();
+      int currentPort = container.getContainerServerPort();
       config.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
       config.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
+      int ratisPort = container.getRatisContainerServerPort();
+      config.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
+      config.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
     }
-    boolean status =  super.restartDataNode(i, true);
-    this.waitActive();
+    boolean status =  super.restartDataNode(i, keepPort);
+
+    try {
+      this.waitActive();
+      this.waitForHeartbeatProcessed();
+      this.waitOzoneReady();
+    } catch (TimeoutException | InterruptedException e) {
+      Thread.interrupted();
+    }
     return status;
   }
 
