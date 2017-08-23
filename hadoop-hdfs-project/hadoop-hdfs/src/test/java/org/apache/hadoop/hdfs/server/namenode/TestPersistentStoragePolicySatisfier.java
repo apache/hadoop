@@ -20,16 +20,22 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
+import com.google.common.base.Supplier;
+
 import java.io.IOException;
+import java.util.List;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.junit.Assert.*;
@@ -476,6 +482,104 @@ public class TestPersistentStoragePolicySatisfier {
           3, 30000, cluster.getFileSystem());
       DFSTestUtil.waitExpectedStorageType(parentFileName, StorageType.ARCHIVE,
           3, 30000, cluster.getFileSystem());
+    } finally {
+      clusterShutdown();
+    }
+  }
+
+  /**
+   * Test SPS xAttr on directory. xAttr should be removed from the directory
+   * once all the files blocks moved to specific storage.
+   */
+  @Test(timeout = 300000)
+  public void testSPSxAttrWhenSpsCalledForDir() throws Exception {
+    try {
+      clusterSetUp();
+      Path parent = new Path("/parent");
+      // create parent dir
+      fs.mkdirs(parent);
+
+      // create 10 child files
+      for (int i = 0; i < 5; i++) {
+        DFSTestUtil.createFile(fs, new Path(parent, "f" + i), 1024, (short) 3,
+            0);
+      }
+
+      // Set storage policy for parent directory
+      fs.setStoragePolicy(parent, "COLD");
+
+      // Stop one DN so we can check the SPS xAttr for directory.
+      DataNodeProperties stopDataNode = cluster.stopDataNode(0);
+
+      fs.satisfyStoragePolicy(parent);
+
+      // Check xAttr for parent directory
+      FSNamesystem namesystem = cluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode("/parent");
+      XAttrFeature f = inode.getXAttrFeature();
+      assertTrue("SPS xAttr should be exist",
+          f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null);
+
+      // check for the child, SPS xAttr should not be there
+      for (int i = 0; i < 5; i++) {
+        inode = namesystem.getFSDirectory().getINode("/parent/f" + i);
+        f = inode.getXAttrFeature();
+        assertTrue(f == null);
+      }
+
+      cluster.restartDataNode(stopDataNode, false);
+
+      // wait and check all the file block moved in ARCHIVE
+      for (int i = 0; i < 5; i++) {
+        DFSTestUtil.waitExpectedStorageType("/parent/f" + i,
+            StorageType.ARCHIVE, 3, 30000, cluster.getFileSystem());
+      }
+      DFSTestUtil.waitForXattrRemoved("/parent", XATTR_SATISFY_STORAGE_POLICY,
+          namesystem, 10000);
+    } finally {
+      clusterShutdown();
+    }
+
+  }
+
+  /**
+   * Test SPS xAttr on file. xAttr should be removed from the file
+   * once all the blocks moved to specific storage.
+   */
+  @Test(timeout = 300000)
+  public void testSPSxAttrWhenSpsCalledForFile() throws Exception {
+    try {
+      clusterSetUp();
+      Path file = new Path("/file");
+      DFSTestUtil.createFile(fs, file, 1024, (short) 3, 0);
+
+      // Set storage policy for file
+      fs.setStoragePolicy(file, "COLD");
+
+      // Stop one DN so we can check the SPS xAttr for file.
+      DataNodeProperties stopDataNode = cluster.stopDataNode(0);
+
+      fs.satisfyStoragePolicy(file);
+
+      // Check xAttr for parent directory
+      FSNamesystem namesystem = cluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode("/file");
+      XAttrFeature f = inode.getXAttrFeature();
+      assertTrue("SPS xAttr should be exist",
+          f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null);
+
+      cluster.restartDataNode(stopDataNode, false);
+
+      // wait and check all the file block moved in ARCHIVE
+      DFSTestUtil.waitExpectedStorageType("/file", StorageType.ARCHIVE, 3,
+          30000, cluster.getFileSystem());
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+          return !existingXAttrs.contains(XATTR_SATISFY_STORAGE_POLICY);
+        }
+      }, 100, 10000);
     } finally {
       clusterShutdown();
     }

@@ -837,6 +837,7 @@ class BPOfferService {
     case DatanodeProtocol.DNA_UNCACHE:
     case DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION:
     case DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT:
+    case DatanodeProtocol.DNA_DROP_SPS_WORK_COMMAND:
       LOG.warn("Got a command from standby NN - ignoring command:" + cmd.getAction());
       break;
     default:

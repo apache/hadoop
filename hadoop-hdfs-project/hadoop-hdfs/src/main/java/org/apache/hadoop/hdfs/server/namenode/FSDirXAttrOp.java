@@ -206,6 +206,14 @@ class FSDirXAttrOp {
     List<XAttr> newXAttrs = filterINodeXAttrs(existingXAttrs, toRemove,
                                               removedXAttrs);
     if (existingXAttrs.size() != newXAttrs.size()) {
+      for (XAttr xattr : toRemove) {
+        if (XATTR_SATISFY_STORAGE_POLICY
+            .equals(XAttrHelper.getPrefixedName(xattr))) {
+          fsd.getBlockManager().getStoragePolicySatisfier()
+              .clearQueue(inode.getId());
+          break;
+        }
+      }
       XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
       return removedXAttrs;
     }
@@ -297,8 +305,7 @@ class FSDirXAttrOp {
 
       // Add inode id to movement queue if xattrs contain satisfy xattr.
       if (XATTR_SATISFY_STORAGE_POLICY.equals(xaName)) {
-        FSDirSatisfyStoragePolicyOp.unprotectedSatisfyStoragePolicy(iip,
-            fsd.getBlockManager(), fsd);
+        FSDirSatisfyStoragePolicyOp.unprotectedSatisfyStoragePolicy(inode, fsd);
         continue;
       }
 

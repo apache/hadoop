@@ -1751,6 +1751,13 @@ public class DatanodeManager {
       }
     }
 
+    if (nodeinfo.shouldDropSPSWork()) {
+      cmds.add(DropSPSWorkCommand.DNA_DROP_SPS_WORK_COMMAND);
+      // Set back to false to indicate that the new value has been sent to the
+      // datanode.
+      nodeinfo.setDropSPSWork(false);
+    }
+
     // check pending block storage movement tasks
     BlockStorageMovementInfosBatch blkStorageMovementInfosBatch = nodeinfo
         .getBlocksToMoveStorages();
@@ -1760,13 +1767,6 @@ public class DatanodeManager {
           DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT,
           blkStorageMovementInfosBatch.getTrackID(), blockPoolId,
           blkStorageMovementInfosBatch.getBlockMovingInfo()));
-    }
-
-    if (nodeinfo.shouldDropSPSWork()) {
-      cmds.add(DropSPSWorkCommand.DNA_DROP_SPS_WORK_COMMAND);
-      // Set back to false to indicate that the new value has been sent to the
-      // datanode.
-      nodeinfo.setDropSPSWork(false);
     }
 
     if (!cmds.isEmpty()) {

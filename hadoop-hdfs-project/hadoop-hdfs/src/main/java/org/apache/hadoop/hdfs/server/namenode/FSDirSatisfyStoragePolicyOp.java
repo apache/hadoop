@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -31,6 +30,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.collect.Lists;
 
@@ -60,10 +60,24 @@ final class FSDirSatisfyStoragePolicyOp {
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
-      XAttr satisfyXAttr = unprotectedSatisfyStoragePolicy(iip, bm, fsd);
-      if (satisfyXAttr != null) {
+      INode inode = FSDirectory.resolveLastINode(iip);
+      if (inodeHasSatisfyXAttr(inode)) {
+        throw new IOException(
+            "Cannot request to call satisfy storage policy on path "
+                + inode.getFullPathName()
+                + ", as this file/dir was already called for satisfying "
+                + "storage policy.");
+      }
+      if (unprotectedSatisfyStoragePolicy(inode, fsd)) {
+        XAttr satisfyXAttr = XAttrHelper
+            .buildXAttr(XATTR_SATISFY_STORAGE_POLICY);
         List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
         xAttrs.add(satisfyXAttr);
+        List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+        List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsd, existingXAttrs,
+            xAttrs, EnumSet.of(XAttrSetFlag.CREATE));
+        XAttrStorage.updateINodeXAttrs(inode, newXAttrs,
+            iip.getLatestSnapshotId());
         fsd.getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
       }
     } finally {
@@ -72,62 +86,29 @@ final class FSDirSatisfyStoragePolicyOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static XAttr unprotectedSatisfyStoragePolicy(INodesInPath iip,
-      BlockManager bm, FSDirectory fsd) throws IOException {
-
-    final INode inode = FSDirectory.resolveLastINode(iip);
-    final int snapshotId = iip.getLatestSnapshotId();
-    final List<INode> candidateNodes = new ArrayList<>();
-
-    // TODO: think about optimization here, label the dir instead
-    // of the sub-files of the dir.
+  static boolean unprotectedSatisfyStoragePolicy(INode inode, FSDirectory fsd) {
     if (inode.isFile() && inode.asFile().numBlocks() != 0) {
-      candidateNodes.add(inode);
-    } else if (inode.isDirectory()) {
-      for (INode node : inode.asDirectory().getChildrenList(snapshotId)) {
-        if (node.isFile() && node.asFile().numBlocks() != 0) {
-          candidateNodes.add(node);
-        }
-      }
+      // Adding directly in the storageMovementNeeded queue, So it can
+      // get more priority compare to directory.
+      fsd.getBlockManager().getStoragePolicySatisfier()
+          .satisfyStoragePolicy(inode.getId());
+      return true;
+    } else if (inode.isDirectory()
+        && inode.asDirectory().getChildrenNum(Snapshot.CURRENT_STATE_ID) > 0) {
+      // Adding directory in the pending queue, so FileInodeIdCollector process
+      // directory child in batch and recursively
+      fsd.getBlockManager().getStoragePolicySatisfier()
+          .addInodeToPendingDirQueue(inode.getId());
+      return true;
     }
-
-    if (candidateNodes.isEmpty()) {
-      return null;
-    }
-    // If node has satisfy xattr, then stop adding it
-    // to satisfy movement queue.
-    if (inodeHasSatisfyXAttr(candidateNodes)) {
-      throw new IOException(
-          "Cannot request to call satisfy storage policy on path "
-              + iip.getPath()
-              + ", as this file/dir was already called for satisfying "
-              + "storage policy.");
-    }
-
-    final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
-    final XAttr satisfyXAttr = XAttrHelper
-        .buildXAttr(XATTR_SATISFY_STORAGE_POLICY);
-    xattrs.add(satisfyXAttr);
-
-    for (INode node : candidateNodes) {
-      bm.satisfyStoragePolicy(node.getId());
-      List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(node);
-      List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsd, existingXAttrs,
-          xattrs, EnumSet.of(XAttrSetFlag.CREATE));
-      XAttrStorage.updateINodeXAttrs(node, newXAttrs, snapshotId);
-    }
-    return satisfyXAttr;
+    return false;
   }
 
-  private static boolean inodeHasSatisfyXAttr(List<INode> candidateNodes) {
-    // If the node is a directory and one of the child files
-    // has satisfy xattr, then return true for this directory.
-    for (INode inode : candidateNodes) {
-      final XAttrFeature f = inode.getXAttrFeature();
-      if (inode.isFile() && f != null
-          && f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null) {
-        return true;
-      }
+  private static boolean inodeHasSatisfyXAttr(INode inode) {
+    final XAttrFeature f = inode.getXAttrFeature();
+    if (inode.isFile() && f != null
+        && f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null) {
+      return true;
     }
     return false;
   }

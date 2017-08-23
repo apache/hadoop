@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -106,10 +103,10 @@ public class StoragePolicySatisfier implements Runnable {
   }
 
   public StoragePolicySatisfier(final Namesystem namesystem,
-      final BlockStorageMovementNeeded storageMovementNeeded,
       final BlockManager blkManager, Configuration conf) {
     this.namesystem = namesystem;
-    this.storageMovementNeeded = storageMovementNeeded;
+    this.storageMovementNeeded = new BlockStorageMovementNeeded(namesystem,
+        this);
     this.blockManager = blkManager;
     this.storageMovementsMonitor = new BlockStorageMovementAttemptedItems(
         conf.getLong(
@@ -146,7 +143,7 @@ public class StoragePolicySatisfier implements Runnable {
     // Ensure that all the previously submitted block movements(if any) have to
     // be stopped in all datanodes.
     addDropSPSWorkCommandsToAllDNs();
-
+    storageMovementNeeded.start();
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
     storagePolicySatisfierThread.start();
@@ -162,14 +159,17 @@ public class StoragePolicySatisfier implements Runnable {
    */
   public synchronized void disable(boolean forceStop) {
     isRunning = false;
+
     if (storagePolicySatisfierThread == null) {
       return;
     }
 
+    storageMovementNeeded.stop();
+
     storagePolicySatisfierThread.interrupt();
     this.storageMovementsMonitor.stop();
     if (forceStop) {
-      this.clearQueuesWithNotification();
+      storageMovementNeeded.clearQueuesWithNotification();
       addDropSPSWorkCommandsToAllDNs();
     } else {
       LOG.info("Stopping StoragePolicySatisfier.");
@@ -184,6 +184,7 @@ public class StoragePolicySatisfier implements Runnable {
       disable(true);
     }
     this.storageMovementsMonitor.stopGracefully();
+
     if (storagePolicySatisfierThread == null) {
       return;
     }
@@ -220,10 +221,11 @@ public class StoragePolicySatisfier implements Runnable {
     while (namesystem.isRunning() && isRunning) {
       try {
         if (!namesystem.isInSafeMode()) {
-          Long blockCollectionID = storageMovementNeeded.get();
-          if (blockCollectionID != null) {
+          ItemInfo itemInfo = storageMovementNeeded.get();
+          if (itemInfo != null) {
+            long trackId = itemInfo.getTrackId();
             BlockCollection blockCollection =
-                namesystem.getBlockCollection(blockCollectionID);
+                namesystem.getBlockCollection(trackId);
             // Check blockCollectionId existence.
             if (blockCollection != null) {
               BlocksMovingAnalysisStatus status =
@@ -234,21 +236,21 @@ public class StoragePolicySatisfier implements Runnable {
                 // Just add to monitor, so it will be tracked for result and
                 // be removed on successful storage movement result.
               case ALL_BLOCKS_TARGETS_PAIRED:
-                this.storageMovementsMonitor.add(blockCollectionID, true);
+                this.storageMovementsMonitor.add(itemInfo, true);
                 break;
               // Add to monitor with allBlcoksAttemptedToSatisfy flag false, so
               // that it will be tracked and still it will be consider for retry
               // as analysis was not found targets for storage movement blocks.
               case FEW_BLOCKS_TARGETS_PAIRED:
-                this.storageMovementsMonitor.add(blockCollectionID, false);
+                this.storageMovementsMonitor.add(itemInfo, false);
                 break;
               case FEW_LOW_REDUNDANCY_BLOCKS:
                 if (LOG.isDebugEnabled()) {
-                  LOG.debug("Adding trackID " + blockCollectionID
+                  LOG.debug("Adding trackID " + trackId
                       + " back to retry queue as some of the blocks"
                       + " are low redundant.");
                 }
-                this.storageMovementNeeded.add(blockCollectionID);
+                this.storageMovementNeeded.add(itemInfo);
                 break;
               // Just clean Xattrs
               case BLOCKS_TARGET_PAIRING_SKIPPED:
@@ -256,9 +258,13 @@ public class StoragePolicySatisfier implements Runnable {
               default:
                 LOG.info("Block analysis skipped or blocks already satisfied"
                     + " with storages. So, Cleaning up the Xattrs.");
-                postBlkStorageMovementCleanup(blockCollectionID);
+                storageMovementNeeded.removeItemTrackInfo(itemInfo);
                 break;
               }
+            } else {
+              // File doesn't exists (maybe got deleted), remove trackId from
+              // the queue
+              storageMovementNeeded.removeItemTrackInfo(itemInfo);
             }
           }
         }
@@ -828,31 +834,63 @@ public class StoragePolicySatisfier implements Runnable {
   }
 
   /**
-   * Clean all the movements in storageMovementNeeded and notify
-   * to clean up required resources.
-   * @throws IOException
+   * Set file inode in queue for which storage movement needed for its blocks.
+   *
+   * @param inodeId
+   *          - file inode/blockcollection id.
    */
-  private void clearQueuesWithNotification() {
-    Long id;
-    while ((id = storageMovementNeeded.get()) != null) {
-      try {
-        postBlkStorageMovementCleanup(id);
-      } catch (IOException ie) {
-        LOG.warn("Failed to remove SPS "
-            + "xattr for collection id " + id, ie);
-      }
+  public void satisfyStoragePolicy(Long inodeId) {
+    //For file rootId and trackId is same
+    storageMovementNeeded.add(new ItemInfo(inodeId, inodeId));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Added track info for inode {} to block "
+          + "storageMovementNeeded queue", inodeId);
     }
   }
 
+  public void addInodeToPendingDirQueue(long id) {
+    storageMovementNeeded.addToPendingDirQueue(id);
+  }
+
   /**
-   * When block movement has been finished successfully, some additional
-   * operations should be notified, for example, SPS xattr should be
-   * removed.
-   * @param trackId track id i.e., block collection id.
-   * @throws IOException
+   * Clear queues for given track id.
    */
-  public void postBlkStorageMovementCleanup(long trackId)
-      throws IOException {
-    this.namesystem.removeXattr(trackId, XATTR_SATISFY_STORAGE_POLICY);
+  public void clearQueue(long trackId) {
+    storageMovementNeeded.clearQueue(trackId);
+  }
+
+  /**
+   * ItemInfo is a file info object for which need to satisfy the
+   * policy.
+   */
+  public static class ItemInfo {
+    private long rootId;
+    private long trackId;
+
+    public ItemInfo(long rootId, long trackId) {
+      this.rootId = rootId;
+      this.trackId = trackId;
+    }
+
+    /**
+     * Return the root of the current track Id.
+     */
+    public long getRootId() {
+      return rootId;
+    }
+
+    /**
+     * Return the File inode Id for which needs to satisfy the policy.
+     */
+    public long getTrackId() {
+      return trackId;
+    }
+
+    /**
+     * Returns true if the tracking path is a directory, false otherwise.
+     */
+    public boolean isDir() {
+      return (rootId != trackId);
+    }
   }
 }

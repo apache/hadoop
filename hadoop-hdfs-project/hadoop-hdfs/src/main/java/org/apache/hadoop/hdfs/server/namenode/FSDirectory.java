@@ -1415,7 +1415,7 @@ public class FSDirectory implements Closeable {
     if (xattr == null) {
       return;
     }
-    getBlockManager().satisfyStoragePolicy(inode.getId());
+    FSDirSatisfyStoragePolicyOp.unprotectedSatisfyStoragePolicy(inode, this);
   }
 
   private void addEncryptionZone(INodeWithAdditionalFields inode,

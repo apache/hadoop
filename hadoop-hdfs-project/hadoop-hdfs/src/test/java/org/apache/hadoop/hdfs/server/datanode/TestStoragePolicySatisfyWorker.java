@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
@@ -115,9 +114,7 @@ public class TestStoragePolicySatisfyWorker {
     // move to ARCHIVE
     dfs.setStoragePolicy(new Path(file), "COLD");
 
-    FSNamesystem namesystem = cluster.getNamesystem();
-    INode inode = namesystem.getFSDirectory().getINode(file);
-    namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+    dfs.satisfyStoragePolicy(new Path(file));
 
     cluster.triggerHeartbeats();
 

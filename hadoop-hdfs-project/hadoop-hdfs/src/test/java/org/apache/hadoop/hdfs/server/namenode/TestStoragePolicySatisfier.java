@@ -119,8 +119,6 @@ public class TestStoragePolicySatisfier {
   private void doTestWhenStoragePolicySetToCOLD() throws Exception {
     // Change policy to COLD
     dfs.setStoragePolicy(new Path(file), COLD);
-    FSNamesystem namesystem = hdfsCluster.getNamesystem();
-    INode inode = namesystem.getFSDirectory().getINode(file);
 
     StorageType[][] newtypes =
         new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE},
@@ -129,7 +127,7 @@ public class TestStoragePolicySatisfier {
     startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
         storagesPerDatanode, capacity, hdfsCluster);
 
-    namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+    dfs.satisfyStoragePolicy(new Path(file));
 
     hdfsCluster.triggerHeartbeats();
     // Wait till namenode notified about the block location details
@@ -144,8 +142,6 @@ public class TestStoragePolicySatisfier {
       createCluster();
       // Change policy to ALL_SSD
       dfs.setStoragePolicy(new Path(file), "ALL_SSD");
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.SSD, StorageType.DISK},
@@ -156,7 +152,7 @@ public class TestStoragePolicySatisfier {
       // datanodes.
       startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
           storagesPerDatanode, capacity, hdfsCluster);
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
@@ -174,8 +170,6 @@ public class TestStoragePolicySatisfier {
       createCluster();
       // Change policy to ONE_SSD
       dfs.setStoragePolicy(new Path(file), ONE_SSD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
@@ -184,7 +178,7 @@ public class TestStoragePolicySatisfier {
       // datanodes.
       startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
           storagesPerDatanode, capacity, hdfsCluster);
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
@@ -207,8 +201,6 @@ public class TestStoragePolicySatisfier {
       createCluster();
       // Change policy to ONE_SSD
       dfs.setStoragePolicy(new Path(file), ONE_SSD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
@@ -217,7 +209,7 @@ public class TestStoragePolicySatisfier {
       // datanodes.
       startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
           storagesPerDatanode, capacity, hdfsCluster);
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
 
       // Wait till the block is moved to SSD areas
@@ -250,13 +242,10 @@ public class TestStoragePolicySatisfier {
         files.add(file1);
         writeContent(file1);
       }
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      List<Long> blockCollectionIds = new ArrayList<>();
       // Change policy to ONE_SSD
       for (String fileName : files) {
         dfs.setStoragePolicy(new Path(fileName), ONE_SSD);
-        INode inode = namesystem.getFSDirectory().getINode(fileName);
-        blockCollectionIds.add(inode.getId());
+        dfs.satisfyStoragePolicy(new Path(fileName));
       }
 
       StorageType[][] newtypes =
@@ -266,9 +255,6 @@ public class TestStoragePolicySatisfier {
       // datanodes.
       startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
           storagesPerDatanode, capacity, hdfsCluster);
-      for (long inodeId : blockCollectionIds) {
-        namesystem.getBlockManager().satisfyStoragePolicy(inodeId);
-      }
       hdfsCluster.triggerHeartbeats();
 
       for (String fileName : files) {
@@ -279,7 +265,7 @@ public class TestStoragePolicySatisfier {
             fileName, StorageType.DISK, 2, 30000, dfs);
       }
 
-      waitForBlocksMovementResult(blockCollectionIds.size(), 30000);
+      waitForBlocksMovementResult(files.size(), 30000);
     } finally {
       shutdownCluster();
     }
@@ -441,8 +427,6 @@ public class TestStoragePolicySatisfier {
       createCluster();
       // Change policy to COLD
       dfs.setStoragePolicy(new Path(file), COLD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE}};
@@ -451,7 +435,7 @@ public class TestStoragePolicySatisfier {
       startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
           storagesPerDatanode, capacity, hdfsCluster);
 
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier identified that block to move to
       // ARCHIVE area.
@@ -486,8 +470,6 @@ public class TestStoragePolicySatisfier {
       createCluster();
       // Change policy to COLD
       dfs.setStoragePolicy(new Path(file), COLD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.DISK, StorageType.DISK}};
@@ -495,7 +477,7 @@ public class TestStoragePolicySatisfier {
       startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
           storagesPerDatanode, capacity, hdfsCluster);
 
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
 
       // No block movement will be scheduled as there is no target node
@@ -600,47 +582,51 @@ public class TestStoragePolicySatisfier {
    */
   @Test(timeout = 120000)
   public void testMoveWithBlockPinning() throws Exception {
-    config.setBoolean(DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED, true);
-    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
-    hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(3)
-        .storageTypes(
-            new StorageType[][] {{StorageType.DISK, StorageType.DISK},
-                {StorageType.DISK, StorageType.DISK},
-                {StorageType.DISK, StorageType.DISK}})
-        .build();
+    try{
+      config.setBoolean(DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED, true);
+      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+          true);
+      hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(3)
+          .storageTypes(
+              new StorageType[][] {{StorageType.DISK, StorageType.DISK},
+                  {StorageType.DISK, StorageType.DISK},
+                  {StorageType.DISK, StorageType.DISK}})
+          .build();
 
-    hdfsCluster.waitActive();
-    dfs = hdfsCluster.getFileSystem();
+      hdfsCluster.waitActive();
+      dfs = hdfsCluster.getFileSystem();
 
-    // create a file with replication factor 3 and mark 2 pinned block
-    // locations.
-    final String file1 = createFileAndSimulateFavoredNodes(2);
+      // create a file with replication factor 3 and mark 2 pinned block
+      // locations.
+      final String file1 = createFileAndSimulateFavoredNodes(2);
 
-    // Change policy to COLD
-    dfs.setStoragePolicy(new Path(file1), COLD);
-    FSNamesystem namesystem = hdfsCluster.getNamesystem();
-    INode inode = namesystem.getFSDirectory().getINode(file1);
+      // Change policy to COLD
+      dfs.setStoragePolicy(new Path(file1), COLD);
 
-    StorageType[][] newtypes =
-        new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE},
-            {StorageType.ARCHIVE, StorageType.ARCHIVE},
-            {StorageType.ARCHIVE, StorageType.ARCHIVE}};
-    // Adding DISK based datanodes
-    startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
-        storagesPerDatanode, capacity, hdfsCluster);
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE}};
+      // Adding DISK based datanodes
+      startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
+          storagesPerDatanode, capacity, hdfsCluster);
 
-    namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
-    hdfsCluster.triggerHeartbeats();
+      dfs.satisfyStoragePolicy(new Path(file1));
+      hdfsCluster.triggerHeartbeats();
 
-    // No block movement will be scheduled as there is no target node available
-    // with the required storage type.
-    waitForAttemptedItems(1, 30000);
-    waitForBlocksMovementResult(1, 30000);
-    DFSTestUtil.waitExpectedStorageType(
-        file1, StorageType.ARCHIVE, 1, 30000, dfs);
-    DFSTestUtil.waitExpectedStorageType(
-        file1, StorageType.DISK, 2, 30000, dfs);
+      // No block movement will be scheduled as there is no target node
+      // available with the required storage type.
+      waitForAttemptedItems(1, 30000);
+      waitForBlocksMovementResult(1, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file1, StorageType.ARCHIVE, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          file1, StorageType.DISK, 2, 30000, dfs);
+    } finally {
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
+    }
   }
 
   /**
@@ -682,10 +668,8 @@ public class TestStoragePolicySatisfier {
 
       // Change policy to COLD
       dfs.setStoragePolicy(new Path(file), COLD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
 
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier identified that block to move to
       // ARCHIVE area.
@@ -723,10 +707,8 @@ public class TestStoragePolicySatisfier {
 
       // Change policy to ONE_SSD
       dfs.setStoragePolicy(new Path(file), ONE_SSD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
 
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
       DFSTestUtil.waitExpectedStorageType(
           file, StorageType.SSD, 1, 30000, dfs);
@@ -764,10 +746,7 @@ public class TestStoragePolicySatisfier {
 
       // Change policy to WARM
       dfs.setStoragePolicy(new Path(file), "WARM");
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
-
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
       hdfsCluster.triggerHeartbeats();
 
       DFSTestUtil.waitExpectedStorageType(
@@ -848,8 +827,6 @@ public class TestStoragePolicySatisfier {
 
       // Change policy to ONE_SSD
       dfs.setStoragePolicy(new Path(file), ONE_SSD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
       Path filePath = new Path("/testChooseInSameDatanode");
       final FSDataOutputStream out =
           dfs.create(filePath, false, 100, (short) 1, 2 * DEFAULT_BLOCK_SIZE);
@@ -872,7 +849,7 @@ public class TestStoragePolicySatisfier {
       for (DataNode dataNode : dataNodes) {
         DataNodeTestUtils.setHeartbeatsDisabledForTests(dataNode, true);
       }
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      dfs.satisfyStoragePolicy(new Path(file));
 
       // Wait for items to be processed
       waitForAttemptedItems(1, 30000);

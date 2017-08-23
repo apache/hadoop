@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.hdfs.server.namenode.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.junit.After;
 import org.junit.Before;
@@ -38,7 +39,9 @@ public class TestBlockStorageMovementAttemptedItems {
 
   @Before
   public void setup() throws Exception {
-    unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded();
+    unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded(
+        Mockito.mock(Namesystem.class),
+        Mockito.mock(StoragePolicySatisfier.class));
     StoragePolicySatisfier sps = Mockito.mock(StoragePolicySatisfier.class);
     bsmAttemptedItems = new BlockStorageMovementAttemptedItems(100,
         selfRetryTimeout, unsatisfiedStorageMovementFiles, sps);
@@ -57,9 +60,9 @@ public class TestBlockStorageMovementAttemptedItems {
     long stopTime = monotonicNow() + (retryTimeout * 2);
     boolean isItemFound = false;
     while (monotonicNow() < (stopTime)) {
-      Long ele = null;
+      ItemInfo ele = null;
       while ((ele = unsatisfiedStorageMovementFiles.get()) != null) {
-        if (item.longValue() == ele.longValue()) {
+        if (item == ele.getTrackId()) {
           isItemFound = true;
           break;
         }
@@ -77,7 +80,7 @@ public class TestBlockStorageMovementAttemptedItems {
   public void testAddResultWithFailureResult() throws Exception {
     bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item, true);
+    bsmAttemptedItems.add(new ItemInfo(0L, item), true);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
             item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});
@@ -88,7 +91,7 @@ public class TestBlockStorageMovementAttemptedItems {
   public void testAddResultWithSucessResult() throws Exception {
     bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item, true);
+    bsmAttemptedItems.add(new ItemInfo(0L, item), true);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
             item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
@@ -99,7 +102,7 @@ public class TestBlockStorageMovementAttemptedItems {
   public void testNoResultAdded() throws Exception {
     bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item, true);
+    bsmAttemptedItems.add(new ItemInfo(0L, item), true);
     // After self retry timeout, it should be added back for retry
     assertTrue("Failed to add to the retry list",
         checkItemMovedForRetry(item, 600));
@@ -115,7 +118,7 @@ public class TestBlockStorageMovementAttemptedItems {
   @Test(timeout = 30000)
   public void testPartialBlockMovementShouldBeRetried1() throws Exception {
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item, false);
+    bsmAttemptedItems.add(new ItemInfo(0L, item), false);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
             item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
@@ -136,7 +139,7 @@ public class TestBlockStorageMovementAttemptedItems {
   @Test(timeout = 30000)
   public void testPartialBlockMovementShouldBeRetried2() throws Exception {
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item, false);
+    bsmAttemptedItems.add(new ItemInfo(0L, item), false);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
             item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
@@ -153,17 +156,20 @@ public class TestBlockStorageMovementAttemptedItems {
   }
 
   /**
-   * Partial block movement with only BlocksStorageMovementResult#FAILURE result
-   * and storageMovementAttemptedItems list is empty.
+   * Partial block movement with only BlocksStorageMovementResult#FAILURE
+   * result and storageMovementAttemptedItems list is empty.
    */
   @Test(timeout = 30000)
-  public void testPartialBlockMovementShouldBeRetried3() throws Exception {
+  public void testPartialBlockMovementWithEmptyAttemptedQueue()
+      throws Exception {
     Long item = new Long(1234);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
-            item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});
+            item, BlocksStorageMovementResult.Status.FAILURE)});
     bsmAttemptedItems.blockStorageMovementResultCheck();
-    assertTrue("Failed to add to the retry list",
+    assertFalse(
+        "Should not add in queue again if it is not there in"
+            + " storageMovementAttemptedItems",
         checkItemMovedForRetry(item, 5000));
     assertEquals("Failed to remove from the attempted list", 0,
         bsmAttemptedItems.getAttemptedItemsCount());
@@ -176,7 +182,7 @@ public class TestBlockStorageMovementAttemptedItems {
   @Test(timeout = 30000)
   public void testPartialBlockMovementShouldBeRetried4() throws Exception {
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item, false);
+    bsmAttemptedItems.add(new ItemInfo(0L, item), false);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
             item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});

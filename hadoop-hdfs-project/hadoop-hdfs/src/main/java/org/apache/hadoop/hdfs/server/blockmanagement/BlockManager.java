@@ -89,7 +89,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
-import org.apache.hadoop.hdfs.server.namenode.BlockStorageMovementNeeded;
 import org.apache.hadoop.hdfs.server.namenode.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -431,9 +430,6 @@ public class BlockManager implements BlockStatsMXBean {
   private final StoragePolicySatisfier sps;
   private final boolean storagePolicyEnabled;
   private boolean spsEnabled;
-  private final BlockStorageMovementNeeded storageMovementNeeded =
-      new BlockStorageMovementNeeded();
-
   /** Minimum live replicas needed for the datanode to be transitioned
    * from ENTERING_MAINTENANCE to IN_MAINTENANCE.
    */
@@ -480,8 +476,7 @@ public class BlockManager implements BlockStatsMXBean {
         conf.getBoolean(
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_DEFAULT);
-    sps = new StoragePolicySatisfier(namesystem, storageMovementNeeded, this,
-        conf);
+    sps = new StoragePolicySatisfier(namesystem, this, conf);
     blockTokenSecretManager = createBlockTokenSecretManager(conf);
 
     providedStorageMap = new ProvidedStorageMap(namesystem, this, conf);
@@ -5014,20 +5009,6 @@ public class BlockManager implements BlockStatsMXBean {
   @VisibleForTesting
   public ProvidedStorageMap getProvidedStorageMap() {
     return providedStorageMap;
-  }
-
-  /**
-   * Set file block collection for which storage movement needed for its blocks.
-   *
-   * @param id
-   *          - file block collection id.
-   */
-  public void satisfyStoragePolicy(long id) {
-    storageMovementNeeded.add(id);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Added block collection id {} to block "
-          + "storageMovementNeeded queue", id);
-    }
   }
 
   /**
