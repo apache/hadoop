@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
-import org.apache.slider.api.resource.Configuration;
+import org.apache.hadoop.yarn.service.api.records.Configuration;
 
 public class YarnServiceConf {
 
@@ -30,8 +30,54 @@ public class YarnServiceConf {
   public static final String CONTAINER_RETRY_MAX = "yarn.service.container-failure.retry.max";
   public static final String CONTAINER_RETRY_INTERVAL = "yarn.service.container-failure.retry-interval";
 
+  public static final String AM_RESTART_MAX = "yarn.service.am-restart.max-attempts";
+  public static final String AM_RESOURCE_MEM = "yarn.service.am-resource.memory";
+  public static final long DEFAULT_KEY_AM_RESOURCE_MEM = 1024;
+
+  public static final String YARN_QUEUE = "yarn.service.queue";
+
   /**
-   * Get long value for the property
+   * The yarn service base path:
+   * Defaults to HomeDir/.yarn/
+   */
+  public static final String YARN_SERVICE_BASE_PATH = "yarn.service.base.path";
+
+  //TODO rename
+  /** Declare that a keytab must be provided */
+  public static final String KEY_AM_LOGIN_KEYTAB_REQUIRED = "slider.am.login.keytab.required";
+  public static final String KEY_AM_LOGIN_KEYTAB_NAME = "slider.am.login.keytab.name";
+  public static final String KEY_HDFS_KEYTAB_DIR = "slider.hdfs.keytab.dir";
+  public static final String KEY_AM_KEYTAB_LOCAL_PATH = "slider.am.keytab.local.path";
+
+  /**
+   * maximum number of failed containers (in a single component)
+   * before the app exits
+   */
+  public static final String CONTAINER_FAILURE_THRESHOLD =
+      "yarn.service.container-failure-per-component.threshold";
+  /**
+   * Maximum number of container failures on a node before the node is blacklisted
+   */
+  public static final String NODE_BLACKLIST_THRESHOLD =
+      "yarn.service.node-blacklist.threshold";
+
+  /**
+   * The failure count for CONTAINER_FAILURE_THRESHOLD and NODE_BLACKLIST_THRESHOLD
+   * gets reset periodically, the unit is seconds.
+   */
+  public static final String CONTAINER_FAILURE_WINDOW =
+      "yarn.service.failure-count-reset.window";
+
+  /**
+   * interval between readiness checks.
+   */
+  public static final String READINESS_CHECK_INTERVAL = "yarn.service.readiness-check-interval.seconds";
+  public static final int DEFAULT_READINESS_CHECK_INTERVAL = 30; // seconds
+
+  /**
+   * Get long value for the property. First get from the userConf, if not
+   * present, get from systemConf.
+   *
    * @param name name of the property
    * @param defaultValue default value of the property, if it is not defined in
    *                     userConf and systemConf.

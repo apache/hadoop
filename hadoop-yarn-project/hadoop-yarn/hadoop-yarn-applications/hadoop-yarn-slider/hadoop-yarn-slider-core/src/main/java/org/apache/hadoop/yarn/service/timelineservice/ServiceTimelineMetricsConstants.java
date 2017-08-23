@@ -84,9 +84,6 @@ public final class ServiceTimelineMetricsConstants {
 
   public static final String DESCRIPTION = "DESCRIPTION";
 
-  public static final String UNIQUE_COMPONENT_SUPPORT =
-      "UNIQUE_COMPONENT_SUPPORT";
-
   public static final String RUN_PRIVILEGED_CONTAINER =
       "RUN_PRIVILEGED_CONTAINER";
 

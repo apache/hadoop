@@ -35,10 +35,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.service.client.params.SliderAMArgs;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.servicemonitor.ServiceMonitor;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.core.exceptions.BadClusterStateException;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +70,7 @@ public class ServiceMaster extends CompositeService {
 
     context = new ServiceContext();
     Path appDir = getAppDir();
+    context.serviceHdfsDir = appDir.toString();
     SliderFileSystem fs = new SliderFileSystem(conf);
     context.fs = fs;
     fs.setAppDir(appDir);

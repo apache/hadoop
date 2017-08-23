@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
-import org.apache.slider.api.resource.Application;
+
+import org.apache.hadoop.yarn.service.api.records.Application;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.slider.utils.SliderTestUtils.JSON_SER_DESER;
+import static org.apache.hadoop.yarn.service.ServiceTestUtils.JSON_SER_DESER;
 
 /**
  * Names of the example configs.

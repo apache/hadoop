@@ -20,33 +20,14 @@
 package org.apache.hadoop.yarn.service.servicemonitor;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.client.api.AMRMClient;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
-import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.MockServiceAM;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
-import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.apache.slider.api.InternalKeys;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.core.exceptions.BadClusterStateException;
+
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,15 +35,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-
-import static org.mockito.Matchers.anyFloat;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.*;
 
 public class TestServiceMonitor extends ServiceTestUtils {
 
@@ -77,7 +50,7 @@ public class TestServiceMonitor extends ServiceTestUtils {
     } else {
       basedir.mkdirs();
     }
-    conf.setLong(InternalKeys.MONITOR_INTERVAL, 2);
+    conf.setLong(YarnServiceConf.READINESS_CHECK_INTERVAL, 2);
   }
 
   @After

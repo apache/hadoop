@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.service.timelineservice;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
@@ -28,19 +28,16 @@ import org.apache.hadoop.yarn.client.api.impl.TimelineV2ClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.hadoop.yarn.service.ServiceScheduler;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.ApplicationState;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.Container;
-import org.apache.slider.api.resource.ContainerState;
-import org.apache.slider.api.resource.PlacementPolicy;
-import org.apache.slider.api.resource.Resource;
-import org.apache.slider.server.appmaster.actions.ActionStopSlider;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.ApplicationState;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
+import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
+import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
 import org.apache.hadoop.yarn.service.compinstance.ComponentInstanceId;
-import org.apache.slider.server.appmaster.state.AppState;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -103,16 +100,9 @@ public class TestServiceTimelinePublisher {
 
   @Test
   public void testServiceAttemptEntity() {
-    AppState appState = createMockAppState();
-    int exitCode = 0;
-    String message = "Stopped by user";
-    ActionStopSlider stopAction = mock(ActionStopSlider.class);
-    when(stopAction.getExitCode()).thenReturn(exitCode);
-    when(stopAction.getFinalApplicationStatus())
-        .thenReturn(FinalApplicationStatus.SUCCEEDED);
-    when(stopAction.getMessage()).thenReturn(message);
-
-    serviceTimelinePublisher.serviceAttemptRegistered(appState.getClusterStatus());
+    Application application = createMockApplication();
+    serviceTimelinePublisher
+        .serviceAttemptRegistered(application, new YarnConfiguration());
 
     Collection<TimelineEntity> lastPublishedEntities =
         ((DummyTimelineClient) timelineClient).getLastPublishedEntities();
@@ -123,17 +113,21 @@ public class TestServiceTimelinePublisher {
           .toString()) {
         verifyComponentTimelineEntity(timelineEntity);
       } else {
-        verifyServiceAttemptTimelineEntity(timelineEntity, 0, null, true);
+        verifyServiceAttemptTimelineEntity(timelineEntity, null, true);
       }
     }
 
-    serviceTimelinePublisher.serviceAttemptUnregistered(appState, stopAction);
+    ServiceContext context = new ServiceContext();
+    context.attemptId = ApplicationAttemptId
+        .newInstance(ApplicationId.fromString(application.getId()), 1);
+    String exitDiags = "service killed";
+    serviceTimelinePublisher.serviceAttemptUnregistered(context, exitDiags);
     lastPublishedEntities =
         ((DummyTimelineClient) timelineClient).getLastPublishedEntities();
     for (TimelineEntity timelineEntity : lastPublishedEntities) {
       if (timelineEntity.getType() == ServiceTimelineEntityType.SERVICE_ATTEMPT
           .toString()) {
-        verifyServiceAttemptTimelineEntity(timelineEntity, exitCode, message,
+        verifyServiceAttemptTimelineEntity(timelineEntity, exitDiags,
             false);
       }
     }
@@ -180,7 +174,7 @@ public class TestServiceTimelinePublisher {
   }
 
   private void verifyServiceAttemptTimelineEntity(TimelineEntity timelineEntity,
-      int exitCode, String message, boolean isRegistedEntity) {
+      String message, boolean isRegistedEntity) {
     assertEquals(SERVICEID, timelineEntity.getId());
     assertEquals(SERVICE_NAME,
         timelineEntity.getInfo().get(ServiceTimelineMetricsConstants.NAME));
@@ -190,13 +184,10 @@ public class TestServiceTimelinePublisher {
       assertEquals(ServiceTimelineEvent.SERVICE_ATTEMPT_REGISTERED.toString(),
           timelineEntity.getEvents().iterator().next().getId());
     } else {
-      assertEquals("SUCCEEDED",
-          timelineEntity.getInfo().get(ServiceTimelineMetricsConstants.STATE));
-      assertEquals(exitCode, timelineEntity.getInfo()
-          .get(ServiceTimelineMetricsConstants.EXIT_STATUS_CODE));
+      assertEquals("ENDED",
+          timelineEntity.getInfo().get(ServiceTimelineMetricsConstants.STATE).toString());
       assertEquals(message, timelineEntity.getInfo()
-          .get(ServiceTimelineMetricsConstants.EXIT_REASON));
-
+          .get(ServiceTimelineMetricsConstants.DIAGNOSTICS_INFO));
       assertEquals(2, timelineEntity.getEvents().size());
       assertEquals(ServiceTimelineEvent.SERVICE_ATTEMPT_UNREGISTERED.toString(),
           timelineEntity.getEvents().iterator().next().getId());
@@ -218,23 +209,20 @@ public class TestServiceTimelinePublisher {
     assertEquals("sleep 1",
         info.get(ServiceTimelineMetricsConstants.LAUNCH_COMMAND));
     assertEquals("false",
-        info.get(ServiceTimelineMetricsConstants.UNIQUE_COMPONENT_SUPPORT));
-    assertEquals("false",
         info.get(ServiceTimelineMetricsConstants.RUN_PRIVILEGED_CONTAINER));
     assertEquals("label",
         info.get(ServiceTimelineMetricsConstants.PLACEMENT_POLICY));
   }
 
-  private static AppState createMockAppState() {
-    AppState appState = mock(AppState.class);
+  private static Application createMockApplication() {
     Application application = mock(Application.class);
 
     when(application.getId()).thenReturn(SERVICEID);
     when(application.getLaunchTime()).thenReturn(new Date());
     when(application.getState()).thenReturn(ApplicationState.STARTED);
     when(application.getName()).thenReturn(SERVICE_NAME);
-    when(application.getConfiguration())
-        .thenReturn(new org.apache.slider.api.resource.Configuration());
+    when(application.getConfiguration()).thenReturn(
+        new org.apache.hadoop.yarn.service.api.records.Configuration());
 
     Component component = mock(Component.class);
     Artifact artifact = new Artifact();
@@ -250,19 +238,13 @@ public class TestServiceTimelinePublisher {
     PlacementPolicy placementPolicy = new PlacementPolicy();
     placementPolicy.setLabel("label");
     when(component.getPlacementPolicy()).thenReturn(placementPolicy);
-    when(component.getConfiguration())
-        .thenReturn(new org.apache.slider.api.resource.Configuration());
+    when(component.getConfiguration()).thenReturn(
+        new org.apache.hadoop.yarn.service.api.records.Configuration());
     List<Component> components = new ArrayList<Component>();
     components.add(component);
 
     when(application.getComponents()).thenReturn(components);
-    when(appState.getClusterStatus()).thenReturn(application);
-    return appState;
-  }
-
-  public static void main(String[] args) {
-    Application application = createMockAppState().getClusterStatus();
-    System.out.println(application.getConfiguration());
+    return application;
   }
 
   protected static class DummyTimelineClient extends TimelineV2ClientImpl {

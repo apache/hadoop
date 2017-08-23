@@ -21,15 +21,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.Resource;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.core.persist.JsonSerDeser;
-import org.apache.slider.util.RestApiConstants;
-import org.apache.slider.util.RestApiErrorMessages;
+import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -41,15 +40,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static org.apache.slider.util.RestApiConstants.DEFAULT_COMPONENT_NAME;
-import static org.apache.slider.util.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
-import static org.apache.slider.util.RestApiErrorMessages.*;
-import static org.apache.slider.util.RestApiErrorMessages.ERROR_CONTAINERS_COUNT_INVALID;
-import static org.apache.slider.util.RestApiErrorMessages.ERROR_RESOURCE_PROFILE_NOT_SUPPORTED_YET;
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.createNiceMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
+import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_COMPONENT_NAME;
+import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
+import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -136,7 +130,7 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_RESOURCE_FOR_COMP_INVALID,
-          RestApiConstants.DEFAULT_COMPONENT_NAME), e.getMessage());
+          DEFAULT_COMPONENT_NAME), e.getMessage());
     }
 
     // memory not specified
@@ -148,7 +142,7 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_RESOURCE_MEMORY_FOR_COMP_INVALID,
-          RestApiConstants.DEFAULT_COMPONENT_NAME), e.getMessage());
+          DEFAULT_COMPONENT_NAME), e.getMessage());
     }
 
     // invalid no of cpus
@@ -161,7 +155,7 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_RESOURCE_CPUS_FOR_COMP_INVALID_RANGE,
-          RestApiConstants.DEFAULT_COMPONENT_NAME), e.getMessage());
+          DEFAULT_COMPONENT_NAME), e.getMessage());
     }
 
     // number of containers not specified
@@ -183,7 +177,7 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(RestApiErrorMessages
               .ERROR_RESOURCE_PROFILE_MULTIPLE_VALUES_FOR_COMP_NOT_SUPPORTED,
-          RestApiConstants.DEFAULT_COMPONENT_NAME),
+          DEFAULT_COMPONENT_NAME),
           e.getMessage());
     }
 
@@ -476,8 +470,7 @@ public class TestServiceApiUtil {
   @Test
   public void testInvalidComponent() throws IOException {
     SliderFileSystem sfs = initMock(null);
-    testComponent(sfs, false);
-    testComponent(sfs, true);
+    testComponent(sfs);
   }
 
   @Test
@@ -496,17 +489,15 @@ public class TestServiceApiUtil {
     }
   }
 
-  private static void testComponent(SliderFileSystem sfs, boolean unique)
+  private static void testComponent(SliderFileSystem sfs)
       throws IOException {
     int maxLen = RegistryConstants.MAX_FQDN_LABEL_LENGTH;
-    if (unique) {
-      assertEquals(19, Long.toString(Long.MAX_VALUE).length());
-      maxLen = maxLen - Long.toString(Long.MAX_VALUE).length();
-    }
+    assertEquals(19, Long.toString(Long.MAX_VALUE).length());
+    maxLen = maxLen - Long.toString(Long.MAX_VALUE).length();
+
     String compName = LEN_64_STR.substring(0, maxLen + 1);
     Application app = createValidApplication(null);
-    app.addComponent(createValidComponent(compName).uniqueComponentSupport(
-        unique));
+    app.addComponent(createValidComponent(compName));
 
     // invalid component name fails if dns is enabled
     try {
@@ -526,8 +517,7 @@ public class TestServiceApiUtil {
 
     compName = LEN_64_STR.substring(0, maxLen);
     app = createValidApplication(null);
-    app.addComponent(createValidComponent(compName).uniqueComponentSupport(
-        unique));
+    app.addComponent(createValidComponent(compName));
 
     // does not fail
     try {

@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.service;
 import com.google.common.cache.LoadingCache;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.slider.common.tools.SliderFileSystem;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 
 public class ServiceContext {
   public Application application = null;

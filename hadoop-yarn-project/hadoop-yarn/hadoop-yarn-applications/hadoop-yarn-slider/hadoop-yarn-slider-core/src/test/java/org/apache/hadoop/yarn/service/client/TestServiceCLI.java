@@ -20,14 +20,15 @@ package org.apache.hadoop.yarn.service.client;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
+import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.client.params.ClientArgs;
 import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,7 +39,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_APPDEF;
-import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.KEY_SLIDER_BASE_PATH;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 import static org.mockito.Mockito.mock;
 
 public class TestServiceCLI {
@@ -59,7 +60,7 @@ public class TestServiceCLI {
   @Before
   public void setup() throws Throwable {
     basedir = new File("target", "apps");
-    conf.set(KEY_SLIDER_BASE_PATH, basedir.getAbsolutePath());
+    conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
     fs = new SliderFileSystem(conf);
     if (basedir.exists()) {
       FileUtils.deleteDirectory(basedir);
@@ -71,7 +72,11 @@ public class TestServiceCLI {
     cli = new ServiceCLI() {
       @Override protected void createServiceClient() {
         client = new ServiceClient() {
-          @Override protected ClientAMProtocol connectToAM(String appName)
+          @Override protected ClientAMProtocol getAMProxy(String appName,
+              ApplicationReport report) throws IOException {
+            return mock(ClientAMProtocol.class);
+          }
+          @Override protected ClientAMProtocol getAMProxy(String appName)
               throws IOException, YarnException {
             return mock(ClientAMProtocol.class);
           }

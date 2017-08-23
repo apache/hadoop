@@ -18,8 +18,6 @@
 package org.apache.hadoop.yarn.service.client.params;
 
 import com.beust.jcommander.Parameters;
-import org.apache.hadoop.yarn.service.client.params.SliderActions;
-import org.apache.slider.common.params.AbstractClusterBuildingActionArgs;
 
 @Parameters(commandNames = { SliderActions.ACTION_BUILD},
             commandDescription = SliderActions.DESCRIBE_ACTION_BUILD)

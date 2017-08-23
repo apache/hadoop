@@ -25,11 +25,11 @@ import com.beust.jcommander.ParameterException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
-import org.apache.slider.core.exceptions.ErrorStrings;
-import org.apache.slider.core.exceptions.SliderException;
-import org.apache.slider.core.exceptions.UsageException;
+import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.exceptions.UsageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,7 +112,7 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
     if (commandOfInterest == null) {
       // JCommander.usage is too verbose for a command with many options like
       // slider no short version of that is found Instead, we compose our msg by
-      helperMessage.append("\nUsage: slider COMMAND [options]\n");
+      helperMessage.append("\nUsage: service COMMAND [options]\n");
       helperMessage.append("where COMMAND is one of\n");
       for (String jcommand : serviceArgs.commander.getCommands().keySet()) {
         helperMessage.append(String.format("\t%-"
@@ -123,7 +123,7 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
           .append("Most commands print help when invoked without parameters or with --help");
       result = helperMessage.toString();
     } else {
-      helperMessage.append("\nUsage: slider ").append(commandOfInterest);
+      helperMessage.append("\nUsage: service ").append(commandOfInterest);
       helperMessage.append(serviceArgs.coreAction.getMinParams() > 0 ? " <application>" : "");
       helperMessage.append("\n");
       for (ParameterDescription paramDesc : serviceArgs.commander.getCommands()
@@ -224,14 +224,6 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
   }
 
   /**
-   * Get the core action -type depends on the action
-   * @return the action class
-   */
-  public AbstractActionArgs getCoreAction() {
-    return coreAction;
-  }
-
-  /**
    * Validate the arguments against the action requested
    */
   public void validate() throws BadCommandArgumentsException, UsageException {
@@ -244,7 +236,8 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
       coreAction.validate();
     } catch (BadCommandArgumentsException e) {
       String badArgMsgBuilder =
-          e.toString() + "\n" + usage(this, coreAction.getActionName());
+          e.getMessage() + System.lineSeparator() + usage(this,
+              coreAction.getActionName());
       throw new BadCommandArgumentsException(badArgMsgBuilder);
     }
   }
@@ -286,9 +279,4 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
   public String getAction() {
     return commander.getParsedCommand();
   }
-
-  public List<String> getActionArgs() {
-    return coreAction.parameters;
-  }
-
 }

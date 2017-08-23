@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.base.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,17 +35,16 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
-import org.apache.slider.api.InternalKeys;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.Container;
-import org.apache.slider.api.resource.ContainerState;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.core.exceptions.SliderException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -71,8 +69,8 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.FINISHED;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
-import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.KEY_AM_RESOURCE_MEM;
-import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.KEY_SLIDER_BASE_PATH;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.AM_RESOURCE_MEM;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 
 /**
  * End to end tests to test deploying services with MiniYarnCluster and a in-JVM
@@ -122,8 +120,8 @@ public class TestYarnNativeServices extends ServiceTestUtils{
     conf.setBoolean(TIMELINE_SERVICE_ENABLED, false);
     conf.setInt(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE, 100);
     conf.setLong(DEBUG_NM_DELETE_DELAY_SEC, 60000);
-    conf.setLong(KEY_AM_RESOURCE_MEM, 526);
-    conf.setLong(InternalKeys.MONITOR_INTERVAL, 5);
+    conf.setLong(AM_RESOURCE_MEM, 526);
+    conf.setLong(YarnServiceConf.READINESS_CHECK_INTERVAL, 5);
     // Disable vmem check to disallow NM killing the container
     conf.setBoolean(NM_VMEM_CHECK_ENABLED, false);
     conf.setBoolean(NM_PMEM_CHECK_ENABLED, false);
@@ -143,7 +141,7 @@ public class TestYarnNativeServices extends ServiceTestUtils{
       basedir.mkdirs();
     }
 
-    conf.set(KEY_SLIDER_BASE_PATH, basedir.getAbsolutePath());
+    conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
 
     if (yarnCluster == null) {
       yarnCluster =
@@ -267,7 +265,7 @@ public class TestYarnNativeServices extends ServiceTestUtils{
 
     // stop the service
     LOG.info("Stop the service");
-    client.actionStop(exampleApp.getName());
+    client.actionStop(exampleApp.getName(), true);
     ApplicationReport report = client.getYarnClient()
         .getApplicationReport(ApplicationId.fromString(exampleApp.getId()));
     // AM unregisters with RM successfully
@@ -303,7 +301,7 @@ public class TestYarnNativeServices extends ServiceTestUtils{
     // check that containers for compa are launched before containers for compb
     checkContainerLaunchDependencies(client, exampleApp, "compa", "compb");
 
-    client.actionStop(exampleApp.getName());
+    client.actionStop(exampleApp.getName(), true);
     client.actionDestroy(exampleApp.getName());
   }
 

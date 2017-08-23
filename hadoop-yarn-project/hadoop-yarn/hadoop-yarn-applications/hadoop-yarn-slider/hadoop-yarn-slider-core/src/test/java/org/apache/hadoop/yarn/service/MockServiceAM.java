@@ -38,14 +38,13 @@ import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.proto.*;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol;
+import org.apache.hadoop.yarn.service.api.records.Application;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentState;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.core.exceptions.BadClusterStateException;
-import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
+import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
+import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 
 import java.io.IOException;
 import java.util.Collections;

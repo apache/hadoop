@@ -19,10 +19,9 @@ package org.apache.hadoop.yarn.service.providers;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.slider.api.resource.ConfigFile.TypeEnum;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -70,7 +69,7 @@ public class TestAbstractClientProvider {
     } catch (IllegalArgumentException e) {
     }
 
-    configFile.setType(TypeEnum.TEMPLATE);
+    configFile.setType(ConfigFile.TypeEnum.TEMPLATE);
     try {
       clientProvider.validateConfigFiles(configFiles, mockFs);
       Assert.fail(EXCEPTION_PREFIX + "empty src_file for type template");
@@ -92,7 +91,7 @@ public class TestAbstractClientProvider {
     }
 
     configFile = new ConfigFile();
-    configFile.setType(TypeEnum.JSON);
+    configFile.setType(ConfigFile.TypeEnum.JSON);
     configFile.setSrcFile(null);
     configFile.setDestFile("path/destfile2");
     configFiles.add(configFile);

@@ -20,78 +20,36 @@ package org.apache.hadoop.yarn.service.client.params;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys;
-import org.apache.slider.common.params.AbstractClusterBuildingActionArgs;
-import org.apache.slider.common.params.ActionAMSuicideArgs;
-import org.apache.slider.common.params.ActionClientArgs;
-import org.apache.slider.common.params.ActionDiagnosticArgs;
-import org.apache.slider.common.params.ActionExistsArgs;
-import org.apache.slider.common.params.ActionFreezeArgs;
-import org.apache.slider.common.params.ActionHelpArgs;
-import org.apache.slider.common.params.ActionKDiagArgs;
-import org.apache.slider.common.params.ActionKeytabArgs;
-import org.apache.slider.common.params.ActionKillContainerArgs;
-import org.apache.slider.common.params.ActionListArgs;
-import org.apache.slider.common.params.ActionLookupArgs;
-import org.apache.slider.common.params.ActionNodesArgs;
-import org.apache.slider.common.params.ActionRegistryArgs;
-import org.apache.slider.common.params.ActionResolveArgs;
-import org.apache.slider.common.params.ActionResourceArgs;
-import org.apache.slider.common.params.ActionStatusArgs;
-import org.apache.slider.common.params.ActionThawArgs;
-import org.apache.slider.common.params.ActionTokensArgs;
-import org.apache.slider.common.params.ActionUpdateArgs;
-import org.apache.slider.common.params.ActionUpgradeArgs;
-import org.apache.slider.common.params.ActionVersionArgs;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
-import org.apache.slider.core.exceptions.ErrorStrings;
-import org.apache.slider.core.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 
 import java.util.Collection;
 
 /**
- * Slider Client CLI Args
+ * Client CLI Args
  */
 
 public class ClientArgs extends CommonArgs {
-
-  /*
-   
-   All the arguments for specific actions
-  
-   */
-  /**
-   * This is not bonded to jcommander, it is set up
-   * after the construction to point to the relevant
-   * entry
-   * 
-   * KEEP IN ALPHABETICAL ORDER
-   */
-  private AbstractClusterBuildingActionArgs buildingActionArgs;
 
   // =========================================================
   // Keep all of these in alphabetical order. Thanks.
   // =========================================================
 
-  private final ActionAMSuicideArgs actionAMSuicideArgs = new ActionAMSuicideArgs();
   private final ActionBuildArgs actionBuildArgs = new ActionBuildArgs();
   private final ActionClientArgs actionClientArgs = new ActionClientArgs();
   private final ActionCreateArgs actionCreateArgs = new ActionCreateArgs();
   private final ActionDependencyArgs actionDependencyArgs = new ActionDependencyArgs();
   private final ActionDestroyArgs actionDestroyArgs = new ActionDestroyArgs();
-  private final ActionDiagnosticArgs actionDiagnosticArgs = new ActionDiagnosticArgs();
   private final ActionExistsArgs actionExistsArgs = new ActionExistsArgs();
   private final ActionFlexArgs actionFlexArgs = new ActionFlexArgs();
   private final ActionFreezeArgs actionFreezeArgs = new ActionFreezeArgs();
   private final ActionHelpArgs actionHelpArgs = new ActionHelpArgs();
   private final ActionKDiagArgs actionKDiagArgs = new ActionKDiagArgs();
   private final ActionKeytabArgs actionKeytabArgs = new ActionKeytabArgs();
-  private final ActionKillContainerArgs actionKillContainerArgs =
-    new ActionKillContainerArgs();
   private final ActionListArgs actionListArgs = new ActionListArgs();
-  private final ActionLookupArgs actionLookupArgs = new ActionLookupArgs();
-  private final ActionNodesArgs actionNodesArgs = new ActionNodesArgs();
   private final ActionRegistryArgs actionRegistryArgs = new ActionRegistryArgs();
   private final ActionResolveArgs actionResolveArgs = new ActionResolveArgs();
   private final ActionResourceArgs actionResourceArgs = new ActionResourceArgs();
@@ -99,8 +57,6 @@ public class ClientArgs extends CommonArgs {
   private final ActionThawArgs actionThawArgs = new ActionThawArgs();
   private final ActionTokensArgs actionTokenArgs = new ActionTokensArgs();
   private final ActionUpdateArgs actionUpdateArgs = new ActionUpdateArgs();
-  private final ActionUpgradeArgs actionUpgradeArgs = new ActionUpgradeArgs();
-  private final ActionVersionArgs actionVersionArgs = new ActionVersionArgs();
 
   public ClientArgs(String[] args) {
     super(args);
@@ -114,32 +70,15 @@ public class ClientArgs extends CommonArgs {
   protected void addActionArguments() {
 
     addActions(
-        actionAMSuicideArgs,
         actionBuildArgs,
-        actionClientArgs,
         actionCreateArgs,
         actionDependencyArgs,
         actionDestroyArgs,
-        actionDiagnosticArgs,
-        actionExistsArgs,
         actionFlexArgs,
         actionFreezeArgs,
         actionHelpArgs,
-        actionKDiagArgs,
-        actionKeytabArgs,
-        actionKillContainerArgs,
-        actionListArgs,
-        actionLookupArgs,
-        actionNodesArgs,
-        actionRegistryArgs,
-        actionResolveArgs,
-        actionResourceArgs,
         actionStatusArgs,
-        actionThawArgs,
-        actionTokenArgs,
-        actionUpdateArgs,
-        actionUpgradeArgs,
-        actionVersionArgs
+        actionThawArgs
     );
   }
 
@@ -154,41 +93,18 @@ public class ClientArgs extends CommonArgs {
     }
     if (getBasePath() != null) {
       log.debug("Setting basePath to {}", getBasePath());
-      conf.set(SliderXmlConfKeys.KEY_SLIDER_BASE_PATH,
+      conf.set(YarnServiceConf.YARN_SERVICE_BASE_PATH,
           getBasePath().toString());
     }
   }
 
-  public ActionDiagnosticArgs getActionDiagnosticArgs() {
-	  return actionDiagnosticArgs;
-  }
-
-  public AbstractClusterBuildingActionArgs getBuildingActionArgs() {
-    return buildingActionArgs;
-  }
-
-  public ActionAMSuicideArgs getActionAMSuicideArgs() {
-    return actionAMSuicideArgs;
-  }
 
   public ActionBuildArgs getActionBuildArgs() {
     return actionBuildArgs;
   }
 
-  public ActionClientArgs getActionClientArgs() { return actionClientArgs; }
-
-  public ActionKDiagArgs getActionKDiagArgs() {
-    return actionKDiagArgs;
-  }
-
-  public ActionKeytabArgs getActionKeytabArgs() { return actionKeytabArgs; }
-
   public ActionUpdateArgs getActionUpdateArgs() {
     return actionUpdateArgs;
-  }
-
-  public ActionUpgradeArgs getActionUpgradeArgs() {
-    return actionUpgradeArgs;
   }
 
   public ActionCreateArgs getActionCreateArgs() {
@@ -215,21 +131,10 @@ public class ClientArgs extends CommonArgs {
     return actionFreezeArgs;
   }
 
-  public ActionKillContainerArgs getActionKillContainerArgs() {
-    return actionKillContainerArgs;
-  }
-
   public ActionListArgs getActionListArgs() {
     return actionListArgs;
   }
 
-  public ActionNodesArgs getActionNodesArgs() {
-    return actionNodesArgs;
-  }
-
-  public ActionLookupArgs getActionLookupArgs() {
-    return actionLookupArgs;
-  }
 
   public ActionRegistryArgs getActionRegistryArgs() {
     return actionRegistryArgs;
@@ -268,14 +173,10 @@ public class ClientArgs extends CommonArgs {
     switch (action) {
       case ACTION_BUILD:
         bindCoreAction(actionBuildArgs);
-        //its a builder, so set those actions too
-        buildingActionArgs = actionBuildArgs;
         break;
 
       case ACTION_CREATE:
         bindCoreAction(actionCreateArgs);
-        //its a builder, so set those actions too
-        buildingActionArgs = actionCreateArgs;
         break;
 
       case ACTION_STOP:
@@ -286,24 +187,12 @@ public class ClientArgs extends CommonArgs {
         bindCoreAction(actionThawArgs);
         break;
 
-      case ACTION_AM_SUICIDE:
-        bindCoreAction(actionAMSuicideArgs);
-        break;
-
-      case ACTION_CLIENT:
-        bindCoreAction(actionClientArgs);
-        break;
-
       case ACTION_DEPENDENCY:
         bindCoreAction(actionDependencyArgs);
         break;
 
       case ACTION_DESTROY:
         bindCoreAction(actionDestroyArgs);
-        break;
-
-      case ACTION_DIAGNOSTICS:
-        bindCoreAction(actionDiagnosticArgs);
         break;
 
       case ACTION_EXISTS:
@@ -326,20 +215,8 @@ public class ClientArgs extends CommonArgs {
         bindCoreAction(actionKeytabArgs);
         break;
 
-      case ACTION_KILL_CONTAINER:
-        bindCoreAction(actionKillContainerArgs);
-        break;
-
       case ACTION_LIST:
         bindCoreAction(actionListArgs);
-        break;
-
-      case ACTION_LOOKUP:
-        bindCoreAction(actionLookupArgs);
-        break;
-
-      case ACTION_NODES:
-        bindCoreAction(actionNodesArgs);
         break;
 
       case ACTION_REGISTRY:
@@ -364,14 +241,6 @@ public class ClientArgs extends CommonArgs {
 
       case ACTION_UPDATE:
         bindCoreAction(actionUpdateArgs);
-        break;
-
-      case ACTION_UPGRADE:
-        bindCoreAction(actionUpgradeArgs);
-        break;
-
-      case ACTION_VERSION:
-        bindCoreAction(actionVersionArgs);
         break;
 
       default:

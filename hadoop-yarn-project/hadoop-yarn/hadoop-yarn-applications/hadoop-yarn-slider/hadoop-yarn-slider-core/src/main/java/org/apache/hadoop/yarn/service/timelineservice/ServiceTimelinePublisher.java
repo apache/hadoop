@@ -21,24 +21,19 @@ package org.apache.hadoop.yarn.service.timelineservice;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.slider.api.resource.Configuration;
-import org.apache.slider.api.resource.Container;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.server.appmaster.actions.ActionStopSlider;
-import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.slider.server.appmaster.state.AppState;
-import org.apache.slider.server.appmaster.state.RoleInstance;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.compinstance.ComponentInstance;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +44,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import static org.apache.hadoop.yarn.service.timelineservice.ServiceTimelineMetricsConstants.DIAGNOSTICS_INFO;
 
 /**
  * A single service that publishes all the Timeline Entities.
@@ -87,7 +84,8 @@ public class ServiceTimelinePublisher extends CompositeService {
     timelineClient = client;
   }
 
-  public void serviceAttemptRegistered(Application application) {
+  public void serviceAttemptRegistered(Application application,
+      org.apache.hadoop.conf.Configuration systemConf) {
     long currentTimeMillis = application.getLaunchTime() == null
         ? System.currentTimeMillis() : application.getLaunchTime().getTime();
 
@@ -114,9 +112,12 @@ public class ServiceTimelinePublisher extends CompositeService {
     // publish before configurations published
     putEntity(entity);
 
-    // publish application specific configurations
-    publishConfigurations(application.getConfiguration(), application.getId(),
-        ServiceTimelineEntityType.SERVICE_ATTEMPT.toString(), true);
+    // publish system config - YarnConfiguration
+    populateTimelineEntity(systemConf.iterator(), application.getId(),
+        ServiceTimelineEntityType.SERVICE_ATTEMPT.toString());
+    // publish user conf
+    publishUserConf(application.getConfiguration(), application.getId(),
+        ServiceTimelineEntityType.SERVICE_ATTEMPT.toString());
 
     // publish component as separate entity.
     publishComponents(application.getComponents());
@@ -129,12 +130,14 @@ public class ServiceTimelinePublisher extends CompositeService {
     putEntity(entity);
   }
 
-  public void serviceAttemptUnregistered(ServiceContext context) {
+  public void serviceAttemptUnregistered(ServiceContext context,
+      String diagnostics) {
     TimelineEntity entity = createServiceAttemptEntity(
         context.attemptId.getApplicationId().toString());
     Map<String, Object> entityInfos = new HashMap<String, Object>();
     entityInfos.put(ServiceTimelineMetricsConstants.STATE,
-        FinalApplicationStatus.FAILED);
+        FinalApplicationStatus.ENDED);
+    entityInfos.put(DIAGNOSTICS_INFO, diagnostics);
     entity.addInfo(entityInfos);
 
     // add an event
@@ -143,39 +146,6 @@ public class ServiceTimelinePublisher extends CompositeService {
         .setId(ServiceTimelineEvent.SERVICE_ATTEMPT_UNREGISTERED.toString());
     finishEvent.setTimestamp(System.currentTimeMillis());
     entity.addEvent(finishEvent);
-
-    putEntity(entity);
-  }
-
-  public void serviceAttemptUnregistered(AppState appState,
-      ActionStopSlider stopAction) {
-    long currentTimeMillis = System.currentTimeMillis();
-
-    TimelineEntity entity =
-        createServiceAttemptEntity(appState.getClusterStatus().getId());
-
-    // add info
-    Map<String, Object> entityInfos = new HashMap<String, Object>();
-    entityInfos.put(ServiceTimelineMetricsConstants.EXIT_STATUS_CODE,
-        stopAction.getExitCode());
-    entityInfos.put(ServiceTimelineMetricsConstants.STATE,
-        stopAction.getFinalApplicationStatus().toString());
-    if (stopAction.getMessage() != null) {
-      entityInfos.put(ServiceTimelineMetricsConstants.EXIT_REASON,
-          stopAction.getMessage());
-    }
-    if (stopAction.getEx() != null) {
-      entityInfos.put(ServiceTimelineMetricsConstants.DIAGNOSTICS_INFO,
-          stopAction.getEx().toString());
-    }
-    entity.addInfo(entityInfos);
-
-    // add an event
-    TimelineEvent startEvent = new TimelineEvent();
-    startEvent
-        .setId(ServiceTimelineEvent.SERVICE_ATTEMPT_UNREGISTERED.toString());
-    startEvent.setTimestamp(currentTimeMillis);
-    entity.addEvent(startEvent);
 
     putEntity(entity);
   }
@@ -210,29 +180,6 @@ public class ServiceTimelinePublisher extends CompositeService {
     putEntity(entity);
   }
 
-  public void componentInstanceFinished(RoleInstance instance) {
-    TimelineEntity entity = createComponentInstanceEntity(instance.id);
-
-    // create info keys
-    Map<String, Object> entityInfos = new HashMap<String, Object>();
-    entityInfos.put(ServiceTimelineMetricsConstants.EXIT_STATUS_CODE,
-        instance.exitCode);
-    entityInfos.put(ServiceTimelineMetricsConstants.DIAGNOSTICS_INFO,
-        instance.diagnostics);
-    // TODO need to change the state based on enum value.
-    entityInfos.put(ServiceTimelineMetricsConstants.STATE, "FINISHED");
-    entity.addInfo(entityInfos);
-
-    // add an event
-    TimelineEvent startEvent = new TimelineEvent();
-    startEvent
-        .setId(ServiceTimelineEvent.COMPONENT_INSTANCE_UNREGISTERED.toString());
-    startEvent.setTimestamp(System.currentTimeMillis());
-    entity.addEvent(startEvent);
-
-    putEntity(entity);
-  }
-
   public void componentInstanceFinished(ComponentInstance instance,
       int exitCode, ContainerState state, String diagnostics) {
     TimelineEntity entity = createComponentInstanceEntity(
@@ -242,7 +189,7 @@ public class ServiceTimelinePublisher extends CompositeService {
     Map<String, Object> entityInfos = new HashMap<String, Object>();
     entityInfos.put(ServiceTimelineMetricsConstants.EXIT_STATUS_CODE,
         exitCode);
-    entityInfos.put(ServiceTimelineMetricsConstants.DIAGNOSTICS_INFO, diagnostics);
+    entityInfos.put(DIAGNOSTICS_INFO, diagnostics);
     entityInfos.put(ServiceTimelineMetricsConstants.STATE, state);
     entity.addInfo(entityInfos);
 
@@ -302,8 +249,6 @@ public class ServiceTimelinePublisher extends CompositeService {
         entityInfos.put(ServiceTimelineMetricsConstants.LAUNCH_COMMAND,
             component.getLaunchCommand());
       }
-      entityInfos.put(ServiceTimelineMetricsConstants.UNIQUE_COMPONENT_SUPPORT,
-          component.getUniqueComponentSupport().toString());
       entityInfos.put(ServiceTimelineMetricsConstants.RUN_PRIVILEGED_CONTAINER,
           component.getRunPrivilegedContainer().toString());
       if (component.getPlacementPolicy() != null) {
@@ -315,31 +260,26 @@ public class ServiceTimelinePublisher extends CompositeService {
       putEntity(entity);
 
       // publish component specific configurations
-      publishConfigurations(component.getConfiguration(), component.getName(),
-          ServiceTimelineEntityType.COMPONENT.toString(), false);
+      publishUserConf(component.getConfiguration(), component.getName(),
+          ServiceTimelineEntityType.COMPONENT.toString());
     }
   }
 
-  private void publishConfigurations(Configuration configuration,
-      String entityId, String entityType, boolean isServiceAttemptEntity) {
-    if (isServiceAttemptEntity) {
-      // publish slider-client.xml properties at service level
-      publishConfigurations(SliderUtils.loadSliderClientXML().iterator(),
-          entityId, entityType);
-    }
-    publishConfigurations(configuration.getProperties().entrySet().iterator(),
+  private void publishUserConf(Configuration configuration,
+      String entityId, String entityType) {
+    populateTimelineEntity(configuration.getProperties().entrySet().iterator(),
         entityId, entityType);
 
-    publishConfigurations(configuration.getEnv().entrySet().iterator(),
+    populateTimelineEntity(configuration.getEnv().entrySet().iterator(),
         entityId, entityType);
 
     for (ConfigFile configFile : configuration.getFiles()) {
-      publishConfigurations(configFile.getProps().entrySet().iterator(),
+      populateTimelineEntity(configFile.getProps().entrySet().iterator(),
           entityId, entityType);
     }
   }
 
-  private void publishConfigurations(Iterator<Entry<String, String>> iterator,
+  private void populateTimelineEntity(Iterator<Entry<String, String>> iterator,
       String entityId, String entityType) {
     int configSize = 0;
     TimelineEntity entity = createTimelineEntity(entityId, entityType);

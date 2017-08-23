@@ -20,8 +20,9 @@ package org.apache.hadoop.yarn.service.client;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.slider.api.resource.Application;
+import org.apache.hadoop.yarn.service.api.records.Application;
 import org.apache.hadoop.yarn.service.client.params.ClientArgs;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +33,7 @@ public class ServiceCLI {
       LoggerFactory.getLogger(ServiceClient.class);
   protected ServiceClient client;
 
-  public int exec(ClientArgs args) throws Throwable {
+  int exec(ClientArgs args) throws Throwable {
     if (StringUtils.isEmpty(args.getAction())) {
       System.out.println(args.usage());
       return -1;
@@ -55,7 +56,7 @@ public class ServiceCLI {
       client.actionFlexByCLI(args);
       break;
     case ACTION_STOP:
-      client.actionStop(args.getClusterName());
+      client.actionStop(args.getClusterName(), false);
       break;
     case ACTION_DESTROY: // Destroy can happen only if app is already stopped
       client.actionDestroy(args.getClusterName());
@@ -90,7 +91,12 @@ public class ServiceCLI {
 
   public static void main(String[] args) throws Throwable {
     ClientArgs clientArgs = new ClientArgs(args);
-    clientArgs.parse();
+    try {
+      clientArgs.parse();
+    } catch (BadCommandArgumentsException e) {
+      System.err.println(e.getMessage());
+      System.exit(-1);
+    }
     ServiceCLI cli =  new ServiceCLI();
     int res = cli.exec(clientArgs);
     System.exit(res);

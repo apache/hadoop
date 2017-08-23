@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.service.client;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
-import org.apache.slider.api.resource.Component;
 import org.apache.hadoop.yarn.service.client.params.ClientArgs;
-import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_APPDEF;
-import static org.apache.hadoop.yarn.service.conf.SliderXmlConfKeys.KEY_SLIDER_BASE_PATH;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 
 /**
  * Test for building / resolving components of type APPLICATION.
@@ -87,7 +87,7 @@ public class TestBuildExternalComponents {
     } else {
       basedir.mkdirs();
     }
-    conf.set(KEY_SLIDER_BASE_PATH, basedir.getAbsolutePath());
+    conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
   }
 
   @After

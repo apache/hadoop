@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.service.providers;
 
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.Artifact.TypeEnum;
 import org.apache.hadoop.yarn.service.provider.ProviderFactory;
 import org.apache.hadoop.yarn.service.provider.defaultImpl.DefaultClientProvider;
 import org.apache.hadoop.yarn.service.provider.defaultImpl.DefaultProviderFactory;
@@ -28,8 +30,7 @@ import org.apache.hadoop.yarn.service.provider.docker.DockerProviderService;
 import org.apache.hadoop.yarn.service.provider.tarball.TarballClientProvider;
 import org.apache.hadoop.yarn.service.provider.tarball.TarballProviderFactory;
 import org.apache.hadoop.yarn.service.provider.tarball.TarballProviderService;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.Artifact.TypeEnum;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;

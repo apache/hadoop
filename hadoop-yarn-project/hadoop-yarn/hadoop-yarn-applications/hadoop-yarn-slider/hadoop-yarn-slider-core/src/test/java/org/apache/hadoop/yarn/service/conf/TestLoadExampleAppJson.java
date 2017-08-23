@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.service.conf;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.common.tools.SliderFileSystem;
+import org.apache.hadoop.yarn.service.api.records.Application;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,11 +32,8 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static org.apache.slider.utils.SliderTestUtils.JSON_SER_DESER;
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.createNiceMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
+import static org.apache.hadoop.yarn.service.ServiceTestUtils.JSON_SER_DESER;
+import static org.easymock.EasyMock.*;
 
 /**
  * Test loading example resources.

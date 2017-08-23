@@ -20,10 +20,9 @@ package org.apache.hadoop.yarn.service.client.params;
 
 import com.beust.jcommander.Parameter;
 import org.apache.hadoop.fs.Path;
-import org.apache.slider.common.params.PathArgumentConverter;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
-import org.apache.slider.core.exceptions.ErrorStrings;
-import org.apache.slider.core.exceptions.UsageException;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
+import org.apache.hadoop.yarn.service.exceptions.UsageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +48,7 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
   public String filesystemBinding;
 
   @Parameter(names = {ARG_BASE_PATH},
-             description = "Slider base path on the filesystem",
+             description = "Service base path on the filesystem",
              converter =  PathArgumentConverter.class)
   public Path basePath;
 
@@ -129,7 +128,7 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
     if (minArgs > actionArgSize) {
       throw new BadCommandArgumentsException(
         ErrorStrings.ERROR_NOT_ENOUGH_ARGUMENTS + getActionName() +
-        " Expected minimum " + minArgs + " but got " + actionArgSize);
+        ", Expected minimum " + minArgs + " but got " + actionArgSize);
     }
     int maxArgs = getMaxParams();
     if (maxArgs == -1) {
@@ -146,7 +145,7 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
       StringBuilder buf = new StringBuilder(message);
       for (String actionArg : parameters) {
         log.error("[{}] \"{}\"", index++, actionArg);
-        buf.append(" \"" + actionArg + "\" ");
+        buf.append(" \"").append(actionArg).append("\" ");
       }
       throw new BadCommandArgumentsException(buf.toString());
     }
@@ -155,26 +154,5 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
   @Override
   public String toString() {
     return super.toString() + ": " + getActionName();
-  }
-
-  /**
-   * Override point: 
-   * Flag to indicate that core hadoop API services are needed (HDFS, YARN, etc)
-   * —and that validation of the client state should take place.
-   * 
-   * @return a flag to indicate that the core hadoop services will be needed.
-   */
-  public boolean getHadoopServicesRequired() {
-    return true;
-  }
-
-  /**
-   * Flag to disable secure login.
-   * This MUST only be set if the action is bypassing security or setting
-   * it itself
-   * @return true if login at slider client init time is to be skipped
-   */
-  public boolean disableSecureLogin() {
-    return false;
   }
 }

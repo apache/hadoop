@@ -19,16 +19,16 @@ package org.apache.hadoop.yarn.service.provider.docker;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.slider.api.resource.Artifact;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.hadoop.yarn.service.conf.SliderKeys;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
-import org.apache.slider.util.RestApiErrorMessages;
+import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 
 import java.io.IOException;
 
 public class DockerClientProvider extends AbstractClientProvider
-    implements SliderKeys {
+    implements YarnServiceConstants {
 
   public DockerClientProvider() {
     super();

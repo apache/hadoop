@@ -21,14 +21,13 @@ package org.apache.hadoop.yarn.service.conf;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.ConfigFile;
-import org.apache.slider.api.resource.ConfigFile.TypeEnum;
-import org.apache.slider.api.resource.Configuration;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.common.tools.SliderUtils;
-import org.apache.slider.core.persist.JsonSerDeser;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.apache.hadoop.yarn.service.utils.SliderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -41,18 +40,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.slider.api.InternalKeys.CHAOS_MONKEY_INTERVAL;
-import static org.apache.slider.api.InternalKeys.DEFAULT_CHAOS_MONKEY_INTERVAL_DAYS;
-import static org.apache.slider.api.InternalKeys.DEFAULT_CHAOS_MONKEY_INTERVAL_HOURS;
-import static org.apache.slider.api.InternalKeys.DEFAULT_CHAOS_MONKEY_INTERVAL_MINUTES;
-import static org.apache.hadoop.yarn.service.conf.ExampleAppJson.APP_JSON;
-import static org.apache.hadoop.yarn.service.conf.ExampleAppJson.EXTERNAL_JSON_1;
-import static org.apache.hadoop.yarn.service.conf.ExampleAppJson.OVERRIDE_JSON;
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.createNiceMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.reset;
+import static org.apache.hadoop.yarn.service.conf.ExampleAppJson.*;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.*;
+import static org.easymock.EasyMock.*;
 
 /**
  * Test global configuration resolution.
@@ -115,9 +105,9 @@ public class TestAppJsonResolve extends Assert {
     Map<String, String> props = new HashMap<>();
     props.put("k1", "overridden");
     props.put("k2", "v2");
-    files.add(new ConfigFile().destFile("file1").type(TypeEnum
+    files.add(new ConfigFile().destFile("file1").type(ConfigFile.TypeEnum
         .PROPERTIES).props(props));
-    files.add(new ConfigFile().destFile("file2").type(TypeEnum
+    files.add(new ConfigFile().destFile("file2").type(ConfigFile.TypeEnum
         .XML).props(Collections.singletonMap("k3", "v3")));
     assertTrue(files.contains(simple.getFiles().get(0)));
     assertTrue(files.contains(simple.getFiles().get(1)));
@@ -132,9 +122,9 @@ public class TestAppJsonResolve extends Assert {
 
     props.put("k1", "v1");
     files.clear();
-    files.add(new ConfigFile().destFile("file1").type(TypeEnum
+    files.add(new ConfigFile().destFile("file1").type(ConfigFile.TypeEnum
         .PROPERTIES).props(props));
-    files.add(new ConfigFile().destFile("file2").type(TypeEnum
+    files.add(new ConfigFile().destFile("file2").type(ConfigFile.TypeEnum
         .XML).props(Collections.singletonMap("k3", "v3")));
 
     assertTrue(files.contains(master.getFiles().get(0)));
@@ -208,7 +198,7 @@ public class TestAppJsonResolve extends Assert {
     assertEquals("a", simple.getProperty("g1"));
     assertEquals("b", simple.getProperty("g2"));
     assertEquals("60",
-        simple.getProperty("internal.chaos.monkey.interval.seconds"));
+        simple.getProperty("yarn.service.failure-count-reset.window"));
 
     master = orig.getComponent("master").getConfiguration();
     assertEquals(5, master.getProperties().size());
@@ -217,7 +207,7 @@ public class TestAppJsonResolve extends Assert {
     assertEquals("b", master.getProperty("g2"));
     assertEquals("is-overridden", master.getProperty("g3"));
     assertEquals("60",
-        simple.getProperty("internal.chaos.monkey.interval.seconds"));
+        simple.getProperty("yarn.service.failure-count-reset.window"));
 
     Configuration worker = orig.getComponent("worker").getConfiguration();
     LOG.info("worker = {}", worker);
@@ -226,27 +216,9 @@ public class TestAppJsonResolve extends Assert {
     assertEquals("overridden-by-worker", worker.getProperty("g1"));
     assertEquals("b", worker.getProperty("g2"));
     assertEquals("60",
-        worker.getProperty("internal.chaos.monkey.interval.seconds"));
+        worker.getProperty("yarn.service.failure-count-reset.window"));
 
     other = orig.getComponent("other").getConfiguration();
     assertEquals(0, other.getProperties().size());
-  }
-
-  @Test
-  public void testTimeIntervalLoading() throws Throwable {
-    Application orig = ExampleAppJson.loadResource(APP_JSON);
-
-    Configuration conf = orig.getConfiguration();
-    long s = conf.getPropertyLong(
-        CHAOS_MONKEY_INTERVAL + SliderUtils.SECONDS,
-        0);
-    assertEquals(60, s);
-    long monkeyInterval = SliderUtils.getTimeRange(conf,
-        CHAOS_MONKEY_INTERVAL,
-        DEFAULT_CHAOS_MONKEY_INTERVAL_DAYS,
-        DEFAULT_CHAOS_MONKEY_INTERVAL_HOURS,
-        DEFAULT_CHAOS_MONKEY_INTERVAL_MINUTES,
-        0);
-    assertEquals(60L, monkeyInterval);
   }
 }

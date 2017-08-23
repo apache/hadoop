@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.yarn.service;
 
-import org.apache.slider.api.resource.Application;
-import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.resource.Resource;
+import org.apache.hadoop.yarn.service.api.records.Application;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
+import org.codehaus.jackson.map.PropertyNamingStrategy;
 
 public class ServiceTestUtils {
+
+  public static final JsonSerDeser<Application> JSON_SER_DESER =
+      new JsonSerDeser<>(Application.class,
+          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
 
   // Example service definition
   // 2 components, each of which has 2 containers.

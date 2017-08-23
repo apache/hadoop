@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.service.client.params;
 
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
-import org.apache.slider.core.exceptions.UsageException;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.UsageException;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;

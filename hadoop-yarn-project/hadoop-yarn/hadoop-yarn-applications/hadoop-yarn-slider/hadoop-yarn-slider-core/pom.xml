@@ -59,8 +59,6 @@
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
-                  <include>SliderClusterMessages.proto</include>
-                  <include>SliderClusterProtocol.proto</include>
                   <include>ClientAMProtocol.proto</include>
                 </includes>
               </source>
@@ -92,32 +90,11 @@
       </plugin>
 
       <plugin>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro-maven-plugin</artifactId>
-        <version>${avro.version}</version>
-        <executions>
-          <execution>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>schema</goal>
-            </goals>
-            <configuration>
-              <sourceDirectory>${project.basedir}/src/main/avro/
-              </sourceDirectory>
-              <outputDirectory>${project.build.directory}/generated-sources/java
-              </outputDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
             <exclude>**/*.json</exclude>
-            <exclude>src/main/resources/webapps/slideram/.keep</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -215,11 +192,6 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
     </dependency>
 
     <dependency>
@@ -422,7 +394,7 @@
                   <attach>false</attach>
                   <finalName>${project.artifactId}-${project.version}</finalName>
                   <descriptorRefs>
-                    <descriptorRef>hadoop-yarn-slider-dist</descriptorRef>
+                    <descriptorRef>hadoop-yarn-services-dist</descriptorRef>
                   </descriptorRefs>
                 </configuration>
               </execution>
