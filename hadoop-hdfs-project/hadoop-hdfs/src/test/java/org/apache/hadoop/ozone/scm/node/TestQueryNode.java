@@ -116,9 +116,5 @@ public class TestQueryNode {
     nodeCount = scmClient.queryNode(EnumSet.of(DEAD),
         OzoneProtos.QueryScope.CLUSTER, "").getNodesCount();
     assertEquals("Mismatch of expected nodes count", 2, nodeCount);
-
-    cluster.restartDataNode(0);
-    cluster.restartDataNode(1);
-
   }
 }
