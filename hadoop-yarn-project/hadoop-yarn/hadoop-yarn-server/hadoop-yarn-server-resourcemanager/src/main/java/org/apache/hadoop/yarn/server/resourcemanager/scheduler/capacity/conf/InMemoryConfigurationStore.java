@@ -79,7 +79,7 @@ public class InMemoryConfigurationStore implements YarnConfigurationStore {
 
   @Override
   public synchronized List<LogMutation> getPendingMutations() {
-    return pendingMutations;
+    return new LinkedList<>(pendingMutations);
   }
 
   @Override

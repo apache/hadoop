@@ -65,6 +65,7 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
   private static final String LOG_COMMITTED_TXN = "committedTxn";
 
   private DB db;
+  // Txnid for the last transaction logged to the store.
   private long txnId = 0;
   private long minTxn = 0;
   private long maxLogs;
@@ -92,6 +93,7 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
           break;
         }
         pendingMutations.add(deserLogMutation(entry.getValue()));
+        txnId++;
       }
       // Get the earliest txnId stored in logs
       itr.seekToFirst();
@@ -278,7 +280,7 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
 
   @Override
   public List<LogMutation> getPendingMutations() {
-    return pendingMutations;
+    return new LinkedList<>(pendingMutations);
   }
 
   @Override
