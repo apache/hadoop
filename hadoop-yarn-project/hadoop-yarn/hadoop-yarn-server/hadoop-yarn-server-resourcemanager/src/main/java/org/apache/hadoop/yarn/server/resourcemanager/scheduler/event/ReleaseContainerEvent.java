@@ -18,38 +18,29 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-public enum SchedulerEventType {
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
-  // Source: Node
-  NODE_ADDED,
-  NODE_REMOVED,
-  NODE_UPDATE,
-  NODE_RESOURCE_UPDATE,
-  NODE_LABELS_UPDATE,
+/**
+ * Event used to release a container.
+ */
+public class ReleaseContainerEvent extends SchedulerEvent {
 
-  // Source: RMApp
-  APP_ADDED,
-  APP_REMOVED,
+  private final RMContainer container;
 
-  // Source: RMAppAttempt
-  APP_ATTEMPT_ADDED,
-  APP_ATTEMPT_REMOVED,
+  /**
+   * Create Event.
+   * @param rmContainer RMContainer.
+   */
+  public ReleaseContainerEvent(RMContainer rmContainer) {
+    super(SchedulerEventType.RELEASE_CONTAINER);
+    this.container = rmContainer;
+  }
 
-  // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED,
-
-  // Source: SchedulerAppAttempt::pullNewlyUpdatedContainer.
-  RELEASE_CONTAINER,
-
-  /* Source: SchedulingEditPolicy */
-  KILL_RESERVED_CONTAINER,
-
-  // Mark a container for preemption
-  MARK_CONTAINER_FOR_PREEMPTION,
-
-  // Mark a for-preemption container killable
-  MARK_CONTAINER_FOR_KILLABLE,
-
-  // Cancel a killable container
-  MARK_CONTAINER_FOR_NONKILLABLE
+  /**
+   * Get RMContainer.
+   * @return RMContainer.
+   */
+  public RMContainer getContainer() {
+    return container;
+  }
 }
