@@ -187,7 +187,7 @@ public final class ScmConfigKeys {
 
   public static final String OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE =
       "ozone.scm.container.provision_batch_size";
-  public static final int OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT = 1;
+  public static final int OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT = 5;
 
 
   /**

@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.scm.XceiverClientManager;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -80,11 +81,11 @@ public class TestContainerMapping {
 
   @Test
   public void testallocateContainer() throws Exception {
-    Pipeline pipeline = mapping.allocateContainer(
+    ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         UUID.randomUUID().toString());
-    Assert.assertNotNull(pipeline);
+    Assert.assertNotNull(containerInfo);
   }
 
   @Test
@@ -97,13 +98,15 @@ public class TestContainerMapping {
      */
     Set<String> pipelineList = new TreeSet<>();
     for (int x = 0; x < 30; x++) {
-      Pipeline pipeline = mapping.allocateContainer(
+      ContainerInfo containerInfo = mapping.allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(),
           UUID.randomUUID().toString());
 
-      Assert.assertNotNull(pipeline);
-      pipelineList.add(pipeline.getLeader().getDatanodeUuid());
+      Assert.assertNotNull(containerInfo);
+      Assert.assertNotNull(containerInfo.getPipeline());
+      pipelineList.add(containerInfo.getPipeline().getLeader()
+          .getDatanodeUuid());
     }
     Assert.assertTrue(pipelineList.size() > 5);
   }
@@ -113,9 +116,9 @@ public class TestContainerMapping {
     String containerName = UUID.randomUUID().toString();
     Pipeline pipeline = mapping.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
+        xceiverClientManager.getFactor(), containerName).getPipeline();
     Assert.assertNotNull(pipeline);
-    Pipeline newPipeline = mapping.getContainer(containerName);
+    Pipeline newPipeline = mapping.getContainer(containerName).getPipeline();
     Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
         newPipeline.getLeader().getDatanodeUuid());
   }
@@ -125,7 +128,7 @@ public class TestContainerMapping {
     String containerName = UUID.randomUUID().toString();
     Pipeline pipeline = mapping.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
+        xceiverClientManager.getFactor(), containerName).getPipeline();
     Assert.assertNotNull(pipeline);
     thrown.expectMessage("Specified container already exists.");
     mapping.allocateContainer(xceiverClientManager.getType(),

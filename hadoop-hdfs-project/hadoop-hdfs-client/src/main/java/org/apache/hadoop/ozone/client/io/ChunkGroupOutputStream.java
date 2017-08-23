@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -37,8 +38,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Maintaining a list of ChunkInputStream. Write based on offset.
@@ -59,10 +58,6 @@ public class ChunkGroupOutputStream extends OutputStream {
   private int currentStreamIndex;
   private long totalSize;
   private long byteOffset;
-
-  //This has to be removed once HDFS-11888 is resolved.
-  //local cache which will have list of created container names.
-  private static Set<String> containersCreated = new HashSet<>();
 
   public ChunkGroupOutputStream() {
     this.streamEntries = new ArrayList<>();
@@ -293,27 +288,21 @@ public class ChunkGroupOutputStream extends OutputStream {
       XceiverClientSpi xceiverClient =
           xceiverClientManager.acquireClient(pipeline);
       // create container if needed
-      // TODO : should be subKeyInfo.getShouldCreateContainer(), but for now
-      //The following change has to reverted once HDFS-11888 is fixed.
-      if(!containersCreated.contains(containerName)) {
-        synchronized (containerName.intern()) {
-          //checking again, there is a chance that some other thread has
-          // created it.
-          if (!containersCreated.contains(containerName)) {
-            LOG.debug("Need to create container {}.", containerName);
-            try {
-              ContainerProtocolCalls.createContainer(xceiverClient, requestId);
-            } catch (StorageContainerException ex) {
-              if (ex.getResult().equals(Result.CONTAINER_EXISTS)) {
-                //container already exist.
-                LOG.debug("Container {} already exists.", containerName);
-              } else {
-                LOG.error("Container creation failed for {}.",
-                    containerName, ex);
-                throw ex;
-              }
-            }
-            containersCreated.add(containerName);
+      if (subKeyInfo.getShouldCreateContainer()) {
+        try {
+          // Block manager sets the container creation stage begin.
+          ContainerProtocolCalls.createContainer(xceiverClient, requestId);
+          storageContainerLocationClient.notifyObjectCreationStage(
+              NotifyObjectCreationStageRequestProto.Type.container,
+              containerName,
+              NotifyObjectCreationStageRequestProto.Stage.complete);
+        } catch (StorageContainerException ex) {
+          if (ex.getResult().equals(Result.CONTAINER_EXISTS)) {
+            //container already exist, this should never happen
+            LOG.debug("Container {} already exists.", containerName);
+          } else {
+            LOG.error("Container creation failed for {}.", containerName, ex);
+            throw ex;
           }
         }
       }

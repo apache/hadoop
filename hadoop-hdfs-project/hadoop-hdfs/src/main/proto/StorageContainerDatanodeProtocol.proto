@@ -51,7 +51,7 @@ message SCMHeartbeatRequestProto {
   optional ReportState containerReportState = 3;
 }
 
-enum ContainerState {
+enum DatanodeContainerState {
   closed = 0;
   open = 1;
 }
@@ -76,7 +76,7 @@ SCM database, This information allows SCM to startup faster and avoid having
 all container info in memory all the time.
   */
 message ContainerPersistanceProto {
-  required ContainerState state = 1;
+  required DatanodeContainerState state = 1;
   required hadoop.hdfs.ozone.Pipeline pipeline = 2;
   required ContainerInfo info = 3;
 }
@@ -88,8 +88,6 @@ if a node goes down
 message NodeContianerMapping {
   repeated string contianerName = 1;
 }
-
-
 
 /**
 A container report contains the following information.

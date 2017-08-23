@@ -82,6 +82,24 @@ message DeleteContainerResponseProto {
   // Empty response
 }
 
+message NotifyObjectCreationStageRequestProto {
+  enum Type {
+    container = 1;
+    pipeline = 2;
+  }
+  enum Stage {
+    begin = 1;
+    complete = 2;
+  }
+  required string name = 1;
+  required Type type = 2;
+  required Stage stage = 3;
+}
+
+message NotifyObjectCreationStageResponseProto {
+  // Empty response
+}
+
 /*
  NodeQueryRequest sends a request to SCM asking to send a list of nodes that
  match the NodeState that we are requesting.
@@ -160,7 +178,12 @@ service StorageContainerLocationProtocolService {
   */
   rpc queryNode(NodeQueryRequestProto)  returns (NodeQueryResponseProto);
 
- /*
+  /**
+  * Notify from client when begin or finish creating container or pipeline on datanodes.
+  */
+  rpc notifyObjectCreationStage(NotifyObjectCreationStageRequestProto) returns (NotifyObjectCreationStageResponseProto);
+
+  /*
   *  Apis that Manage Pipelines.
   *
   * Pipelines are abstractions offered by SCM and Datanode that allows users
@@ -175,5 +198,4 @@ service StorageContainerLocationProtocolService {
   */
   rpc allocatePipeline(PipelineRequestProto)
       returns (PipelineResponseProto);
-
 }

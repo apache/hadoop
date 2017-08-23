@@ -53,6 +53,7 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SendContainerReportProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.ozone.protocolPB.ScmBlockLocationProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolServerSideTranslatorPB;
@@ -65,6 +66,7 @@ import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
@@ -373,7 +375,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   @Override
   public Pipeline getContainer(String containerName) throws IOException {
     checkAdminAccess();
-    return scmContainerManager.getContainer(containerName);
+    return scmContainerManager.getContainer(containerName).getPipeline();
   }
 
   /**
@@ -422,6 +424,34 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
 
     return poolBuilder.build();
+  }
+
+  /**
+   * Notify from client when begin/finish creating container/pipeline objects
+   * on datanodes.
+   * @param type
+   * @param name
+   * @param stage
+   */
+  @Override
+  public void notifyObjectCreationStage(
+      NotifyObjectCreationStageRequestProto.Type type, String name,
+      NotifyObjectCreationStageRequestProto.Stage stage) throws IOException {
+
+    if (type == NotifyObjectCreationStageRequestProto.Type.container) {
+      ContainerInfo info = scmContainerManager.getContainer(name);
+      LOG.info("Container {} current state {} new stage {}", name,
+          info.getState(), stage);
+      if (stage == NotifyObjectCreationStageRequestProto.Stage.begin) {
+        scmContainerManager.updateContainerState(name,
+            OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+      } else {
+        scmContainerManager.updateContainerState(name,
+            OzoneProtos.LifeCycleEvent.COMPLETE_CREATE);
+      }
+    } else if (type == NotifyObjectCreationStageRequestProto.Type.pipeline) {
+      // TODO: pipeline state update will be addressed in future patch.
+    }
   }
 
   /**
@@ -503,7 +533,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    *
    * @param containerName - Name of the container.
    * @param replicationFactor - replication factor.
-   * @return Pipeline.
+   * @return pipeline
    * @throws IOException
    */
   @Override
@@ -512,7 +542,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       throws IOException {
     checkAdminAccess();
     return scmContainerManager.allocateContainer(replicationType,
-        replicationFactor, containerName);
+        replicationFactor, containerName).getPipeline();
   }
 
   /**

@@ -319,20 +319,25 @@ public class TestOzoneRpcClient {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    String keyName = UUID.randomUUID().toString();
+
     String value = "sample value";
     ozClient.createVolume(volumeName);
     ozClient.createBucket(volumeName, bucketName);
-    OzoneOutputStream out = ozClient.createKey(volumeName, bucketName,
-        keyName, value.getBytes().length);
-    out.write(value.getBytes());
-    out.close();
-    OzoneKey key = ozClient.getKeyDetails(volumeName, bucketName, keyName);
-    Assert.assertEquals(keyName, key.getKeyName());
-    OzoneInputStream is = ozClient.getKey(volumeName, bucketName, keyName);
-    byte[] fileContent = new byte[value.getBytes().length];
-    is.read(fileContent);
-    Assert.assertEquals(value, new String(fileContent));
+
+    for (int i = 0; i < 10; i++) {
+      String keyName = UUID.randomUUID().toString();
+
+      OzoneOutputStream out = ozClient.createKey(volumeName, bucketName,
+          keyName, value.getBytes().length);
+      out.write(value.getBytes());
+      out.close();
+      OzoneKey key = ozClient.getKeyDetails(volumeName, bucketName, keyName);
+      Assert.assertEquals(keyName, key.getKeyName());
+      OzoneInputStream is = ozClient.getKey(volumeName, bucketName, keyName);
+      byte[] fileContent = new byte[value.getBytes().length];
+      is.read(fileContent);
+      Assert.assertEquals(value, new String(fileContent));
+    }
   }
 
   @Test

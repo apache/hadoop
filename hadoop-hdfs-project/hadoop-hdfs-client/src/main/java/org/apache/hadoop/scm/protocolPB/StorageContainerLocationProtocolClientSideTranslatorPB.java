@@ -35,9 +35,9 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineResponseProto;
-
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
@@ -205,6 +205,32 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       throw  ProtobufHelper.getRemoteException(e);
     }
 
+  }
+
+  /**
+   * Notify from client that creates object on datanodes.
+   * @param type object type
+   * @param name object name
+   * @param stage object creation stage : begin/complete
+   */
+  @Override
+  public void notifyObjectCreationStage(
+      NotifyObjectCreationStageRequestProto.Type type,
+      String name,
+      NotifyObjectCreationStageRequestProto.Stage stage) throws IOException {
+    Preconditions.checkState(!Strings.isNullOrEmpty(name),
+        "Object name cannot be null or empty");
+    NotifyObjectCreationStageRequestProto request =
+        NotifyObjectCreationStageRequestProto.newBuilder()
+            .setType(type)
+            .setName(name)
+            .setStage(stage)
+            .build();
+    try {
+      rpcProxy.notifyObjectCreationStage(NULL_RPC_CONTROLLER, request);
+    } catch(ServiceException e){
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   /**
