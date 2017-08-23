@@ -64,18 +64,11 @@ public final class KeyUtils {
     ContainerCache cache = ContainerCache.getInstance(conf);
     Preconditions.checkNotNull(cache);
     try {
-      MetadataStore db = cache.getDB(container.getContainerName());
-      if (db == null) {
-        db = MetadataStoreBuilder.newBuilder()
-            .setDbFile(new File(container.getDBPath()))
-            .setCreateIfMissing(false)
-            .build();
-        cache.putDB(container.getContainerName(), db);
-      }
-      return db;
+      return cache.getDB(container.getContainerName(), container.getDBPath());
     } catch (IOException ex) {
-      String message = "Unable to open DB. DB Name: %s, Path: %s. ex: %s"
-          .format(container.getContainerName(), container.getDBPath(), ex);
+      String message =
+          String.format("Unable to open DB. DB Name: %s, Path: %s. ex: %s",
+          container.getContainerName(), container.getDBPath(), ex.getMessage());
       throw new StorageContainerException(message, UNABLE_TO_READ_METADATA_DB);
     }
   }

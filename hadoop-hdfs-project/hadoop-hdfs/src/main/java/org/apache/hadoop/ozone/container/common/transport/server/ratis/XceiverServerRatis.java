@@ -41,7 +41,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Objects;
 
@@ -113,8 +115,10 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     if (ozoneConf.getBoolean(OzoneConfigKeys
             .DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT_DEFAULT)) {
-      try (ServerSocket socket = new ServerSocket(0)) {
+      try (ServerSocket socket = new ServerSocket()) {
         socket.setReuseAddress(true);
+        SocketAddress address = new InetSocketAddress(0);
+        socket.bind(address);
         localPort = socket.getLocalPort();
         LOG.info("Found a free port for the server : {}", localPort);
         // If we have random local ports configured this means that it
