@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.Executors;
@@ -42,7 +43,8 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class BackgroundService {
 
-  private static final Logger LOG =
+  @VisibleForTesting
+  public static final Logger LOG =
       LoggerFactory.getLogger(BackgroundService.class);
 
   // Executor to launch child tasks
@@ -51,13 +53,15 @@ public abstract class BackgroundService {
   private final ThreadFactory threadFactory;
   private final String serviceName;
   private final int interval;
+  private final long serviceTimeout;
   private final TimeUnit unit;
 
   public BackgroundService(String serviceName, int interval,
-      TimeUnit unit, int threadPoolSize) {
+      TimeUnit unit, int threadPoolSize, long serviceTimeout) {
     this.interval = interval;
     this.unit = unit;
     this.serviceName = serviceName;
+    this.serviceTimeout = serviceTimeout;
     threadGroup = new ThreadGroup(serviceName);
     ThreadFactory tf = r -> new Thread(threadGroup, r);
     threadFactory = new ThreadFactoryBuilder()
@@ -115,8 +119,9 @@ public abstract class BackgroundService {
       results.parallelStream().forEach(taskResultFuture -> {
         try {
           // Collect task results
-          // TODO timeout in case task hangs
-          BackgroundTaskResult result = taskResultFuture.get();
+          BackgroundTaskResult result = serviceTimeout > 0
+              ? taskResultFuture.get(serviceTimeout, TimeUnit.MILLISECONDS)
+              : taskResultFuture.get();
           if (LOG.isDebugEnabled()) {
             LOG.debug("task execution result size {}", result.getSize());
           }
@@ -124,6 +129,9 @@ public abstract class BackgroundService {
           LOG.warn(
               "Background task fails to execute, "
                   + "retrying in next interval", e);
+        } catch (TimeoutException e) {
+          LOG.warn("Background task executes timed out, "
+              + "retrying in next interval", e);
         }
       });
     }

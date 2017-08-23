@@ -32,8 +32,11 @@ import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.common.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
 import org.junit.Assert;
@@ -233,6 +236,64 @@ public class TestBlockDeletingService {
     // Shutdown service and verify all threads are stopped
     service.shutdown();
     GenericTestUtils.waitFor(() -> service.getThreadCount() == 0, 100, 1000);
+  }
+
+  @Test
+  public void testBlockDeletionTimeout() throws Exception {
+    Configuration conf = new OzoneConfiguration();
+    conf.setInt(OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL, 10);
+    conf.setInt(OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER, 2);
+    ContainerManager containerManager = createContainerManager(conf);
+    createToDeleteBlocks(containerManager, conf, 1, 3, 1, chunksDir);
+
+    // set timeout value as 1ms to trigger timeout behavior
+    long timeout  = 1;
+    BlockDeletingService svc =
+        new BlockDeletingService(containerManager, 1000, timeout, conf);
+    svc.start();
+
+    LogCapturer log = LogCapturer.captureLogs(BackgroundService.LOG);
+    GenericTestUtils.waitFor(() -> {
+      if(log.getOutput().contains(
+          "Background task executes timed out, retrying in next interval")) {
+        log.stopCapturing();
+        return true;
+      }
+
+      return false;
+    }, 1000, 100000);
+
+    log.stopCapturing();
+    svc.shutdown();
+
+    // test for normal case that doesn't have timeout limitation
+    timeout  = 0;
+    createToDeleteBlocks(containerManager, conf, 1, 3, 1, chunksDir);
+    svc =  new BlockDeletingService(containerManager, 1000, timeout, conf);
+    svc.start();
+
+    // get container meta data
+    List<ContainerData> containerData = Lists.newArrayList();
+    containerManager.listContainer(null, 1, "", containerData);
+    MetadataStore meta = KeyUtils.getDB(containerData.get(0), conf);
+
+    LogCapturer newLog = LogCapturer.captureLogs(BackgroundService.LOG);
+    GenericTestUtils.waitFor(() -> {
+      try {
+        if (getUnderDeletionBlocksCount(meta) == 0) {
+          return true;
+        }
+      } catch (IOException ignored) {
+      }
+      return false;
+    }, 1000, 100000);
+    newLog.stopCapturing();
+
+    // The block deleting successfully and shouldn't catch timed
+    // out warning log.
+    Assert.assertTrue(!newLog.getOutput().contains(
+        "Background task executes timed out, retrying in next interval"));
+    svc.shutdown();
   }
 
   @Test(timeout = 30000)

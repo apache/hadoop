@@ -118,6 +118,11 @@ public final class OzoneConfigKeys {
   public static final int OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT
       = 60000;
 
+  public static final String OZONE_BLOCK_DELETING_SERVICE_TIMEOUT =
+      "ozone.block.deleting.service.timeout";
+  public static final int OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT
+      = 300000; // 300s for default
+
   public static final String OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER =
       "ozone.block.deleting.limit.per.task";
   public static final int OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER_DEFAULT
