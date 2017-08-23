@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainer
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 
@@ -866,10 +867,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         // Mark container for release (set RRs to null, so RM does not think
         // it is a recoverable container)
         ((RMContainerImpl) c).setResourceRequests(null);
-        ((AbstractYarnScheduler) rmContext.getScheduler()).completedContainer(c,
-            SchedulerUtils.createAbnormalContainerStatus(c.getContainerId(),
-                SchedulerUtils.UPDATED_CONTAINER),
-            RMContainerEventType.KILL);
+
+        // Release this container async-ly so as to prevent
+        // 'LeafQueue::completedContainer()' from trying to acquire a lock
+        // on the app and queue which can contended for in the reverse order
+        // by the Scheduler thread.
+        ((AbstractYarnScheduler)rmContext.getScheduler())
+            .asyncContainerRelease(c);
         tempIter.remove();
       }
       return updatedContainers;

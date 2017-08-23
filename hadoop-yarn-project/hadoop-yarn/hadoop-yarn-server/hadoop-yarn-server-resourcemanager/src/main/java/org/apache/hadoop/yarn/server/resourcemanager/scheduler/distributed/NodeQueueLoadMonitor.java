@@ -203,6 +203,10 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     LOG.debug("Node update event from: " + rmNode.getNodeID());
     OpportunisticContainersStatus opportunisticContainersStatus =
         rmNode.getOpportunisticContainersStatus();
+    if (opportunisticContainersStatus == null) {
+      opportunisticContainersStatus =
+          OpportunisticContainersStatus.newInstance();
+    }
     int estimatedQueueWaitTime =
         opportunisticContainersStatus.getEstimatedQueueWaitTime();
     int waitQueueLength = opportunisticContainersStatus.getWaitQueueLength();

@@ -391,6 +391,8 @@ public class OpportunisticContainerAllocatorAMService
       break;
     case NODE_LABELS_UPDATE:
       break;
+    case RELEASE_CONTAINER:
+      break;
     // <-- IGNORED EVENTS : END -->
     default:
       LOG.error("Unknown event arrived at" +
