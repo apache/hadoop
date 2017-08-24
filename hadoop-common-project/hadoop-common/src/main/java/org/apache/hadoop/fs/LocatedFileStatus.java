@@ -84,8 +84,10 @@ public class LocatedFileStatus extends FileStatus {
           Path symlink, Path path, BlockLocation[] locations) {
     this(length, isdir, block_replication, blocksize, modification_time,
         access_time, permission, owner, group, symlink, path,
-        permission.getAclBit(), permission.getEncryptedBit(),
-        permission.getErasureCodedBit(), locations);
+        permission == null ? false : permission.getAclBit(),
+        permission == null ? false : permission.getEncryptedBit(),
+        permission == null ? false : permission.getErasureCodedBit(),
+        locations);
   }
 
   /**
