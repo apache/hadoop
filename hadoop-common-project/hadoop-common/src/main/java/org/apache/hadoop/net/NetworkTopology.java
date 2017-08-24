@@ -495,7 +495,7 @@ public class NetworkTopology {
     }
   }
 
-  private Node chooseRandom(final String scope, String excludedScope,
+  protected Node chooseRandom(final String scope, String excludedScope,
       final Collection<Node> excludedNodes) {
     if (excludedScope != null) {
       if (scope.startsWith(excludedScope)) {

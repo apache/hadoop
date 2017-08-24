@@ -508,4 +508,61 @@ public class TestDFSNetworkTopology {
     assertEquals(1,
         innerl2d3r3.getSubtreeStorageCount(StorageType.DISK));
   }
+
+  @Test
+  public void testChooseRandomWithStorageTypeTwoTrial() throws Exception {
+    Node n;
+    DatanodeDescriptor dd;
+    n = CLUSTER.chooseRandomWithStorageType("/l2/d3/r4", null, null,
+        StorageType.ARCHIVE);
+    HashSet<Node> excluded = new HashSet<>();
+    // exclude the host on r4 (since there is only one host, no randomness here)
+    excluded.add(n);
+
+    // search with given scope being desired scope
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
+          "/l2/d3", null, StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host12") ||
+          dd.getHostName().equals("host13"));
+    }
+
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
+          "/l2/d3", excluded, StorageType.ARCHIVE);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host13"));
+    }
+
+    // search with given scope being exclude scope
+
+    // a total of 4 ramdisk nodes:
+    // /l1/d2/r3/host7, /l2/d3/r2/host10, /l2/d4/r1/host7 and /l2/d4/r1/host10
+    // so if we exclude /l2/d4/r1, if should be always either host7 or host10
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
+          "~/l2/d4", null, StorageType.RAM_DISK);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host7") ||
+          dd.getHostName().equals("host10"));
+    }
+
+    // similar to above, except that we also exclude host10 here. so it should
+    // always be host7
+    n = CLUSTER.chooseRandomWithStorageType("/l2/d3/r2", null, null,
+        StorageType.RAM_DISK);
+    // add host10 to exclude
+    excluded.add(n);
+    for (int i = 0; i<10; i++) {
+      n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
+          "~/l2/d4", excluded, StorageType.RAM_DISK);
+      assertTrue(n instanceof DatanodeDescriptor);
+      dd = (DatanodeDescriptor) n;
+      assertTrue(dd.getHostName().equals("host7"));
+    }
+  }
 }

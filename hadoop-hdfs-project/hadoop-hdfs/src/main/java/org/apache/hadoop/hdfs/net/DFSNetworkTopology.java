@@ -36,7 +36,6 @@ import java.util.Random;
  * remaining parts should be the same.
  *
  * Currently a placeholder to test storage type info.
- * TODO : add "chooseRandom with storageType info" function.
  */
 public class DFSNetworkTopology extends NetworkTopology {
 
@@ -56,6 +55,7 @@ public class DFSNetworkTopology extends NetworkTopology {
    *
    * @param scope range of nodes from which a node will be chosen
    * @param excludedNodes nodes to be excluded from
+   * @param type the storage type we search for
    * @return the chosen node
    */
   public Node chooseRandomWithStorageType(final String scope,
@@ -68,6 +68,69 @@ public class DFSNetworkTopology extends NetworkTopology {
       } else {
         return chooseRandomWithStorageType(
             scope, null, excludedNodes, type);
+      }
+    } finally {
+      netlock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Randomly choose one node from <i>scope</i> with the given storage type.
+   *
+   * If scope starts with ~, choose one from the all nodes except for the
+   * ones in <i>scope</i>; otherwise, choose one from <i>scope</i>.
+   * If excludedNodes is given, choose a node that's not in excludedNodes.
+   *
+   * This call would make up to two calls. It first tries to get a random node
+   * (with old method) and check if it satisfies. If yes, simply return it.
+   * Otherwise, it make a second call (with the new method) by passing in a
+   * storage type.
+   *
+   * This is for better performance reason. Put in short, the key note is that
+   * the old method is faster but may take several runs, while the new method
+   * is somewhat slower, and always succeed in one trial.
+   * See HDFS-11535 for more detail.
+   *
+   * @param scope range of nodes from which a node will be chosen
+   * @param excludedNodes nodes to be excluded from
+   * @param type the storage type we search for
+   * @return the chosen node
+   */
+  public Node chooseRandomWithStorageTypeTwoTrial(final String scope,
+      final Collection<Node> excludedNodes, StorageType type) {
+    netlock.readLock().lock();
+    try {
+      String searchScope;
+      String excludedScope;
+      if (scope.startsWith("~")) {
+        searchScope = NodeBase.ROOT;
+        excludedScope = scope.substring(1);
+      } else {
+        searchScope = scope;
+        excludedScope = null;
+      }
+      // next do a two-trial search
+      // first trial, call the old method, inherited from NetworkTopology
+      Node n = chooseRandom(searchScope, excludedScope, excludedNodes);
+      if (n == null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No node to choose.");
+        }
+        // this means there is simply no node to choose from
+        return null;
+      }
+      Preconditions.checkArgument(n instanceof DatanodeDescriptor);
+      DatanodeDescriptor dnDescriptor = (DatanodeDescriptor)n;
+
+      if (dnDescriptor.hasStorageType(type)) {
+        // the first trial succeeded, just return
+        return dnDescriptor;
+      } else {
+        // otherwise, make the second trial by calling the new method
+        LOG.debug("First trial failed, node has no type {}, " +
+            "making second trial carrying this type", type);
+        return chooseRandomWithStorageType(searchScope, excludedScope,
+            excludedNodes, type);
       }
     } finally {
       netlock.readLock().unlock();
@@ -99,13 +162,10 @@ public class DFSNetworkTopology extends NetworkTopology {
    * all it's ancestors' storage counters accordingly, this way the excluded
    * root is out of the picture.
    *
-   * TODO : this function has duplicate code as NetworkTopology, need to
-   * refactor in the future.
-   *
-   * @param scope
-   * @param excludedScope
-   * @param excludedNodes
-   * @return
+   * @param scope the scope where we look for node.
+   * @param excludedScope the scope where the node must NOT be from.
+   * @param excludedNodes the returned node must not be in this set
+   * @return a node with required storage type
    */
   @VisibleForTesting
   Node chooseRandomWithStorageType(final String scope,
