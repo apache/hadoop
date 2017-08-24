@@ -33,9 +33,9 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
@@ -97,7 +97,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   public static final String YARN_NODEMANAGER_DURATION_TO_TRACK_STOPPED_CONTAINERS =
       YarnConfiguration.NM_PREFIX + "duration-to-track-stopped-containers";
 
-  private static final Log LOG = LogFactory.getLog(NodeStatusUpdaterImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NodeStatusUpdaterImpl.class);
 
   private final Object heartbeatMonitor = new Object();
   private final Object shutdownMonitor = new Object();
@@ -425,7 +426,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     successfullRegistrationMsg.append(nodeLabelsHandler
         .verifyRMRegistrationResponseForNodeLabels(regNMResponse));
 
-    LOG.info(successfullRegistrationMsg);
+    LOG.info(successfullRegistrationMsg.toString());
   }
 
   private List<ApplicationId> createKeepAliveApplicationList() {

@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -39,8 +41,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -82,8 +82,8 @@ import com.google.common.base.Strings;
  */
 @Deprecated
 public class DockerContainerExecutor extends ContainerExecutor {
-  private static final Log LOG = LogFactory
-    .getLog(DockerContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(DockerContainerExecutor.class);
   //The name of the script file that will launch the Docker containers
   public static final String DOCKER_CONTAINER_EXECUTOR_SCRIPT =
     "docker_container_executor";
@@ -537,7 +537,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
         pout = new PrintStream(out, false, "UTF-8");
         writeLocalWrapperScript(launchDst, pidFile, pout);
       } finally {
-        IOUtils.cleanup(LOG, pout, out);
+        IOUtils.cleanupWithLogger(LOG, pout, out);
       }
     }
 
@@ -605,7 +605,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
         pout.println(dockerCommand + " bash \"" +
           launchDst.toUri().getPath().toString() + "\"");
       } finally {
-        IOUtils.cleanup(LOG, pout, out);
+        IOUtils.cleanupWithLogger(LOG, pout, out);
       }
       lfs.setPermission(sessionScriptPath,
         ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);

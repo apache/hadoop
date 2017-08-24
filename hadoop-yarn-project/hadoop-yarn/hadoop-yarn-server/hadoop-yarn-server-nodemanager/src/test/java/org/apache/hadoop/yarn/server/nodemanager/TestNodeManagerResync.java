@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,8 +38,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -113,8 +113,8 @@ public class TestNodeManagerResync {
       new NodeManagerEvent(NodeManagerEventType.RESYNC);
   private final long DUMMY_RM_IDENTIFIER = 1234;
 
-  protected static Log LOG = LogFactory
-      .getLog(TestNodeManagerResync.class);
+  protected static final Logger LOG =
+       LoggerFactory.getLogger(TestNodeManagerResync.class);
 
   @Before
   public void setup() throws UnsupportedFileSystemException {

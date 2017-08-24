@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class to determine hardware related characteristics such as the
@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 @InterfaceStability.Unstable
 public class NodeManagerHardwareUtils {
 
-  private static final Log LOG = LogFactory
-      .getLog(NodeManagerHardwareUtils.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NodeManagerHardwareUtils.class);
 
   private static boolean isHardwareDetectionEnabled(Configuration conf) {
     return conf.getBoolean(

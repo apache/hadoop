@@ -37,6 +37,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,8 +53,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -93,7 +93,8 @@ import com.google.common.base.Supplier;
 
 public class TestContainerLocalizer {
 
-  static final Log LOG = LogFactory.getLog(TestContainerLocalizer.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(TestContainerLocalizer.class);
   static final Path basedir =
       new Path("target", TestContainerLocalizer.class.getName());
   static final FsPermission CACHE_DIR_PERM = new FsPermission((short)0710);
@@ -298,7 +299,7 @@ public class TestContainerLocalizer {
         try {
           localizerA.runLocalization(nmAddr);
         } catch (Exception e) {
-          LOG.warn(e);
+          LOG.warn(e.toString());
         }
       }
     };
@@ -308,7 +309,7 @@ public class TestContainerLocalizer {
         try {
           localizerB.runLocalization(nmAddr);
         } catch (Exception e) {
-          LOG.warn(e);
+          LOG.warn(e.toString());
         }
       }
     };

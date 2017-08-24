@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.api.impl.pb;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -25,6 +23,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.recov
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTaskType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +34,8 @@ import java.util.List;
  */
 public final class NMProtoUtils {
 
-  private static final Log LOG = LogFactory.getLog(NMProtoUtils.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMProtoUtils.class);
 
   private NMProtoUtils() { }
 

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
@@ -48,8 +48,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ContainersMonitorImpl extends AbstractService implements
     ContainersMonitor {
 
-  final static Log LOG = LogFactory
-      .getLog(ContainersMonitorImpl.class);
+  final static Logger LOG =
+       LoggerFactory.getLogger(ContainersMonitorImpl.class);
 
   private long monitoringInterval;
   private MonitoringThread monitoringThread;

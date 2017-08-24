@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
@@ -57,6 +56,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import static org.mockito.Mockito.spy;
 
@@ -70,7 +70,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   }
 
   static {
-    LOG = LogFactory.getLog(TestContainerSchedulerQueuing.class);
+    LOG = LoggerFactory.getLogger(TestContainerSchedulerQueuing.class);
   }
 
   private boolean delayContainers = true;

@@ -32,9 +32,9 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -83,8 +83,8 @@ import com.google.common.collect.Sets;
 
 public class AppLogAggregatorImpl implements AppLogAggregator {
 
-  private static final Log LOG = LogFactory
-      .getLog(AppLogAggregatorImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(AppLogAggregatorImpl.class);
   private static final int THREAD_SLEEP_TIME = 1000;
   // This is temporary solution. The configuration will be deleted once
   // we find a more scalable method to only write a single log file per LRS.

@@ -22,8 +22,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +59,8 @@ import java.util.regex.Pattern;
 @InterfaceStability.Unstable
 class CGroupsHandlerImpl implements CGroupsHandler {
 
-  private static final Log LOG = LogFactory.getLog(CGroupsHandlerImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(CGroupsHandlerImpl.class);
   private static final String MTAB_FILE = "/proc/mounts";
   private static final String CGROUPS_FSTYPE = "cgroup";
 
@@ -243,7 +244,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
         LOG.warn("Error while reading " + mtab, e);
       }
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
 
     return ret;

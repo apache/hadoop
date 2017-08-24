@@ -40,9 +40,9 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -85,7 +85,8 @@ import static org.apache.hadoop.util.Shell.getAllShells;
 
 public class ContainerLocalizer {
 
-  static final Log LOG = LogFactory.getLog(ContainerLocalizer.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(ContainerLocalizer.class);
 
   public static final String FILECACHE = "filecache";
   public static final String APPCACHE = "appcache";

@@ -19,9 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
@@ -45,7 +45,8 @@ import java.util.List;
 
 public class WebServer extends AbstractService {
 
-  private static final Log LOG = LogFactory.getLog(WebServer.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(WebServer.class);
 
   private final Context nmContext;
   private final NMWebApp nmWebApp;

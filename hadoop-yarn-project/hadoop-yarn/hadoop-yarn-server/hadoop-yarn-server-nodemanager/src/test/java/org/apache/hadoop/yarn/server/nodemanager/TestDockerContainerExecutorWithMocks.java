@@ -24,6 +24,8 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileReader;
@@ -35,8 +37,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
@@ -58,8 +58,8 @@ import org.junit.Test;
  */
 public class TestDockerContainerExecutorWithMocks {
 
-  private static final Log LOG = LogFactory
-    .getLog(TestDockerContainerExecutorWithMocks.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestDockerContainerExecutorWithMocks.class);
   public static final String DOCKER_LAUNCH_COMMAND = "/bin/true";
   private DockerContainerExecutor dockerContainerExecutor = null;
   private LocalDirsHandlerService dirsHandler;

@@ -29,6 +29,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileReader;
@@ -44,8 +46,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -79,8 +79,8 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class TestLinuxContainerExecutorWithMocks {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestLinuxContainerExecutorWithMocks.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestLinuxContainerExecutorWithMocks.class);
 
   private static final String MOCK_EXECUTOR =
       "./src/test/resources/mock-container-executor";
