@@ -265,6 +265,19 @@
   </property>
 
   <property>
+    <name>ozone.scm.block.deletion.max.retry</name>
+    <value>4096</value>
+    <description>
+      SCM wraps up a number of blocks in a deletion transaction and send that
+      to datanode for physically deletion periodically. This property
+      determines how many times at most for SCM to retry sending a deletion
+      transaction to datanode. The default value 4096 is relatively big so
+      that SCM could try enough times before giving up, as the actual deletion
+      is async so time required is unpredictable.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.scm.heartbeat.log.warn.interval.count</name>
     <value>10</value>
     <description>

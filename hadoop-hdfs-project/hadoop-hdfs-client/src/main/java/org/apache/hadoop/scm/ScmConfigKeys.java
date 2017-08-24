@@ -212,6 +212,9 @@ public final class ScmConfigKeys {
   public static final int OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT =
       300; // Default 5 minute wait.
 
+  public static final String OZONE_SCM_BLOCK_DELETION_MAX_RETRY =
+      "ozone.scm.block.deletion.max.retry";
+  public static final int OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT = 4096;
 
   /**
    * Never constructed.

@@ -80,6 +80,7 @@ public final class OzoneConsts {
   public static final String BLOCK_DB = "block.db";
   public static final String NODEPOOL_DB = "nodepool.db";
   public static final String OPEN_CONTAINERS_DB = "openContainers.db";
+  public static final String DELETED_BLOCK_DB = "deletedBlock.db";
   public static final String KSM_DB_NAME = "ksm.db";
 
   /**
