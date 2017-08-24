@@ -2504,6 +2504,22 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
   @Test(timeout = 60000)
   public void testRMRestartAfterNodeLabelDisabled() throws Exception {
+    if (getSchedulerType() != SchedulerType.CAPACITY) {
+      return;
+    }
+
+    // Initial FS node label store root dir to a random tmp dir
+    File nodeLabelFsStoreDir = new File("target",
+        this.getClass().getSimpleName()
+            + "-testRMRestartAfterNodeLabelDisabled");
+    if (nodeLabelFsStoreDir.exists()) {
+      FileUtils.deleteDirectory(nodeLabelFsStoreDir);
+    }
+    nodeLabelFsStoreDir.deleteOnExit();
+    String nodeLabelFsStoreDirURI = nodeLabelFsStoreDir.toURI().toString();
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
+        nodeLabelFsStoreDirURI);
+
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
 
     MockRM rm1 = new MockRM(
