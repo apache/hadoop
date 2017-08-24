@@ -32,8 +32,11 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -286,10 +289,139 @@ public class CryptoAdmin extends Configured implements Tool {
     }
   }
 
+  private static class ReencryptZoneCommand implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-reencryptZone";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " <action> -path <zone>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      final TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<action>",
+          "The re-encrypt action to perform. Must be -start or -cancel.");
+      listing.addRow("<zone>", "The path to the zone to be re-encrypted.");
+      return getShortUsage() + "\n" + "Issue a re-encryption command for"
+          + " an encryption zone. Requires superuser permissions.\n\n"
+          + listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String path = StringUtils.popOptionWithArgument("-path", args);
+      final boolean start = StringUtils.popOption("-start", args);
+      final boolean cancel = StringUtils.popOption("-cancel", args);
+
+      if (!args.isEmpty()) {
+        System.err.println("Can't understand argument: " + args.get(0));
+        getLongUsage();
+        return 1;
+      }
+      if (!(start ^ cancel)) {
+        System.err.println("You must specify either [-start] or [-cancel]. ");
+        getLongUsage();
+        return 2;
+      }
+      if (path == null) {
+        System.err.println("You must specify a zone directory with [-path]. ");
+        getLongUsage();
+        return 3;
+      }
+      ReencryptAction action = ReencryptAction.START;
+      if (cancel) {
+        action = ReencryptAction.CANCEL;
+      }
+
+      final HdfsAdmin admin =
+          new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      try {
+        admin.reencryptEncryptionZone(new Path(path), action);
+        System.out.println("re-encrypt command successfully submitted for "
+            + "zone: " + path + " action: " + action);
+      } catch (IOException e) {
+        System.err.println(prettifyException(e));
+        return 4;
+      }
+      return 0;
+    }
+  }
+
+  private static class ListReencryptionStatusCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-listReencryptionStatus";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName()+ "]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      return getShortUsage() + "\n" +
+          "List re-encryption statuses of encryption zones. "
+          + "Requires superuser permissions.\n\n";
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      HdfsAdmin admin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      try {
+        final TableListing listing =
+            new TableListing.Builder().addField("Zone Name").addField("Status")
+                .addField("EZKey Version Name").addField("Submission Time")
+                .addField("Is Canceled?").addField("Completion Time")
+                .addField("Number of files re-encrypted")
+                .addField("Number of failures")
+                .addField("Last File Checkpointed")
+                .wrapWidth(AdminHelper.MAX_LINE_WIDTH).showHeaders().build();
+        final RemoteIterator<ZoneReencryptionStatus> it =
+            admin.listReencryptionStatus();
+        boolean failuresMet = false;
+        while (it.hasNext()) {
+          ZoneReencryptionStatus zs = it.next();
+          final long completion = zs.getCompletionTime();
+          listing.addRow(zs.getZoneName(), zs.getState().toString(),
+              zs.getEzKeyVersionName(), Time.formatTime(zs.getSubmissionTime()),
+              Boolean.toString(zs.isCanceled()),
+              completion == 0 ? "N/A" : Time.formatTime(completion),
+              Long.toString(zs.getFilesReencrypted()),
+              Long.toString(zs.getNumReencryptionFailures()),
+              zs.getLastCheckpointFile());
+          if (zs.getNumReencryptionFailures() > 0) {
+            failuresMet = true;
+          }
+        }
+        System.out.println(listing.toString());
+        if (failuresMet) {
+          System.out.println("There are re-encryption failures. Files that are"
+              + " failed to re-encrypt are still using the old EDEKs. "
+              + "Please check NameNode log to see which files failed,"
+              + " then either fix the error and re-encrypt again,"
+              + " or manually copy the failed files to use new EDEKs.");
+        }
+      } catch (IOException e) {
+        System.err.println(prettifyException(e));
+        return 2;
+      }
+
+      return 0;
+    }
+  }
+
   private static final AdminHelper.Command[] COMMANDS = {
       new CreateZoneCommand(),
       new ListZonesCommand(),
       new ProvisionTrashCommand(),
-      new GetFileEncryptionInfoCommand()
+      new GetFileEncryptionInfoCommand(),
+      new ReencryptZoneCommand(),
+      new ListReencryptionStatusCommand()
   };
 }
