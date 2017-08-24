@@ -99,6 +99,15 @@ message ContainerInfo {
   optional int64 keycount = 4;
 }
 
+// The deleted blocks which are stored in deletedBlock.db of scm.
+message DeletedBlocksTransaction {
+  required int64 txID = 1;
+  required string containerName = 2;
+  repeated string blockID = 3;
+  // the retry time of sending deleting command to datanode.
+  required int32 count = 4;
+}
+
 /**
 A set of container reports, max count is generally set to
 8192 since that keeps the size of the reports under 1 MB.

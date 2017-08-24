@@ -88,6 +88,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
 
   // Track all containers owned by block service.
   private final MetadataStore containerStore;
+  private final DeletedBlockLog deletedBlockLog;
 
   private Map<OzoneProtos.LifeCycleState,
       Map<String, BlockContainerInfo>> containers;
@@ -142,6 +143,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     this.lock = new ReentrantLock();
 
     mxBean = MBeans.register("BlockManager", "BlockManagerImpl", this);
+    deletedBlockLog = new DeletedBlockLogImpl(conf);
   }
 
   // TODO: close full (or almost full) containers with a separate thread.
@@ -490,7 +492,9 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     if (containerStore != null) {
       containerStore.close();
     }
-
+    if (deletedBlockLog != null) {
+      deletedBlockLog.close();
+    }
     MBeans.unregister(mxBean);
   }
 
