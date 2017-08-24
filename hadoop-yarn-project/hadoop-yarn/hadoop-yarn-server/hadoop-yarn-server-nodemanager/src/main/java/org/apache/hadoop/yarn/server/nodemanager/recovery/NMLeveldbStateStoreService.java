@@ -85,7 +85,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   /**
    * Changes from 1.0 to 1.1: Save AMRMProxy state in NMSS.
-   * Changes from 1.2 to 1.2: Save queued container information.
+   * Changes from 1.1 to 1.2: Save queued container information.
    */
   private static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 2);
 
