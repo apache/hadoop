@@ -59,7 +59,6 @@ public class TestOzoneContainer {
     MiniOzoneCluster cluster = null;
     try {
       cluster = new MiniOzoneCluster.Builder(conf)
-          .setRandomContainerPort(false)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
       // We don't start Ozone Container via data node, we will do it
       // independently in our test path.
@@ -67,6 +66,7 @@ public class TestOzoneContainer {
           containerName);
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
+      conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
       container = new OzoneContainer(DFSTestUtil.getLocalDatanodeID(1),
           conf);
       container.start();
