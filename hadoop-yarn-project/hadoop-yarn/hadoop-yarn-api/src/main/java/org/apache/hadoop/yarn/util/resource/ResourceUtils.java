@@ -353,7 +353,7 @@ public class ResourceUtils {
             initializedResources = true;
           } catch (FileNotFoundException fe) {
             LOG.info("Unable to find '" + resourceFile
-                + "'. Falling back to memory and vcores as resources", fe);
+                + "'. Falling back to memory and vcores as resources.");
             initializeResourcesMap(conf);
             initializedResources = true;
           }
