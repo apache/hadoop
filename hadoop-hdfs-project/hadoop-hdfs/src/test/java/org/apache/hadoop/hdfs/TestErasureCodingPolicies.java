@@ -600,7 +600,17 @@ public class TestErasureCodingPolicies {
     fs.mkdirs(dirPath);
     fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
-    final String ecPolicyName = "RS-10-4-64k";
+    String ecPolicyName = null;
+    Collection<ErasureCodingPolicy> allPolicies =
+        fs.getAllErasureCodingPolicies();
+    for (ErasureCodingPolicy policy : allPolicies) {
+      if (!ecPolicy.equals(policy)) {
+        ecPolicyName = policy.getName();
+        break;
+      }
+    }
+    assertNotNull(ecPolicyName);
+
     fs.createFile(filePath).build().close();
     assertEquals(ecPolicy, fs.getErasureCodingPolicy(filePath));
     fs.delete(filePath, true);
@@ -704,7 +714,7 @@ public class TestErasureCodingPolicies {
 
     // Test add policy successfully
     newPolicy =
-        new ErasureCodingPolicy(toAddSchema, 1 * 1024 * 1024);
+        new ErasureCodingPolicy(toAddSchema, 4 * 1024 * 1024);
     policyArray  = new ErasureCodingPolicy[]{newPolicy};
     responses = fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);

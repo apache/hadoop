@@ -3029,7 +3029,7 @@
 
 <property>
   <name>dfs.namenode.ec.system.default.policy</name>
-  <value>RS-6-3-64k</value>
+  <value>RS-6-3-1024k</value>
   <description>The default erasure coding policy name will be used
     on the path if no policy name is passed.
   </description>

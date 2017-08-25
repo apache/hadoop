@@ -65,7 +65,7 @@ Architecture
 
       2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, six built-in policies are supported: `RS-3-2-64k`, `RS-6-3-64k`, `RS-10-4-64k`, `RS-LEGACY-6-3-64k`, `XOR-2-1-64k` and `REPLICATION`.
+    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, six built-in policies are supported: `RS-3-2-1024k`, `RS-6-3-1024k`, `RS-10-4-1024k`, `RS-LEGACY-6-3-1024k`, `XOR-2-1-1024k` and `REPLICATION`.
 
     `REPLICATION` is a special policy. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
 
@@ -115,14 +115,14 @@ Deployment
 
   By default, all built-in erasure coding policies are disabled. Typically, the cluster administrator will enable set of policies by including them
   in the `dfs.namenode.ec.policies.enabled` configuration based on the size of the cluster and the desired fault-tolerance properties. For instance,
-  for a cluster with 9 racks, a policy like `RS-10-4-64k` will not preserve rack-level fault-tolerance, and `RS-6-3-64k` or `RS-3-2-64k` might
-  be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as
+  for a cluster with 9 racks, a policy like `RS-10-4-1024k` will not preserve rack-level fault-tolerance, and `RS-6-3-1024k` or `RS-3-2-1024k` might
+  be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-1024k` would still be appropriate as long as
   there are at least 14 DataNodes in the cluster.
 
   A system default EC policy can be configured via 'dfs.namenode.ec.system.default.policy' configuration. With this configuration,
   the default EC policy will be used when no policy name is passed as an argument in the '-setPolicy' command.
 
-  By default, the 'dfs.namenode.ec.system.default.policy' is "RS-6-3-64k".
+  By default, the 'dfs.namenode.ec.system.default.policy' is "RS-6-3-1024k".
 
   The codec implementations for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
   `io.erasurecode.codec.rs.rawcoders` for the default RS codec,
