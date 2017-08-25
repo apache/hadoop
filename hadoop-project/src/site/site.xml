@@ -154,7 +154,12 @@
       <item name="Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html#Timeline_Server_REST_API_v1"/>
       <item name="Timeline Service V.2" href="hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html#Timeline_Service_v.2_REST_API"/>
     </menu>
-    
+
+    <menu name="YARN Native Services" inherit="top">
+      <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesIntro.html"/>
+      <item name="Native Services Discovery" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesDiscovery.html"/>
+    </menu>
+
     <menu name="Hadoop Compatible File Systems" inherit="top">
       <item name="Aliyun OSS" href="hadoop-aliyun/tools/hadoop-aliyun/index.html"/>
       <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
