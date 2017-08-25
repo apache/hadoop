@@ -272,7 +272,42 @@ public class TestApplicationMasterService {
     Assert.assertEquals(MockRM.getClusterTimeStamp(), tokenId.getRMIdentifier());
     rm.stop();
   }
-  
+
+  @Test(timeout = 3000000)
+  public void testAllocateResponseIdOverflow() throws Exception {
+    MockRM rm = new MockRM(conf);
+    try {
+      rm.start();
+
+      // Register node1
+      MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
+
+      // Submit an application
+      RMApp app1 = rm.submitApp(2048);
+
+      // kick the scheduling
+      nm1.nodeHeartbeat(true);
+      RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+      MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+      am1.registerAppAttempt();
+
+      // Set the last reponseId to be MAX_INT
+      Assert.assertTrue(am1.setApplicationLastResponseId(Integer.MAX_VALUE));
+
+      // Both allocate should succeed
+      am1.schedule(); // send allocate with reponseId = MAX_INT
+      Assert.assertEquals(0, am1.getResponseId());
+
+      am1.schedule(); // send allocate with reponseId = 0
+      Assert.assertEquals(1, am1.getResponseId());
+
+    } finally {
+      if (rm != null) {
+        rm.stop();
+      }
+    }
+  }
+
   @Test(timeout=600000)
   public void testInvalidContainerReleaseRequest() throws Exception {
     MockRM rm = new MockRM(conf);
