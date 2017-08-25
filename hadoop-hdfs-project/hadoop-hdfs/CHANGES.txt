@@ -1,5 +1,20 @@
 Hadoop HDFS Change Log
 
+Release 2.7.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-12319. DirectoryScanner will throw IllegalStateException
+    when Multiple BP's are present. Contributed by Brahma Reddy Battula.
+
 Release 2.7.7 - 2018-07-18
 
   INCOMPATIBLE CHANGES
