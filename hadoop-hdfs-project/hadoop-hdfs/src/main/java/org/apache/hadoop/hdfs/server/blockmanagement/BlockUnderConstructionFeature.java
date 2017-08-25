@@ -84,7 +84,7 @@ public class BlockUnderConstructionFeature {
     for(int i = 0; i < targets.length; i++) {
       // Only store non-null DatanodeStorageInfo.
       if (targets[i] != null) {
-        replicas[i] = new ReplicaUnderConstruction(block,
+        replicas[offset++] = new ReplicaUnderConstruction(block,
             targets[i], ReplicaState.RBW);
       }
     }
