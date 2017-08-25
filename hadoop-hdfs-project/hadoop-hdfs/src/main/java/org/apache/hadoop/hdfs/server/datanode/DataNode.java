@@ -2919,7 +2919,8 @@ public class DataNode extends ReconfigurableBase
     b.setNumBytes(visible);
 
     if (targets.length > 0) {
-      new DataTransfer(targets, targetStorageTypes, b, stage, client).run();
+      new Daemon(new DataTransfer(targets, targetStorageTypes,
+          b, stage, client)).start();
     }
   }
 
