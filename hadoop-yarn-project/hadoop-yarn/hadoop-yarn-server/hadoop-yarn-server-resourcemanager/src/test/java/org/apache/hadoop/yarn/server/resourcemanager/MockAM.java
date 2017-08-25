@@ -139,6 +139,18 @@ public class MockAM {
     }
   }
 
+  public boolean setApplicationLastResponseId(int newLastResponseId) {
+    ApplicationMasterService applicationMasterService =
+        (ApplicationMasterService) amRMProtocol;
+    responseId = newLastResponseId;
+    return applicationMasterService.setAttemptLastResponseId(attemptId,
+        newLastResponseId);
+  }
+
+  public int getResponseId() {
+    return responseId;
+  }
+
   public void addRequests(String[] hosts, int memory, int priority,
       int containers) throws Exception {
     requests.addAll(createReq(hosts, memory, priority, containers));
@@ -258,19 +270,22 @@ public class MockAM {
 
   public AllocateResponse doAllocateAs(UserGroupInformation ugi,
       final AllocateRequest req) throws Exception {
-    req.setResponseId(++responseId);
+    req.setResponseId(responseId);
     try {
-      return ugi.doAs(new PrivilegedExceptionAction<AllocateResponse>() {
-        @Override
-        public AllocateResponse run() throws Exception {
-          return amRMProtocol.allocate(req);
-        }
-      });
+      AllocateResponse response =
+          ugi.doAs(new PrivilegedExceptionAction<AllocateResponse>() {
+            @Override
+            public AllocateResponse run() throws Exception {
+              return amRMProtocol.allocate(req);
+            }
+          });
+      responseId = response.getResponseId();
+      return response;
     } catch (UndeclaredThrowableException e) {
       throw (Exception) e.getCause();
     }
   }
-  
+
   public AllocateResponse doHeartbeat() throws Exception {
     return allocate(null, null);
   }
