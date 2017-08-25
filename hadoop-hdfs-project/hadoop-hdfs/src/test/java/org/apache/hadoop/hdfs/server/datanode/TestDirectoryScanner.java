@@ -47,16 +47,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
@@ -307,15 +310,22 @@ public class TestDirectoryScanner {
          missingMemoryBlocks, mismatchBlocks, 0);
   }
 
-    private void scan(long totalBlocks, int diffsize, long missingMetaFile, long missingBlockFile,
-      long missingMemoryBlocks, long mismatchBlocks, long duplicateBlocks) throws IOException {
+  private void scan(long totalBlocks, int diffsize, long missingMetaFile,
+      long missingBlockFile, long missingMemoryBlocks, long mismatchBlocks,
+      long duplicateBlocks) throws IOException {
     scanner.reconcile();
-    
+    verifyStats(totalBlocks, diffsize, missingMetaFile, missingBlockFile,
+        missingMemoryBlocks, mismatchBlocks, duplicateBlocks);
+  }
+
+  private void verifyStats(long totalBlocks, int diffsize, long missingMetaFile,
+      long missingBlockFile, long missingMemoryBlocks, long mismatchBlocks,
+      long duplicateBlocks) {
     assertTrue(scanner.diffs.containsKey(bpid));
     LinkedList<DirectoryScanner.ScanInfo> diff = scanner.diffs.get(bpid);
     assertTrue(scanner.stats.containsKey(bpid));
     DirectoryScanner.Stats stats = scanner.stats.get(bpid);
-    
+
     assertEquals(diffsize, diff.size());
     assertEquals(totalBlocks, stats.totalBlocks);
     assertEquals(missingMetaFile, stats.missingMetaFile);
@@ -989,6 +999,50 @@ public class TestDirectoryScanner {
         scanner = null;
       }
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testDirectoryScannerInFederatedCluster() throws Exception {
+    //Create Federated cluster with two nameservices and one DN
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
+        .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
+        .numDataNodes(1).build()) {
+      cluster.waitActive();
+      cluster.transitionToActive(1);
+      cluster.transitionToActive(3);
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      //Create one block in first nameservice
+      FileSystem fs = cluster.getFileSystem(1);
+      int bp1Files = 1;
+      writeFile(fs, bp1Files);
+      //Create two blocks in second nameservice
+      FileSystem fs2 = cluster.getFileSystem(3);
+      int bp2Files = 2;
+      writeFile(fs2, bp2Files);
+      //Call the Directory scanner
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      scanner.setRetainDiffs(true);
+      scanner.reconcile();
+      //Check blocks in corresponding BP
+      bpid = cluster.getNamesystem(1).getBlockPoolId();
+      verifyStats(bp1Files, 0, 0, 0, 0, 0, 0);
+      bpid = cluster.getNamesystem(3).getBlockPoolId();
+      verifyStats(bp2Files, 0, 0, 0, 0, 0, 0);
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+    }
+  }
+
+  private void writeFile(FileSystem fs, int numFiles) throws IOException {
+    final String fileName = "/" + GenericTestUtils.getMethodName();
+    final Path filePath = new Path(fileName);
+    for (int i = 0; i < numFiles; i++) {
+      DFSTestUtil.createFile(fs, filePath, 1, (short) 1, 0);
     }
   }
 }
