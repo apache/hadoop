@@ -1579,7 +1579,8 @@ class DataStreamer extends Daemon {
   }
 
   /** update pipeline at the namenode */
-  private void updatePipeline(long newGS) throws IOException {
+  @VisibleForTesting
+  void updatePipeline(long newGS) throws IOException {
     final ExtendedBlock oldBlock = block.getCurrentBlock();
     // the new GS has been propagated to all DN, it should be ok to update the
     // local block state
