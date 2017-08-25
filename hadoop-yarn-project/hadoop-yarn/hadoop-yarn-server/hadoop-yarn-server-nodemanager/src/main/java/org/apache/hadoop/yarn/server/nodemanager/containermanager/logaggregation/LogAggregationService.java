@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
@@ -287,7 +286,8 @@ public class LogAggregationService extends AbstractService implements
     return this.appLogAggregators.size();
   }
 
-  private void stopContainer(ContainerId containerId, int exitCode) {
+  private void stopContainer(ContainerId containerId,
+      ContainerType containerType, int exitCode) {
 
     // A container is complete. Put this containers' logs up for aggregation if
     // this containers' logs are needed.
@@ -298,14 +298,6 @@ public class LogAggregationService extends AbstractService implements
           + ", did it fail to start?");
       return;
     }
-    Container container = context.getContainers().get(containerId);
-    if (null == container) {
-      LOG.warn("Log aggregation cannot be started for " + containerId
-          + ", as its an absent container");
-      return;
-    }
-    ContainerType containerType =
-        container.getContainerTokenIdentifier().getContainerType();
     aggregator.startContainerLogAggregation(
         new ContainerLogContext(containerId, containerType, exitCode));
   }
@@ -344,6 +336,7 @@ public class LogAggregationService extends AbstractService implements
         LogHandlerContainerFinishedEvent containerFinishEvent =
             (LogHandlerContainerFinishedEvent) event;
         stopContainer(containerFinishEvent.getContainerId(),
+            containerFinishEvent.getContainerType(),
             containerFinishEvent.getExitCode());
         break;
       case APPLICATION_FINISHED:

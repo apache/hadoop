@@ -703,7 +703,7 @@ public class ContainerImpl implements Container {
     eventHandler.handle(new ContainerStopMonitoringEvent(containerId));
     // Tell the logService too
     eventHandler.handle(new LogHandlerContainerFinishedEvent(
-      containerId, exitCode));
+        containerId, containerTokenIdentifier.getContainerType(), exitCode));
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed
