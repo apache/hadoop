@@ -44,7 +44,11 @@ import java.util.regex.Pattern;
 import static java.util.concurrent.TimeUnit.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import junit.framework.TestCase;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertArrayEquals;
 
 import org.apache.commons.lang.StringUtils;
@@ -65,11 +69,11 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.mockito.Mockito;
 
-public class TestConfiguration extends TestCase {
+public class TestConfiguration {
 
+  private static final double DOUBLE_DELTA = 0.000000001f;
   private Configuration conf;
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2-TestConfiguration.xml").getAbsolutePath();
@@ -82,7 +86,7 @@ public class TestConfiguration extends TestCase {
   private static final String CONFIG_MULTI_BYTE_SAVED = new File(
     "./test-config-multi-byte-saved-TestConfiguration.xml").getAbsolutePath();
   final static Random RAN = new Random();
-  final static String XMLHEADER = 
+  final static String XMLHEADER =
             IBM_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
   "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>";
 
@@ -94,18 +98,16 @@ public class TestConfiguration extends TestCase {
 
   private BufferedWriter out;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     conf = new Configuration();
   }
-  
-  @Override
-  protected void tearDown() throws Exception {
+
+  @After
+  public void tearDown() throws Exception {
     if(out != null) {
       out.close();
     }
-    super.tearDown();
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
     new File(CONFIG_FOR_ENUM).delete();
@@ -113,7 +115,7 @@ public class TestConfiguration extends TestCase {
     new File(CONFIG_MULTI_BYTE).delete();
     new File(CONFIG_MULTI_BYTE_SAVED).delete();
   }
-  
+
   private void startConfig() throws IOException{
     out.write("<?xml version=\"1.0\"?>\n");
     out.write("<configuration>\n");
@@ -164,6 +166,7 @@ public class TestConfiguration extends TestCase {
         + " [\n<!ENTITY " + entity + " SYSTEM \"" + value + "\">\n]>");
   }
 
+  @Test
   public void testInputStreamResource() throws Exception {
     StringWriter writer = new StringWriter();
     out = new BufferedWriter(writer);
@@ -182,6 +185,7 @@ public class TestConfiguration extends TestCase {
     assertEquals("A", conf.get("prop"));
   }
 
+  @Test
   public void testFinalWarnings() throws Exception {
     // Make a configuration file with a final property
     StringWriter writer = new StringWriter();
@@ -226,6 +230,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testNoFinalWarnings() throws Exception {
     // Make a configuration file with a final property
     StringWriter writer = new StringWriter();
@@ -263,6 +268,7 @@ public class TestConfiguration extends TestCase {
 
 
 
+  @Test
   public void testFinalWarningsMultiple() throws Exception {
     // Make a configuration file with a repeated final property
     StringWriter writer = new StringWriter();
@@ -296,6 +302,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testFinalWarningsMultipleOverride() throws Exception {
     // Make a configuration file with 2 final properties with different values
     StringWriter writer = new StringWriter();
@@ -358,6 +365,7 @@ public class TestConfiguration extends TestCase {
    * round-trips multi-byte string literals through saving and loading of config
    * and asserts that the same values were read.
    */
+  @Test
   public void testMultiByteCharacters() throws IOException {
     String priorDefaultEncoding = System.getProperty("file.encoding");
     try {
@@ -388,6 +396,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testVariableSubstitution() throws IOException {
     // stubbing only environment dependent functions
     Configuration mock = Mockito.spy(conf);
@@ -419,12 +428,13 @@ public class TestConfiguration extends TestCase {
       assertEq(p.val, gotRawVal);
       assertEq(p.expectEval, gotVal);
     }
-      
+
     // check that expansion also occurs for getInt()
     assertTrue(mock.getInt("intvar", -1) == 42);
     assertTrue(mock.getInt("my.int", -1) == 42);
   }
 
+  @Test
   public void testEnvDefault() throws IOException {
     Configuration mock = Mockito.spy(conf);
     Mockito.when(mock.getenv("NULL_VALUE")).thenReturn(null);
@@ -465,6 +475,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testFinalParam() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -474,7 +485,7 @@ public class TestConfiguration extends TestCase {
     Configuration conf1 = new Configuration();
     conf1.addResource(fileResource);
     assertNull("my var is not null", conf1.get("my.var"));
-	
+
     out=new BufferedWriter(new FileWriter(CONFIG2));
     startConfig();
     declareProperty("my.var", "myval", "myval", false);
@@ -486,6 +497,7 @@ public class TestConfiguration extends TestCase {
     assertNull("my var is not final", conf2.get("my.var"));
   }
 
+  @Test
   public void testCompactFormat() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -530,8 +542,8 @@ public class TestConfiguration extends TestCase {
   }
 
   void declareProperty(String name, String val, String expectEval,
-                       boolean isFinal)
-    throws IOException {
+      boolean isFinal)
+      throws IOException {
     appendProperty(name, val, isFinal);
     Prop p = new Prop();
     p.name = name;
@@ -543,10 +555,10 @@ public class TestConfiguration extends TestCase {
   void appendProperty(String name, String val) throws IOException {
     appendProperty(name, val, false);
   }
- 
-  void appendProperty(String name, String val, boolean isFinal, 
+
+  void appendProperty(String name, String val, boolean isFinal,
       String ... sources)
-    throws IOException {
+      throws IOException {
     out.write("<property>");
     out.write("<name>");
     out.write(name);
@@ -564,19 +576,19 @@ public class TestConfiguration extends TestCase {
     }
     out.write("</property>\n");
   }
-  
+
   void appendCompactFormatProperty(String name, String val) throws IOException {
     appendCompactFormatProperty(name, val, false);
   }
 
   void appendCompactFormatProperty(String name, String val, boolean isFinal)
-    throws IOException {
+      throws IOException {
     appendCompactFormatProperty(name, val, isFinal, null);
   }
 
   void appendCompactFormatProperty(String name, String val, boolean isFinal,
       String source)
-    throws IOException {
+      throws IOException {
     out.write("<property ");
     out.write("name=\"");
     out.write(name);
@@ -595,6 +607,7 @@ public class TestConfiguration extends TestCase {
     out.write("/>\n");
   }
 
+  @Test
   public void testOverlay() throws IOException{
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -610,25 +623,26 @@ public class TestConfiguration extends TestCase {
     appendProperty("b","d");
     appendProperty("e","e");
     endConfig();
-    
+
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    
+
     //set dynamically something
     conf.set("c","d");
     conf.set("a","d");
-    
+
     Configuration clone=new Configuration(conf);
     clone.addResource(new Path(CONFIG2));
-    
-    assertEquals(clone.get("a"), "d"); 
-    assertEquals(clone.get("b"), "d"); 
-    assertEquals(clone.get("c"), "d"); 
-    assertEquals(clone.get("d"), "e"); 
-    assertEquals(clone.get("e"), "f"); 
-    
+
+    assertEquals(clone.get("a"), "d");
+    assertEquals(clone.get("b"), "d");
+    assertEquals(clone.get("c"), "d");
+    assertEquals(clone.get("d"), "e");
+    assertEquals(clone.get("e"), "f");
+
   }
-  
+
+  @Test
   public void testCommentsInValue() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -640,6 +654,7 @@ public class TestConfiguration extends TestCase {
     assertEquals("this  contains a comment", conf.get("my.comment"));
   }
 
+  @Test
   public void testEscapedCharactersInValue() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -651,6 +666,7 @@ public class TestConfiguration extends TestCase {
     assertEquals("''''", conf.get("my.comment"));
   }
 
+  @Test
   public void testTrim() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -658,13 +674,13 @@ public class TestConfiguration extends TestCase {
     String[] name = new String[100];
     for(int i = 0; i < name.length; i++) {
       name[i] = "foo" + i;
-      StringBuilder prefix = new StringBuilder(); 
-      StringBuilder postfix = new StringBuilder(); 
+      StringBuilder prefix = new StringBuilder();
+      StringBuilder postfix = new StringBuilder();
       for(int j = 0; j < 3; j++) {
         prefix.append(whitespaces[RAN.nextInt(whitespaces.length)]);
         postfix.append(whitespaces[RAN.nextInt(whitespaces.length)]);
       }
-      
+
       appendProperty(prefix + name[i] + postfix, name[i] + ".value");
     }
     endConfig();
@@ -675,6 +691,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testGetLocalPath() throws IOException {
     Configuration conf = new Configuration();
     String[] dirs = new String[]{"a", "b", "c"};
@@ -690,7 +707,8 @@ public class TestConfiguration extends TestCase {
         localPath.contains(" "));
     }
   }
-  
+
+  @Test
   public void testGetFile() throws IOException {
     Configuration conf = new Configuration();
     String[] dirs = new String[]{"a", "b", "c"};
@@ -707,29 +725,32 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testToString() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    
-    String expectedOutput = 
-      "Configuration: core-default.xml, core-site.xml, " + 
+
+    String expectedOutput =
+      "Configuration: core-default.xml, core-site.xml, " +
       fileResource.toString();
     assertEquals(expectedOutput, conf.toString());
   }
-  
+
+  @Test
   public void testWriteXml() throws IOException {
     Configuration conf = new Configuration();
-    ByteArrayOutputStream baos = new ByteArrayOutputStream(); 
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
     conf.writeXml(baos);
     String result = baos.toString();
     assertTrue("Result has proper header", result.startsWith(XMLHEADER));
-	  
+
     assertTrue("Result has proper footer", result.endsWith("</configuration>"));
   }
-  
+
+  @Test
   public void testIncludes() throws Exception {
     tearDown();
     System.out.println("XXX testIncludes");
@@ -758,8 +779,8 @@ public class TestConfiguration extends TestCase {
     // verify that the includes file contains all properties
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    assertEquals(conf.get("a"), "b"); 
-    assertEquals(conf.get("c"), "d"); 
+    assertEquals(conf.get("a"), "b");
+    assertEquals(conf.get("c"), "d");
     assertEquals(conf.get("e"), "f");
     assertEquals(conf.get("g"), "h");
     assertEquals(conf.get("i"), "j");
@@ -767,6 +788,7 @@ public class TestConfiguration extends TestCase {
     tearDown();
   }
 
+  @Test
   public void testCharsetInDocumentEncoding() throws Exception {
     tearDown();
     out=new BufferedWriter(new OutputStreamWriter(new FileOutputStream(CONFIG),
@@ -785,6 +807,7 @@ public class TestConfiguration extends TestCase {
     tearDown();
   }
 
+  @Test
   public void testEntityReference() throws Exception {
     tearDown();
     out=new BufferedWriter(new FileWriter(CONFIG));
@@ -803,6 +826,7 @@ public class TestConfiguration extends TestCase {
     tearDown();
   }
 
+  @Test
   public void testSystemEntityReference() throws Exception {
     tearDown();
     out=new BufferedWriter(new FileWriter(CONFIG2));
@@ -824,6 +848,7 @@ public class TestConfiguration extends TestCase {
     tearDown();
   }
 
+  @Test
   public void testIncludesWithFallback() throws Exception {
     tearDown();
     out=new BufferedWriter(new FileWriter(CONFIG2));
@@ -862,6 +887,7 @@ public class TestConfiguration extends TestCase {
     tearDown();
   }
 
+  @Test
   public void testRelativeIncludes() throws Exception {
     tearDown();
     String relConfig = new File("./tmp/test-config.xml").getAbsolutePath();
@@ -893,6 +919,7 @@ public class TestConfiguration extends TestCase {
     new File(new File(relConfig).getParent()).delete();
   }
 
+  @Test
   public void testIntegerRanges() {
     Configuration conf = new Configuration();
     conf.set("first", "-100");
@@ -923,7 +950,8 @@ public class TestConfiguration extends TestCase {
     assertEquals(true, range.isIncluded(34));
     assertEquals(true, range.isIncluded(100000000));
   }
-  
+
+  @Test
   public void testGetRangeIterator() throws Exception {
     Configuration config = new Configuration(false);
     IntegerRanges ranges = config.getRange("Test", "");
@@ -943,7 +971,7 @@ public class TestConfiguration extends TestCase {
       found.add(i);
     }
     assertEquals(expected, found);
-    
+
     ranges = config.getRange("Test", "8-12, 5- 7");
     expected = new HashSet<Integer>(Arrays.asList(5,6,7,8,9,10,11,12));
     found = new HashSet<Integer>();
@@ -953,6 +981,7 @@ public class TestConfiguration extends TestCase {
     assertEquals(expected, found);
   }
 
+  @Test
   public void testHexValues() throws IOException{
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -984,6 +1013,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testIntegerValues() throws IOException{
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1014,7 +1044,8 @@ public class TestConfiguration extends TestCase {
       // pass
     }
   }
-  
+
+  @Test
   public void testHumanReadableValues() throws IOException {
     out = new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1035,6 +1066,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testBooleanValues() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1058,7 +1090,8 @@ public class TestConfiguration extends TestCase {
     assertEquals(false, conf.getBoolean("test.bool7", true));
     assertEquals(false, conf.getBoolean("test.bool8", false));
   }
-  
+
+  @Test
   public void testFloatValues() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1070,10 +1103,10 @@ public class TestConfiguration extends TestCase {
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    assertEquals(3.1415f, conf.getFloat("test.float1", 0.0f));
-    assertEquals(3.1415f, conf.getFloat("test.float2", 0.0f));
-    assertEquals(-3.1415f, conf.getFloat("test.float3", 0.0f));
-    assertEquals(-3.1415f, conf.getFloat("test.float4", 0.0f));
+    assertEquals(3.1415f, conf.getFloat("test.float1", 0.0f), DOUBLE_DELTA);
+    assertEquals(3.1415f, conf.getFloat("test.float2", 0.0f), DOUBLE_DELTA);
+    assertEquals(-3.1415f, conf.getFloat("test.float3", 0.0f), DOUBLE_DELTA);
+    assertEquals(-3.1415f, conf.getFloat("test.float4", 0.0f), DOUBLE_DELTA);
     try {
       conf.getFloat("test.float5", 0.0f);
       fail("Property had invalid float value, but was read successfully.");
@@ -1081,7 +1114,8 @@ public class TestConfiguration extends TestCase {
       // pass
     }
   }
-  
+
+  @Test
   public void testDoubleValues() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1093,10 +1127,10 @@ public class TestConfiguration extends TestCase {
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    assertEquals(3.1415, conf.getDouble("test.double1", 0.0));
-    assertEquals(3.1415, conf.getDouble("test.double2", 0.0));
-    assertEquals(-3.1415, conf.getDouble("test.double3", 0.0));
-    assertEquals(-3.1415, conf.getDouble("test.double4", 0.0));
+    assertEquals(3.1415, conf.getDouble("test.double1", 0.0), DOUBLE_DELTA);
+    assertEquals(3.1415, conf.getDouble("test.double2", 0.0), DOUBLE_DELTA);
+    assertEquals(-3.1415, conf.getDouble("test.double3", 0.0), DOUBLE_DELTA);
+    assertEquals(-3.1415, conf.getDouble("test.double4", 0.0), DOUBLE_DELTA);
     try {
       conf.getDouble("test.double5", 0.0);
       fail("Property had invalid double value, but was read successfully.");
@@ -1104,7 +1138,8 @@ public class TestConfiguration extends TestCase {
       // pass
     }
   }
-  
+
+  @Test
   public void testGetClass() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1113,10 +1148,13 @@ public class TestConfiguration extends TestCase {
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    assertEquals("java.lang.Integer", conf.getClass("test.class1", null).getCanonicalName());
-    assertEquals("java.lang.Integer", conf.getClass("test.class2", null).getCanonicalName());
+    assertEquals("java.lang.Integer",
+        conf.getClass("test.class1", null).getCanonicalName());
+    assertEquals("java.lang.Integer",
+        conf.getClass("test.class2", null).getCanonicalName());
   }
-  
+
+  @Test
   public void testGetClasses() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1132,14 +1170,15 @@ public class TestConfiguration extends TestCase {
     assertArrayEquals(expectedNames, extractClassNames(classes1));
     assertArrayEquals(expectedNames, extractClassNames(classes2));
   }
-  
+
+  @Test
   public void testGetStringCollection() {
     Configuration c = new Configuration();
     c.set("x", " a, b\n,\nc ");
     Collection<String> strs = c.getTrimmedStringCollection("x");
     assertEquals(3, strs.size());
     assertArrayEquals(new String[]{ "a", "b", "c" },
-                      strs.toArray(new String[0]));
+        strs.toArray(new String[0]));
 
     // Check that the result is mutable
     strs.add("z");
@@ -1150,13 +1189,14 @@ public class TestConfiguration extends TestCase {
     strs.add("z");
   }
 
+  @Test
   public void testGetTrimmedStringCollection() {
     Configuration c = new Configuration();
     c.set("x", "a, b, c");
     Collection<String> strs = c.getStringCollection("x");
     assertEquals(3, strs.size());
     assertArrayEquals(new String[]{ "a", " b", " c" },
-                      strs.toArray(new String[0]));
+        strs.toArray(new String[0]));
 
     // Check that the result is mutable
     strs.add("z");
@@ -1174,9 +1214,10 @@ public class TestConfiguration extends TestCase {
     }
     return classNames;
   }
-  
+
   enum Dingo { FOO, BAR };
   enum Yak { RAB, FOO };
+  @Test
   public void testEnum() {
     Configuration conf = new Configuration();
     conf.setEnum("test.enum", Dingo.FOO);
@@ -1193,6 +1234,7 @@ public class TestConfiguration extends TestCase {
     assertTrue(fail);
   }
 
+  @Test
   public void testEnumFromXml() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG_FOR_ENUM));
     startConfig();
@@ -1213,6 +1255,7 @@ public class TestConfiguration extends TestCase {
     assertTrue(fail);
   }
 
+  @Test
   public void testTimeDuration() {
     Configuration conf = new Configuration(false);
     conf.setTimeDuration("test.time.a", 7L, SECONDS);
@@ -1246,17 +1289,18 @@ public class TestConfiguration extends TestCase {
     assertEquals(30L, conf.getTimeDuration("test.time.d", 40, SECONDS));
 
     for (Configuration.ParsedTimeDuration ptd :
-         Configuration.ParsedTimeDuration.values()) {
+        Configuration.ParsedTimeDuration.values()) {
       conf.setTimeDuration("test.time.unit", 1, ptd.unit());
       assertEquals(1 + ptd.suffix(), conf.get("test.time.unit"));
       assertEquals(1, conf.getTimeDuration("test.time.unit", 2, ptd.unit()));
     }
   }
 
+  @Test
   public void testTimeDurationWarning() {
     // check warn for possible loss of precision
     final String warnFormat = "Possible loss of precision converting %s" +
-            " to %s for test.time.warn";
+        " to %s for test.time.warn";
     final ArrayList<String> warnchk = new ArrayList<>();
     Configuration wconf = new Configuration(false) {
       @Override
@@ -1290,6 +1334,7 @@ public class TestConfiguration extends TestCase {
     assertEquals(2, warnchk.size());
   }
 
+  @Test
   public void testPattern() throws IOException {
     out = new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1303,20 +1348,21 @@ public class TestConfiguration extends TestCase {
     Pattern defaultPattern = Pattern.compile("x+");
     // Return default if missing
     assertEquals(defaultPattern.pattern(),
-                 conf.getPattern("xxxxx", defaultPattern).pattern());
+        conf.getPattern("xxxxx", defaultPattern).pattern());
     // Return null if empty and default is null
     assertNull(conf.getPattern("test.pattern1", null));
     // Return default for empty
     assertEquals(defaultPattern.pattern(),
-                 conf.getPattern("test.pattern1", defaultPattern).pattern());
+        conf.getPattern("test.pattern1", defaultPattern).pattern());
     // Return default for malformed
     assertEquals(defaultPattern.pattern(),
-                 conf.getPattern("test.pattern2", defaultPattern).pattern());
+        conf.getPattern("test.pattern2", defaultPattern).pattern());
     // Works for correct patterns
     assertEquals("a+b",
-                 conf.getPattern("test.pattern3", defaultPattern).pattern());
+        conf.getPattern("test.pattern3", defaultPattern).pattern());
   }
 
+  @Test
   public void testPropertySource() throws IOException {
     out = new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1329,17 +1375,19 @@ public class TestConfiguration extends TestCase {
     assertEquals(1, sources.length);
     assertEquals(
         "Resource string returned for a file-loaded property" +
-        " must be a proper absolute path",
+            " must be a proper absolute path",
         fileResource,
         new Path(sources[0]));
     assertArrayEquals("Resource string returned for a set() property must be " +
-        "\"programmatically\"",
+            "\"programmatically\"",
         new String[]{"programmatically"},
         conf.getPropertySources("fs.defaultFS"));
-    assertEquals("Resource string returned for an unset property must be null",
+    assertArrayEquals("Resource string returned for an unset property must "
+            + "be null",
         null, conf.getPropertySources("fs.defaultFoo"));
   }
-  
+
+  @Test
   public void testMultiplePropertySource() throws IOException {
     out = new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1354,24 +1402,25 @@ public class TestConfiguration extends TestCase {
     assertEquals("c", sources[2]);
     assertEquals(
         "Resource string returned for a file-loaded property" +
-        " must be a proper absolute path",
+            " must be a proper absolute path",
         fileResource,
         new Path(sources[3]));
   }
 
+  @Test
   public void testSocketAddress() {
     Configuration conf = new Configuration();
     final String defaultAddr = "host:1";
     final int defaultPort = 2;
     InetSocketAddress addr = null;
-    
+
     addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
     assertEquals(defaultAddr, NetUtils.getHostPortString(addr));
-    
+
     conf.set("myAddress", "host2");
     addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
     assertEquals("host2:"+defaultPort, NetUtils.getHostPortString(addr));
-    
+
     conf.set("myAddress", "host2:3");
     addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
     assertEquals("host2:3", NetUtils.getHostPortString(addr));
@@ -1387,35 +1436,38 @@ public class TestConfiguration extends TestCase {
     } catch (IllegalArgumentException iae) {
       threwException = true;
       assertEquals("Does not contain a valid host:port authority: " +
-                   "bad:-port (configuration property 'myAddress')",
-                   iae.getMessage());
-      
+              "bad:-port (configuration property 'myAddress')",
+          iae.getMessage());
+
     } finally {
       assertTrue(threwException);
     }
   }
 
+  @Test
   public void testSetSocketAddress() {
     Configuration conf = new Configuration();
     NetUtils.addStaticResolution("host", "127.0.0.1");
     final String defaultAddr = "host:1";
-    
-    InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);    
+
+    InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
     conf.setSocketAddr("myAddress", addr);
     assertEquals(defaultAddr, NetUtils.getHostPortString(addr));
   }
-  
+
+  @Test
   public void testUpdateSocketAddress() throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddrForHost("host", 1);
     InetSocketAddress connectAddr = conf.updateConnectAddr("myAddress", addr);
     assertEquals(connectAddr.getHostName(), addr.getHostName());
-    
+
     addr = new InetSocketAddress(1);
     connectAddr = conf.updateConnectAddr("myAddress", addr);
     assertEquals(connectAddr.getHostName(),
-                 InetAddress.getLocalHost().getHostName());
+        InetAddress.getLocalHost().getHostName());
   }
 
+  @Test
   public void testReload() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1424,7 +1476,7 @@ public class TestConfiguration extends TestCase {
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    
+
     out=new BufferedWriter(new FileWriter(CONFIG2));
     startConfig();
     appendProperty("test.key1", "value1");
@@ -1432,23 +1484,23 @@ public class TestConfiguration extends TestCase {
     endConfig();
     Path fileResource1 = new Path(CONFIG2);
     conf.addResource(fileResource1);
-    
+
     // add a few values via set.
     conf.set("test.key3", "value4");
     conf.set("test.key4", "value5");
-    
+
     assertEquals("final-value1", conf.get("test.key1"));
     assertEquals("value2", conf.get("test.key2"));
     assertEquals("value4", conf.get("test.key3"));
     assertEquals("value5", conf.get("test.key4"));
-    
+
     // change values in the test file...
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
     appendProperty("test.key1", "final-value1");
     appendProperty("test.key3", "final-value3", true);
     endConfig();
-    
+
     conf.reloadConfiguration();
     assertEquals("value1", conf.get("test.key1"));
     // overlayed property overrides.
@@ -1457,6 +1509,7 @@ public class TestConfiguration extends TestCase {
     assertEquals("value5", conf.get("test.key4"));
   }
 
+  @Test
   public void testSize() {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
@@ -1464,6 +1517,7 @@ public class TestConfiguration extends TestCase {
     assertEquals(2, conf.size());
   }
 
+  @Test
   public void testClear() {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
@@ -1476,6 +1530,7 @@ public class TestConfiguration extends TestCase {
   public static class Fake_ClassLoader extends ClassLoader {
   }
 
+  @Test
   public void testClassLoader() {
     Configuration conf = new Configuration(false);
     conf.setQuietMode(false);
@@ -1483,7 +1538,7 @@ public class TestConfiguration extends TestCase {
     Configuration other = new Configuration(conf);
     assertTrue(other.getClassLoader() instanceof Fake_ClassLoader);
   }
-  
+
   static class JsonConfiguration {
     JsonProperty[] properties;
 
@@ -1546,6 +1601,7 @@ public class TestConfiguration extends TestCase {
     return ac;
   }
 
+  @Test
   public void testGetSetTrimmedNames() throws IOException {
     Configuration conf = new Configuration(false);
     conf.set(" name", "value");
@@ -1554,6 +1610,7 @@ public class TestConfiguration extends TestCase {
     assertEquals("value", conf.getRaw("  name  "));
   }
 
+  @Test
   public void testDumpProperty() throws IOException {
     StringWriter outWriter = new StringWriter();
     ObjectMapper mapper = new ObjectMapper();
@@ -1668,15 +1725,16 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testDumpConfiguration() throws IOException {
     StringWriter outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     String jsonStr = outWriter.toString();
     ObjectMapper mapper = new ObjectMapper();
-    JsonConfiguration jconf = 
-      mapper.readValue(jsonStr, JsonConfiguration.class);
+    JsonConfiguration jconf =
+        mapper.readValue(jsonStr, JsonConfiguration.class);
     int defaultLength = jconf.getProperties().length;
-    
+
     // add 3 keys to the existing configuration properties
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1687,7 +1745,7 @@ public class TestConfiguration extends TestCase {
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
     out.close();
-    
+
     outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     jsonStr = outWriter.toString();
@@ -1696,7 +1754,7 @@ public class TestConfiguration extends TestCase {
     int length = jconf.getProperties().length;
     // check for consistency in the number of properties parsed in Json format.
     assertEquals(length, defaultLength+3);
-    
+
     //change few keys in another resource file
     out=new BufferedWriter(new FileWriter(CONFIG2));
     startConfig();
@@ -1706,14 +1764,14 @@ public class TestConfiguration extends TestCase {
     Path fileResource1 = new Path(CONFIG2);
     conf.addResource(fileResource1);
     out.close();
-    
+
     outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     jsonStr = outWriter.toString();
     mapper = new ObjectMapper();
     jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
-    
-    // put the keys and their corresponding attributes into a hashmap for their 
+
+    // put the keys and their corresponding attributes into a hashmap for their
     // efficient retrieval
     HashMap<String,JsonProperty> confDump = new HashMap<String,JsonProperty>();
     for(JsonProperty prop : jconf.getProperties()) {
@@ -1724,7 +1782,7 @@ public class TestConfiguration extends TestCase {
     assertEquals(false, confDump.get("test.key1").getIsFinal());
     assertEquals(fileResource1.toString(),
         confDump.get("test.key1").getResource());
-    // check if final parameter test.key2 is not changed, since it is first 
+    // check if final parameter test.key2 is not changed, since it is first
     // loaded as final parameter
     assertEquals("value2", confDump.get("test.key2").getValue());
     assertEquals(true, confDump.get("test.key2").getIsFinal());
@@ -1735,7 +1793,7 @@ public class TestConfiguration extends TestCase {
     assertEquals(false, confDump.get("test.key3").getIsFinal());
     assertEquals(fileResource.toString(),
         confDump.get("test.key3").getResource());
-    // check for resource to be "Unknown" for keys which are loaded using 'set' 
+    // check for resource to be "Unknown" for keys which are loaded using 'set'
     // and expansion of properties
     conf.set("test.key4", "value4");
     conf.set("test.key5", "value5");
@@ -1753,7 +1811,8 @@ public class TestConfiguration extends TestCase {
     assertEquals("programmatically", confDump.get("test.key4").getResource());
     outWriter.close();
   }
-  
+
+  @Test
   public void testDumpConfiguratioWithoutDefaults() throws IOException {
     // check for case when default resources are not loaded
     Configuration config = new Configuration(false);
@@ -1761,12 +1820,12 @@ public class TestConfiguration extends TestCase {
     Configuration.dumpConfiguration(config, outWriter);
     String jsonStr = outWriter.toString();
     ObjectMapper mapper = new ObjectMapper();
-    JsonConfiguration jconf = 
-      mapper.readValue(jsonStr, JsonConfiguration.class);
-    
+    JsonConfiguration jconf =
+        mapper.readValue(jsonStr, JsonConfiguration.class);
+
     //ensure that no properties are loaded.
     assertEquals(0, jconf.getProperties().length);
-    
+
     // add 2 keys
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -1776,13 +1835,13 @@ public class TestConfiguration extends TestCase {
     Path fileResource = new Path(CONFIG);
     config.addResource(fileResource);
     out.close();
-    
+
     outWriter = new StringWriter();
     Configuration.dumpConfiguration(config, outWriter);
     jsonStr = outWriter.toString();
     mapper = new ObjectMapper();
     jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
-    
+
     HashMap<String, JsonProperty>confDump = new HashMap<String, JsonProperty>();
     for (JsonProperty prop : jconf.getProperties()) {
       confDump.put(prop.getKey(), prop);
@@ -1801,6 +1860,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testDumpSensitiveProperty() throws IOException {
     final String myPassword = "ThisIsMyPassword";
     Configuration testConf = new Configuration(false);
@@ -1818,6 +1878,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testDumpSensitiveConfiguration() throws IOException {
     final String myPassword = "ThisIsMyPassword";
     Configuration testConf = new Configuration(false);
@@ -1835,6 +1896,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testGetValByRegex() {
     Configuration conf = new Configuration();
     String key1 = "t.abc.key1";
@@ -1853,10 +1915,11 @@ public class TestConfiguration extends TestCase {
     assertTrue("Picked out wrong key " + key4, !res.containsKey(key4));
   }
 
+  @Test
   public void testGetClassesShouldReturnDefaultValue() throws Exception {
     Configuration config = new Configuration();
-    Class<?>[] classes = 
-      config.getClasses("testClassName", Configuration.class);
+    Class<?>[] classes =
+        config.getClasses("testClassName", Configuration.class);
     assertEquals(
         "Not returning expected number of classes. Number of returned classes ="
             + classes.length, 1, classes.length);
@@ -1864,6 +1927,7 @@ public class TestConfiguration extends TestCase {
         classes[0]);
   }
 
+  @Test
   public void testGetClassesShouldReturnEmptyArray()
       throws Exception {
     Configuration config = new Configuration();
@@ -1873,7 +1937,8 @@ public class TestConfiguration extends TestCase {
         "Not returning expected number of classes. Number of returned classes ="
             + classes.length, 0, classes.length);
   }
-  
+
+  @Test
   public void testSettingValueNull() throws Exception {
     Configuration config = new Configuration();
     try {
@@ -1886,6 +1951,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testSettingKeyNull() throws Exception {
     Configuration config = new Configuration();
     try {
@@ -1897,6 +1963,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testInvalidSubstitution() {
     final Configuration configuration = new Configuration(false);
 
@@ -1913,6 +1980,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testIncompleteSubbing() {
     Configuration configuration = new Configuration(false);
     String key = "test.random.key";
@@ -1931,6 +1999,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  @Test
   public void testBoolean() {
     boolean value = true;
     Configuration configuration = new Configuration();
@@ -1938,6 +2007,7 @@ public class TestConfiguration extends TestCase {
     assertEquals(value, configuration.getBoolean("value", false));
   }
 
+  @Test
   public void testBooleanIfUnset() {
     boolean value = true;
     Configuration configuration = new Configuration();
@@ -1947,20 +2017,23 @@ public class TestConfiguration extends TestCase {
     assertEquals(value, configuration.getBoolean("value", false));
   }
 
+  @Test
   public void testFloat() {
     float value = 1.0F;
     Configuration configuration = new Configuration();
     configuration.setFloat("value", value);
-    assertEquals(value, configuration.getFloat("value", 0.0F));
+    assertEquals(value, configuration.getFloat("value", 0.0F), DOUBLE_DELTA);
   }
-  
+
+  @Test
   public void testDouble() {
     double value = 1.0D;
     Configuration configuration = new Configuration();
     configuration.setDouble("value", value);
-    assertEquals(value, configuration.getDouble("value", 0.0D));
+    assertEquals(value, configuration.getDouble("value", 0.0D), DOUBLE_DELTA);
   }
 
+  @Test
   public void testInt() {
     int value = 1;
     Configuration configuration = new Configuration();
@@ -1968,6 +2041,7 @@ public class TestConfiguration extends TestCase {
     assertEquals(value, configuration.getInt("value", 0));
   }
 
+  @Test
   public void testLong() {
     long value = 1L;
     Configuration configuration = new Configuration();
@@ -1975,16 +2049,18 @@ public class TestConfiguration extends TestCase {
     assertEquals(value, configuration.getLong("value", 0L));
   }
 
+  @Test
   public void testStrings() {
     String [] strings = {"FOO","BAR"};
     Configuration configuration = new Configuration();
     configuration.setStrings("strings", strings);
     String [] returnStrings = configuration.getStrings("strings");
     for(int i=0;i<returnStrings.length;i++) {
-       assertEquals(strings[i], returnStrings[i]);
+      assertEquals(strings[i], returnStrings[i]);
     }
   }
-  
+
+  @Test
   public void testSetPattern() {
     Pattern testPattern = Pattern.compile("a+b");
     Configuration configuration = new Configuration();
@@ -1992,13 +2068,15 @@ public class TestConfiguration extends TestCase {
     assertEquals(testPattern.pattern(),
         configuration.getPattern("testPattern", Pattern.compile("")).pattern());
   }
-  
+
+  @Test
   public void testGetClassByNameOrNull() throws Exception {
-   Configuration config = new Configuration();
-   Class<?> clazz = config.getClassByNameOrNull("java.lang.Object");
-   assertNotNull(clazz);
+    Configuration config = new Configuration();
+    Class<?> clazz = config.getClassByNameOrNull("java.lang.Object");
+    assertNotNull(clazz);
   }
 
+  @Test
   public void testGetFinalParameters() throws Exception {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -2021,6 +2099,7 @@ public class TestConfiguration extends TestCase {
    * by SPARK-2546.
    * @throws Exception
    */
+  @Test
   public void testConcurrentAccesses() throws Exception {
     out = new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -2061,6 +2140,7 @@ public class TestConfiguration extends TestCase {
     // it's expected behaviour.
   }
 
+  @Test
   public void testNullValueProperties() throws Exception {
     Configuration conf = new Configuration();
     conf.setAllowNullValueProperties(true);
@@ -2074,6 +2154,7 @@ public class TestConfiguration extends TestCase {
     assertEquals("value", conf.get("attr"));
   }
 
+  @Test
   public void testGetPasswordDeprecatedKeyStored() throws Exception {
     final String oldKey = "test.password.old.key";
     final String newKey = "test.password.new.key";
@@ -2093,14 +2174,15 @@ public class TestConfiguration extends TestCase {
 
     Configuration.addDeprecation(oldKey, newKey);
 
-    Assert.assertThat(conf.getPassword(newKey),
+    assertThat(conf.getPassword(newKey),
         CoreMatchers.is(password.toCharArray()));
-    Assert.assertThat(conf.getPassword(oldKey),
+    assertThat(conf.getPassword(oldKey),
         CoreMatchers.is(password.toCharArray()));
 
     FileUtil.fullyDelete(tmpDir);
   }
 
+  @Test
   public void testGetPasswordByDeprecatedKey() throws Exception {
     final String oldKey = "test.password.old.key";
     final String newKey = "test.password.new.key";
@@ -2120,9 +2202,9 @@ public class TestConfiguration extends TestCase {
 
     Configuration.addDeprecation(oldKey, newKey);
 
-    Assert.assertThat(conf.getPassword(newKey),
+    assertThat(conf.getPassword(newKey),
         CoreMatchers.is(password.toCharArray()));
-    Assert.assertThat(conf.getPassword(oldKey),
+    assertThat(conf.getPassword(oldKey),
         CoreMatchers.is(password.toCharArray()));
 
     FileUtil.fullyDelete(tmpDir);

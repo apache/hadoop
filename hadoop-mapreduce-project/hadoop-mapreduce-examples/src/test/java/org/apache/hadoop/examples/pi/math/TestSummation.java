@@ -28,14 +28,19 @@ import org.apache.hadoop.examples.pi.Container;
 import org.apache.hadoop.examples.pi.Util;
 import org.apache.hadoop.examples.pi.Util.Timer;
 import org.apache.hadoop.examples.pi.math.TestModular.Montgomery2;
+import org.junit.Test;
+import org.junit.Assert;
 
-public class TestSummation extends junit.framework.TestCase {
+public class TestSummation {
   static final Random RANDOM = new Random();
   static final BigInteger TWO = BigInteger.valueOf(2);
+  private static final double DOUBLE_DELTA = 0.000000001f;
 
   private static Summation2 newSummation(final long base, final long range, final long delta) {
-    final ArithmeticProgression N = new ArithmeticProgression('n', base+3, delta, base+3+range);
-    final ArithmeticProgression E = new ArithmeticProgression('e', base+range, -delta, base);
+    final ArithmeticProgression N = new ArithmeticProgression('n', base + 3,
+        delta, base + 3 + range);
+    final ArithmeticProgression E = new ArithmeticProgression('e', base + range,
+        -delta, base);
     return new Summation2(N, E);
   }
 
@@ -53,10 +58,11 @@ public class TestSummation extends junit.framework.TestCase {
 
     final List<Summation> combined = Util.combine(a);
 //    Util.out.println("combined=" + combined);
-    assertEquals(1, combined.size());
-    assertEquals(sigma, combined.get(0));
+    Assert.assertEquals(1, combined.size());
+    Assert.assertEquals(sigma, combined.get(0));
   }
 
+  @Test
   public void testSubtract() {
     final Summation sigma = newSummation(3, 10000, 20);
     final int size = 10;
@@ -112,7 +118,9 @@ public class TestSummation extends junit.framework.TestCase {
       long n = N.value;
       double s = 0;
       for(; e > E.limit; e += E.delta) {
-        s = Modular.addMod(s, TWO.modPow(BigInteger.valueOf(e), BigInteger.valueOf(n)).doubleValue()/n);
+        s = Modular.addMod(s,
+            TWO.modPow(BigInteger.valueOf(e), BigInteger.valueOf(n))
+                .doubleValue() / n);
         n += N.delta;
       }
       return s;
@@ -124,16 +132,16 @@ public class TestSummation extends junit.framework.TestCase {
     t.tick("sigma=" + sigma);
     final double value = sigma.compute();
     t.tick("compute=" + value);
-    assertEquals(value, sigma.compute_modular());
+    Assert.assertEquals(value, sigma.compute_modular(), DOUBLE_DELTA);
     t.tick("compute_modular");
-    assertEquals(value, sigma.compute_montgomery());
+    Assert.assertEquals(value, sigma.compute_montgomery(), DOUBLE_DELTA);
     t.tick("compute_montgomery");
-    assertEquals(value, sigma.compute_montgomery2());
+    Assert.assertEquals(value, sigma.compute_montgomery2(), DOUBLE_DELTA);
     t.tick("compute_montgomery2");
 
-    assertEquals(value, sigma.compute_modBigInteger());
+    Assert.assertEquals(value, sigma.compute_modBigInteger(), DOUBLE_DELTA);
     t.tick("compute_modBigInteger");
-    assertEquals(value, sigma.compute_modPow());
+    Assert.assertEquals(value, sigma.compute_modPow(), DOUBLE_DELTA);
     t.tick("compute_modPow");
   }
 
