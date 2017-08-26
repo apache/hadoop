@@ -564,9 +564,11 @@ public class ContainerLaunch implements Callable<Integer> {
         errorFileIS = fileSystem.open(errorFile);
         errorFileIS.readFully(startPosition, tailBuffer);
 
+        String tailBufferMsg = new String(tailBuffer, StandardCharsets.UTF_8);
         diagnosticInfo.append("Last ").append(tailSizeInBytes)
             .append(" bytes of ").append(errorFile.getName()).append(" :\n")
-            .append(new String(tailBuffer, StandardCharsets.UTF_8));
+            .append(tailBufferMsg).append("\n")
+            .append(analysesErrorMsgOfContainerExitWithFailure(tailBufferMsg));
       }
     } catch (IOException e) {
       LOG.error("Failed to get tail of the container's error log file", e);
@@ -578,6 +580,29 @@ public class ContainerLaunch implements Callable<Integer> {
         .handle(new ContainerExitEvent(containerID,
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
             diagnosticInfo.toString()));
+  }
+
+  private String analysesErrorMsgOfContainerExitWithFailure(String errorMsg) {
+    StringBuilder analysis = new StringBuilder();
+    if (errorMsg.indexOf("Error: Could not find or load main class"
+        + " org.apache.hadoop.mapreduce") != -1) {
+      analysis.append("Please check whether your etc/hadoop/mapred-site.xml "
+          + "contains the below configuration:\n");
+      analysis.append("<property>\n")
+          .append("  <name>yarn.app.mapreduce.am.env</name>\n")
+          .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
+              + "distribution directory}</value>\n")
+          .append("</property>\n<property>\n")
+          .append("  <name>mapreduce.map.env</name>\n")
+          .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
+              + "distribution directory}</value>\n")
+          .append("</property>\n<property>\n")
+          .append("  <name>mapreduce.reduce.e nv</name>\n")
+          .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
+              + "distribution directory}</value>\n")
+          .append("</property>\n");
+    }
+    return analysis.toString();
   }
 
   protected String getPidFileSubpath(String appIdStr, String containerIdStr) {
