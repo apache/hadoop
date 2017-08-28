@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
+import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
@@ -52,6 +53,9 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SendContainerReportProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.Type;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto.DeleteBlockTransactionResult;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.ozone.protocolPB.ScmBlockLocationProtocolServerSideTranslatorPB;
@@ -91,6 +95,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.Collections;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result;
@@ -322,8 +328,8 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @throws InvalidProtocolBufferException
    */
   @VisibleForTesting
-  public static SCMCommandResponseProto getCommandResponse(SCMCommand cmd)
-      throws InvalidProtocolBufferException {
+  public SCMCommandResponseProto getCommandResponse(SCMCommand cmd)
+      throws IOException {
     Type type = cmd.getType();
     SCMCommandResponseProto.Builder builder =
         SCMCommandResponseProto.newBuilder();
@@ -345,6 +351,17 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       return builder.setCmdType(Type.reregisterCommand)
           .setReregisterProto(SCMReregisterCmdResponseProto
               .getDefaultInstance())
+          .build();
+    case deleteBlocksCommand:
+      // Once SCM sends out the deletion message, increment the count.
+      // this is done here instead of when SCM receives the ACK, because
+      // DN might not be able to response the ACK for sometime. In case
+      // it times out, SCM needs to re-send the message some more times.
+      List<Long> txs = ((DeleteBlocksCommand) cmd).blocksTobeDeleted()
+          .stream().map(tx -> tx.getTxID()).collect(Collectors.toList());
+      this.getScmBlockManager().getDeletedBlockLog().incrementCount(txs);
+      return builder.setCmdType(Type.deleteBlocksCommand)
+          .setDeleteBlocksProto(((DeleteBlocksCommand) cmd).getProto())
           .build();
     default:
       throw new IllegalArgumentException("Not implemented");
@@ -591,6 +608,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
         datanodeRpcAddress));
     datanodeRpcServer.start();
     httpServer.start();
+    scmBlockManager.start();
 
     setStartTime();
 
@@ -626,6 +644,13 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       httpServer.stop();
     } catch (Exception ex) {
       LOG.error("Storage Container Manager HTTP server stop failed.", ex);
+    }
+
+    try {
+      LOG.info("Stopping Block Manager Service.");
+      scmBlockManager.stop();
+    } catch (Exception ex) {
+      LOG.error("SCM block manager service stop failed.", ex);
     }
 
     unregisterMXBean();
@@ -715,6 +740,38 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   }
 
   /**
+   * Handles the block deletion ACKs sent by datanodes. Once ACKs recieved,
+   * SCM considers the blocks are deleted and update the metadata in SCM DB.
+   *
+   * @param acks
+   * @return
+   * @throws IOException
+   */
+  @Override
+  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
+      ContainerBlocksDeletionACKProto acks) throws IOException {
+    if (acks.getResultsCount() > 0) {
+      List<DeleteBlockTransactionResult> resultList = acks.getResultsList();
+      for (DeleteBlockTransactionResult result : resultList) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Got block deletion ACK from datanode, TXIDs={}, "
+                  + "success={}", result.getTxID(), result.getSuccess());
+        }
+        if (result.getSuccess()) {
+          LOG.info("Purging TXID={} from block deletion log", result.getTxID());
+          this.getScmBlockManager().getDeletedBlockLog()
+              .commitTransactions(Collections.singletonList(result.getTxID()));
+        } else {
+          LOG.warn("Got failed ACK for TXID={}, prepare to resend the "
+              + "TX in next interval", result.getTxID());
+        }
+      }
+    }
+    return ContainerBlocksDeletionACKResponseProto.newBuilder()
+        .getDefaultInstanceForType();
+  }
+
+  /**
    * Returns the Number of Datanodes that are communicating with SCM.
    *
    * @param nodestate Healthy, Dead etc.
@@ -740,6 +797,11 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public NodeManager getScmNodeManager() {
     return scmNodeManager;
+  }
+
+  @VisibleForTesting
+  public BlockManager getScmBlockManager() {
+    return scmBlockManager;
   }
 
   /**

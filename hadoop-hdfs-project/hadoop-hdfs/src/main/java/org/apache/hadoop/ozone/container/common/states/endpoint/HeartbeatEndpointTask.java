@@ -21,11 +21,14 @@ package org.apache.hadoop.ozone.container.common.states.endpoint;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.container.common.helpers
+    .DeletedContainerBlocksSummary;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine.EndPointStates;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
 import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
@@ -142,6 +145,18 @@ public class HeartbeatEndpointTask
             LOG.debug("Illegal state {} found, expecting {}.",
                 rpcEndpoint.getState().name(), EndPointStates.HEARTBEAT);
           }
+        }
+        break;
+      case deleteBlocksCommand:
+        DeleteBlocksCommand db = DeleteBlocksCommand
+            .getFromProtobuf(commandResponseProto.getDeleteBlocksProto());
+        if (!db.blocksTobeDeleted().isEmpty()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(DeletedContainerBlocksSummary
+                .getFrom(db.blocksTobeDeleted())
+                .toString());
+          }
+          this.context.addCommand(db);
         }
         break;
       default:

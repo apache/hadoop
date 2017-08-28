@@ -38,6 +38,8 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKResponseProto;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -177,4 +179,16 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
     return resp;
   }
 
+  @Override
+  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
+      ContainerBlocksDeletionACKProto deletedBlocks) throws IOException {
+    final ContainerBlocksDeletionACKResponseProto resp;
+    try {
+      resp = rpcProxy.sendContainerBlocksDeletionACK(NULL_RPC_CONTROLLER,
+          deletedBlocks);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    return resp;
+  }
 }

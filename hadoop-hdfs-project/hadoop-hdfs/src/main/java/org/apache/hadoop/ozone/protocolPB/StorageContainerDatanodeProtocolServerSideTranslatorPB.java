@@ -24,6 +24,8 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
 
 import java.io.IOException;
 
@@ -93,6 +95,17 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       throws ServiceException {
     try {
       return impl.sendContainerReport(request);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
+      RpcController controller, ContainerBlocksDeletionACKProto request)
+      throws ServiceException {
+    try {
+      return impl.sendContainerBlocksDeletionACK(request);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

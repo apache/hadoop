@@ -836,4 +836,9 @@ public class SCMNodeManager
     }
     return nodeCountMap;
   }
+
+  @Override
+  public void addDatanodeCommand(DatanodeID id, SCMCommand command) {
+    this.commandQueue.addCommand(id, command);
+  }
 }

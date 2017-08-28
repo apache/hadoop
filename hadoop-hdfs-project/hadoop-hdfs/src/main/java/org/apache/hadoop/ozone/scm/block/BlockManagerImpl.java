@@ -46,6 +46,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.List;
@@ -70,6 +71,14 @@ import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
     FAILED_TO_LOAD_OPEN_CONTAINER;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
     INVALID_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
 /**
  * Block Manager manages the block access for SCM.
@@ -89,6 +98,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   // Track all containers owned by block service.
   private final MetadataStore containerStore;
   private final DeletedBlockLog deletedBlockLog;
+  private final SCMBlockDeletingService blockDeletingService;
 
   private Map<OzoneProtos.LifeCycleState,
       Map<String, BlockContainerInfo>> containers;
@@ -143,7 +153,34 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     this.lock = new ReentrantLock();
 
     mxBean = MBeans.register("BlockManager", "BlockManagerImpl", this);
+
+    // SCM block deleting transaction log and deleting service.
     deletedBlockLog = new DeletedBlockLogImpl(conf);
+    int svcInterval = conf.getInt(
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
+    long serviceTimeout = conf.getTimeDuration(
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+    blockDeletingService = new SCMBlockDeletingService(deletedBlockLog,
+        containerManager, nodeManager, svcInterval, serviceTimeout);
+  }
+
+  /**
+   * Start block manager services.
+   * @throws IOException
+   */
+  public void start() throws IOException {
+    this.blockDeletingService.start();
+  }
+
+  /**
+   * Shutdown block manager services.
+   * @throws IOException
+   */
+  public void stop() throws IOException {
+    this.blockDeletingService.shutdown();
+    this.close();
   }
 
   // TODO: close full (or almost full) containers with a separate thread.
@@ -475,6 +512,11 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     }
   }
 
+  @Override
+  public DeletedBlockLog getDeletedBlockLog() {
+    return this.deletedBlockLog;
+  }
+
   @VisibleForTesting
   public String getDeletedKeyName(String key) {
     return StringUtils.format(".Deleted/%s", key);
@@ -495,6 +537,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     if (deletedBlockLog != null) {
       deletedBlockLog.close();
     }
+    blockDeletingService.shutdown();
     MBeans.unregister(mxBean);
   }
 

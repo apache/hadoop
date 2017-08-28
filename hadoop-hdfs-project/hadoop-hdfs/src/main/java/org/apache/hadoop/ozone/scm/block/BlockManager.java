@@ -51,4 +51,21 @@ public interface BlockManager extends Closeable {
    * @throws IOException
    */
   void deleteBlock(String key) throws IOException;
+
+  /**
+   * @return the block deletion transaction log maintained by SCM.
+   */
+  DeletedBlockLog getDeletedBlockLog();
+
+  /**
+   * Start block manager background services.
+   * @throws IOException
+   */
+  void start() throws IOException;
+
+  /**
+   * Shutdown block manager background services.
+   * @throws IOException
+   */
+  void stop() throws IOException;
 }

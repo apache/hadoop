@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.scm.block;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -36,6 +37,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -147,6 +149,28 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     return result;
   }
 
+  @Override
+  public List<DeletedBlocksTransaction> getFailedTransactions()
+      throws IOException {
+    lock.lock();
+    try {
+      final List<DeletedBlocksTransaction> failedTXs = Lists.newArrayList();
+      deletedStore.iterate(null, (key, value) -> {
+        if (!Arrays.equals(LATEST_TXID, key)) {
+          DeletedBlocksTransaction delTX =
+              DeletedBlocksTransaction.parseFrom(value);
+          if (delTX.getCount() == -1) {
+            failedTXs.add(delTX);
+          }
+        }
+        return true;
+      });
+      return failedTXs;
+    } finally {
+      lock.unlock();
+    }
+  }
+
   /**
    * {@inheritDoc}
    *
@@ -163,13 +187,14 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
           DeletedBlocksTransaction block = DeletedBlocksTransaction
               .parseFrom(deletedStore.get(Longs.toByteArray(txID)));
           DeletedBlocksTransaction.Builder builder = block.toBuilder();
-          if (block.getCount() > -1) {
-            builder.setCount(block.getCount() + 1);
+          int currentCount = block.getCount();
+          if (currentCount > -1) {
+            builder.setCount(++currentCount);
           }
           // if the retry time exceeds the maxRetry value
           // then set the retry value to -1, stop retrying, admins can
           // analyze those blocks and purge them manually by SCMCli.
-          if (block.getCount() > maxRetry) {
+          if (currentCount > maxRetry) {
             builder.setCount(-1);
           }
           deletedStore.put(Longs.toByteArray(txID),
@@ -232,6 +257,28 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
 
       deletedStore.writeBatch(batch);
       lastTxID += 1;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  @Override
+  public int getNumOfValidTransactions() throws IOException {
+    lock.lock();
+    try {
+      final AtomicInteger num = new AtomicInteger(0);
+      deletedStore.iterate(null, (key, value) -> {
+        // Exclude latest txid record
+        if (!Arrays.equals(LATEST_TXID, key)) {
+          DeletedBlocksTransaction delTX =
+              DeletedBlocksTransaction.parseFrom(value);
+          if (delTX.getCount() > -1) {
+            num.incrementAndGet();
+          }
+        }
+        return true;
+      });
+      return num.get();
     } finally {
       lock.unlock();
     }

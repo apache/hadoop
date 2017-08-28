@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
@@ -134,4 +135,12 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @return Healthy/Stale/Dead.
    */
   NodeState getNodeState(DatanodeID id);
+
+  /**
+   * Add a {@link SCMCommand} to the command queue, which are
+   * handled by HB thread asynchronously.
+   * @param id
+   * @param command
+   */
+  default void addDatanodeCommand(DatanodeID id, SCMCommand command) {}
 }
