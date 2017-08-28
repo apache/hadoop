@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
@@ -116,6 +117,11 @@ public class BlockDeletingService extends BackgroundService{
       LOG.warn("Failed to initiate block deleting tasks, "
           + "caused by unable to get containers info. "
           + "Retry in next interval. ", e);
+    } catch (Exception e) {
+      // In case listContainer call throws any uncaught RuntimeException.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Unexpected error occurs during deleting blocks.", e);
+      }
     }
     return queue;
   }
@@ -159,6 +165,7 @@ public class BlockDeletingService extends BackgroundService{
 
     @Override
     public BackgroundTaskResult call() throws Exception {
+      ContainerBackgroundTaskResult crr = new ContainerBackgroundTaskResult();
       long startTime = Time.monotonicNow();
       // Scan container's db and get list of under deletion blocks
       MetadataStore meta = KeyUtils.getDB(containerData, conf);
@@ -175,17 +182,24 @@ public class BlockDeletingService extends BackgroundService{
       List<String> succeedBlocks = new LinkedList<>();
       LOG.debug("Container : {}, To-Delete blocks : {}",
           containerData.getContainerName(), toDeleteBlocks.size());
+      File dataDir = ContainerUtils.getDataDirectory(containerData).toFile();
+      if (!dataDir.exists() || !dataDir.isDirectory()) {
+        LOG.error("Invalid container data dir {} : "
+            + "not exist or not a directory", dataDir.getAbsolutePath());
+        return crr;
+      }
+
       toDeleteBlocks.forEach(entry -> {
         String blockName = DFSUtil.bytes2String(entry.getKey());
         LOG.debug("Deleting block {}", blockName);
         try {
           ContainerProtos.KeyData data =
               ContainerProtos.KeyData.parseFrom(entry.getValue());
-
           for (ContainerProtos.ChunkInfo chunkInfo : data.getChunksList()) {
-            File chunkFile = new File(chunkInfo.getChunkName());
+            File chunkFile = dataDir.toPath()
+                .resolve(chunkInfo.getChunkName()).toFile();
             if (FileUtils.deleteQuietly(chunkFile)) {
-              LOG.debug("block {} chunk {} deleted", blockName,
+              LOG.info("block {} chunk {} deleted", blockName,
                   chunkFile.getAbsolutePath());
             }
           }
@@ -201,11 +215,11 @@ public class BlockDeletingService extends BackgroundService{
           batch.delete(DFSUtil.string2Bytes(entry)));
       meta.writeBatch(batch);
 
-      LOG.info("The elapsed time of task@{} for"
-          + " deleting blocks: {}ms.",
-          Integer.toHexString(this.hashCode()),
-          Time.monotonicNow() - startTime);
-      ContainerBackgroundTaskResult crr = new ContainerBackgroundTaskResult();
+      if (!succeedBlocks.isEmpty()) {
+        LOG.info("Container: {}, deleted blocks: {}, task elapsed time: {}ms",
+            containerData.getContainerName(), succeedBlocks.size(),
+            Time.monotonicNow() - startTime);
+      }
       crr.addAll(succeedBlocks);
       return crr;
     }

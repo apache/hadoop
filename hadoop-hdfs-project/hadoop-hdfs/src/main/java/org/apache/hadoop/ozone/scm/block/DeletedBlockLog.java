@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone.scm.block;
 
-
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 
@@ -43,6 +42,17 @@ public interface DeletedBlockLog extends Closeable {
    * @return a list of BlockDeletionTransaction.
    */
   List<DeletedBlocksTransaction> getTransactions(int count)
+      throws IOException;
+
+  /**
+   * Return all failed transactions in the log. A transaction is considered
+   * to be failed if it has been sent more than MAX_RETRY limit and its
+   * count is reset to -1.
+   *
+   * @return a list of failed deleted block transactions.
+   * @throws IOException
+   */
+  List<DeletedBlocksTransaction> getFailedTransactions()
       throws IOException;
 
   /**
@@ -75,4 +85,13 @@ public interface DeletedBlockLog extends Closeable {
    */
   void addTransaction(String containerName, List<String> blocks)
       throws IOException;
+
+  /**
+   * Returns the total number of valid transactions. A transaction is
+   * considered to be valid as long as its count is in range [0, MAX_RETRY].
+   *
+   * @return number of a valid transactions.
+   * @throws IOException
+   */
+  int getNumOfValidTransactions() throws IOException;
 }

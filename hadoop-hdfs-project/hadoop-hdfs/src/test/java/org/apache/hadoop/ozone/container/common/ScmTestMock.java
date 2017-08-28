@@ -25,6 +25,8 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKResponseProto;
 import org.apache.hadoop.ozone.scm.VersionInfo;
 
 import java.io.IOException;
@@ -186,6 +188,13 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         cmdResponses = new LinkedList<>();
     return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
         .build();
+  }
+
+  @Override
+  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
+      ContainerBlocksDeletionACKProto request) throws IOException {
+    return ContainerBlocksDeletionACKResponseProto
+        .newBuilder().getDefaultInstanceForType();
   }
 
   public ReportState getReportState() {

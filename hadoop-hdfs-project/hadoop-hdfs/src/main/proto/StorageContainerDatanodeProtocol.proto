@@ -122,7 +122,6 @@ message ContainerReportsProto {
   required reportType type = 3;
 }
 
-
 /**
 * This message is send along with the heart beat to report datanode
 * storage utilization by SCM.
@@ -210,6 +209,7 @@ enum Type {
   registeredCommand = 3;
   sendContainerReport = 4;
   reregisterCommand = 5;
+  deleteBlocksCommand = 6;
 }
 
 /*
@@ -221,6 +221,7 @@ message SCMCommandResponseProto {
   optional SCMVersionResponseProto versionProto = 4;
   optional SendContainerReportProto sendReport = 5;
   optional SCMReregisterCmdResponseProto reregisterProto = 6;
+  optional SCMDeleteBlocksCmdResponseProto deleteBlocksProto = 7;
 }
 
 
@@ -231,6 +232,24 @@ message SCMHeartbeatResponseProto {
   repeated SCMCommandResponseProto commands = 1;
 }
 
+// HB response from SCM, contains a list of block deletion transactions.
+message SCMDeleteBlocksCmdResponseProto {
+  repeated DeletedBlocksTransaction deletedBlocksTransactions = 1;
+}
+
+// SendACK response returned by datanode to SCM, currently empty.
+message ContainerBlocksDeletionACKResponseProto {
+}
+
+// ACK message datanode sent to SCM, contains the result of
+// block deletion transactions.
+message ContainerBlocksDeletionACKProto {
+  message DeleteBlockTransactionResult {
+    required int64 txID = 1;
+    required bool success = 2;
+  }
+  repeated DeleteBlockTransactionResult results = 1;
+}
 
 /**
  * Protocol used from a datanode to StorageContainerManager.
@@ -318,6 +337,10 @@ service StorageContainerDatanodeProtocolService {
     send container reports sends the container report to SCM. This will
     return a null command as response.
   */
-  rpc sendContainerReport(ContainerReportsProto)  returns (SCMHeartbeatResponseProto);
+  rpc sendContainerReport(ContainerReportsProto) returns (SCMHeartbeatResponseProto);
 
+  /**
+   * Sends the block deletion ACK to SCM.
+   */
+  rpc sendContainerBlocksDeletionACK (ContainerBlocksDeletionACKProto) returns (ContainerBlocksDeletionACKResponseProto);
 }

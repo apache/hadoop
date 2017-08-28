@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.CommandDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.ContainerReportHandler;
+import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.DeleteBlocksCommandHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
@@ -77,15 +78,16 @@ public class DatanodeStateMachine implements Closeable {
     this.datanodeID = datanodeID;
     nextHB = new AtomicLong(Time.monotonicNow());
 
-
      // When we add new handlers just adding a new handler here should do the
      // trick.
     commandDispatcher = CommandDispatcher.newBuilder()
-      .addHandler(new ContainerReportHandler())
-      .setConnectionManager(connectionManager)
-      .setContainer(container)
-      .setContext(context)
-      .build();
+        .addHandler(new ContainerReportHandler())
+        .addHandler(new DeleteBlocksCommandHandler(
+            container.getContainerManager(), conf))
+        .setConnectionManager(connectionManager)
+        .setContainer(container)
+        .setContext(context)
+        .build();
   }
 
   public void setDatanodeID(DatanodeID datanodeID) {

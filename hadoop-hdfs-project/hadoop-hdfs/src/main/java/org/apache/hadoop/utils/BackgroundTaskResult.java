@@ -23,7 +23,22 @@ package org.apache.hadoop.utils;
 public interface BackgroundTaskResult {
 
   /**
-   *   Returns the size of entries included in this result.
+   * Returns the size of entries included in this result.
    */
   int getSize();
+
+  /**
+   * An empty task result implementation.
+   */
+  class EmptyTaskResult implements BackgroundTaskResult {
+
+    public static EmptyTaskResult newResult() {
+      return new EmptyTaskResult();
+    }
+
+    @Override
+    public int getSize() {
+      return 0;
+    }
+  }
 }

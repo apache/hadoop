@@ -25,7 +25,8 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKResponseProto;
 import java.io.IOException;
 
 /**
@@ -70,4 +71,13 @@ public interface StorageContainerDatanodeProtocol {
    */
   SCMHeartbeatResponseProto sendContainerReport(ContainerReportsProto reports)
       throws IOException;
+
+  /**
+   * Used by datanode to send block deletion ACK to SCM.
+   * @param request block deletion transactions.
+   * @return block deletion transaction response.
+   * @throws IOException
+   */
+  ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
+      ContainerBlocksDeletionACKProto request) throws IOException;
 }
