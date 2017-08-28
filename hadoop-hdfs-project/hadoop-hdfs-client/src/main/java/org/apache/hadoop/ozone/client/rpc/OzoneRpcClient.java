@@ -57,6 +57,7 @@ import org.apache.hadoop.scm.protocolPB
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -201,6 +202,7 @@ public class OzoneRpcClient implements OzoneClient, Closeable {
         .setOwnerName(owner)
         .setVolume(volumeName)
         .setQuotaInBytes(quota)
+        .setCreationTime(Time.now())
         .addOzoneAcls(KSMPBHelper.convertOzoneAcl(userAcl));
 
     List<OzoneAcl> listOfAcls = new ArrayList<>();
