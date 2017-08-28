@@ -1,0 +1,48 @@
+{
+  "name": "service-1",
+  "id" : "application_1503358878042_0011",
+  "lifetime": "3600",
+  "launch_command": "sleep 3600",
+  "configuration": {
+    "properties": {
+      "g1": "a",
+      "g2": "b",
+      "yarn.service.failure-count-reset.window": "60"
+    }
+  },
+  "resource": {
+    "cpus": 1,
+    "memory": "512"
+  },
+  "number_of_containers": 2,
+  "components": [
+    {
+      "name": "simple"
+    },
+    {
+      "name": "master",
+      "number_of_containers": 1,
+      "configuration": {
+        "properties": {
+          "g1": "overridden",
+          "g3": "will-be-overridden",
+          "jvm.heapsize": "512M"
+        }
+      }
+    },
+    {
+      "name": "worker",
+      "number_of_containers": 5,
+      "resource": {
+        "cpus": 1,
+        "memory": "1024"
+      },
+      "configuration": {
+        "properties": {
+          "g1": "overridden-by-worker",
+          "jvm.heapsize": "512M"
+        }
+      }
+    }
+  ]
+}

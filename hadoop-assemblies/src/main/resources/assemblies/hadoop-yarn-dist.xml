@@ -87,19 +87,19 @@
       </includes>
     </fileSet>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-slider/hadoop-yarn-slider-core/target</directory>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services/hadoop-yarn-services-core/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
         <include>*-sources.jar</include>
       </includes>
     </fileSet>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-slider/hadoop-yarn-slider-core/conf</directory>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services/hadoop-yarn-services-core/conf</directory>
       <outputDirectory>etc/hadoop</outputDirectory>
     </fileSet>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-slider/hadoop-yarn-slider-core/target/hadoop-yarn-slider-core-${project.version}</directory>
-      <outputDirectory>/share/hadoop/${hadoop.component}/lib/slider</outputDirectory>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services/hadoop-yarn-services-core/target/hadoop-yarn-services-core-${project.version}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/lib/services</outputDirectory>
     </fileSet>
     <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services-api/target</directory>
