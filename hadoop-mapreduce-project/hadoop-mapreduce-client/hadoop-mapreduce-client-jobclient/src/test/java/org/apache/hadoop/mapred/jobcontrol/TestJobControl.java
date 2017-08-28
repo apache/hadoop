@@ -38,7 +38,7 @@ import org.junit.Test;
  * This class performs unit test for Job/JobControl classes.
  *  
  */
-public class TestJobControl extends junit.framework.TestCase {
+public class TestJobControl {
 
   /**
    * This is a main function for testing JobControl class.
@@ -263,13 +263,13 @@ public class TestJobControl extends junit.framework.TestCase {
     JobConf jc = new JobConf();
     Job j = new Job(jc);
     //Just make sure no exception is thrown
-    assertNull(j.getAssignedJobID());
+    Assert.assertNull(j.getAssignedJobID());
     org.apache.hadoop.mapreduce.Job mockjob = mock(org.apache.hadoop.mapreduce.Job.class);
     org.apache.hadoop.mapreduce.JobID jid = new org.apache.hadoop.mapreduce.JobID("test",0);
     when(mockjob.getJobID()).thenReturn(jid);
     j.setJob(mockjob);
     JobID expected = new JobID("test",0);
-    assertEquals(expected, j.getAssignedJobID());
+    Assert.assertEquals(expected, j.getAssignedJobID());
     verify(mockjob).getJobID();
   }
   

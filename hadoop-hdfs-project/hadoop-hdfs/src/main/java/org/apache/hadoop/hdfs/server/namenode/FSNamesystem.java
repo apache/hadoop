@@ -89,9 +89,11 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
+import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.hdfs.protocol.BlocksStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.util.Time.now;
@@ -199,6 +201,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.IllegalECPolicyException;
@@ -1230,6 +1233,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dir.updateCountForQuota();
       // Enable quota checks.
       dir.enableQuotaChecks();
+      dir.ezManager.startReencryptThreads();
+
       if (haEnabled) {
         // Renew all of the leases before becoming active.
         // This is because, while we were in standby mode,
@@ -1320,6 +1325,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // Update the fsimage with the last txid that we wrote
         // so that the tailer starts from the right spot.
         getFSImage().updateLastAppliedTxIdFromWritten();
+      }
+      if (dir != null) {
+        dir.ezManager.stopReencryptThread();
       }
       if (cacheManager != null) {
         cacheManager.stopMonitorThread();
@@ -7029,6 +7037,84 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       readUnlock(operationName);
       logAuditEvent(success, operationName, null);
     }
+  }
+
+  void reencryptEncryptionZone(final String zone, final ReencryptAction action,
+      final boolean logRetryCache) throws IOException {
+    boolean success = false;
+    try {
+      Preconditions.checkNotNull(zone, "zone is null.");
+      checkSuperuserPrivilege();
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("NameNode in safemode, cannot " + action
+          + " re-encryption on zone " + zone);
+      reencryptEncryptionZoneInt(zone, action, logRetryCache);
+      success = true;
+    } finally {
+      logAuditEvent(success, action + "reencryption", zone, null, null);
+    }
+  }
+
+  BatchedListEntries<ZoneReencryptionStatus> listReencryptionStatus(
+      final long prevId) throws IOException {
+    final String operationName = "listReencryptionStatus";
+    boolean success = false;
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkSuperuserPrivilege();
+      checkOperation(OperationCategory.READ);
+      final BatchedListEntries<ZoneReencryptionStatus> ret =
+          FSDirEncryptionZoneOp.listReencryptionStatus(dir, prevId);
+      success = true;
+      return ret;
+    } finally {
+      readUnlock(operationName);
+      logAuditEvent(success, operationName, null);
+    }
+  }
+
+  private void reencryptEncryptionZoneInt(final String zone,
+      final ReencryptAction action, final boolean logRetryCache)
+      throws IOException {
+    if (getProvider() == null) {
+      throw new IOException("No key provider configured, re-encryption "
+          + "operation is rejected");
+    }
+    FSPermissionChecker pc = getPermissionChecker();
+    // get keyVersionName out of the lock. This keyVersionName will be used
+    // as the target keyVersion for the entire re-encryption.
+    // This means all edek's keyVersion will be compared with this one, and
+    // kms is only contacted if the edek's keyVersion is different.
+    final KeyVersion kv =
+        FSDirEncryptionZoneOp.getLatestKeyVersion(dir, zone, pc);
+    provider.invalidateCache(kv.getName());
+    writeLock();
+    try {
+      checkSuperuserPrivilege();
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode(
+          "NameNode in safemode, cannot " + action + " re-encryption on zone "
+              + zone);
+      switch (action) {
+      case START:
+        FSDirEncryptionZoneOp
+            .reencryptEncryptionZone(dir, zone, kv.getVersionName(),
+                logRetryCache);
+        break;
+      case CANCEL:
+        FSDirEncryptionZoneOp
+            .cancelReencryptEncryptionZone(dir, zone, logRetryCache);
+        break;
+      default:
+        throw new IOException(
+            "Re-encryption action " + action + " is not supported");
+      }
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
   }
 
   /**

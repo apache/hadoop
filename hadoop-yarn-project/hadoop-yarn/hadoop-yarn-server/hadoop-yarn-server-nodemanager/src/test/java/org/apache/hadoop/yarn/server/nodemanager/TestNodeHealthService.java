@@ -22,11 +22,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
@@ -47,8 +47,8 @@ import static org.mockito.Mockito.spy;
 
 public class TestNodeHealthService {
 
-  private static volatile Log LOG = LogFactory
-      .getLog(TestNodeHealthService.class);
+  private static volatile Logger LOG =
+       LoggerFactory.getLogger(TestNodeHealthService.class);
 
   protected static File testRootDir = new File("target",
       TestNodeHealthService.class.getName() + "-localDir").getAbsoluteFile();

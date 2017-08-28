@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import static org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils.newNodeHeartbeatResponse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.File;
@@ -45,8 +47,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -125,7 +125,8 @@ public class TestNodeStatusUpdater {
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  static final Log LOG = LogFactory.getLog(TestNodeStatusUpdater.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(TestNodeStatusUpdater.class);
   static final File basedir =
       new File("target", TestNodeStatusUpdater.class.getName());
   static final File nmLocalDir = new File(basedir, "nm0");

@@ -100,9 +100,11 @@ public class SchedulingMonitor extends AbstractService {
       try {
         //invoke the preemption policy
         invokePolicy();
-      } catch (YarnRuntimeException e) {
-        LOG.error("YarnRuntimeException raised while executing preemption"
-            + " checker, skip this run..., exception=", e);
+      } catch (Throwable t) {
+        // The preemption monitor does not alter structures nor do structures
+        // persist across invocations. Therefore, log, skip, and retry.
+        LOG.error("Exception raised while executing preemption"
+            + " checker, skip this run..., exception=", t);
       }
     }
   }

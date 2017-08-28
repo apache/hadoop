@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +59,8 @@ import java.util.List;
 @InterfaceAudience.Private
 public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
 
-  static final Log LOG = LogFactory.getLog(CGroupsCpuResourceHandlerImpl.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(CGroupsCpuResourceHandlerImpl.class);
 
   private CGroupsHandler cGroupsHandler;
   private boolean strictResourceUsageMode = false;

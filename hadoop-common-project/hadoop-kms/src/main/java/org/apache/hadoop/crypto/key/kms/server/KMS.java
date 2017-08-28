@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
+import org.apache.hadoop.util.KMSUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -53,6 +56,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
+import static org.apache.hadoop.util.KMSUtil.checkNotNull;
+
 /**
  * Class providing the REST bindings, via Jersey, for the KMS.
  */
@@ -64,13 +70,15 @@ public class KMS {
     CREATE_KEY, DELETE_KEY, ROLL_NEW_VERSION, INVALIDATE_CACHE,
     GET_KEYS, GET_KEYS_METADATA,
     GET_KEY_VERSIONS, GET_METADATA, GET_KEY_VERSION, GET_CURRENT_KEY,
-    GENERATE_EEK, DECRYPT_EEK, REENCRYPT_EEK
+    GENERATE_EEK, DECRYPT_EEK, REENCRYPT_EEK, REENCRYPT_EEK_BATCH
   }
 
   private KeyProviderCryptoExtension provider;
   private KMSAudit kmsAudit;
 
   static final Logger LOG = LoggerFactory.getLogger(KMS.class);
+
+  private static final int MAX_NUM_PER_BATCH = 10000;
 
   public KMS() throws Exception {
     provider = KMSWebApp.getKeyProvider();
@@ -109,7 +117,7 @@ public class KMS {
       KMSWebApp.getAdminCallsMeter().mark();
       UserGroupInformation user = HttpUserGroupInformation.get();
       final String name = (String) jsonKey.get(KMSRESTConstants.NAME_FIELD);
-      KMSClientProvider.checkNotEmpty(name, KMSRESTConstants.NAME_FIELD);
+      checkNotEmpty(name, KMSRESTConstants.NAME_FIELD);
       assertAccess(KMSACLs.Type.CREATE, user, KMSOp.CREATE_KEY, name);
       String cipher = (String) jsonKey.get(KMSRESTConstants.CIPHER_FIELD);
       final String material;
@@ -158,7 +166,7 @@ public class KMS {
       if (!KMSWebApp.getACLs().hasAccess(KMSACLs.Type.GET, user)) {
         keyVersion = removeKeyMaterial(keyVersion);
       }
-      Map json = KMSServerJSONUtils.toJSON(keyVersion);
+      Map json = KMSUtil.toJSON(keyVersion);
       String requestURL = KMSMDCFilter.getURL();
       int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
       requestURL = requestURL.substring(0, idx);
@@ -181,7 +189,7 @@ public class KMS {
       KMSWebApp.getAdminCallsMeter().mark();
       UserGroupInformation user = HttpUserGroupInformation.get();
       assertAccess(KMSACLs.Type.DELETE, user, KMSOp.DELETE_KEY, name);
-      KMSClientProvider.checkNotEmpty(name, "name");
+      checkNotEmpty(name, "name");
       LOG.debug("Deleting key with name {}.", name);
       user.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
@@ -212,7 +220,7 @@ public class KMS {
       KMSWebApp.getAdminCallsMeter().mark();
       UserGroupInformation user = HttpUserGroupInformation.get();
       assertAccess(KMSACLs.Type.ROLLOVER, user, KMSOp.ROLL_NEW_VERSION, name);
-      KMSClientProvider.checkNotEmpty(name, "name");
+      checkNotEmpty(name, "name");
       LOG.debug("Rolling key with name {}.", name);
       final String material = (String)
               jsonMaterial.get(KMSRESTConstants.MATERIAL_FIELD);
@@ -242,7 +250,7 @@ public class KMS {
       if (!KMSWebApp.getACLs().hasAccess(KMSACLs.Type.GET, user)) {
         keyVersion = removeKeyMaterial(keyVersion);
       }
-      Map json = KMSServerJSONUtils.toJSON(keyVersion);
+      Map json = KMSUtil.toJSON(keyVersion);
       LOG.trace("Exiting rolloverKey Method.");
       return Response.ok().type(MediaType.APPLICATION_JSON).entity(json)
               .build();
@@ -260,7 +268,7 @@ public class KMS {
     try {
       LOG.trace("Entering invalidateCache Method.");
       KMSWebApp.getAdminCallsMeter().mark();
-      KMSClientProvider.checkNotEmpty(name, "name");
+      checkNotEmpty(name, "name");
       UserGroupInformation user = HttpUserGroupInformation.get();
       assertAccess(KMSACLs.Type.ROLLOVER, user, KMSOp.INVALIDATE_CACHE, name);
       LOG.debug("Invalidating cache with key name {}.", name);
@@ -369,7 +377,7 @@ public class KMS {
     try {
       LOG.trace("Entering getMetadata method.");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      KMSClientProvider.checkNotEmpty(name, "name");
+      checkNotEmpty(name, "name");
       KMSWebApp.getAdminCallsMeter().mark();
       assertAccess(KMSACLs.Type.GET_METADATA, user, KMSOp.GET_METADATA, name);
       LOG.debug("Getting metadata for key with name {}.", name);
@@ -403,7 +411,7 @@ public class KMS {
     try {
       LOG.trace("Entering getCurrentVersion method.");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      KMSClientProvider.checkNotEmpty(name, "name");
+      checkNotEmpty(name, "name");
       KMSWebApp.getKeyCallsMeter().mark();
       assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_CURRENT_KEY, name);
       LOG.debug("Getting key version for key with name {}.", name);
@@ -417,7 +425,7 @@ public class KMS {
             }
       );
 
-      Object json = KMSServerJSONUtils.toJSON(keyVersion);
+      Object json = KMSUtil.toJSON(keyVersion);
       kmsAudit.ok(user, KMSOp.GET_CURRENT_KEY, name, "");
       LOG.trace("Exiting getCurrentVersion method.");
       return Response.ok().type(MediaType.APPLICATION_JSON).entity(json)
@@ -436,7 +444,7 @@ public class KMS {
     try {
       LOG.trace("Entering getKeyVersion method.");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      KMSClientProvider.checkNotEmpty(versionName, "versionName");
+      checkNotEmpty(versionName, "versionName");
       KMSWebApp.getKeyCallsMeter().mark();
       assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_KEY_VERSION);
       LOG.debug("Getting key with version name {}.", versionName);
@@ -453,7 +461,7 @@ public class KMS {
       if (keyVersion != null) {
         kmsAudit.ok(user, KMSOp.GET_KEY_VERSION, keyVersion.getName(), "");
       }
-      Object json = KMSServerJSONUtils.toJSON(keyVersion);
+      Object json = KMSUtil.toJSON(keyVersion);
       LOG.trace("Exiting getKeyVersion method.");
       return Response.ok().type(MediaType.APPLICATION_JSON).entity(json)
               .build();
@@ -477,8 +485,8 @@ public class KMS {
     try {
       LOG.trace("Entering generateEncryptedKeys method.");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      KMSClientProvider.checkNotEmpty(name, "name");
-      KMSClientProvider.checkNotNull(edekOp, "eekOp");
+      checkNotEmpty(name, "name");
+      checkNotNull(edekOp, "eekOp");
       LOG.debug("Generating encrypted key with name {}," +
               " the edek Operation is {}.", name, edekOp);
 
@@ -512,7 +520,7 @@ public class KMS {
         kmsAudit.ok(user, KMSOp.GENERATE_EEK, name, "");
         retJSON = new ArrayList();
         for (EncryptedKeyVersion edek : retEdeks) {
-          ((ArrayList) retJSON).add(KMSServerJSONUtils.toJSON(edek));
+          ((ArrayList) retJSON).add(KMSUtil.toJSON(edek));
         }
       } else {
         StringBuilder error;
@@ -537,6 +545,64 @@ public class KMS {
 
   @SuppressWarnings("rawtypes")
   @POST
+  @Path(KMSRESTConstants.KEY_RESOURCE + "/{name:.*}/" +
+      KMSRESTConstants.REENCRYPT_BATCH_SUB_RESOURCE)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  public Response reencryptEncryptedKeys(
+      @PathParam("name") final String name,
+      final List<Map> jsonPayload)
+      throws Exception {
+    LOG.trace("Entering reencryptEncryptedKeys method.");
+    try {
+      final Stopwatch sw = new Stopwatch().start();
+      checkNotEmpty(name, "name");
+      checkNotNull(jsonPayload, "jsonPayload");
+      final UserGroupInformation user = HttpUserGroupInformation.get();
+      KMSWebApp.getReencryptEEKBatchCallsMeter().mark();
+      if (jsonPayload.size() > MAX_NUM_PER_BATCH) {
+        LOG.warn("Payload size {} too big for reencryptEncryptedKeys from"
+            + " user {}.", jsonPayload.size(), user);
+      }
+      assertAccess(KMSACLs.Type.GENERATE_EEK, user, KMSOp.REENCRYPT_EEK_BATCH,
+          name);
+      LOG.debug("Batch reencrypting {} Encrypted Keys for key name {}",
+          jsonPayload.size(), name);
+      final List<EncryptedKeyVersion> ekvs =
+          KMSUtil.parseJSONEncKeyVersions(name, jsonPayload);
+      Preconditions.checkArgument(ekvs.size() == jsonPayload.size(),
+          "EncryptedKey size mismatch after parsing from json");
+      for (EncryptedKeyVersion ekv : ekvs) {
+        Preconditions.checkArgument(name.equals(ekv.getEncryptionKeyName()),
+            "All EncryptedKeys must be under the given key name " + name);
+      }
+
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          provider.reencryptEncryptedKeys(ekvs);
+          return null;
+        }
+      });
+      List retJSON = new ArrayList<>(ekvs.size());
+      for (EncryptedKeyVersion ekv: ekvs) {
+        retJSON.add(KMSUtil.toJSON(ekv));
+      }
+      kmsAudit.ok(user, KMSOp.REENCRYPT_EEK_BATCH, name,
+          "reencrypted " + ekvs.size() + " keys");
+      LOG.info("reencryptEncryptedKeys {} keys for key {} took {}",
+          jsonPayload.size(), name, sw.stop());
+      LOG.trace("Exiting reencryptEncryptedKeys method.");
+      return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
+          .build();
+    } catch (Exception e) {
+      LOG.debug("Exception in reencryptEncryptedKeys.", e);
+      throw e;
+    }
+  }
+
+  @SuppressWarnings("rawtypes")
+  @POST
   @Path(KMSRESTConstants.KEY_VERSION_RESOURCE + "/{versionName:.*}/" +
       KMSRESTConstants.EEK_SUB_RESOURCE)
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
@@ -548,8 +614,8 @@ public class KMS {
     try {
       LOG.trace("Entering decryptEncryptedKey method.");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      KMSClientProvider.checkNotEmpty(versionName, "versionName");
-      KMSClientProvider.checkNotNull(eekOp, "eekOp");
+      checkNotEmpty(versionName, "versionName");
+      checkNotNull(eekOp, "eekOp");
       LOG.debug("Decrypting key for {}, the edek Operation is {}.",
               versionName, eekOp);
 
@@ -558,13 +624,14 @@ public class KMS {
       String ivStr = (String) jsonPayload.get(KMSRESTConstants.IV_FIELD);
       String encMaterialStr =
               (String) jsonPayload.get(KMSRESTConstants.MATERIAL_FIELD);
-      KMSClientProvider.checkNotNull(ivStr, KMSRESTConstants.IV_FIELD);
+      checkNotNull(ivStr, KMSRESTConstants.IV_FIELD);
       final byte[] iv = Base64.decodeBase64(ivStr);
-      KMSClientProvider.checkNotNull(encMaterialStr,
+      checkNotNull(encMaterialStr,
           KMSRESTConstants.MATERIAL_FIELD);
       final byte[] encMaterial = Base64.decodeBase64(encMaterialStr);
       Object retJSON;
       if (eekOp.equals(KMSRESTConstants.EEK_DECRYPT)) {
+        KMSWebApp.getDecryptEEKCallsMeter().mark();
         assertAccess(KMSACLs.Type.DECRYPT_EEK, user, KMSOp.DECRYPT_EEK,
                 keyName);
 
@@ -582,9 +649,10 @@ public class KMS {
               }
         );
 
-        retJSON = KMSServerJSONUtils.toJSON(retKeyVersion);
+        retJSON = KMSUtil.toJSON(retKeyVersion);
         kmsAudit.ok(user, KMSOp.DECRYPT_EEK, keyName, "");
       } else if (eekOp.equals(KMSRESTConstants.EEK_REENCRYPT)) {
+        KMSWebApp.getReencryptEEKCallsMeter().mark();
         assertAccess(KMSACLs.Type.GENERATE_EEK, user, KMSOp.REENCRYPT_EEK,
             keyName);
 
@@ -599,7 +667,7 @@ public class KMS {
               }
             });
 
-        retJSON = KMSServerJSONUtils.toJSON(retEncryptedKeyVersion);
+        retJSON = KMSUtil.toJSON(retEncryptedKeyVersion);
         kmsAudit.ok(user, KMSOp.REENCRYPT_EEK, keyName, "");
       } else {
         StringBuilder error;
@@ -612,7 +680,6 @@ public class KMS {
         LOG.error(error.toString());
         throw new IllegalArgumentException(error.toString());
       }
-      KMSWebApp.getDecryptEEKCallsMeter().mark();
       LOG.trace("Exiting handleEncryptedKeyOp method.");
       return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
           .build();
@@ -631,7 +698,7 @@ public class KMS {
     try {
       LOG.trace("Entering getKeyVersions method.");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      KMSClientProvider.checkNotEmpty(name, "name");
+      checkNotEmpty(name, "name");
       KMSWebApp.getKeyCallsMeter().mark();
       assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_KEY_VERSIONS, name);
       LOG.debug("Getting key versions for key {}", name);

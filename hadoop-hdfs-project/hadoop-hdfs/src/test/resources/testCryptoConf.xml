@@ -603,5 +603,85 @@
         </comparator>
       </comparators>
     </test>
+
+    <!--More thorough test cases for re-encryption are in TestEncryptionZones-->
+    <test>
+      <description>Test success of reencrypt submission on a EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-reencryptZone -start -path /src</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r -skipTrash /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>successfully submitted for zone: /src action: START</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of reencrypt submission on a non-EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-reencryptZone -start -path /src</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r -skipTrash /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>not the root of an encryption zone</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <!-- Cannot test successful cancel here, since the submit will finish very quickly.
+         TestReencryption covers successful cancellations. -->
+
+    <test>
+      <description>Test failure of reencrypt on cancellation a not-being-re-encrypted EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-reencryptZone -cancel -path /src</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r -skipTrash /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Zone /src is not under re-encryption</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test success of list reencrypt status on a EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <command>-fs NAMENODE -mkdir /zone2</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /zone2 -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-reencryptZone -start -path /src</crypto-admin-command>
+        <crypto-admin-command>-reencryptZone -start -path /zone2</crypto-admin-command>
+        <crypto-admin-command>-listReencryptionStatus</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r -skipTrash /src</command>
+        <command>-fs NAMENODE -rm -r -skipTrash /zone2</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>/src,Completed,false,myKey,zone2</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

@@ -81,6 +81,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class ApplicationMasterService extends AbstractService implements
     ApplicationMasterProtocol {
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
+  private static final int PRE_REGISTER_RESPONSE_ID = -1;
+
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
   protected InetSocketAddress masterServiceAddress;
@@ -325,6 +327,11 @@ public class ApplicationMasterService extends AbstractService implements
   protected static final Allocation EMPTY_ALLOCATION = new Allocation(
       EMPTY_CONTAINER_LIST, Resources.createResource(0), null, null, null);
 
+  private int getNextResponseId(int responseId) {
+    // Loop between 0 to Integer.MAX_VALUE
+    return (responseId + 1) & Integer.MAX_VALUE;
+  }
+
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
@@ -357,14 +364,17 @@ public class ApplicationMasterService extends AbstractService implements
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
-      if ((request.getResponseId() + 1) == lastResponse.getResponseId()) {
-        /* old heartbeat */
+      // Normally request.getResponseId() == lastResponse.getResponseId()
+      if (getNextResponseId(request.getResponseId()) == lastResponse
+          .getResponseId()) {
+        // heartbeat one step old, simply return lastReponse
         return lastResponse;
-      } else if (request.getResponseId() + 1 < lastResponse.getResponseId()) {
+      } else if (request.getResponseId() != lastResponse.getResponseId()) {
         String message =
             "Invalid responseId in AllocateRequest from application attempt: "
                 + appAttemptId + ", expect responseId to be "
-                + (lastResponse.getResponseId() + 1);
+                + lastResponse.getResponseId() + ", but get "
+                + request.getResponseId();
         throw new InvalidApplicationMasterRequestException(message);
       }
 
@@ -404,7 +414,7 @@ public class ApplicationMasterService extends AbstractService implements
        * need to worry about unregister call occurring in between (which
        * removes the lock object).
        */
-      response.setResponseId(lastResponse.getResponseId() + 1);
+      response.setResponseId(getNextResponseId(lastResponse.getResponseId()));
       lock.setAllocateResponse(response);
       return response;
     }
@@ -415,10 +425,21 @@ public class ApplicationMasterService extends AbstractService implements
         recordFactory.newRecordInstance(AllocateResponse.class);
     // set response id to -1 before application master for the following
     // attemptID get registered
-    response.setResponseId(-1);
+    response.setResponseId(PRE_REGISTER_RESPONSE_ID);
     LOG.info("Registering app attempt : " + attemptId);
     responseMap.put(attemptId, new AllocateResponseLock(response));
     rmContext.getNMTokenSecretManager().registerApplicationAttempt(attemptId);
+  }
+
+  @VisibleForTesting
+  protected boolean setAttemptLastResponseId(ApplicationAttemptId attemptId,
+      int lastResponseId) {
+    AllocateResponseLock lock = responseMap.get(attemptId);
+    if (lock == null || lock.getAllocateResponse() == null) {
+      return false;
+    }
+    lock.getAllocateResponse().setResponseId(lastResponseId);
+    return true;
   }
 
   public void unregisterAttempt(ApplicationAttemptId attemptId) {

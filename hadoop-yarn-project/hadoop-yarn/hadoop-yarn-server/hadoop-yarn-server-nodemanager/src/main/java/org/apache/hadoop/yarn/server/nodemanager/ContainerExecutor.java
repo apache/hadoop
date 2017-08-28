@@ -35,11 +35,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -68,7 +68,8 @@ import org.apache.hadoop.util.StringUtils;
  * underlying OS.  All executor implementations must extend ContainerExecutor.
  */
 public abstract class ContainerExecutor implements Configurable {
-  private static final Log LOG = LogFactory.getLog(ContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerExecutor.class);
   protected static final String WILDCARD = "*";
 
   /**

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import static org.fusesource.leveldbjni.JniDBFactory.asString;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,8 +35,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -69,7 +68,6 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
@@ -79,15 +77,15 @@ import com.google.common.collect.ListMultimap;
 
 public class NMLeveldbStateStoreService extends NMStateStoreService {
 
-  public static final Log LOG =
-      LogFactory.getLog(NMLeveldbStateStoreService.class);
+  public static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(NMLeveldbStateStoreService.class);
 
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
 
   /**
    * Changes from 1.0 to 1.1: Save AMRMProxy state in NMSS.
-   * Changes from 1.2 to 1.2: Save queued container information.
+   * Changes from 1.1 to 1.2: Save queued container information.
    */
   private static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 2);
 
@@ -1382,8 +1380,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
   }
 
-  private static class LeveldbLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LeveldbLogger.class);
+  private static class LeveldbLogger implements org.iq80.leveldb.Logger {
+    private static final org.slf4j.Logger LOG =
+        LoggerFactory.getLogger(LeveldbLogger.class);
 
     @Override
     public void log(String message) {

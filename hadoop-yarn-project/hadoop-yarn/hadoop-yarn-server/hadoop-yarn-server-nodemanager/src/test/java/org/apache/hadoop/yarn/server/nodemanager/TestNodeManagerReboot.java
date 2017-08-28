@@ -22,6 +22,8 @@ import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,8 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -82,7 +82,8 @@ public class TestNodeManagerReboot {
   private FileContext localFS;
   private MyNodeManager nm;
   private DeletionService delService;
-  static final Log LOG = LogFactory.getLog(TestNodeManagerReboot.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(TestNodeManagerReboot.class);
 
   @Before
   public void setup() throws UnsupportedFileSystemException {

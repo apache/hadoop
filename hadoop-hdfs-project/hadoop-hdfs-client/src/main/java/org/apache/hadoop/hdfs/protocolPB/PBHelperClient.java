@@ -83,6 +83,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -99,6 +100,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryScopeProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryTypeProto;
@@ -129,6 +131,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeMo
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptActionProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptionStateProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ZoneReencryptionStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AddECPolicyResponseProto;
@@ -157,6 +162,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
@@ -165,6 +171,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectorySt
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ZoneEncryptionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.InotifyProtos;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
@@ -1678,6 +1685,17 @@ public class PBHelperClient {
     return builder.build();
   }
 
+  public static ReencryptActionProto convert(ReencryptAction a) {
+    switch (a) {
+    case CANCEL:
+      return ReencryptActionProto.CANCEL_REENCRYPT;
+    case START:
+      return ReencryptActionProto.START_REENCRYPT;
+    default:
+      throw new IllegalArgumentException("Unexpected value: " + a);
+    }
+  }
+
   public static RollingUpgradeActionProto convert(RollingUpgradeAction a) {
     switch (a) {
     case QUERY:
@@ -2282,6 +2300,17 @@ public class PBHelperClient {
     }
   }
 
+  public static ReencryptAction convert(ReencryptActionProto a) {
+    switch (a) {
+    case CANCEL_REENCRYPT:
+      return ReencryptAction.CANCEL;
+    case START_REENCRYPT:
+      return ReencryptAction.START;
+    default:
+      throw new IllegalArgumentException("Unexpected value: " + a);
+    }
+  }
+
   public static RollingUpgradeAction convert(RollingUpgradeActionProto a) {
     switch (a) {
     case QUERY:
@@ -2733,16 +2762,24 @@ public class PBHelperClient {
         .build();
   }
 
-  public static HdfsProtos.ZoneEncryptionInfoProto convert(
-      CipherSuite suite, CryptoProtocolVersion version, String keyName) {
+  public static ZoneEncryptionInfoProto convert(CipherSuite suite,
+      CryptoProtocolVersion version, String keyName) {
+    return convert(suite, version, keyName, null);
+  }
+
+  public static ZoneEncryptionInfoProto convert(CipherSuite suite,
+      CryptoProtocolVersion version, String keyName,
+      ReencryptionInfoProto proto) {
     if (suite == null || version == null || keyName == null) {
       return null;
     }
-    return HdfsProtos.ZoneEncryptionInfoProto.newBuilder()
-        .setSuite(convert(suite))
-        .setCryptoProtocolVersion(convert(version))
-        .setKeyName(keyName)
-        .build();
+    ZoneEncryptionInfoProto.Builder builder =
+        ZoneEncryptionInfoProto.newBuilder().setSuite(convert(suite))
+            .setCryptoProtocolVersion(convert(version)).setKeyName(keyName);
+    if (proto != null) {
+      builder.setReencryptionProto(proto);
+    }
+    return builder.build();
   }
 
   public static FileEncryptionInfo convert(
@@ -2757,6 +2794,91 @@ public class PBHelperClient {
     String ezKeyVersionName = fileProto.getEzKeyVersionName();
     return new FileEncryptionInfo(suite, version, key, iv, keyName,
         ezKeyVersionName);
+  }
+
+  public static ReencryptionInfoProto convert(String ezkvn, Long submissionTime,
+      boolean isCanceled, long numReencrypted, long numFailures,
+      Long completionTime, String lastFile) {
+    if (ezkvn == null || submissionTime == null) {
+      return null;
+    }
+    ReencryptionInfoProto.Builder builder =
+        ReencryptionInfoProto.newBuilder().setEzKeyVersionName(ezkvn)
+            .setSubmissionTime(submissionTime).setCanceled(isCanceled)
+            .setNumReencrypted(numReencrypted).setNumFailures(numFailures);
+    if (completionTime != null) {
+      builder.setCompletionTime(completionTime);
+    }
+    if (lastFile != null) {
+      builder.setLastFile(lastFile);
+    }
+    return builder.build();
+  }
+
+  public static ZoneReencryptionStatusProto convert(ZoneReencryptionStatus zs) {
+    ZoneReencryptionStatusProto.Builder builder =
+        ZoneReencryptionStatusProto.newBuilder()
+        .setId(zs.getId())
+        .setPath(zs.getZoneName())
+        .setEzKeyVersionName(zs.getEzKeyVersionName())
+        .setSubmissionTime(zs.getSubmissionTime())
+        .setCanceled(zs.isCanceled())
+        .setNumReencrypted(zs.getFilesReencrypted())
+        .setNumFailures(zs.getNumReencryptionFailures());
+    switch (zs.getState()) {
+    case Submitted:
+      builder.setState(ReencryptionStateProto.SUBMITTED);
+      break;
+    case Processing:
+      builder.setState(ReencryptionStateProto.PROCESSING);
+      break;
+    case Completed:
+      builder.setState(ReencryptionStateProto.COMPLETED);
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown state " + zs.getState());
+    }
+    final long completion = zs.getCompletionTime();
+    if (completion != 0) {
+      builder.setCompletionTime(completion);
+    }
+    final String file = zs.getLastCheckpointFile();
+    if (file != null) {
+      builder.setLastFile(file);
+    }
+    return builder.build();
+  }
+
+  public static ZoneReencryptionStatus convert(
+      ZoneReencryptionStatusProto proto) {
+    ZoneReencryptionStatus.State state;
+    switch (proto.getState()) {
+    case SUBMITTED:
+      state = ZoneReencryptionStatus.State.Submitted;
+      break;
+    case PROCESSING:
+      state = ZoneReencryptionStatus.State.Processing;
+      break;
+    case COMPLETED:
+      state = ZoneReencryptionStatus.State.Completed;
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown state " + proto.getState());
+    }
+    ZoneReencryptionStatus.Builder builder = new ZoneReencryptionStatus.
+        Builder().
+        id(proto.getId()).zoneName(proto.getPath()).state(state)
+        .ezKeyVersionName(proto.getEzKeyVersionName())
+        .submissionTime(proto.getSubmissionTime()).canceled(proto.getCanceled())
+        .filesReencrypted(proto.getNumReencrypted())
+        .fileReencryptionFailures(proto.getNumFailures());
+    if (proto.hasCompletionTime()) {
+      builder.completionTime(proto.getCompletionTime());
+    }
+    if (proto.hasLastFile()) {
+      builder.lastCheckpointFile(proto.getLastFile());
+    }
+    return builder.build();
   }
 
   public static DatanodeInfo[] convert(DatanodeInfosProto datanodeInfosProto) {

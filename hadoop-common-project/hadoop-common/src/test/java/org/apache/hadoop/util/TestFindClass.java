@@ -19,7 +19,7 @@ package org.apache.hadoop.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.hadoop.util.FindClass;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;

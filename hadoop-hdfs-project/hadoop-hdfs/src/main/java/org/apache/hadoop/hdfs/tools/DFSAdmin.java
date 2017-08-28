@@ -66,11 +66,13 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
+import org.apache.hadoop.hdfs.protocol.BlocksStats;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -532,16 +534,30 @@ public class DFSAdmin extends FsShell {
      * minutes. Use "-metaSave" to list of all such blocks and accurate 
      * counts.
      */
-    System.out.println("Under replicated blocks: " + 
-                       dfs.getLowRedundancyBlocksCount());
-    System.out.println("Blocks with corrupt replicas: " + 
-                       dfs.getCorruptBlocksCount());
-    System.out.println("Missing blocks: " + 
-                       dfs.getMissingBlocksCount());
-    System.out.println("Missing blocks (with replication factor 1): " +
-                      dfs.getMissingReplOneBlocksCount());
-    System.out.println("Pending deletion blocks: " +
-        dfs.getPendingDeletionBlocksCount());
+    BlocksStats blocksStats = dfs.getClient().getNamenode().getBlocksStats();
+    System.out.println("Replicated Blocks:");
+    System.out.println("\tUnder replicated blocks: " +
+        blocksStats.getLowRedundancyBlocksStat());
+    System.out.println("\tBlocks with corrupt replicas: " +
+        blocksStats.getCorruptBlocksStat());
+    System.out.println("\tMissing blocks: " +
+        blocksStats.getMissingReplicaBlocksStat());
+    System.out.println("\tMissing blocks (with replication factor 1): " +
+        blocksStats.getMissingReplicationOneBlocksStat());
+    System.out.println("\tPending deletion blocks: " +
+        blocksStats.getPendingDeletionBlocksStat());
+
+    ECBlockGroupsStats ecBlockGroupsStats =
+        dfs.getClient().getNamenode().getECBlockGroupsStats();
+    System.out.println("Erasure Coded Block Groups: ");
+    System.out.println("\tLow redundancy block groups: " +
+        ecBlockGroupsStats.getLowRedundancyBlockGroupsStat());
+    System.out.println("\tBlock groups with corrupt internal blocks: " +
+        ecBlockGroupsStats.getCorruptBlockGroupsStat());
+    System.out.println("\tMissing block groups: " +
+        ecBlockGroupsStats.getMissingBlockGroupsStat());
+    System.out.println("\tPending deletion block groups: " +
+        ecBlockGroupsStats.getPendingDeletionBlockGroupsStat());
 
     System.out.println();
 

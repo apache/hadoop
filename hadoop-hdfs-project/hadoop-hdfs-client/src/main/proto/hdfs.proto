@@ -313,6 +313,20 @@ message ZoneEncryptionInfoProto {
   required CipherSuiteProto suite = 1;
   required CryptoProtocolVersionProto cryptoProtocolVersion = 2;
   required string keyName = 3;
+  optional ReencryptionInfoProto reencryptionProto = 4;
+}
+
+/**
+ * Re-encryption information for an encryption zone
+ */
+message ReencryptionInfoProto {
+  required string ezKeyVersionName = 1;
+  required uint64 submissionTime = 2;
+  required bool canceled = 3;
+  required int64 numReencrypted = 4;
+  required int64 numFailures = 5;
+  optional uint64 completionTime = 6;
+  optional string lastFile = 7;
 }
 
 /**

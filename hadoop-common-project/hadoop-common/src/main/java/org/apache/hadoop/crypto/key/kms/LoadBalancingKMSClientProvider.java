@@ -313,6 +313,26 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
   }
 
   @Override
+  public void reencryptEncryptedKeys(final List<EncryptedKeyVersion> ekvs)
+      throws IOException, GeneralSecurityException {
+    try {
+      doOp(new ProviderCallable<Void>() {
+        @Override
+        public Void call(KMSClientProvider provider)
+            throws IOException, GeneralSecurityException {
+          provider.reencryptEncryptedKeys(ekvs);
+          return null;
+        }
+      }, nextIdx());
+    } catch (WrapperException we) {
+      if (we.getCause() instanceof GeneralSecurityException) {
+        throw (GeneralSecurityException) we.getCause();
+      }
+      throw new IOException(we.getCause());
+    }
+  }
+
+  @Override
   public KeyVersion getKeyVersion(final String versionName) throws IOException {
     return doOp(new ProviderCallable<KeyVersion>() {
       @Override

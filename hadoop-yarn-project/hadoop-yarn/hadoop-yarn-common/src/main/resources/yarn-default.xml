@@ -1167,6 +1167,25 @@
   </property>
 
   <property>
+    <description>Specify which log file controllers we will support. The first
+    file controller we add will be used to write the aggregated logs.
+    This comma separated configuration will work with the configuration:
+    yarn.log-aggregation.file-controller.%s.class which defines the supported
+    file controller's class. By default, the TFile controller would be used.
+    The user could override this configuration by adding more file controllers.
+    To support back-ward compatibility, make sure that we always
+    add TFile file controller.</description>
+    <name>yarn.log-aggregation.file-formats</name>
+    <value>TFile</value>
+  </property>
+
+  <property>
+    <description>Class that supports TFile read and write operations.</description>
+    <name>yarn.log-aggregation.file-controller.TFile.class</name>
+    <value>org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationTFileController</value>
+  </property>
+
+  <property>
     <description>
     How long for ResourceManager to wait for NodeManager to report its
     log aggregation status. If waiting time of which the log aggregation

@@ -20,10 +20,10 @@ package org.apache.hadoop.contrib.utils.join;
 
 import java.io.IOException;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.extensions.TestSetup;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -36,24 +36,27 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
 
-public class TestDataJoin extends TestCase {
-
+/**
+ * Class to test JOIN between 2 data
+ * sources.
+ */
+public class TestDataJoin {
   private static MiniDFSCluster cluster = null;
-  public static Test suite() {
-    TestSetup setup = new TestSetup(new TestSuite(TestDataJoin.class)) {
-      protected void setUp() throws Exception {
-        Configuration conf = new Configuration();
-        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      }
-      protected void tearDown() throws Exception {
-        if (cluster != null) {
-          cluster.shutdown();
-        }
-      }
-    };
-    return setup;
+
+  @Before
+  public void setUp() throws Exception {
+    Configuration conf = new Configuration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
   }
 
+  @After
+  public void tearDown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
   public void testDataJoin() throws Exception {
     final int srcs = 4;
     JobConf job = new JobConf();

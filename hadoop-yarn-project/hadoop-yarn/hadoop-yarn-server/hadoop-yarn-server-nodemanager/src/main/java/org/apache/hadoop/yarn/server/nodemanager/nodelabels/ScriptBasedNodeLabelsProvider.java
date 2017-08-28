@@ -25,9 +25,9 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -132,7 +132,8 @@ public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
    */
   private class NodeLabelsScriptRunner extends TimerTask {
 
-    private final Log LOG = LogFactory.getLog(NodeLabelsScriptRunner.class);
+    private final Logger LOG =
+        LoggerFactory.getLogger(NodeLabelsScriptRunner.class);
 
     public NodeLabelsScriptRunner() {
       ArrayList<String> execScript = new ArrayList<String>();

@@ -22,11 +22,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -101,6 +103,31 @@ public class AliyunOSSFileSystem extends FileSystem {
 
     return new FSDataOutputStream(new AliyunOSSOutputStream(getConf(),
         store, key, progress, statistics), (Statistics)(null));
+  }
+
+  /**
+   * {@inheritDoc}
+   * @throws FileNotFoundException if the parent directory is not present -or
+   * is not a directory.
+   */
+  @Override
+  public FSDataOutputStream createNonRecursive(Path path,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress) throws IOException {
+    Path parent = path.getParent();
+    if (parent != null) {
+      // expect this to raise an exception if there is no parent
+      if (!getFileStatus(parent).isDirectory()) {
+        throw new FileAlreadyExistsException("Not a directory: " + parent);
+      }
+    }
+    return create(path, permission,
+      flags.contains(CreateFlag.OVERWRITE), bufferSize,
+      replication, blockSize, progress);
   }
 
   @Override

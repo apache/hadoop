@@ -308,18 +308,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.customMessage = customMessage;
     }
 
+    private final String getWarningMessage(String key) {
+      return getWarningMessage(key, null);
+    }
+
     /**
      * Method to provide the warning message. It gives the custom message if
      * non-null, and default message otherwise.
      * @param key the associated deprecated key.
+     * @param source the property source.
      * @return message that is to be logged when a deprecated key is used.
      */
-    private final String getWarningMessage(String key) {
+    private String getWarningMessage(String key, String source) {
       String warningMessage;
       if(customMessage == null) {
         StringBuilder message = new StringBuilder(key);
-        String deprecatedKeySuffix = " is deprecated. Instead, use ";
-        message.append(deprecatedKeySuffix);
+        if (source != null) {
+          message.append(" in " + source);
+        }
+        message.append(" is deprecated. Instead, use ");
         for (int i = 0; i < newKeys.length; i++) {
           message.append(newKeys[i]);
           if(i != newKeys.length-1) {
@@ -591,6 +598,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public static boolean isDeprecated(String key) {
     return deprecationContext.get().getDeprecatedKeyMap().containsKey(key);
+  }
+
+  private static String getDeprecatedKey(String key) {
+    return deprecationContext.get().getReverseDeprecatedKeyMap().get(key);
+  }
+
+  private static DeprecatedKeyInfo getDeprecatedKeyInfo(String key) {
+    return deprecationContext.get().getDeprecatedKeyMap().get(key);
   }
 
   /**
@@ -1268,6 +1283,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   @VisibleForTesting
   void logDeprecation(String message) {
     LOG_DEPRECATION.info(message);
+  }
+
+  void logDeprecationOnce(String name, String source) {
+    DeprecatedKeyInfo keyInfo = getDeprecatedKeyInfo(name);
+    if (keyInfo != null && !keyInfo.getAndSetAccessed()) {
+      LOG_DEPRECATION.info(keyInfo.getWarningMessage(name, source));
+    }
   }
 
   /**
@@ -2080,6 +2102,47 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Get the credential entry by name from a credential provider.
+   *
+   * Handle key deprecation.
+   *
+   * @param provider a credential provider
+   * @param name alias of the credential
+   * @return the credential entry or null if not found
+   */
+  private CredentialEntry getCredentialEntry(CredentialProvider provider,
+                                             String name) throws IOException {
+    CredentialEntry entry = provider.getCredentialEntry(name);
+    if (entry != null) {
+      return entry;
+    }
+
+    // The old name is stored in the credential provider.
+    String oldName = getDeprecatedKey(name);
+    if (oldName != null) {
+      entry = provider.getCredentialEntry(oldName);
+      if (entry != null) {
+        logDeprecationOnce(oldName, provider.toString());
+        return entry;
+      }
+    }
+
+    // The name is deprecated.
+    DeprecatedKeyInfo keyInfo = getDeprecatedKeyInfo(name);
+    if (keyInfo != null && keyInfo.newKeys != null) {
+      for (String newName : keyInfo.newKeys) {
+        entry = provider.getCredentialEntry(newName);
+        if (entry != null) {
+          logDeprecationOnce(name, null);
+          return entry;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Try and resolve the provided element name as a credential provider
    * alias.
    * @param name alias of the provisioned credential
@@ -2096,7 +2159,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (providers != null) {
         for (CredentialProvider provider : providers) {
           try {
-            CredentialEntry entry = provider.getCredentialEntry(name);
+            CredentialEntry entry = getCredentialEntry(provider, name);
             if (entry != null) {
               pass = entry.getCredential();
               break;

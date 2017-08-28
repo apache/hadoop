@@ -25,10 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
@@ -85,7 +85,8 @@ public class ApplicationImpl implements Application {
   private final WriteLock writeLock;
   private final Context context;
 
-  private static final Log LOG = LogFactory.getLog(ApplicationImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ApplicationImpl.class);
 
   private LogAggregationContext logAggregationContext;
 

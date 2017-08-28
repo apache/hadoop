@@ -1064,7 +1064,17 @@ public class YarnConfiguration extends Configuration {
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";
   public static final boolean DEFAULT_LOG_AGGREGATION_ENABLED = false;
-  
+
+  public static final String LOG_AGGREGATION_FILE_FORMATS = YARN_PREFIX
+      + "log-aggregation.file-formats";
+  public static final String LOG_AGGREGATION_FILE_CONTROLLER_FMT =
+      YARN_PREFIX + "log-aggregation.file-controller.%s.class";
+
+  public static final String LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT
+      = YARN_PREFIX + "log-aggregation.%s.remote-app-log-dir";
+  public static final String LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT
+      = YARN_PREFIX + "log-aggregation.%s.remote-app-log-dir-suffix";
+
   /** 
    * How long to wait before deleting aggregated logs, -1 disables.
    * Be careful set this too small and you will spam the name node.

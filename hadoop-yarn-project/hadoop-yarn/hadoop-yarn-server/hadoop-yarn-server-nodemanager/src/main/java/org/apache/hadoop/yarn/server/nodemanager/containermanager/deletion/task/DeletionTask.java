@@ -16,11 +16,11 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -34,7 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class DeletionTask implements Runnable {
 
-  static final Log LOG = LogFactory.getLog(DeletionTask.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(DeletionTask.class);
 
   public static final int INVALID_TASK_ID = -1;
 

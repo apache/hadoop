@@ -626,7 +626,7 @@ public class TestPread {
    */
   @Test
   public void testPreadFailureWithChangedBlockLocations() throws Exception {
-    doPreadTestWithChangedLocations();
+    doPreadTestWithChangedLocations(1);
   }
 
   /**
@@ -639,21 +639,36 @@ public class TestPread {
    * 7. Consider next calls to getBlockLocations() always returns DN3 as last
    * location.<br>
    */
-  @Test
+  @Test(timeout = 60000)
   public void testPreadHedgedFailureWithChangedBlockLocations()
       throws Exception {
     isHedgedRead = true;
-    doPreadTestWithChangedLocations();
+    DFSClientFaultInjector old = DFSClientFaultInjector.get();
+    try {
+      DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+        public void sleepBeforeHedgedGet() {
+          try {
+            Thread.sleep(500);
+          } catch (InterruptedException e) {
+          }
+        }
+      });
+      doPreadTestWithChangedLocations(2);
+    } finally {
+      DFSClientFaultInjector.set(old);
+    }
   }
 
-  private void doPreadTestWithChangedLocations()
+  private void doPreadTestWithChangedLocations(int maxFailures)
       throws IOException, TimeoutException, InterruptedException {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.DEBUG);
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 2);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (isHedgedRead) {
+      conf.setInt(HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY, 100);
       conf.setInt(HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY, 2);
+      conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 1000);
     }
     try (MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
@@ -747,6 +762,9 @@ public class TestPread {
       int n = din.read(0, buf, 0, data.length());
       assertEquals(data.length(), n);
       assertEquals("Data should be read", data, new String(buf, 0, n));
+      assertTrue("Read should complete with maximum " + maxFailures
+              + " failures, but completed with " + din.failures,
+          din.failures <= maxFailures);
       DFSClient.LOG.info("Read completed");
     }
   }

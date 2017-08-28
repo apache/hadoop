@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.AccessControlException;
@@ -275,6 +276,12 @@ class FSDirXAttrOp {
             PBHelperClient.convert(ezProto.getSuite()),
             PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
             ezProto.getKeyName());
+
+        if (ezProto.hasReencryptionProto()) {
+          ReencryptionInfoProto reProto = ezProto.getReencryptionProto();
+          fsd.ezManager.getReencryptionStatus()
+              .updateZoneStatus(inode.getId(), iip.getPath(), reProto);
+        }
       }
 
       if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {
