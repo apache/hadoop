@@ -129,7 +129,7 @@ public abstract class BaseAMRMProxyE2ETest {
     ResourceBlacklistRequest resourceBlacklistRequest = ResourceBlacklistRequest
         .newInstance(new ArrayList<String>(), new ArrayList<String>());
 
-    int responseId = 1;
+    int responseId = 0;
 
     return AllocateRequest.newInstance(responseId, 0, resourceAsk,
         new ArrayList<ContainerId>(), resourceBlacklistRequest);
