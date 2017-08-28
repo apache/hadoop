@@ -987,7 +987,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_USE_DFS_NETWORK_TOPOLOGY_KEY =
       "dfs.use.dfs.network.topology";
-  public static final boolean DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT = false;
+  public static final boolean DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT = true;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated

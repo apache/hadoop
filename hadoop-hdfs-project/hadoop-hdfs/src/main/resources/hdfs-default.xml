@@ -4286,7 +4286,7 @@
 
   <property>
     <name>dfs.use.dfs.network.topology</name>
-    <value>false</value>
+    <value>true</value>
     <description>
      Enables DFSNetworkTopology to choose nodes for placing replicas.
     </description>
