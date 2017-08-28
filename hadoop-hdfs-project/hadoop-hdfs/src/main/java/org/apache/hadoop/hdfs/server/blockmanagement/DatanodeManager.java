@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
@@ -180,6 +181,11 @@ public class DatanodeManager {
    */
   private final boolean dataNodeDiskStatsEnabled;
 
+  /**
+   * If we use DfsNetworkTopology to choose nodes for placing replicas.
+   */
+  private final boolean useDfsNetworkTopology;
+
   @Nullable
   private final SlowPeerTracker slowPeerTracker;
   @Nullable
@@ -220,7 +226,16 @@ public class DatanodeManager {
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
         new SlowDiskTracker(conf, timer) : null;
 
-    networktopology = NetworkTopology.getInstance(conf);
+    // TODO: Enables DFSNetworkTopology by default after more stress
+    // testings/validations.
+    this.useDfsNetworkTopology = conf.getBoolean(
+        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
+        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
+    if (useDfsNetworkTopology) {
+      networktopology = DFSNetworkTopology.getInstance(conf);
+    } else {
+      networktopology = NetworkTopology.getInstance(conf);
+    }
 
     this.defaultXferPort = NetUtils.createSocketAddr(
           conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
