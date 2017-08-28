@@ -726,7 +726,7 @@ public class TestClientProtocolForPipelineRecovery {
       DFSOutputStream dfsOut = (DFSOutputStream) out.getWrappedStream();
       DatanodeInfo[] pipeline = dfsOut.getPipeline();
       DataNode dn1 = cluster.getDataNode(pipeline[0].getIpcPort());
-      dn1.setHeartbeatsDisabledForTests(true);
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn1, true);
       DatanodeDescriptor dn1Desc = cluster.getNamesystem(0).getBlockManager()
           .getDatanodeManager().getDatanode(dn1.getDatanodeId());
       cluster.setDataNodeDead(dn1Desc);
