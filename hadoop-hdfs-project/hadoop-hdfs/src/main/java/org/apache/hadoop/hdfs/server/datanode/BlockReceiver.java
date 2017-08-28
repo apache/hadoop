@@ -284,7 +284,8 @@ class BlockReceiver implements Closeable {
       
       // check if there is a disk error
       IOException cause = DatanodeUtil.getCauseIfDiskError(ioe);
-      DataNode.LOG.warn("IOException in BlockReceiver constructor"
+      DataNode.LOG
+          .warn("IOException in BlockReceiver constructor :" + ioe.getMessage()
           + (cause == null ? "" : ". Cause is "), cause);
       if (cause != null) {
         ioe = cause;
