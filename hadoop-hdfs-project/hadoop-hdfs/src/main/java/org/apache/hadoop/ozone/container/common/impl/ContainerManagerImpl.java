@@ -207,28 +207,32 @@ public class ContainerManagerImpl implements ContainerManager {
 
       dis = new DigestInputStream(containerStream, sha);
 
-      ContainerData containerData = ContainerData.getFromProtBuf(
-          ContainerProtos.ContainerData.parseDelimitedFrom(dis));
-
-
-      ContainerProtos.ContainerMeta meta = ContainerProtos.ContainerMeta
-          .parseDelimitedFrom(metaStream);
-
-      if (meta != null &&
-          !DigestUtils.sha256Hex(sha.digest()).equals(meta.getHash())) {
-        // This means we were not able read data from the disk when booted the
-        // datanode. We are going to rely on SCM understanding that we don't
-        // have
-        // valid data for this container when we send container reports.
-        // Hopefully SCM will ask us to delete this container and rebuild it.
-        LOG.error("Invalid SHA found for container data. Name :{}" +
-            "cowardly refusing to read invalid data", containerName);
+      ContainerProtos.ContainerData containerDataProto =
+          ContainerProtos.ContainerData.parseDelimitedFrom(dis);
+      ContainerData containerData;
+      if (containerDataProto == null) {
+        // Sometimes container metadata might have been created but empty,
+        // when loading the info we get a null, this often means last time
+        // SCM was ending up at some middle phase causing that the metadata
+        // was not populated. Such containers are marked as inactive.
         containerMap.put(keyName, new ContainerStatus(null, false));
         return;
       }
-
+      containerData = ContainerData.getFromProtBuf(containerDataProto);
+      ContainerProtos.ContainerMeta meta =
+          ContainerProtos.ContainerMeta.parseDelimitedFrom(metaStream);
+      if (meta != null && !DigestUtils.sha256Hex(sha.digest())
+          .equals(meta.getHash())) {
+        // This means we were not able read data from the disk when booted the
+        // datanode. We are going to rely on SCM understanding that we don't
+        // have valid data for this container when we send container reports.
+        // Hopefully SCM will ask us to delete this container and rebuild it.
+        LOG.error("Invalid SHA found for container data. Name :{}"
+            + "cowardly refusing to read invalid data", containerName);
+        containerMap.put(keyName, new ContainerStatus(null, false));
+        return;
+      }
       containerMap.put(keyName, new ContainerStatus(containerData, true));
-
     } catch (IOException | NoSuchAlgorithmException ex) {
       LOG.error("read failed for file: {} ex: {}", containerName,
           ex.getMessage());
