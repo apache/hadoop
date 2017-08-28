@@ -49,7 +49,7 @@ function hadoop_usage
   hadoop_add_subcommand "router" daemon "run the Router daemon"
   hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
   hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
-  hadoop_add_subcommand "servicesapi" "run yarn-native-service rest server"
+  hadoop_add_subcommand "apiserver" "run yarn-native-service rest server"
   hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
   hadoop_add_subcommand "service" "run a service"
   hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
@@ -151,14 +151,14 @@ function yarncmd_case
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'
     ;;
-    servicesapi)
+    apiserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider"'/*'
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/services"'/*'
       hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/services-api"'/*'
-      HADOOP_CLASSNAME='org.apache.hadoop.yarn.service.webapp.ApplicationApiWebApp'
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.service.webapp.ApiServerWebApp'
       local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
 ${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
-${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider,\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/services,\
 ${HADOOP_HDFS_HOME}/${HDFS_DIR},\
 ${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
 ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
@@ -171,11 +171,11 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
     ;;
     service)
-      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider"'/*'
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/services"'/*'
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.service.client.ServiceCLI'
       local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
 ${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
-${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider,\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/services,\
 ${HADOOP_HDFS_HOME}/${HDFS_DIR},\
 ${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
 ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\

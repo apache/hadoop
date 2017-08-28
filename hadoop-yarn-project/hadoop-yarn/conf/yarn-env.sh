@@ -159,4 +159,4 @@
 #
 # See ResourceManager for some examples
 #
-#export YARN_SERVICESAPI_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-servicesapi.log-$(date +'%Y%m%d%H%M')"
+#export YARN_APISERVER_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-apiserver.log-$(date +'%Y%m%d%H%M')"

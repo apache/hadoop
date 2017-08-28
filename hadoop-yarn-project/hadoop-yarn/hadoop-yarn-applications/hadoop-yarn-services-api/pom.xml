@@ -91,7 +91,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-slider-core</artifactId>
+      <artifactId>hadoop-yarn-services-core</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

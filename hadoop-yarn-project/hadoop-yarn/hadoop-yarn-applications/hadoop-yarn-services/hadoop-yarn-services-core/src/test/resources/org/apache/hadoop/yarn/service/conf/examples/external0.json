@@ -1,0 +1,8 @@
+{
+  "name": "external-0",
+  "lifetime": "3600",
+  "artifact": {
+    "type": "SERVICE",
+    "id": "app-1"
+  }
+}
