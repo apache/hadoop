@@ -86,22 +86,6 @@
         </div>
       </div>
     </div>
-
-    <div class="col-lg-4 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Node Managers
-        </div>
-        <div class="container-fluid" id="nodes-donut-chart">
-          {{donut-chart data=model.clusterMetrics.firstObject.getNodesDataForDonutChart
-          showLabels=true
-          parentId="nodes-donut-chart"
-          ratio=0.6
-          maxHeight=350
-          colorTargets="good error warn"}}
-        </div>
-      </div>
-    </div>
   </div>
 
   <hr>
@@ -138,6 +122,23 @@
           maxHeight=350
           colorTargets="good"
           colorTargetReverse=true}}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-lg-6 container-fluid">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          Node Managers
+        </div>
+        <div class="container-fluid" id="nodes-donut-chart">
+          {{donut-chart data=model.clusterMetrics.firstObject.getNodesDataForDonutChart
+          showLabels=true
+          parentId="nodes-donut-chart"
+          ratio=0.6
+          maxHeight=350
+          colorTargets="good error warn"}}
         </div>
       </div>
     </div>

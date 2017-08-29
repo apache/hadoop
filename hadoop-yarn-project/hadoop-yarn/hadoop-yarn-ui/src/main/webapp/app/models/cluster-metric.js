@@ -39,6 +39,7 @@ export default DS.Model.extend({
   totalNodes: DS.attr('number'),
   lostNodes: DS.attr('number'),
   unhealthyNodes: DS.attr('number'),
+  decommissioningNodes: DS.attr('number'),
   decommissionedNodes: DS.attr('number'),
   rebootedNodes: DS.attr('number'),
   activeNodes: DS.attr('number'),
@@ -87,11 +88,15 @@ export default DS.Model.extend({
       value: this.get("unhealthyNodes")
     });
     arr.push({
+      label: "Decommissioning",
+      value: this.get("decommissioningNodes")
+    });
+    arr.push({
       label: "Decomissioned",
       value: this.get("decommissionedNodes")
     });
     return arr;
-  }.property("activeNodes", "unhealthyNodes", "decommissionedNodes"),
+  }.property("activeNodes", "unhealthyNodes", "decommissioningNodes", "decommissionedNodes"),
 
   getMemoryDataForDonutChart: function() {
     var type = "MB";
