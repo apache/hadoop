@@ -50,11 +50,11 @@ public class KeyManagerImpl implements KeyManager {
    * A SCM block client, used to talk to SCM to allocate block during putKey.
    */
   private final ScmBlockLocationProtocol scmBlockClient;
-  private final MetadataManager metadataManager;
+  private final KSMMetadataManager metadataManager;
   private final long scmBlockSize;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
-      MetadataManager metadataManager, OzoneConfiguration conf) {
+      KSMMetadataManager metadataManager, OzoneConfiguration conf) {
     this.scmBlockClient = scmBlockClient;
     this.metadataManager = metadataManager;
     this.scmBlockSize = conf.getLong(OZONE_SCM_BLOCK_SIZE_KEY,

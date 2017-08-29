@@ -47,16 +47,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.mockito.Mockito.any;
 
 /**
- * Tests BucketManagerImpl, mocks MetadataManager for testing.
+ * Tests BucketManagerImpl, mocks KSMMetadataManager for testing.
  */
 @RunWith(MockitoJUnitRunner.class)
 public class TestBucketManagerImpl {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  private MetadataManager getMetadataManagerMock(String... volumesToCreate)
+  private KSMMetadataManager getMetadataManagerMock(String... volumesToCreate)
       throws IOException {
-    MetadataManager metadataManager = Mockito.mock(MetadataManager.class);
+    KSMMetadataManager metadataManager = Mockito.mock(KSMMetadataManager.class);
     Map<String, byte[]> metadataDB = new HashMap<>();
     ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -133,7 +133,7 @@ public class TestBucketManagerImpl {
   @Test
   public void testCreateBucketWithoutVolume() throws IOException {
     thrown.expectMessage("Volume doesn't exist");
-    MetadataManager metaMgr = getMetadataManagerMock();
+    KSMMetadataManager metaMgr = getMetadataManagerMock();
     try {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
@@ -150,7 +150,7 @@ public class TestBucketManagerImpl {
 
   @Test
   public void testCreateBucket() throws IOException {
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -163,7 +163,7 @@ public class TestBucketManagerImpl {
   @Test
   public void testCreateAlreadyExistingBucket() throws IOException {
     thrown.expectMessage("Bucket already exist");
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     try {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
@@ -183,7 +183,7 @@ public class TestBucketManagerImpl {
   public void testGetBucketInfoForInvalidBucket() throws IOException {
     thrown.expectMessage("Bucket not found");
     try {
-      MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+      KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       bucketManager.getBucketInfo("sampleVol", "bucketOne");
     } catch(KSMException ksmEx) {
@@ -195,7 +195,7 @@ public class TestBucketManagerImpl {
 
   @Test
   public void testGetBucketInfo() throws IOException {
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -215,7 +215,7 @@ public class TestBucketManagerImpl {
 
   @Test
   public void testSetBucketPropertyAddACL() throws IOException {
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl ozoneAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "root", OzoneAcl.OzoneACLRights.READ);
@@ -252,7 +252,7 @@ public class TestBucketManagerImpl {
 
   @Test
   public void testSetBucketPropertyRemoveACL() throws IOException {
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl aclOne = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "root", OzoneAcl.OzoneACLRights.READ);
@@ -288,7 +288,7 @@ public class TestBucketManagerImpl {
 
   @Test
   public void testSetBucketPropertyChangeStorageType() throws IOException {
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -314,7 +314,7 @@ public class TestBucketManagerImpl {
 
   @Test
   public void testSetBucketPropertyChangeVersioning() throws IOException {
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -339,7 +339,7 @@ public class TestBucketManagerImpl {
   @Test
   public void testDeleteBucket() throws IOException {
     thrown.expectMessage("Bucket not found");
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     for(int i = 0; i < 5; i++) {
       KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
@@ -372,7 +372,7 @@ public class TestBucketManagerImpl {
   @Test
   public void testDeleteNonEmptyBucket() throws IOException {
     thrown.expectMessage("Bucket is not empty");
-    MetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    KSMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     KsmBucketInfo bucketInfo = KsmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")

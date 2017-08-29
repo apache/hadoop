@@ -39,15 +39,15 @@ public class BucketManagerImpl implements BucketManager {
       LoggerFactory.getLogger(BucketManagerImpl.class);
 
   /**
-   * MetadataManager is used for accessing KSM MetadataDB and ReadWriteLock.
+   * KSMMetadataManager is used for accessing KSM MetadataDB and ReadWriteLock.
    */
-  private final MetadataManager metadataManager;
+  private final KSMMetadataManager metadataManager;
 
   /**
    * Constructs BucketManager.
    * @param metadataManager
    */
-  public BucketManagerImpl(MetadataManager metadataManager){
+  public BucketManagerImpl(KSMMetadataManager metadataManager){
     this.metadataManager = metadataManager;
   }
 
