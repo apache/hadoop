@@ -398,7 +398,7 @@ public class TestMRTimelineEventHandling {
 
           LOG.info("strLine.trim()= " + strLine.trim());
           if (checkIdPrefix) {
-            Assert.assertTrue("Entity ID prefix expected to be > 0" ,
+            Assert.assertTrue("Entity ID prefix expected to be > 0",
                 entity.getIdPrefix() > 0);
             if (idPrefix == -1) {
               idPrefix = entity.getIdPrefix();

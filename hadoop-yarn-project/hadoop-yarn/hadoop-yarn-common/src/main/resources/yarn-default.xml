@@ -3188,7 +3188,7 @@
     <name>yarn.timeline-service.http-cross-origin.enabled</name>
     <value>false</value>
   </property>
-  
+ 
   <property>
     <description>
       Flag to enable cross-origin (CORS) support for timeline service v1.x or

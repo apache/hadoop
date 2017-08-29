@@ -62,7 +62,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   private long startTime;
   private static final Counters EMPTY_COUNTERS = new Counters();
 
-  /** 
+  /**
    * Create an event to record the unsuccessful completion of attempts.
    * @param id Attempt ID
    * @param taskType Type of the task
@@ -227,12 +227,12 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   public String getHostname() { return hostname; }
   /** Gets the rpc port for the host where the attempt executed. */
   public int getPort() { return port; }
-  
+
   /** Gets the rack name of the node where the attempt ran. */
   public String getRackName() {
     return rackName == null ? null : rackName.toString();
   }
-  
+
   /** Gets the error string. */
   public String getError() { return error.toString(); }
   /**
