@@ -102,8 +102,8 @@ public class BlockDeletingService extends BackgroundService{
       // We at most list a number of containers a time,
       // in case there are too many containers and start too many workers.
       // We must ensure there is no empty container in this result.
-      containerManager.listContainer(null, containerLimitPerInterval,
-          null, containers);
+      containers = containerManager.chooseContainerForBlockDeletion(
+          containerLimitPerInterval);
 
       // TODO
       // in case we always fetch a few same containers,

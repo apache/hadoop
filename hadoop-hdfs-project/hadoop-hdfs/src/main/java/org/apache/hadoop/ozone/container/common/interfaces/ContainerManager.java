@@ -96,6 +96,15 @@ public interface ContainerManager extends RwLock {
       throws StorageContainerException;
 
   /**
+   * Choose containers for block deletion.
+   *
+   * @param count   - how many to return
+   * @throws StorageContainerException
+   */
+  List<ContainerData> chooseContainerForBlockDeletion(int count)
+      throws StorageContainerException;
+
+  /**
    * Get metadata about a specific container.
    *
    * @param containerName - Name of the container

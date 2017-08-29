@@ -417,6 +417,21 @@
   </property>
 
   <property>
+    <name>ozone.scm.container.deletion-choosing.policy</name>
+    <value>org.apache.hadoop.ozone.container.common.impl.RandomContainerDeletionChoosingPolicy</value>
+    <description>
+      The policy used for choosing desire containers for block deletion.
+      Datanode selects a number of containers to process block deletion
+      in a certain interval defined by ozone.block.deleting.service.interval.ms,
+      the number of containers to process in each interval is defined
+      by ozone.block.deleting.container.limit.per.interval. This property
+      is used to configure the policy applied while selecting containers,
+      org.apache.hadoop.ozone.container.common.impl.RandomContainerDeletionChoosingPolicy
+      implements a simply random policy that to return a random list of containers.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.container.ipc</name>
     <value>50011</value>
     <description>
