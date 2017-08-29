@@ -91,9 +91,8 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
 
     int counter = 0;
     while (true) {
-      try (ResultScanner results
-          = getResult(hbaseConf, conn, typeFilterList, currRowKey, nextRowKey))
-      {
+      try (ResultScanner results =
+          getResult(hbaseConf, conn, typeFilterList, currRowKey, nextRowKey)) {
         TimelineEntity entity = parseEntityForType(results.next());
         if (entity == null) {
           break;

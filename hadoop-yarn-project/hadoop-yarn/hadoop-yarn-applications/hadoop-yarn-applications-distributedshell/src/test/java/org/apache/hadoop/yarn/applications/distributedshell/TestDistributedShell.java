@@ -652,7 +652,7 @@ public class TestDistributedShell {
           if (checkIdPrefix) {
             TimelineEntity entity = FileSystemTimelineReaderImpl.
                 getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
-            Assert.assertTrue("Entity ID prefix expected to be > 0" ,
+            Assert.assertTrue("Entity ID prefix expected to be > 0",
                 entity.getIdPrefix() > 0);
             if (idPrefix == -1) {
               idPrefix = entity.getIdPrefix();

@@ -58,7 +58,7 @@ public enum AppToFlowColumnPrefix implements ColumnPrefix<AppToFlowTable> {
   private final String columnPrefix;
   private final byte[] columnPrefixBytes;
 
-  private AppToFlowColumnPrefix(ColumnFamily<AppToFlowTable> columnFamily,
+  AppToFlowColumnPrefix(ColumnFamily<AppToFlowTable> columnFamily,
       String columnPrefix) {
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;

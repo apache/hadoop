@@ -53,7 +53,8 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
   /**
    * The configuration prefix of timeline HTTP authentication.
    */
-  public static final String PREFIX = "yarn.timeline-service.http-authentication.";
+  public static final String PREFIX =
+      "yarn.timeline-service.http-authentication.";
 
   @VisibleForTesting
   Map<String, String> filterConfig;
@@ -104,15 +105,15 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
   }
 
   /**
-   * Initializes {@link TimelineAuthenticationFilter}
+   * Initializes {@link TimelineAuthenticationFilter}.
    * <p>
    * Propagates to {@link TimelineAuthenticationFilter} configuration all YARN
-   * configuration properties prefixed with {@value #PREFIX}
+   * configuration properties prefixed with {@value #PREFIX}.
    *
    * @param container
-   *          The filter container
+   *          The filter container.
    * @param conf
-   *          Configuration for run-time parameters
+   *          Configuration for run-time parameters.
    */
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {

@@ -125,7 +125,7 @@ public interface TimelineReader extends Service {
    *    <li><b>flowRunId</b> - Context flow run id.</li>
    *    <li><b>appId</b> - Context app id.</li>
    *    </ul>
-   *    Although entityIdPrefix and entityId are also part of context, 
+   *    Although entityIdPrefix and entityId are also part of context,
    *    it has no meaning for getEntities.<br>
    *    Fields in context which are mandatory depends on entity type. Entity
    *    type is always mandatory. In addition to entity type, below is the list
@@ -161,7 +161,7 @@ public interface TimelineReader extends Service {
    *    {@link TimelineDataToRetrieve} for details.
    * @return A set of <cite>TimelineEntity</cite> instances of the given entity
    *    type in the given context scope which matches the given predicates
-   *    ordered by enitityIdPrefix(for generic entities only). 
+   *    ordered by enitityIdPrefix(for generic entities only).
    *    Each entity will only contain
    *    the metadata(id, type , idPrefix and created time) plus the given
    *    fields to retrieve.
