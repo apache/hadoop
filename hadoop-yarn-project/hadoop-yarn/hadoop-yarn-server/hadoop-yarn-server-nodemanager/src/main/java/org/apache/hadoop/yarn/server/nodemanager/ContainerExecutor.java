@@ -337,6 +337,9 @@ public abstract class ContainerExecutor implements Configurable {
       whitelist.add(param);
     }
 
+    // Add "set -o pipefail -e" to validate launch_container script.
+    sb.setExitOnFailure();
+
     if (environment != null) {
       for (Map.Entry<String, String> env : environment.entrySet()) {
         if (!whitelist.contains(env.getKey())) {
