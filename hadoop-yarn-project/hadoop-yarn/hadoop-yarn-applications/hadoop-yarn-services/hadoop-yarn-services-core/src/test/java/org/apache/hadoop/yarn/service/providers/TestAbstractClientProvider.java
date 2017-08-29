@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.service.providers;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
@@ -29,7 +28,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.easymock.EasyMock.*;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test the AbstractClientProvider shared methods.
@@ -55,9 +56,8 @@ public class TestAbstractClientProvider {
   @Test
   public void testConfigFiles() throws IOException {
     ClientProvider clientProvider = new ClientProvider();
-    FileSystem mockFs = createNiceMock(FileSystem.class);
-    expect(mockFs.exists(anyObject(Path.class))).andReturn(true).anyTimes();
-    replay(mockFs);
+    FileSystem mockFs = mock(FileSystem.class);
+    when(mockFs.exists(anyObject())).thenReturn(true);
 
     ConfigFile configFile = new ConfigFile();
     List<ConfigFile> configFiles = new ArrayList<>();

@@ -47,7 +47,6 @@ public class ClientArgs extends CommonArgs {
   private final ActionFlexArgs actionFlexArgs = new ActionFlexArgs();
   private final ActionFreezeArgs actionFreezeArgs = new ActionFreezeArgs();
   private final ActionHelpArgs actionHelpArgs = new ActionHelpArgs();
-  private final ActionKDiagArgs actionKDiagArgs = new ActionKDiagArgs();
   private final ActionKeytabArgs actionKeytabArgs = new ActionKeytabArgs();
   private final ActionListArgs actionListArgs = new ActionListArgs();
   private final ActionRegistryArgs actionRegistryArgs = new ActionRegistryArgs();
@@ -205,10 +204,6 @@ public class ClientArgs extends CommonArgs {
 
       case ACTION_HELP:
         bindCoreAction(actionHelpArgs);
-        break;
-
-      case ACTION_KDIAG:
-        bindCoreAction(actionKDiagArgs);
         break;
 
       case ACTION_KEYTAB:

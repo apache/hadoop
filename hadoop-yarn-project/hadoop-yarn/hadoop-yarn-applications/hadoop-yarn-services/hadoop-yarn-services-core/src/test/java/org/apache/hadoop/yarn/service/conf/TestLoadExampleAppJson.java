@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
@@ -33,7 +32,6 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.apache.hadoop.yarn.service.ServiceTestUtils.JSON_SER_DESER;
-import static org.easymock.EasyMock.*;
 
 /**
  * Test loading example resources.
@@ -62,12 +60,7 @@ public class TestLoadExampleAppJson extends Assert {
     try {
       Service service = JSON_SER_DESER.fromResource(resource);
 
-      SliderFileSystem sfs = createNiceMock(SliderFileSystem.class);
-      FileSystem mockFs = createNiceMock(FileSystem.class);
-      expect(sfs.getFileSystem()).andReturn(mockFs).anyTimes();
-      expect(sfs.buildClusterDirPath(anyObject())).andReturn(
-          new Path("cluster_dir_path")).anyTimes();
-      replay(sfs, mockFs);
+      SliderFileSystem sfs = ServiceTestUtils.initMockFs();
 
       ServiceApiUtil.validateAndResolveService(service, sfs,
           new YarnConfiguration());

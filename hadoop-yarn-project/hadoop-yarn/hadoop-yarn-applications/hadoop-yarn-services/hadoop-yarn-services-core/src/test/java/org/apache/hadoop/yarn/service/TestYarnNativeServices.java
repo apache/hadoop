@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.service;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,6 +49,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -78,8 +78,8 @@ import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_B
  */
 public class TestYarnNativeServices extends ServiceTestUtils{
 
-  private static final Log LOG =
-      LogFactory.getLog(TestYarnNativeServices.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestYarnNativeServices.class);
 
   private MiniYARNCluster yarnCluster = null;
   private MiniDFSCluster hdfsCluster = null;
@@ -416,7 +416,7 @@ public class TestYarnNativeServices extends ServiceTestUtils{
         LOG.info("Num Components " + retrievedApp.getComponents().size());
         for (Component component : retrievedApp.getComponents()) {
           LOG.info("looking for  " + component.getName());
-          LOG.info(component);
+          LOG.info(component.toString());
           if (component.getContainers() != null) {
             if (component.getContainers().size() == exampleApp
                 .getComponent(component.getName()).getNumberOfContainers()) {

@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
-import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.Assert;
@@ -40,7 +38,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.service.conf.ExampleAppJson.*;
-import static org.easymock.EasyMock.*;
 
 /**
  * Test global configuration resolution.
@@ -78,12 +75,7 @@ public class TestAppJsonResolve extends Assert {
     assertEquals("1000", worker.getProperty("timeout"));
 
     // here is the resolution
-    SliderFileSystem sfs = createNiceMock(SliderFileSystem.class);
-    FileSystem mockFs = createNiceMock(FileSystem.class);
-    expect(sfs.getFileSystem()).andReturn(mockFs).anyTimes();
-    expect(sfs.buildClusterDirPath(anyObject())).andReturn(
-        new Path("cluster_dir_path")).anyTimes();
-    replay(sfs, mockFs);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
     ServiceApiUtil.validateAndResolveService(orig, sfs, new
         YarnConfiguration());
 
@@ -162,27 +154,13 @@ public class TestAppJsonResolve extends Assert {
     assertEquals(0, other.getProperties().size());
 
     // load the external service
-    SliderFileSystem sfs = createNiceMock(SliderFileSystem.class);
-    FileSystem mockFs = createNiceMock(FileSystem.class);
-    expect(sfs.getFileSystem()).andReturn(mockFs).anyTimes();
-    expect(sfs.buildClusterDirPath(anyObject())).andReturn(
-        new Path("cluster_dir_path")).anyTimes();
-    replay(sfs, mockFs);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
     Service ext = ExampleAppJson.loadResource(APP_JSON);
     ServiceApiUtil.validateAndResolveService(ext, sfs, new
         YarnConfiguration());
-    reset(sfs, mockFs);
 
     // perform the resolution on original service
-    JsonSerDeser<Service> jsonSerDeser = createNiceMock(JsonSerDeser
-        .class);
-    expect(sfs.getFileSystem()).andReturn(mockFs).anyTimes();
-    expect(sfs.buildClusterDirPath(anyObject())).andReturn(
-        new Path("cluster_dir_path")).anyTimes();
-    expect(jsonSerDeser.load(anyObject(), anyObject())).andReturn(ext)
-        .anyTimes();
-    replay(sfs, mockFs, jsonSerDeser);
-    ServiceApiUtil.setJsonSerDeser(jsonSerDeser);
+    sfs = ServiceTestUtils.initMockFs(ext);
     ServiceApiUtil.validateAndResolveService(orig, sfs, new
         YarnConfiguration());
 

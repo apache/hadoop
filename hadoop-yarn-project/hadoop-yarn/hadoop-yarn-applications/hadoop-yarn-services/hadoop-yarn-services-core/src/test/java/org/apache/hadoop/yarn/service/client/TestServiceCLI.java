@@ -45,7 +45,6 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.RESOURCEMANAGER_CONN
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS;
 import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_APPDEF;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 public class TestServiceCLI {
