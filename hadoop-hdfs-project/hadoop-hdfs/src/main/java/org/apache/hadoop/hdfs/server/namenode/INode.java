@@ -724,8 +724,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /**
    * Set last access time of inode.
    */
-  public final INode setAccessTime(long accessTime, int latestSnapshotId) {
-    recordModification(latestSnapshotId);
+  public final INode setAccessTime(long accessTime, int latestSnapshotId,
+      boolean skipCaptureAccessTimeOnlyChangeInSnapshot) {
+    if (!skipCaptureAccessTimeOnlyChangeInSnapshot) {
+      recordModification(latestSnapshotId);
+    }
     setAccessTime(accessTime);
     return this;
   }
