@@ -19,9 +19,13 @@ package org.apache.hadoop.yarn.logaggregation;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -193,6 +197,54 @@ public final class LogToolUtils {
     }
     org.apache.hadoop.io.IOUtils.skipFully(fis, skipAfterRead);
     os.flush();
+  }
+
+  public static void outputContainerLogThroughZeroCopy(String containerId,
+      String nodeId, String fileName, long fileLength, long outputSize,
+      String lastModifiedTime, FileInputStream fis, OutputStream os,
+      ContainerLogAggregationType logType) throws IOException {
+    long toSkip = 0;
+    long totalBytesToRead = fileLength;
+    if (outputSize < 0) {
+      long absBytes = Math.abs(outputSize);
+      if (absBytes < fileLength) {
+        toSkip = fileLength - absBytes;
+        totalBytesToRead = absBytes;
+      }
+    } else {
+      if (outputSize < fileLength) {
+        totalBytesToRead = outputSize;
+      }
+    }
+
+    if (totalBytesToRead > 0) {
+      // output log summary
+      StringBuilder sb = new StringBuilder();
+      String containerStr = String.format(
+          LogToolUtils.CONTAINER_ON_NODE_PATTERN,
+          containerId, nodeId);
+      sb.append(containerStr + "\n");
+      sb.append("LogAggregationType: " + logType + "\n");
+      sb.append(StringUtils.repeat("=", containerStr.length()) + "\n");
+      sb.append("LogType:" + fileName + "\n");
+      sb.append("LogLastModifiedTime:" + lastModifiedTime + "\n");
+      sb.append("LogLength:" + Long.toString(fileLength) + "\n");
+      sb.append("LogContents:\n");
+      byte[] b = sb.toString().getBytes(
+          Charset.forName("UTF-8"));
+      os.write(b, 0, b.length);
+      // output log content
+      FileChannel inputChannel = fis.getChannel();
+      WritableByteChannel outputChannel = Channels.newChannel(os);
+      long position = toSkip;
+      while (totalBytesToRead > 0) {
+        long transferred =
+            inputChannel.transferTo(position, totalBytesToRead, outputChannel);
+        totalBytesToRead -= transferred;
+        position += transferred;
+      }
+      os.flush();
+    }
   }
 
   public static boolean outputAggregatedContainerLog(Configuration conf,
