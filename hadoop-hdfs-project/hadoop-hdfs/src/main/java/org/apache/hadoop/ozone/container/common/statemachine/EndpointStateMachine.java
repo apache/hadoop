@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.ZonedDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -35,7 +36,8 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Endpoint is used as holder class that keeps state around the RPC endpoint.
  */
-public class EndpointStateMachine implements Closeable {
+public class EndpointStateMachine
+    implements Closeable, EndpointStateMachineMBean {
   static final Logger
       LOG = LoggerFactory.getLogger(EndpointStateMachine.class);
   private final StorageContainerDatanodeProtocolClientSideTranslatorPB endPoint;
@@ -45,6 +47,7 @@ public class EndpointStateMachine implements Closeable {
   private final Configuration conf;
   private EndPointStates state;
   private VersionResponse version;
+  private ZonedDateTime lastSuccessfulHeartbeat;
 
   /**
    * Constructs RPC Endpoints.
@@ -104,6 +107,15 @@ public class EndpointStateMachine implements Closeable {
     return state;
   }
 
+  @Override
+  public int getVersionNumber() {
+    if (version != null) {
+      return version.getProtobufMessage().getSoftwareVersion();
+    } else {
+      return -1;
+    }
+  }
+
   /**
    * Sets the endpoint state.
    *
@@ -142,6 +154,11 @@ public class EndpointStateMachine implements Closeable {
    */
   public long getMissedCount() {
     return this.missedCount.get();
+  }
+
+  @Override
+  public String getAddressString() {
+    return getAddress().toString();
   }
 
   public void zeroMissedCount() {
@@ -261,5 +278,16 @@ public class EndpointStateMachine implements Closeable {
       }
       return getLastState();
     }
+  }
+
+  public long getLastSuccessfulHeartbeat() {
+    return lastSuccessfulHeartbeat == null ?
+        0 :
+        lastSuccessfulHeartbeat.toEpochSecond();
+  }
+
+  public void setLastSuccessfulHeartbeat(
+      ZonedDateTime lastSuccessfulHeartbeat) {
+    this.lastSuccessfulHeartbeat = lastSuccessfulHeartbeat;
   }
 }

@@ -21,12 +21,15 @@ package org.apache.hadoop.ozone.container.common.impl;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces
     .ContainerLocationManager;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerLocationManagerMXBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,14 +44,15 @@ import java.util.List;
  *  For example : A user could map all container files to a
  *  SSD but leave data/metadata on bunch of other disks.
  */
-public class ContainerLocationManagerImpl implements ContainerLocationManager {
+public class ContainerLocationManagerImpl implements ContainerLocationManager,
+    ContainerLocationManagerMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerLocationManagerImpl.class);
 
   private final List<ContainerStorageLocation> dataLocations;
   private int currentIndex;
   private final List<StorageLocation> metadataLocations;
-
+  private final ObjectName jmxbean;
 
   /**
    * Constructs a Location Manager.
@@ -67,6 +71,8 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
       dataLocations.add(new ContainerStorageLocation(dataDir, conf));
     }
     this.metadataLocations = metadataLocations;
+    jmxbean = MBeans.register("OzoneDataNode",
+        ContainerLocationManager.class.getSimpleName(), this);
   }
 
   /**
@@ -138,5 +144,6 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
     for (ContainerStorageLocation loc: dataLocations) {
       loc.shutdown();
     }
+    MBeans.unregister(jmxbean);
   }
 }
