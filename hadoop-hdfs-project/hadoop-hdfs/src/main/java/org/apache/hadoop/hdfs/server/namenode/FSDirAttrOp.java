@@ -493,7 +493,9 @@ public class FSDirAttrOp {
     // then no need to store access time
     if (atime != -1 && (status || force
         || atime > inode.getAccessTime() + fsd.getAccessTimePrecision())) {
-      inode.setAccessTime(atime, latest);
+      inode.setAccessTime(atime, latest,
+          fsd.getFSNamesystem().getSnapshotManager().
+          getSkipCaptureAccessTimeOnlyChange());
       status = true;
     }
     return status;
