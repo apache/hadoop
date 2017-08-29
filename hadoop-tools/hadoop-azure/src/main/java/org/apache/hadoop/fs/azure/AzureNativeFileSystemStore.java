@@ -731,14 +731,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     try {
       if (!container.exists(getInstrumentedContext())) {
         throw new AzureException("Container " + containerName + " in account "
-            + accountName + " not found, and we can't create"
-            + " it using anoynomous credentials, and no credentials found for them"
+            + accountName + " not found, and we can't create it"
+            + " using anonymous credentials, and no credentials found for them"
             + " in the configuration.");
       }
     } catch (StorageException ex) {
       throw new AzureException("Unable to access container " + containerName
           + " in account " + accountName
-          + " using anonymous credentials, and no credentials found for them "
+          + " using anonymous credentials, and no credentials found for them"
           + " in the configuration.", ex);
     }
 
