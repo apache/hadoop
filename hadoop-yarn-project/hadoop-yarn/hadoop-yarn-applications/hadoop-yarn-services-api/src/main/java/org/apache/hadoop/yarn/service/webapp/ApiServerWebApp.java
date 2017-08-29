@@ -59,8 +59,10 @@ public class ApiServerWebApp extends AbstractService {
   public static void main(String[] args) throws IOException {
     ApiServerWebApp apiWebApp = new ApiServerWebApp();
     try {
-      apiWebApp.startWebApp();
+      apiWebApp.init(new YarnConfiguration());
+      apiWebApp.serviceStart();
     } catch (Exception e) {
+      logger.error("Got exception starting", e);
       apiWebApp.close();
     }
   }

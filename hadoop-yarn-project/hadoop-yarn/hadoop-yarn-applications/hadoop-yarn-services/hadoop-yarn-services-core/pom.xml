@@ -104,7 +104,6 @@
     <dependency>
       <groupId>com.beust</groupId>
       <artifactId>jcommander</artifactId>
-      <version>1.30</version>
     </dependency>
 
     <dependency>
@@ -126,37 +125,16 @@
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-jaxrs</artifactId>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-xc</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs</artifactId>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
     </dependency>
 
     <dependency>
@@ -167,25 +145,31 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-client</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-web-proxy</artifactId>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-registry</artifactId>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-common</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-api</artifactId>
     </dependency>
 
     <dependency>
@@ -195,13 +179,12 @@
 
     <dependency>
       <groupId>org.apache.commons</groupId>
-      <artifactId>commons-compress</artifactId>
+      <artifactId>commons-configuration2</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>commons-digester</groupId>
-      <artifactId>commons-digester</artifactId>
-      <version>1.8</version>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
     </dependency>
 
     <dependency>
@@ -215,37 +198,13 @@
     </dependency>
 
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-client</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>com.codahale.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.codahale.metrics</groupId>
-      <artifactId>metrics-servlets</artifactId>
-      <version>3.0.1</version>
-    </dependency>
-
-    <!-- ======================================================== -->
-    <!-- service registry -->
-    <!-- ======================================================== -->
-
-    <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-    </dependency>
-
-    <!-- ======================================================== -->
-    <!-- Jersey and webapp support -->
-    <!-- ======================================================== -->
-
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-framework</artifactId>
     </dependency>
 
     <dependency>
@@ -254,38 +213,23 @@
     </dependency>
 
     <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-client</artifactId>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-json</artifactId>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-annotations</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-server</artifactId>
-    </dependency>
+    <!-- ======================================================== -->
+    <!-- Test dependencies -->
+    <!-- ======================================================== -->
 
     <dependency>
-      <groupId>com.google.inject</groupId>
-      <artifactId>guice</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.google.inject.extensions</groupId>
-      <artifactId>guice-servlet</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.sun.jersey.contribs</groupId>
-      <artifactId>jersey-guice</artifactId>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -295,114 +239,23 @@
     </dependency>
 
     <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
-      <version>3.1</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.objenesis</groupId>
-          <artifactId>objenesis</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-api-easymock</artifactId>
-      <version>1.6.5</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-module-junit4</artifactId>
-      <version>1.6.5</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.javassist</groupId>
-          <artifactId>javassist</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.objenesis</groupId>
-          <artifactId>objenesis</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>javax.servlet.jsp</groupId>
-      <artifactId>jsp-api</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.codehaus.jettison</groupId>
-      <artifactId>jettison</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.yaml</groupId>
-      <artifactId>snakeyaml</artifactId>
-      <version>1.16</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-        <groupId>io.swagger</groupId>
-        <artifactId>swagger-annotations</artifactId>
-        <version>1.5.4</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-minicluster</artifactId>
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
-
-
-  <profiles>
-    <profile>
-      <id>dist</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-assemblies</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
-            <executions>
-              <execution>
-                <id>dist</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <appendAssemblyId>false</appendAssemblyId>
-                  <attach>false</attach>
-                  <finalName>${project.artifactId}-${project.version}</finalName>
-                  <descriptorRefs>
-                    <descriptorRef>hadoop-yarn-services-dist</descriptorRef>
-                  </descriptorRefs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-  </profiles>
 
 </project>

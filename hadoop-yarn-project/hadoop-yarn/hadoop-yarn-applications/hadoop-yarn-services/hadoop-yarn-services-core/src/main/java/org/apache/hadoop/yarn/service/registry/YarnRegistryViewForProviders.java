@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.service.registry;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -32,6 +30,8 @@ import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
 import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -43,8 +43,8 @@ import static org.apache.hadoop.registry.client.binding.RegistryPathUtils.join;
  * is registered, offers access to the record and other things.
  */
 public class YarnRegistryViewForProviders {
-  private static final Log LOG =
-      LogFactory.getLog(YarnRegistryViewForProviders.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(YarnRegistryViewForProviders.class);
 
   private final RegistryOperations registryOperations;
   private final String user;

@@ -18,8 +18,6 @@
 package org.apache.hadoop.yarn.service;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -27,7 +25,6 @@ import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Resource;
-import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.Assert;
@@ -44,10 +41,8 @@ import java.util.List;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_COMPONENT_NAME;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test for ServiceApiUtil helper methods.
@@ -78,7 +73,7 @@ public class TestServiceApiUtil {
     assertEquals(RegistryConstants.MAX_FQDN_LABEL_LENGTH + 1, LEN_64_STR
         .length());
 
-    SliderFileSystem sfs = initMock(null);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
 
     Service app = new Service();
 
@@ -230,7 +225,7 @@ public class TestServiceApiUtil {
 
   @Test
   public void testArtifacts() throws IOException {
-    SliderFileSystem sfs = initMock(null);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
 
     Service app = new Service();
     app.setName("name");
@@ -309,27 +304,10 @@ public class TestServiceApiUtil {
     return app;
   }
 
-  private static SliderFileSystem initMock(Service ext) throws IOException {
-    SliderFileSystem sfs = createNiceMock(SliderFileSystem.class);
-    FileSystem mockFs = createNiceMock(FileSystem.class);
-    JsonSerDeser<Service> jsonSerDeser = createNiceMock(JsonSerDeser
-        .class);
-    expect(sfs.getFileSystem()).andReturn(mockFs).anyTimes();
-    expect(sfs.buildClusterDirPath(anyObject())).andReturn(
-        new Path("cluster_dir_path")).anyTimes();
-    if (ext != null) {
-      expect(jsonSerDeser.load(anyObject(), anyObject())).andReturn(ext)
-          .anyTimes();
-    }
-    replay(sfs, mockFs, jsonSerDeser);
-    ServiceApiUtil.setJsonSerDeser(jsonSerDeser);
-    return sfs;
-  }
-
   @Test
   public void testExternalApplication() throws IOException {
     Service ext = createValidApplication("comp1");
-    SliderFileSystem sfs = initMock(ext);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs(ext);
 
     Service app = createValidApplication(null);
 
@@ -350,7 +328,7 @@ public class TestServiceApiUtil {
 
   @Test
   public void testDuplicateComponents() throws IOException {
-    SliderFileSystem sfs = initMock(null);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
 
     String compName = "comp1";
     Service app = createValidApplication(compName);
@@ -368,7 +346,7 @@ public class TestServiceApiUtil {
   @Test
   public void testExternalDuplicateComponent() throws IOException {
     Service ext = createValidApplication("comp1");
-    SliderFileSystem sfs = initMock(ext);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs(ext);
 
     Service app = createValidApplication("comp1");
     Artifact artifact = new Artifact();
@@ -387,7 +365,7 @@ public class TestServiceApiUtil {
   @Test
   public void testExternalComponent() throws IOException {
     Service ext = createValidApplication("comp1");
-    SliderFileSystem sfs = initMock(ext);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs(ext);
 
     Service app = createValidApplication("comp2");
     Artifact artifact = new Artifact();
@@ -454,7 +432,7 @@ public class TestServiceApiUtil {
               e)), ex.getMessage());
     }
 
-    SliderFileSystem sfs = initMock(null);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
     Service service = createValidApplication(null);
     service.setComponents(Arrays.asList(c, d, e));
     try {
@@ -470,7 +448,7 @@ public class TestServiceApiUtil {
 
   @Test
   public void testInvalidComponent() throws IOException {
-    SliderFileSystem sfs = initMock(null);
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
     testComponent(sfs);
   }
 

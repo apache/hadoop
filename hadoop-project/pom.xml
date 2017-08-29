@@ -145,7 +145,8 @@
     <declared.hadoop.version>${project.version}</declared.hadoop.version>
     
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
-    <maven-doxia-module-markdown.version>1.4</maven-doxia-module-markdown.version>
+    <snakeyaml.version>1.16</snakeyaml.version>
+    <jcommander.version>1.30</jcommander.version>
   </properties>
 
   <dependencyManagement>
@@ -606,6 +607,11 @@
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>3.1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.ws.rs</groupId>
+        <artifactId>jsr311-api</artifactId>
+        <version>1.1.1</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -1343,9 +1349,14 @@
           <version>${jackson2.version}</version>
         </dependency>
         <dependency>
-          <groupId>org.apache.maven.doxia</groupId>
-          <artifactId>doxia-module-markdown</artifactId>
-          <version>${maven-doxia-module-markdown.version}</version>
+          <groupId>org.yaml</groupId>
+          <artifactId>snakeyaml</artifactId>
+          <version>${snakeyaml.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.beust</groupId>
+          <artifactId>jcommander</artifactId>
+          <version>${jcommander.version}</version>
         </dependency>
 
     </dependencies>
