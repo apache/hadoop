@@ -1380,7 +1380,15 @@
     This flag is relevant only when fs.azure.authorization is enabled.
   </description>
 </property>
-
+<property>
+  <name>fs.azure.saskey.usecontainersaskeyforallaccess</name>
+  <value>true</value>
+  <description>
+    Use container saskey for access to all blobs within the container.
+    Blob-specific saskeys are not used when this setting is enabled.
+    This setting provides better performance compared to blob-specific saskeys.
+  </description>
+</property>
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>

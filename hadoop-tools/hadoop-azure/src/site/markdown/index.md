@@ -476,6 +476,15 @@ The maximum number of entries that that cache can hold can be customized using t
     </property>
 ```
 
+ Use container saskey for access to all blobs within the container.
+ Blob-specific saskeys are not used when this setting is enabled.
+ This setting provides better performance compared to blob-specific saskeys.
+ ```
+    <property>
+      <name>fs.azure.saskey.usecontainersaskeyforallaccess</name>
+      <value>true</value>
+    </property>
+```
 ## Testing the hadoop-azure Module
 
 The hadoop-azure module includes a full suite of unit tests.  Most of the tests
