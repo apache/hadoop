@@ -18,7 +18,7 @@
 package org.apache.hadoop.scm;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +43,10 @@ public class TestArchive {
   private static final int DIR_COUNT = 10;
   private static final int SUB_DIR_COUNT = 3;
   private static final int FILE_COUNT = 10;
+  private long checksumWrite = 0L;
+  private long checksumRead = 0L;
+  private long tmp = 0L;
+
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
@@ -68,10 +72,12 @@ public class TestArchive {
         for (int z = 0; z < FILE_COUNT; z++) {
           Path temp = Paths.get(targetDir.getPath().concat(File.separator)
               .concat(String.format("File%d.txt", z)));
-          byte[] buf = RandomStringUtils.randomAlphanumeric(r.nextInt(megaByte))
-              .getBytes("UTF-8");
+          byte[] buf = RandomUtils.nextBytes(r.nextInt(megaByte));
           Files.write(temp, buf);
+          crc.reset();
           crc.update(buf, 0, buf.length);
+          tmp = crc.getValue();
+          checksumWrite +=tmp;
         }
       }
     }
@@ -79,7 +85,6 @@ public class TestArchive {
 
   @Test
   public void testArchive() throws Exception {
-    Checksum readCrc = new Adler32();
     File archiveFile = new File(outputFolder.getRoot() + File.separator
         + "test.container.zip");
     long zipCheckSum = FileUtil.zip(folder.getRoot(), archiveFile);
@@ -98,9 +103,12 @@ public class TestArchive {
     while (iter.hasNext()) {
       count++;
       byte[] buf = Files.readAllBytes(iter.next().toPath());
-      readCrc.update(buf, 0, buf.length);
+      crc.reset();
+      crc.update(buf, 0, buf.length);
+      tmp = crc.getValue();
+      checksumRead += tmp;
     }
     Assert.assertEquals(DIR_COUNT * SUB_DIR_COUNT * FILE_COUNT, count);
-    Assert.assertEquals(crc.getValue(), readCrc.getValue());
+    Assert.assertEquals(checksumWrite, checksumRead);
   }
 }
