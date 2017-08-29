@@ -2027,24 +2027,30 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
         LOG.debug("Found {} as an explicit blob. Checking if it's a file or folder.", key);
 
-        // The blob exists, so capture the metadata from the blob
-        // properties.
-        blob.downloadAttributes(getInstrumentedContext());
-        BlobProperties properties = blob.getProperties();
+        try {
+          // The blob exists, so capture the metadata from the blob
+          // properties.
+          blob.downloadAttributes(getInstrumentedContext());
+          BlobProperties properties = blob.getProperties();
 
-        if (retrieveFolderAttribute(blob)) {
-          LOG.debug("{} is a folder blob.", key);
-          return new FileMetadata(key, properties.getLastModified().getTime(),
-              getPermissionStatus(blob), BlobMaterialization.Explicit);
-        } else {
+          if (retrieveFolderAttribute(blob)) {
+            LOG.debug("{} is a folder blob.", key);
+            return new FileMetadata(key, properties.getLastModified().getTime(),
+                getPermissionStatus(blob), BlobMaterialization.Explicit);
+          } else {
 
-          LOG.debug("{} is a normal blob.", key);
+            LOG.debug("{} is a normal blob.", key);
 
-          return new FileMetadata(
-              key, // Always return denormalized key with metadata.
-              getDataLength(blob, properties),
-              properties.getLastModified().getTime(),
-              getPermissionStatus(blob));
+            return new FileMetadata(
+                key, // Always return denormalized key with metadata.
+                getDataLength(blob, properties),
+                properties.getLastModified().getTime(),
+                getPermissionStatus(blob));
+          }
+        } catch(StorageException e){
+          if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
+            throw e;
+          }
         }
       }
 
