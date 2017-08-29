@@ -426,11 +426,9 @@ public class NMWebServices {
         public void write(OutputStream os) throws IOException,
             WebApplicationException {
           try {
-            int bufferSize = 65536;
-            byte[] buf = new byte[bufferSize];
-            LogToolUtils.outputContainerLog(containerId.toString(),
-                nmContext.getNodeId().toString(), outputFileName, fileLength,
-                bytes, lastModifiedTime, fis, os, buf,
+            LogToolUtils.outputContainerLogThroughZeroCopy(
+                containerId.toString(), nmContext.getNodeId().toString(),
+                outputFileName, fileLength, bytes, lastModifiedTime, fis, os,
                 ContainerLogAggregationType.LOCAL);
             StringBuilder sb = new StringBuilder();
             String endOfFile = "End of LogType:" + outputFileName;
@@ -451,6 +449,8 @@ public class NMWebServices {
             Application app = nmContext.getApplications().get(appId);
             String appOwner = app == null ? null : app.getUser();
             try {
+              int bufferSize = 65536;
+              byte[] buf = new byte[bufferSize];
               LogToolUtils.outputAggregatedContainerLog(nmContext.getConf(),
                   appId, appOwner, containerId.toString(),
                   nmContext.getNodeId().toString(), outputFileName, bytes,
