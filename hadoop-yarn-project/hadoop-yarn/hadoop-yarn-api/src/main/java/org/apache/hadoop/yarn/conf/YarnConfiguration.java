@@ -2753,6 +2753,15 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.router.webapp."
           + "DefaultRequestInterceptorREST";
 
+  /**
+   * The interceptor class used in FederationInterceptorREST should return
+   * partial AppReports.
+   */
+  public static final String ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
+      ROUTER_WEBAPP_PREFIX + "partial-result.enabled";
+  public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
+      false;
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////

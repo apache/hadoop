@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUt
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.junit.Assert;
 import org.junit.Test;
@@ -372,6 +373,22 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppInfo response = interceptor.getApp(null, "Application_wrong_id", null);
 
     Assert.assertNull(response);
+  }
+
+  /**
+   * This test validates the correctness of GetApplicationsReport in case each
+   * subcluster provided one application.
+   */
+  @Test
+  public void testGetApplicationsReport()
+      throws YarnException, IOException, InterruptedException {
+
+    AppsInfo responseGet = interceptor.getApps(null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null);
+
+    Assert.assertNotNull(responseGet);
+    Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getApps().size());
+    // The merged operations will be tested in TestRouterWebServiceUtil
   }
 
 }

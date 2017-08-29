@@ -40,4 +40,8 @@ public class AppsInfo {
     return app;
   }
 
+  public void addAll(ArrayList<AppInfo> appsInfo) {
+    app.addAll(appsInfo);
+  }
+
 }

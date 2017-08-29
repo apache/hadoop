@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
@@ -269,6 +270,50 @@ public class TestFederationInterceptorRESTRetry
             .getApplicationHomeSubCluster(
                 GetApplicationHomeSubClusterRequest.newInstance(appId))
             .getApplicationHomeSubCluster().getHomeSubCluster());
+  }
+
+  /**
+   * This test validates the correctness of GetApps in case the cluster is
+   * composed of only 1 bad SubCluster.
+   */
+  @Test
+  public void testGetAppsOneBadSC()
+      throws YarnException, IOException, InterruptedException {
+
+    setupCluster(Arrays.asList(bad2));
+
+    AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null);
+    Assert.assertNull(response);
+  }
+
+  /**
+   * This test validates the correctness of GetApps in case the cluster is
+   * composed of only 2 bad SubClusters.
+   */
+  @Test
+  public void testGetAppsTwoBadSCs()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(bad1, bad2));
+
+    AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null);
+    Assert.assertNull(response);
+  }
+
+  /**
+   * This test validates the correctness of GetApps in case the cluster is
+   * composed of only 1 bad SubCluster and a good one.
+   */
+  @Test
+  public void testGetAppsOneBadOneGood()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(good, bad2));
+
+    AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getApps().size());
   }
 
 }

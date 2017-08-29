@@ -25,6 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -102,8 +107,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private RouterPolicyFacade policyFacade;
   private RouterMetrics routerMetrics;
   private final Clock clock = new MonotonicClock();
+  private boolean returnPartialReport;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
+
+  /**
+   * Thread pool used for asynchronous operations.
+   */
+  private ExecutorService threadpool;
 
   @Override
   public void init(String user) {
@@ -125,6 +136,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     interceptors = new HashMap<SubClusterId, DefaultRequestInterceptorREST>();
     routerMetrics = RouterMetrics.getMetrics();
+    threadpool = Executors.newCachedThreadPool();
+
+    returnPartialReport =
+        conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED,
+            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED);
   }
 
   private SubClusterId getRandomActiveSubCluster(
@@ -586,6 +602,99 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     return response;
   }
 
+  /**
+   * The Yarn Router will forward the request to all the Yarn RMs in parallel,
+   * after that it will group all the ApplicationReports by the ApplicationId.
+   * <p>
+   * Possible failure:
+   * <p>
+   * Client: identical behavior as {@code RMWebServices}.
+   * <p>
+   * Router: the Client will timeout and resubmit the request.
+   * <p>
+   * ResourceManager: the Router calls each Yarn RM in parallel by using one
+   * thread for each Yarn RM. In case a Yarn RM fails, a single call will
+   * timeout. However the Router will merge the ApplicationReports it got, and
+   * provides a partial list to the client.
+   * <p>
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
+  @Override
+  public AppsInfo getApps(HttpServletRequest hsr, String stateQuery,
+      Set<String> statesQuery, String finalStatusQuery, String userQuery,
+      String queueQuery, String count, String startedBegin, String startedEnd,
+      String finishBegin, String finishEnd, Set<String> applicationTypes,
+      Set<String> applicationTags, Set<String> unselectedFields) {
+    AppsInfo apps = new AppsInfo();
+    long startTime = clock.getTime();
+
+    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    try {
+      subClustersActive = federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      routerMetrics.incrMultipleAppsFailedRetrieved();
+      return null;
+    }
+
+    // Send the requests in parallel
+
+    ExecutorCompletionService<AppsInfo> compSvc =
+        new ExecutorCompletionService<AppsInfo>(this.threadpool);
+
+    for (final SubClusterInfo info : subClustersActive.values()) {
+      compSvc.submit(new Callable<AppsInfo>() {
+        @Override
+        public AppsInfo call() {
+          DefaultRequestInterceptorREST interceptor =
+              getOrCreateInterceptorForSubCluster(info.getSubClusterId(),
+                  info.getClientRMServiceAddress());
+          AppsInfo rmApps = interceptor.getApps(hsr, stateQuery, statesQuery,
+              finalStatusQuery, userQuery, queueQuery, count, startedBegin,
+              startedEnd, finishBegin, finishEnd, applicationTypes,
+              applicationTags, unselectedFields);
+
+          if (rmApps == null) {
+            routerMetrics.incrMultipleAppsFailedRetrieved();
+            LOG.error("Subcluster " + info.getSubClusterId()
+                + " failed to return appReport.");
+            return null;
+          }
+          return rmApps;
+        }
+      });
+    }
+
+    // Collect all the responses in parallel
+
+    for (int i = 0; i < subClustersActive.values().size(); i++) {
+      try {
+        Future<AppsInfo> future = compSvc.take();
+        AppsInfo appsResponse = future.get();
+
+        long stopTime = clock.getTime();
+        routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+
+        if (appsResponse != null) {
+          apps.addAll(appsResponse.getApps());
+        }
+      } catch (Throwable e) {
+        routerMetrics.incrMultipleAppsFailedRetrieved();
+        LOG.warn("Failed to get application report ", e);
+      }
+    }
+
+    if (apps.getApps().isEmpty()) {
+      return null;
+    }
+
+    // Merge all the application reports got from all the available Yarn RMs
+
+    return RouterWebServiceUtil.mergeAppsInfo(apps.getApps(),
+        returnPartialReport);
+  }
+
   @Override
   public ClusterInfo get() {
     return getClusterInfo();
@@ -636,15 +745,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public ApplicationStatisticsInfo getAppStatistics(HttpServletRequest hsr,
       Set<String> stateQueries, Set<String> typeQueries) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public AppsInfo getApps(HttpServletRequest hsr, String stateQuery,
-      Set<String> statesQuery, String finalStatusQuery, String userQuery,
-      String queueQuery, String count, String startedBegin, String startedEnd,
-      String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
     throw new NotImplementedException();
   }
 
