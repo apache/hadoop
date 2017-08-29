@@ -46,7 +46,7 @@ public class VolumeManagerImpl implements VolumeManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(VolumeManagerImpl.class);
 
-  private final MetadataManager metadataManager;
+  private final KSMMetadataManager metadataManager;
   private final int maxUserVolumeCount;
 
   /**
@@ -54,7 +54,7 @@ public class VolumeManagerImpl implements VolumeManager {
    * @param conf - Ozone configuration.
    * @throws IOException
    */
-  public VolumeManagerImpl(MetadataManager metadataManager,
+  public VolumeManagerImpl(KSMMetadataManager metadataManager,
       OzoneConfiguration conf) throws IOException {
     this.metadataManager = metadataManager;
     this.maxUserVolumeCount = conf.getInt(OZONE_KSM_USER_MAX_VOLUME,

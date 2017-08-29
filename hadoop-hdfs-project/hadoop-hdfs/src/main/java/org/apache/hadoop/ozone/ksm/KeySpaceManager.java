@@ -78,7 +78,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
 
   private final RPC.Server ksmRpcServer;
   private final InetSocketAddress ksmRpcAddress;
-  private final MetadataManager metadataManager;
+  private final KSMMetadataManager metadataManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
   private final KeyManager keyManager;
@@ -102,7 +102,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
         handlerCount);
     ksmRpcAddress = OzoneClientUtils.updateRPCListenAddress(conf,
         OZONE_KSM_ADDRESS_KEY, ksmNodeRpcAddr, ksmRpcServer);
-    metadataManager = new MetadataManagerImpl(conf);
+    metadataManager = new KSMMetadataManagerImpl(conf);
     volumeManager = new VolumeManagerImpl(metadataManager, conf);
     bucketManager = new BucketManagerImpl(metadataManager);
     metrics = KSMMetrics.create();
@@ -168,7 +168,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
    * Get metadata manager.
    * @return metadata manager.
    */
-  public MetadataManager getMetadataManager() {
+  public KSMMetadataManager getMetadataManager() {
     return metadataManager;
   }
 

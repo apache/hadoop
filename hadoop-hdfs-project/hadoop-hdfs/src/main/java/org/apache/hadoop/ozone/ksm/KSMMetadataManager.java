@@ -30,7 +30,7 @@ import java.util.concurrent.locks.Lock;
 /**
  * KSM metadata manager interface.
  */
-public interface MetadataManager {
+public interface KSMMetadataManager {
   /**
    * Start metadata manager.
    */

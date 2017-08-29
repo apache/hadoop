@@ -58,13 +58,13 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
 /**
  * KSM metadata manager interface.
  */
-public class MetadataManagerImpl implements MetadataManager {
+public class KSMMetadataManagerImpl implements KSMMetadataManager {
 
   private final MetadataStore store;
   private final ReadWriteLock lock;
 
 
-  public MetadataManagerImpl(OzoneConfiguration conf) throws IOException {
+  public KSMMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     File metaDir = OzoneUtils.getScmMetadirPath(conf);
     final int cacheSize = conf.getInt(OZONE_KSM_DB_CACHE_SIZE_MB,
         OZONE_KSM_DB_CACHE_SIZE_DEFAULT);
