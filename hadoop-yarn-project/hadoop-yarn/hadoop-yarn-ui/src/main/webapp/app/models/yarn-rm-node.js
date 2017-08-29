@@ -53,7 +53,7 @@ export default DS.Model.extend({
   nodeStateStyle: function() {
     var style = "default";
     var nodeState = this.get("state");
-    if (nodeState === "REBOOTED") {
+    if (nodeState === "REBOOTED" || nodeState === "DECOMMISSIONING") {
       style = "warning";
     } else if (nodeState === "UNHEALTHY" || nodeState === "DECOMMISSIONED" ||
           nodeState === "LOST" || nodeState === "SHUTDOWN") {
