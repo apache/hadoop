@@ -21,6 +21,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
@@ -236,17 +239,20 @@ public class NMWebServices {
     try {
       final FileInputStream fis = ContainerLogsUtils.openLogFileForRead(
           containerIdStr, logFile, nmContext);
-      
+      final FileChannel inputChannel = fis.getChannel();
       StreamingOutput stream = new StreamingOutput() {
         @Override
         public void write(OutputStream os) throws IOException,
             WebApplicationException {
+          WritableByteChannel outputChannel = Channels.newChannel(os);
           try {
-            int bufferSize = 65536;
-            byte[] buf = new byte[bufferSize];
-            int len;
-            while ((len = fis.read(buf, 0, bufferSize)) > 0) {
-              os.write(buf, 0, len);
+            long remaining = inputChannel.size();
+            long position = 0;
+            while (remaining > 0) {
+              long transferred =
+                  inputChannel.transferTo(position, remaining, outputChannel);
+              remaining -= transferred;
+              position += transferred;
             }
             os.flush();
           } finally {
