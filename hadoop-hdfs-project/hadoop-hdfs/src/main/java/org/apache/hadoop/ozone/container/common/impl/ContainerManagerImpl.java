@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto
@@ -36,10 +37,12 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.interfaces
     .ContainerLocationManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
@@ -107,6 +110,8 @@ public class ContainerManagerImpl implements ContainerManager {
   private KeyManager keyManager;
   private Configuration conf;
 
+  private ContainerDeletionChoosingPolicy containerDeletionChooser;
+
   /**
    * Init call that sets up a container Manager.
    *
@@ -127,6 +132,12 @@ public class ContainerManagerImpl implements ContainerManager {
     this.conf = config;
     readLock();
     try {
+      // TODO: Use pending deletion blocks based policy as default way
+      containerDeletionChooser = ReflectionUtils.newInstance(conf.getClass(
+          ScmConfigKeys.OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY,
+          RandomContainerDeletionChoosingPolicy.class,
+          ContainerDeletionChoosingPolicy.class), conf);
+
       for (StorageLocation path : containerDirs) {
         File directory = Paths.get(path.getNormalizedUri()).toFile();
         if (!directory.exists() && !directory.mkdirs()) {
@@ -416,7 +427,7 @@ public class ContainerManagerImpl implements ContainerManager {
         throw new StorageContainerException("No such container. Name : " +
             containerName, CONTAINER_NOT_FOUND);
       }
-      ContainerUtils.removeContainer(status.containerData, conf, forceDelete);
+      ContainerUtils.removeContainer(status.getContainer(), conf, forceDelete);
       containerMap.remove(containerName);
     } catch (StorageContainerException e) {
       throw e;
@@ -814,51 +825,20 @@ public class ContainerManagerImpl implements ContainerManager {
     }
   }
 
-  /**
-   * This is an immutable class that represents the state of a container. if the
-   * container reading encountered an error when we boot up we will post that
-   * info to a recovery queue and keep the info in the containerMap.
-   * <p/>
-   * if and when the issue is fixed, the expectation is that this entry will be
-   * deleted by the recovery thread from the containerMap and will insert entry
-   * instead of modifying this class.
-   */
+  @Override
+  public List<ContainerData> chooseContainerForBlockDeletion(
+      int count) throws StorageContainerException {
+    readLock();
+    try {
+      return containerDeletionChooser.chooseContainerForBlockDeletion(
+          count, containerMap);
+    } finally {
+      readUnlock();
+    }
+  }
+
   @VisibleForTesting
-  static class ContainerStatus {
-    private final ContainerData containerData;
-    private final boolean active;
-
-    /**
-     * Creates a Container Status class.
-     *
-     * @param containerData - ContainerData.
-     * @param active - Active or not active.
-     */
-    ContainerStatus(ContainerData containerData, boolean active) {
-      this.containerData = containerData;
-      this.active = active;
-    }
-
-    /**
-     * Returns container if it is active. It is not active if we have had an
-     * error and we are waiting for the background threads to fix the issue.
-     *
-     * @return ContainerData.
-     */
-    public ContainerData getContainer() {
-      if (active) {
-        return containerData;
-      }
-      return null;
-    }
-
-    /**
-     * Indicates if a container is Active.
-     *
-     * @return true if it is active.
-     */
-    public boolean isActive() {
-      return active;
-    }
+  public ContainerDeletionChoosingPolicy getContainerDeletionChooser() {
+    return containerDeletionChooser;
   }
 }

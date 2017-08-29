@@ -189,6 +189,8 @@ public final class ScmConfigKeys {
       "ozone.scm.container.provision_batch_size";
   public static final int OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT = 5;
 
+  public static final String OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY =
+      "ozone.scm.container.deletion-choosing.policy";
 
   /**
    * Don't start processing a pool if we have not had a minimum number of
