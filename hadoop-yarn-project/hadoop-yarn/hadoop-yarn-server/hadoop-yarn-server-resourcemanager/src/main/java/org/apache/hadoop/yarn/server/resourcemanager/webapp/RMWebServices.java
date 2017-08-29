@@ -568,7 +568,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     List<ApplicationReport> appReports = null;
     try {
-      appReports = rm.getClientRMService().getApplications(request, false)
+      appReports = rm.getClientRMService().getApplications(request)
           .getApplicationList();
     } catch (YarnException e) {
       LOG.error("Unable to retrieve apps from ClientRMService", e);
