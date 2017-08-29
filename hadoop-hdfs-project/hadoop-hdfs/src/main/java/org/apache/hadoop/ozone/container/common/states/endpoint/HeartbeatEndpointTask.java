@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.ZonedDateTime;
 import java.util.concurrent.Callable;
 
 /**
@@ -103,6 +104,7 @@ public class HeartbeatEndpointTask
           .sendHeartbeat(datanodeID, this.context.getNodeReport(),
               this.context.getContainerReportState());
       processResponse(reponse);
+      rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
       rpcEndpoint.logIfNeeded(ex);

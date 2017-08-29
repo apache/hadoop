@@ -95,6 +95,52 @@
   {/dn.BPServiceActorInfo}
 </table>
 
+{#ozone.enabled}
+<div class="page-header"><h1>Ozone: SCM Connections</h1></div>
+<table class="table">
+  <thead>
+  <tr>
+    <th>SCM Address</th>
+    <th>Status</th>
+    <th>Version</th>
+    <th>Missed count</th>
+    <th>Last heartbeat</th>
+  </tr>
+  </thead>
+  {#ozone.SCMServers}
+  <tr>
+    <td>{addressString}</td>
+    <td>{state}</td>
+    <td>{versionNumber}</td>
+    <td>{missedCount}s</td>
+    <td>{lastSuccessfulHeartbeat|elapsed|fmt_time}</td>
+  </tr>
+  {/ozone.SCMServers}
+</table>
+
+<div class="page-header"><h1>Ozone: Storage locations</h1></div>
+<table class="table">
+  <thead>
+  <tr>
+    <th>ID</th>
+    <th>Capacity</th>
+    <th>Remaining</th>
+    <th>SCM used</th>
+    <th>failed</th>
+  </tr>
+  </thead>
+  {#ozone.LocationReport}
+  <tr>
+    <td>{id}</td>
+    <td>{capacity|fmt_bytes}</td>
+    <td>{remaining|fmt_bytes}</td>
+    <td>{scmUsed|fmt_bytes}</td>
+    <td>{failed}</td>
+  </tr>
+  {/ozone.LocationReport}
+</table>
+{/ozone.enabled}
+
 <div class="page-header"><h1>Volume Information</h1></div>
 <table class="table">
   <thead>
