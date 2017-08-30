@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
@@ -37,18 +36,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The service wrapper of {@link TimelineDelegationTokenSecretManager}
+ * The service wrapper of {@link TimelineV1DelegationTokenSecretManager}.
  */
 @Private
 @Unstable
-public class TimelineDelegationTokenSecretManagerService extends
-    AbstractService {
-
-  private TimelineDelegationTokenSecretManager secretManager = null;
+public class TimelineV1DelegationTokenSecretManagerService extends
+    TimelineDelgationTokenSecretManagerService {
   private TimelineStateStore stateStore = null;
 
-  public TimelineDelegationTokenSecretManagerService() {
-    super(TimelineDelegationTokenSecretManagerService.class.getName());
+  public TimelineV1DelegationTokenSecretManagerService() {
+    super(TimelineV1DelegationTokenSecretManagerService.class.getName());
   }
 
   @Override
@@ -58,19 +55,7 @@ public class TimelineDelegationTokenSecretManagerService extends
       stateStore = createStateStore(conf);
       stateStore.init(conf);
     }
-
-    long secretKeyInterval =
-        conf.getLong(YarnConfiguration.TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL,
-            YarnConfiguration.DEFAULT_TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL);
-    long tokenMaxLifetime =
-        conf.getLong(YarnConfiguration.TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME,
-            YarnConfiguration.DEFAULT_TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME);
-    long tokenRenewInterval =
-        conf.getLong(YarnConfiguration.TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL,
-            YarnConfiguration.DEFAULT_TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL);
-    secretManager = new TimelineDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, 3600000, stateStore);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
@@ -78,10 +63,9 @@ public class TimelineDelegationTokenSecretManagerService extends
     if (stateStore != null) {
       stateStore.start();
       TimelineServiceState state = stateStore.loadState();
-      secretManager.recover(state);
+      ((TimelineV1DelegationTokenSecretManager)
+          getTimelineDelegationTokenSecretManager()).recover(state);
     }
-
-    secretManager.startThreads();
     super.serviceStart();
   }
 
@@ -90,9 +74,18 @@ public class TimelineDelegationTokenSecretManagerService extends
     if (stateStore != null) {
       stateStore.stop();
     }
+    super.serviceStop();
+  }
 
-    secretManager.stopThreads();
-    super.stop();
+  @Override
+  protected AbstractDelegationTokenSecretManager
+      <TimelineDelegationTokenIdentifier>
+      createTimelineDelegationTokenSecretManager(long secretKeyInterval,
+          long tokenMaxLifetime, long tokenRenewInterval,
+          long tokenRemovalScanInterval) {
+    return new TimelineV1DelegationTokenSecretManager(secretKeyInterval,
+        tokenMaxLifetime, tokenRenewInterval, tokenRemovalScanInterval,
+        stateStore);
   }
 
   protected TimelineStateStore createStateStore(
@@ -104,27 +97,20 @@ public class TimelineDelegationTokenSecretManagerService extends
   }
 
   /**
-   * Ge the instance of {link #TimelineDelegationTokenSecretManager}
-   *
-   * @return the instance of {link #TimelineDelegationTokenSecretManager}
+   * Delegation token secret manager for ATSv1 and ATSv1.5.
    */
-  public TimelineDelegationTokenSecretManager
-  getTimelineDelegationTokenSecretManager() {
-    return secretManager;
-  }
-
   @Private
   @Unstable
-  public static class TimelineDelegationTokenSecretManager extends
+  public static class TimelineV1DelegationTokenSecretManager extends
       AbstractDelegationTokenSecretManager<TimelineDelegationTokenIdentifier> {
 
     public static final Logger LOG =
-        LoggerFactory.getLogger(TimelineDelegationTokenSecretManager.class);
+        LoggerFactory.getLogger(TimelineV1DelegationTokenSecretManager.class);
 
     private TimelineStateStore stateStore;
 
     /**
-     * Create a timeline secret manager
+     * Create a timeline v1 secret manager.
      * @param delegationKeyUpdateInterval the number of milliseconds for rolling
      *        new secret keys.
      * @param delegationTokenMaxLifetime the maximum lifetime of the delegation
@@ -135,7 +121,7 @@ public class TimelineDelegationTokenSecretManagerService extends
      *        scanned for expired tokens in milliseconds
      * @param stateStore timeline service state store
      */
-    public TimelineDelegationTokenSecretManager(
+    public TimelineV1DelegationTokenSecretManager(
         long delegationKeyUpdateInterval,
         long delegationTokenMaxLifetime,
         long delegationTokenRenewInterval,
@@ -236,5 +222,4 @@ public class TimelineDelegationTokenSecretManagerService extends
       }
     }
   }
-
 }

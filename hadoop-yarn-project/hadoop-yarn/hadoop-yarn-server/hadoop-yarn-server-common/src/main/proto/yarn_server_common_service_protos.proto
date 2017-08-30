@@ -22,6 +22,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.yarn;
 
+import "Security.proto";
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
 import "yarn_service_protos.proto";
@@ -90,7 +91,7 @@ message NodeHeartbeatRequestProto {
   optional MasterKeyProto last_known_nm_token_master_key = 3;
   optional NodeLabelsProto nodeLabels = 4;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 5;
-  repeated AppCollectorsMapProto registered_collectors = 6;
+  repeated AppCollectorDataProto registering_collectors = 6;
 }
 
 message LogAggregationReportProto {
@@ -116,7 +117,7 @@ message NodeHeartbeatResponseProto {
   repeated SignalContainerRequestProto containers_to_signal = 13;
   optional ResourceProto resource = 14;
   optional ContainerQueuingLimitProto container_queuing_limit = 15;
-  repeated AppCollectorsMapProto app_collectors_map = 16;
+  repeated AppCollectorDataProto app_collectors = 16;
   // to be used in place of containers_to_decrease
   repeated ContainerProto containers_to_update = 17;
 }
@@ -134,16 +135,19 @@ message SystemCredentialsForAppsProto {
 ////////////////////////////////////////////////////////////////////////
 ////// From collector_nodemanager_protocol ////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-message AppCollectorsMapProto {
-  optional ApplicationIdProto appId = 1;
-  optional string appCollectorAddr = 2;
+message AppCollectorDataProto {
+  optional ApplicationIdProto app_id = 1;
+  optional string app_collector_addr = 2;
+  optional int64 rm_identifier = 3 [default = -1];
+  optional int64 version = 4 [default = -1];
+  optional hadoop.common.TokenProto app_collector_token = 5;
 }
 
 //////////////////////////////////////////////////////
 /////// collector_nodemanager_protocol //////////////
 //////////////////////////////////////////////////////
 message ReportNewCollectorInfoRequestProto {
-  repeated AppCollectorsMapProto app_collectors = 1;
+  repeated AppCollectorDataProto app_collectors = 1;
 }
 
 message ReportNewCollectorInfoResponseProto {

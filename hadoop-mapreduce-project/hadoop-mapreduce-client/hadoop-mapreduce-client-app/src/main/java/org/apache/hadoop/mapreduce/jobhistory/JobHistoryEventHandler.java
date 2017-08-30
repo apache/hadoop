@@ -78,6 +78,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -1124,7 +1125,7 @@ public class JobHistoryEventHandler extends AbstractService
   private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
       createTaskEntity(HistoryEvent event, long timestamp, String taskId,
       String entityType, String relatedJobEntity, JobId jobId,
-      boolean setCreatedTime) {
+      boolean setCreatedTime, long taskIdPrefix) {
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         createBaseEntity(event, timestamp, entityType, setCreatedTime);
     entity.setId(taskId);
@@ -1133,6 +1134,7 @@ public class JobHistoryEventHandler extends AbstractService
           ((TaskStartedEvent)event).getTaskType().toString());
     }
     entity.addIsRelatedToEntity(relatedJobEntity, jobId.toString());
+    entity.setIdPrefix(taskIdPrefix);
     return entity;
   }
 
@@ -1141,11 +1143,12 @@ public class JobHistoryEventHandler extends AbstractService
   private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
       createTaskAttemptEntity(HistoryEvent event, long timestamp,
       String taskAttemptId, String entityType, String relatedTaskEntity,
-      String taskId, boolean setCreatedTime) {
+      String taskId, boolean setCreatedTime, long taskAttemptIdPrefix) {
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         createBaseEntity(event, timestamp, entityType, setCreatedTime);
     entity.setId(taskAttemptId);
     entity.addIsRelatedToEntity(relatedTaskEntity, taskId);
+    entity.setIdPrefix(taskAttemptIdPrefix);
     return entity;
   }
 
@@ -1196,6 +1199,8 @@ public class JobHistoryEventHandler extends AbstractService
     String taskId = null;
     String taskAttemptId = null;
     boolean setCreatedTime = false;
+    long taskIdPrefix = 0;
+    long taskAttemptIdPrefix = 0;
 
     switch (event.getEventType()) {
     // Handle job events
@@ -1218,15 +1223,21 @@ public class JobHistoryEventHandler extends AbstractService
     case TASK_STARTED:
       setCreatedTime = true;
       taskId = ((TaskStartedEvent)event).getTaskId().toString();
+      taskIdPrefix = TimelineServiceHelper.
+          invertLong(((TaskStartedEvent)event).getStartTime());
       break;
     case TASK_FAILED:
       taskId = ((TaskFailedEvent)event).getTaskId().toString();
+      taskIdPrefix = TimelineServiceHelper.
+          invertLong(((TaskFailedEvent)event).getStartTime());
       break;
     case TASK_UPDATED:
       taskId = ((TaskUpdatedEvent)event).getTaskId().toString();
       break;
     case TASK_FINISHED:
       taskId = ((TaskFinishedEvent)event).getTaskId().toString();
+      taskIdPrefix = TimelineServiceHelper.
+          invertLong(((TaskFinishedEvent)event).getStartTime());
       break;
     case MAP_ATTEMPT_STARTED:
     case REDUCE_ATTEMPT_STARTED:
@@ -1234,6 +1245,8 @@ public class JobHistoryEventHandler extends AbstractService
       taskId = ((TaskAttemptStartedEvent)event).getTaskId().toString();
       taskAttemptId = ((TaskAttemptStartedEvent)event).
           getTaskAttemptId().toString();
+      taskAttemptIdPrefix = TimelineServiceHelper.
+          invertLong(((TaskAttemptStartedEvent)event).getStartTime());
       break;
     case CLEANUP_ATTEMPT_STARTED:
     case SETUP_ATTEMPT_STARTED:
@@ -1253,16 +1266,22 @@ public class JobHistoryEventHandler extends AbstractService
           getTaskId().toString();
       taskAttemptId = ((TaskAttemptUnsuccessfulCompletionEvent)event).
           getTaskAttemptId().toString();
+      taskAttemptIdPrefix = TimelineServiceHelper.invertLong(
+          ((TaskAttemptUnsuccessfulCompletionEvent)event).getStartTime());
       break;
     case MAP_ATTEMPT_FINISHED:
       taskId = ((MapAttemptFinishedEvent)event).getTaskId().toString();
       taskAttemptId = ((MapAttemptFinishedEvent)event).
           getAttemptId().toString();
+      taskAttemptIdPrefix = TimelineServiceHelper.
+          invertLong(((MapAttemptFinishedEvent)event).getStartTime());
       break;
     case REDUCE_ATTEMPT_FINISHED:
       taskId = ((ReduceAttemptFinishedEvent)event).getTaskId().toString();
       taskAttemptId = ((ReduceAttemptFinishedEvent)event).
           getAttemptId().toString();
+      taskAttemptIdPrefix = TimelineServiceHelper.
+          invertLong(((ReduceAttemptFinishedEvent)event).getStartTime());
       break;
     case SETUP_ATTEMPT_FINISHED:
     case CLEANUP_ATTEMPT_FINISHED:
@@ -1291,12 +1310,12 @@ public class JobHistoryEventHandler extends AbstractService
         // TaskEntity
         tEntity = createTaskEntity(event, timestamp, taskId,
             MAPREDUCE_TASK_ENTITY_TYPE, MAPREDUCE_JOB_ENTITY_TYPE,
-            jobId, setCreatedTime);
+            jobId, setCreatedTime, taskIdPrefix);
       } else {
         // TaskAttemptEntity
         tEntity = createTaskAttemptEntity(event, timestamp, taskAttemptId,
             MAPREDUCE_TASK_ATTEMPT_ENTITY_TYPE, MAPREDUCE_TASK_ENTITY_TYPE,
-            taskId, setCreatedTime);
+            taskId, setCreatedTime, taskAttemptIdPrefix);
       }
     }
     try {

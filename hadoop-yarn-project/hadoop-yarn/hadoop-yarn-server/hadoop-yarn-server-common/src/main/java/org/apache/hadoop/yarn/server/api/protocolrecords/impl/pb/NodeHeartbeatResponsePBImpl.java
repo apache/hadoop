@@ -26,26 +26,30 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ContainerQueuingLimitProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
@@ -70,7 +74,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   private List<ApplicationId> applicationsToCleanup = null;
   private Map<ApplicationId, ByteBuffer> systemCredentials = null;
   private Resource resource = null;
-  private Map<ApplicationId, String> appCollectorsMap = null;
+  private Map<ApplicationId, AppCollectorData> appCollectorsMap = null;
 
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -146,11 +150,21 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
 
   private void addAppCollectorsMapToProto() {
     maybeInitBuilder();
-    builder.clearAppCollectorsMap();
-    for (Map.Entry<ApplicationId, String> entry : appCollectorsMap.entrySet()) {
-      builder.addAppCollectorsMap(AppCollectorsMapProto.newBuilder()
-          .setAppId(convertToProtoFormat(entry.getKey()))
-          .setAppCollectorAddr(entry.getValue()));
+    builder.clearAppCollectors();
+    for (Map.Entry<ApplicationId, AppCollectorData> entry
+        : appCollectorsMap.entrySet()) {
+      AppCollectorData data = entry.getValue();
+      AppCollectorDataProto.Builder appCollectorDataBuilder =
+          AppCollectorDataProto.newBuilder()
+              .setAppId(convertToProtoFormat(entry.getKey()))
+              .setAppCollectorAddr(data.getCollectorAddr())
+              .setRmIdentifier(data.getRMIdentifier())
+              .setVersion(data.getVersion());
+      if (data.getCollectorToken() != null) {
+        appCollectorDataBuilder.setAppCollectorToken(
+            convertToProtoFormat(data.getCollectorToken()));
+      }
+      builder.addAppCollectors(appCollectorDataBuilder);
     }
   }
 
@@ -568,7 +582,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   }
 
   @Override
-  public Map<ApplicationId, String> getAppCollectorsMap() {
+  public Map<ApplicationId, AppCollectorData> getAppCollectors() {
     if (this.appCollectorsMap != null) {
       return this.appCollectorsMap;
     }
@@ -589,12 +603,19 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
 
   private void initAppCollectorsMap() {
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<AppCollectorsMapProto> list = p.getAppCollectorsMapList();
+    List<AppCollectorDataProto> list = p.getAppCollectorsList();
     if (!list.isEmpty()) {
       this.appCollectorsMap = new HashMap<>();
-      for (AppCollectorsMapProto c : list) {
+      for (AppCollectorDataProto c : list) {
         ApplicationId appId = convertFromProtoFormat(c.getAppId());
-        this.appCollectorsMap.put(appId, c.getAppCollectorAddr());
+        Token collectorToken = null;
+        if (c.hasAppCollectorToken()){
+          collectorToken = convertFromProtoFormat(c.getAppCollectorToken());
+        }
+        AppCollectorData data = AppCollectorData.newInstance(appId,
+            c.getAppCollectorAddr(), c.getRmIdentifier(), c.getVersion(),
+            collectorToken);
+        this.appCollectorsMap.put(appId, data);
       }
     }
   }
@@ -611,14 +632,14 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   }
 
   @Override
-  public void setAppCollectorsMap(
-      Map<ApplicationId, String> appCollectorsMap) {
-    if (appCollectorsMap == null || appCollectorsMap.isEmpty()) {
+  public void setAppCollectors(
+      Map<ApplicationId, AppCollectorData> appCollectors) {
+    if (appCollectors == null || appCollectors.isEmpty()) {
       return;
     }
     maybeInitBuilder();
-    this.appCollectorsMap = new HashMap<ApplicationId, String>();
-    this.appCollectorsMap.putAll(appCollectorsMap);
+    this.appCollectorsMap = new HashMap<>();
+    this.appCollectorsMap.putAll(appCollectors);
   }
 
   @Override
@@ -772,6 +793,14 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   private SignalContainerRequestProto convertToProtoFormat(
       SignalContainerRequest t) {
     return ((SignalContainerRequestPBImpl)t).getProto();
+  }
+
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl) t).getProto();
+  }
+
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 }
 

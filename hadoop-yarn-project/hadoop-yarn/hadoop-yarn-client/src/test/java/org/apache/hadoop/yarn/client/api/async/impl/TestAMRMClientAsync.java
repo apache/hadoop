@@ -426,7 +426,7 @@ public class TestAMRMClientAsync {
     }
     AllocateResponse response =
         AllocateResponse.newInstance(0, completed, allocated,
-            new ArrayList<NodeReport>(), null, null, 1, null, nmTokens,
+            new ArrayList<NodeReport>(), null, null, 1, null, nmTokens, null,
             updatedContainers);
     return response;
   }

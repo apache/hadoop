@@ -16,31 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.records;
-
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.Records;
-
-
-@Private
-public abstract class AppCollectorsMap {
-
-  public static AppCollectorsMap newInstance(
-      ApplicationId id, String collectorAddr) {
-    AppCollectorsMap appCollectorsMap =
-        Records.newRecord(AppCollectorsMap.class);
-    appCollectorsMap.setApplicationId(id);
-    appCollectorsMap.setCollectorAddr(collectorAddr);
-    return appCollectorsMap;
-  }
-
-  public abstract ApplicationId getApplicationId();
-
-  public abstract void setApplicationId(ApplicationId id);
-
-  public abstract String getCollectorAddr();
-
-  public abstract void setCollectorAddr(String addr);
-
-}
+/**
+ * Package org.apache.hadoop.server.timeline.security contains classes related
+ * to timeline authentication filters and abstract delegation token service for
+ * ATSv1 and ATSv2.
+ */
+@InterfaceAudience.Private
+package org.apache.hadoop.yarn.server.timeline.security;
+import org.apache.hadoop.classification.InterfaceAudience;

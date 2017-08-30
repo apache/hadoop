@@ -40,7 +40,7 @@ public final class LongConverter implements NumericValueConverter,
 
   @Override
   public byte[] encodeValue(Object value) throws IOException {
-    if (!TimelineStorageUtils.isIntegralValue(value)) {
+    if (!HBaseTimelineStorageUtils.isIntegralValue(value)) {
       throw new IOException("Expected integral value");
     }
     return Bytes.toBytes(((Number)value).longValue());

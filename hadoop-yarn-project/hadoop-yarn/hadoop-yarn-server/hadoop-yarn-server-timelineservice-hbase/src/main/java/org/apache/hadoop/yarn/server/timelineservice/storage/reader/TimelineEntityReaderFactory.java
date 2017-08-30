@@ -82,8 +82,24 @@ public final class TimelineEntityReaderFactory {
         YARN_FLOW_RUN.matches(context.getEntityType())) {
       return new FlowRunEntityReader(context, filters, dataToRetrieve);
     } else {
+      if (context.getDoAsUser() != null) {
+        return new SubApplicationEntityReader(context, filters, dataToRetrieve);
+      }
       // assume we're dealing with a generic entity read
-      return new GenericEntityReader(context, filters, dataToRetrieve, false);
+      return new GenericEntityReader(context, filters, dataToRetrieve);
     }
+  }
+
+  /**
+   * Creates a timeline entity type reader that will read all available entity
+   * types within the specified context.
+   *
+   * @param context Reader context which defines the scope in which query has to
+   *                be made. Limited to application level only.
+   * @return an <cite>EntityTypeReader</cite> object
+   */
+  public static EntityTypeReader createEntityTypeReader(
+      TimelineReaderContext context) {
+    return new EntityTypeReader(context);
   }
 }

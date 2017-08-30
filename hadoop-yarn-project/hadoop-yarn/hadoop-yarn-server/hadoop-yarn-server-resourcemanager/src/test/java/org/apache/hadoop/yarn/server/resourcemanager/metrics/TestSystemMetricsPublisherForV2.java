@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineC
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -216,7 +217,8 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    verifyEntity(appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8);
+    verifyEntity(
+        appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8, 0);
   }
 
   @Test(timeout = 10000)
@@ -251,7 +253,7 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(appFile, 2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE,
-        0);
+        0, TimelineServiceHelper.invertLong(appAttemptId.getAttemptId()));
   }
 
   @Test(timeout = 10000)
@@ -283,7 +285,7 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(appFile, 2,
-        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0);
+        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0, 0);
   }
 
   private RMApp createAppAndRegister(ApplicationId appId) {
@@ -297,7 +299,8 @@ public class TestSystemMetricsPublisherForV2 {
   }
 
   private static void verifyEntity(File entityFile, long expectedEvents,
-      String eventForCreatedTime, long expectedMetrics) throws IOException {
+      String eventForCreatedTime, long expectedMetrics, long idPrefix)
+      throws IOException {
     BufferedReader reader = null;
     String strLine;
     long count = 0;
@@ -309,6 +312,7 @@ public class TestSystemMetricsPublisherForV2 {
           TimelineEntity entity = FileSystemTimelineReaderImpl.
               getTimelineRecordFromJSON(strLine.trim(), TimelineEntity.class);
           metricsCount = entity.getMetrics().size();
+          assertEquals(idPrefix, entity.getIdPrefix());
           for (TimelineEvent event : entity.getEvents()) {
             if (event.getId().equals(eventForCreatedTime)) {
               assertTrue(entity.getCreatedTime() > 0);
@@ -394,6 +398,7 @@ public class TestSystemMetricsPublisherForV2 {
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");
     when(appAttempt.getOriginalTrackingUrl()).thenReturn(
         "test original tracking url");
+    when(appAttempt.getStartTime()).thenReturn(200L);
     return appAttempt;
   }
 

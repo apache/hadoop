@@ -33,6 +33,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationAttemptEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
@@ -80,7 +81,7 @@ public class TestTimelineServiceClientIntegration {
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
               collectorManager, conf);
-      auxService.addApplication(ApplicationId.newInstance(0, 1));
+      auxService.addApplication(ApplicationId.newInstance(0, 1), "user");
     } catch (ExitUtil.ExitException e) {
       fail();
     }
@@ -99,9 +100,9 @@ public class TestTimelineServiceClientIntegration {
     TimelineV2Client client =
         TimelineV2Client.createTimelineClient(ApplicationId.newInstance(0, 1));
     try {
-      // set the timeline service address manually
-      client.setTimelineServiceAddress(
-          collectorManager.getRestServerBindAddress());
+      // Set the timeline service address manually.
+      client.setTimelineCollectorInfo(CollectorInfo.newInstance(
+          collectorManager.getRestServerBindAddress()));
       client.init(conf);
       client.start();
       TimelineEntity entity = new TimelineEntity();
@@ -126,9 +127,9 @@ public class TestTimelineServiceClientIntegration {
     TimelineV2Client client =
         TimelineV2Client.createTimelineClient(appId);
     try {
-      // set the timeline service address manually
-      client.setTimelineServiceAddress(
-          collectorManager.getRestServerBindAddress());
+      // Set the timeline service address manually.
+      client.setTimelineCollectorInfo(CollectorInfo.newInstance(
+          collectorManager.getRestServerBindAddress()));
       client.init(conf);
       client.start();
       ClusterEntity cluster = new ClusterEntity();

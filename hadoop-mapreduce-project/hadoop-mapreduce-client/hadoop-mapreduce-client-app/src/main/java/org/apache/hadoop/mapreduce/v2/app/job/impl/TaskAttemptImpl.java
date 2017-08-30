@@ -1530,7 +1530,7 @@ public abstract class TaskAttemptImpl implements
             StringUtils.join(
                 LINE_SEPARATOR, taskAttempt.getDiagnostics()),
                 taskAttempt.getCounters(), taskAttempt
-                .getProgressSplitBlock().burst());
+                .getProgressSplitBlock().burst(), taskAttempt.launchTime);
     return tauce;
   }
 
@@ -1943,35 +1943,35 @@ public abstract class TaskAttemptImpl implements
         this.container == null ? -1 : this.container.getNodeId().getPort();
     if (attemptId.getTaskId().getTaskType() == TaskType.MAP) {
       MapAttemptFinishedEvent mfe =
-         new MapAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
-         TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
-         state.toString(),
-         this.reportedStatus.mapFinishTime,
-         finishTime,
-         containerHostName,
-         containerNodePort,
-         this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
-         this.reportedStatus.stateString,
-         getCounters(),
-         getProgressSplitBlock().burst());
-         eventHandler.handle(
-           new JobHistoryEvent(attemptId.getTaskId().getJobId(), mfe));
+          new MapAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
+          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
+          state.toString(),
+          this.reportedStatus.mapFinishTime,
+          finishTime,
+          containerHostName,
+          containerNodePort,
+          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
+          this.reportedStatus.stateString,
+          getCounters(),
+          getProgressSplitBlock().burst(), launchTime);
+      eventHandler.handle(
+          new JobHistoryEvent(attemptId.getTaskId().getJobId(), mfe));
     } else {
-       ReduceAttemptFinishedEvent rfe =
-         new ReduceAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
-         TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
-         state.toString(),
-         this.reportedStatus.shuffleFinishTime,
-         this.reportedStatus.sortFinishTime,
-         finishTime,
-         containerHostName,
-         containerNodePort,
-         this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
-         this.reportedStatus.stateString,
-         getCounters(),
-         getProgressSplitBlock().burst());
-         eventHandler.handle(
-           new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
+      ReduceAttemptFinishedEvent rfe =
+          new ReduceAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
+          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
+          state.toString(),
+          this.reportedStatus.shuffleFinishTime,
+          this.reportedStatus.sortFinishTime,
+          finishTime,
+          containerHostName,
+          containerNodePort,
+          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
+          this.reportedStatus.stateString,
+          getCounters(),
+          getProgressSplitBlock().burst(), launchTime);
+      eventHandler.handle(
+          new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
     }
   }
 

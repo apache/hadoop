@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -97,15 +99,7 @@ public abstract class MockAsm extends MockApps {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override
-    public String getCollectorAddr() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-    @Override
-    public void setCollectorAddr(String collectorAddr) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-    @Override
-    public void removeCollectorAddr() {
+    public AppCollectorData getCollectorData() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override
@@ -244,6 +238,11 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public boolean isAppInCompletedStates() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public CollectorInfo getCollectorInfo() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
   }

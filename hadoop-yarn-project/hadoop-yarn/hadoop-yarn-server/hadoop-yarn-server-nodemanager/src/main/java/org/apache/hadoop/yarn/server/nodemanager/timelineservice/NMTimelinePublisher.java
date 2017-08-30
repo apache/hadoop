@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,8 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -55,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl.ContainerMetric;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -77,6 +81,8 @@ public class NMTimelinePublisher extends CompositeService {
 
   private String httpAddress;
 
+  private UserGroupInformation nmLoginUGI;
+
   private final Map<ApplicationId, TimelineV2Client> appToClientMap;
 
   public NMTimelinePublisher(Context context) {
@@ -91,6 +97,9 @@ public class NMTimelinePublisher extends CompositeService {
     dispatcher.register(NMTimelineEventType.class,
         new ForwardingEventHandler());
     addIfService(dispatcher);
+    this.nmLoginUGI =  UserGroupInformation.isSecurityEnabled() ?
+        UserGroupInformation.getLoginUser() :
+        UserGroupInformation.getCurrentUser();
     super.serviceInit(conf);
   }
 
@@ -149,6 +158,8 @@ public class NMTimelinePublisher extends CompositeService {
             Math.round(cpuUsagePercentPerCore));
         entity.addMetric(cpuMetric);
       }
+      entity.setIdPrefix(TimelineServiceHelper.
+          invertLong(container.getContainerStartTime()));
       ApplicationId appId = container.getContainerId().getApplicationAttemptId()
           .getApplicationId();
       try {
@@ -195,15 +206,17 @@ public class NMTimelinePublisher extends CompositeService {
     tEvent.setId(ContainerMetricsConstants.CREATED_EVENT_TYPE);
     tEvent.setTimestamp(event.getTimestamp());
 
+    long containerStartTime = container.getContainerStartTime();
     entity.addEvent(tEvent);
-    entity.setCreatedTime(event.getTimestamp());
+    entity.setCreatedTime(containerStartTime);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
     dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
         containerId.getApplicationAttemptId().getApplicationId()));
   }
 
   @SuppressWarnings("unchecked")
   private void publishContainerFinishedEvent(ContainerStatus containerStatus,
-      long timeStamp) {
+      long containerFinishTime, long containerStartTime) {
     ContainerId containerId = containerStatus.getContainerId();
     TimelineEntity entity = createContainerEntity(containerId);
 
@@ -215,13 +228,14 @@ public class NMTimelinePublisher extends CompositeService {
     entityInfo.put(ContainerMetricsConstants.STATE_INFO,
         ContainerState.COMPLETE.toString());
     entityInfo.put(ContainerMetricsConstants.CONTAINER_FINISHED_TIME,
-        timeStamp);
+        containerFinishTime);
     entity.setInfo(entityInfo);
 
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
-    tEvent.setTimestamp(timeStamp);
+    tEvent.setTimestamp(containerFinishTime);
     entity.addEvent(tEvent);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
 
     dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
         containerId.getApplicationAttemptId().getApplicationId()));
@@ -237,6 +251,8 @@ public class NMTimelinePublisher extends CompositeService {
     tEvent.setId(eventType);
     tEvent.setTimestamp(event.getTimestamp());
     entity.addEvent(tEvent);
+    entity.setIdPrefix(TimelineServiceHelper.
+        invertLong(container.getContainerStartTime()));
 
     ApplicationId appId =
         container.getContainerId().getApplicationAttemptId().getApplicationId();
@@ -300,7 +316,7 @@ public class NMTimelinePublisher extends CompositeService {
       ApplicationContainerFinishedEvent evnt =
           (ApplicationContainerFinishedEvent) event;
       publishContainerFinishedEvent(evnt.getContainerStatus(),
-          event.getTimestamp());
+          event.getTimestamp(), evnt.getContainerStartTime());
       break;
 
     default:
@@ -391,11 +407,23 @@ public class NMTimelinePublisher extends CompositeService {
 
   public void createTimelineClient(ApplicationId appId) {
     if (!appToClientMap.containsKey(appId)) {
-      TimelineV2Client timelineClient =
-          TimelineV2Client.createTimelineClient(appId);
-      timelineClient.init(getConfig());
-      timelineClient.start();
-      appToClientMap.put(appId, timelineClient);
+      try {
+        TimelineV2Client timelineClient =
+            nmLoginUGI.doAs(new PrivilegedExceptionAction<TimelineV2Client>() {
+              @Override
+              public TimelineV2Client run() throws Exception {
+                TimelineV2Client timelineClient =
+                    TimelineV2Client.createTimelineClient(appId);
+                timelineClient.init(getConfig());
+                timelineClient.start();
+                return timelineClient;
+              }
+            });
+        appToClientMap.put(appId, timelineClient);
+      } catch (IOException | InterruptedException | RuntimeException |
+          Error e) {
+        LOG.warn("Unable to create timeline client for app " + appId, e);
+      }
     }
   }
 
@@ -410,7 +438,7 @@ public class NMTimelinePublisher extends CompositeService {
       String collectorAddr) {
     TimelineV2Client client = appToClientMap.get(appId);
     if (client != null) {
-      client.setTimelineServiceAddress(collectorAddr);
+      client.setTimelineCollectorInfo(CollectorInfo.newInstance(collectorAddr));
     }
   }
 
