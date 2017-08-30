@@ -135,7 +135,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Get the list of enabled erasure coding policies</expected-output>
+          <expected-output>Get the list of all erasure coding policies</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
@@ -406,6 +406,25 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>Add ErasureCodingPolicy RS-6-3-1024k failed</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listPolicies : get the list of ECPolicies supported</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listPolicies</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>XOR-2-1-128k</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>State=DISABLED</expected-output>
         </comparator>
       </comparators>
     </test>

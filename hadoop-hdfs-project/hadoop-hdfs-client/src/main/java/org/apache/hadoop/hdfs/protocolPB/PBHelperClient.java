@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -2925,6 +2926,16 @@ public class PBHelperClient {
     return builder.build();
   }
 
+  public static ErasureCodingPolicyState convertECState(
+      HdfsProtos.ErasureCodingPolicyState state) {
+    return ErasureCodingPolicyState.fromValue(state.getNumber());
+  }
+
+  public static HdfsProtos.ErasureCodingPolicyState convertECState(
+      ErasureCodingPolicyState state) {
+    return HdfsProtos.ErasureCodingPolicyState.valueOf(state.getValue());
+  }
+
   public static ErasureCodingPolicy convertErasureCodingPolicy(
       ErasureCodingPolicyProto proto) {
     final byte id = (byte) (proto.getId() & 0xFF);
@@ -2938,10 +2949,12 @@ public class PBHelperClient {
           "Missing schema field in ErasureCodingPolicy proto");
       Preconditions.checkArgument(proto.hasCellSize(),
           "Missing cellsize field in ErasureCodingPolicy proto");
+      Preconditions.checkArgument(proto.hasState(),
+          "Missing state field in ErasureCodingPolicy proto");
 
       return new ErasureCodingPolicy(proto.getName(),
           convertECSchema(proto.getSchema()),
-          proto.getCellSize(), id);
+          proto.getCellSize(), id, convertECState(proto.getState()));
     }
     return policy;
   }
@@ -2955,7 +2968,8 @@ public class PBHelperClient {
     if (SystemErasureCodingPolicies.getByID(policy.getId()) == null) {
       builder.setName(policy.getName())
           .setSchema(convertECSchema(policy.getSchema()))
-          .setCellSize(policy.getCellSize());
+          .setCellSize(policy.getCellSize())
+          .setState(convertECState(policy.getState()));
     }
     return builder.build();
   }

@@ -373,11 +373,21 @@ message ECSchemaProto {
   repeated ECSchemaOptionEntryProto options = 4;
 }
 
+/**
+ * EC policy state.
+ */
+enum ErasureCodingPolicyState {
+  DISABLED = 1;
+  ENABLED = 2;
+  REMOVED = 3;
+}
+
 message ErasureCodingPolicyProto {
   optional string name = 1;
   optional ECSchemaProto schema = 2;
   optional uint32 cellSize = 3;
   required uint32 id = 4; // Actually a byte - only 8 bits used
+  optional ErasureCodingPolicyState state = 5 [default = ENABLED];
 }
 
 message AddECPolicyResponseProto {

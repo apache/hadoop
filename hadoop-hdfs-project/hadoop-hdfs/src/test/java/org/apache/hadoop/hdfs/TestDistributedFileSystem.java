@@ -1608,8 +1608,6 @@ public class TestDistributedFileSystem {
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
           getByName(policyName).getName());
       fs.disableErasureCodingPolicy(policyName);
-      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
-          getRemovedPolicies().get(0).getName());
       fs.enableErasureCodingPolicy(policyName);
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
           getByName(policyName).getName());
