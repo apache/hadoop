@@ -1035,8 +1035,6 @@ public class RMAppImpl implements RMApp, Recoverable {
                   app.submissionContext.getCancelTokensWhenComplete(),
                   app.getUser(),
                   BuilderUtils.parseTokensConf(app.submissionContext));
-          // set the memory free
-          app.submissionContext.getAMContainerSpec().setTokensConf(null);
         } catch (Exception e) {
           String msg = "Failed to fetch user credentials from application:"
               + e.getMessage();
@@ -1089,8 +1087,6 @@ public class RMAppImpl implements RMApp, Recoverable {
           app.submissionContext, false, app.applicationPriority));
       // send the ATS create Event
       app.sendATSCreateEvent();
-      // Set the memory free after submission context is persisted
-      app.submissionContext.getAMContainerSpec().setTokensConf(null);
     }
   }
 
