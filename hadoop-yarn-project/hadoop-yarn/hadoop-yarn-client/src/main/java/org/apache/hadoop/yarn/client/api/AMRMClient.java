@@ -111,9 +111,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     private List<String> racks;
     private Priority priority;
     private long allocationRequestId;
-    private boolean relaxLocality;
+    private boolean relaxLocality = true;
     private String nodeLabelsExpression;
-    private ExecutionTypeRequest executionTypeRequest;
+    private ExecutionTypeRequest executionTypeRequest =
+        ExecutionTypeRequest.newInstance();
     
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints and
