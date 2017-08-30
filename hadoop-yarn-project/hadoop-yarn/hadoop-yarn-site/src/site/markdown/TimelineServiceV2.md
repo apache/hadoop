@@ -250,7 +250,7 @@ For example,
 ##### <a name="Create_schema"> </a>Step 3) Create the timeline service schema
 Finally, run the schema creator tool to create the necessary tables:
 
-    bin/hadoop org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator
+    bin/hadoop org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator -create
 
 The `TimelineSchemaCreator` tool supports a few options that may come handy especially when you
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
