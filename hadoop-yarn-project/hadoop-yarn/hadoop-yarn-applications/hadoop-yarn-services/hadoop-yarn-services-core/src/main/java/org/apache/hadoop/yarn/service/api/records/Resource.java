@@ -22,6 +22,7 @@ import io.swagger.annotations.ApiModelProperty;
 
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -103,6 +104,7 @@ public class Resource extends BaseResource implements Cloneable {
     this.memory = memory;
   }
 
+  @JsonIgnore
   public long getMemoryMB() {
     if (this.memory == null) {
       return 0;
