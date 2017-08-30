@@ -573,7 +573,7 @@ public class EncryptionZoneManager {
       return false;
     }
     INode lastINode = null;
-    if (inode.getParent() != null || inode.isRoot()) {
+    if (INode.isValidAbsolutePath(zonePath)) {
       INodesInPath iip = dir.getINodesInPath(zonePath, DirOp.READ_LINK);
       lastINode = iip.getLastINode();
     }

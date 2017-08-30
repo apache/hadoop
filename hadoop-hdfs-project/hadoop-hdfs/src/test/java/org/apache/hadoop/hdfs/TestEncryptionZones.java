@@ -1867,4 +1867,51 @@ public class TestEncryptionZones {
     // Read them back in and compare byte-by-byte
     verifyFilesEqual(fs, baseFile, encFile1, len);
   }
+
+  /**
+   * Test listing encryption zones after zones had been deleted,
+   * but still exist under snapshots. This test first moves EZs
+   * to trash folder, so that an inodereference is created for the EZ,
+   * then it removes the EZ from trash folder to emulate condition where
+   * the EZ inode will not be complete.
+   */
+  @Test
+  public void testListEncryptionZonesWithSnapshots() throws Exception {
+    final Path snapshottable = new Path("/zones");
+    final Path zoneDirectChild = new Path(snapshottable, "zone1");
+    final Path snapshottableChild = new Path(snapshottable, "child");
+    final Path zoneSubChild = new Path(snapshottableChild, "zone2");
+    fsWrapper.mkdir(zoneDirectChild, FsPermission.getDirDefault(),
+        true);
+    fsWrapper.mkdir(zoneSubChild, FsPermission.getDirDefault(),
+        true);
+    dfsAdmin.allowSnapshot(snapshottable);
+    dfsAdmin.createEncryptionZone(zoneDirectChild, TEST_KEY, NO_TRASH);
+    dfsAdmin.createEncryptionZone(zoneSubChild, TEST_KEY, NO_TRASH);
+    final Path snap1 = fs.createSnapshot(snapshottable, "snap1");
+    Configuration clientConf = new Configuration(conf);
+    clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    FsShell shell = new FsShell(clientConf);
+    //will "trash" the zone under subfolder of snapshottable directory
+    verifyShellDeleteWithTrash(shell, snapshottableChild);
+    //permanently remove zone under subfolder of snapshottable directory
+    fsWrapper.delete(shell.getCurrentTrashDir(snapshottableChild),
+        true);
+    final RemoteIterator<EncryptionZone> it = dfsAdmin.listEncryptionZones();
+    boolean match = false;
+    while (it.hasNext()) {
+      EncryptionZone ez = it.next();
+      assertNotEquals("EncryptionZone " + zoneSubChild.toString() +
+          " should not be listed.",
+          ez.getPath(), zoneSubChild.toString());
+    }
+    //will "trash" the zone direct child of snapshottable directory
+    verifyShellDeleteWithTrash(shell, zoneDirectChild);
+    //permanently remove zone direct child of snapshottable directory
+    fsWrapper.delete(shell.getCurrentTrashDir(zoneDirectChild), true);
+    assertFalse("listEncryptionZones should not return anything, " +
+            "since both EZs were deleted.",
+        dfsAdmin.listEncryptionZones().hasNext());
+  }
+
 }

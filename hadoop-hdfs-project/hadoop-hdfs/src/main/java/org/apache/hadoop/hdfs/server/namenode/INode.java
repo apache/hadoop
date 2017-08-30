@@ -783,8 +783,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return StringUtils.split(path, Path.SEPARATOR_CHAR);
   }
 
+  /**
+   * Verifies if the path informed is a valid absolute path.
+   * @param path the absolute path to validate.
+   * @return true if the path is valid.
+   */
+  static boolean isValidAbsolutePath(final String path){
+    return path != null && path.startsWith(Path.SEPARATOR);
+  }
+
   private static void checkAbsolutePath(final String path) {
-    if (path == null || !path.startsWith(Path.SEPARATOR)) {
+    if (!isValidAbsolutePath(path)) {
       throw new AssertionError("Absolute path required, but got '"
           + path + "'");
     }
