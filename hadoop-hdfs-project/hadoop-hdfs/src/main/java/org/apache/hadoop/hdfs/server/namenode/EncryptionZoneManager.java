@@ -373,7 +373,7 @@ public class EncryptionZoneManager {
       final String pathName = getFullPathName(ezi);
       INode inode = dir.getInode(ezi.getINodeId());
       INode lastINode = null;
-      if (inode.getParent() != null || inode.isRoot()) {
+      if (INode.isValidAbsolutePath(pathName)) {
         INodesInPath iip = dir.getINodesInPath(pathName, DirOp.READ_LINK);
         lastINode = iip.getLastINode();
       }
