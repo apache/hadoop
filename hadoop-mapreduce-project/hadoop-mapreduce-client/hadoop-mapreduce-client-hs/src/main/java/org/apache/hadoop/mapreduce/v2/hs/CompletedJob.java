@@ -56,7 +56,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -71,7 +70,11 @@ import org.apache.hadoop.yarn.util.Records;
  * Data from job history file is loaded lazily.
  */
 public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
-  
+  // Backward compatibility: if the failed or killed map/reduce
+  // count is -1, that means the value was not recorded
+  // so we count it as 0
+  private static final int UNDEFINED_VALUE = -1;
+
   static final Log LOG = LogFactory.getLog(CompletedJob.class);
   private final Configuration conf;
   private final JobId jobId; //Can be picked from JobInfo with a conversion.
@@ -104,12 +107,36 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public int getCompletedMaps() {
-    return (int) jobInfo.getFinishedMaps();
+    int killedMaps = (int) jobInfo.getKilledMaps();
+    int failedMaps = (int) jobInfo.getFailedMaps();
+
+    if (killedMaps == UNDEFINED_VALUE) {
+      killedMaps = 0;
+    }
+
+    if (failedMaps == UNDEFINED_VALUE) {
+      failedMaps = 0;
+    }
+
+    return (int) (jobInfo.getSucceededMaps() +
+        killedMaps + failedMaps);
   }
 
   @Override
   public int getCompletedReduces() {
-    return (int) jobInfo.getFinishedReduces();
+    int killedReduces = (int) jobInfo.getKilledReduces();
+    int failedReduces = (int) jobInfo.getFailedReduces();
+
+    if (killedReduces == UNDEFINED_VALUE) {
+      killedReduces = 0;
+    }
+
+    if (failedReduces == UNDEFINED_VALUE) {
+      failedReduces = 0;
+    }
+
+    return (int) (jobInfo.getSucceededReduces() +
+        killedReduces + failedReduces);
   }
 
   @Override
@@ -480,5 +507,25 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   public void setJobPriority(Priority priority) {
     throw new UnsupportedOperationException(
         "Can't set job's priority in history");
+  }
+
+  @Override
+  public int getFailedMaps() {
+    return (int) jobInfo.getFailedMaps();
+  }
+
+  @Override
+  public int getFailedReduces() {
+    return (int) jobInfo.getFailedReduces();
+  }
+
+  @Override
+  public int getKilledMaps() {
+    return (int) jobInfo.getKilledMaps();
+  }
+
+  @Override
+  public int getKilledReduces() {
+    return (int) jobInfo.getKilledReduces();
   }
 }

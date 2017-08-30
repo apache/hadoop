@@ -424,5 +424,25 @@ public class TestHsWebServicesAcls {
     @Override
     public void setJobPriority(Priority priority) {
     }
+
+    @Override
+    public int getFailedMaps() {
+      return mockJob.getFailedMaps();
+    }
+
+    @Override
+    public int getFailedReduces() {
+      return mockJob.getFailedReduces();
+    }
+
+    @Override
+    public int getKilledMaps() {
+      return mockJob.getKilledMaps();
+    }
+
+    @Override
+    public int getKilledReduces() {
+      return mockJob.getKilledReduces();
+    }
   }
 }

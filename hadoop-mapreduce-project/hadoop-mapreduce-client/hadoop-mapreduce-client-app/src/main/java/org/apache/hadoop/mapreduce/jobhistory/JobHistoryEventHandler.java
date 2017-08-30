@@ -431,10 +431,18 @@ public class JobHistoryEventHandler extends AbstractService
             + " to have not been closed. Will close");
           //Create a JobFinishEvent so that it is written to the job history
           final Job job = context.getJob(toClose);
+          int successfulMaps = job.getCompletedMaps() - job.getFailedMaps()
+                  - job.getKilledMaps();
+          int successfulReduces = job.getCompletedReduces()
+                  - job.getFailedReduces() - job.getKilledReduces();
+
           JobUnsuccessfulCompletionEvent jucEvent =
             new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(toClose),
-                System.currentTimeMillis(), job.getCompletedMaps(),
-                job.getCompletedReduces(),
+                System.currentTimeMillis(),
+                successfulMaps,
+                successfulReduces,
+                job.getFailedMaps(), job.getFailedReduces(),
+                job.getKilledMaps(), job.getKilledReduces(),
                 createJobStateForJobUnsuccessfulCompletionEvent(
                     mi.getForcedJobStateOnShutDown()),
                 job.getDiagnostics());
@@ -655,9 +663,9 @@ public class JobHistoryEventHandler extends AbstractService
           JobFinishedEvent jFinishedEvent =
               (JobFinishedEvent) event.getHistoryEvent();
           mi.getJobIndexInfo().setFinishTime(jFinishedEvent.getFinishTime());
-          mi.getJobIndexInfo().setNumMaps(jFinishedEvent.getFinishedMaps());
+          mi.getJobIndexInfo().setNumMaps(jFinishedEvent.getSucceededMaps());
           mi.getJobIndexInfo().setNumReduces(
-              jFinishedEvent.getFinishedReduces());
+              jFinishedEvent.getSucceededReduces());
           mi.getJobIndexInfo().setJobStatus(JobState.SUCCEEDED.toString());
           closeEventWriter(event.getJobID());
           processDoneFiles(event.getJobID());
@@ -672,8 +680,8 @@ public class JobHistoryEventHandler extends AbstractService
           JobUnsuccessfulCompletionEvent jucEvent =
               (JobUnsuccessfulCompletionEvent) event.getHistoryEvent();
           mi.getJobIndexInfo().setFinishTime(jucEvent.getFinishTime());
-          mi.getJobIndexInfo().setNumMaps(jucEvent.getFinishedMaps());
-          mi.getJobIndexInfo().setNumReduces(jucEvent.getFinishedReduces());
+          mi.getJobIndexInfo().setNumMaps(jucEvent.getSucceededMaps());
+          mi.getJobIndexInfo().setNumReduces(jucEvent.getSucceededReduces());
           mi.getJobIndexInfo().setJobStatus(jucEvent.getStatus());
           closeEventWriter(event.getJobID());
           if(context.isLastAMRetry())
@@ -690,8 +698,8 @@ public class JobHistoryEventHandler extends AbstractService
               (JobUnsuccessfulCompletionEvent) event
               .getHistoryEvent();
           mi.getJobIndexInfo().setFinishTime(jucEvent.getFinishTime());
-          mi.getJobIndexInfo().setNumMaps(jucEvent.getFinishedMaps());
-          mi.getJobIndexInfo().setNumReduces(jucEvent.getFinishedReduces());
+          mi.getJobIndexInfo().setNumMaps(jucEvent.getSucceededMaps());
+          mi.getJobIndexInfo().setNumReduces(jucEvent.getSucceededReduces());
           mi.getJobIndexInfo().setJobStatus(jucEvent.getStatus());
           closeEventWriter(event.getJobID());
           processDoneFiles(event.getJobID());
@@ -739,10 +747,12 @@ public class JobHistoryEventHandler extends AbstractService
     case JOB_FINISHED:
       JobFinishedEvent jfe = (JobFinishedEvent) event;
       summary.setJobFinishTime(jfe.getFinishTime());
-      summary.setNumFinishedMaps(jfe.getFinishedMaps());
+      summary.setNumSucceededMaps(jfe.getSucceededMaps());
       summary.setNumFailedMaps(jfe.getFailedMaps());
-      summary.setNumFinishedReduces(jfe.getFinishedReduces());
+      summary.setNumSucceededReduces(jfe.getSucceededReduces());
       summary.setNumFailedReduces(jfe.getFailedReduces());
+      summary.setNumKilledMaps(jfe.getKilledMaps());
+      summary.setNumKilledReduces(jfe.getKilledReduces());
       if (summary.getJobStatus() == null)
         summary
             .setJobStatus(org.apache.hadoop.mapreduce.JobStatus.State.SUCCEEDED
@@ -753,11 +763,21 @@ public class JobHistoryEventHandler extends AbstractService
       break;
     case JOB_FAILED:
     case JOB_KILLED:
+      Job job = context.getJob(jobId);
       JobUnsuccessfulCompletionEvent juce = (JobUnsuccessfulCompletionEvent) event;
+      int successfulMaps = job.getCompletedMaps() - job.getFailedMaps()
+          - job.getKilledMaps();
+      int successfulReduces = job.getCompletedReduces()
+          - job.getFailedReduces() - job.getKilledReduces();
+
       summary.setJobStatus(juce.getStatus());
-      summary.setNumFinishedMaps(context.getJob(jobId).getTotalMaps());
-      summary.setNumFinishedReduces(context.getJob(jobId).getTotalReduces());
+      summary.setNumSucceededMaps(successfulMaps);
+      summary.setNumSucceededReduces(successfulReduces);
+      summary.setNumFailedMaps(job.getFailedMaps());
+      summary.setNumFailedReduces(job.getFailedReduces());
       summary.setJobFinishTime(juce.getFinishTime());
+      summary.setNumKilledMaps(juce.getKilledMaps());
+      summary.setNumKilledReduces(juce.getKilledReduces());
       setSummarySlotSeconds(summary, context.getJob(jobId).getAllCounters());
       break;
     default:
@@ -840,12 +860,22 @@ public class JobHistoryEventHandler extends AbstractService
         JobUnsuccessfulCompletionEvent juce =
               (JobUnsuccessfulCompletionEvent) event;
         tEvent.addEventInfo("FINISH_TIME", juce.getFinishTime());
-        tEvent.addEventInfo("NUM_MAPS", juce.getFinishedMaps());
-        tEvent.addEventInfo("NUM_REDUCES", juce.getFinishedReduces());
+        tEvent.addEventInfo("NUM_MAPS",
+            juce.getSucceededMaps() +
+            juce.getFailedMaps() +
+            juce.getKilledMaps());
+        tEvent.addEventInfo("NUM_REDUCES",
+            juce.getSucceededReduces() +
+            juce.getFailedReduces() +
+            juce.getKilledReduces());
         tEvent.addEventInfo("JOB_STATUS", juce.getStatus());
         tEvent.addEventInfo("DIAGNOSTICS", juce.getDiagnostics());
-        tEvent.addEventInfo("FINISHED_MAPS", juce.getFinishedMaps());
-        tEvent.addEventInfo("FINISHED_REDUCES", juce.getFinishedReduces());
+        tEvent.addEventInfo("SUCCESSFUL_MAPS", juce.getSucceededMaps());
+        tEvent.addEventInfo("SUCCESSFUL_REDUCES", juce.getSucceededReduces());
+        tEvent.addEventInfo("FAILED_MAPS", juce.getFailedMaps());
+        tEvent.addEventInfo("FAILED_REDUCES", juce.getFailedReduces());
+        tEvent.addEventInfo("KILLED_MAPS", juce.getKilledMaps());
+        tEvent.addEventInfo("KILLED_REDUCES", juce.getKilledReduces());
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(jobId.toString());
         tEntity.setEntityType(MAPREDUCE_JOB_ENTITY_TYPE);
@@ -853,12 +883,20 @@ public class JobHistoryEventHandler extends AbstractService
       case JOB_FINISHED:
         JobFinishedEvent jfe = (JobFinishedEvent) event;
         tEvent.addEventInfo("FINISH_TIME", jfe.getFinishTime());
-        tEvent.addEventInfo("NUM_MAPS", jfe.getFinishedMaps());
-        tEvent.addEventInfo("NUM_REDUCES", jfe.getFinishedReduces());
+        tEvent.addEventInfo("NUM_MAPS",
+            jfe.getSucceededMaps() +
+            jfe.getFailedMaps() +
+            jfe.getKilledMaps());
+        tEvent.addEventInfo("NUM_REDUCES",
+            jfe.getSucceededReduces() +
+            jfe.getFailedReduces() +
+            jfe.getKilledReduces());
         tEvent.addEventInfo("FAILED_MAPS", jfe.getFailedMaps());
         tEvent.addEventInfo("FAILED_REDUCES", jfe.getFailedReduces());
-        tEvent.addEventInfo("FINISHED_MAPS", jfe.getFinishedMaps());
-        tEvent.addEventInfo("FINISHED_REDUCES", jfe.getFinishedReduces());
+        tEvent.addEventInfo("SUCCESSFUL_MAPS", jfe.getSucceededMaps());
+        tEvent.addEventInfo("SUCCESSFUL_REDUCES", jfe.getSucceededReduces());
+        tEvent.addEventInfo("KILLED_MAPS", jfe.getKilledMaps());
+        tEvent.addEventInfo("KILLED_REDUCES", jfe.getKilledReduces());
         tEvent.addEventInfo("MAP_COUNTERS_GROUPS",
             JobHistoryEventUtils.countersToJSON(jfe.getMapCounters()));
         tEvent.addEventInfo("REDUCE_COUNTERS_GROUPS",
