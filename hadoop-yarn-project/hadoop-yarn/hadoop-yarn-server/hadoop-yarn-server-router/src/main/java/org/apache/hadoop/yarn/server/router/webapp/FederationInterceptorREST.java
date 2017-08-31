@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,6 +39,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -85,10 +85,12 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Extends the {@code AbstractRESTRequestInterceptor} class and provides an
@@ -136,7 +138,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     interceptors = new HashMap<SubClusterId, DefaultRequestInterceptorREST>();
     routerMetrics = RouterMetrics.getMetrics();
-    threadpool = Executors.newCachedThreadPool();
+    threadpool = HadoopExecutors.newCachedThreadPool(new ThreadFactoryBuilder()
+        .setNameFormat("FederationInterceptorREST #%d").build());
 
     returnPartialReport =
         conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED,
@@ -695,6 +698,219 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         returnPartialReport);
   }
 
+  /**
+   * The Yarn Router will forward to the request to all the SubClusters to find
+   * where the node is running.
+   * <p>
+   * Possible failure:
+   * <p>
+   * Client: identical behavior as {@code RMWebServices}.
+   * <p>
+   * Router: the Client will timeout and resubmit the request.
+   * <p>
+   * ResourceManager: the Router will timeout and the call will fail.
+   * <p>
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
+  @Override
+  public NodeInfo getNode(String nodeId) {
+    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    try {
+      subClustersActive = federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    }
+
+    if (subClustersActive.isEmpty()) {
+      throw new NotFoundException(
+          FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
+    }
+
+    // Send the requests in parallel
+
+    ExecutorCompletionService<NodeInfo> compSvc =
+        new ExecutorCompletionService<NodeInfo>(this.threadpool);
+
+    for (final SubClusterInfo info : subClustersActive.values()) {
+      compSvc.submit(new Callable<NodeInfo>() {
+        @Override
+        public NodeInfo call() {
+          DefaultRequestInterceptorREST interceptor =
+              getOrCreateInterceptorForSubCluster(info.getSubClusterId(),
+                  info.getClientRMServiceAddress());
+          try {
+            NodeInfo nodeInfo = interceptor.getNode(nodeId);
+            return nodeInfo;
+          } catch (Exception e) {
+            LOG.error("Subcluster " + info.getSubClusterId()
+                + " failed to return nodeInfo.");
+            return null;
+          }
+        }
+      });
+    }
+
+    // Collect all the responses in parallel
+    NodeInfo nodeInfo = null;
+    for (int i = 0; i < subClustersActive.values().size(); i++) {
+      try {
+        Future<NodeInfo> future = compSvc.take();
+        NodeInfo nodeResponse = future.get();
+
+        // Check if the node was found in this SubCluster
+        if (nodeResponse != null) {
+          // Check if the node was already found in a different SubCluster and
+          // it has an old health report
+          if (nodeInfo == null || nodeInfo.getLastHealthUpdate() < nodeResponse
+              .getLastHealthUpdate()) {
+            nodeInfo = nodeResponse;
+          }
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to get node report ", e);
+      }
+    }
+    if (nodeInfo == null) {
+      throw new NotFoundException("nodeId, " + nodeId + ", is not found");
+    }
+    return nodeInfo;
+  }
+
+  /**
+   * The Yarn Router will forward the request to all the Yarn RMs in parallel,
+   * after that it will remove all the duplicated NodeInfo by using the NodeId.
+   * <p>
+   * Possible failure:
+   * <p>
+   * Client: identical behavior as {@code RMWebServices}.
+   * <p>
+   * Router: the Client will timeout and resubmit the request.
+   * <p>
+   * ResourceManager: the Router calls each Yarn RM in parallel by using one
+   * thread for each Yarn RM. In case a Yarn RM fails, a single call will
+   * timeout. However the Router will use the NodesInfo it got, and provides a
+   * partial list to the client.
+   * <p>
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
+  @Override
+  public NodesInfo getNodes(String states) {
+
+    NodesInfo nodes = new NodesInfo();
+
+    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    try {
+      subClustersActive = federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      LOG.error(e.getMessage());
+      return new NodesInfo();
+    }
+
+    // Send the requests in parallel
+
+    ExecutorCompletionService<NodesInfo> compSvc =
+        new ExecutorCompletionService<NodesInfo>(this.threadpool);
+
+    for (final SubClusterInfo info : subClustersActive.values()) {
+      compSvc.submit(new Callable<NodesInfo>() {
+        @Override
+        public NodesInfo call() {
+          DefaultRequestInterceptorREST interceptor =
+              getOrCreateInterceptorForSubCluster(info.getSubClusterId(),
+                  info.getClientRMServiceAddress());
+          try {
+            NodesInfo nodesInfo = interceptor.getNodes(states);
+            return nodesInfo;
+          } catch (Exception e) {
+            LOG.error("Subcluster " + info.getSubClusterId()
+                + " failed to return nodesInfo.");
+            return null;
+          }
+        }
+      });
+    }
+
+    // Collect all the responses in parallel
+
+    for (int i = 0; i < subClustersActive.values().size(); i++) {
+      try {
+        Future<NodesInfo> future = compSvc.take();
+        NodesInfo nodesResponse = future.get();
+
+        if (nodesResponse != null) {
+          nodes.addAll(nodesResponse.getNodes());
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to get nodes report ", e);
+      }
+    }
+
+    // Delete duplicate from all the node reports got from all the available
+    // Yarn RMs. Nodes can be moved from one subclusters to another. In this
+    // operation they result LOST/RUNNING in the previous SubCluster and
+    // NEW/RUNNING in the new one.
+
+    return RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
+  }
+
+  @Override
+  public ClusterMetricsInfo getClusterMetricsInfo() {
+    ClusterMetricsInfo metrics = new ClusterMetricsInfo();
+
+    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    try {
+      subClustersActive = federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      LOG.error(e.getLocalizedMessage());
+      return metrics;
+    }
+
+    // Send the requests in parallel
+
+    ExecutorCompletionService<ClusterMetricsInfo> compSvc =
+        new ExecutorCompletionService<ClusterMetricsInfo>(this.threadpool);
+
+    for (final SubClusterInfo info : subClustersActive.values()) {
+      compSvc.submit(new Callable<ClusterMetricsInfo>() {
+        @Override
+        public ClusterMetricsInfo call() {
+          DefaultRequestInterceptorREST interceptor =
+              getOrCreateInterceptorForSubCluster(info.getSubClusterId(),
+                  info.getClientRMServiceAddress());
+          try {
+            ClusterMetricsInfo metrics = interceptor.getClusterMetricsInfo();
+            return metrics;
+          } catch (Exception e) {
+            LOG.error("Subcluster " + info.getSubClusterId()
+                + " failed to return Cluster Metrics.");
+            return null;
+          }
+        }
+      });
+    }
+
+    // Collect all the responses in parallel
+
+    for (int i = 0; i < subClustersActive.values().size(); i++) {
+      try {
+        Future<ClusterMetricsInfo> future = compSvc.take();
+        ClusterMetricsInfo metricsResponse = future.get();
+
+        if (metricsResponse != null) {
+          RouterWebServiceUtil.mergeMetrics(metrics, metricsResponse);
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to get nodes report ", e);
+      }
+    }
+
+    return metrics;
+  }
+
   @Override
   public ClusterInfo get() {
     return getClusterInfo();
@@ -706,11 +922,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public ClusterMetricsInfo getClusterMetricsInfo() {
-    throw new NotImplementedException();
-  }
-
-  @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     throw new NotImplementedException();
   }
@@ -718,16 +929,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public NodesInfo getNodes(String states) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public NodeInfo getNode(String nodeId) {
     throw new NotImplementedException();
   }
 
@@ -932,5 +1133,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         + "FederationInterceptorREST, which should be the last one "
         + "in the chain. Check if the interceptor pipeline configuration "
         + "is correct");
+  }
+
+  @Override
+  public void shutdown() {
+    if (threadpool != null) {
+      threadpool.shutdown();
+    }
   }
 }

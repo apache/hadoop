@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -39,6 +40,9 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -233,10 +237,10 @@ public final class RouterWebServiceUtil {
   }
 
   /**
-   * Merges a list of AppInfo grouping by ApplicationId. Our current policy
-   * is to merge the application reports from the reacheable SubClusters.
-   * Via configuration parameter, we decide whether to return applications
-   * for which the primary AM is missing or to omit them.
+   * Merges a list of AppInfo grouping by ApplicationId. Our current policy is
+   * to merge the application reports from the reacheable SubClusters. Via
+   * configuration parameter, we decide whether to return applications for which
+   * the primary AM is missing or to omit them.
    *
    * @param appsInfo a list of AppInfo to merge
    * @param returnPartialResult if the merge AppsInfo should contain partial
@@ -331,4 +335,93 @@ public final class RouterWebServiceUtil {
       am.setVcoreSeconds(am.getVcoreSeconds() + uam.getVcoreSeconds());
     }
   }
+
+  /**
+   * Deletes all the duplicate NodeInfo by discarding the old instances.
+   *
+   * @param nodes a list of NodeInfo to check for duplicates
+   * @return a NodesInfo that contains a list of NodeInfos without duplicates
+   */
+  public static NodesInfo deleteDuplicateNodesInfo(ArrayList<NodeInfo> nodes) {
+    NodesInfo nodesInfo = new NodesInfo();
+
+    Map<String, NodeInfo> nodesMap = new LinkedHashMap<>();
+    for (NodeInfo node : nodes) {
+      String nodeId = node.getNodeId();
+      // If the node already exists, it could be an old instance
+      if (nodesMap.containsKey(nodeId)) {
+        // Check if the node is an old instance
+        if (nodesMap.get(nodeId).getLastHealthUpdate() < node
+            .getLastHealthUpdate()) {
+          nodesMap.put(node.getNodeId(), node);
+        }
+      } else {
+        nodesMap.put(node.getNodeId(), node);
+      }
+    }
+    nodesInfo.addAll(new ArrayList<NodeInfo>(nodesMap.values()));
+    return nodesInfo;
+  }
+
+  /**
+   * Adds all the values from the second ClusterMetricsInfo to the first one.
+   *
+   * @param metrics the ClusterMetricsInfo we want to update
+   * @param metricsResponse the ClusterMetricsInfo we want to add to the first
+   *          param
+   */
+  public static void mergeMetrics(ClusterMetricsInfo metrics,
+      ClusterMetricsInfo metricsResponse) {
+    metrics.setAppsSubmitted(
+        metrics.getAppsSubmitted() + metricsResponse.getAppsSubmitted());
+    metrics.setAppsCompleted(
+        metrics.getAppsCompleted() + metricsResponse.getAppsCompleted());
+    metrics.setAppsPending(
+        metrics.getAppsPending() + metricsResponse.getAppsPending());
+    metrics.setAppsRunning(
+        metrics.getAppsRunning() + metricsResponse.getAppsRunning());
+    metrics.setAppsFailed(
+        metrics.getAppsFailed() + metricsResponse.getAppsFailed());
+    metrics.setAppsKilled(
+        metrics.getAppsKilled() + metricsResponse.getAppsKilled());
+
+    metrics.setReservedMB(
+        metrics.getReservedMB() + metricsResponse.getReservedMB());
+    metrics.setAvailableMB(
+        metrics.getAvailableMB() + metricsResponse.getAvailableMB());
+    metrics.setAllocatedMB(
+        metrics.getAllocatedMB() + metricsResponse.getAllocatedMB());
+
+    metrics.setReservedVirtualCores(metrics.getReservedVirtualCores()
+        + metricsResponse.getReservedVirtualCores());
+    metrics.setAvailableVirtualCores(metrics.getAvailableVirtualCores()
+        + metricsResponse.getAvailableVirtualCores());
+    metrics.setAllocatedVirtualCores(metrics.getAllocatedVirtualCores()
+        + metricsResponse.getAllocatedVirtualCores());
+
+    metrics.setContainersAllocated(metrics.getContainersAllocated()
+        + metricsResponse.getContainersAllocated());
+    metrics.setContainersReserved(metrics.getReservedContainers()
+        + metricsResponse.getReservedContainers());
+    metrics.setContainersPending(metrics.getPendingContainers()
+        + metricsResponse.getPendingContainers());
+
+    metrics.setTotalMB(metrics.getTotalMB() + metricsResponse.getTotalMB());
+    metrics.setTotalVirtualCores(
+        metrics.getTotalVirtualCores() + metrics.getTotalVirtualCores());
+    metrics.setTotalNodes(metrics.getTotalNodes() + metrics.getTotalNodes());
+    metrics.setLostNodes(metrics.getLostNodes() + metrics.getLostNodes());
+    metrics.setUnhealthyNodes(
+        metrics.getUnhealthyNodes() + metrics.getUnhealthyNodes());
+    metrics.setDecommissioningNodes(
+        metrics.getDecommissioningNodes() + metrics.getDecommissioningNodes());
+    metrics.setDecommissionedNodes(
+        metrics.getDecommissionedNodes() + metrics.getDecommissionedNodes());
+    metrics.setRebootedNodes(
+        metrics.getRebootedNodes() + metrics.getRebootedNodes());
+    metrics.setActiveNodes(metrics.getActiveNodes() + metrics.getActiveNodes());
+    metrics.setShutdownNodes(
+        metrics.getShutdownNodes() + metrics.getShutdownNodes());
+  }
+
 }

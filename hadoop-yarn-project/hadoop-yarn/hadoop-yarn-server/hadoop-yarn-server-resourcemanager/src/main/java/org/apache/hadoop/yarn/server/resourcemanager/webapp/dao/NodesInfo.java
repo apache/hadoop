@@ -39,4 +39,8 @@ public class NodesInfo {
   public ArrayList<NodeInfo> getNodes() {
     return node;
   }
+
+  public void addAll(ArrayList<NodeInfo> nodesInfo) {
+    node.addAll(nodesInfo);
+  }
 }
