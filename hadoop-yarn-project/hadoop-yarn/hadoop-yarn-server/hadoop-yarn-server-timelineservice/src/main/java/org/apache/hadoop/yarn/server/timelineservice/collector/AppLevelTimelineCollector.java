@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +31,8 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Service that handles writes to the timeline service and writes them to the
@@ -43,7 +43,8 @@ import com.google.common.base.Preconditions;
 @Private
 @Unstable
 public class AppLevelTimelineCollector extends TimelineCollector {
-  private static final Log LOG = LogFactory.getLog(TimelineCollector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineCollector.class);
 
   private final ApplicationId appId;
   private final String appUser;

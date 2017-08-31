@@ -19,8 +19,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,6 +27,8 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The flow activity table has column family info
@@ -63,7 +63,8 @@ public class FlowActivityTable extends BaseTable<FlowActivityTable> {
   public static final String DEFAULT_TABLE_NAME =
       "timelineservice.flowactivity";
 
-  private static final Log LOG = LogFactory.getLog(FlowActivityTable.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FlowActivityTable.class);
 
   /** default max number of versions. */
   public static final int DEFAULT_METRICS_MAX_VERSIONS = Integer.MAX_VALUE;

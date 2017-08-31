@@ -19,8 +19,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,6 +27,8 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 
@@ -96,7 +96,8 @@ public class FlowRunTable extends BaseTable<FlowRunTable> {
   /** default value for flowrun table name. */
   public static final String DEFAULT_TABLE_NAME = "timelineservice.flowrun";
 
-  private static final Log LOG = LogFactory.getLog(FlowRunTable.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FlowRunTable.class);
 
   /** default max number of versions. */
   public static final int DEFAULT_METRICS_MAX_VERSIONS = Integer.MAX_VALUE;

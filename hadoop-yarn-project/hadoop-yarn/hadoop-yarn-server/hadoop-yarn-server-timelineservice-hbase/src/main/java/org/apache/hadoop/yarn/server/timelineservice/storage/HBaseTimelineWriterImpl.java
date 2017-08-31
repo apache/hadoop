@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +69,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubA
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This implements a hbase based backend for storing the timeline entity
@@ -82,8 +82,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubA
 public class HBaseTimelineWriterImpl extends AbstractService implements
     TimelineWriter {
 
-  private static final Log LOG = LogFactory
-      .getLog(HBaseTimelineWriterImpl.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(HBaseTimelineWriterImpl.class);
 
   private Connection conn;
   private TypedBufferedMutator<EntityTable> entityTable;

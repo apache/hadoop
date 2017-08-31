@@ -40,8 +40,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -56,6 +54,8 @@ import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** REST end point for Timeline Reader. */
 @Private
@@ -63,8 +63,8 @@ import com.google.inject.Singleton;
 @Singleton
 @Path("/ws/v2/timeline")
 public class TimelineReaderWebServices {
-  private static final Log LOG =
-      LogFactory.getLog(TimelineReaderWebServices.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineReaderWebServices.class);
 
   @Context private ServletContext ctxt;
 
