@@ -369,13 +369,13 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>deplist</id>
+            <id>deplist1</id>
             <phase>compile</phase>
             <goals>
               <goal>list</goal>
             </goals>
             <configuration>
-              <!-- build a shellprofile -->
+              <!-- build a shellprofile for hadoop-aws optional tools -->
               <outputFile>${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-optional.txt</outputFile>
             </configuration>
           </execution>
@@ -391,11 +391,6 @@
               <outputDirectory>${project.build.directory}/native-libs</outputDirectory>
             </configuration>
           </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
           <execution>
             <phase>package</phase>
             <goals>
@@ -406,13 +401,13 @@
             </configuration>
           </execution>
           <execution>
-            <id>deplist</id>
+            <id>deplist2</id>
             <phase>compile</phase>
             <goals>
               <goal>list</goal>
             </goals>
             <configuration>
-              <!-- referenced by a built-in command -->
+              <!-- referenced by the s3guard command -->
               <outputFile>${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-builtin.txt</outputFile>
             </configuration>
           </execution>
