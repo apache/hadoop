@@ -189,7 +189,7 @@ Usage:
 ```
   Usage: yarn rmadmin
      -refreshQueues
-     -refreshNodes [-g [timeout in seconds]]
+     -refreshNodes [-g|graceful [timeout in seconds] -client|server]
      -refreshNodesResources
      -refreshSuperUserGroupsConfiguration
      -refreshUserToGroupsMappings
@@ -214,7 +214,7 @@ Usage:
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -refreshQueues | Reload the queues' acls, states and scheduler specific properties. ResourceManager will reload the mapred-queues configuration file. |
-| -refreshNodes [-g|graceful [timeout in seconds] -client|server] | Refresh the hosts information at the ResourceManager. -g option indicates graceful decommission of excluded hosts, in which case, the optional timeout indicates maximal time in seconds ResourceManager should wait before forcefully mark the node as decommissioned. |
+| -refreshNodes [-g&#124;graceful [timeout in seconds] -client&#124;server] | Refresh the hosts information at the ResourceManager. Here [-g&#124;graceful [timeout in seconds] -client&#124;server] is optional, if we specify the timeout then ResourceManager will wait for timeout before marking the NodeManager as decommissioned. The -client&#124;server indicates if the timeout tracking should be handled by the client or the ResourceManager. The client-side tracking is blocking, while the server-side tracking is not. Omitting the timeout, or a timeout of -1, indicates an infinite timeout. Known Issue: the server-side tracking will immediately decommission if an RM HA failover occurs. |
 | -refreshNodesResources | Refresh resources of NodeManagers at the ResourceManager. |
 | -refreshSuperUserGroupsConfiguration | Refresh superuser proxy groups mappings. |
 | -refreshUserToGroupsMappings | Refresh user-to-groups mappings. |
