@@ -107,6 +107,7 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BoundedAppender;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -1539,38 +1540,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  private static boolean shouldCountTowardsNodeBlacklisting(int exitStatus) {
-    switch (exitStatus) {
-    case ContainerExitStatus.PREEMPTED:
-    case ContainerExitStatus.KILLED_BY_RESOURCEMANAGER:
-    case ContainerExitStatus.KILLED_BY_APPMASTER:
-    case ContainerExitStatus.KILLED_AFTER_APP_COMPLETION:
-    case ContainerExitStatus.ABORTED:
-      // Neither the app's fault nor the system's fault. This happens by design,
-      // so no need for skipping nodes
-      return false;
-    case ContainerExitStatus.DISKS_FAILED:
-      // This container is marked with this exit-status means that the node is
-      // already marked as unhealthy given that most of the disks failed. So, no
-      // need for any explicit skipping of nodes.
-      return false;
-    case ContainerExitStatus.KILLED_EXCEEDED_VMEM:
-    case ContainerExitStatus.KILLED_EXCEEDED_PMEM:
-      // No point in skipping the node as it's not the system's fault
-      return false;
-    case ContainerExitStatus.SUCCESS:
-      return false;
-    case ContainerExitStatus.INVALID:
-      // Ideally, this shouldn't be considered for skipping a node. But in
-      // reality, it seems like there are cases where we are not setting
-      // exit-code correctly and so it's better to be conservative. See
-      // YARN-4284.
-      return true;
-    default:
-      return true;
-    }
-  }
-
   private static final class UnmanagedAMAttemptSavedTransition
                                                 extends AMLaunchedTransition {
     @Override
@@ -1954,7 +1923,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         containerFinishedEvent.getContainerStatus();
     if (containerStatus != null) {
       int exitStatus = containerStatus.getExitStatus();
-      if (shouldCountTowardsNodeBlacklisting(exitStatus)) {
+      if (Apps.shouldCountTowardsNodeBlacklisting(exitStatus)) {
         appAttempt.addAMNodeToBlackList(nodeId);
       }
     } else {
