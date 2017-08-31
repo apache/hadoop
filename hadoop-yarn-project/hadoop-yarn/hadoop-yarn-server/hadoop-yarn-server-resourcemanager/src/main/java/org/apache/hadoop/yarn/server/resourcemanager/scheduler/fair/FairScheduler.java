@@ -84,7 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.GPUResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -126,7 +126,7 @@ public class FairScheduler extends
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
   
   private static final ResourceCalculator RESOURCE_CALCULATOR =
-      new DefaultResourceCalculator();
+      new GPUResourceCalculator();
   private static final ResourceCalculator DOMINANT_RESOURCE_CALCULATOR =
       new DominantResourceCalculator();
   
@@ -236,6 +236,24 @@ public class FairScheduler extends
         + "=" + maxVcores + ", min should equal greater than 0"
         + ", max should be no smaller than min.");
     }
+
+    // validate scheduler GPUs allocation setting
+    int minGPUs = conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
+    int maxGPUs = conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
+
+    if (minGPUs < 0 || minGPUs > maxGPUs) {
+      throw new YarnRuntimeException("Invalid resource scheduler GPUs"
+              + " allocation configuration"
+              + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS
+              + "=" + minGPUs
+              + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS
+              + "=" + maxGPUs + ", min should equal greater than 0"
+              + ", max should be no smaller than min.");
+    }
   }
 
   public FairSchedulerConfiguration getConf() {
@@ -319,7 +337,8 @@ public class FairScheduler extends
             "  Allocations: " + rootMetrics.getAllocatedResources() +
             "  Availability: " + Resource.newInstance(
             rootMetrics.getAvailableMB(),
-            rootMetrics.getAvailableVirtualCores()) +
+            rootMetrics.getAvailableVirtualCores(),
+            rootMetrics.getAvailableGPUs(), 0) +
             "  Demand: " + rootQueue.getDemand());
       }
     }
@@ -511,8 +530,8 @@ public class FairScheduler extends
   public synchronized ResourceWeights getAppWeight(FSAppAttempt app) {
     double weight = 1.0;
     if (sizeBasedWeight) {
-      // Set weight based on current memory demand
-      weight = Math.log1p(app.getDemand().getMemory()) / Math.log(2);
+      // Set weight based on current GPU demand
+      weight = Math.log1p(app.getDemand().getGPUs()) / Math.log(2);
     }
     weight *= app.getPriority().getPriority();
     if (weightAdjuster != null) {
@@ -1152,9 +1171,9 @@ public class FairScheduler extends
   private boolean shouldAttemptPreemption() {
     if (preemptionEnabled) {
       return (preemptionUtilizationThreshold < Math.max(
-          (float) rootMetrics.getAllocatedMB() / clusterResource.getMemory(),
-          (float) rootMetrics.getAllocatedVirtualCores() /
-              clusterResource.getVirtualCores()));
+          Math.max((float) rootMetrics.getAllocatedMB() / clusterResource.getMemory(),
+          (float) rootMetrics.getAllocatedVirtualCores() / clusterResource.getVirtualCores()),
+          (float) rootMetrics.getAllocatedGPUs() / clusterResource.getGPUs()));
     }
     return false;
   }
@@ -1659,7 +1678,7 @@ public class FairScheduler extends
   @Override
   public EnumSet<SchedulerResourceTypes> getSchedulingResourceTypes() {
     return EnumSet
-      .of(SchedulerResourceTypes.MEMORY, SchedulerResourceTypes.CPU);
+      .of(SchedulerResourceTypes.MEMORY, SchedulerResourceTypes.CPU, SchedulerResourceTypes.GPU);
   }
 
   @Override

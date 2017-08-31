@@ -46,15 +46,15 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   private MockClock clock;
 
   private static class StubbedFairScheduler extends FairScheduler {
-    public int lastPreemptMemory = -1;
+    public int lastPreemptGPU = -1;
 
     @Override
     protected void preemptResources(Resource toPreempt) {
-      lastPreemptMemory = toPreempt.getMemory();
+      lastPreemptGPU = toPreempt.getGPUs();
     }
 
     public void resetLastPreemptResources() {
-      lastPreemptMemory = -1;
+      lastPreemptGPU = -1;
     }
   }
 
@@ -97,9 +97,9 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   }
 
   private void registerNodeAndSubmitApp(
-      int memory, int vcores, int appContainers, int appMemory) {
+      int memory, int vcores, int GPUs, int GpuBitVec, int appContainers, int appMemory) {
     RMNode node1 = MockNodes.newNodeInfo(
-        1, Resources.createResource(memory, vcores), 1, "node1");
+        1, Resources.createResource(memory, vcores, GPUs, GpuBitVec), 1, "node1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -126,15 +126,15 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
     out.println("<queue name=\"default\">");
-    out.println("<maxResources>0mb,0vcores</maxResources>");
+    out.println("<maxResources>0mb,0vcores,0gpus</maxResources>");
     out.println("</queue>");
     out.println("<queue name=\"queueA\">");
     out.println("<weight>1</weight>");
-    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<minResources>0mb,0vcores,1gpus</minResources>");
     out.println("</queue>");
     out.println("<queue name=\"queueB\">");
     out.println("<weight>1</weight>");
-    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<minResources>0mb,0vcores,1gpus</minResources>");
     out.println("</queue>");
     out.print("<defaultMinSharePreemptionTimeout>5</defaultMinSharePreemptionTimeout>");
     out.print("<fairSharePreemptionTimeout>10</fairSharePreemptionTimeout>");
@@ -142,8 +142,8 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     out.close();
 
     startResourceManager(0f);
-    // Create node with 4GB memory and 4 vcores
-    registerNodeAndSubmitApp(4 * 1024, 4, 2, 1024);
+    // Create node with 4GB memory, 4 vcores, and 4 GPUs
+    registerNodeAndSubmitApp(4 * 1024, 4, 4, 15, 2, 1024);
 
     // Verify submitting another request triggers preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
@@ -152,14 +152,14 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
     ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
     scheduler.preemptTasksIfNecessary();
-    assertEquals("preemptResources() should have been called", 1024,
-        ((StubbedFairScheduler) scheduler).lastPreemptMemory);
+    assertEquals("preemptResources() should have been called", 1,
+        ((StubbedFairScheduler) scheduler).lastPreemptGPU);
 
     resourceManager.stop();
 
     startResourceManager(0.8f);
-    // Create node with 4GB memory and 4 vcores
-    registerNodeAndSubmitApp(4 * 1024, 4, 3, 1024);
+    // Create node with 4GB memory, 4 vcores, and 4 GPUs
+    registerNodeAndSubmitApp(4 * 1024, 4, 4, 15, 3, 1024);
 
     // Verify submitting another request doesn't trigger preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
@@ -169,13 +169,13 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
     scheduler.preemptTasksIfNecessary();
     assertEquals("preemptResources() should not have been called", -1,
-        ((StubbedFairScheduler) scheduler).lastPreemptMemory);
+        ((StubbedFairScheduler) scheduler).lastPreemptGPU);
 
     resourceManager.stop();
 
     startResourceManager(0.7f);
-    // Create node with 4GB memory and 4 vcores
-    registerNodeAndSubmitApp(4 * 1024, 4, 3, 1024);
+    // Create node with 4GB memory, 4 vcores, and 4 GPUs
+    registerNodeAndSubmitApp(4 * 1024, 4, 4, 15, 3, 1024);
 
     // Verify submitting another request triggers preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
@@ -184,7 +184,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
     ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
     scheduler.preemptTasksIfNecessary();
-    assertEquals("preemptResources() should have been called", 1024,
-        ((StubbedFairScheduler) scheduler).lastPreemptMemory);
+    assertEquals("preemptResources() should have been called", 1,
+        ((StubbedFairScheduler) scheduler).lastPreemptGPU);
   }
 }

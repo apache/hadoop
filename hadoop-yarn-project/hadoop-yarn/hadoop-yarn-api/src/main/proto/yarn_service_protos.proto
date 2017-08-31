@@ -92,6 +92,8 @@ message AllocateResponseProto {
 enum SchedulerResourceTypes {
   MEMORY = 0;
   CPU = 1;
+  GPU = 2;
+  GPUBITVEC = 3;
 }
 
 //////////////////////////////////////////////////////

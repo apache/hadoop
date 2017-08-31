@@ -163,11 +163,11 @@ public class TestAllocationFileLoaderService {
     out.println("<allocations>");
     // Give queue A a minimum of 1024 M
     out.println("<queue name=\"queueA\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<minResources>1024mb,0vcores,0gpus</minResources>");
     out.println("</queue>");
     // Give queue B a minimum of 2048 M
     out.println("<queue name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
+    out.println("<minResources>2048mb,0vcores,0gpus</minResources>");
     out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
     out.println("<schedulingPolicy>fair</schedulingPolicy>");
     out.println("</queue>");
@@ -233,9 +233,9 @@ public class TestAllocationFileLoaderService {
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
-    assertEquals(Resources.createResource(1024, 0),
+    assertEquals(Resources.createResource(1024, 0, 0, 0),
         queueConf.getMinResources("root.queueA"));
-    assertEquals(Resources.createResource(2048, 0),
+    assertEquals(Resources.createResource(2048, 0, 0, 0),
         queueConf.getMinResources("root.queueB"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueC"));
@@ -356,11 +356,11 @@ public class TestAllocationFileLoaderService {
     out.println("<allocations>");
     // Give queue A a minimum of 1024 M
     out.println("<pool name=\"queueA\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<minResources>1024mb,0vcores,0gpus</minResources>");
     out.println("</pool>");
     // Give queue B a minimum of 2048 M
     out.println("<pool name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
+    out.println("<minResources>2048mb,0vcores,0gpus</minResources>");
     out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
     out.println("</pool>");
     // Give queue C no minimum
@@ -406,9 +406,9 @@ public class TestAllocationFileLoaderService {
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
-    assertEquals(Resources.createResource(1024, 0),
+    assertEquals(Resources.createResource(1024, 0, 0, 0),
         queueConf.getMinResources("root.queueA"));
-    assertEquals(Resources.createResource(2048, 0),
+    assertEquals(Resources.createResource(2048, 0, 0, 0),
         queueConf.getMinResources("root.queueB"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueC"));

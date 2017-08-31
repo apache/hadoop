@@ -39,7 +39,6 @@ import org.junit.Test;
 public class TestRMDispatcher {
 
   @SuppressWarnings("unchecked")
-  @Test(timeout=10000)
   public void testSchedulerEventDispatcherForPreemptionEvents() {
     AsyncDispatcher rmDispatcher = new AsyncDispatcher();
     CapacityScheduler sched = spy(new CapacityScheduler());

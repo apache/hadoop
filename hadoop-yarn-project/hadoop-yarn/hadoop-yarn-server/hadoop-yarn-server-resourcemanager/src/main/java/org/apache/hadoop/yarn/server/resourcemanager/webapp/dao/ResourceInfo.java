@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 public class ResourceInfo {
   int memory;
   int vCores;
+  int GPUs;
   
   public ResourceInfo() {
   }
@@ -36,6 +37,7 @@ public class ResourceInfo {
   public ResourceInfo(Resource res) {
     memory = res.getMemory();
     vCores = res.getVirtualCores();
+    GPUs = res.getGPUs();
   }
 
   public int getMemory() {
@@ -45,10 +47,14 @@ public class ResourceInfo {
   public int getvCores() {
     return vCores;
   }
+
+  public int getGPUs() {
+    return GPUs;
+  }
   
   @Override
   public String toString() {
-    return "<memory:" + memory + ", vCores:" + vCores + ">";
+    return "<memory:" + memory + ", vCores:" + vCores + ", GPUs:" + GPUs + ">";
   }
 
   public void setMemory(int memory) {
@@ -57,5 +63,9 @@ public class ResourceInfo {
 
   public void setvCores(int vCores) {
     this.vCores = vCores;
+  }
+
+  public void setGPUs(int GPUs) {
+    this.GPUs = GPUs;
   }
 }

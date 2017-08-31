@@ -57,7 +57,7 @@ public class FairSchedulerInfo extends SchedulerInfo {
   public int getAppFairShare(ApplicationAttemptId appAttemptId) {
     FSAppAttempt fsAppAttempt = scheduler.getSchedulerApp(appAttemptId);
     return fsAppAttempt == null ?
-        INVALID_FAIR_SHARE :  fsAppAttempt.getFairShare().getMemory();
+        INVALID_FAIR_SHARE :  fsAppAttempt.getFairShare().getGPUs();
   }
   
   public FairSchedulerQueueInfo getRootQueueInfo() {

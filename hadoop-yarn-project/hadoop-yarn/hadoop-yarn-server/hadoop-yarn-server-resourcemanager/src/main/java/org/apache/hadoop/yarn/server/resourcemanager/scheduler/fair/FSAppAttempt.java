@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.GPUResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -65,15 +65,15 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     implements Schedulable {
 
   private static final Log LOG = LogFactory.getLog(FSAppAttempt.class);
-  private static final DefaultResourceCalculator RESOURCE_CALCULATOR
-      = new DefaultResourceCalculator();
+  private static final GPUResourceCalculator RESOURCE_CALCULATOR
+      = new GPUResourceCalculator();
 
   private long startTime;
   private Priority priority;
   private ResourceWeights resourceWeights;
   private Resource demand = Resources.createResource(0);
   private FairScheduler scheduler;
-  private Resource fairShare = Resources.createResource(0, 0);
+  private Resource fairShare = Resources.createResource(0, 0, 0, 0);
   private Resource preemptedResources = Resources.createResource(0);
   private RMContainerComparator comparator = new RMContainerComparator();
   private final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
@@ -416,6 +416,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   public void clearPreemptedResources() {
     preemptedResources.setMemory(0);
     preemptedResources.setVirtualCores(0);
+    preemptedResources.setGPUs(0);
   }
 
   /**

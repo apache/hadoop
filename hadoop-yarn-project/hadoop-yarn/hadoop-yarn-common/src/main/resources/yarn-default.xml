@@ -289,6 +289,22 @@
   </property>
 
   <property>
+    <description>The minimum allocation for every container request at the RM,
+    in terms of GPUs. Requests lower than this will throw a
+    InvalidResourceRequestException.</description>
+    <name>yarn.scheduler.minimum-allocation-gpus</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>The maximum allocation for every container request at the RM,
+    in terms of GPUs. Requests higher than this will throw a
+    InvalidResourceRequestException.</description>
+    <name>yarn.scheduler.maximum-allocation-gpus</name>
+    <value>32</value>
+  </property>
+
+  <property>
     <description>Enable RM to recover state after starting. If true, then 
       yarn.resourcemanager.store.class must be specified. </description>
     <name>yarn.resourcemanager.recovery.enabled</name>

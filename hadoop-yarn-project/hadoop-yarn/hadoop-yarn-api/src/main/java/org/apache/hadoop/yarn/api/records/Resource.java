@@ -53,10 +53,12 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Stable
-  public static Resource newInstance(int memory, int vCores) {
+  public static Resource newInstance(int memory, int vCores, int GPUs, int GpuBitVec ) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
+    resource.setGPUs(GPUs);
+    resource.setGpuBitVec(GpuBitVec);
     return resource;
   }
 
@@ -105,12 +107,68 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public abstract void setVirtualCores(int vCores);
 
+  /**
+   * Get <em>number of GPUs</em> of the resource.
+   *
+   * GPUs are a unit for expressing GPU parallelism. A node's capacity
+   * should be configured with GPUs equal to its number of GPUs.
+   * A container should be requested with the number of GPUs it can saturate, i.e.
+   * the average number of GPU parallelism it expects to have runnable at a time.
+   *
+   * @return <em>number of GPUs</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract int getGPUs();
+
+  /**
+   * Set <em>number of GPUs</em> of the resource.
+   *
+   * GPUs are a unit for expressing GPU parallelism. A node's capacity
+   * should be configured with GPUs equal to its number of GPUs.
+   * A container should be requested with the number of GPUs it can saturate, i.e.
+   * the average number of GPU parallelism it expects to have runnable at a time.
+   *
+   * @param GPUs <em>number of GPUs</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract void setGPUs(int GPUs);
+
+  /**
+   * Get <em> Gpu Bit Vector </em> of the resource.
+   *
+   * GpuBitVec is a unit for representing GPU information with locality awareness.
+   * Bit being set 1 means the related GPU is requested/occupied. The sum of 1 bits should equal to #GPUs.
+   * Bit being set 0 means the related GPU is idle/not exist.
+   *
+   * @return <em>Gpu Bit Vector</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract int getGpuBitVec();
+
+  /**
+   * Set <em>Gpu Bit Vector</em> of the resource.
+   *
+   * GpuBitVec is a unit for representing GPU information with locality awareness.
+   * Bit being set 1 means the related GPU is requested/occupied. The sum of 1 bits should equal to #GPUs.
+   * Bit being set 0 means the related GPU is idle/not exist.
+   *
+   * @param GpuBitVec <em>Gpu Bit Vector</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract void setGpuBitVec(int GpuBitVec);
+
   @Override
   public int hashCode() {
     final int prime = 263167;
     int result = 3571;
     result = 939769357 + getMemory(); // prime * result = 939769357 initially
     result = prime * result + getVirtualCores();
+    result = prime * result + getGPUs();
+    result = prime * result + getGpuBitVec();
     return result;
   }
 
@@ -123,8 +181,10 @@ public abstract class Resource implements Comparable<Resource> {
     if (!(obj instanceof Resource))
       return false;
     Resource other = (Resource) obj;
-    if (getMemory() != other.getMemory() || 
-        getVirtualCores() != other.getVirtualCores()) {
+    if (getMemory() != other.getMemory() ||
+        getVirtualCores() != other.getVirtualCores() ||
+        getGPUs() != other.getGPUs() ||
+        getGpuBitVec() != other.getGpuBitVec()) {
       return false;
     }
     return true;
@@ -132,6 +192,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GpuBitVec:" + getGpuBitVec() + ">";
   }
 }

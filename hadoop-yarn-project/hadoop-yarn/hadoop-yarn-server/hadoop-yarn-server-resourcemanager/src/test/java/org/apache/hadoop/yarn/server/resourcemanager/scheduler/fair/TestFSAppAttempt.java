@@ -199,17 +199,17 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
 
     final FSLeafQueue mockQueue = Mockito.mock(FSLeafQueue.class);
 
-    final Resource queueMaxResources = Resource.newInstance(5 * 1024, 3);
-    final Resource queueFairShare = Resources.createResource(4096, 2);
-    final Resource queueUsage = Resource.newInstance(2048, 2);
+    final Resource queueMaxResources = Resource.newInstance(5 * 1024, 3, 3, 7);
+    final Resource queueFairShare = Resources.createResource(4096, 2, 2, 3);
+    final Resource queueUsage = Resource.newInstance(2048, 2, 2, 3);
 
     final Resource queueStarvation =
         Resources.subtract(queueFairShare, queueUsage);
     final Resource queueMaxResourcesAvailable =
         Resources.subtract(queueMaxResources, queueUsage);
 
-    final Resource clusterResource = Resources.createResource(8192, 8);
-    final Resource clusterUsage = Resources.createResource(2048, 2);
+    final Resource clusterResource = Resources.createResource(8192, 8, 8, (1 << 8) - 1);
+    final Resource clusterUsage = Resources.createResource(2048, 2, 2, 3);
     final Resource clusterAvailable =
         Resources.subtract(clusterResource, clusterUsage);
 
@@ -231,7 +231,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
         new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
             null, rmContext);
 
-    // Min of Memory and CPU across cluster and queue is used in
+    // Min of Memory, CPU, and GPU across cluster and queue is used in
     // DominantResourceFairnessPolicy
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(DominantResourceFairnessPolicy.class));
@@ -241,30 +241,39 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             queueMaxResourcesAvailable.getMemory()),
         min(queueStarvation.getVirtualCores(),
             clusterAvailable.getVirtualCores(),
-            queueMaxResourcesAvailable.getVirtualCores())
+            queueMaxResourcesAvailable.getVirtualCores()),
+        min(queueStarvation.getGPUs(),
+            clusterAvailable.getGPUs(),
+            queueMaxResourcesAvailable.getGPUs())
     );
 
-    // Fair and Fifo ignore CPU of queue, so use cluster available CPU
+    // Fair ignores CPU and memory of queue, so use cluster available CPU and memory
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FairSharePolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemory(),
+        Math.min(
             clusterAvailable.getMemory(),
             queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
-            queueMaxResourcesAvailable.getVirtualCores())
+            queueMaxResourcesAvailable.getVirtualCores()),
+        min(queueStarvation.getGPUs(),
+            clusterAvailable.getGPUs(),
+            queueMaxResourcesAvailable.getGPUs())
     );
 
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FifoPolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemory(),
+        Math.min(
             clusterAvailable.getMemory(),
             queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
-            queueMaxResourcesAvailable.getVirtualCores())
+            queueMaxResourcesAvailable.getVirtualCores()),
+        min(queueStarvation.getGPUs(),
+            clusterAvailable.getGPUs(),
+            queueMaxResourcesAvailable.getGPUs())
     );
   }
 
@@ -273,9 +282,10 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
   }
 
   protected void verifyHeadroom(FSAppAttempt schedulerApp,
-                                int expectedMemory, int expectedCPU) {
+                                int expectedMemory, int expectedCPU, int expectedGPU) {
     Resource headroom = schedulerApp.getHeadroom();
     assertEquals(expectedMemory, headroom.getMemory());
     assertEquals(expectedCPU, headroom.getVirtualCores());
+    assertEquals(expectedGPU, headroom.getGPUs());
   }
 }

@@ -40,7 +40,7 @@ public abstract class ApplicationAttemptStateData {
       Credentials attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
-      long finishTime, long memorySeconds, long vcoreSeconds) {
+      long finishTime, long memorySeconds, long vcoreSeconds, long GPUSeconds, long GpuBitVecSeconds) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
@@ -55,17 +55,19 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setFinishTime(finishTime);
     attemptStateData.setMemorySeconds(memorySeconds);
     attemptStateData.setVcoreSeconds(vcoreSeconds);
+    attemptStateData.setGPUSeconds(GPUSeconds);
+    attemptStateData.setGpuBitVecSeconds(GpuBitVecSeconds);
     return attemptStateData;
   }
 
   public static ApplicationAttemptStateData newInstance(
       ApplicationAttemptId attemptId, Container masterContainer,
       Credentials attemptTokens, long startTime, long memorySeconds,
-      long vcoreSeconds) {
+      long vcoreSeconds, long GPUSeconds, long GpuBitVecSeconds) {
     return newInstance(attemptId, masterContainer, attemptTokens,
         startTime, null, "N/A", "", null, ContainerExitStatus.INVALID, 0,
-        memorySeconds, vcoreSeconds);
-    }
+        memorySeconds, vcoreSeconds, GPUSeconds, GpuBitVecSeconds);
+  }
 
 
   public abstract ApplicationAttemptStateDataProto getProto();
@@ -182,4 +184,28 @@ public abstract class ApplicationAttemptStateData {
   @Public
   @Unstable
   public abstract void setVcoreSeconds(long vcoreSeconds);
+
+  /**
+   * Get the <em>GPU seconds</em> of the application.
+   * @return <em>GPU seconds</em> of the application
+   */
+  @Public
+  @Unstable
+  public abstract long getGPUSeconds();
+
+  @Public
+  @Unstable
+  public abstract void setGPUSeconds(long GPUSeconds);
+
+  /**
+   * Get the <em>GpuBitVec seconds</em> of the application.
+   * @return <em>GpuBitVec seconds</em> of the application
+   */
+  @Public
+  @Unstable
+  public abstract long getGpuBitVecSeconds();
+
+  @Public
+  @Unstable
+  public abstract void setGpuBitVecSeconds(long GpuBitVecSeconds);
 }

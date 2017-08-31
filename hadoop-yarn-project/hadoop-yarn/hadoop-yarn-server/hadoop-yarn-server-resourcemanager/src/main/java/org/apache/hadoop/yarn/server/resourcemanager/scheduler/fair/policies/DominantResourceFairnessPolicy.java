@@ -94,12 +94,13 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
     int queueAvailableMemory =
         Math.max(queueFairShare.getMemory() - queueUsage.getMemory(), 0);
     int queueAvailableCPU =
-        Math.max(queueFairShare.getVirtualCores() - queueUsage
-            .getVirtualCores(), 0);
+        Math.max(queueFairShare.getVirtualCores() - queueUsage.getVirtualCores(), 0);
+    int queueAvailableGPU =
+        Math.max(queueFairShare.getGPUs() - queueUsage.getGPUs(), 0);
     Resource headroom = Resources.createResource(
         Math.min(maxAvailable.getMemory(), queueAvailableMemory),
-        Math.min(maxAvailable.getVirtualCores(),
-            queueAvailableCPU));
+        Math.min(maxAvailable.getVirtualCores(), queueAvailableCPU),
+        Math.min(maxAvailable.getGPUs(), queueAvailableGPU), 0);
     return headroom;
   }
 
@@ -174,14 +175,18 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
           (pool.getMemory() * weights.getWeight(MEMORY)));
       shares.setWeight(CPU, (float)resource.getVirtualCores() /
           (pool.getVirtualCores() * weights.getWeight(CPU)));
+      shares.setWeight(GPU, (float)resource.getGPUs() /
+          (pool.getGPUs() * weights.getWeight(GPU)));
       // sort order vector by resource share
       if (resourceOrder != null) {
         if (shares.getWeight(MEMORY) > shares.getWeight(CPU)) {
           resourceOrder[0] = MEMORY;
           resourceOrder[1] = CPU;
+          resourceOrder[2] = GPU;
         } else  {
           resourceOrder[0] = CPU;
           resourceOrder[1] = MEMORY;
+          resourceOrder[2] = GPU;
         }
       }
     }

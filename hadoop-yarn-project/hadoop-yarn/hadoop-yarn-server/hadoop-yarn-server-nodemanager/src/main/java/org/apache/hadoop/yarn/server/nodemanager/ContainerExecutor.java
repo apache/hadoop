@@ -328,6 +328,7 @@ public abstract class ContainerExecutor implements Configurable {
     }
   
     if (Shell.WINDOWS) {
+      int gpuRate = -1;
       int cpuRate = -1;
       int memory = -1;
       if (resource != null) {
@@ -365,10 +366,38 @@ public abstract class ContainerExecutor implements Configurable {
           cpuRate = Math.min(10000,
               (int) ((containerVCores * 10000) / yarnVCores));
         }
+
+        if (conf.getBoolean(
+            YarnConfiguration.NM_WINDOWS_CONTAINER_GPU_LIMIT_ENABLED,
+            YarnConfiguration.DEFAULT_NM_WINDOWS_CONTAINER_GPU_LIMIT_ENABLED)) {
+          int containerGPUs = resource.getGPUs();
+          int nodeGPUs = conf.getInt(YarnConfiguration.NM_GPUS,
+              YarnConfiguration.DEFAULT_NM_GPUS);
+          // cap overall usage to the number of GPUs allocated to YARN
+          int nodeGpuPercentage = Math
+              .min(
+                  conf.getInt(
+                      YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT,
+                      YarnConfiguration.DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT),
+                  100);
+          nodeGpuPercentage = Math.max(0, nodeGpuPercentage);
+          if (nodeGpuPercentage == 0) {
+            String message = "Illegal value for "
+                + YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT
+                + ". Value cannot be less than or equal to 0.";
+            throw new IllegalArgumentException(message);
+          }
+          float yarnGPUs = (nodeGpuPercentage * nodeGPUs) / 100.0f;
+          // GPU should be set to a percentage * 100, e.g. 20% gpu rate limit
+          // should be set as 20 * 100. The following setting is equal to:
+          // 100 * (100 * (GPUs / Total # of GPUs allocated to YARN))
+          gpuRate = Math.min(10000,
+                  (int) ((containerGPUs * 10000) / yarnGPUs));
+        }
       }
       return new String[] { Shell.WINUTILS, "task", "create", "-m",
-          String.valueOf(memory), "-c", String.valueOf(cpuRate), groupId,
-          "cmd /c " + command };
+          String.valueOf(memory), "-c", String.valueOf(cpuRate), "-g", String.valueOf(gpuRate),
+          groupId, "cmd /c " + command };
     } else {
       List<String> retCommand = new ArrayList<String>();
       if (containerSchedPriorityIsSet) {

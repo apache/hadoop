@@ -75,9 +75,17 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     		            "[ \t]*([0-9]*)[ \t]*([0-9]*)[ \t].*");
   private CpuTimeTracker cpuTimeTracker;
 
+  /**
+   * Patterns for parsing /proc/driver/nvidia/gpus
+   */
+  private static final String PROCFS_GPUINFO = "/proc/driver/nvidia/gpus";
+  private static final Pattern GPU_FORMAT =
+          Pattern.compile("^GPU[ \t]:[ \t]*([0-9]*)");
+
   private String procfsMemFile;
   private String procfsCpuFile;
   private String procfsStatFile;
+  private String procfsGpuFile;
   long jiffyLengthInMillis;
 
   private long ramSize = 0;
@@ -87,9 +95,11 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private long inactiveSize = 0; // inactive cache memory (kB)
   private int numProcessors = 0; // number of processors on the system
   private long cpuFrequency = 0L; // CPU frequency on the system (kHz)
+  private int numGPUs = 0; // number of GPUs on the system
 
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;
+  boolean readGpuInfoFile = false;
 
   /**
    * Get current time
@@ -100,7 +110,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
   public LinuxResourceCalculatorPlugin() {
-    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT,
+    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, PROCFS_GPUINFO,
         ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS);
   }
 
@@ -109,16 +119,19 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    * used only in unit tests
    * @param procfsMemFile fake file for /proc/meminfo
    * @param procfsCpuFile fake file for /proc/cpuinfo
+   * @param procfsGpuFile fake file for /proc/driver/nvidia/gpus
    * @param procfsStatFile fake file for /proc/stat
    * @param jiffyLengthInMillis fake jiffy length value
    */
   public LinuxResourceCalculatorPlugin(String procfsMemFile,
                                        String procfsCpuFile,
                                        String procfsStatFile,
+                                       String procfsGpuFile,
                                        long jiffyLengthInMillis) {
     this.procfsMemFile = procfsMemFile;
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
+    this.procfsGpuFile = procfsGpuFile;
     this.jiffyLengthInMillis = jiffyLengthInMillis;
     this.cpuTimeTracker = new CpuTimeTracker(jiffyLengthInMillis);
   }
@@ -245,6 +258,54 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
   /**
+   * Read /proc/driver/nvidia/gpus, parse and calculate CPU information
+   */
+  private void readProcGpuInfoFile() {
+    // This directory needs to be read only once
+    if (readGpuInfoFile) {
+      return;
+    }
+    // Read "XXX" file
+    BufferedReader in = null;
+    InputStreamReader fReader = null;
+    try {
+      fReader = new InputStreamReader(
+              new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
+      in = new BufferedReader(fReader);
+    } catch (FileNotFoundException f) {
+      // shouldn't happen....
+      return;
+    }
+    Matcher mat = null;
+    try {
+      numGPUs = 0;
+      String str = in.readLine();
+      while (str != null) {
+        mat = GPU_FORMAT.matcher(str);
+        if (mat.find()) {
+          numGPUs++;
+        }
+        str = in.readLine();
+      }
+    } catch (IOException io) {
+      LOG.warn("Error reading the stream " + io);
+    } finally {
+      // Close the streams
+      try {
+        fReader.close();
+        try {
+          in.close();
+        } catch (IOException i) {
+          LOG.warn("Error closing the stream " + in);
+        }
+      } catch (IOException i) {
+        LOG.warn("Error closing the stream " + fReader);
+      }
+    }
+    readGpuInfoFile = true;
+  }
+
+  /**
    * Read /proc/stat file, parse and calculate cumulative CPU
    */
   private void readProcStatFile() {
@@ -353,6 +414,13 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     return overallCpuUsage;
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public int getNumGPUs() {
+    readProcGpuInfoFile();
+    return numGPUs;
+  }
+
   /**
    * Test the {@link LinuxResourceCalculatorPlugin}
    *
@@ -372,6 +440,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     System.out.println("CPU frequency (kHz) : " + plugin.getCpuFrequency());
     System.out.println("Cumulative CPU time (ms) : " +
             plugin.getCumulativeCpuTime());
+    System.out.println("Number of GPUs : " + plugin.getNumGPUs());
+
     try {
       // Sleep so we can compute the CPU usage
       Thread.sleep(500L);

@@ -154,7 +154,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       DominantResourceCalculator.class.getName());
 
     int containerMemory = 1024;
-    Resource containerResource = Resource.newInstance(containerMemory, 1);
+    Resource containerResource = Resource.newInstance(containerMemory, 1, 1, 1);
 
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
@@ -221,7 +221,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // 2 running containers.
     Resource usedResources = Resources.multiply(containerResource, 2);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGpuBitVec());
 
     assertTrue(schedulerNode1.isValidContainer(amContainer.getContainerId()));
     assertTrue(schedulerNode1.isValidContainer(runningContainer
@@ -280,15 +280,15 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // ************* check Queue metrics ************
     QueueMetrics queueMetrics = queue.getMetrics();
     assertMetrics(queueMetrics, 1, 0, 1, 0, 2, availableResources.getMemory(),
-        availableResources.getVirtualCores(), usedResource.getMemory(),
-        usedResource.getVirtualCores());
+        availableResources.getVirtualCores(), availableResources.getGPUs(),
+        usedResource.getMemory(), usedResource.getVirtualCores(), usedResource.getGPUs());
 
     // ************ check user metrics ***********
     QueueMetrics userMetrics =
         queueMetrics.getUserMetrics(app.getUser());
     assertMetrics(userMetrics, 1, 0, 1, 0, 2, availableResources.getMemory(),
-        availableResources.getVirtualCores(), usedResource.getMemory(),
-        usedResource.getVirtualCores());
+        availableResources.getVirtualCores(), availableResources.getGPUs(),
+        usedResource.getMemory(), usedResource.getVirtualCores(), usedResource.getGPUs());
   }
 
   private void checkCSLeafQueue(MockRM rm,
@@ -321,7 +321,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       Resource availableResources) throws Exception {
     // waiting for RM's scheduling apps
     int retry = 0;
-    Resource assumedFairShare = Resource.newInstance(8192, 8);
+    Resource assumedFairShare = Resource.newInstance(8192, 8, 8, (1 << 8) - 1);
     while (true) {
       Thread.sleep(100);
       if (assumedFairShare.equals(((FairScheduler)rm.getResourceScheduler())
@@ -348,8 +348,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // ************ check queue metrics ****************
     QueueMetrics queueMetrics = scheduler.getRootQueueMetrics();
     assertMetrics(queueMetrics, 1, 0, 1, 0, 2, availableResources.getMemory(),
-        availableResources.getVirtualCores(), usedResources.getMemory(),
-        usedResources.getVirtualCores());
+        availableResources.getVirtualCores(), availableResources.getGPUs(),
+        usedResources.getMemory(), usedResources.getVirtualCores(), usedResources.getGPUs());
   }
 
   // create 3 container reports for AM
@@ -495,9 +495,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     waitForNumContainersToRecover(2, rm2, am1_2.getApplicationAttemptId());
 
     // Calculate each queue's resource usage.
-    Resource containerResource = Resource.newInstance(1024, 1);
+    Resource containerResource = Resource.newInstance(1024, 1, 1, 1);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGpuBitVec());
     Resource clusterResource = Resources.multiply(nmResource, 2);
     Resource q1Resource = Resources.multiply(clusterResource, 0.5);
     Resource q2Resource = Resources.multiply(clusterResource, 0.5);
@@ -522,9 +522,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       q1UsedResource, 4);
     QueueMetrics queue1Metrics = schedulerApp1_1.getQueue().getMetrics();
     assertMetrics(queue1Metrics, 2, 0, 2, 0, 4,
-        q1availableResources.getMemory(),
-        q1availableResources.getVirtualCores(), q1UsedResource.getMemory(),
-        q1UsedResource.getVirtualCores());
+        q1availableResources.getMemory(), q1availableResources.getVirtualCores(),
+        q1availableResources.getGPUs(), q1UsedResource.getMemory(),
+        q1UsedResource.getVirtualCores(), q1UsedResource.getGPUs());
 
     // assert queue B state.
     SchedulerApplication schedulerApp2 =
@@ -533,9 +533,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       q2UsedResource, 2);
     QueueMetrics queue2Metrics = schedulerApp2.getQueue().getMetrics();
     assertMetrics(queue2Metrics, 1, 0, 1, 0, 2,
-        q2availableResources.getMemory(),
-        q2availableResources.getVirtualCores(), q2UsedResource.getMemory(),
-        q2UsedResource.getVirtualCores());
+        q2availableResources.getMemory(), q2availableResources.getVirtualCores(),
+        q2availableResources.getGPUs(), q2UsedResource.getMemory(),
+        q2UsedResource.getVirtualCores(), q2UsedResource.getGPUs());
 
     // assert parent queue state.
     LeafQueue leafQueue = (LeafQueue) schedulerApp2.getQueue();
@@ -543,9 +543,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     checkParentQueue(parentQueue, 6, totalUsedResource, (float) 6 / 16,
       (float) 6 / 16);
     assertMetrics(parentQueue.getMetrics(), 3, 0, 3, 0, 6,
-        totalAvailableResource.getMemory(),
-        totalAvailableResource.getVirtualCores(), totalUsedResource.getMemory(),
-        totalUsedResource.getVirtualCores());
+        totalAvailableResource.getMemory(), totalAvailableResource.getVirtualCores(),
+        totalAvailableResource.getGPUs(), totalUsedResource.getMemory(),
+        totalUsedResource.getVirtualCores(), totalUsedResource.getGPUs());
   }
 
   private void verifyAppRecoveryWithWrongQueueConfig(
@@ -966,7 +966,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   private void assertMetrics(QueueMetrics qm, int appsSubmitted,
       int appsPending, int appsRunning, int appsCompleted,
       int allocatedContainers, int availableMB, int availableVirtualCores,
-      int allocatedMB, int allocatedVirtualCores) {
+      int availableGPUs, int allocatedMB, int allocatedVirtualCores, int allocatedGPUs) {
     assertEquals(appsSubmitted, qm.getAppsSubmitted());
     assertEquals(appsPending, qm.getAppsPending());
     assertEquals(appsRunning, qm.getAppsRunning());
@@ -974,8 +974,10 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     assertEquals(allocatedContainers, qm.getAllocatedContainers());
     assertEquals(availableMB, qm.getAvailableMB());
     assertEquals(availableVirtualCores, qm.getAvailableVirtualCores());
+    assertEquals(availableGPUs, qm.getAvailableGPUs());
     assertEquals(allocatedMB, qm.getAllocatedMB());
     assertEquals(allocatedVirtualCores, qm.getAllocatedVirtualCores());
+    assertEquals(allocatedGPUs, qm.getAllocatedGPUs());
   }
 
   public static void waitForNumContainersToRecover(int num, MockRM rm,
