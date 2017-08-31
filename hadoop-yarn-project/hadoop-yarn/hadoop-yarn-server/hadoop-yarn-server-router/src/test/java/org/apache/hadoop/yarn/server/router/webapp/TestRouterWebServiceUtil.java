@@ -20,11 +20,15 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceRequestInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.Assert;
@@ -39,6 +43,11 @@ public class TestRouterWebServiceUtil {
   private static final ApplicationId APPID2 = ApplicationId.newInstance(2, 1);
   private static final ApplicationId APPID3 = ApplicationId.newInstance(3, 1);
   private static final ApplicationId APPID4 = ApplicationId.newInstance(4, 1);
+
+  private static final String NODE1 = "Node1";
+  private static final String NODE2 = "Node2";
+  private static final String NODE3 = "Node3";
+  private static final String NODE4 = "Node4";
 
   /**
    * This test validates the correctness of RouterWebServiceUtil#mergeAppsInfo
@@ -307,5 +316,258 @@ public class TestRouterWebServiceUtil {
     AppsInfo result = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), false);
     Assert.assertNotNull(result);
     Assert.assertEquals(1, result.getApps().size());
+  }
+
+  /**
+   * This test validates the correctness of
+   * RouterWebServiceUtil#deleteDuplicateNodesInfo in case we want to merge 4
+   * Nodes. The expected result would be the same 4 Nodes.
+   */
+  @Test
+  public void testDeleteDuplicate4DifferentNodes() {
+
+    NodesInfo nodes = new NodesInfo();
+
+    NodeInfo nodeInfo1 = new NodeInfo();
+    nodeInfo1.setId(NODE1);
+    nodes.add(nodeInfo1);
+
+    NodeInfo nodeInfo2 = new NodeInfo();
+    nodeInfo2.setId(NODE2);
+    nodes.add(nodeInfo2);
+
+    NodeInfo nodeInfo3 = new NodeInfo();
+    nodeInfo3.setId(NODE3);
+    nodes.add(nodeInfo3);
+
+    NodeInfo nodeInfo4 = new NodeInfo();
+    nodeInfo4.setId(NODE4);
+    nodes.add(nodeInfo4);
+
+    NodesInfo result =
+        RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
+    Assert.assertNotNull(result);
+    Assert.assertEquals(4, result.getNodes().size());
+
+    List<String> nodesIds = new ArrayList<String>();
+
+    for (NodeInfo node : result.getNodes()) {
+      nodesIds.add(node.getNodeId());
+    }
+
+    Assert.assertTrue(nodesIds.contains(NODE1));
+    Assert.assertTrue(nodesIds.contains(NODE2));
+    Assert.assertTrue(nodesIds.contains(NODE3));
+    Assert.assertTrue(nodesIds.contains(NODE4));
+  }
+
+  /**
+   * This test validates the correctness of
+   * {@link RouterWebServiceUtil#deleteDuplicateNodesInfo(ArrayList)} in case we
+   * want to merge 3 nodes with the same id. The expected result would be 1 node
+   * report with the newest healthy report.
+   */
+  @Test
+  public void testDeleteDuplicateNodes() {
+
+    NodesInfo nodes = new NodesInfo();
+
+    NodeInfo node1 = new NodeInfo();
+    node1.setId(NODE1);
+    node1.setLastHealthUpdate(0);
+    nodes.add(node1);
+
+    NodeInfo node2 = new NodeInfo();
+    node2.setId(NODE1);
+    node2.setLastHealthUpdate(1);
+    nodes.add(node2);
+
+    NodeInfo node3 = new NodeInfo();
+    node3.setId(NODE1);
+    node3.setLastHealthUpdate(2);
+    nodes.add(node3);
+
+    NodesInfo result =
+        RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
+    Assert.assertNotNull(result);
+    Assert.assertEquals(1, result.getNodes().size());
+
+    NodeInfo node = result.getNodes().get(0);
+
+    Assert.assertEquals(NODE1, node.getNodeId());
+    Assert.assertEquals(2, node.getLastHealthUpdate());
+  }
+
+  /**
+   * This test validates the correctness of
+   * {@link RouterWebServiceUtil#mergeMetrics}.
+   */
+  @Test
+  public void testMergeMetrics() {
+    ClusterMetricsInfo metrics = new ClusterMetricsInfo();
+    ClusterMetricsInfo metricsResponse = new ClusterMetricsInfo();
+
+    setUpClusterMetrics(metrics);
+    setUpClusterMetrics(metricsResponse);
+    ClusterMetricsInfo metricsClone = createClusterMetricsClone(metrics);
+    RouterWebServiceUtil.mergeMetrics(metrics, metricsResponse);
+
+    Assert.assertEquals(
+        metricsResponse.getAppsSubmitted() + metricsClone.getAppsSubmitted(),
+        metrics.getAppsSubmitted());
+    Assert.assertEquals(
+        metricsResponse.getAppsCompleted() + metricsClone.getAppsCompleted(),
+        metrics.getAppsCompleted());
+    Assert.assertEquals(
+        metricsResponse.getAppsPending() + metricsClone.getAppsPending(),
+        metrics.getAppsPending());
+    Assert.assertEquals(
+        metricsResponse.getAppsRunning() + metricsClone.getAppsRunning(),
+        metrics.getAppsRunning());
+    Assert.assertEquals(
+        metricsResponse.getAppsFailed() + metricsClone.getAppsFailed(),
+        metrics.getAppsFailed());
+    Assert.assertEquals(
+        metricsResponse.getAppsKilled() + metricsClone.getAppsKilled(),
+        metrics.getAppsKilled());
+
+    Assert.assertEquals(
+        metricsResponse.getReservedMB() + metricsClone.getReservedMB(),
+        metrics.getReservedMB());
+    Assert.assertEquals(
+        metricsResponse.getAvailableMB() + metricsClone.getAvailableMB(),
+        metrics.getAvailableMB());
+    Assert.assertEquals(
+        metricsResponse.getAllocatedMB() + metricsClone.getAllocatedMB(),
+        metrics.getAllocatedMB());
+
+    Assert.assertEquals(
+        metricsResponse.getReservedVirtualCores()
+            + metricsClone.getReservedVirtualCores(),
+        metrics.getReservedVirtualCores());
+    Assert.assertEquals(
+        metricsResponse.getAvailableVirtualCores()
+            + metricsClone.getAvailableVirtualCores(),
+        metrics.getAvailableVirtualCores());
+    Assert.assertEquals(
+        metricsResponse.getAllocatedVirtualCores()
+            + metricsClone.getAllocatedVirtualCores(),
+        metrics.getAllocatedVirtualCores());
+
+    Assert.assertEquals(
+        metricsResponse.getContainersAllocated()
+            + metricsClone.getContainersAllocated(),
+        metrics.getContainersAllocated());
+    Assert.assertEquals(
+        metricsResponse.getReservedContainers()
+            + metricsClone.getReservedContainers(),
+        metrics.getReservedContainers());
+    Assert.assertEquals(
+        metricsResponse.getPendingContainers()
+            + metricsClone.getPendingContainers(),
+        metrics.getPendingContainers());
+
+    Assert.assertEquals(
+        metricsResponse.getTotalMB() + metricsClone.getTotalMB(),
+        metrics.getTotalMB());
+    Assert.assertEquals(
+        metricsResponse.getTotalVirtualCores()
+            + metricsClone.getTotalVirtualCores(),
+        metrics.getTotalVirtualCores());
+    Assert.assertEquals(
+        metricsResponse.getTotalNodes() + metricsClone.getTotalNodes(),
+        metrics.getTotalNodes());
+    Assert.assertEquals(
+        metricsResponse.getLostNodes() + metricsClone.getLostNodes(),
+        metrics.getLostNodes());
+    Assert.assertEquals(
+        metricsResponse.getUnhealthyNodes() + metricsClone.getUnhealthyNodes(),
+        metrics.getUnhealthyNodes());
+    Assert.assertEquals(
+        metricsResponse.getDecommissioningNodes()
+            + metricsClone.getDecommissioningNodes(),
+        metrics.getDecommissioningNodes());
+    Assert.assertEquals(
+        metricsResponse.getDecommissionedNodes()
+            + metricsClone.getDecommissionedNodes(),
+        metrics.getDecommissionedNodes());
+    Assert.assertEquals(
+        metricsResponse.getRebootedNodes() + metricsClone.getRebootedNodes(),
+        metrics.getRebootedNodes());
+    Assert.assertEquals(
+        metricsResponse.getActiveNodes() + metricsClone.getActiveNodes(),
+        metrics.getActiveNodes());
+    Assert.assertEquals(
+        metricsResponse.getShutdownNodes() + metricsClone.getShutdownNodes(),
+        metrics.getShutdownNodes());
+  }
+
+  private ClusterMetricsInfo createClusterMetricsClone(
+      ClusterMetricsInfo metrics) {
+    ClusterMetricsInfo metricsClone = new ClusterMetricsInfo();
+    metricsClone.setAppsSubmitted(metrics.getAppsSubmitted());
+    metricsClone.setAppsCompleted(metrics.getAppsCompleted());
+    metricsClone.setAppsPending(metrics.getAppsPending());
+    metricsClone.setAppsRunning(metrics.getAppsRunning());
+    metricsClone.setAppsFailed(metrics.getAppsFailed());
+    metricsClone.setAppsKilled(metrics.getAppsKilled());
+
+    metricsClone.setReservedMB(metrics.getReservedMB());
+    metricsClone.setAvailableMB(metrics.getAvailableMB());
+    metricsClone.setAllocatedMB(metrics.getAllocatedMB());
+
+    metricsClone.setReservedVirtualCores(metrics.getReservedVirtualCores());
+    metricsClone.setAvailableVirtualCores(metrics.getAvailableVirtualCores());
+    metricsClone.setAllocatedVirtualCores(metrics.getAllocatedVirtualCores());
+
+    metricsClone.setContainersAllocated(metrics.getContainersAllocated());
+    metricsClone.setContainersReserved(metrics.getReservedContainers());
+    metricsClone.setContainersPending(metrics.getPendingContainers());
+
+    metricsClone.setTotalMB(metrics.getTotalMB());
+    metricsClone.setTotalVirtualCores(metrics.getTotalVirtualCores());
+    metricsClone.setTotalNodes(metrics.getTotalNodes());
+    metricsClone.setLostNodes(metrics.getLostNodes());
+    metricsClone.setUnhealthyNodes(metrics.getUnhealthyNodes());
+    metricsClone.setDecommissioningNodes(metrics.getDecommissioningNodes());
+    metricsClone.setDecommissionedNodes(metrics.getDecommissionedNodes());
+    metricsClone.setRebootedNodes(metrics.getRebootedNodes());
+    metricsClone.setActiveNodes(metrics.getActiveNodes());
+    metricsClone.setShutdownNodes(metrics.getShutdownNodes());
+    return metricsClone;
+
+  }
+
+  private void setUpClusterMetrics(ClusterMetricsInfo metrics) {
+    Random rand = new Random(System.currentTimeMillis());
+    metrics.setAppsSubmitted(rand.nextInt(1000));
+    metrics.setAppsCompleted(rand.nextInt(1000));
+    metrics.setAppsPending(rand.nextInt(1000));
+    metrics.setAppsRunning(rand.nextInt(1000));
+    metrics.setAppsFailed(rand.nextInt(1000));
+    metrics.setAppsKilled(rand.nextInt(1000));
+
+    metrics.setReservedMB(rand.nextInt(1000));
+    metrics.setAvailableMB(rand.nextInt(1000));
+    metrics.setAllocatedMB(rand.nextInt(1000));
+
+    metrics.setReservedVirtualCores(rand.nextInt(1000));
+    metrics.setAvailableVirtualCores(rand.nextInt(1000));
+    metrics.setAllocatedVirtualCores(rand.nextInt(1000));
+
+    metrics.setContainersAllocated(rand.nextInt(1000));
+    metrics.setContainersReserved(rand.nextInt(1000));
+    metrics.setContainersPending(rand.nextInt(1000));
+
+    metrics.setTotalMB(rand.nextInt(1000));
+    metrics.setTotalVirtualCores(rand.nextInt(1000));
+    metrics.setTotalNodes(rand.nextInt(1000));
+    metrics.setLostNodes(rand.nextInt(1000));
+    metrics.setUnhealthyNodes(rand.nextInt(1000));
+    metrics.setDecommissioningNodes(rand.nextInt(1000));
+    metrics.setDecommissionedNodes(rand.nextInt(1000));
+    metrics.setRebootedNodes(rand.nextInt(1000));
+    metrics.setActiveNodes(rand.nextInt(1000));
+    metrics.setShutdownNodes(rand.nextInt(1000));
   }
 }

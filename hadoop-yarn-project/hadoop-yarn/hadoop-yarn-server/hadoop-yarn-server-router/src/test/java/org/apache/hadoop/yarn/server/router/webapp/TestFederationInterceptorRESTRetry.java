@@ -37,9 +37,13 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -88,9 +92,9 @@ public class TestFederationInterceptorRESTRetry
     interceptor.init(user);
 
     // Create SubClusters
-    good = SubClusterId.newInstance("0");
-    bad1 = SubClusterId.newInstance("1");
-    bad2 = SubClusterId.newInstance("2");
+    good = SubClusterId.newInstance("1");
+    bad1 = SubClusterId.newInstance("2");
+    bad2 = SubClusterId.newInstance("3");
     scs.add(good);
     scs.add(bad1);
     scs.add(bad2);
@@ -316,4 +320,201 @@ public class TestFederationInterceptorRESTRetry
     Assert.assertEquals(1, response.getApps().size());
   }
 
+  /**
+   * This test validates the correctness of GetNode in case the cluster is
+   * composed of only 1 bad SubCluster.
+   */
+  @Test
+  public void testGetNodeOneBadSC()
+      throws YarnException, IOException, InterruptedException {
+
+    setupCluster(Arrays.asList(bad2));
+    try {
+      interceptor.getNode("testGetNodeOneBadSC");
+      Assert.fail();
+    } catch (NotFoundException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("nodeId, testGetNodeOneBadSC, is not found"));
+    }
+  }
+
+  /**
+   * This test validates the correctness of GetNode in case the cluster is
+   * composed of only 2 bad SubClusters.
+   */
+  @Test
+  public void testGetNodeTwoBadSCs()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(bad1, bad2));
+
+    try {
+      interceptor.getNode("testGetNodeTwoBadSCs");
+      Assert.fail();
+    } catch (NotFoundException e) {
+      Assert.assertTrue(e.getMessage()
+          .contains("nodeId, testGetNodeTwoBadSCs, is not found"));
+    }
+  }
+
+  /**
+   * This test validates the correctness of GetNode in case the cluster is
+   * composed of only 1 bad SubCluster and a good one.
+   */
+  @Test
+  public void testGetNodeOneBadOneGood()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(good, bad2));
+
+    NodeInfo response = interceptor.getNode(null);
+    Assert.assertNotNull(response);
+    // Check if the only node came from Good SubCluster
+    Assert.assertEquals(good.getId(),
+        Long.toString(response.getLastHealthUpdate()));
+  }
+
+  /**
+   * This test validates the correctness of GetNodes in case the cluster is
+   * composed of only 1 bad SubCluster.
+   */
+  @Test
+  public void testGetNodesOneBadSC()
+      throws YarnException, IOException, InterruptedException {
+
+    setupCluster(Arrays.asList(bad2));
+
+    NodesInfo response = interceptor.getNodes(null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(0, response.getNodes().size());
+    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+  }
+
+  /**
+   * This test validates the correctness of GetNodes in case the cluster is
+   * composed of only 2 bad SubClusters.
+   */
+  @Test
+  public void testGetNodesTwoBadSCs()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(bad1, bad2));
+
+    NodesInfo response = interceptor.getNodes(null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(0, response.getNodes().size());
+    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+  }
+
+  /**
+   * This test validates the correctness of GetNodes in case the cluster is
+   * composed of only 1 bad SubCluster and a good one.
+   */
+  @Test
+  public void testGetNodesOneBadOneGood()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(good, bad2));
+
+    NodesInfo response = interceptor.getNodes(null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getNodes().size());
+    // Check if the only node came from Good SubCluster
+    Assert.assertEquals(good.getId(),
+        Long.toString(response.getNodes().get(0).getLastHealthUpdate()));
+    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+  }
+
+  /**
+   * This test validates the correctness of GetNodes in case the cluster is
+   * composed of only 1 bad SubCluster. The excepted result would be a
+   * ClusterMetricsInfo with all its values set to 0.
+   */
+  @Test
+  public void testGetClusterMetricsOneBadSC()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(bad2));
+
+    ClusterMetricsInfo response = interceptor.getClusterMetricsInfo();
+    Assert.assertNotNull(response);
+    // check if we got an empty metrics
+    checkEmptyMetrics(response);
+  }
+
+  /**
+   * This test validates the correctness of GetClusterMetrics in case the
+   * cluster is composed of only 2 bad SubClusters. The excepted result would be
+   * a ClusterMetricsInfo with all its values set to 0.
+   */
+  @Test
+  public void testGetClusterMetricsTwoBadSCs()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(bad1, bad2));
+
+    ClusterMetricsInfo response = interceptor.getClusterMetricsInfo();
+    Assert.assertNotNull(response);
+    // check if we got an empty metrics
+    Assert.assertEquals(0, response.getAppsSubmitted());
+  }
+
+  /**
+   * This test validates the correctness of GetClusterMetrics in case the
+   * cluster is composed of only 1 bad SubCluster and a good one. The good
+   * SubCluster provided a ClusterMetricsInfo with appsSubmitted set to its
+   * SubClusterId. The expected result would be appSubmitted equals to its
+   * SubClusterId. SubClusterId in this case is an integer.
+   */
+  @Test
+  public void testGetClusterMetricsOneBadOneGood()
+      throws YarnException, IOException, InterruptedException {
+    setupCluster(Arrays.asList(good, bad2));
+
+    ClusterMetricsInfo response = interceptor.getClusterMetricsInfo();
+    Assert.assertNotNull(response);
+    checkMetricsFromGoodSC(response);
+    // The merge operations is tested in TestRouterWebServiceUtil
+  }
+
+  private void checkMetricsFromGoodSC(ClusterMetricsInfo response) {
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        response.getAppsSubmitted());
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        response.getAppsCompleted());
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        response.getAppsPending());
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        response.getAppsRunning());
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        response.getAppsFailed());
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        response.getAppsKilled());
+  }
+
+  private void checkEmptyMetrics(ClusterMetricsInfo response) {
+    Assert.assertEquals(0, response.getAppsSubmitted());
+    Assert.assertEquals(0, response.getAppsCompleted());
+    Assert.assertEquals(0, response.getAppsPending());
+    Assert.assertEquals(0, response.getAppsRunning());
+    Assert.assertEquals(0, response.getAppsFailed());
+    Assert.assertEquals(0, response.getAppsKilled());
+
+    Assert.assertEquals(0, response.getReservedMB());
+    Assert.assertEquals(0, response.getAvailableMB());
+    Assert.assertEquals(0, response.getAllocatedMB());
+
+    Assert.assertEquals(0, response.getReservedVirtualCores());
+    Assert.assertEquals(0, response.getAvailableVirtualCores());
+    Assert.assertEquals(0, response.getAllocatedVirtualCores());
+
+    Assert.assertEquals(0, response.getContainersAllocated());
+    Assert.assertEquals(0, response.getReservedContainers());
+    Assert.assertEquals(0, response.getPendingContainers());
+
+    Assert.assertEquals(0, response.getTotalMB());
+    Assert.assertEquals(0, response.getTotalVirtualCores());
+    Assert.assertEquals(0, response.getTotalNodes());
+    Assert.assertEquals(0, response.getLostNodes());
+    Assert.assertEquals(0, response.getUnhealthyNodes());
+    Assert.assertEquals(0, response.getDecommissioningNodes());
+    Assert.assertEquals(0, response.getDecommissionedNodes());
+    Assert.assertEquals(0, response.getRebootedNodes());
+    Assert.assertEquals(0, response.getActiveNodes());
+    Assert.assertEquals(0, response.getShutdownNodes());
+  }
 }

@@ -36,7 +36,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -388,7 +391,56 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Assert.assertNotNull(responseGet);
     Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getApps().size());
-    // The merged operations will be tested in TestRouterWebServiceUtil
+    // The merged operations is tested in TestRouterWebServiceUtil
+  }
+
+  /**
+   * This test validates the correctness of GetNodes in case each subcluster
+   * provided one node with the LastHealthUpdate set to the SubClusterId. The
+   * expected result would be the NodeInfo from the last SubCluster that has
+   * LastHealthUpdate equal to Num_SubCluster -1.
+   */
+  @Test
+  public void testGetNode() {
+
+    NodeInfo responseGet = interceptor.getNode("testGetNode");
+
+    Assert.assertNotNull(responseGet);
+    Assert.assertEquals(NUM_SUBCLUSTER - 1, responseGet.getLastHealthUpdate());
+  }
+
+  /**
+   * This test validates the correctness of GetNodes in case each subcluster
+   * provided one node.
+   */
+  @Test
+  public void testGetNodes() {
+
+    NodesInfo responseGet = interceptor.getNodes(null);
+
+    Assert.assertNotNull(responseGet);
+    Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getNodes().size());
+    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+  }
+
+  /**
+   * This test validates the correctness of getClusterMetricsInfo in case each
+   * SubCluster provided a ClusterMetricsInfo with appsSubmitted set to the
+   * SubClusterId. The expected result would be appSubmitted equals to the sum
+   * of SubClusterId. SubClusterId in this case is an integer.
+   */
+  @Test
+  public void testGetClusterMetrics() {
+
+    ClusterMetricsInfo responseGet = interceptor.getClusterMetricsInfo();
+
+    Assert.assertNotNull(responseGet);
+    int expectedAppSubmitted = 0;
+    for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+      expectedAppSubmitted += i;
+    }
+    Assert.assertEquals(expectedAppSubmitted, responseGet.getAppsSubmitted());
+    // The merge operations is tested in TestRouterWebServiceUtil
   }
 
 }

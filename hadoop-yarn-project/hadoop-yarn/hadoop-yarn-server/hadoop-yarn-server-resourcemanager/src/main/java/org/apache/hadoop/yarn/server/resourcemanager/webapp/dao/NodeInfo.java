@@ -33,16 +33,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @XmlRootElement(name = "node")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class NodeInfo {
 
   protected String rack;
   protected NodeState state;
-  protected String id;
+  private String id;
   protected String nodeHostName;
   protected String nodeHTTPAddress;
-  protected long lastHealthUpdate;
+  private long lastHealthUpdate;
   protected String version;
   protected String healthReport;
   protected int numContainers;
@@ -184,4 +186,15 @@ public class NodeInfo {
   public ResourceUtilizationInfo getResourceUtilization() {
     return this.resourceUtilization;
   }
+
+  @VisibleForTesting
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  @VisibleForTesting
+  public void setLastHealthUpdate(long lastHealthUpdate) {
+    this.lastHealthUpdate = lastHealthUpdate;
+  }
+
 }
