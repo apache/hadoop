@@ -24,8 +24,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -40,6 +38,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOperation;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.NumberFormat;
 
@@ -47,9 +47,9 @@ import java.text.NumberFormat;
  * A bunch of utility functions used in HBase TimelineService backend.
  */
 public final class HBaseTimelineStorageUtils {
-  private static final Log LOG =
-      LogFactory.getLog(HBaseTimelineStorageUtils.class);
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HBaseTimelineStorageUtils.class);
   /** milliseconds in one day. */
   public static final long MILLIS_ONE_DAY = 86400000L;
 

@@ -26,8 +26,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +37,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class that manages adding and removing collectors and their lifecycle. It
@@ -48,8 +48,9 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class TimelineCollectorManager extends CompositeService {
-  private static final Log LOG =
-      LogFactory.getLog(TimelineCollectorManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineCollectorManager.class);
+
 
   private TimelineWriter writer;
   private ScheduledExecutorService writerFlusher;

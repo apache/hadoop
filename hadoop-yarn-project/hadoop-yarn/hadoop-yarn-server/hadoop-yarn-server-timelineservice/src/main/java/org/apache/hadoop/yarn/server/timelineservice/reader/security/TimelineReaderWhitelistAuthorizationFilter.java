@@ -31,13 +31,13 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderWebServicesUtils;
 
 /**
@@ -48,8 +48,8 @@ public class TimelineReaderWhitelistAuthorizationFilter implements Filter {
 
   public static final String EMPTY_STRING = "";
 
-  private static final Log LOG =
-      LogFactory.getLog(TimelineReaderWhitelistAuthorizationFilter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineReaderWhitelistAuthorizationFilter.class);
 
   private boolean isWhitelistReadAuthEnabled = false;
 

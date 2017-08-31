@@ -27,8 +27,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -54,6 +52,8 @@ import org.apache.hadoop.yarn.server.util.timeline.TimelineServerUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -65,8 +65,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Private
 @Unstable
 public class NodeTimelineCollectorManager extends TimelineCollectorManager {
-  private static final Log LOG =
-      LogFactory.getLog(NodeTimelineCollectorManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodeTimelineCollectorManager.class);
 
   // REST server for this collector manager.
   private HttpServer2 timelineRestServer;

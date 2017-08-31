@@ -29,8 +29,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +46,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTable;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This creates the schema for a hbase based backend for storing application
@@ -60,7 +60,8 @@ public final class TimelineSchemaCreator {
   }
 
   final static String NAME = TimelineSchemaCreator.class.getSimpleName();
-  private static final Log LOG = LogFactory.getLog(TimelineSchemaCreator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineSchemaCreator.class);
   private static final String SKIP_EXISTING_TABLE_OPTION_SHORT = "s";
   private static final String APP_METRICS_TTL_OPTION_SHORT = "ma";
   private static final String SUB_APP_METRICS_TTL_OPTION_SHORT = "msa";

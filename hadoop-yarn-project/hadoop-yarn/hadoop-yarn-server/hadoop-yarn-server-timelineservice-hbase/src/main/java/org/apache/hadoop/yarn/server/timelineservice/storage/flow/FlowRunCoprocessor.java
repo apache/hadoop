@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -50,13 +48,16 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coprocessor for flow run table.
  */
 public class FlowRunCoprocessor extends BaseRegionObserver {
 
-  private static final Log LOG = LogFactory.getLog(FlowRunCoprocessor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FlowRunCoprocessor.class);
 
   private Region region;
   /**

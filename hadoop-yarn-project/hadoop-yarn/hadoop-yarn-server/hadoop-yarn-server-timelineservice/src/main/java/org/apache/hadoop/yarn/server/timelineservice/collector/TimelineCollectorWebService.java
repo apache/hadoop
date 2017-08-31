@@ -36,8 +36,6 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -57,6 +55,8 @@ import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The main per-node REST end point for timeline service writes. It is
@@ -68,8 +68,8 @@ import com.google.inject.Singleton;
 @Singleton
 @Path("/ws/v2/timeline")
 public class TimelineCollectorWebService {
-  private static final Log LOG =
-      LogFactory.getLog(TimelineCollectorWebService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineCollectorWebService.class);
 
   private @Context ServletContext context;
 

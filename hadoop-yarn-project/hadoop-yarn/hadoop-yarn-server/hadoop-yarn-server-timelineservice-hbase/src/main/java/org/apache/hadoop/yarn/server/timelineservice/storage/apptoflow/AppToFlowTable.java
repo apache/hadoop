@@ -18,8 +18,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,6 +27,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBaseSchemaConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -79,7 +79,8 @@ public class AppToFlowTable extends BaseTable<AppToFlowTable> {
   /** default value for app_flow table name. */
   private static final String DEFAULT_TABLE_NAME = "timelineservice.app_flow";
 
-  private static final Log LOG = LogFactory.getLog(AppToFlowTable.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AppToFlowTable.class);
 
   public AppToFlowTable() {
     super(TABLE_NAME_CONF_NAME, DEFAULT_TABLE_NAME);
