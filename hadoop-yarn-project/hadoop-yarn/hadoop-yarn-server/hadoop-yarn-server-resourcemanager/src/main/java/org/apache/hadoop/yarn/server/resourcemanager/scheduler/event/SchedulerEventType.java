@@ -38,6 +38,9 @@ public enum SchedulerEventType {
   // Source: ContainerAllocationExpirer
   CONTAINER_EXPIRED,
 
+  // Source: SchedulerAppAttempt::pullNewlyUpdatedContainer.
+  RELEASE_CONTAINER,
+
   /* Source: SchedulingEditPolicy */
   KILL_RESERVED_CONTAINER,
 

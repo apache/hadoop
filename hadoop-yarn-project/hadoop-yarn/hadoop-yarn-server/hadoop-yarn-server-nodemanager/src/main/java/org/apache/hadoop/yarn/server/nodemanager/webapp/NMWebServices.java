@@ -25,6 +25,8 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -43,8 +45,6 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.http.JettyUtils;
@@ -82,7 +82,8 @@ import com.google.inject.Singleton;
 @Singleton
 @Path("/ws/v1/node")
 public class NMWebServices {
-  private static final Log LOG = LogFactory.getLog(NMWebServices.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMWebServices.class);
   private Context nmContext;
   private ResourceView rview;
   private WebApp webapp;
@@ -425,11 +426,9 @@ public class NMWebServices {
         public void write(OutputStream os) throws IOException,
             WebApplicationException {
           try {
-            int bufferSize = 65536;
-            byte[] buf = new byte[bufferSize];
-            LogToolUtils.outputContainerLog(containerId.toString(),
-                nmContext.getNodeId().toString(), outputFileName, fileLength,
-                bytes, lastModifiedTime, fis, os, buf,
+            LogToolUtils.outputContainerLogThroughZeroCopy(
+                containerId.toString(), nmContext.getNodeId().toString(),
+                outputFileName, fileLength, bytes, lastModifiedTime, fis, os,
                 ContainerLogAggregationType.LOCAL);
             StringBuilder sb = new StringBuilder();
             String endOfFile = "End of LogType:" + outputFileName;
@@ -450,6 +449,8 @@ public class NMWebServices {
             Application app = nmContext.getApplications().get(appId);
             String appOwner = app == null ? null : app.getUser();
             try {
+              int bufferSize = 65536;
+              byte[] buf = new byte[bufferSize];
               LogToolUtils.outputAggregatedContainerLog(nmContext.getConf(),
                   appId, appOwner, containerId.toString(),
                   nmContext.getNodeId().toString(), outputFileName, bytes,

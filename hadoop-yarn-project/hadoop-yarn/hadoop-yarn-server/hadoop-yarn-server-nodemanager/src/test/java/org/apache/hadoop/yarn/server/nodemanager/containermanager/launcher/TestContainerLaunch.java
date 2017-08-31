@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -1528,5 +1529,109 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     launchOtherError.call();
     verify(updaterNoCall, never()).reportException(any());
 
+  }
+
+  /*
+   * ${foo.version} is substituted to suffix a specific version number
+   */
+  @Test
+  public void testInvalidEnvVariableSubstitutionType1() throws IOException {
+    Map<String, String> env = new HashMap<String, String>();
+    // invalid env
+    env.put("testVar", "version${foo.version}");
+    validateShellExecutorForDifferentEnvs(env);
+  }
+
+  /*
+   * Multiple paths are substituted in a path variable
+   */
+  @Test
+  public void testInvalidEnvVariableSubstitutionType2() throws IOException {
+    Map<String, String> env = new HashMap<String, String>();
+    // invalid env
+    env.put("testPath", "/abc:/${foo.path}:/$bar");
+    validateShellExecutorForDifferentEnvs(env);
+  }
+
+  private void validateShellExecutorForDifferentEnvs(Map<String, String> env)
+      throws IOException {
+    File shellFile = null;
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+      FileOutputStream fos = new FileOutputStream(shellFile);
+      FileUtil.setExecutable(shellFile, true);
+
+      List<String> commands = new ArrayList<String>();
+      DefaultContainerExecutor executor = new DefaultContainerExecutor();
+      executor.setConf(new Configuration());
+      executor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()), user);
+      fos.flush();
+      fos.close();
+
+      // It is supposed that LANG is set as C.
+      Map<String, String> cmdEnv = new HashMap<String, String>();
+      cmdEnv.put("LANG", "C");
+      Shell.ShellCommandExecutor shexc = new Shell.ShellCommandExecutor(
+          new String[] { shellFile.getAbsolutePath() }, tmpDir, cmdEnv);
+      try {
+        shexc.execute();
+        Assert.fail("Should catch exception");
+      } catch (ExitCodeException e) {
+        Assert.assertTrue(shexc.getExitCode() != 0);
+      }
+    } finally {
+      // cleanup
+      if (shellFile != null && shellFile.exists()) {
+        shellFile.delete();
+      }
+    }
+  }
+
+  @Test
+  public void testValidEnvVariableSubstitution() throws IOException  {
+    File shellFile = null;
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
+      FileOutputStream fos = new FileOutputStream(shellFile);
+      FileUtil.setExecutable(shellFile, true);
+
+      Map<String, String> env = new LinkedHashMap<String, String>();
+      // valid env
+      env.put(
+          "foo", "2.4.6" );
+      env.put(
+          "testVar", "version${foo}" );
+      List<String> commands = new ArrayList<String>();
+      DefaultContainerExecutor executor = new DefaultContainerExecutor();
+      executor.setConf(new Configuration());
+      executor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()), user);
+      fos.flush();
+      fos.close();
+
+      // It is supposed that LANG is set as C.
+      Map<String, String> cmdEnv = new HashMap<String, String>();
+      cmdEnv.put("LANG", "C");
+      Shell.ShellCommandExecutor shexc
+      = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()},
+        tmpDir, cmdEnv);
+      try {
+        shexc.execute();
+      } catch(ExitCodeException e){
+        Assert.fail("Should not catch exception");
+      }
+      Assert.assertTrue(shexc.getExitCode() == 0);
+    }
+    finally {
+      // cleanup
+      if (shellFile != null
+          && shellFile.exists()) {
+        shellFile.delete();
+      }
+    }
   }
 }

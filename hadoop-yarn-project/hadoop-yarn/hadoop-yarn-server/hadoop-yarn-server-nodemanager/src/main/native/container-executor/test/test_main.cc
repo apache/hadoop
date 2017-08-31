@@ -20,10 +20,13 @@
 #include <main/native/container-executor/impl/util.h>
 #include <cstdio>
 
-FILE* ERRORFILE = stderr;
-FILE* LOGFILE = stdout;
+extern "C" {
+#include "util.h"
+}
 
 int main(int argc, char **argv) {
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+  ERRORFILE = stderr;
+  LOGFILE = stdout;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

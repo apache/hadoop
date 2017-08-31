@@ -28,7 +28,8 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
 import org.junit.Assert;
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,8 +50,6 @@ import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.junit.Test;
-
 /**
  * Tests the use of the
  * {@link org.apache.hadoop.mapreduce.filecache.DistributedCache} within the
@@ -66,7 +65,7 @@ import org.junit.Test;
  * This test is not fast: it uses MiniMRCluster.
  */
 @SuppressWarnings("deprecation")
-public class TestMRWithDistributedCache extends TestCase {
+public class TestMRWithDistributedCache {
   private static Path TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"));
   private static File symlinkFile = new File("distributed.first.symlink");
@@ -97,23 +96,23 @@ public class TestMRWithDistributedCache extends TestCase {
       FileSystem fs = LocalFileSystem.get(conf);
 
       // Check that 2 files and 2 archives are present
-      TestCase.assertEquals(2, localFiles.length);
-      TestCase.assertEquals(2, localArchives.length);
-      TestCase.assertEquals(2, files.length);
-      TestCase.assertEquals(2, archives.length);
+      Assert.assertEquals(2, localFiles.length);
+      Assert.assertEquals(2, localArchives.length);
+      Assert.assertEquals(2, files.length);
+      Assert.assertEquals(2, archives.length);
 
       // Check the file name
-      TestCase.assertTrue(files[0].getPath().endsWith("distributed.first"));
-      TestCase.assertTrue(files[1].getPath().endsWith("distributed.second.jar"));
+      Assert.assertTrue(files[0].getPath().endsWith("distributed.first"));
+      Assert.assertTrue(files[1].getPath().endsWith("distributed.second.jar"));
       
       // Check lengths of the files
-      TestCase.assertEquals(1, fs.getFileStatus(localFiles[0]).getLen());
-      TestCase.assertTrue(fs.getFileStatus(localFiles[1]).getLen() > 1);
+      Assert.assertEquals(1, fs.getFileStatus(localFiles[0]).getLen());
+      Assert.assertTrue(fs.getFileStatus(localFiles[1]).getLen() > 1);
 
       // Check extraction of the archive
-      TestCase.assertTrue(fs.exists(new Path(localArchives[0],
+      Assert.assertTrue(fs.exists(new Path(localArchives[0],
           "distributed.jar.inside3")));
-      TestCase.assertTrue(fs.exists(new Path(localArchives[1],
+      Assert.assertTrue(fs.exists(new Path(localArchives[1],
           "distributed.jar.inside4")));
 
       // Check the class loaders
@@ -121,18 +120,18 @@ public class TestMRWithDistributedCache extends TestCase {
       ClassLoader cl = Thread.currentThread().getContextClassLoader();
       // Both the file and the archive were added to classpath, so both
       // should be reachable via the class loader.
-      TestCase.assertNotNull(cl.getResource("distributed.jar.inside2"));
-      TestCase.assertNotNull(cl.getResource("distributed.jar.inside3"));
-      TestCase.assertNull(cl.getResource("distributed.jar.inside4"));
+      Assert.assertNotNull(cl.getResource("distributed.jar.inside2"));
+      Assert.assertNotNull(cl.getResource("distributed.jar.inside3"));
+      Assert.assertNull(cl.getResource("distributed.jar.inside4"));
 
       // Check that the symlink for the renaming was created in the cwd;
-      TestCase.assertTrue("symlink distributed.first.symlink doesn't exist",
+      Assert.assertTrue("symlink distributed.first.symlink doesn't exist",
           symlinkFile.exists());
-      TestCase.assertEquals("symlink distributed.first.symlink length not 1", 1,
+      Assert.assertEquals("symlink distributed.first.symlink length not 1", 1,
           symlinkFile.length());
       
       //This last one is a difference between MRv2 and MRv1
-      TestCase.assertTrue("second file should be symlinked too",
+      Assert.assertTrue("second file should be symlinked too",
           expectedAbsentSymlinkFile.exists());
     }
 
@@ -188,6 +187,7 @@ public class TestMRWithDistributedCache extends TestCase {
   }
 
   /** Tests using the local job runner. */
+  @Test
   public void testLocalJobRunner() throws Exception {
     symlinkFile.delete(); // ensure symlink is not present (e.g. if test is
                           // killed part way through)

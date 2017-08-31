@@ -682,4 +682,17 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       stopHttpServer(myServer2);
     }
   }
+
+  @Test
+  public void testBacklogSize() throws Exception
+  {
+    final int backlogSize = 2048;
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_SOCKET_BACKLOG_SIZE_KEY, backlogSize);
+    HttpServer2 srv = createServer("test", conf);
+    List<?> listeners = (List<?>) Whitebox.getInternalState(srv,
+            "listeners");
+    ServerConnector listener = (ServerConnector)listeners.get(0);
+    assertEquals(backlogSize, listener.getAcceptQueueSize());
+  }
 }

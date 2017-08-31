@@ -26,9 +26,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,11 +57,13 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
@@ -105,7 +107,8 @@ public class NodeManager extends CompositeService
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  private static final Log LOG = LogFactory.getLog(NodeManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NodeManager.class);
   private static long nmStartupTime = System.currentTimeMillis();
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
   private JvmPauseMonitor pauseMonitor;
@@ -463,17 +466,55 @@ public class NodeManager extends CompositeService
           if (!rmWorkPreservingRestartEnabled) {
             LOG.info("Cleaning up running containers on resync");
             containerManager.cleanupContainersOnNMResync();
+            // Clear all known collectors for resync.
+            if (context.getKnownCollectors() != null) {
+              context.getKnownCollectors().clear();
+            }
           } else {
             LOG.info("Preserving containers on resync");
+            // Re-register known timeline collectors.
+            reregisterCollectors();
           }
           ((NodeStatusUpdaterImpl) nodeStatusUpdater)
             .rebootNodeStatusUpdaterAndRegisterWithRM();
         } catch (YarnRuntimeException e) {
-          LOG.fatal("Error while rebooting NodeStatusUpdater.", e);
+          LOG.error("Error while rebooting NodeStatusUpdater.", e);
           shutDown(NodeManagerStatus.EXCEPTION.getExitCode());
         }
       }
     }.start();
+  }
+
+  /**
+   * Reregisters all collectors known by this node to the RM. This method is
+   * called when the RM needs to resync with the node.
+   */
+  protected void reregisterCollectors() {
+    Map<ApplicationId, AppCollectorData> knownCollectors
+        = context.getKnownCollectors();
+    if (knownCollectors == null) {
+      return;
+    }
+    ConcurrentMap<ApplicationId, AppCollectorData> registeringCollectors
+        = context.getRegisteringCollectors();
+    for (Map.Entry<ApplicationId, AppCollectorData> entry
+        : knownCollectors.entrySet()) {
+      Application app = context.getApplications().get(entry.getKey());
+      if ((app != null)
+          && !ApplicationState.FINISHED.equals(app.getApplicationState())) {
+        registeringCollectors.putIfAbsent(entry.getKey(), entry.getValue());
+        AppCollectorData data = entry.getValue();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(entry.getKey() + " : " + data.getCollectorAddr() + "@<"
+              + data.getRMIdentifier() + ", " + data.getVersion() + ">");
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Remove collector data for done app " + entry.getKey());
+        }
+      }
+    }
+    knownCollectors.clear();
   }
 
   public static class NMContext implements Context {
@@ -491,7 +532,10 @@ public class NodeManager extends CompositeService
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
-    private Map<ApplicationId, String> registeredCollectors;
+    private ConcurrentMap<ApplicationId, AppCollectorData>
+        registeringCollectors;
+
+    private ConcurrentMap<ApplicationId, AppCollectorData> knownCollectors;
 
     protected final ConcurrentMap<ContainerId,
         org.apache.hadoop.yarn.api.records.Container> increasedContainers =
@@ -525,7 +569,8 @@ public class NodeManager extends CompositeService
         NMStateStoreService stateStore, boolean isDistSchedulingEnabled,
         Configuration conf) {
       if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
-        this.registeredCollectors = new ConcurrentHashMap<>();
+        this.registeringCollectors = new ConcurrentHashMap<>();
+        this.knownCollectors = new ConcurrentHashMap<>();
       }
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
@@ -680,18 +725,14 @@ public class NodeManager extends CompositeService
     }
 
     @Override
-    public Map<ApplicationId, String> getRegisteredCollectors() {
-      return this.registeredCollectors;
+    public ConcurrentMap<ApplicationId, AppCollectorData>
+        getRegisteringCollectors() {
+      return this.registeringCollectors;
     }
 
-    public void addRegisteredCollectors(
-        Map<ApplicationId, String> newRegisteredCollectors) {
-      if (registeredCollectors != null) {
-        this.registeredCollectors.putAll(newRegisteredCollectors);
-      } else {
-        LOG.warn("collectors are added when the registered collectors are " +
-            "initialized");
-      }
+    @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors() {
+      return this.knownCollectors;
     }
 
     @Override
@@ -729,7 +770,7 @@ public class NodeManager extends CompositeService
           String message =
               "Failing NodeManager start since we're on a "
                   + "Unix-based system but bash doesn't seem to be available.";
-          LOG.fatal(message);
+          LOG.error(message);
           throw new YarnRuntimeException(message);
         }
       }
@@ -748,7 +789,7 @@ public class NodeManager extends CompositeService
       this.init(conf);
       this.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting NodeManager", t);
+      LOG.error("Error starting NodeManager", t);
       System.exit(-1);
     }
   }

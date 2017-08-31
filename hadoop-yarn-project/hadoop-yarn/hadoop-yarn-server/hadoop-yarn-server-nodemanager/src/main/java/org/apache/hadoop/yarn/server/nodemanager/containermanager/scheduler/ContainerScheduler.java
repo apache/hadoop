@@ -173,6 +173,7 @@ public class ContainerScheduler extends AbstractService implements
             new ChangeMonitoringContainerResourceEvent(containerId,
                 updateEvent.getUpdatedToken().getResource()));
       } else {
+        // Is Queued or localizing..
         updateEvent.getContainer().setContainerTokenIdentifier(
             updateEvent.getUpdatedToken());
       }

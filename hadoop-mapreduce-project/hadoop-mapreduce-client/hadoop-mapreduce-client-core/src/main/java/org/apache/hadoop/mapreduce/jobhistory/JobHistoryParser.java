@@ -376,18 +376,24 @@ public class JobHistoryParser implements HistoryEventHandler {
 
   private void handleJobFailedEvent(JobUnsuccessfulCompletionEvent event) {
     info.finishTime = event.getFinishTime();
-    info.finishedMaps = event.getFinishedMaps();
-    info.finishedReduces = event.getFinishedReduces();
+    info.succeededMaps = event.getSucceededMaps();
+    info.succeededReduces = event.getSucceededReduces();
+    info.failedMaps = event.getFailedMaps();
+    info.failedReduces = event.getFailedReduces();
+    info.killedMaps = event.getKilledMaps();
+    info.killedReduces = event.getKilledReduces();
     info.jobStatus = StringInterner.weakIntern(event.getStatus());
     info.errorInfo = StringInterner.weakIntern(event.getDiagnostics());
   }
 
   private void handleJobFinishedEvent(JobFinishedEvent event) {
     info.finishTime = event.getFinishTime();
-    info.finishedMaps = event.getFinishedMaps();
-    info.finishedReduces = event.getFinishedReduces();
+    info.succeededMaps = event.getSucceededMaps();
+    info.succeededReduces = event.getSucceededReduces();
     info.failedMaps = event.getFailedMaps();
     info.failedReduces = event.getFailedReduces();
+    info.killedMaps = event.getKilledMaps();
+    info.killedReduces = event.getKilledReduces();
     info.totalCounters = event.getTotalCounters();
     info.mapCounters = event.getMapCounters();
     info.reduceCounters = event.getReduceCounters();
@@ -456,8 +462,10 @@ public class JobHistoryParser implements HistoryEventHandler {
     int totalReduces;
     int failedMaps;
     int failedReduces;
-    int finishedMaps;
-    int finishedReduces;
+    int succeededMaps;
+    int succeededReduces;
+    int killedMaps;
+    int killedReduces;
     String jobStatus;
     Counters totalCounters;
     Counters mapCounters;
@@ -477,7 +485,7 @@ public class JobHistoryParser implements HistoryEventHandler {
     public JobInfo() {
       submitTime = launchTime = finishTime = -1;
       totalMaps = totalReduces = failedMaps = failedReduces = 0;
-      finishedMaps = finishedReduces = 0;
+      succeededMaps = succeededReduces = 0;
       username = jobname = jobConfPath = jobQueueName = "";
       tasksMap = new HashMap<TaskID, TaskInfo>();
       completedTaskAttemptsMap = new HashMap<TaskAttemptID, TaskAttemptInfo>();
@@ -540,10 +548,14 @@ public class JobHistoryParser implements HistoryEventHandler {
     public long getFailedMaps() { return failedMaps; }
     /** @return the number of failed reduces */
     public long getFailedReduces() { return failedReduces; }
-    /** @return the number of finished maps */
-    public long getFinishedMaps() { return finishedMaps; }
-    /** @return the number of finished reduces */
-    public long getFinishedReduces() { return finishedReduces; }
+    /** @return the number of killed maps */
+    public long getKilledMaps() { return killedMaps; }
+    /** @return the number of killed reduces */
+    public long getKilledReduces() { return killedReduces; }
+    /** @return the number of succeeded maps */
+    public long getSucceededMaps() { return succeededMaps; }
+    /** @return the number of succeeded reduces */
+    public long getSucceededReduces() { return succeededReduces; }
     /** @return the job status */
     public String getJobStatus() { return jobStatus; }
     public String getErrorInfo() { return errorInfo; }

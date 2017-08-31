@@ -1384,7 +1384,6 @@ char* sanitize_docker_command(const char *line) {
 }
 
 char* parse_docker_command_file(const char* command_file) {
-
   size_t len = 0;
   char *line = NULL;
   ssize_t read;
@@ -1417,9 +1416,10 @@ int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
   char* docker_binary = get_section_value(DOCKER_BINARY_KEY, &executor_cfg);
   docker_binary = check_docker_binary(docker_binary);
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
-  char* docker_command_with_binary = calloc(sizeof(char), EXECUTOR_PATH_MAX);
-  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
+  char* docker_command_with_binary = calloc(sizeof(char), command_size);
+  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
   char **args = split_delimiter(docker_command_with_binary, " ");
 
   int exit_code = -1;
@@ -1567,15 +1567,23 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-  char docker_command_with_binary[EXECUTOR_PATH_MAX];
-  char docker_wait_command[EXECUTOR_PATH_MAX];
-  char docker_logs_command[EXECUTOR_PATH_MAX];
-  char docker_inspect_command[EXECUTOR_PATH_MAX];
-  char docker_rm_command[EXECUTOR_PATH_MAX];
+  char *docker_command_with_binary = NULL;
+  char *docker_wait_command = NULL;
+  char *docker_logs_command = NULL;
+  char *docker_inspect_command = NULL;
+  char *docker_rm_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
   int BUFFER_SIZE = 4096;
   char buffer[BUFFER_SIZE];
+
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
+
+  docker_command_with_binary = calloc(sizeof(char), command_size);
+  docker_wait_command = calloc(sizeof(char), command_size);
+  docker_logs_command = calloc(sizeof(char), command_size);
+  docker_inspect_command = calloc(sizeof(char), command_size);
+  docker_rm_command = calloc(sizeof(char), command_size);
 
   gid_t user_gid = getegid();
   uid_t prev_uid = geteuid();
@@ -1621,7 +1629,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
+  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
 
   fprintf(LOGFILE, "Launching docker container...\n");
   FILE* start_docker = popen(docker_command_with_binary, "r");
@@ -1634,7 +1642,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_inspect_command, EXECUTOR_PATH_MAX,
+  snprintf(docker_inspect_command, command_size,
     "%s inspect --format {{.State.Pid}} %s",
     docker_binary, container_id);
 
@@ -1679,7 +1687,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       goto cleanup;
     }
 
-    snprintf(docker_wait_command, EXECUTOR_PATH_MAX,
+    snprintf(docker_wait_command, command_size,
       "%s wait %s", docker_binary, container_id);
 
     fprintf(LOGFILE, "Waiting for docker container to finish...\n");
@@ -1693,7 +1701,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     if(exit_code != 0) {
       fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
       exit_code);
-      snprintf(docker_logs_command, EXECUTOR_PATH_MAX, "%s logs --tail=250 %s",
+      snprintf(docker_logs_command, command_size, "%s logs --tail=250 %s",
         docker_binary, container_id);
       FILE* logs = popen(docker_logs_command, "r");
       if(logs != NULL) {
@@ -1723,7 +1731,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
   fprintf(LOGFILE, "Removing docker container post-exit...\n");
-  snprintf(docker_rm_command, EXECUTOR_PATH_MAX,
+  snprintf(docker_rm_command, command_size,
     "%s rm %s", docker_binary, container_id);
   FILE* rm_docker = popen(docker_rm_command, "w");
   if (pclose (rm_docker) != 0)
@@ -1763,6 +1771,11 @@ cleanup:
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
+  free(docker_command_with_binary);
+  free(docker_wait_command);
+  free(docker_logs_command);
+  free(docker_inspect_command);
+  free(docker_rm_command);
   return exit_code;
 }
 
@@ -2428,4 +2441,13 @@ int traffic_control_read_state(char *command_file) {
  */
 int traffic_control_read_stats(char *command_file) {
   return run_traffic_control(TC_READ_STATS_OPTS, command_file);
+}
+
+/**
+ * FIXME: (wangda) it's better to move executor_cfg out of container-executor.c
+ * Now initialize of executor_cfg and data structures are stored inside
+ * container-executor which is not a good design.
+ */
+struct configuration* get_cfg() {
+  return &CFG;
 }

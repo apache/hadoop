@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -39,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -48,10 +50,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import com.google.common.base.Preconditions;
 
@@ -65,7 +68,7 @@ class ApplicationEntityReader extends GenericEntityReader {
 
   public ApplicationEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
-    super(ctxt, entityFilters, toRetrieve, true);
+    super(ctxt, entityFilters, toRetrieve);
   }
 
   public ApplicationEntityReader(TimelineReaderContext ctxt,
@@ -313,6 +316,8 @@ class ApplicationEntityReader extends GenericEntityReader {
             context.getFlowName(), context.getFlowRunId(), context.getAppId());
     byte[] rowKey = applicationRowKey.getRowKey();
     Get get = new Get(rowKey);
+    // Set time range for metric values.
+    setMetricsTimeRange(get);
     get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       get.setFilter(filterList);
@@ -343,20 +348,9 @@ class ApplicationEntityReader extends GenericEntityReader {
   @Override
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
-    TimelineReaderContext context = getContext();
     if (isSingleEntityRead()) {
       // Get flow context information from AppToFlow table.
-      if (context.getFlowName() == null || context.getFlowRunId() == null
-          || context.getUserId() == null) {
-        AppToFlowRowKey appToFlowRowKey =
-            new AppToFlowRowKey(context.getClusterId(), context.getAppId());
-        FlowContext flowContext =
-            lookupFlowContext(appToFlowRowKey,
-                hbaseConf, conn);
-        context.setFlowName(flowContext.getFlowName());
-        context.setFlowRunId(flowContext.getFlowRunId());
-        context.setUserId(flowContext.getUserId());
-      }
+      defaultAugmentParams(hbaseConf, conn);
     }
     // Add configs/metrics to fields to retrieve if confsToRetrieve and/or
     // metricsToRetrieve are specified.
@@ -366,24 +360,65 @@ class ApplicationEntityReader extends GenericEntityReader {
     }
   }
 
+  private void setMetricsTimeRange(Query query) {
+    // Set time range for metric values.
+    HBaseTimelineStorageUtils.setMetricsTimeRange(
+        query, ApplicationColumnFamily.METRICS.getBytes(),
+        getDataToRetrieve().getMetricsTimeBegin(),
+        getDataToRetrieve().getMetricsTimeEnd());
+  }
+
   @Override
   protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
     TimelineReaderContext context = getContext();
+    RowKeyPrefix<ApplicationRowKey> applicationRowKeyPrefix = null;
+
     // Whether or not flowRunID is null doesn't matter, the
     // ApplicationRowKeyPrefix will do the right thing.
-    RowKeyPrefix<ApplicationRowKey> applicationRowKeyPrefix =
-        new ApplicationRowKeyPrefix(context.getClusterId(),
-            context.getUserId(), context.getFlowName(),
-            context.getFlowRunId());
-    scan.setRowPrefixFilter(applicationRowKeyPrefix.getRowKeyPrefix());
+    // default mode, will always scans from beginning of entity type.
+    if (getFilters().getFromId() == null) {
+      applicationRowKeyPrefix = new ApplicationRowKeyPrefix(
+          context.getClusterId(), context.getUserId(), context.getFlowName(),
+          context.getFlowRunId());
+      scan.setRowPrefixFilter(applicationRowKeyPrefix.getRowKeyPrefix());
+    } else {
+      ApplicationRowKey applicationRowKey = null;
+      try {
+        applicationRowKey =
+            ApplicationRowKey.parseRowKeyFromString(getFilters().getFromId());
+      } catch (IllegalArgumentException e) {
+        throw new BadRequestException("Invalid filter fromid is provided.");
+      }
+      if (!context.getClusterId().equals(applicationRowKey.getClusterId())) {
+        throw new BadRequestException(
+            "fromid doesn't belong to clusterId=" + context.getClusterId());
+      }
+
+      // set start row
+      scan.setStartRow(applicationRowKey.getRowKey());
+
+      // get the bytes for stop row
+      applicationRowKeyPrefix = new ApplicationRowKeyPrefix(
+          context.getClusterId(), context.getUserId(), context.getFlowName(),
+          context.getFlowRunId());
+
+      // set stop row
+      scan.setStopRow(
+          HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
+              applicationRowKeyPrefix.getRowKeyPrefix()));
+    }
+
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(getFilters().getLimit()));
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       newList.addFilter(filterList);
     }
     scan.setFilter(newList);
+
+    // Set time range for metric values.
+    setMetricsTimeRange(scan);
     scan.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     return getTable().getResultScanner(hbaseConf, conn, scan);
   }
@@ -476,6 +511,10 @@ class ApplicationEntityReader extends GenericEntityReader {
     if (hasField(fieldsToRetrieve, Field.METRICS)) {
       readMetrics(entity, result, ApplicationColumnPrefix.METRIC);
     }
+
+    ApplicationRowKey rowKey = ApplicationRowKey.parseRowKey(result.getRow());
+    entity.getInfo().put(TimelineReaderUtils.FROMID_KEY,
+        rowKey.getRowKeyAsString());
     return entity;
   }
 }

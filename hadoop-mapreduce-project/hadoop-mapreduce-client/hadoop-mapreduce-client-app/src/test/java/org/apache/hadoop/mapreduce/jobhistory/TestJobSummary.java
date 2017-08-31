@@ -43,10 +43,12 @@ public class TestJobSummary {
     summary.setFirstMapTaskLaunchTime(4L);
     summary.setFirstReduceTaskLaunchTime(5L);
     summary.setJobFinishTime(6L);
-    summary.setNumFinishedMaps(1);
+    summary.setNumSucceededMaps(1);
     summary.setNumFailedMaps(0);
-    summary.setNumFinishedReduces(1);
+    summary.setNumSucceededReduces(1);
     summary.setNumFailedReduces(0);
+    summary.setNumKilledMaps(0);
+    summary.setNumKilledReduces(0);
     summary.setUser("testUser");
     summary.setQueue("testQueue");
     summary.setJobStatus("testJobStatus");

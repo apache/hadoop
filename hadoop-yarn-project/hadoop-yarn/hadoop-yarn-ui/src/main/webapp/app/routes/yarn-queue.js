@@ -22,22 +22,28 @@ import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
   model(param) {
-    return Ember.RSVP.hash({
-      selected : param.queue_name,
-      queues: this.store.query('yarn-queue', {}),
-      selectedQueue : undefined,
-      apps: this.store.query('yarn-app', {
-        queue: param.queue_name
-      })
-    });
+      return Ember.RSVP.hash({
+        selected : param.queue_name,
+        queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
+          let type = model.get('firstObject').get('type');
+          return this.store.query("yarn-queue." + type + "-queue", {});
+        }),
+        selectedQueue : undefined,
+        apps: this.store.query('yarn-app', {
+          queue: param.queue_name
+        })
+      });
   },
 
   afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
+    var type = model.queues.get('firstObject').constructor.modelName;
+    model.selectedQueue = this.store.peekRecord(type, model.selected);
   },
 
   unloadAll() {
-    this.store.unloadAll('yarn-queue');
+    this.store.unloadAll('yarn-queue.capacity-queue');
+    this.store.unloadAll('yarn-queue.fair-queue');
+    this.store.unloadAll('yarn-queue.fifo-queue');
     this.store.unloadAll('yarn-app');
   }
 });

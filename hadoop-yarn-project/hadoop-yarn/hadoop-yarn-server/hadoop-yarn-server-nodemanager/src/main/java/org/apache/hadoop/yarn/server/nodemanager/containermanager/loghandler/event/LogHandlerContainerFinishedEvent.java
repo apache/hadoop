@@ -19,21 +19,28 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 
 public class LogHandlerContainerFinishedEvent extends LogHandlerEvent {
 
   private final ContainerId containerId;
+  private final ContainerType containerType;
   private final int exitCode;
 
   public LogHandlerContainerFinishedEvent(ContainerId containerId,
-      int exitCode) {
+      ContainerType containerType, int exitCode) {
     super(LogHandlerEventType.CONTAINER_FINISHED);
     this.containerId = containerId;
+    this.containerType = containerType;
     this.exitCode = exitCode;
   }
 
   public ContainerId getContainerId() {
     return this.containerId;
+  }
+
+  public ContainerType getContainerType() {
+    return containerType;
   }
 
   public int getExitCode() {

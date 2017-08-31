@@ -53,21 +53,30 @@ public class TestTimelineUIDConverter {
     assertEquals(context, TimelineUIDConverter.APPLICATION_UID.decodeUID(uid));
 
     context = new TimelineReaderContext("yarn_cluster", "root", "hive_join",
-        1234L, "application_1111111111_1111", "YARN_CONTAINER",
+        1234L, "application_1111111111_1111", "YARN_CONTAINER", 12345L,
         "container_1111111111_1111_01_000001");
     uid = TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context);
     assertEquals("yarn_cluster!root!hive_join!1234!application_1111111111_1111!"
-        + "YARN_CONTAINER!container_1111111111_1111_01_000001", uid);
+        + "YARN_CONTAINER!12345!container_1111111111_1111_01_000001", uid);
     assertEquals(
         context, TimelineUIDConverter.GENERIC_ENTITY_UID.decodeUID(uid));
     context = new TimelineReaderContext("yarn_cluster", null, null, null,
-        "application_1111111111_1111", "YARN_CONTAINER",
+        "application_1111111111_1111", "YARN_CONTAINER", 54321L,
         "container_1111111111_1111_01_000001");
     uid = TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context);
     assertEquals("yarn_cluster!application_1111111111_1111!YARN_CONTAINER!" +
-        "container_1111111111_1111_01_000001", uid);
+        "54321!container_1111111111_1111_01_000001", uid);
     assertEquals(
         context, TimelineUIDConverter.GENERIC_ENTITY_UID.decodeUID(uid));
+
+    context = new TimelineReaderContext("yarn_cluster", null, null, null, null,
+        "YARN_CONTAINER", 54321L, "container_1111111111_1111_01_000001",
+        "user1");
+    uid = TimelineUIDConverter.SUB_APPLICATION_ENTITY_UID.encodeUID(context);
+    assertEquals("yarn_cluster!user1!YARN_CONTAINER!"
+        + "54321!container_1111111111_1111_01_000001", uid);
+    assertEquals(context,
+        TimelineUIDConverter.SUB_APPLICATION_ENTITY_UID.decodeUID(uid));
   }
 
   @Test

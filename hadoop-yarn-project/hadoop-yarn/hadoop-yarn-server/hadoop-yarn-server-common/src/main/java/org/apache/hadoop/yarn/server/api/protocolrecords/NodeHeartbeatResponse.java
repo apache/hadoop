@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -47,10 +48,9 @@ public abstract class NodeHeartbeatResponse {
   public abstract List<ApplicationId> getApplicationsToCleanup();
 
   // This tells NM the collectors' address info of related apps
-  public abstract Map<ApplicationId, String> getAppCollectorsMap();
-
-  public abstract void setAppCollectorsMap(
-      Map<ApplicationId, String> appCollectorsMap);
+  public abstract Map<ApplicationId, AppCollectorData> getAppCollectors();
+  public abstract void setAppCollectors(
+      Map<ApplicationId, AppCollectorData> appCollectorsMap);
 
   public abstract void setResponseId(int responseId);
 
@@ -104,10 +104,10 @@ public abstract class NodeHeartbeatResponse {
 
   public abstract void setResource(Resource resource);
 
-  public abstract List<Container> getContainersToDecrease();
+  public abstract List<Container> getContainersToUpdate();
 
-  public abstract void addAllContainersToDecrease(
-      Collection<Container> containersToDecrease);
+  public abstract void addAllContainersToUpdate(
+      Collection<Container> containersToUpdate);
 
   public abstract ContainerQueuingLimit getContainerQueuingLimit();
 

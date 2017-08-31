@@ -66,6 +66,13 @@ enum errorcodes {
   ERROR_COMPILING_REGEX = 42
 };
 
+/* Macros for min/max. */
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif /* MIN */
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif  /* MAX */
 
 // the log file for messages
 extern FILE *LOGFILE;

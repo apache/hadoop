@@ -25,10 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.FlowContextProto;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
@@ -85,7 +86,8 @@ public class ApplicationImpl implements Application {
   private final WriteLock writeLock;
   private final Context context;
 
-  private static final Log LOG = LogFactory.getLog(ApplicationImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ApplicationImpl.class);
 
   private LogAggregationContext logAggregationContext;
 
@@ -557,6 +559,29 @@ public class ApplicationImpl implements Application {
   @SuppressWarnings("unchecked")
   static class AppCompletelyDoneTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
+
+    private void updateCollectorStatus(ApplicationImpl app) {
+      // Remove collectors info for finished apps.
+      // TODO check we remove related collectors info in failure cases
+      // (YARN-3038)
+      Map<ApplicationId, AppCollectorData> registeringCollectors
+          = app.context.getRegisteringCollectors();
+      if (registeringCollectors != null) {
+        registeringCollectors.remove(app.getAppId());
+      }
+      Map<ApplicationId, AppCollectorData> knownCollectors =
+          app.context.getKnownCollectors();
+      if (knownCollectors != null) {
+        knownCollectors.remove(app.getAppId());
+      }
+      // stop timelineClient when application get finished.
+      NMTimelinePublisher nmTimelinePublisher =
+          app.context.getNMTimelinePublisher();
+      if (nmTimelinePublisher != null) {
+        nmTimelinePublisher.stopTimelineClient(app.getAppId());
+      }
+    }
+
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
 
@@ -565,20 +590,7 @@ public class ApplicationImpl implements Application {
           new LogHandlerAppFinishedEvent(app.appId));
 
       app.context.getNMTokenSecretManager().appFinished(app.getAppId());
-      // Remove collectors info for finished apps.
-      // TODO check we remove related collectors info in failure cases
-      // (YARN-3038)
-      Map<ApplicationId, String> registeredCollectors =
-          app.context.getRegisteredCollectors();
-      if (registeredCollectors != null) {
-        registeredCollectors.remove(app.getAppId());
-      }
-      // stop timelineClient when application get finished.
-      NMTimelinePublisher nmTimelinePublisher =
-          app.context.getNMTimelinePublisher();
-      if (nmTimelinePublisher != null) {
-        nmTimelinePublisher.stopTimelineClient(app.getAppId());
-      }
+      updateCollectorStatus(app);
     }
   }
 

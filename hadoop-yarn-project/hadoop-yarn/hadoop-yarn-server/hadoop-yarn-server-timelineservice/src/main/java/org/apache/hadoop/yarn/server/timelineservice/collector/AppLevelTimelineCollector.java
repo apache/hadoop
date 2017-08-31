@@ -18,26 +18,21 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.concurrent.Future;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Service that handles writes to the timeline service and writes them to the
@@ -51,30 +46,68 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineCollector.class);
 
-  private final static int AGGREGATION_EXECUTOR_NUM_THREADS = 1;
-  private final static int AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS = 15;
-  private static Set<String> entityTypesSkipAggregation
-      = initializeSkipSet();
-
   private final ApplicationId appId;
+  private final String appUser;
   private final TimelineCollectorContext context;
-  private ScheduledThreadPoolExecutor appAggregationExecutor;
-  private AppLevelAggregator appAggregator;
   private UserGroupInformation currentUser;
+  private Token<TimelineDelegationTokenIdentifier> delegationTokenForApp;
+  private long tokenMaxDate = 0;
+  private String tokenRenewer;
+  private Future<?> renewalOrRegenerationFuture;
 
   public AppLevelTimelineCollector(ApplicationId appId) {
+    this(appId, null);
+  }
+
+  public AppLevelTimelineCollector(ApplicationId appId, String user) {
     super(AppLevelTimelineCollector.class.getName() + " - " + appId.toString());
     Preconditions.checkNotNull(appId, "AppId shouldn't be null");
     this.appId = appId;
+    this.appUser = user;
     context = new TimelineCollectorContext();
   }
 
-  private static Set<String> initializeSkipSet() {
-    Set<String> result = new HashSet<>();
-    result.add(TimelineEntityType.YARN_APPLICATION.toString());
-    result.add(TimelineEntityType.YARN_FLOW_RUN.toString());
-    result.add(TimelineEntityType.YARN_FLOW_ACTIVITY.toString());
-    return result;
+  public UserGroupInformation getCurrentUser() {
+    return currentUser;
+  }
+
+  public String getAppUser() {
+    return appUser;
+  }
+
+  void setDelegationTokenAndFutureForApp(
+      Token<TimelineDelegationTokenIdentifier> token,
+      Future<?> appRenewalOrRegenerationFuture, long tknMaxDate,
+      String renewer) {
+    this.delegationTokenForApp = token;
+    this.tokenMaxDate = tknMaxDate;
+    this.tokenRenewer = renewer;
+    this.renewalOrRegenerationFuture = appRenewalOrRegenerationFuture;
+  }
+
+  void setRenewalOrRegenerationFutureForApp(
+      Future<?> appRenewalOrRegenerationFuture) {
+    this.renewalOrRegenerationFuture = appRenewalOrRegenerationFuture;
+  }
+
+  void cancelRenewalOrRegenerationFutureForApp() {
+    if (renewalOrRegenerationFuture != null &&
+        !renewalOrRegenerationFuture.isDone()) {
+      renewalOrRegenerationFuture.cancel(true);
+    }
+  }
+
+  long getAppDelegationTokenMaxDate() {
+    return tokenMaxDate;
+  }
+
+  String getAppDelegationTokenRenewer() {
+    return tokenRenewer;
+  }
+
+  @VisibleForTesting
+  public Token<TimelineDelegationTokenIdentifier> getDelegationTokenForApp() {
+    return this.delegationTokenForApp;
   }
 
   @Override
@@ -92,29 +125,12 @@ public class AppLevelTimelineCollector extends TimelineCollector {
 
   @Override
   protected void serviceStart() throws Exception {
-    // Launch the aggregation thread
-    appAggregationExecutor = new ScheduledThreadPoolExecutor(
-        AppLevelTimelineCollector.AGGREGATION_EXECUTOR_NUM_THREADS,
-        new ThreadFactoryBuilder()
-            .setNameFormat("TimelineCollector Aggregation thread #%d")
-            .build());
-    appAggregator = new AppLevelAggregator();
-    appAggregationExecutor.scheduleAtFixedRate(appAggregator,
-        AppLevelTimelineCollector.AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS,
-        AppLevelTimelineCollector.AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS,
-        TimeUnit.SECONDS);
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    appAggregationExecutor.shutdown();
-    if (!appAggregationExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-      LOG.info("App-level aggregator shutdown timed out, shutdown now. ");
-      appAggregationExecutor.shutdownNow();
-    }
-    // Perform one round of aggregation after the aggregation executor is done.
-    appAggregator.aggregate();
+    cancelRenewalOrRegenerationFutureForApp();
     super.serviceStop();
   }
 
@@ -122,49 +138,4 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   public TimelineCollectorContext getTimelineEntityContext() {
     return context;
   }
-
-  @Override
-  protected Set<String> getEntityTypesSkipAggregation() {
-    return entityTypesSkipAggregation;
-  }
-
-  private class AppLevelAggregator implements Runnable {
-
-    private void aggregate() {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("App-level real-time aggregating");
-      }
-      if (!isReadyToAggregate()) {
-        LOG.warn("App-level collector is not ready, skip aggregation. ");
-        return;
-      }
-      try {
-        TimelineCollectorContext currContext = getTimelineEntityContext();
-        Map<String, AggregationStatusTable> aggregationGroups
-            = getAggregationGroups();
-        if (aggregationGroups == null
-            || aggregationGroups.isEmpty()) {
-          LOG.debug("App-level collector is empty, skip aggregation. ");
-          return;
-        }
-        TimelineEntity resultEntity = TimelineCollector.aggregateWithoutGroupId(
-            aggregationGroups, currContext.getAppId(),
-            TimelineEntityType.YARN_APPLICATION.toString());
-        TimelineEntities entities = new TimelineEntities();
-        entities.addEntity(resultEntity);
-        putEntitiesAsync(entities, currentUser);
-      } catch (Exception e) {
-        LOG.error("Error aggregating timeline metrics", e);
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("App-level real-time aggregation complete");
-      }
-    }
-
-    @Override
-    public void run() {
-      aggregate();
-    }
-  }
-
 }

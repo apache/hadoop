@@ -50,8 +50,8 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.*;
@@ -211,7 +211,8 @@ public class TestErasureCodingPolicies {
 
     // Only default policy should be enabled after restart
     Assert.assertEquals("Only default policy should be enabled after restart",
-        1, fs.getAllErasureCodingPolicies().size());
+        1,
+        ErasureCodingPolicyManager.getInstance().getEnabledPolicies().length);
 
     // Already set directory-level policies should still be in effect
     Path disabledPolicy = new Path(dir1, "afterDisabled");
@@ -383,6 +384,18 @@ public class TestErasureCodingPolicies {
         .getAllErasureCodingPolicies();
     assertTrue("All system policies should be enabled",
         allECPolicies.containsAll(SystemErasureCodingPolicies.getPolicies()));
+
+    // Query after add a new policy
+    ECSchema toAddSchema = new ECSchema("rs", 5, 2);
+    ErasureCodingPolicy newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 128 * 1024);
+    ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[]{newPolicy};
+    fs.addErasureCodingPolicies(policyArray);
+    allECPolicies = fs.getAllErasureCodingPolicies();
+    assertEquals("Should return new added policy",
+        SystemErasureCodingPolicies.getPolicies().size() + 1,
+        allECPolicies.size());
+
   }
 
   @Test
@@ -600,7 +613,17 @@ public class TestErasureCodingPolicies {
     fs.mkdirs(dirPath);
     fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
-    final String ecPolicyName = "RS-10-4-64k";
+    String ecPolicyName = null;
+    Collection<ErasureCodingPolicy> allPolicies =
+        fs.getAllErasureCodingPolicies();
+    for (ErasureCodingPolicy policy : allPolicies) {
+      if (!ecPolicy.equals(policy)) {
+        ecPolicyName = policy.getName();
+        break;
+      }
+    }
+    assertNotNull(ecPolicyName);
+
     fs.createFile(filePath).build().close();
     assertEquals(ecPolicy, fs.getErasureCodingPolicy(filePath));
     fs.delete(filePath, true);
@@ -647,7 +670,7 @@ public class TestErasureCodingPolicies {
 
   @Test
   public void testGetAllErasureCodingCodecs() throws Exception {
-    HashMap<String, String> allECCodecs = fs
+    Map<String, String> allECCodecs = fs
         .getAllErasureCodingCodecs();
     assertTrue("At least 3 system codecs should be enabled",
         allECCodecs.size() >= 3);
@@ -704,7 +727,7 @@ public class TestErasureCodingPolicies {
 
     // Test add policy successfully
     newPolicy =
-        new ErasureCodingPolicy(toAddSchema, 1 * 1024 * 1024);
+        new ErasureCodingPolicy(toAddSchema, 4 * 1024 * 1024);
     policyArray  = new ErasureCodingPolicy[]{newPolicy};
     responses = fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);
@@ -731,5 +754,86 @@ public class TestErasureCodingPolicies {
         return null;
       }
     });
+  }
+
+  @Test
+  public void testReplicationPolicy() throws Exception {
+    ErasureCodingPolicy replicaPolicy =
+        SystemErasureCodingPolicies.getReplicationPolicy();
+
+    final Path rootDir = new Path("/striped");
+    final Path replicaDir = new Path(rootDir, "replica");
+    final Path subReplicaDir = new Path(replicaDir, "replica");
+    final Path replicaFile = new Path(replicaDir, "file");
+    final Path subReplicaFile = new Path(subReplicaDir, "file");
+
+    fs.mkdirs(rootDir);
+    fs.setErasureCodingPolicy(rootDir, ecPolicy.getName());
+
+    // 1. At first, child directory will inherit parent's EC policy
+    fs.mkdirs(replicaDir);
+    fs.createFile(replicaFile).build().close();
+    HdfsFileStatus fileStatus = (HdfsFileStatus)fs.getFileStatus(replicaFile);
+    assertEquals("File should inherit EC policy.", ecPolicy, fileStatus
+        .getErasureCodingPolicy());
+    assertEquals("File should be a EC file.", true, fileStatus
+        .isErasureCoded());
+    assertEquals("File should have the same EC policy as its ancestor.",
+        ecPolicy, fs.getErasureCodingPolicy(replicaFile));
+    fs.delete(replicaFile, false);
+
+    // 2. Set replication policy on child directory, then get back the policy
+    fs.setErasureCodingPolicy(replicaDir, replicaPolicy.getName());
+    ErasureCodingPolicy temp = fs.getErasureCodingPolicy(replicaDir);
+    assertEquals("Directory should hide replication EC policy.",
+        null, temp);
+
+    // 3. New file will be replication file. Please be noted that replication
+    //    policy only set on directory, not on file
+    fs.createFile(replicaFile).build().close();
+    assertEquals("Replication file should have default replication factor.",
+        fs.getDefaultReplication(),
+        fs.getFileStatus(replicaFile).getReplication());
+    fs.setReplication(replicaFile, (short) 2);
+    assertEquals("File should have replication factor as expected.",
+        2, fs.getFileStatus(replicaFile).getReplication());
+    fileStatus = (HdfsFileStatus)fs.getFileStatus(replicaFile);
+    assertEquals("File should not have EC policy.", null, fileStatus
+        .getErasureCodingPolicy());
+    assertEquals("File should not be a EC file.", false,
+        fileStatus.isErasureCoded());
+    ErasureCodingPolicy ecPolicyOnFile = fs.getErasureCodingPolicy(replicaFile);
+    assertEquals("File should not have EC policy.", null, ecPolicyOnFile);
+    fs.delete(replicaFile, false);
+
+    // 4. New directory under replication directory, is also replication
+    // directory
+    fs.mkdirs(subReplicaDir);
+    assertEquals("Directory should inherit hiding replication EC policy.",
+        null, fs.getErasureCodingPolicy(subReplicaDir));
+    fs.createFile(subReplicaFile).build().close();
+    assertEquals("File should have default replication factor.",
+        fs.getDefaultReplication(),
+        fs.getFileStatus(subReplicaFile).getReplication());
+    fileStatus = (HdfsFileStatus)fs.getFileStatus(subReplicaFile);
+    assertEquals("File should not have EC policy.", null,
+        fileStatus.getErasureCodingPolicy());
+    assertEquals("File should not be a EC file.", false,
+        fileStatus.isErasureCoded());
+    assertEquals("File should not have EC policy.", null,
+        fs.getErasureCodingPolicy(subReplicaFile));
+    fs.delete(subReplicaFile, false);
+
+    // 5. Unset replication policy on directory, new file will be EC file
+    fs.unsetErasureCodingPolicy(replicaDir);
+    fs.createFile(subReplicaFile).build().close();
+    fileStatus = (HdfsFileStatus)fs.getFileStatus(subReplicaFile);
+    assertEquals("File should inherit EC policy.", ecPolicy,
+        fileStatus.getErasureCodingPolicy());
+    assertEquals("File should be a EC file.", true,
+        fileStatus.isErasureCoded());
+    assertEquals("File should have the same EC policy as its ancestor",
+        ecPolicy, fs.getErasureCodingPolicy(subReplicaFile));
+    fs.delete(subReplicaFile, false);
   }
 }

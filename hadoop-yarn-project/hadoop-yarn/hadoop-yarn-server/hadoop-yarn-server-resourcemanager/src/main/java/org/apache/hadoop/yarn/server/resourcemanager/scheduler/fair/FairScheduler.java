@@ -83,6 +83,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -1194,6 +1196,17 @@ public class FairScheduler extends
           appAttemptRemovedEvent.getApplicationAttemptID(),
           appAttemptRemovedEvent.getFinalAttemptState(),
           appAttemptRemovedEvent.getKeepContainersAcrossAppAttempts());
+      break;
+    case RELEASE_CONTAINER:
+      if (!(event instanceof ReleaseContainerEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      RMContainer container = ((ReleaseContainerEvent) event).getContainer();
+      completedContainer(container,
+          SchedulerUtils.createAbnormalContainerStatus(
+              container.getContainerId(),
+              SchedulerUtils.RELEASED_CONTAINER),
+          RMContainerEventType.RELEASED);
       break;
     case CONTAINER_EXPIRED:
       if (!(event instanceof ContainerExpiredSchedulerEvent)) {

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE_DEFAULT;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -33,6 +35,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -67,8 +71,19 @@ import com.google.common.base.Preconditions;
  * if necessary.
  */
 public class SnapshotManager implements SnapshotStatsMXBean {
+  public static final Log LOG = LogFactory.getLog(SnapshotManager.class);
+
   private final FSDirectory fsdir;
   private final boolean captureOpenFiles;
+  /**
+   * If skipCaptureAccessTimeOnlyChange is set to true, if accessTime
+   * of a file changed but there is no other modification made to the file,
+   * it will not be captured in next snapshot. However, if there is other
+   * modification made to the file, the last access time will be captured
+   * together with the modification in next snapshot.
+   */
+  private boolean skipCaptureAccessTimeOnlyChange = false;
+
   private final AtomicInteger numSnapshots = new AtomicInteger();
   private static final int SNAPSHOT_ID_BIT_WIDTH = 24;
 
@@ -84,6 +99,19 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     this.captureOpenFiles = conf.getBoolean(
         DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES,
         DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT);
+    this.skipCaptureAccessTimeOnlyChange = conf.getBoolean(
+        DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE,
+        DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE_DEFAULT);
+    LOG.info("Loaded config captureOpenFiles: " + captureOpenFiles
+        + "skipCaptureAccessTimeOnlyChange: " +
+        skipCaptureAccessTimeOnlyChange);
+  }
+
+  /**
+   * @return skipCaptureAccessTimeOnlyChange
+   */
+  public boolean getSkipCaptureAccessTimeOnlyChange() {
+    return skipCaptureAccessTimeOnlyChange;
   }
 
   /** Used in tests only */

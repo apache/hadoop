@@ -2043,7 +2043,12 @@ public class NativeAzureFileSystem extends FileSystem {
       AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
         @Override
         public boolean execute(FileMetadata file) throws IOException{
-          return deleteFile(file.getKey(), file.isDir());
+          if (!deleteFile(file.getKey(), file.isDir())) {
+            LOG.warn("Attempt to delete non-existent {} {}",
+                file.isDir() ? "directory" : "file",
+                file.getKey());
+          }
+          return true;
         }
       };
 
@@ -2080,30 +2085,28 @@ public class NativeAzureFileSystem extends FileSystem {
     return new AzureFileSystemThreadPoolExecutor(threadCount, threadNamePrefix, operation, key, config);
   }
 
-  // Delete single file / directory from key.
+  /**
+   * Delete the specified file or directory and increment metrics.
+   * If the file or directory does not exist, the operation returns false.
+   * @param path the path to a file or directory.
+   * @param isDir true if the path is a directory; otherwise false.
+   * @return true if delete is successful; otherwise false.
+   * @throws IOException if an IO error occurs while attempting to delete the
+   * path.
+   *
+   */
   @VisibleForTesting
-  boolean deleteFile(String key, boolean isDir) throws IOException {
-    try {
-      if (store.delete(key)) {
-        if (isDir) {
-          instrumentation.directoryDeleted();
-        } else {
-          instrumentation.fileDeleted();
-        }
-        return true;
-      } else {
-        return false;
-      }
-    } catch(IOException e) {
-      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
-
-      if (innerException instanceof StorageException
-          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-        return false;
-      }
-
-      throw e;
+  boolean deleteFile(String path, boolean isDir) throws IOException {
+    if (!store.delete(path)) {
+      return false;
     }
+
+    if (isDir) {
+      instrumentation.directoryDeleted();
+    } else {
+      instrumentation.fileDeleted();
+    }
+    return true;
   }
 
   @Override

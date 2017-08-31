@@ -32,8 +32,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
@@ -70,7 +68,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -83,6 +80,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+
+import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
+import static org.apache.hadoop.util.KMSUtil.checkNotNull;
+import static org.apache.hadoop.util.KMSUtil.parseJSONEncKeyVersion;
+import static org.apache.hadoop.util.KMSUtil.parseJSONEncKeyVersions;
+import static org.apache.hadoop.util.KMSUtil.parseJSONKeyVersion;
+import static org.apache.hadoop.util.KMSUtil.parseJSONMetadata;
 
 /**
  * KMS client <code>KeyProvider</code> implementation.
@@ -219,77 +223,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     }
   }
 
-  @SuppressWarnings("rawtypes")
-  private static List<EncryptedKeyVersion>
-      parseJSONEncKeyVersions(String keyName, List valueList) {
-    List<EncryptedKeyVersion> ekvs = new LinkedList<EncryptedKeyVersion>();
-    if (!valueList.isEmpty()) {
-      for (Object values : valueList) {
-        Map valueMap = (Map) values;
-        ekvs.add(parseJSONEncKeyVersion(keyName, valueMap));
-      }
-    }
-    return ekvs;
-  }
-
-  private static EncryptedKeyVersion parseJSONEncKeyVersion(String keyName,
-      Map valueMap) {
-    String versionName = checkNotNull(
-        (String) valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
-        KMSRESTConstants.VERSION_NAME_FIELD);
-
-    byte[] iv = Base64.decodeBase64(checkNotNull(
-        (String) valueMap.get(KMSRESTConstants.IV_FIELD),
-        KMSRESTConstants.IV_FIELD));
-
-    Map encValueMap = checkNotNull((Map)
-            valueMap.get(KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD),
-        KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD);
-
-    String encVersionName = checkNotNull((String)
-            encValueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
-        KMSRESTConstants.VERSION_NAME_FIELD);
-
-    byte[] encKeyMaterial = Base64.decodeBase64(checkNotNull((String)
-            encValueMap.get(KMSRESTConstants.MATERIAL_FIELD),
-        KMSRESTConstants.MATERIAL_FIELD));
-
-    return new KMSEncryptedKeyVersion(keyName, versionName, iv,
-        encVersionName, encKeyMaterial);
-  }
-
-  private static KeyVersion parseJSONKeyVersion(Map valueMap) {
-    KeyVersion keyVersion = null;
-    if (!valueMap.isEmpty()) {
-      byte[] material = (valueMap.containsKey(KMSRESTConstants.MATERIAL_FIELD))
-          ? Base64.decodeBase64((String) valueMap.get(KMSRESTConstants.MATERIAL_FIELD))
-          : null;
-      String versionName = (String)valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD);
-      String keyName = (String)valueMap.get(KMSRESTConstants.NAME_FIELD);
-      keyVersion = new KMSKeyVersion(keyName, versionName, material);
-    }
-    return keyVersion;
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Metadata parseJSONMetadata(Map valueMap) {
-    Metadata metadata = null;
-    if (!valueMap.isEmpty()) {
-      metadata = new KMSMetadata(
-          (String) valueMap.get(KMSRESTConstants.CIPHER_FIELD),
-          (Integer) valueMap.get(KMSRESTConstants.LENGTH_FIELD),
-          (String) valueMap.get(KMSRESTConstants.DESCRIPTION_FIELD),
-          (Map<String, String>) valueMap.get(KMSRESTConstants.ATTRIBUTES_FIELD),
-          new Date((Long) valueMap.get(KMSRESTConstants.CREATED_FIELD)),
-          (Integer) valueMap.get(KMSRESTConstants.VERSIONS_FIELD));
-    }
-    return metadata;
-  }
-
-  private static void writeJson(Map map, OutputStream os) throws IOException {
+  private static void writeJson(Object obj, OutputStream os)
+      throws IOException {
     Writer writer = new OutputStreamWriter(os, StandardCharsets.UTF_8);
     ObjectMapper jsonMapper = new ObjectMapper();
-    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, map);
+    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, obj);
   }
 
   /**
@@ -358,25 +296,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
       return new LoadBalancingKMSClientProvider(providers, conf);
     }
-  }
-
-  public static <T> T checkNotNull(T o, String name)
-      throws IllegalArgumentException {
-    if (o == null) {
-      throw new IllegalArgumentException("Parameter '" + name +
-          "' cannot be null");
-    }
-    return o;
-  }
-
-  public static String checkNotEmpty(String s, String name)
-      throws IllegalArgumentException {
-    checkNotNull(s, name);
-    if (s.isEmpty()) {
-      throw new IllegalArgumentException("Parameter '" + name +
-          "' cannot be empty");
-    }
-    return s;
   }
 
   private String kmsUrl;
@@ -560,12 +479,12 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
-  private <T> T call(HttpURLConnection conn, Map jsonOutput,
+  private <T> T call(HttpURLConnection conn, Object jsonOutput,
       int expectedResponse, Class<T> klass) throws IOException {
     return call(conn, jsonOutput, expectedResponse, klass, authRetry);
   }
 
-  private <T> T call(HttpURLConnection conn, Map jsonOutput,
+  private <T> T call(HttpURLConnection conn, Object jsonOutput,
       int expectedResponse, Class<T> klass, int authRetryCount)
       throws IOException {
     T ret = null;
@@ -600,17 +519,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         return call(conn, jsonOutput, expectedResponse, klass,
             authRetryCount - 1);
       }
-    }
-    try {
-      AuthenticatedURL.extractToken(conn, authToken);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Extracted token, authToken={}, its dt={}", authToken,
-            authToken.getDelegationToken());
-      }
-    } catch (AuthenticationException e) {
-      // Ignore the AuthExceptions.. since we are just using the method to
-      // extract and set the authToken.. (Workaround till we actually fix
-      // AuthenticatedURL properly to set authToken post initialization)
     }
     HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (conn.getContentType() != null
@@ -882,6 +790,48 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     final Map response =
         call(conn, jsonPayload, HttpURLConnection.HTTP_OK, Map.class);
     return parseJSONEncKeyVersion(ekv.getEncryptionKeyName(), response);
+  }
+
+  @Override
+  public void reencryptEncryptedKeys(List<EncryptedKeyVersion> ekvs)
+      throws IOException, GeneralSecurityException {
+    checkNotNull(ekvs, "ekvs");
+    if (ekvs.isEmpty()) {
+      return;
+    }
+    final List<Map> jsonPayload = new ArrayList<>();
+    String keyName = null;
+    for (EncryptedKeyVersion ekv : ekvs) {
+      checkNotNull(ekv.getEncryptionKeyName(), "keyName");
+      checkNotNull(ekv.getEncryptionKeyVersionName(), "versionName");
+      checkNotNull(ekv.getEncryptedKeyIv(), "iv");
+      checkNotNull(ekv.getEncryptedKeyVersion(), "encryptedKey");
+      Preconditions.checkArgument(ekv.getEncryptedKeyVersion().getVersionName()
+              .equals(KeyProviderCryptoExtension.EEK),
+          "encryptedKey version name must be '%s', is '%s'",
+          KeyProviderCryptoExtension.EEK,
+          ekv.getEncryptedKeyVersion().getVersionName());
+      if (keyName == null) {
+        keyName = ekv.getEncryptionKeyName();
+      } else {
+        Preconditions.checkArgument(keyName.equals(ekv.getEncryptionKeyName()),
+            "All EncryptedKey must have the same key name.");
+      }
+      jsonPayload.add(KMSUtil.toJSON(ekv));
+    }
+    final URL url = createURL(KMSRESTConstants.KEY_RESOURCE, keyName,
+        KMSRESTConstants.REENCRYPT_BATCH_SUB_RESOURCE, null);
+    final HttpURLConnection conn = createConnection(url, HTTP_POST);
+    conn.setRequestProperty(CONTENT_TYPE, APPLICATION_JSON_MIME);
+    final List<Map> response =
+        call(conn, jsonPayload, HttpURLConnection.HTTP_OK, List.class);
+    Preconditions.checkArgument(response.size() == ekvs.size(),
+        "Response size is different than input size.");
+    for (int i = 0; i < response.size(); ++i) {
+      final Map item = response.get(i);
+      final EncryptedKeyVersion ekv = parseJSONEncKeyVersion(keyName, item);
+      ekvs.set(i, ekv);
+    }
   }
 
   @Override

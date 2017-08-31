@@ -859,6 +859,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FileStatus expectedFileStatus = expected.getFileStatus(path);
     FileStatus actualFileStatus = actual.getFileStatus(path);
     assertEquals(actualFileStatus.hasAcl(), expectedFileStatus.hasAcl());
+    // backwards compat
     assertEquals(actualFileStatus.getPermission().getAclBit(),
         expectedFileStatus.getPermission().getAclBit());
   }

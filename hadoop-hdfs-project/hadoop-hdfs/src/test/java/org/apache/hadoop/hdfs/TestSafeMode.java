@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -463,6 +465,29 @@ public class TestSafeMode {
       myfs.access(file1, FsAction.WRITE);
       fail("The access call should have failed.");
     } catch (AccessControlException e) {
+      // expected
+    }
+
+    ECSchema toAddSchema = new ECSchema("testcodec", 3, 2);
+    ErasureCodingPolicy newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 128 * 1024);
+    ErasureCodingPolicy[] policyArray =
+        new ErasureCodingPolicy[]{newPolicy};
+    try {
+      dfs.addErasureCodingPolicies(policyArray);
+      fail("AddErasureCodingPolicies should have failed.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "Cannot add erasure coding policy", ioe);
+      // expected
+    }
+
+    try {
+      dfs.removeErasureCodingPolicy("testECName");
+      fail("RemoveErasureCodingPolicy should have failed.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "Cannot remove erasure coding policy", ioe);
       // expected
     }
 

@@ -21,11 +21,10 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -60,12 +59,12 @@ import org.slf4j.LoggerFactory;
  * HBase storage. Different types can be defined for different types of the
  * entities that are being requested.
  */
-public abstract class TimelineEntityReader {
+public abstract class TimelineEntityReader extends
+    AbstractTimelineStorageReader {
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineEntityReader.class);
 
   private final boolean singleEntityRead;
-  private TimelineReaderContext context;
   private TimelineDataToRetrieve dataToRetrieve;
   // used only for multiple entity read mode
   private TimelineEntityFilters filters;
@@ -74,14 +73,6 @@ public abstract class TimelineEntityReader {
    * Main table the entity reader uses.
    */
   private BaseTable<?> table;
-
-  /**
-   * Specifies whether keys for this table are sorted in a manner where entities
-   * can be retrieved by created time. If true, it will be sufficient to collect
-   * the first results as specified by the limit. Otherwise all matched entities
-   * will be fetched and then limit applied.
-   */
-  private boolean sortedKeys = false;
 
   /**
    * Used to convert strings key components to and from storage format.
@@ -96,15 +87,11 @@ public abstract class TimelineEntityReader {
    *     made.
    * @param entityFilters Filters which limit the entities returned.
    * @param toRetrieve Data to retrieve for each entity.
-   * @param sortedKeys Specifies whether key for this table are sorted or not.
-   *     If sorted, entities can be retrieved by created time.
    */
   protected TimelineEntityReader(TimelineReaderContext ctxt,
-      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve,
-      boolean sortedKeys) {
+      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
+    super(ctxt);
     this.singleEntityRead = false;
-    this.sortedKeys = sortedKeys;
-    this.context = ctxt;
     this.dataToRetrieve = toRetrieve;
     this.filters = entityFilters;
 
@@ -120,8 +107,8 @@ public abstract class TimelineEntityReader {
    */
   protected TimelineEntityReader(TimelineReaderContext ctxt,
       TimelineDataToRetrieve toRetrieve) {
+    super(ctxt);
     this.singleEntityRead = true;
-    this.context = ctxt;
     this.dataToRetrieve = toRetrieve;
 
     this.setTable(getTable());
@@ -185,10 +172,6 @@ public abstract class TimelineEntityReader {
     return null;
   }
 
-  protected TimelineReaderContext getContext() {
-    return context;
-  }
-
   protected TimelineDataToRetrieve getDataToRetrieve() {
     return dataToRetrieve;
   }
@@ -203,7 +186,7 @@ public abstract class TimelineEntityReader {
    */
   protected void createFiltersIfNull() {
     if (filters == null) {
-      filters = new TimelineEntityFilters();
+      filters = new TimelineEntityFilters.Builder().build();
     }
   }
 
@@ -229,7 +212,7 @@ public abstract class TimelineEntityReader {
     if (result == null || result.isEmpty()) {
       // Could not find a matching row.
       LOG.info("Cannot find matching entity of type " +
-          context.getEntityType());
+          getContext().getEntityType());
       return null;
     }
     return parseEntity(result);
@@ -250,7 +233,7 @@ public abstract class TimelineEntityReader {
     validateParams();
     augmentParams(hbaseConf, conn);
 
-    NavigableSet<TimelineEntity> entities = new TreeSet<>();
+    Set<TimelineEntity> entities = new LinkedHashSet<>();
     FilterList filterList = createFilterList();
     if (LOG.isDebugEnabled() && filterList != null) {
       LOG.debug("FilterList created for scan is - " + filterList);
@@ -263,14 +246,8 @@ public abstract class TimelineEntityReader {
           continue;
         }
         entities.add(entity);
-        if (!sortedKeys) {
-          if (entities.size() > filters.getLimit()) {
-            entities.pollLast();
-          }
-        } else {
-          if (entities.size() == filters.getLimit()) {
-            break;
-          }
+        if (entities.size() == filters.getLimit()) {
+          break;
         }
       }
       return entities;
@@ -287,21 +264,6 @@ public abstract class TimelineEntityReader {
   protected BaseTable<?> getTable() {
     return table;
   }
-
-  /**
-   * Validates the required parameters to read the entities.
-   */
-  protected abstract void validateParams();
-
-  /**
-   * Sets certain parameters to defaults if the values are not provided.
-   *
-   * @param hbaseConf HBase Configuration.
-   * @param conn HBase Connection.
-   * @throws IOException if any exception is encountered while setting params.
-   */
-  protected abstract void augmentParams(Configuration hbaseConf,
-      Connection conn) throws IOException;
 
   /**
    * Fetches a {@link Result} instance for a single-entity read.

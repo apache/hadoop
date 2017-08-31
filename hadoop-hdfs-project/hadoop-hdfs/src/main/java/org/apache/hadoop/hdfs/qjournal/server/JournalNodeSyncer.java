@@ -403,20 +403,23 @@ public class JournalNodeSyncer {
     LOG.info("Downloaded file " + tmpEditsFile.getName() + " of size " +
         tmpEditsFile.length() + " bytes.");
 
-    final boolean moveSuccess = journal.moveTmpSegmentToCurrent(tmpEditsFile,
-        finalEditsFile, log.getEndTxId());
-    if (!moveSuccess) {
-      // If move is not successful, delete the tmpFile
-      LOG.debug("Move to current directory unsuccessful. Deleting temporary " +
-          "file: " + tmpEditsFile);
-      if (!tmpEditsFile.delete()) {
+    boolean moveSuccess = false;
+    try {
+      moveSuccess = journal.moveTmpSegmentToCurrent(tmpEditsFile,
+          finalEditsFile, log.getEndTxId());
+    } catch (IOException e) {
+      LOG.info("Could not move %s to current directory.", tmpEditsFile);
+    } finally {
+      if (tmpEditsFile.exists() && !tmpEditsFile.delete()) {
         LOG.warn("Deleting " + tmpEditsFile + " has failed");
       }
-      return false;
-    } else {
-      metrics.incrNumEditLogsSynced();
     }
-    return true;
+    if (moveSuccess) {
+      metrics.incrNumEditLogsSynced();
+      return true;
+    } else {
+      return false;
+    }
   }
 
   private static DataTransferThrottler getThrottler(Configuration conf) {

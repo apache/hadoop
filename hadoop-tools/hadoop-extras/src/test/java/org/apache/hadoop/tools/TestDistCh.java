@@ -38,11 +38,13 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.junit.Assert;
+import org.junit.Test;
 import org.slf4j.event.Level;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-public class TestDistCh extends junit.framework.TestCase {
+public class TestDistCh {
   {
     GenericTestUtils.setLogLevel(
         getLogger("org.apache.hadoop.hdfs.StateChange"), Level.ERROR);
@@ -75,20 +77,20 @@ public class TestDistCh extends junit.framework.TestCase {
 
     Path createSmallFile(Path dir) throws IOException {
       final Path f = new Path(dir, "f" + ++fcount);
-      assertTrue(!fs.exists(f));
+      Assert.assertTrue(!fs.exists(f));
       final DataOutputStream out = fs.create(f);
       try {
         out.writeBytes("createSmallFile: f=" + f);
       } finally {
         out.close();
       }
-      assertTrue(fs.exists(f));
+      Assert.assertTrue(fs.exists(f));
       return f;
     }
 
     Path mkdir(Path dir) throws IOException {
-      assertTrue(fs.mkdirs(dir));
-      assertTrue(fs.getFileStatus(dir).isDirectory());
+      Assert.assertTrue(fs.mkdirs(dir));
+      Assert.assertTrue(fs.getFileStatus(dir).isDirectory());
       return dir;
     }
     
@@ -127,7 +129,8 @@ public class TestDistCh extends junit.framework.TestCase {
       defaultPerm = permission == null || "".equals(permission);
     }
   }
-  
+
+  @Test
   public void testDistCh() throws Exception {
     final Configuration conf = new Configuration();
 
@@ -190,13 +193,13 @@ public class TestDistCh extends junit.framework.TestCase {
   }
 
   static void checkFileStatus(ChPermissionStatus expected, FileStatus actual) {
-    assertEquals(expected.getUserName(), actual.getOwner());
-    assertEquals(expected.getGroupName(), actual.getGroup());
+    Assert.assertEquals(expected.getUserName(), actual.getOwner());
+    Assert.assertEquals(expected.getGroupName(), actual.getGroup());
     FsPermission perm = expected.getPermission();
     if (actual.isFile() && expected.defaultPerm) {
       perm = perm.applyUMask(UMASK);
     }
-    assertEquals(perm, actual.getPermission());
+    Assert.assertEquals(perm, actual.getPermission());
   }
 
   private static String runLsr(final FsShell shell, String root, int returnvalue
@@ -210,7 +213,7 @@ public class TestDistCh extends junit.framework.TestCase {
     System.setErr(out);
     final String results;
     try {
-      assertEquals(returnvalue, shell.run(new String[]{"-lsr", root}));
+      Assert.assertEquals(returnvalue, shell.run(new String[]{"-lsr", root}));
       results = bytes.toString();
     } finally {
       IOUtils.closeStream(out);

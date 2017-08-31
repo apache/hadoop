@@ -144,6 +144,13 @@ public final class HdfsConstants {
     ALL, LIVE, DEAD, DECOMMISSIONING, ENTERING_MAINTENANCE, IN_MAINTENANCE
   }
 
+  /**
+   * Re-encrypt encryption zone actions.
+   */
+  public enum ReencryptAction {
+    CANCEL, START
+  }
+
   /* Hidden constructor */
   protected HdfsConstants() {
   }

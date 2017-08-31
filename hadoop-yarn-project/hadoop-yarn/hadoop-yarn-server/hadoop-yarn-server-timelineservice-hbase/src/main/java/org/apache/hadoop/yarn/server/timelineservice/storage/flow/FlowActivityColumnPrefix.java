@@ -191,62 +191,6 @@ public enum FlowActivityColumnPrefix
         keyConverter);
   }
 
-  /**
-   * Retrieve an {@link FlowActivityColumnPrefix} given a name, or null if there
-   * is no match. The following holds true: {@code columnFor(x) == columnFor(y)}
-   * if and only if {@code x.equals(y)} or {@code (x == y == null)}
-   *
-   * @param columnPrefix
-   *          Name of the column to retrieve
-   * @return the corresponding {@link FlowActivityColumnPrefix} or null
-   */
-  public static final FlowActivityColumnPrefix columnFor(String columnPrefix) {
-
-    // Match column based on value, assume column family matches.
-    for (FlowActivityColumnPrefix flowActivityColPrefix :
-        FlowActivityColumnPrefix.values()) {
-      // Find a match based only on name.
-      if (flowActivityColPrefix.getColumnPrefix().equals(columnPrefix)) {
-        return flowActivityColPrefix;
-      }
-    }
-    // Default to null
-    return null;
-  }
-
-  /**
-   * Retrieve an {@link FlowActivityColumnPrefix} given a name, or null if there
-   * is no match. The following holds true:
-   * {@code columnFor(a,x) == columnFor(b,y)} if and only if
-   * {@code (x == y == null)} or {@code a.equals(b) & x.equals(y)}
-   *
-   * @param columnFamily
-   *          The columnFamily for which to retrieve the column.
-   * @param columnPrefix
-   *          Name of the column to retrieve
-   * @return the corresponding {@link FlowActivityColumnPrefix} or null if both
-   *         arguments don't match.
-   */
-  public static final FlowActivityColumnPrefix columnFor(
-      FlowActivityColumnFamily columnFamily, String columnPrefix) {
-
-    // TODO: needs unit test to confirm and need to update javadoc to explain
-    // null prefix case.
-
-    for (FlowActivityColumnPrefix flowActivityColumnPrefix :
-        FlowActivityColumnPrefix.values()) {
-      // Find a match based column family and on name.
-      if (flowActivityColumnPrefix.columnFamily.equals(columnFamily)
-          && (((columnPrefix == null) && (flowActivityColumnPrefix
-              .getColumnPrefix() == null)) || (flowActivityColumnPrefix
-              .getColumnPrefix().equals(columnPrefix)))) {
-        return flowActivityColumnPrefix;
-      }
-    }
-    // Default to null
-    return null;
-  }
-
   /*
    * (non-Javadoc)
    *
@@ -271,7 +215,7 @@ public enum FlowActivityColumnPrefix
     byte[] columnQualifier = getColumnPrefixBytes(qualifier);
     Attribute[] combinedAttributes =
         HBaseTimelineStorageUtils.combineAttributes(attributes, this.aggOp);
-    column.store(rowKey, tableMutator, columnQualifier, null, inputValue,
+    column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue,
         combinedAttributes);
   }
 }

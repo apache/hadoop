@@ -66,6 +66,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(YarnConfiguration
             .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER_PROTOCOL);
+    configurationPropsToSkipCompare.add(YarnConfiguration
+        .YARN_SECURITY_SERVICE_AUTHORIZATION_COLLECTOR_NODEMANAGER_PROTOCOL);
     configurationPropsToSkipCompare.add(YarnConfiguration.CURATOR_LEADER_ELECTOR);
 
     // Federation default configs to be ignored
@@ -95,6 +97,10 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER_PARAMS);
+
+    // Federation StateStore ZK implementation configs to be ignored
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH);
 
     // Federation StateStore SQL implementation configs to be ignored
     configurationPropsToSkipCompare
@@ -155,6 +161,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
 
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED);
 
     // Set by container-executor.cfg
     configurationPrefixToSkipCompare.add(YarnConfiguration.NM_USER_HOME_DIR);
@@ -180,6 +188,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     // Currently defined in RegistryConstants/core-site.xml
     xmlPrefixToSkipCompare.add("hadoop.registry");
 
+    xmlPrefixToSkipCompare.add(
+        "yarn.log-aggregation.file-controller.TFile.class");
     // Add the filters used for checking for collision of default values.
     initDefaultValueCollisionCheck();
   }

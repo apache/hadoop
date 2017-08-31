@@ -21,11 +21,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.util.ZKUtil;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.ACL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +71,7 @@ public class TestZKCuratorManager {
     curator.create(testZNode);
     assertTrue(curator.exists(testZNode));
     curator.setData(testZNode, expectedString, -1);
-    String testString = curator.getSringData("/test");
+    String testString = curator.getStringData("/test");
     assertEquals(expectedString, testString);
   }
 
@@ -91,5 +95,40 @@ public class TestZKCuratorManager {
     assertFalse(curator.exists("/node2"));
     children = curator.getChildren("/");
     assertEquals(2, children.size());
+  }
+
+  @Test
+  public void testTransaction() throws Exception {
+    List<ACL> zkAcl = ZKUtil.parseACLs(CommonConfigurationKeys.ZK_ACL_DEFAULT);
+    String fencingNodePath = "/fencing";
+    String node1 = "/node1";
+    String node2 = "/node2";
+    byte[] testData = "testData".getBytes("UTF-8");
+    assertFalse(curator.exists(fencingNodePath));
+    assertFalse(curator.exists(node1));
+    assertFalse(curator.exists(node2));
+    ZKCuratorManager.SafeTransaction txn = curator.createTransaction(
+        zkAcl, fencingNodePath);
+    txn.create(node1, testData, zkAcl, CreateMode.PERSISTENT);
+    txn.create(node2, testData, zkAcl, CreateMode.PERSISTENT);
+    assertFalse(curator.exists(fencingNodePath));
+    assertFalse(curator.exists(node1));
+    assertFalse(curator.exists(node2));
+    txn.commit();
+    assertFalse(curator.exists(fencingNodePath));
+    assertTrue(curator.exists(node1));
+    assertTrue(curator.exists(node2));
+    assertTrue(Arrays.equals(testData, curator.getData(node1)));
+    assertTrue(Arrays.equals(testData, curator.getData(node2)));
+
+    byte[] setData = "setData".getBytes("UTF-8");
+    txn = curator.createTransaction(zkAcl, fencingNodePath);
+    txn.setData(node1, setData, -1);
+    txn.delete(node2);
+    assertTrue(curator.exists(node2));
+    assertTrue(Arrays.equals(testData, curator.getData(node1)));
+    txn.commit();
+    assertFalse(curator.exists(node2));
+    assertTrue(Arrays.equals(setData, curator.getData(node1)));
   }
 }

@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 import java.io.File;
 import java.io.InterruptedIOException;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -47,8 +47,8 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisition
  */
 public class RecoveredContainerLaunch extends ContainerLaunch {
 
-  private static final Log LOG = LogFactory.getLog(
-    RecoveredContainerLaunch.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(RecoveredContainerLaunch.class);
 
   public RecoveredContainerLaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,

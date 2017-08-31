@@ -65,9 +65,11 @@ Architecture
 
       2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, five built-in policies are supported: `RS-3-2-64k`, `RS-6-3-64k`, `RS-10-4-64k`, `RS-LEGACY-6-3-64k`, and `XOR-2-1-64k`.
+    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, six built-in policies are supported: `RS-3-2-1024k`, `RS-6-3-1024k`, `RS-10-4-1024k`, `RS-LEGACY-6-3-1024k`, `XOR-2-1-1024k` and `REPLICATION`.
 
-    By default, all built-in erasure coding policies are disabled.
+    `REPLICATION` is a special policy. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
+
+    `REPLICATION` policy is always enabled. For other built-in policies, unless they are configured in `dfs.namenode.ec.policies.enabled` property, otherwise they are disabled by default.
 
     Similar to HDFS storage policies, erasure coding policies are set on a directory. When a file is created, it inherits the EC policy of its nearest ancestor directory.
 
@@ -112,15 +114,15 @@ Deployment
   what EC policies can be set by clients. It does not affect the behavior of already set file or directory-level EC policies.
 
   By default, all built-in erasure coding policies are disabled. Typically, the cluster administrator will enable set of policies by including them
-  in the `dfs .namenode.ec.policies.enabled` configuration based on the size of the cluster and the desired fault-tolerance properties. For instance,
-  for a cluster with 9 racks, a policy like `RS-10-4-64k` will not preserve rack-level fault-tolerance, and `RS-6-3-64k` or `RS-3-2-64k` might
-  be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as
+  in the `dfs.namenode.ec.policies.enabled` configuration based on the size of the cluster and the desired fault-tolerance properties. For instance,
+  for a cluster with 9 racks, a policy like `RS-10-4-1024k` will not preserve rack-level fault-tolerance, and `RS-6-3-1024k` or `RS-3-2-1024k` might
+  be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-1024k` would still be appropriate as long as
   there are at least 14 DataNodes in the cluster.
 
   A system default EC policy can be configured via 'dfs.namenode.ec.system.default.policy' configuration. With this configuration,
   the default EC policy will be used when no policy name is passed as an argument in the '-setPolicy' command.
 
-  By default, the 'dfs.namenode.ec.system.default.policy' is "RS-6-3-64k".
+  By default, the 'dfs.namenode.ec.system.default.policy' is "RS-6-3-1024k".
 
   The codec implementations for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
   `io.erasurecode.codec.rs.rawcoders` for the default RS codec,
@@ -153,7 +155,7 @@ Deployment
   HDFS provides an `ec` subcommand to perform administrative commands related to erasure coding.
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -path <path> [-policy <policyName>] [-replicate]]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
@@ -165,7 +167,7 @@ Deployment
 
 Below are the details about each command.
 
- *  `[-setPolicy -policy <policyName> -path <path>]`
+ *  `[-setPolicy -path <path> [-policy <policyName>] [-replicate]]`
 
     Sets an erasure coding policy on a directory at the specified path.
 
@@ -174,6 +176,10 @@ Below are the details about each command.
       `policyName`: The erasure coding policy to be used for files under this directory.
       This parameter can be omitted if a 'dfs.namenode.ec.system.default.policy' configuration is set.
       The EC policy of the path will be set with the default value in configuration.
+
+      `-replicate` apply the special `REPLICATION` policy on the directory, force the directory to adopt 3x replication scheme.
+
+      `-replicate` and `-policy <policyName>` are optional arguments. They cannot be specified at the same time.
 
 
  *  `[-getPolicy -path <path>]`
@@ -186,7 +192,7 @@ Below are the details about each command.
 
  *  `[-listPolicies]`
 
-     Lists the set of enabled erasure coding policies. These names are suitable for use with the `setPolicy` command.
+     Lists all (enabled, disabled and removed) erasure coding policies registered in HDFS. Only the enabled policies are suitable for use with the `setPolicy` command.
 
  *  `[-addPolicies -policyFile <file>]`
 

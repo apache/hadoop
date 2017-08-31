@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -44,8 +44,8 @@ import java.util.List;
 @InterfaceStability.Unstable
 public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
 
-  static final Log LOG = LogFactory.getLog(
-      CGroupsMemoryResourceHandlerImpl.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(CGroupsMemoryResourceHandlerImpl.class);
   private static final CGroupsHandler.CGroupController MEMORY =
       CGroupsHandler.CGroupController.MEMORY;
   private static final int OPPORTUNISTIC_SWAPPINESS = 100;

@@ -26,6 +26,8 @@ import java.util.List;
 import org.apache.curator.framework.AuthInfo;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.api.transaction.CuratorTransaction;
+import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -33,8 +35,11 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Helper class that provides utility methods specific to ZK operations.
@@ -50,7 +55,6 @@ public final class ZKCuratorManager {
 
   /** Curator for ZooKeeper. */
   private CuratorFramework curator;
-
 
   public ZKCuratorManager(Configuration config) throws IOException {
     this.conf = config;
@@ -116,7 +120,6 @@ public final class ZKCuratorManager {
 
   /**
    * Start the connection to the ZooKeeper ensemble.
-   * @param conf Configuration for the connection.
    * @throws IOException If the connection cannot be started.
    */
   public void start() throws IOException {
@@ -125,7 +128,6 @@ public final class ZKCuratorManager {
 
   /**
    * Start the connection to the ZooKeeper ensemble.
-   * @param conf Configuration for the connection.
    * @param authInfos List of authentication keys.
    * @throws IOException If the connection cannot be started.
    */
@@ -179,7 +181,6 @@ public final class ZKCuratorManager {
   /**
    * Get the data in a ZNode.
    * @param path Path of the ZNode.
-   * @param stat Output statistics of the ZNode.
    * @return The data in the ZNode.
    * @throws Exception If it cannot contact Zookeeper.
    */
@@ -190,12 +191,34 @@ public final class ZKCuratorManager {
   /**
    * Get the data in a ZNode.
    * @param path Path of the ZNode.
+   * @param stat
+   * @return The data in the ZNode.
+   * @throws Exception If it cannot contact Zookeeper.
+   */
+  public byte[] getData(final String path, Stat stat) throws Exception {
+    return curator.getData().storingStatIn(stat).forPath(path);
+  }
+
+  /**
+   * Get the data in a ZNode.
+   * @param path Path of the ZNode.
+   * @return The data in the ZNode.
+   * @throws Exception If it cannot contact Zookeeper.
+   */
+  public String getStringData(final String path) throws Exception {
+    byte[] bytes = getData(path);
+    return new String(bytes, Charset.forName("UTF-8"));
+  }
+
+  /**
+   * Get the data in a ZNode.
+   * @param path Path of the ZNode.
    * @param stat Output statistics of the ZNode.
    * @return The data in the ZNode.
    * @throws Exception If it cannot contact Zookeeper.
    */
-  public String getSringData(final String path) throws Exception {
-    byte[] bytes = getData(path);
+  public String getStringData(final String path, Stat stat) throws Exception {
+    byte[] bytes = getData(path, stat);
     return new String(bytes, Charset.forName("UTF-8"));
   }
 
@@ -272,14 +295,36 @@ public final class ZKCuratorManager {
   }
 
   /**
+   * Utility function to ensure that the configured base znode exists.
+   * This recursively creates the znode as well as all of its parents.
+   * @param path Path of the znode to create.
+   * @throws Exception If it cannot create the file.
+   */
+  public void createRootDirRecursively(String path) throws Exception {
+    String[] pathParts = path.split("/");
+    Preconditions.checkArgument(
+        pathParts.length >= 1 && pathParts[0].isEmpty(),
+        "Invalid path: %s", path);
+    StringBuilder sb = new StringBuilder();
+
+    for (int i = 1; i < pathParts.length; i++) {
+      sb.append("/").append(pathParts[i]);
+      create(sb.toString());
+    }
+  }
+
+  /**
    * Delete a ZNode.
    * @param path Path of the ZNode.
+   * @return If the znode was deleted.
    * @throws Exception If it cannot contact ZooKeeper.
    */
-  public void delete(final String path) throws Exception {
+  public boolean delete(final String path) throws Exception {
     if (exists(path)) {
       curator.delete().deletingChildrenIfNeeded().forPath(path);
+      return true;
     }
+    return false;
   }
 
   /**
@@ -290,5 +335,88 @@ public final class ZKCuratorManager {
    */
   public static String getNodePath(String root, String nodeName) {
     return root + "/" + nodeName;
+  }
+
+  public void safeCreate(String path, byte[] data, List<ACL> acl,
+      CreateMode mode, List<ACL> fencingACL, String fencingNodePath)
+      throws Exception {
+    if (!exists(path)) {
+      SafeTransaction transaction = createTransaction(fencingACL,
+          fencingNodePath);
+      transaction.create(path, data, acl, mode);
+      transaction.commit();
+    }
+  }
+
+  /**
+   * Deletes the path. Checks for existence of path as well.
+   * @param path Path to be deleted.
+   * @throws Exception if any problem occurs while performing deletion.
+   */
+  public void safeDelete(final String path, List<ACL> fencingACL,
+      String fencingNodePath) throws Exception {
+    if (exists(path)) {
+      SafeTransaction transaction = createTransaction(fencingACL,
+          fencingNodePath);
+      transaction.delete(path);
+      transaction.commit();
+    }
+  }
+
+  public void safeSetData(String path, byte[] data, int version,
+      List<ACL> fencingACL, String fencingNodePath)
+      throws Exception {
+    SafeTransaction transaction = createTransaction(fencingACL,
+        fencingNodePath);
+    transaction.setData(path, data, version);
+    transaction.commit();
+  }
+
+  public SafeTransaction createTransaction(List<ACL> fencingACL,
+      String fencingNodePath) throws Exception {
+    return new SafeTransaction(fencingACL, fencingNodePath);
+  }
+
+  /**
+   * Use curator transactions to ensure zk-operations are performed in an all
+   * or nothing fashion. This is equivalent to using ZooKeeper#multi.
+   *
+   * TODO (YARN-3774): Curator 3.0 introduces CuratorOp similar to Op. We ll
+   * have to rewrite this inner class when we adopt that.
+   */
+  public class SafeTransaction {
+    private CuratorTransactionFinal transactionFinal;
+    private String fencingNodePath;
+
+    SafeTransaction(List<ACL> fencingACL, String fencingNodePath)
+        throws Exception {
+      this.fencingNodePath = fencingNodePath;
+      CuratorTransaction transaction = curator.inTransaction();
+      transactionFinal = transaction.create()
+          .withMode(CreateMode.PERSISTENT).withACL(fencingACL)
+          .forPath(fencingNodePath, new byte[0]).and();
+    }
+
+    public void commit() throws Exception {
+      transactionFinal = transactionFinal.delete()
+          .forPath(fencingNodePath).and();
+      transactionFinal.commit();
+    }
+
+    public void create(String path, byte[] data, List<ACL> acl, CreateMode mode)
+        throws Exception {
+      transactionFinal = transactionFinal.create()
+          .withMode(mode).withACL(acl).forPath(path, data).and();
+    }
+
+    public void delete(String path) throws Exception {
+      transactionFinal = transactionFinal.delete().forPath(path).and();
+    }
+
+    public void setData(String path, byte[] data, int version)
+        throws Exception {
+      transactionFinal = transactionFinal.setData()
+          .withVersion(version).forPath(path, data).and();
+    }
   }
 }

@@ -148,7 +148,7 @@ public class TestJobHistoryEventHandler {
 
       // First completion event, but min-queue-size for batching flushes is 10
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-          t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+          t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       verify(mockWriter).flush();
 
     } finally {
@@ -184,7 +184,7 @@ public class TestJobHistoryEventHandler {
 
       for (int i = 0 ; i < 100 ; i++) {
         queueEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       }
 
       handleNextNEvents(jheh, 9);
@@ -229,7 +229,7 @@ public class TestJobHistoryEventHandler {
 
       for (int i = 0 ; i < 100 ; i++) {
         queueEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       }
 
       handleNextNEvents(jheh, 9);
@@ -272,10 +272,11 @@ public class TestJobHistoryEventHandler {
 
       for (int i = 0 ; i < 100 ; i++) {
         queueEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       }
       queueEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 10, 10, 0, 0, null, null, new Counters())));
+          TypeConverter.fromYarn(t.jobId), 0, 10, 10, 0, 0, 0, 0, null, null,
+          new Counters())));
 
       handleNextNEvents(jheh, 29);
       verify(mockWriter, times(0)).flush();
@@ -308,22 +309,22 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.ERROR.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.ERROR.toString())));
       verify(jheh, times(1)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-        TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
-        new Counters(), new Counters())));
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
+          new Counters(), new Counters())));
       verify(jheh, times(2)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.FAILED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
       verify(jheh, times(3)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.KILLED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.KILLED.toString())));
       verify(jheh, times(4)).processDoneFiles(any(JobId.class));
 
       mockWriter = jheh.getEventWriter();
@@ -354,22 +355,22 @@ public class TestJobHistoryEventHandler {
       // skip processing done files
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.ERROR.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.ERROR.toString())));
       verify(jheh, times(0)).processDoneFiles(t.jobId);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
           new Counters(), new Counters())));
       verify(jheh, times(1)).processDoneFiles(t.jobId);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.FAILED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
       verify(jheh, times(2)).processDoneFiles(t.jobId);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.KILLED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.KILLED.toString())));
       verify(jheh, times(3)).processDoneFiles(t.jobId);
 
       mockWriter = jheh.getEventWriter();
@@ -405,7 +406,8 @@ public class TestJobHistoryEventHandler {
               "nmhost", 3000, 4000, -1)));
       handleEvent(jheh, new JobHistoryEvent(params.jobId,
           new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(
-              params.jobId), 0, 0, 0, JobStateInternal.FAILED.toString())));
+              params.jobId), 0, 0, 0, 0, 0, 0, 0,
+              JobStateInternal.FAILED.toString())));
 
       // verify the value of the sensitive property in job.xml is restored.
       Assert.assertEquals(sensitivePropertyName + " is modified.",
@@ -476,7 +478,7 @@ public class TestJobHistoryEventHandler {
           t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
           new Counters(), new Counters())));
 
       // If we got here then event handler worked but we don't know with which
@@ -546,7 +548,7 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.FAILED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
 
       Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
       Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
@@ -642,7 +644,7 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
               new JobFinishedEvent(TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0,
-              0, new Counters(), new Counters(), new Counters()), currentTime));
+              0, 0, 0, new Counters(), new Counters(), new Counters()), currentTime));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -668,7 +670,8 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId),
-            0, 0, 0, JobStateInternal.KILLED.toString()), currentTime + 20));
+            0, 0, 0, 0, 0, 0, 0, JobStateInternal.KILLED.toString()),
+            currentTime + 20));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -944,7 +947,7 @@ public class TestJobHistoryEventHandler {
 
       // Job finishes and successfully writes history
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
           new Counters(), new Counters())));
 
       verify(jheh, times(1)).processDoneFiles(any(JobId.class));
@@ -978,7 +981,7 @@ public class TestJobHistoryEventHandler {
 
       // Job finishes, but doesn't successfully write history
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
           new Counters(), new Counters())));
       verify(jheh, times(1)).processDoneFiles(any(JobId.class));
       verify(t.mockAppContext, times(0)).setHistoryUrl(any(String.class));
@@ -1009,8 +1012,8 @@ public class TestJobHistoryEventHandler {
       // Job finishes, but doesn't successfully write history
       try {
         handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-            TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
-            new Counters(), new Counters())));
+            TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0,
+            new Counters(), new Counters(), new Counters())));
         throw new RuntimeException(
             "processDoneFiles didn't throw, but should have");
       } catch (YarnRuntimeException yre) {

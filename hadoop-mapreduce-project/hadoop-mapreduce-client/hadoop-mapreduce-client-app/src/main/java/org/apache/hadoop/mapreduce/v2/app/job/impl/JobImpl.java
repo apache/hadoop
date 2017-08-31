@@ -1684,6 +1684,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               finishTime,
               succeededMapTaskCount,
               succeededReduceTaskCount,
+              failedMapTaskCount,
+              failedReduceTaskCount,
+              killedMapTaskCount,
+              killedReduceTaskCount,
               finalState.toString(),
               diagnostics);
       eventHandler.handle(new JobHistoryEvent(jobId,
@@ -1748,6 +1752,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.oldJobId, job.finishTime,
         job.succeededMapTaskCount, job.succeededReduceTaskCount,
         job.failedMapTaskCount, job.failedReduceTaskCount,
+        job.killedMapTaskCount, job.killedReduceTaskCount,
         job.finalMapCounters,
         job.finalReduceCounters,
         job.fullCounters);
@@ -1797,7 +1802,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       job.setFinishTime();
       JobUnsuccessfulCompletionEvent failedEvent =
           new JobUnsuccessfulCompletionEvent(job.oldJobId,
-              job.finishTime, 0, 0,
+              job.finishTime, 0, 0, 0, 0, 0, 0,
               JobStateInternal.KILLED.toString(), job.diagnostics);
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
       job.finished(JobStateInternal.KILLED);
@@ -1954,8 +1959,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     @Override
     public JobStateInternal transition(JobImpl job, JobEvent event) {
       job.completedTaskCount++;
-      LOG.info("Num completed Tasks: " + job.completedTaskCount);
       JobTaskEvent taskEvent = (JobTaskEvent) event;
+      LOG.info("Num completed Tasks: " + job.completedTaskCount);
       Task task = job.tasks.get(taskEvent.getTaskID());
       if (taskEvent.getState() == TaskState.SUCCEEDED) {
         taskSucceeded(job, task);
@@ -1991,11 +1996,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.allowedMapFailuresPercent*job.numMapTasks ||
         job.failedReduceTaskCount*100 > 
         job.allowedReduceFailuresPercent*job.numReduceTasks) {
+
         job.setFinishTime();
 
         String diagnosticMsg = "Job failed as tasks failed. " +
             "failedMaps:" + job.failedMapTaskCount + 
-            " failedReduces:" + job.failedReduceTaskCount;
+            " failedReduces:" + job.failedReduceTaskCount +
+            " killedMaps:" + job.killedMapTaskCount +
+            " killedReduces: " + job.killedReduceTaskCount;
+
         LOG.info(diagnosticMsg);
         job.addDiagnostic(diagnosticMsg);
 
@@ -2226,7 +2235,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       job.setFinishTime();
       JobUnsuccessfulCompletionEvent failedEvent =
           new JobUnsuccessfulCompletionEvent(job.oldJobId,
-              job.finishTime, 0, 0,
+              job.finishTime,
+              job.succeededMapTaskCount,
+              job.succeededReduceTaskCount,
+              job.failedMapTaskCount,
+              job.failedReduceTaskCount,
+              job.killedMapTaskCount,
+              job.killedReduceTaskCount,
               jobHistoryString, job.diagnostics);
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
       job.finished(terminationState);
@@ -2265,5 +2280,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public void setJobPriority(Priority priority) {
     this.jobPriority = priority;
+  }
+
+  @Override
+  public int getFailedMaps() {
+    return failedMapTaskCount;
+  }
+
+  @Override
+  public int getFailedReduces() {
+    return failedReduceTaskCount;
+  }
+
+  @Override
+  public int getKilledMaps() {
+    return killedMapTaskCount;
+  }
+
+  @Override
+  public int getKilledReduces() {
+    return killedReduceTaskCount;
   }
 }

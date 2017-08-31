@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -34,8 +34,8 @@ import org.junit.Assume;
 
 public class TestContainerManagerWithLCE extends TestContainerManager {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestContainerManagerWithLCE.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestContainerManagerWithLCE.class);
 
   public TestContainerManagerWithLCE() throws UnsupportedFileSystemException {
     super();

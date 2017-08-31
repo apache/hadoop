@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
@@ -29,25 +29,7 @@ set(GTEST_SRC_DIR ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoo
 string(REGEX MATCH . HCD_ONE "${HADOOP_CONF_DIR}")
 string(COMPARE EQUAL ${HCD_ONE} / HADOOP_CONF_DIR_IS_ABS)
 
-if (CMAKE_VERSION VERSION_LESS "3.1")
-  # subset of CMAKE_<LANG>_COMPILER_ID
-  # https://cmake.org/cmake/help/v3.0/variable/CMAKE_LANG_COMPILER_ID.html
-  if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
-      CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
-      CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
-    set (CMAKE_C_FLAGS "-std=c99 -Wall -pedantic-errors ${CMAKE_C_FLAGS}")
-  elseif (CMAKE_C_COMPILER_ID STREQUAL "Intel")
-    set (CMAKE_C_FLAGS "-std=c99 -Wall ${CMAKE_C_FLAGS}")
-  elseif (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
-    set (CMAKE_C_FLAGS "-xc99 ${CMAKE_C_FLAGS}")
-  endif ()
-else ()
-  set (CMAKE_C_STANDARD 99)
-endif ()
-
-# Note: can't use -D_FILE_OFFSET_BITS=64, see MAPREDUCE-4258
-string(REPLACE "-D_FILE_OFFSET_BITS=64" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-string(REPLACE "-D_FILE_OFFSET_BITS=64" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+set (CMAKE_C_STANDARD 99)
 
 include(CheckIncludeFiles)
 check_include_files("sys/types.h;sys/sysctl.h" HAVE_SYS_SYSCTL_H)
@@ -101,6 +83,10 @@ add_library(container
     main/native/container-executor/impl/container-executor.c
     main/native/container-executor/impl/get_executable.c
     main/native/container-executor/impl/utils/string-utils.c
+    main/native/container-executor/impl/utils/path-utils.c
+    main/native/container-executor/impl/modules/cgroups/cgroups-operations.c
+    main/native/container-executor/impl/modules/common/module-configs.c
+    main/native/container-executor/impl/modules/gpu/gpu-module.c
 )
 
 add_executable(container-executor
@@ -113,12 +99,14 @@ target_link_libraries(container-executor
 
 output_directory(container-executor target/usr/local/bin)
 
+# Test cases
 add_executable(test-container-executor
     main/native/container-executor/test/test-container-executor.c
 )
 target_link_libraries(test-container-executor
     container ${EXTRA_LIBS}
 )
+
 output_directory(test-container-executor target/usr/local/bin)
 
 # unit tests for container executor
@@ -126,6 +114,10 @@ add_executable(cetest
         main/native/container-executor/impl/util.c
         main/native/container-executor/test/test_configuration.cc
         main/native/container-executor/test/test_main.cc
+        main/native/container-executor/test/utils/test-string-utils.cc
+        main/native/container-executor/test/utils/test-path-utils.cc
+        main/native/container-executor/test/modules/cgroups/test-cgroups-module.cc
+        main/native/container-executor/test/modules/gpu/test-gpu-module.cc
         main/native/container-executor/test/test_util.cc)
-target_link_libraries(cetest gtest)
+target_link_libraries(cetest gtest container)
 output_directory(cetest test)

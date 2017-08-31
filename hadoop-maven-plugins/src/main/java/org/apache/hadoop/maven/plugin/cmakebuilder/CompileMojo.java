@@ -96,8 +96,6 @@ public class CompileMojo extends AbstractMojo {
     validatePlatform();
     runCMake();
     runMake();
-    runMake(); // The second make is a workaround for HADOOP-9215.  It can be
-               // removed when cmake 2.6 is no longer supported.
     long end = System.nanoTime();
     getLog().info("cmake compilation finished successfully in " +
           TimeUnit.MILLISECONDS.convert(end - start, TimeUnit.NANOSECONDS) +

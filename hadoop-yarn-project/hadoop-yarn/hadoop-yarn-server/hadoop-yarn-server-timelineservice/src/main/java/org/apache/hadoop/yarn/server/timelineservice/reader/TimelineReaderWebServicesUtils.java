@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import java.security.Principal;
 import java.util.EnumSet;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -30,7 +32,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Fiel
 /**
  * Set of utility methods to be used by timeline reader web services.
  */
-final class TimelineReaderWebServicesUtils {
+public final class TimelineReaderWebServicesUtils {
 
   private TimelineReaderWebServicesUtils() {
   }
@@ -49,10 +51,20 @@ final class TimelineReaderWebServicesUtils {
    */
   static TimelineReaderContext createTimelineReaderContext(String clusterId,
       String userId, String flowName, String flowRunId, String appId,
-      String entityType, String entityId) {
+      String entityType, String entityIdPrefix, String entityId) {
     return new TimelineReaderContext(parseStr(clusterId), parseStr(userId),
         parseStr(flowName), parseLongStr(flowRunId), parseStr(appId),
-        parseStr(entityType), parseStr(entityId));
+        parseStr(entityType), parseLongStr(entityIdPrefix), parseStr(entityId));
+  }
+
+  static TimelineReaderContext createTimelineReaderContext(String clusterId,
+      String userId, String flowName, String flowRunId, String appId,
+      String entityType, String entityIdPrefix, String entityId,
+      String doAsUser) {
+    return new TimelineReaderContext(parseStr(clusterId), parseStr(userId),
+        parseStr(flowName), parseLongStr(flowRunId), parseStr(appId),
+        parseStr(entityType), parseLongStr(entityIdPrefix), parseStr(entityId),
+        parseStr(doAsUser));
   }
 
   /**
@@ -73,12 +85,46 @@ final class TimelineReaderWebServicesUtils {
   static TimelineEntityFilters createTimelineEntityFilters(String limit,
       String createdTimeStart, String createdTimeEnd, String relatesTo,
       String isRelatedTo, String infofilters, String conffilters,
-      String metricfilters, String eventfilters) throws TimelineParseException {
-    return new TimelineEntityFilters(parseLongStr(limit),
-        parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
-        parseRelationFilters(relatesTo), parseRelationFilters(isRelatedTo),
-        parseKVFilters(infofilters, false), parseKVFilters(conffilters, true),
-        parseMetricFilters(metricfilters), parseEventFilters(eventfilters));
+      String metricfilters, String eventfilters,
+      String fromid) throws TimelineParseException {
+    return createTimelineEntityFilters(
+        limit, parseLongStr(createdTimeStart),
+        parseLongStr(createdTimeEnd),
+        relatesTo, isRelatedTo, infofilters,
+        conffilters, metricfilters, eventfilters, fromid);
+  }
+
+  /**
+   * Parse the passed filters represented as strings and convert them into a
+   * {@link TimelineEntityFilters} object.
+   * @param limit Limit to number of entities to return.
+   * @param createdTimeStart Created time start for the entities to return.
+   * @param createdTimeEnd Created time end for the entities to return.
+   * @param relatesTo Entities to return must match relatesTo.
+   * @param isRelatedTo Entities to return must match isRelatedTo.
+   * @param infofilters Entities to return must match these info filters.
+   * @param conffilters Entities to return must match these metric filters.
+   * @param metricfilters Entities to return must match these metric filters.
+   * @param eventfilters Entities to return must match these event filters.
+   * @return a {@link TimelineEntityFilters} object.
+   * @throws TimelineParseException if any problem occurs during parsing.
+   */
+  static TimelineEntityFilters createTimelineEntityFilters(String limit,
+      Long createdTimeStart, Long createdTimeEnd, String relatesTo,
+      String isRelatedTo, String infofilters, String conffilters,
+      String metricfilters, String eventfilters,
+      String fromid) throws TimelineParseException {
+    return new TimelineEntityFilters.Builder()
+        .entityLimit(parseLongStr(limit))
+        .createdTimeBegin(createdTimeStart)
+        .createTimeEnd(createdTimeEnd)
+        .relatesTo(parseRelationFilters(relatesTo))
+        .isRelatedTo(parseRelationFilters(isRelatedTo))
+        .infoFilters(parseKVFilters(infofilters, false))
+        .configFilters(parseKVFilters(conffilters, true))
+        .metricFilters(parseMetricFilters(metricfilters))
+        .eventFilters(parseEventFilters(eventfilters))
+        .fromId(parseStr(fromid)).build();
   }
 
   /**
@@ -92,11 +138,13 @@ final class TimelineReaderWebServicesUtils {
    * @throws TimelineParseException if any problem occurs during parsing.
    */
   static TimelineDataToRetrieve createTimelineDataToRetrieve(String confs,
-      String metrics, String fields, String metricsLimit)
+      String metrics, String fields, String metricsLimit,
+      String metricsTimeBegin, String metricsTimeEnd)
       throws TimelineParseException {
     return new TimelineDataToRetrieve(parseDataToRetrieve(confs),
         parseDataToRetrieve(metrics), parseFieldsStr(fields,
-        TimelineParseConstants.COMMA_DELIMITER), parseIntStr(metricsLimit));
+        TimelineParseConstants.COMMA_DELIMITER), parseIntStr(metricsLimit),
+        parseLongStr(metricsTimeBegin), parseLongStr(metricsTimeEnd));
   }
 
   /**
@@ -207,20 +255,40 @@ final class TimelineReaderWebServicesUtils {
    * @return trimmed string if string is not null, null otherwise.
    */
   static String parseStr(String str) {
-    return str == null ? null : str.trim();
+    return StringUtils.trimToNull(str);
   }
 
   /**
-   * Get UGI from HTTP request.
+   * Get UGI based on the remote user in the HTTP request.
+   *
    * @param req HTTP request.
    * @return UGI.
    */
-  static UserGroupInformation getUser(HttpServletRequest req) {
-    String remoteUser = req.getRemoteUser();
+  public static UserGroupInformation getUser(HttpServletRequest req) {
+    return getCallerUserGroupInformation(req, false);
+  }
+
+  /**
+   * Get UGI from the HTTP request.
+   *
+   * @param hsr HTTP request.
+   * @param usePrincipal if true, use principal name else use remote user name
+   * @return UGI.
+   */
+  public static UserGroupInformation getCallerUserGroupInformation(
+      HttpServletRequest hsr, boolean usePrincipal) {
+
+    String remoteUser = hsr.getRemoteUser();
+    if (usePrincipal) {
+      Principal princ = hsr.getUserPrincipal();
+      remoteUser = princ == null ? null : princ.getName();
+    }
+
     UserGroupInformation callerUGI = null;
     if (remoteUser != null) {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
+
     return callerUGI;
   }
 

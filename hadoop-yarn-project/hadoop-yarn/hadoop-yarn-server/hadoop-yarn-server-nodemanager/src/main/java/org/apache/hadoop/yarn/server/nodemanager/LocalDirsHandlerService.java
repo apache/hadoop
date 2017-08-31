@@ -27,9 +27,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -51,7 +51,10 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
  */
 public class LocalDirsHandlerService extends AbstractService {
 
-  private static Log LOG = LogFactory.getLog(LocalDirsHandlerService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(LocalDirsHandlerService.class);
+
+  private static final String diskCapacityExceededErrorMsg =  "usable space is below configured utilization percentage/no more usable space";
 
   /**
    * Good local directories, use internally,
@@ -344,21 +347,36 @@ public class LocalDirsHandlerService extends AbstractService {
     }
 
     StringBuilder report = new StringBuilder();
-    List<String> failedLocalDirsList = localDirs.getFailedDirs();
-    List<String> failedLogDirsList = logDirs.getFailedDirs();
+    List<String> erroredLocalDirsList = localDirs.getErroredDirs();
+    List<String> erroredLogDirsList = logDirs.getErroredDirs();
+    List<String> diskFullLocalDirsList = localDirs.getFullDirs();
+    List<String> diskFullLogDirsList = logDirs.getFullDirs();
     List<String> goodLocalDirsList = localDirs.getGoodDirs();
     List<String> goodLogDirsList = logDirs.getGoodDirs();
-    int numLocalDirs = goodLocalDirsList.size() + failedLocalDirsList.size();
-    int numLogDirs = goodLogDirsList.size() + failedLogDirsList.size();
+
+    int numLocalDirs = goodLocalDirsList.size() + erroredLocalDirsList.size() + diskFullLocalDirsList.size();
+    int numLogDirs = goodLogDirsList.size() + erroredLogDirsList.size() + diskFullLogDirsList.size();
     if (!listGoodDirs) {
-      if (!failedLocalDirsList.isEmpty()) {
-        report.append(failedLocalDirsList.size() + "/" + numLocalDirs
-            + " local-dirs are bad: "
-            + StringUtils.join(",", failedLocalDirsList) + "; ");
+      if (!erroredLocalDirsList.isEmpty()) {
+        report.append(erroredLocalDirsList.size() + "/" + numLocalDirs
+            + " local-dirs have errors: "
+            + buildDiskErrorReport(erroredLocalDirsList, localDirs));
       }
-      if (!failedLogDirsList.isEmpty()) {
-        report.append(failedLogDirsList.size() + "/" + numLogDirs
-            + " log-dirs are bad: " + StringUtils.join(",", failedLogDirsList));
+      if (!diskFullLocalDirsList.isEmpty()) {
+        report.append(diskFullLocalDirsList.size() + "/" + numLocalDirs
+            + " local-dirs " + diskCapacityExceededErrorMsg
+            + buildDiskErrorReport(diskFullLocalDirsList, localDirs) + "; ");
+      }
+
+      if (!erroredLogDirsList.isEmpty()) {
+        report.append(erroredLogDirsList.size() + "/" + numLogDirs
+            + " log-dirs have errors: "
+            + buildDiskErrorReport(erroredLogDirsList, logDirs));
+      }
+      if (!diskFullLogDirsList.isEmpty()) {
+        report.append(diskFullLogDirsList.size() + "/" + numLogDirs
+            + " log-dirs " + diskCapacityExceededErrorMsg
+            + buildDiskErrorReport(diskFullLogDirsList, logDirs));
       }
     } else {
       report.append(goodLocalDirsList.size() + "/" + numLocalDirs
@@ -619,5 +637,25 @@ public class LocalDirsHandlerService extends AbstractService {
       nodeManagerMetrics.setGoodLogDirsDiskUtilizationPerc(
           logDirs.getGoodDirsDiskUtilizationPercentage());
     }
+  }
+
+  private String buildDiskErrorReport(List<String> dirs, DirectoryCollection directoryCollection) {
+    StringBuilder sb = new StringBuilder();
+
+    sb.append(" [ ");
+    for (int i = 0; i < dirs.size(); i++) {
+      final String dirName = dirs.get(i);
+      if ( directoryCollection.isDiskUnHealthy(dirName)) {
+        sb.append(dirName + " : " + directoryCollection.getDirectoryErrorInfo(dirName).message);
+      } else {
+        sb.append(dirName + " : " + "Unknown cause for disk error");
+      }
+
+      if ( i != (dirs.size() - 1)) {
+        sb.append(" , ");
+      }
+    }
+    sb.append(" ] ");
+    return sb.toString();
   }
 }

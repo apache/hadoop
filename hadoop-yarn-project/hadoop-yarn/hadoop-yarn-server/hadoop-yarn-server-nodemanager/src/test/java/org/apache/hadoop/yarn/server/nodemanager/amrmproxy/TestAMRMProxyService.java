@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -50,8 +50,8 @@ import org.junit.Test;
 
 public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestAMRMProxyService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestAMRMProxyService.class);
 
   private static MockResourceManagerFacade mockRM;
 
