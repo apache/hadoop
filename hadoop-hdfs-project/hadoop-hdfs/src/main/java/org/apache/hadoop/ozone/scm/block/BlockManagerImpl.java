@@ -316,7 +316,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   // should be enough for now.
   private void refreshContainers() {
     Map<String, BlockContainerInfo> containersByState =
-        this.containers.get(OzoneProtos.LifeCycleState.ALLOCATED);
+        this.containers.get(OzoneProtos.LifeCycleState.CREATING);
     for (String containerName: containersByState.keySet()) {
       try {
         ContainerInfo containerInfo =
@@ -329,7 +329,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           continue;
         }
         if (containerInfo.getState() == OzoneProtos.LifeCycleState.OPEN) {
-          updateContainer(OzoneProtos.LifeCycleState.ALLOCATED, containerName,
+          updateContainer(OzoneProtos.LifeCycleState.CREATING, containerName,
               containerInfo.getState());
         }
         // TODO: check containers in other state and refresh as needed.
