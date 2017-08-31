@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -468,7 +469,7 @@ public class TestLogsCLI {
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId1, "syslog")));
-    assertTrue(sysOutStream.toString().contains("Log Upload Time"));
+    assertTrue(sysOutStream.toString().contains("LogLastModifiedTime"));
     assertTrue(!sysOutStream.toString().contains(
       "Logs for container " + containerId1.toString()
           + " are not present in this log-file."));
@@ -492,8 +493,12 @@ public class TestLogsCLI {
 
     String logMessage = logMessage(containerId3, "stdout");
     int fileContentSize = logMessage.getBytes().length;
-    int tailContentSize = "\nEnd of LogType:stdout\n\n".getBytes().length;
-
+    StringBuilder sb = new StringBuilder();
+    String endOfFile = "End of LogType:stdout";
+    sb.append("\n" + endOfFile + "\n");
+    sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
+        + "\n\n");
+    int tailContentSize = sb.toString().length();
     // specify how many bytes we should get from logs
     // specify a position number, it would get the first n bytes from
     // container log
