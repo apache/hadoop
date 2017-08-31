@@ -150,6 +150,8 @@ public class Apps {
   }
 
   // Check if should black list the node based on container exit status
+  @Private
+  @Unstable
   public static boolean shouldCountTowardsNodeBlacklisting(int exitStatus) {
     switch (exitStatus) {
     case ContainerExitStatus.PREEMPTED:
