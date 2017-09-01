@@ -386,30 +386,6 @@
     </profile>
     
     <profile>
-      <id>docs</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-site-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>docs</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>site</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
       <id>dist</id>
       <activation>
         <activeByDefault>false</activeByDefault>
