@@ -294,12 +294,38 @@ public final class S3AUtils {
       S3ObjectSummary summary,
       long blockSize,
       String owner) {
-    if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
-      return new S3AFileStatus(true, keyPath, owner);
+    long size = summary.getSize();
+    return createFileStatus(keyPath,
+        objectRepresentsDirectory(summary.getKey(), size),
+        size, summary.getLastModified(), blockSize, owner);
+  }
+
+  /**
+   * Create a file status for object we just uploaded.  For files, we use
+   * current time as modification time, since s3a uses S3's service-based
+   * modification time, which will not be available until we do a
+   * getFileStatus() later on.
+   * @param keyPath path for created object
+   * @param isDir true iff directory
+   * @param size file length
+   * @param blockSize block size for file status
+   * @param owner Hadoop username
+   * @return a status entry
+   */
+  public static S3AFileStatus createUploadFileStatus(Path keyPath,
+      boolean isDir, long size, long blockSize, String owner) {
+    Date date = isDir ? null : new Date();
+    return createFileStatus(keyPath, isDir, size, date, blockSize, owner);
+  }
+
+  /* Date 'modified' is ignored when isDir is true. */
+  private static S3AFileStatus createFileStatus(Path keyPath, boolean isDir,
+      long size, Date modified, long blockSize, String owner) {
+    if (isDir) {
+      return new S3AFileStatus(Tristate.UNKNOWN, keyPath, owner);
     } else {
-      return new S3AFileStatus(summary.getSize(),
-          dateToLong(summary.getLastModified()), keyPath,
-          blockSize, owner);
+      return new S3AFileStatus(size, dateToLong(modified), keyPath, blockSize,
+          owner);
     }
   }
 
