@@ -556,8 +556,12 @@ class CapacitySchedulerPage extends RmView {
               .$class("ui-state-default").__("Queue").__().__().__().tbody();
         SchedulerHealth.DetailedInformation di = entry.getValue();
         if (di.getTimestamp() != 0) {
-          containerId = di.getContainerId().toString();
-          nodeId = di.getNodeId().toString();
+          if (di.getContainerId() != null) {
+            containerId = di.getContainerId().toString();
+          }
+          if (di.getNodeId() != null) {
+            nodeId = di.getNodeId().toString();
+          }
           queue = di.getQueue();
         }
         tbody.$class("ui-widget-content").tr()
