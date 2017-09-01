@@ -157,6 +157,7 @@
 
     <menu name="YARN Native Services" inherit="top">
       <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesIntro.html"/>
+      <item name="Native Services API" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesAPI.html"/>
       <item name="Native Services Discovery" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesDiscovery.html"/>
     </menu>
 

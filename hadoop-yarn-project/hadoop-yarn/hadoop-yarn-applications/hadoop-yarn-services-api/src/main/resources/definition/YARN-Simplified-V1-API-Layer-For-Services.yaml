@@ -17,18 +17,30 @@
 
 swagger: '2.0'
 info:
-  title: "[YARN-4793] Simplified API layer for services and beyond"
+  title: "YARN Simplified API layer for services"
   description: |
-    Bringing a new service on YARN today is not a simple experience. The APIs of existing frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs) or writing a complex spec (for declarative frameworks). In addition to building critical building blocks inside YARN (as part of other efforts at link:https://issues.apache.org/jira/browse/YARN-4692[YARN-4692]), there is a need for simplifying the user facing story for building services. Experience of projects like Apache Slider running real-life services like HBase, Storm, Accumulo, Solr etc, gives us some very good insights on how simplified APIs for services should look like.
+    Bringing a new service on YARN today is not a simple experience. The APIs of
+    existing frameworks are either too low level (native YARN), require writing
+    new code (for frameworks with programmatic APIs) or writing a complex spec
+    (for declarative frameworks). In addition to building critical building blocks
+    inside YARN (as part of other efforts at YARN-4692), there is a need for
+    simplifying the user facing story for building services. Experience of projects
+    like Apache Slider running real-life services like HBase, Storm, Accumulo,
+    Solr etc, gives us some very good insights on how simplified APIs for services
+    should look like.
 
+    To this end, we should look at a new simple-services API layer backed by REST
+    interfaces. This API can be used to create and manage the lifecycle of YARN
+    services. Services here can range from simple single-component service to
+    complex multi-component assemblies needing orchestration. YARN-4793 tracks
+    this effort.
 
-    To this end, we should look at a new simple-services API layer backed by REST interfaces. This API can be used to create and manage the lifecycle of YARN services. Services here can range from simple single-component service to complex multi-component assemblies needing orchestration.
-
-
-    We should also look at making this a unified REST based entry point for other important features like resource-profile management (link:https://issues.apache.org/jira/browse/YARN-3926[YARN-3926]), package-definitions' lifecycle-management and service-discovery (link:https://issues.apache.org/jira/browse/YARN-913[YARN-913]/link:https://issues.apache.org/jira/browse/YARN-4757[YARN-4757]). We also need to flesh out its relation to our present much lower level REST APIs (link:https://issues.apache.org/jira/browse/YARN-1695[YARN-1695]) in YARN for application-submission and management.
-
-
-    This document spotlights on this specification. In most of the cases, the application owner will not be forced to make any changes to their application. This is primarily true if the application is packaged with containerization technologies like docker. Irrespective of how complex the application is, there will be hooks provided at appropriate layers to allow pluggable and customizable application behavior.
+    This document spotlights on this specification. In most of the cases, the
+    application owner will not be forced to make any changes to their applications.
+    This is primarily true if the application is packaged with containerization
+    technologies like docker. Irrespective of how complex the application is,
+    there will be hooks provided at appropriate layers to allow pluggable and
+    customizable application behavior.
 
   version: "1.0.0"
   license:
@@ -39,7 +51,6 @@ host: host.mycompany.com
 # array of all schemes that your API supports
 schemes:
   - http
-  - https
 # will be prefixed to all paths
 basePath: /ws/v1/
 consumes:
@@ -47,9 +58,17 @@ consumes:
 produces:
   - application/json
 paths:
+  /services/version:
+    get:
+      summary: Get current version of the API server.
+      description: Get current version of the API server.
+      responses:
+        200:
+          description: Successful request
+
   /services:
     get:
-      summary: List of services running in the cluster
+      summary: (TBD) List of services running in the cluster.
       description: Get a list of all currently running services (response includes a minimal projection of the service info). For more details do a GET on a specific service name.
       responses:
         200:
@@ -74,15 +93,62 @@ paths:
             $ref: '#/definitions/Service'
       responses:
         202:
-          description: Request accepted
+          description: The request to create a service is accepted
+        400:
+          description: Invalid service definition provided in the request body
+        500:
+          description: Failed to create a service
         default:
           description: Unexpected error
           schema:
             $ref: '#/definitions/ServiceStatus'
 
   /services/{service_name}:
+    put:
+      summary: Update a service or upgrade the binary version of the components of a running service
+      description: Update the runtime properties of a service. Currently the following operations are supported - update lifetime, stop/start a service.
+                   The PUT operation is also used to orchestrate an upgrade of the service containers to a newer version of their artifacts (TBD).
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+        - name: Service
+          in: body
+          description: The updated service definition. It can contain the updated lifetime of a service or the desired state (STOPPED/STARTED) of a service to initiate a start/stop operation against the specified service
+          required: true
+          schema:
+            $ref: '#/definitions/Service'
+      responses:
+        204:
+          description: Update or upgrade was successful
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
+    delete:
+      summary: Destroy a service
+      description: Destroy a service and release all resources. This API might have to return JSON data providing location of logs (TBD), etc.
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+      responses:
+        204:
+          description: Destroy was successful
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
     get:
-      summary: Get service details
+      summary: Get details of a service.
       description: Return the details (including containers) of a running service
       parameters:
         - name: service_name
@@ -108,43 +174,36 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/ServiceStatus'
+  /services/{service_name}/components/{component_name}:
     put:
-      summary: Update a service or upgrade the binary version of the components of a running service
-      description: Update the runtime properties of a service. As of now, only update of lifetime and number of instances (flexing) of the components of a service is supported. The PUT operation is also used to orchestrate an upgrade of the service containers to a newer version of their artifacts.
+      summary: Flex a component's number of instances.
+      description: Set a component's desired number of instanes
       parameters:
         - name: service_name
           in: path
           description: Service name
           required: true
           type: string
-      responses:
-        204:
-          description: Update or upgrade was successful
-        404:
-          description: Service does not exist
-        default:
-          description: Unexpected error
-          schema:
-            $ref: '#/definitions/ServiceStatus'
-    delete:
-      summary: Destroy service
-      description: Destroy a service and release all resources. This API might have to return JSON data providing location of logs, etc. Not finalized yet.
-      parameters:
-        - name: service_name
+        - name: component_name
           in: path
-          description: Service name
+          description: Component name
           required: true
           type: string
+        - name: Component
+          in: body
+          description: The definition of a component which contains the updated number of instances.
+          required: true
+          schema:
+            $ref: '#/definitions/Component'
       responses:
-        204:
-          description: Destroy was successful
+        200:
+          description: Flex was successful
         404:
           description: Service does not exist
         default:
           description: Unexpected error
           schema:
             $ref: '#/definitions/ServiceStatus'
-
 definitions:
   Service:
     description: a service resource has the following attributes.
@@ -183,7 +242,7 @@ definitions:
         format: int64
         description: Life time (in seconds) of the service from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.
       placement_policy:
-        description: Advanced scheduling and placement policies (optional). If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.
+        description: (TBD) Advanced scheduling and placement policies. If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.
         $ref: '#/definitions/PlacementPolicy'
       components:
         description: Components of a service.
@@ -420,4 +479,3 @@ definitions:
         type: integer
         format: int32
         description: An error code specific to a scenario which service owners should be able to use to understand the failure in addition to the diagnostic information.
-

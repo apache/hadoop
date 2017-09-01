@@ -24,12 +24,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
-import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +48,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.service.api.records.ServiceState.ACCEPTED;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.*;
 
 /**
@@ -76,11 +76,11 @@ public class ApiServer {
   @GET
   @Path(VERSION)
   @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN })
+  @Produces({ MediaType.APPLICATION_JSON })
   public Response getVersion() {
     String version = VersionInfo.getBuildVersion();
     LOG.info(version);
-    return Response.ok(version).build();
+    return Response.ok("{ \"hadoop_version\": \"" + version + "\"}").build();
   }
 
   @POST
@@ -94,11 +94,11 @@ public class ApiServer {
       ApplicationId applicationId = SERVICE_CLIENT.actionCreate(service);
       LOG.info("Successfully created service " + service.getName()
           + " applicationId = " + applicationId);
-      serviceStatus.setState(ServiceState.ACCEPTED);
+      serviceStatus.setState(ACCEPTED);
       serviceStatus.setUri(
           CONTEXT_ROOT + SERVICE_ROOT_PATH + "/" + service
               .getName());
-      return Response.status(Status.CREATED).entity(serviceStatus).build();
+      return Response.status(Status.ACCEPTED).entity(serviceStatus).build();
     } catch (IllegalArgumentException e) {
       serviceStatus.setDiagnostics(e.getMessage());
       return Response.status(Status.BAD_REQUEST).entity(serviceStatus)
@@ -182,16 +182,16 @@ public class ApiServer {
               + ": Invalid number of containers specified " + component
               .getNumberOfContainers()).build();
     }
+    ServiceStatus status = new ServiceStatus();
     try {
       Map<String, Long> original = SERVICE_CLIENT.flexByRestService(appName,
           Collections.singletonMap(component.getName(),
               component.getNumberOfContainers()));
-      return Response.ok().entity(
-          "Updating component " + componentName + " size from " + original
-              .get(componentName) + " to " + component.getNumberOfContainers())
-          .build();
+      status.setDiagnostics(
+          "Updating component (" + componentName + ") size from " + original
+              .get(componentName) + " to " + component.getNumberOfContainers());
+      return Response.ok().entity(status).build();
     } catch (YarnException | IOException e) {
-      ServiceStatus status = new ServiceStatus();
       status.setDiagnostics(e.getMessage());
       return Response.status(Status.INTERNAL_SERVER_ERROR).entity(status)
           .build();
@@ -244,31 +244,40 @@ public class ApiServer {
   }
 
   private Response updateLifetime(String appName, Service updateAppData) {
+    ServiceStatus status = new ServiceStatus();
     try {
       String newLifeTime =
           SERVICE_CLIENT.updateLifetime(appName, updateAppData.getLifetime());
-      return Response.ok("Service " + appName + " lifeTime is successfully updated to "
-          + updateAppData.getLifetime() + " seconds from now: " + newLifeTime).build();
+      status.setDiagnostics(
+          "Service (" + appName + ")'s lifeTime is updated to " + newLifeTime
+              + ", " + updateAppData.getLifetime()
+              + " seconds remaining");
+      return Response.ok(status).build();
     } catch (Exception e) {
       String message =
-          "Failed to update service (" + appName + ") lifetime ("
-              + updateAppData.getLifetime() + ")";
+          "Failed to update service (" + appName + ")'s lifetime to "
+              + updateAppData.getLifetime();
       LOG.error(message, e);
-      return Response.status(Status.INTERNAL_SERVER_ERROR)
-          .entity(message + " : " + e.getMessage()).build();
+      status.setDiagnostics(message + ": " + e.getMessage());
+      return Response.status(Status.INTERNAL_SERVER_ERROR).entity(status)
+          .build();
     }
   }
 
   private Response startService(String appName) {
+    ServiceStatus status = new ServiceStatus();
     try {
       SERVICE_CLIENT.actionStart(appName);
       LOG.info("Successfully started service " + appName);
-      return Response.ok("Service " + appName + " is successfully started").build();
+      status.setDiagnostics("Service " + appName + " is successfully started.");
+      status.setState(ServiceState.ACCEPTED);
+      return Response.ok(status).build();
     } catch (Exception e) {
       String message = "Failed to start service " + appName;
+      status.setDiagnostics(message + ": " +  e.getMessage());
       LOG.info(message, e);
       return Response.status(Status.INTERNAL_SERVER_ERROR)
-          .entity(message + ": " + e.getMessage()).build();
+          .entity(status).build();
     }
   }
 }
