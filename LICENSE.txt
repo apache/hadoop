@@ -1777,6 +1777,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 The binary distribution of this product bundles these dependencies under the
 following license:
 FindBugs-jsr305 3.0.0
+dnsjava 2.1.7, Copyright (c) 1998-2011, Brian Wellington. All rights reserved.
 --------------------------------------------------------------------------------
 (2-clause BSD)
 Redistribution and use in source and binary forms, with or without
