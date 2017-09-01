@@ -1148,7 +1148,7 @@
   <property>
     <description>Class that supports TFile read and write operations.</description>
     <name>yarn.log-aggregation.file-controller.TFile.class</name>
-    <value>org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationTFileController</value>
+    <value>org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController</value>
   </property>
 
   <property>

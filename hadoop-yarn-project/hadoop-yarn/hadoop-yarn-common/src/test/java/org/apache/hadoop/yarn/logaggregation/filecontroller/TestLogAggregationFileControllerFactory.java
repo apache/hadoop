@@ -23,19 +23,27 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Writer;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
-import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationTFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
+import org.apache.hadoop.yarn.webapp.View.ViewContext;
+import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 import org.junit.Test;
 
 /**
@@ -166,6 +174,35 @@ public class TestLogAggregationFileControllerFactory {
     public void initializeWriter(LogAggregationFileControllerContext context)
         throws IOException {
       // Do Nothing
+    }
+
+    @Override
+    public boolean readAggregatedLogs(ContainerLogsRequest logRequest,
+        OutputStream os) throws IOException {
+      return false;
+    }
+
+    @Override
+    public List<ContainerLogMeta> readAggregatedLogsMeta(
+        ContainerLogsRequest logRequest) throws IOException {
+      return null;
+    }
+
+    @Override
+    public void renderAggregatedLogsBlock(Block html, ViewContext context) {
+      // DO NOTHING
+    }
+
+    @Override
+    public String getApplicationOwner(Path aggregatedLogPath)
+        throws IOException {
+      return null;
+    }
+
+    @Override
+    public Map<ApplicationAccessType, String> getApplicationAcls(
+        Path aggregatedLogPath) throws IOException {
+      return null;
     }
   }
 }
