@@ -27,6 +27,10 @@ export default BaseChartComponent.extend({
   RACK_MARGIN: 20,
   filter: "",
   selectedCategory: 0,
+  memoryLabel: "Memory",
+  cpuLabel: "VCores",
+  containersLabel: "Containers",
+  totalContainers: 0,
 
   bindTP: function(element, cell) {
     element.on("mouseover", function() {
@@ -75,8 +79,7 @@ export default BaseChartComponent.extend({
       return true;
     }
 
-    var usage = node.get("usedMemoryMB") /
-      (node.get("usedMemoryMB") + node.get("availMemoryMB"));
+    var usage = this.calcUsage(node);
     var lowerLimit = (this.selectedCategory - 1) * 0.2;
     var upperLimit = this.selectedCategory * 0.2;
     if (lowerLimit <= usage && usage <= upperLimit) {
@@ -89,6 +92,7 @@ export default BaseChartComponent.extend({
   //    [{label=label1, value=value1}, ...]
   //    ...
   renderCells: function (model, title) {
+    var selectedOption = d3.select("select").property("value");
     var data = [];
     model.forEach(function (o) {
       data.push(o);
@@ -149,6 +153,7 @@ export default BaseChartComponent.extend({
 
     var chartXOffset = -1;
 
+    this.totalContainers = 0;
     for (i = 0; i < racksArray.length; i++) {
       text = g.append("text")
         .text(racksArray[i])
@@ -166,6 +171,7 @@ export default BaseChartComponent.extend({
         var rack = data[j].get("rack");
 
         if (rack === racksArray[i]) {
+          this.totalContainers += data[j].get("numContainers");
           this.addNode(g, xOffset, yOffset, colorFunc, data[j]);
           xOffset += this.CELL_MARGIN + this.CELL_WIDTH;
           if (xOffset + this.CELL_MARGIN + this.CELL_WIDTH >= layout.x2 -
@@ -192,7 +198,7 @@ export default BaseChartComponent.extend({
 
     layout.y2 = yOffset + layout.margin;
     this.adjustMaxHeight(layout.y2);
-    this.renderTitleAndBG(g, title, layout, false);
+    this.renderTitleAndBG(g, title + selectedOption + ")" , layout, false);
   },
 
   addNode: function (g, xOffset, yOffset, colorFunc, data) {
@@ -200,10 +206,9 @@ export default BaseChartComponent.extend({
       .attr("y", yOffset)
       .attr("x", xOffset)
       .attr("height", this.CELL_HEIGHT)
-      .attr("fill", colorFunc(data.get("usedMemoryMB") /
-        (data.get("usedMemoryMB") + data.get("availMemoryMB"))))
+      .attr("fill", colorFunc(this.calcUsage(data)))
       .attr("width", this.CELL_WIDTH)
-      .attr("tooltiptext", data.get("toolTipText"));
+      .attr("tooltiptext", data.get("toolTipText") + this.getToolTipText(data));
 
     if (this.isNodeSelected(data)) {
       rect.style("opacity", 0.8);
@@ -243,6 +248,18 @@ export default BaseChartComponent.extend({
   },
 
   didInsertElement: function () {
+    var parentId = this.get("parentId");
+    var self = this;
+    var optionsData = [this.memoryLabel, this.cpuLabel, this.containersLabel];
+    d3.select("#heatmap-select")
+      .on('change', function() {
+        self.renderCells(self.get("model"), self.get("title"), self.get("textWidth"));
+      })
+      .selectAll('option')
+      .data(optionsData).enter()
+      .append('option')
+      .text(function (d) { return d; });
+
     this.draw();
   },
 
@@ -251,6 +268,39 @@ export default BaseChartComponent.extend({
       this.filter = event.srcElement.value;
       this.selectedCategory = 0;
       this.didInsertElement();
+    }
+  },
+
+  calcUsage: function(data) {
+    var selectedOption = d3.select('select').property("value");
+    if (selectedOption === this.memoryLabel) {
+      return data.get("usedMemoryMB") /
+        (data.get("usedMemoryMB") + data.get("availMemoryMB"));
+    }
+    else if (selectedOption === this.cpuLabel) {
+      return data.get("usedVirtualCores") /
+        (data.get("usedVirtualCores") + data.get("availableVirtualCores"));
+    }
+    else if (selectedOption === this.containersLabel) {
+      var totalContainers = this.totalContainers;
+      if (totalContainers === 0) { return 0; }
+      return data.get("numContainers") / totalContainers;
+    }
+  },
+
+  getToolTipText: function(data) {
+    var selectedOption = d3.select('select').property("value");
+    if (selectedOption === this.memoryLabel) {
+      return "<p>Used Memory: " + Math.round(data.get("usedMemoryMB")) + " MB</p>" +
+        "<p>Available Memory: " + Math.round(data.get("availMemoryMB")) + " MB</p>";
+    }
+    else if (selectedOption === this.cpuLabel) {
+      return "<p>Used VCores: " + Math.round(data.get("usedVirtualCores")) + " VCores</p>" +
+        "<p>Available VCores: " + Math.round(data.get("availableVirtualCores")) + " VCores</p>";
+    }
+    else if (selectedOption === this.containersLabel) {
+        return "<p>Containers: " + Math.round(data.get("numContainers")) + " Containers</p>" +
+          "<p>Total Containers: " + this.totalContainers + " Containers</p>";
     }
   }
 });

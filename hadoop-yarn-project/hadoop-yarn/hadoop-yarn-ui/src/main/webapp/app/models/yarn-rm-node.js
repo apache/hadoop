@@ -92,9 +92,7 @@ export default DS.Model.extend({
 
   toolTipText: function() {
     return "<p>Rack: " + this.get("rack") + '</p>' +
-           "<p>Host: " + this.get("nodeHostName") + '</p>' +
-           "<p>Used Memory: " + Math.round(this.get("usedMemoryMB")) + ' MB</p>' +
-           "<p>Available Memory: " + Math.round(this.get("availMemoryMB")) + ' MB</p>';
+           "<p>Host: " + this.get("nodeHostName") + '</p>';
   }.property(),
 
   usedMemoryBytes: function() {
