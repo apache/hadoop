@@ -19,14 +19,14 @@
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.HashSet;
@@ -46,7 +46,8 @@ import java.util.concurrent.TimeUnit;
 @Unstable
 public class AppLevelTimelineCollectorWithAgg
     extends AppLevelTimelineCollector {
-  private static final Log LOG = LogFactory.getLog(TimelineCollector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineCollector.class);
 
   private final static int AGGREGATION_EXECUTOR_NUM_THREADS = 1;
   private final static int AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS = 15;
@@ -111,9 +112,7 @@ public class AppLevelTimelineCollectorWithAgg
   private class AppLevelAggregator implements Runnable {
 
     private void aggregate() {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("App-level real-time aggregating");
-      }
+      LOG.debug("App-level real-time aggregating");
       if (!isReadyToAggregate()) {
         LOG.warn("App-level collector is not ready, skip aggregation. ");
         return;
@@ -136,9 +135,7 @@ public class AppLevelTimelineCollectorWithAgg
       } catch (Exception e) {
         LOG.error("Error aggregating timeline metrics", e);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("App-level real-time aggregation complete");
-      }
+      LOG.debug("App-level real-time aggregation complete");
     }
 
     @Override

@@ -18,8 +18,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
@@ -36,6 +34,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -49,7 +49,8 @@ import java.util.TreeSet;
  */
 public final class EntityTypeReader extends AbstractTimelineStorageReader {
 
-  private static final Log LOG = LogFactory.getLog(EntityTypeReader.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(EntityTypeReader.class);
   private static final EntityTable ENTITY_TABLE = new EntityTable();
 
   public EntityTypeReader(TimelineReaderContext context) {
@@ -85,9 +86,7 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
     typeFilterList.addFilter(new FirstKeyOnlyFilter());
     typeFilterList.addFilter(new KeyOnlyFilter());
     typeFilterList.addFilter(new PageFilter(1));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("FilterList created for scan is - " + typeFilterList);
-    }
+    LOG.debug("FilterList created for scan is - {}", typeFilterList);
 
     int counter = 0;
     while (true) {
@@ -110,10 +109,7 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
         currRowKey = getNextRowKey(prefix.getRowKeyPrefix(), currType);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Scanned " + counter + "records for "
-          + types.size() + "types");
-    }
+    LOG.debug("Scanned {} records for {} types", counter, types.size());
     return types;
   }
 

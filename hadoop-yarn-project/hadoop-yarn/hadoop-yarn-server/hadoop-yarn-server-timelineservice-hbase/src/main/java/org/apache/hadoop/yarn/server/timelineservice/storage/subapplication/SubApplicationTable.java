@@ -19,8 +19,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.subapplication;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -30,6 +28,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBaseSchemaConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The sub application table has column families:
@@ -103,7 +103,7 @@ public class SubApplicationTable extends BaseTable<SubApplicationTable> {
   /** default max number of versions. */
   private static final int DEFAULT_METRICS_MAX_VERSIONS = 10000;
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       SubApplicationTable.class);
 
   public SubApplicationTable() {

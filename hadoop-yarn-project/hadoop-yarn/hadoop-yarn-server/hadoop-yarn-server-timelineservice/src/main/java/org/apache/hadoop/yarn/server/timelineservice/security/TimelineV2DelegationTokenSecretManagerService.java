@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.timelineservice.security;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
@@ -30,6 +28,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineDelgationTokenSecretManagerService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The service wrapper of {@link TimelineV2DelegationTokenSecretManager}.
@@ -75,8 +75,8 @@ public class TimelineV2DelegationTokenSecretManagerService extends
   public static class TimelineV2DelegationTokenSecretManager extends
       AbstractDelegationTokenSecretManager<TimelineDelegationTokenIdentifier> {
 
-    private static final Log LOG =
-        LogFactory.getLog(TimelineV2DelegationTokenSecretManager.class);
+    private static final Logger LOG =
+        LoggerFactory.getLogger(TimelineV2DelegationTokenSecretManager.class);
 
     /**
      * Create a timeline v2 secret manager.

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
@@ -40,8 +38,6 @@ import static org.junit.Assert.assertEquals;
  * transition.
  */
 public class TestRMHATimelineCollectors extends RMHATestBase {
-  public static final Log LOG = LogFactory
-      .getLog(TestSubmitApplicationWithRMHA.class);
 
   @Before
   @Override
