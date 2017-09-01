@@ -70,6 +70,8 @@ import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 
 public class NMLeveldbStateStoreService extends NMStateStoreService {
 
@@ -133,6 +135,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private DB db;
   private boolean isNewlyCreated;
   private Timer compactionTimer;
+
+  /**
+   * Map of containerID vs List of unknown key suffixes.
+   */
+  private ListMultimap<ContainerId, String> containerUnknownKeySuffixes =
+      ArrayListMultimap.create();
 
   public NMLeveldbStateStoreService() {
     super(NMLeveldbStateStoreService.class.getName());
@@ -251,7 +259,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         rcs.capability = new ResourcePBImpl(
             ResourceProto.parseFrom(entry.getValue()));
       } else {
-        throw new IOException("Unexpected container state key: " + key);
+        LOG.warn("the container " + containerId
+            + " will be killed because of the unknown key " + key
+            + " during recovery.");
+        containerUnknownKeySuffixes.put(containerId, suffix);
+        rcs.setRecoveryType(RecoveredContainerType.KILL);
       }
     }
     return rcs;
@@ -380,6 +392,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.delete(bytes(keyPrefix + CONTAINER_LAUNCHED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
+        List<String> unknownKeysForContainer =
+            containerUnknownKeySuffixes.removeAll(containerId);
+        for (String unknownKeySuffix : unknownKeysForContainer) {
+          batch.delete(bytes(keyPrefix + unknownKeySuffix));
+        }
         db.write(batch);
       } finally {
         batch.close();
