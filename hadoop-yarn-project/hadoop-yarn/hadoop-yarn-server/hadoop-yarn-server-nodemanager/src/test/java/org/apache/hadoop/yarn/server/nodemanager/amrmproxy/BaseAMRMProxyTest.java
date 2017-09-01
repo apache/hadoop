@@ -33,9 +33,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -87,8 +88,8 @@ import org.junit.Before;
  *
  */
 public abstract class BaseAMRMProxyTest {
-  private static final Log LOG = LogFactory
-      .getLog(BaseAMRMProxyTest.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(BaseAMRMProxyTest.class);
   // The AMRMProxyService instance that will be used by all the test cases
   private MockAMRMProxyService amrmProxyService;
 
@@ -659,7 +660,13 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
-    public Map<ApplicationId, String> getRegisteredCollectors() {
+    public ConcurrentMap<ApplicationId, AppCollectorData>
+        getRegisteringCollectors() {
+      return null;
+    }
+
+    @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors() {
       return null;
     }
 

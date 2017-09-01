@@ -38,8 +38,8 @@ The node information resource provides overall information about that particular
 
 Both of the following URI's give you the cluster information.
 
-      * http://<nm http address:port>/ws/v1/node
-      * http://<nm http address:port>/ws/v1/node/info
+      * http://nm-http-address:port/ws/v1/node
+      * http://nm-http-address:port/ws/v1/node/info
 
 ### HTTP Operations Supported
 
@@ -77,7 +77,7 @@ Both of the following URI's give you the cluster information.
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/info
+      GET http://nm-http-address:port/ws/v1/node/info
 
 Response Header:
 
@@ -118,7 +118,7 @@ Response Body:
 HTTP Request:
 
       Accept: application/xml
-      GET http://<nm http address:port>/ws/v1/node/info
+      GET http://nm-http-address:port/ws/v1/node/info
 
 Response Header:
 
@@ -159,7 +159,7 @@ With the Applications API, you can obtain a collection of resources, each of whi
 
 ### URI
 
-      * http://<nm http address:port>/ws/v1/node/apps
+      * http://nm-http-address:port/ws/v1/node/apps
 
 ### HTTP Operations Supported
 
@@ -169,7 +169,7 @@ With the Applications API, you can obtain a collection of resources, each of whi
 
 Multiple parameters can be specified.
 
-      * state - application state 
+      * state - application state
       * user - user name
 
 ### Elements of the *apps* (Applications) object
@@ -186,7 +186,7 @@ When you make a request for the list of applications, the information will be re
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps
+      GET http://nm-http-address:port/ws/v1/node/apps
 
 Response Header:
 
@@ -224,7 +224,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps
+      GET http://nm-http-address:port/ws/v1/node/apps
       Accept: application/xml
 
 Response Header:
@@ -263,7 +263,7 @@ An application resource contains information about a particular application that
 
 Use the following URI to obtain an app Object, for a application identified by the appid value.
 
-      * http://<nm http address:port>/ws/v1/node/apps/{appid}
+      * http://nm-http-address:port/ws/v1/node/apps/{appid}
 
 ### HTTP Operations Supported
 
@@ -288,7 +288,7 @@ Use the following URI to obtain an app Object, for a application identified by t
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps/application_1326121700862_0005
+      GET http://nm-http-address:port/ws/v1/node/apps/application_1326121700862_0005
 
 Response Header:
 
@@ -317,14 +317,14 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps/application_1326121700862_0005
+      GET http://nm-http-address:port/ws/v1/node/apps/application_1326121700862_0005
       Accept: application/xml
 
 Response Header:
 
       HTTP/1.1 200 OK
       Content-Type: application/xml
-      Content-Length: 281 
+      Content-Length: 281
       Server: Jetty(6.1.26)
 
 Response Body:
@@ -347,7 +347,7 @@ With the containers API, you can obtain a collection of resources, each of which
 
 ### URI
 
-      * http://<nm http address:port>/ws/v1/node/containers
+      * http://nm-http-address:port/ws/v1/node/containers
 
 ### HTTP Operations Supported
 
@@ -371,7 +371,7 @@ When you make a request for the list of containers, the information will be retu
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/containers
+      GET http://nm-http-address:port/ws/v1/node/containers
 
 Response Header:
 
@@ -429,7 +429,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/containers
+      GET http://nm-http-address:port/ws/v1/node/containers
       Accept: application/xml
 
 Response Header:
@@ -486,7 +486,7 @@ A container resource contains information about a particular container that is r
 
 Use the following URI to obtain a Container Object, from a container identified by the containerid value.
 
-      * http://<nm http address:port>/ws/v1/node/containers/{containerid}
+      * http://nm-http-address:port/ws/v1/node/containers/{containerid}
 
 ### HTTP Operations Supported
 
@@ -518,7 +518,7 @@ Use the following URI to obtain a Container Object, from a container identified 
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/nodes/containers/container_1326121700862_0007_01_000001
+      GET http://nm-http-address:port/ws/v1/nodes/containers/container_1326121700862_0007_01_000001
 
 Response Header:
 
@@ -555,14 +555,14 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/containers/container_1326121700862_0007_01_000001
+      GET http://nm-http-address:port/ws/v1/node/containers/container_1326121700862_0007_01_000001
       Accept: application/xml
 
 Response Header:
 
       HTTP/1.1 200 OK
       Content-Type: application/xml
-      Content-Length: 491 
+      Content-Length: 491
       Server: Jetty(6.1.26)
 
 Response Body:

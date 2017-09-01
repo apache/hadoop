@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import static org.fusesource.leveldbjni.JniDBFactory.asString;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,8 +35,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -69,7 +68,6 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
@@ -79,15 +77,15 @@ import com.google.common.collect.ListMultimap;
 
 public class NMLeveldbStateStoreService extends NMStateStoreService {
 
-  public static final Log LOG =
-      LogFactory.getLog(NMLeveldbStateStoreService.class);
+  public static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(NMLeveldbStateStoreService.class);
 
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
 
   /**
    * Changes from 1.0 to 1.1: Save AMRMProxy state in NMSS.
-   * Changes from 1.2 to 1.2: Save queued container information.
+   * Changes from 1.1 to 1.2: Save queued container information.
    */
   private static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 2);
 
@@ -114,6 +112,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       "ContainerManager/containers/";
   private static final String CONTAINER_REQUEST_KEY_SUFFIX = "/request";
   private static final String CONTAINER_VERSION_KEY_SUFFIX = "/version";
+  private static final String CONTAINER_START_TIME_KEY_SUFFIX = "/starttime";
   private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
   private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
   private static final String CONTAINER_QUEUED_KEY_SUFFIX = "/queued";
@@ -259,6 +258,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             StartContainerRequestProto.parseFrom(entry.getValue()));
       } else if (suffix.equals(CONTAINER_VERSION_KEY_SUFFIX)) {
         rcs.version = Integer.parseInt(asString(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_START_TIME_KEY_SUFFIX)) {
+        rcs.setStartTime(Long.parseLong(asString(entry.getValue())));
       } else if (suffix.equals(CONTAINER_DIAGS_KEY_SUFFIX)) {
         rcs.diagnostics = asString(entry.getValue());
       } else if (suffix.equals(CONTAINER_QUEUED_KEY_SUFFIX)) {
@@ -298,21 +299,23 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainer(ContainerId containerId, int containerVersion,
-      StartContainerRequest startRequest) throws IOException {
+      long startTime, StartContainerRequest startRequest) throws IOException {
     String idStr = containerId.toString();
     if (LOG.isDebugEnabled()) {
       LOG.debug("storeContainer: containerId= " + idStr
           + ", startRequest= " + startRequest);
     }
-    String keyRequest = CONTAINERS_KEY_PREFIX + idStr
-        + CONTAINER_REQUEST_KEY_SUFFIX;
+    String keyRequest = getContainerKey(idStr, CONTAINER_REQUEST_KEY_SUFFIX);
     String keyVersion = getContainerVersionKey(idStr);
+    String keyStartTime =
+        getContainerKey(idStr, CONTAINER_START_TIME_KEY_SUFFIX);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
         batch.put(bytes(keyRequest),
-            ((StartContainerRequestPBImpl) startRequest)
-                .getProto().toByteArray());
+            ((StartContainerRequestPBImpl) startRequest).getProto().
+                toByteArray());
+        batch.put(bytes(keyStartTime), bytes(Long.toString(startTime)));
         if (containerVersion != 0) {
           batch.put(bytes(keyVersion),
               bytes(Integer.toString(containerVersion)));
@@ -328,7 +331,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @VisibleForTesting
   String getContainerVersionKey(String containerId) {
-    return CONTAINERS_KEY_PREFIX + containerId + CONTAINER_VERSION_KEY_SUFFIX;
+    return getContainerKey(containerId, CONTAINER_VERSION_KEY_SUFFIX);
+  }
+
+  private String getContainerKey(String containerId, String suffix) {
+    return CONTAINERS_KEY_PREFIX + containerId + suffix;
   }
 
   @Override
@@ -1382,8 +1389,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
   }
 
-  private static class LeveldbLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LeveldbLogger.class);
+  private static class LeveldbLogger implements org.iq80.leveldb.Logger {
+    private static final org.slf4j.Logger LOG =
+        LoggerFactory.getLogger(LeveldbLogger.class);
 
     @Override
     public void log(String message) {

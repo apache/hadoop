@@ -22,20 +22,23 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.junit.Test;
 
-public class TestAmFilterInitializer extends TestCase {
+/**
+ * Test class for {@Link AmFilterInitializer}.
+ */
+public class TestAmFilterInitializer {
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     NetUtils.addStaticResolution("host1", "172.0.0.1");
     NetUtils.addStaticResolution("host2", "172.0.0.1");
     NetUtils.addStaticResolution("host3", "172.0.0.1");

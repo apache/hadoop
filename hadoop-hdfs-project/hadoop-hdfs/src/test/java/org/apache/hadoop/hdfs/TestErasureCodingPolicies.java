@@ -211,7 +211,8 @@ public class TestErasureCodingPolicies {
 
     // Only default policy should be enabled after restart
     Assert.assertEquals("Only default policy should be enabled after restart",
-        1, fs.getAllErasureCodingPolicies().size());
+        1,
+        ErasureCodingPolicyManager.getInstance().getEnabledPolicies().length);
 
     // Already set directory-level policies should still be in effect
     Path disabledPolicy = new Path(dir1, "afterDisabled");
@@ -383,6 +384,18 @@ public class TestErasureCodingPolicies {
         .getAllErasureCodingPolicies();
     assertTrue("All system policies should be enabled",
         allECPolicies.containsAll(SystemErasureCodingPolicies.getPolicies()));
+
+    // Query after add a new policy
+    ECSchema toAddSchema = new ECSchema("rs", 5, 2);
+    ErasureCodingPolicy newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 128 * 1024);
+    ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[]{newPolicy};
+    fs.addErasureCodingPolicies(policyArray);
+    allECPolicies = fs.getAllErasureCodingPolicies();
+    assertEquals("Should return new added policy",
+        SystemErasureCodingPolicies.getPolicies().size() + 1,
+        allECPolicies.size());
+
   }
 
   @Test
@@ -600,7 +613,17 @@ public class TestErasureCodingPolicies {
     fs.mkdirs(dirPath);
     fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
-    final String ecPolicyName = "RS-10-4-64k";
+    String ecPolicyName = null;
+    Collection<ErasureCodingPolicy> allPolicies =
+        fs.getAllErasureCodingPolicies();
+    for (ErasureCodingPolicy policy : allPolicies) {
+      if (!ecPolicy.equals(policy)) {
+        ecPolicyName = policy.getName();
+        break;
+      }
+    }
+    assertNotNull(ecPolicyName);
+
     fs.createFile(filePath).build().close();
     assertEquals(ecPolicy, fs.getErasureCodingPolicy(filePath));
     fs.delete(filePath, true);
@@ -704,7 +727,7 @@ public class TestErasureCodingPolicies {
 
     // Test add policy successfully
     newPolicy =
-        new ErasureCodingPolicy(toAddSchema, 1 * 1024 * 1024);
+        new ErasureCodingPolicy(toAddSchema, 4 * 1024 * 1024);
     policyArray  = new ErasureCodingPolicy[]{newPolicy};
     responses = fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);

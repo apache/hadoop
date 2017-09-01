@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -155,6 +155,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProv
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -189,7 +190,8 @@ public class ContainerManagerImpl extends CompositeService implements
    */
   private static final int SHUTDOWN_CLEANUP_SLOP_MS = 1000;
 
-  private static final Log LOG = LogFactory.getLog(ContainerManagerImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerManagerImpl.class);
 
   public static final String INVALID_NMTOKEN_MSG = "Invalid NMToken";
   static final String INVALID_CONTAINERTOKEN_MSG =
@@ -399,6 +401,16 @@ public class ContainerManagerImpl extends CompositeService implements
       if (LOG.isDebugEnabled()) {
         LOG.debug(
             "Recovering Flow context: " + fc + " for an application " + appId);
+      }
+    } else {
+      // in upgrade situations, where there is no prior existing flow context,
+      // default would be used.
+      fc = new FlowContext(TimelineUtils.generateDefaultFlowName(null, appId),
+          YarnConfiguration.DEFAULT_FLOW_VERSION, appId.getClusterTimestamp());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "No prior existing flow context found. Using default Flow context: "
+                + fc + " for an application " + appId);
       }
     }
 
@@ -1051,10 +1063,11 @@ public class ContainerManagerImpl extends CompositeService implements
     Credentials credentials =
         YarnServerSecurityUtils.parseCredentials(launchContext);
 
+    long containerStartTime = SystemClock.getInstance().getTime();
     Container container =
         new ContainerImpl(getConfig(), this.dispatcher,
             launchContext, credentials, metrics, containerTokenIdentifier,
-            context);
+            context, containerStartTime);
     ApplicationId applicationID =
         containerId.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerId, container) != null) {
@@ -1111,7 +1124,7 @@ public class ContainerManagerImpl extends CompositeService implements
         }
 
         this.context.getNMStateStore().storeContainer(containerId,
-            containerTokenIdentifier.getVersion(), request);
+            containerTokenIdentifier.getVersion(), containerStartTime, request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
 

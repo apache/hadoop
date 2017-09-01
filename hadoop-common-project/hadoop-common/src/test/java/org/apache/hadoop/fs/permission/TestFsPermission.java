@@ -21,11 +21,14 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import static org.apache.hadoop.fs.permission.FsAction.*;
 
-public class TestFsPermission extends TestCase {
+public class TestFsPermission {
+
+  @Test
   public void testFsAction() {
     //implies
     for(FsAction a : FsAction.values()) {
@@ -53,6 +56,7 @@ public class TestFsPermission extends TestCase {
    * Ensure that when manually specifying permission modes we get
    * the expected values back out for all combinations
    */
+  @Test
   public void testConvertingPermissions() {
     for(short s = 0; s <= 01777; s++) {
       assertEquals(s, new FsPermission(s).toShort());
@@ -80,6 +84,7 @@ public class TestFsPermission extends TestCase {
     assertEquals(02000, s);
   }
 
+  @Test
   public void testSpecialBitsToString() {
     for (boolean sb : new boolean[] { false, true }) {
       for (FsAction u : FsAction.values()) {
@@ -106,6 +111,7 @@ public class TestFsPermission extends TestCase {
     }
   }
 
+  @Test
   public void testFsPermission() {
     String symbolic = "-rwxrwxrwx";
 
@@ -132,6 +138,7 @@ public class TestFsPermission extends TestCase {
     }
   }
 
+  @Test
   public void testSymbolicPermission() {
     for (int i = 0; i < SYMBOLIC.length; ++i) {
       short val = 0777;
@@ -146,6 +153,7 @@ public class TestFsPermission extends TestCase {
     }
   }
 
+  @Test
   public void testUMaskParser() throws IOException {
     Configuration conf = new Configuration();
     
@@ -163,6 +171,7 @@ public class TestFsPermission extends TestCase {
     }
   }
 
+  @Test
   public void testSymbolicUmasks() {
     Configuration conf = new Configuration();
     
@@ -176,6 +185,7 @@ public class TestFsPermission extends TestCase {
     assertEquals(0111, FsPermission.getUMask(conf).toShort());
   }
 
+  @Test
   public void testBadUmasks() {
     Configuration conf = new Configuration();
     

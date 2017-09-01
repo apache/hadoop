@@ -20,54 +20,14 @@
 
 ## Release 0.14.1 - 2007-09-03
 
-### INCOMPATIBLE CHANGES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### IMPORTANT ISSUES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### NEW FEATURES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### IMPROVEMENTS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### BUG FIXES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
-| [HADOOP-1798](https://issues.apache.org/jira/browse/HADOOP-1798) | The counts of currently running maps and reduces isn't maintained correctly when task trackers fail |  Major | . | Owen O'Malley | Owen O'Malley |
-| [HADOOP-1790](https://issues.apache.org/jira/browse/HADOOP-1790) | hadoop seems not to support multi-homed installations |  Blocker | . | Torsten Curdt | Doug Cutting |
 | [HADOOP-1740](https://issues.apache.org/jira/browse/HADOOP-1740) | Certain Pipes tasks fail, after exiting the C++ application |  Blocker | . | Srikanth Kakani | Devaraj Das |
-
-
-### TESTS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### SUB-TASKS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### OTHER:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
+| [HADOOP-1790](https://issues.apache.org/jira/browse/HADOOP-1790) | hadoop seems not to support multi-homed installations |  Blocker | . | Torsten Curdt | Doug Cutting |
+| [HADOOP-1798](https://issues.apache.org/jira/browse/HADOOP-1798) | The counts of currently running maps and reduces isn't maintained correctly when task trackers fail |  Major | . | Owen O'Malley | Owen O'Malley |
 
 

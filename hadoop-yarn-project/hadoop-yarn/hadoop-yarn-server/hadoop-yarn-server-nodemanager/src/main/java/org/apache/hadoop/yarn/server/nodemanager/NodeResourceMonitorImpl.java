@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of the node resource monitor. It periodically tracks the
@@ -34,8 +34,8 @@ public class NodeResourceMonitorImpl extends AbstractService implements
     NodeResourceMonitor {
 
   /** Logging infrastructure. */
-  final static Log LOG = LogFactory
-      .getLog(NodeResourceMonitorImpl.class);
+  final static Logger LOG =
+       LoggerFactory.getLogger(NodeResourceMonitorImpl.class);
 
   /** Interval to monitor the node resource utilization. */
   private long monitoringInterval;

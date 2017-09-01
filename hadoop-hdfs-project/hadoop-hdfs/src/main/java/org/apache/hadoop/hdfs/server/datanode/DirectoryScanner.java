@@ -606,11 +606,10 @@ public class DirectoryScanner implements Runnable {
     public ScanInfoPerBlockPool call() throws IOException {
       String[] bpList = volume.getBlockPoolList();
       ScanInfoPerBlockPool result = new ScanInfoPerBlockPool(bpList.length);
+      perfTimer.start();
+      throttleTimer.start();
       for (String bpid : bpList) {
         LinkedList<ScanInfo> report = new LinkedList<>();
-
-        perfTimer.start();
-        throttleTimer.start();
 
         try {
           result.put(bpid, volume.compileReport(bpid, report, this));

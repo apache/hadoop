@@ -61,7 +61,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   private ScheduledExecutorService scheduler;
 
   public PerNodeTimelineCollectorsAuxService() {
-    this(new NodeTimelineCollectorManager());
+    this(new NodeTimelineCollectorManager(true));
   }
 
   @VisibleForTesting PerNodeTimelineCollectorsAuxService(
@@ -114,11 +114,12 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    * exists, no new service is created.
    *
    * @param appId Application Id to be added.
+   * @param user Application Master container user.
    * @return whether it was added successfully
    */
-  public boolean addApplication(ApplicationId appId) {
+  public boolean addApplication(ApplicationId appId, String user) {
     AppLevelTimelineCollector collector =
-        new AppLevelTimelineCollector(appId);
+        new AppLevelTimelineCollectorWithAgg(appId, user);
     return (collectorManager.putIfAbsent(appId, collector)
         == collector);
   }
@@ -147,7 +148,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
-      addApplication(appId);
+      addApplication(appId, context.getUser());
     }
   }
 
@@ -202,7 +203,8 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     PerNodeTimelineCollectorsAuxService auxService = null;
     try {
       auxService = collectorManager == null ?
-          new PerNodeTimelineCollectorsAuxService() :
+          new PerNodeTimelineCollectorsAuxService(
+              new NodeTimelineCollectorManager(false)) :
           new PerNodeTimelineCollectorsAuxService(collectorManager);
       ShutdownHookManager.get().addShutdownHook(new ShutdownHook(auxService),
           SHUTDOWN_HOOK_PRIORITY);

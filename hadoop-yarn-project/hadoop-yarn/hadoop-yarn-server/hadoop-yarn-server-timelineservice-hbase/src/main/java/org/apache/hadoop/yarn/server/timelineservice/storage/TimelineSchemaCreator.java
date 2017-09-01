@@ -32,16 +32,18 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTable;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -62,7 +64,9 @@ public final class TimelineSchemaCreator {
       LoggerFactory.getLogger(TimelineSchemaCreator.class);
   private static final String SKIP_EXISTING_TABLE_OPTION_SHORT = "s";
   private static final String APP_METRICS_TTL_OPTION_SHORT = "ma";
+  private static final String SUB_APP_METRICS_TTL_OPTION_SHORT = "msa";
   private static final String APP_TABLE_NAME_SHORT = "a";
+  private static final String SUB_APP_TABLE_NAME_SHORT = "sa";
   private static final String APP_TO_FLOW_TABLE_NAME_SHORT = "a2f";
   private static final String ENTITY_METRICS_TTL_OPTION_SHORT = "me";
   private static final String ENTITY_TABLE_NAME_SHORT = "e";
@@ -71,7 +75,10 @@ public final class TimelineSchemaCreator {
 
   public static void main(String[] args) throws Exception {
 
-    Configuration hbaseConf = HBaseConfiguration.create();
+    LOG.info("Starting the schema creation");
+    Configuration hbaseConf =
+        HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(
+            new YarnConfiguration());
     // Grab input args and allow for -Dxyz style arguments
     String[] otherArgs = new GenericOptionsParser(hbaseConf, args)
         .getRemainingArgs();
@@ -115,6 +122,21 @@ public final class TimelineSchemaCreator {
       if (StringUtils.isNotBlank(applicationTableMetricsTTL)) {
         int appMetricsTTL = Integer.parseInt(applicationTableMetricsTTL);
         new ApplicationTable().setMetricsTTL(appMetricsTTL, hbaseConf);
+      }
+
+      // Grab the subApplicationTableName argument
+      String subApplicationTableName = commandLine.getOptionValue(
+          SUB_APP_TABLE_NAME_SHORT);
+      if (StringUtils.isNotBlank(subApplicationTableName)) {
+        hbaseConf.set(SubApplicationTable.TABLE_NAME_CONF_NAME,
+            subApplicationTableName);
+      }
+      // Grab the subApplication metrics TTL
+      String subApplicationTableMetricsTTL = commandLine
+          .getOptionValue(SUB_APP_METRICS_TTL_OPTION_SHORT);
+      if (StringUtils.isNotBlank(subApplicationTableMetricsTTL)) {
+        int subAppMetricsTTL = Integer.parseInt(subApplicationTableMetricsTTL);
+        new SubApplicationTable().setMetricsTTL(subAppMetricsTTL, hbaseConf);
       }
 
       // create all table schemas in hbase
@@ -178,6 +200,18 @@ public final class TimelineSchemaCreator {
     o.setRequired(false);
     options.addOption(o);
 
+    o = new Option(SUB_APP_TABLE_NAME_SHORT, "subApplicationTableName", true,
+        "subApplication table name");
+    o.setArgName("subApplicationTableName");
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option(SUB_APP_METRICS_TTL_OPTION_SHORT, "subApplicationMetricsTTL",
+        true, "TTL for metrics column family");
+    o.setArgName("subApplicationMetricsTTL");
+    o.setRequired(false);
+    options.addOption(o);
+
     // Options without an argument
     // No need to set arg name since we do not need an argument here
     o = new Option(SKIP_EXISTING_TABLE_OPTION_SHORT, "skipExistingTable",
@@ -216,6 +250,11 @@ public final class TimelineSchemaCreator {
         " The name of the Application table\n");
     usage.append("[-applicationMetricsTTL <Application Table Metrics TTL>]" +
         " TTL for metrics in the Application table\n");
+    usage.append("[-subApplicationTableName <SubApplication Table Name>]" +
+        " The name of the SubApplication table\n");
+    usage.append("[-subApplicationMetricsTTL " +
+        " <SubApplication Table Metrics TTL>]" +
+        " TTL for metrics in the SubApplication table\n");
     usage.append("[-skipExistingTable] Whether to skip existing" +
         " hbase tables\n");
     System.out.println(usage.toString());
@@ -301,6 +340,15 @@ public final class TimelineSchemaCreator {
       }
       try {
         new FlowActivityTable().createTable(admin, hbaseConf);
+      } catch (IOException e) {
+        if (skipExisting) {
+          LOG.warn("Skip and continue on: " + e.getMessage());
+        } else {
+          throw e;
+        }
+      }
+      try {
+        new SubApplicationTable().createTable(admin, hbaseConf);
       } catch (IOException e) {
         if (skipExisting) {
           LOG.warn("Skip and continue on: " + e.getMessage());

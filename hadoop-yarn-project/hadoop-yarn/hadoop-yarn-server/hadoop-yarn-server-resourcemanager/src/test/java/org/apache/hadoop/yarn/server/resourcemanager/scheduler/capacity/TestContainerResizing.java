@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -163,10 +165,16 @@ public class TestContainerResizing {
      * Application has a container running, try to decrease the container and
      * check queue's usage and container resource will be updated.
      */
+    final DrainDispatcher dispatcher = new DrainDispatcher();
     MockRM rm1 = new MockRM() {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
+      }
+
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
       }
     };
     rm1.start();
@@ -194,6 +202,10 @@ public class TestContainerResizing {
                 Resources.createResource(1 * GB), null)));
 
     verifyContainerDecreased(response, containerId1, 1 * GB);
+
+    // Wait for scheduler to finish processing kill events..
+    dispatcher.waitForEventThreadToWait();
+
     checkUsedResource(rm1, "default", 1 * GB, null);
     Assert.assertEquals(1 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemorySize());
@@ -507,10 +519,16 @@ public class TestContainerResizing {
      * the increase request reserved, it decreases the reserved container,
      * container should be decreased and reservation will be cancelled
      */
+    final DrainDispatcher dispatcher = new DrainDispatcher();
     MockRM rm1 = new MockRM() {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
+      }
+
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
       }
     };
     rm1.start();
@@ -586,7 +604,8 @@ public class TestContainerResizing {
                 Resources.createResource(1 * GB), null)));
     // Trigger a node heartbeat..
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    
+
+    dispatcher.waitForEventThreadToWait();
     /* Check statuses after reservation satisfied */
     // Increase request should be unreserved
     Assert.assertTrue(app.getReservedContainers().isEmpty());
@@ -617,10 +636,16 @@ public class TestContainerResizing {
      * So increase container request will be reserved. When app releases
      * container2, reserved part should be released as well.
      */
+    final DrainDispatcher dispatcher = new DrainDispatcher();
     MockRM rm1 = new MockRM() {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
+      }
+
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
       }
     };
     rm1.start();
@@ -687,6 +712,10 @@ public class TestContainerResizing {
 
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     am1.allocate(null, null);
+
+    // Wait for scheduler to process all events.
+    dispatcher.waitForEventThreadToWait();
+
     /* Check statuses after reservation satisfied */
     // Increase request should be unreserved
     Assert.assertTrue(app.getReservedContainers().isEmpty());

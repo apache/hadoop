@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
 public class ApplicationTable extends BaseTable<ApplicationTable> {
   /** application prefix. */
   private static final String PREFIX =
-      YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".application";
+      YarnConfiguration.TIMELINE_SERVICE_PREFIX + "application";
 
   /** config param name that specifies the application table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";

@@ -35,7 +35,6 @@ ENV DEBCONF_TERSE true
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     build-essential \
     bzip2 \
-    cmake \
     curl \
     doxygen \
     fuse \
@@ -89,11 +88,22 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y ant
 ######
 RUN mkdir -p /opt/maven && \
     curl -L -s -S \
-         http://www-us.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+         https://www-us.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
          -o /opt/maven.tar.gz && \
     tar xzf /opt/maven.tar.gz --strip-components 1 -C /opt/maven
 ENV MAVEN_HOME /opt/maven
-ENV PATH "$PATH:/opt/maven/bin"
+ENV PATH "${PATH}:/opt/maven/bin"
+
+######
+# Install cmake
+######
+RUN mkdir -p /opt/cmake && \
+    curl -L -s -S \
+         https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
+         -o /opt/cmake.tar.gz && \
+    tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
+ENV CMAKE_HOME /opt/cmake
+ENV PATH "${PATH}:/opt/cmake/bin"
 
 ######
 # Install findbugs
@@ -104,6 +114,7 @@ RUN mkdir -p /opt/findbugs && \
          -o /opt/findbugs.tar.gz && \
     tar xzf /opt/findbugs.tar.gz --strip-components 1 -C /opt/findbugs
 ENV FINDBUGS_HOME /opt/findbugs
+ENV PATH "${PATH}:/opt/findbugs/bin"
 
 ####
 # Install shellcheck

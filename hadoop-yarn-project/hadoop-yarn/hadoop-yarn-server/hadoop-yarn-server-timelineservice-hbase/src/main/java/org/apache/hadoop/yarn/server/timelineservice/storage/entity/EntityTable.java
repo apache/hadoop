@@ -50,8 +50,8 @@ import org.slf4j.LoggerFactory;
  * | flowRunId! |                              |              | configKey2:  |
  * | AppId!     | created_time:                | metricId1:   | configValue2 |
  * | entityType!| 1392993084018                | metricValue2 |              |
- * | entityId   |                              | @timestamp2  |              |
- * |            | i!infoKey:                   |              |              |
+ * | idPrefix!  |                              | @timestamp2  |              |
+ * | entityId   | i!infoKey:                   |              |              |
  * |            | infoValue                    | metricId1:   |              |
  * |            |                              | metricValue1 |              |
  * |            | r!relatesToKey:              | @timestamp2  |              |

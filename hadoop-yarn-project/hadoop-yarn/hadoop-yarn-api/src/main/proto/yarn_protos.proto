@@ -613,3 +613,8 @@ message StringBytesMapProto {
   optional string key = 1;
   optional bytes value = 2;
 }
+
+message CollectorInfoProto {
+  optional string collector_addr = 1;
+  optional hadoop.common.TokenProto collector_token = 2;
+}

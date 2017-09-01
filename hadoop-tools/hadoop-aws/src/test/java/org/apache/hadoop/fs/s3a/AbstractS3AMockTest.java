@@ -26,6 +26,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 
 import org.junit.After;
 import org.junit.Before;
@@ -33,7 +35,8 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
 /**
- * Abstract base class for S3A unit tests using a mock S3 client.
+ * Abstract base class for S3A unit tests using a mock S3 client and a null
+ * metadata store.
  */
 public abstract class AbstractS3AMockTest {
 
@@ -55,6 +58,10 @@ public abstract class AbstractS3AMockTest {
     Configuration conf = new Configuration();
     conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
         S3ClientFactory.class);
+    // We explicitly disable MetadataStore even if it's configured. For unit
+    // test we don't issue request to AWS DynamoDB service.
+    conf.setClass(S3_METADATA_STORE_IMPL, NullMetadataStore.class,
+        MetadataStore.class);
     fs = new S3AFileSystem();
     URI uri = URI.create(FS_S3A + "://" + BUCKET);
     fs.initialize(uri, conf);

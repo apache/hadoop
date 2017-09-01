@@ -40,8 +40,8 @@ public final class SystemErasureCodingPolicies {
   // Private constructor, this is a utility class.
   private SystemErasureCodingPolicies() {}
 
-  // 64 KB
-  private static final int DEFAULT_CELLSIZE = 64 * 1024;
+  // 1 MB
+  private static final int DEFAULT_CELLSIZE = 1024 * 1024;
 
   public static final byte RS_6_3_POLICY_ID = 1;
   private static final ErasureCodingPolicy SYS_POLICY1 =

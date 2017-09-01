@@ -228,9 +228,10 @@ class CapacitySchedulerPage extends RmView {
           resourcesUsed = userInfo.getResourceUsageInfo()
               .getPartitionResourceUsageInfo(nodeLabel).getUsed();
         }
-        ResourceInfo amUsed = (resourceUsages.getAmUsed() == null)
-            ? new ResourceInfo(Resources.none())
-            : resourceUsages.getAmUsed();
+        ResourceInfo amUsed = userInfo.getAMResourcesUsed();
+        if (amUsed == null) {
+          amUsed = new ResourceInfo(Resources.none());
+        }
         String highlightIfAsking =
             userInfo.getIsActive() ? ACTIVE_USER : null;
         tbody.tr().$style(highlightIfAsking).td(userInfo.getUsername())
@@ -555,8 +556,12 @@ class CapacitySchedulerPage extends RmView {
               .$class("ui-state-default").__("Queue").__().__().__().tbody();
         SchedulerHealth.DetailedInformation di = entry.getValue();
         if (di.getTimestamp() != 0) {
-          containerId = di.getContainerId().toString();
-          nodeId = di.getNodeId().toString();
+          if (di.getContainerId() != null) {
+            containerId = di.getContainerId().toString();
+          }
+          if (di.getNodeId() != null) {
+            nodeId = di.getNodeId().toString();
+          }
           queue = di.getQueue();
         }
         tbody.$class("ui-widget-content").tr()

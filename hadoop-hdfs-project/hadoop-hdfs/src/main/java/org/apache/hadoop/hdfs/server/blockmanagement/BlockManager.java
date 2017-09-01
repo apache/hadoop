@@ -4487,8 +4487,12 @@ public class BlockManager implements BlockStatsMXBean {
         for (int i = 0; i < datanodesAndStorages.size(); i += 2) {
           namesystem.writeLock();
           try {
-            DatanodeStorageInfo storage = datanodeManager.
-                getDatanode(datanodesAndStorages.get(i)).
+            final DatanodeDescriptor dn = datanodeManager.
+                getDatanode(datanodesAndStorages.get(i));
+            if (dn == null) {
+              continue;
+            }
+            final DatanodeStorageInfo storage = dn.
                 getStorageInfo(datanodesAndStorages.get(i + 1));
             if (storage != null) {
               boolean aborted =

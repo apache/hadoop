@@ -21,8 +21,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -58,8 +58,8 @@ import static org.mockito.Mockito.verifyZeroInteractions;
  * Tests for the CGroups handler implementation.
  */
 public class TestCGroupsHandlerImpl {
-  private static final Log LOG =
-      LogFactory.getLog(TestCGroupsHandlerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCGroupsHandlerImpl.class);
 
   private PrivilegedOperationExecutor privilegedOperationExecutorMock;
   private String tmpPath;

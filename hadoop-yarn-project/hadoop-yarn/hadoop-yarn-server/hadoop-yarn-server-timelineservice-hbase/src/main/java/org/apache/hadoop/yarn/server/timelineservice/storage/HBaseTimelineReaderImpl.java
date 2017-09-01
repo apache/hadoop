@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.service.AbstractService;
@@ -30,6 +29,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.reader.EntityTypeReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReaderFactory;
 import org.slf4j.Logger;
@@ -54,7 +55,7 @@ public class HBaseTimelineReaderImpl
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    hbaseConf = HBaseConfiguration.create(conf);
+    hbaseConf = HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(conf);
     conn = ConnectionFactory.createConnection(hbaseConf);
   }
 
@@ -84,5 +85,12 @@ public class HBaseTimelineReaderImpl
         TimelineEntityReaderFactory.createMultipleEntitiesReader(context,
             filters, dataToRetrieve);
     return reader.readEntities(hbaseConf, conn);
+  }
+
+  @Override
+  public Set<String> getEntityTypes(TimelineReaderContext context)
+      throws IOException {
+    EntityTypeReader reader = new EntityTypeReader(context);
+    return reader.readEntityTypes(hbaseConf, conn);
   }
 }

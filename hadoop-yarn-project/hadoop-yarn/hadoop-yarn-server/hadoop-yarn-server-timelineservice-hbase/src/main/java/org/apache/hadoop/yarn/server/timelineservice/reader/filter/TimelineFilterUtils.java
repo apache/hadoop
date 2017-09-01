@@ -182,6 +182,23 @@ public final class TimelineFilterUtils {
   }
 
   /**
+   * Creates a HBase {@link SingleColumnValueFilter} with specified column.
+   * @param <T> Describes the type of column prefix.
+   * @param column Column which value to be filtered.
+   * @param value Value to be filtered.
+   * @param op Compare operator
+   * @return a SingleColumnValue Filter
+   * @throws IOException if any exception.
+   */
+  public static <T> Filter createHBaseSingleColValueFilter(Column<T> column,
+      Object value, CompareOp op) throws IOException {
+    Filter singleColValFilter = createHBaseSingleColValueFilter(
+        column.getColumnFamilyBytes(), column.getColumnQualifierBytes(),
+        column.getValueConverter().encodeValue(value), op, true);
+    return singleColValFilter;
+  }
+
+  /**
    * Creates a HBase {@link SingleColumnValueFilter}.
    *
    * @param columnFamily Column Family represented as bytes.

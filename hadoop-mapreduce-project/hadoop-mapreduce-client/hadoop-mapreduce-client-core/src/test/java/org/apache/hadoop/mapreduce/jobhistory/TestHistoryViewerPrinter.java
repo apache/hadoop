@@ -883,8 +883,8 @@ public class TestHistoryViewerPrinter {
     job.totalReduces = 1;
     job.failedMaps = 1;
     job.failedReduces = 0;
-    job.finishedMaps = 5;
-    job.finishedReduces = 1;
+    job.succeededMaps = 5;
+    job.succeededReduces = 1;
     job.jobStatus = JobStatus.State.SUCCEEDED.name();
     job.totalCounters = createCounters();
     job.mapCounters = createCounters();

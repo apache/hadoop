@@ -263,7 +263,7 @@ public class MockNodes {
     }
 
     public OpportunisticContainersStatus getOpportunisticContainersStatus() {
-      return null;
+      return OpportunisticContainersStatus.newInstance();
     }
 
     @Override

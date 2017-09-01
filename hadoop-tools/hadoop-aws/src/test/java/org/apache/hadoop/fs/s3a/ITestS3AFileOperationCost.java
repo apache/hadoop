@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -32,8 +33,8 @@ import java.net.URI;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
+import static org.junit.Assume.assumeFalse;
 
 /**
  * Use metrics to assert about the cost of file status queries.
@@ -62,9 +63,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     touch(fs, simpleFile);
     resetMetricDiffs();
-    S3AFileStatus status = fs.getFileStatus(simpleFile);
+    FileStatus status = fs.getFileStatus(simpleFile);
     assertTrue("not a file: " + status, status.isFile());
-    metadataRequests.assertDiffEquals(1);
+    if (!fs.hasMetadataStore()) {
+      metadataRequests.assertDiffEquals(1);
+    }
     listRequests.assertDiffEquals(0);
   }
 
@@ -79,9 +82,13 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path dir = path("empty");
     fs.mkdirs(dir);
     resetMetricDiffs();
-    S3AFileStatus status = fs.getFileStatus(dir);
-    assertTrue("not empty: " + status, status.isEmptyDirectory());
-    metadataRequests.assertDiffEquals(2);
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
+    assertTrue("not empty: " + status,
+        status.isEmptyDirectory() == Tristate.TRUE);
+
+    if (!fs.hasMetadataStore()) {
+      metadataRequests.assertDiffEquals(2);
+    }
     listRequests.assertDiffEquals(0);
   }
 
@@ -92,7 +99,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path path = path("missing");
     resetMetricDiffs();
     try {
-      S3AFileStatus status = fs.getFileStatus(path);
+      FileStatus status = fs.getFileStatus(path);
       fail("Got a status back from a missing file path " + status);
     } catch (FileNotFoundException expected) {
       // expected
@@ -108,7 +115,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path path = path("missingdir/missingpath");
     resetMetricDiffs();
     try {
-      S3AFileStatus status = fs.getFileStatus(path);
+      FileStatus status = fs.getFileStatus(path);
       fail("Got a status back from a missing file path " + status);
     } catch (FileNotFoundException expected) {
       // expected
@@ -126,16 +133,18 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path simpleFile = new Path(dir, "simple.txt");
     touch(fs, simpleFile);
     resetMetricDiffs();
-    S3AFileStatus status = fs.getFileStatus(dir);
-    if (status.isEmptyDirectory()) {
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
+    if (status.isEmptyDirectory() == Tristate.TRUE) {
       // erroneous state
       String fsState = fs.toString();
       fail("FileStatus says directory isempty: " + status
           + "\n" + ContractTestUtils.ls(fs, dir)
           + "\n" + fsState);
     }
-    metadataRequests.assertDiffEquals(2);
-    listRequests.assertDiffEquals(1);
+    if (!fs.hasMetadataStore()) {
+      metadataRequests.assertDiffEquals(2);
+      listRequests.assertDiffEquals(1);
+    }
   }
 
   @Test
@@ -187,6 +196,13 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         + "In S3, rename deletes any fake directories as a part of "
         + "clean up activity");
     S3AFileSystem fs = getFileSystem();
+
+    // As this test uses the s3 metrics to count the number of fake directory
+    // operations, it depends on side effects happening internally. With
+    // metadata store enabled, it is brittle to change. We disable this test
+    // before the internal behavior w/ or w/o metadata store.
+    assumeFalse(fs.hasMetadataStore());
+
     Path srcBaseDir = path("src");
     mkdirs(srcBaseDir);
     MetricDiff deleteRequests =

@@ -36,6 +36,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
@@ -70,6 +72,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.http.HttpConfig;
@@ -80,6 +83,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -1569,5 +1573,23 @@ public class DFSUtil {
     KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
         .createKeyProviderCryptoExtension(keyProvider);
     return cryptoProvider;
+  }
+
+  /**
+   * Decodes an HDFS delegation token to its identifier.
+   *
+   * @param token the token
+   * @return the decoded identifier.
+   * @throws IOException
+   */
+  public static DelegationTokenIdentifier decodeDelegationToken(
+      final Token<DelegationTokenIdentifier> token) throws IOException {
+    final DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+    final ByteArrayInputStream buf =
+        new ByteArrayInputStream(token.getIdentifier());
+    try (DataInputStream in = new DataInputStream(buf)) {
+      id.readFields(in);
+    }
+    return id;
   }
 }

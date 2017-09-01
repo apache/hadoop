@@ -97,6 +97,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 public class TestKMS {
@@ -722,6 +723,22 @@ public class TestKMS {
         assertArrayEquals(k1.getMaterial(), k1r.getMaterial());
         assertEquals(kv.getMaterial().length, k1r.getMaterial().length);
 
+        // test re-encrypt batch
+        EncryptedKeyVersion ek3 = kpExt.generateEncryptedKey(kv.getName());
+        KeyVersion latest = kpExt.rollNewVersion(kv.getName());
+        List<EncryptedKeyVersion> ekvs = new ArrayList<>(3);
+        ekvs.add(ek1);
+        ekvs.add(ek2);
+        ekvs.add(ek3);
+        ekvs.add(ek1);
+        ekvs.add(ek2);
+        ekvs.add(ek3);
+        kpExt.reencryptEncryptedKeys(ekvs);
+        for (EncryptedKeyVersion ekv: ekvs) {
+          assertEquals(latest.getVersionName(),
+              ekv.getEncryptionKeyVersionName());
+        }
+
         // deleteKey()
         kp.deleteKey("k1");
 
@@ -1134,6 +1151,10 @@ public class TestKMS {
                 KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
             EncryptedKeyVersion ekv = kpce.generateEncryptedKey("k1");
             kpce.reencryptEncryptedKey(ekv);
+            List<EncryptedKeyVersion> ekvs = new ArrayList<>(2);
+            ekvs.add(ekv);
+            ekvs.add(ekv);
+            kpce.reencryptEncryptedKeys(ekvs);
             return null;
           }
         });
@@ -1563,6 +1584,10 @@ public class TestKMS {
             KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
                 createKeyProviderCryptoExtension(kp);
             kpCE.reencryptEncryptedKey(encKv);
+            List<EncryptedKeyVersion> ekvs = new ArrayList<>(2);
+            ekvs.add(encKv);
+            ekvs.add(encKv);
+            kpCE.reencryptEncryptedKeys(ekvs);
             return null;
           }
         });
@@ -1669,8 +1694,27 @@ public class TestKMS {
               KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
                   createKeyProviderCryptoExtension(kp);
               kpCE.reencryptEncryptedKey(encKv);
+              fail("Should not have been able to reencryptEncryptedKey");
             } catch (AuthorizationException ex) {
-              LOG.info("Caught expected exception.", ex);
+              LOG.info("reencryptEncryptedKey caught expected exception.", ex);
+            }
+            return null;
+          }
+        });
+        doAs("GENERATE_EEK", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            KeyProvider kp = createProvider(uri, conf);
+            try {
+              KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
+                  createKeyProviderCryptoExtension(kp);
+              List<EncryptedKeyVersion> ekvs = new ArrayList<>(2);
+              ekvs.add(encKv);
+              ekvs.add(encKv);
+              kpCE.reencryptEncryptedKeys(ekvs);
+              fail("Should not have been able to reencryptEncryptedKeys");
+            } catch (AuthorizationException ex) {
+              LOG.info("reencryptEncryptedKeys caught expected exception.", ex);
             }
             return null;
           }

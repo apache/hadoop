@@ -37,7 +37,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
-import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 
@@ -54,7 +53,7 @@ class JobHistoryFileReplayMapperV1 extends
 
   public void map(IntWritable key, IntWritable val, Context context) throws IOException {
     // collect the apps it needs to process
-    TimelineClient tlc = new TimelineClientImpl();
+    TimelineClient tlc = TimelineClient.createTimelineClient();
     TimelineEntityConverterV1 converter = new TimelineEntityConverterV1();
     JobHistoryFileReplayHelper helper = new JobHistoryFileReplayHelper(context);
     int replayMode = helper.getReplayMode();

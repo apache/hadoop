@@ -533,6 +533,26 @@ public class TestRuntimeEstimators {
     public void setJobPriority(Priority priority) {
       // do nothing
     }
+
+    @Override
+    public int getFailedMaps() {
+      return 0;
+    }
+
+    @Override
+    public int getFailedReduces() {
+      return 0;
+    }
+
+    @Override
+    public int getKilledMaps() {
+      return 0;
+    }
+
+    @Override
+    public int getKilledReduces() {
+      return 0;
+    }
   }
 
   /*

@@ -7,7 +7,7 @@ Requirements:
 * JDK 1.8+
 * Maven 3.3 or later
 * ProtocolBuffer 2.5.0
-* CMake 2.6 or newer (if compiling native code), must be 3.0 or newer on Mac
+* CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
@@ -345,7 +345,7 @@ Requirements:
 * JDK 1.8+
 * Maven 3.0 or later
 * ProtocolBuffer 2.5.0
-* CMake 2.6 or newer
+* CMake 3.1 or newer
 * Windows SDK 7.1 or Visual Studio 2010 Professional
 * Windows SDK 8.1 (if building CPU rate control for the container executor)
 * zlib headers (if building native code bindings for zlib)

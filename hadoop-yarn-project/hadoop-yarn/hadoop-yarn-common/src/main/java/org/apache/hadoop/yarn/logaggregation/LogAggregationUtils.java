@@ -133,6 +133,23 @@ public class LogAggregationUtils {
         new org.apache.hadoop.fs.Path(conf.get(
             YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    return getRemoteAppLogDir(conf, appId, appOwner, remoteRootLogDir, suffix);
+  }
+
+  /**
+   * Return the remote application log directory.
+   * @param conf the configuration
+   * @param appId the application
+   * @param appOwner the application owner
+   * @param remoteRootLogDir the remote root log directory
+   * @param suffix the log directory suffix
+   * @return the remote application log directory path
+   * @throws IOException if we can not find remote application log directory
+   */
+  public static org.apache.hadoop.fs.Path getRemoteAppLogDir(
+      Configuration conf, ApplicationId appId, String appOwner,
+      org.apache.hadoop.fs.Path remoteRootLogDir, String suffix)
+      throws IOException {
     org.apache.hadoop.fs.Path remoteAppDir = null;
     if (appOwner == null) {
       org.apache.hadoop.fs.Path qualifiedRemoteRootLogDir =
@@ -152,6 +169,30 @@ public class LogAggregationUtils {
           remoteRootLogDir, appId, appOwner, suffix);
     }
     return remoteAppDir;
+  }
+
+  /**
+   * Get all available log files under remote app log directory.
+   * @param conf the configuration
+   * @param appId the applicationId
+   * @param appOwner the application owner
+   * @param remoteRootLogDir the remote root log directory
+   * @param suffix the log directory suffix
+   * @return the iterator of available log files
+   * @throws IOException if there is no log file available
+   */
+  public static RemoteIterator<FileStatus> getRemoteNodeFileDir(
+      Configuration conf, ApplicationId appId, String appOwner,
+      org.apache.hadoop.fs.Path remoteRootLogDir, String suffix)
+      throws IOException {
+    Path remoteAppLogDir = getRemoteAppLogDir(conf, appId, appOwner,
+        remoteRootLogDir, suffix);
+    RemoteIterator<FileStatus> nodeFiles = null;
+    Path qualifiedLogDir =
+        FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
+    nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
+        conf).listStatus(remoteAppLogDir);
+    return nodeFiles;
   }
 
   /**

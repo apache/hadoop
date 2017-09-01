@@ -94,28 +94,6 @@ public enum EntityColumn implements Column<EntityTable> {
     return column.readResult(result, columnQualifierBytes);
   }
 
-  /**
-   * Retrieve an {@link EntityColumn} given a name, or null if there is no
-   * match. The following holds true: {@code columnFor(x) == columnFor(y)} if
-   * and only if {@code x.equals(y)} or {@code (x == y == null)}
-   *
-   * @param columnQualifier Name of the column to retrieve
-   * @return the corresponding {@link EntityColumn} or null
-   */
-  public static final EntityColumn columnFor(String columnQualifier) {
-
-    // Match column based on value, assume column family matches.
-    for (EntityColumn ec : EntityColumn.values()) {
-      // Find a match based only on name.
-      if (ec.getColumnQualifier().equals(columnQualifier)) {
-        return ec;
-      }
-    }
-
-    // Default to null
-    return null;
-  }
-
   @Override
   public byte[] getColumnQualifierBytes() {
     return columnQualifierBytes.clone();
@@ -129,32 +107,6 @@ public enum EntityColumn implements Column<EntityTable> {
   @Override
   public ValueConverter getValueConverter() {
     return column.getValueConverter();
-  }
-
-  /**
-   * Retrieve an {@link EntityColumn} given a name, or null if there is no
-   * match. The following holds true: {@code columnFor(a,x) == columnFor(b,y)}
-   * if and only if {@code a.equals(b) & x.equals(y)} or
-   * {@code (x == y == null)}
-   *
-   * @param columnFamily The columnFamily for which to retrieve the column.
-   * @param name Name of the column to retrieve
-   * @return the corresponding {@link EntityColumn} or null if both arguments
-   *         don't match.
-   */
-  public static final EntityColumn columnFor(EntityColumnFamily columnFamily,
-      String name) {
-
-    for (EntityColumn ec : EntityColumn.values()) {
-      // Find a match based column family and on name.
-      if (ec.columnFamily.equals(columnFamily)
-          && ec.getColumnQualifier().equals(name)) {
-        return ec;
-      }
-    }
-
-    // Default to null
-    return null;
   }
 
 }

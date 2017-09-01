@@ -223,7 +223,7 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
           && finishedReduces != null) {
         return new JobUnsuccessfulCompletionEvent(jobID, Long
             .parseLong(finishTime), Integer.parseInt(finishedMaps), Integer
-            .parseInt(finishedReduces), status);
+            .parseInt(finishedReduces), -1, -1, -1, -1, status);
       }
 
       return null;
@@ -256,8 +256,8 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
           && finishedReduces != null) {
         return new JobFinishedEvent(jobID, Long.parseLong(finishTime), Integer
             .parseInt(finishedMaps), Integer.parseInt(finishedReduces), Integer
-            .parseInt(failedMaps), Integer.parseInt(failedReduces), null, null,
-            maybeParseCounters(counters));
+            .parseInt(failedMaps), Integer.parseInt(failedReduces), -1, -1,
+            null, null, maybeParseCounters(counters));
       }
 
       return null;

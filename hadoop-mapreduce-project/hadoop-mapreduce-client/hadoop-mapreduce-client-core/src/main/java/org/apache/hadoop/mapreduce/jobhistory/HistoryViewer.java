@@ -327,12 +327,12 @@ public class HistoryViewer {
     /** Generate analysis information for the parsed job */
     public AnalyzedJob (JobInfo job) {
       Map<TaskID, JobHistoryParser.TaskInfo> tasks = job.getAllTasks();
-      int finishedMaps = (int) job.getFinishedMaps();
-      int finishedReduces = (int) job.getFinishedReduces();
+      int succeededMaps = (int) job.getSucceededMaps();
+      int succeededReduces = (int) job.getSucceededReduces();
       mapTasks = 
-        new JobHistoryParser.TaskAttemptInfo[finishedMaps]; 
+        new JobHistoryParser.TaskAttemptInfo[succeededMaps];
       reduceTasks = 
-        new JobHistoryParser.TaskAttemptInfo[finishedReduces]; 
+        new JobHistoryParser.TaskAttemptInfo[succeededReduces];
       int mapIndex = 0 , reduceIndex=0; 
       avgMapTime = 0;
       avgReduceTime = 0;
@@ -360,12 +360,12 @@ public class HistoryViewer {
           }
         }
       }
-      if (finishedMaps > 0) {
-        avgMapTime /= finishedMaps;
+      if (succeededMaps > 0) {
+        avgMapTime /= succeededMaps;
       }
-      if (finishedReduces > 0) {
-        avgReduceTime /= finishedReduces;
-        avgShuffleTime /= finishedReduces;
+      if (succeededReduces > 0) {
+        avgReduceTime /= succeededReduces;
+        avgShuffleTime /= succeededReduces;
       }
     }
   }

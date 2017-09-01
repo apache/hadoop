@@ -37,11 +37,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -68,8 +68,8 @@ import org.apache.hadoop.yarn.util.SystemClock;
 @Deprecated
 public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
-  final static Log LOG = LogFactory
-      .getLog(CgroupsLCEResourcesHandler.class);
+  final static Logger LOG =
+       LoggerFactory.getLogger(CgroupsLCEResourcesHandler.class);
 
   private Configuration conf;
   private String cgroupPrefix;
@@ -435,7 +435,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     } catch (IOException e) {
       throw new IOException("Error while reading " + getMtabFileName(), e);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
 
     return ret;

@@ -506,7 +506,7 @@ $H5 Key ACLs
 KMS supports access control for all non-read operations at the Key level. All Key Access operations are classified as :
 
 * MANAGEMENT - createKey, deleteKey, rolloverNewVersion
-* GENERATE_EEK - generateEncryptedKey, reencryptEncryptedKey, warmUpEncryptedKeys
+* GENERATE_EEK - generateEncryptedKey, reencryptEncryptedKey, reencryptEncryptedKeys, warmUpEncryptedKeys
 * DECRYPT_EEK - decryptEncryptedKey
 * READ - getKeyVersion, getKeyVersions, getMetadata, getKeysMetadata, getCurrentKey
 * ALL - all of the above
@@ -982,6 +982,64 @@ This is usually useful after a [Rollover](#Rollover_Key) of an encryption key. R
           "material"          : "<material>",    //base64
       }
     }
+
+$H4 Batch Re-encrypt Encrypted Keys With The Latest KeyVersion
+
+Batched version of the above re-encrypt Encrypted Key. This command takes a list of previously generated encrypted key, and re-encrypts them using the latest KeyVersion encryption key in the KeyProvider, and return the re-encrypted encrypted keys in the same sequence. For each encrypted key, if the latest KeyVersion is the same as the one used to generate the encrypted key, no action is taken and the same encrypted key is returned.
+
+This is usually useful after a [Rollover](#Rollover_Key) of an encryption key. Re-encrypting the encrypted key will allow it to be encrypted using the latest version of the encryption key, but still with the same key material and initialization vector.
+
+All Encrypted keys for a batch request must be under the same encryption key name, but could be potentially under different versions of the encryption key.
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/key/<key-name>/_reencryptbatch
+    Content-Type: application/json
+
+    [
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      ...
+    ]
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    [
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      ...
+    ]
 
 $H4 Get Key Version
 

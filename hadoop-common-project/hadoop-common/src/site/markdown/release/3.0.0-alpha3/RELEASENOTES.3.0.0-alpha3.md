@@ -16,7 +16,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# "Apache Hadoop"  3.0.0-alpha3 Release Notes
+# Apache Hadoop  3.0.0-alpha3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
+
+---
+
+* [YARN-6709](https://issues.apache.org/jira/browse/YARN-6709) | *Blocker* | **Root privilege escalation in experimental Docker support**
+
+CVE-2017-7669 / YARN's Docker support did not do enough input validation.  This allowed a root level escalation from an ordinary user account.

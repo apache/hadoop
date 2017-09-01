@@ -38,7 +38,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -110,6 +109,7 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.BoundedAppender;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -184,7 +184,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       new ExpiredTransition();
   private static final AttemptFailedTransition FAILED_TRANSITION =
       new AttemptFailedTransition();
-
+  private static final AMRegisteredTransition REGISTERED_TRANSITION =
+      new AMRegisteredTransition();
+  private static final AMLaunchedTransition LAUNCHED_TRANSITION =
+      new AMLaunchedTransition();
   private RMAppAttemptEvent eventCausingFinalSaving;
   private RMAppAttemptState targetedFinalState;
   private RMAppAttemptState recoveredFinalState;
@@ -314,7 +317,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
        // Transitions from ALLOCATED State
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.LAUNCHED,
-          RMAppAttemptEventType.LAUNCHED, new AMLaunchedTransition())
+          RMAppAttemptEventType.LAUNCHED, LAUNCHED_TRANSITION)
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.LAUNCH_FAILED,
           new FinalSavingTransition(new LaunchFailedTransition(),
@@ -328,6 +331,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptEventType.FAIL,
           new FinalSavingTransition(FAILED_TRANSITION,
               RMAppAttemptState.FAILED))
+      .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.RUNNING,
+          RMAppAttemptEventType.REGISTERED, REGISTERED_TRANSITION)
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.CONTAINER_FINISHED,
           new FinalSavingTransition(
@@ -335,7 +340,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
        // Transitions from LAUNCHED State
       .addTransition(RMAppAttemptState.LAUNCHED, RMAppAttemptState.RUNNING,
-          RMAppAttemptEventType.REGISTERED, new AMRegisteredTransition())
+          RMAppAttemptEventType.REGISTERED, REGISTERED_TRANSITION)
       .addTransition(RMAppAttemptState.LAUNCHED,
           EnumSet.of(RMAppAttemptState.LAUNCHED, RMAppAttemptState.FINAL_SAVING),
           RMAppAttemptEventType.CONTAINER_FINISHED,
@@ -357,6 +362,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               RMAppAttemptState.FAILED))
 
        // Transitions from RUNNING State
+      .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
+          RMAppAttemptEventType.LAUNCHED)
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.UNREGISTERED, new AMUnregisteredTransition())
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
@@ -421,6 +428,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptState.FAILED,
           RMAppAttemptState.FAILED,
           EnumSet.of(
+              RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.KILL,
               RMAppAttemptEventType.FAIL,
@@ -438,6 +446,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           new FinalTransition(RMAppAttemptState.FINISHED))
       .addTransition(RMAppAttemptState.FINISHING, RMAppAttemptState.FINISHING,
           EnumSet.of(
+              RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
@@ -451,6 +460,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptState.FINISHED,
           RMAppAttemptState.FINISHED,
           EnumSet.of(
+              RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
@@ -1291,7 +1301,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
          * 2) OR AMLivelinessMonitor expires this attempt (when am doesn't
          * heart beat back).  
          */
-        (new AMLaunchedTransition()).transition(appAttempt, event);
+        LAUNCHED_TRANSITION.transition(appAttempt, event);
         return RMAppAttemptState.LAUNCHED;
       }
     }
@@ -1316,7 +1326,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // AFTER the initial saving on app-attempt-start
     // These fields can be visible from outside only after they are saved in
     // StateStore
-    BoundedAppender diags = new BoundedAppender(diagnostics.limit);
+    BoundedAppender diags = new BoundedAppender(diagnostics.getLimit());
 
     // don't leave the tracking URL pointing to a non-existent AM
     if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
@@ -1516,7 +1526,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
                             RMAppAttemptEvent event) {
-      if (event.getType() == RMAppAttemptEventType.LAUNCHED) {
+      if (event.getType() == RMAppAttemptEventType.LAUNCHED
+          || event.getType() == RMAppAttemptEventType.REGISTERED) {
         appAttempt.launchAMEndTime = System.currentTimeMillis();
         long delay = appAttempt.launchAMEndTime -
             appAttempt.launchAMStartTime;
@@ -1651,6 +1662,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
+      if (!RMAppAttemptState.LAUNCHED.equals(appAttempt.getState())) {
+        // registered received before launch
+        LAUNCHED_TRANSITION.transition(appAttempt, event);
+      }
       long delay = System.currentTimeMillis() - appAttempt.launchAMEndTime;
       ClusterMetrics.getMetrics().addAMRegisterDelay(delay);
       RMAppAttemptRegistrationEvent registrationEvent
@@ -2280,114 +2295,4 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     return Collections.EMPTY_SET;
   }
 
-  /**
-   * A {@link CharSequence} appender that considers its {@link #limit} as upper
-   * bound.
-   * <p>
-   * When {@link #limit} would be reached on append, past messages will be
-   * truncated from head, and a header telling the user about truncation will be
-   * prepended, with ellipses in between header and messages.
-   * <p>
-   * Note that header and ellipses are not counted against {@link #limit}.
-   * <p>
-   * An example:
-   *
-   * <pre>
-   * {@code
-   *   // At the beginning it's an empty string
-   *   final Appendable shortAppender = new BoundedAppender(80);
-   *   // The whole message fits into limit
-   *   shortAppender.append(
-   *       "message1 this is a very long message but fitting into limit\n");
-   *   // The first message is truncated, the second not
-   *   shortAppender.append("message2 this is shorter than the previous one\n");
-   *   // The first message is deleted, the second truncated, the third
-   *   // preserved
-   *   shortAppender.append("message3 this is even shorter message, maybe.\n");
-   *   // The first two are deleted, the third one truncated, the last preserved
-   *   shortAppender.append("message4 the shortest one, yet the greatest :)");
-   *   // Current contents are like this:
-   *   // Diagnostic messages truncated, showing last 80 chars out of 199:
-   *   // ...s is even shorter message, maybe.
-   *   // message4 the shortest one, yet the greatest :)
-   * }
-   * </pre>
-   * <p>
-   * Note that <tt>null</tt> values are {@link #append(CharSequence) append}ed
-   * just like in {@link StringBuilder#append(CharSequence) original
-   * implementation}.
-   * <p>
-   * Note that this class is not thread safe.
-   */
-  @VisibleForTesting
-  static class BoundedAppender {
-    @VisibleForTesting
-    static final String TRUNCATED_MESSAGES_TEMPLATE =
-        "Diagnostic messages truncated, showing last "
-            + "%d chars out of %d:%n...%s";
-
-    private final int limit;
-    private final StringBuilder messages = new StringBuilder();
-    private int totalCharacterCount = 0;
-
-    BoundedAppender(final int limit) {
-      Preconditions.checkArgument(limit > 0, "limit should be positive");
-
-      this.limit = limit;
-    }
-
-    /**
-     * Append a {@link CharSequence} considering {@link #limit}, truncating
-     * from the head of {@code csq} or {@link #messages} when necessary.
-     *
-     * @param csq the {@link CharSequence} to append
-     * @return this
-     */
-    BoundedAppender append(final CharSequence csq) {
-      appendAndCount(csq);
-      checkAndCut();
-
-      return this;
-    }
-
-    private void appendAndCount(final CharSequence csq) {
-      final int before = messages.length();
-      messages.append(csq);
-      final int after = messages.length();
-      totalCharacterCount += after - before;
-    }
-
-    private void checkAndCut() {
-      if (messages.length() > limit) {
-        final int newStart = messages.length() - limit;
-        messages.delete(0, newStart);
-      }
-    }
-
-    /**
-     * Get current length of messages considering truncates
-     * without header and ellipses.
-     *
-     * @return current length
-     */
-    int length() {
-      return messages.length();
-    }
-
-    /**
-     * Get a string representation of the actual contents, displaying also a
-     * header and ellipses when there was a truncate.
-     *
-     * @return String representation of the {@link #messages}
-     */
-    @Override
-    public String toString() {
-      if (messages.length() < totalCharacterCount) {
-        return String.format(TRUNCATED_MESSAGES_TEMPLATE, messages.length(),
-            totalCharacterCount, messages.toString());
-      }
-
-      return messages.toString();
-    }
-  }
 }

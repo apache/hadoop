@@ -249,6 +249,23 @@ public final class LambdaTestUtils {
   }
 
   /**
+   * Variant of {@link #eventually(int, Callable, Callable)} method for
+   * void lambda expressions.
+   * @param timeoutMillis timeout in milliseconds.
+   * Can be zero, in which case only one attempt is made before failing.
+   * @param eval expression to evaluate
+   * @param retry retry interval generator
+   * @throws Exception the last exception thrown before timeout was triggered
+   * @throws FailFastException if raised -without any retry attempt.
+   * @throws InterruptedException if interrupted during the sleep operation.
+   */
+  public static void eventually(int timeoutMillis,
+      VoidCallable eval,
+      Callable<Integer> retry) throws Exception {
+    eventually(timeoutMillis, new VoidCaller(eval), retry);
+  }
+
+  /**
    * Simplified {@link #eventually(int, Callable, Callable)} method
    * with a fixed interval.
    * <p>
@@ -273,6 +290,25 @@ public final class LambdaTestUtils {
       int intervalMillis,
       Callable<T> eval) throws Exception {
     return eventually(timeoutMillis, eval,
+        new FixedRetryInterval(intervalMillis));
+  }
+
+  /**
+   /**
+   * Variant of {@link #eventually(int, int, Callable)} method for
+   * void lambda expressions.
+   * @param timeoutMillis timeout in milliseconds.
+   * Can be zero, in which case only one attempt is made before failing.
+   * @param intervalMillis interval in milliseconds
+   * @param eval expression to evaluate
+   * @throws Exception the last exception thrown before timeout was triggered
+   * @throws FailFastException if raised -without any retry attempt.
+   * @throws InterruptedException if interrupted during the sleep operation.
+   */
+  public static void eventually(int timeoutMillis,
+      int intervalMillis,
+      VoidCallable eval) throws Exception {
+    eventually(timeoutMillis, eval,
         new FixedRetryInterval(intervalMillis));
   }
 
@@ -319,6 +355,32 @@ public final class LambdaTestUtils {
   }
 
   /**
+   * Variant of {@link #intercept(Class, Callable)} to simplify void
+   * invocations.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param eval expression to eval
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   */
+  public static <E extends Throwable> E intercept(
+      Class<E> clazz,
+      VoidCallable eval)
+      throws Exception {
+    try {
+      eval.call();
+      throw new AssertionError("Expected an exception");
+    } catch (Throwable e) {
+      if (clazz.isAssignableFrom(e.getClass())) {
+        return (E)e;
+      }
+      throw e;
+    }
+  }
+
+  /**
    * Intercept an exception; throw an {@code AssertionError} if one not raised.
    * The caught exception is rethrown if it is of the wrong class or
    * does not contain the text defined in {@code contained}.
@@ -352,6 +414,29 @@ public final class LambdaTestUtils {
       Class<E> clazz,
       String contained,
       Callable<T> eval)
+      throws Exception {
+    E ex = intercept(clazz, eval);
+    GenericTestUtils.assertExceptionContains(contained, ex);
+    return ex;
+  }
+
+  /**
+   * Variant of {@link #intercept(Class, Callable)} to simplify void
+   * invocations.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param eval expression to eval
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   */
+  public static <E extends Throwable> E intercept(
+      Class<E> clazz,
+      String contained,
+      VoidCallable eval)
       throws Exception {
     E ex = intercept(clazz, eval);
     GenericTestUtils.assertExceptionContains(contained, ex);
@@ -518,4 +603,31 @@ public final class LambdaTestUtils {
       return new FailFastException(String.format(format, args));
     }
   }
+
+  /**
+   * A simple interface for lambdas, which returns nothing; this exists
+   * to simplify lambda tests on operations with no return value.
+   */
+  public interface VoidCallable {
+    void call() throws Exception;
+  }
+
+  /**
+   * Bridge class to make {@link VoidCallable} something to use in anything
+   * which takes an {@link Callable}.
+   */
+  public static class VoidCaller implements Callable<Void> {
+    private final VoidCallable callback;
+
+    public VoidCaller(VoidCallable callback) {
+      this.callback = callback;
+    }
+
+    @Override
+    public Void call() throws Exception {
+      callback.call();
+      return null;
+    }
+  }
+
 }

@@ -34,13 +34,16 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.mockito.Mock;
@@ -68,6 +71,7 @@ public class TestAuditLoggerWithCommands {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY,true);
+    conf.setBoolean(DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
     cluster.waitActive();
@@ -564,6 +568,54 @@ public class TestAuditLoggerWithCommands {
     assertTrue("Unexpected log!",
         length == auditlog.getOutput().split("\n").length);
     cluster.getNamesystem().setFSDirectory(dir);
+  }
+
+  @Test
+  public void testDelegationTokens() throws Exception {
+    Token dt = fs.getDelegationToken("foo");
+    final String getDT =
+        ".*src=HDFS_DELEGATION_TOKEN token 1.*with renewer foo.*";
+    verifyAuditLogs(true, ".*cmd=getDelegationToken" + getDT);
+
+    // renew
+    final UserGroupInformation foo =
+        UserGroupInformation.createUserForTesting("foo", new String[] {});
+    foo.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        dt.renew(conf);
+        return null;
+      }
+    });
+    verifyAuditLogs(true, ".*cmd=renewDelegationToken" + getDT);
+    try {
+      dt.renew(conf);
+      fail("Renewing a token with non-renewer should fail");
+    } catch (AccessControlException expected) {
+    }
+    verifyAuditLogs(false, ".*cmd=renewDelegationToken" + getDT);
+
+    // cancel
+    final UserGroupInformation bar =
+        UserGroupInformation.createUserForTesting("bar", new String[] {});
+    try {
+      bar.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          dt.cancel(conf);
+          return null;
+        }
+      });
+      fail("Canceling a token with non-renewer should fail");
+    } catch (AccessControlException expected) {
+    }
+    verifyAuditLogs(false, ".*cmd=cancelDelegationToken" + getDT);
+    dt.cancel(conf);
+    verifyAuditLogs(true, ".*cmd=cancelDelegationToken" + getDT);
+  }
+
+  private int verifyAuditLogs(final boolean allowed, final String pattern) {
+    return verifyAuditLogs(".*allowed=" + allowed + pattern);
   }
 
   private int verifyAuditLogs(String pattern) {

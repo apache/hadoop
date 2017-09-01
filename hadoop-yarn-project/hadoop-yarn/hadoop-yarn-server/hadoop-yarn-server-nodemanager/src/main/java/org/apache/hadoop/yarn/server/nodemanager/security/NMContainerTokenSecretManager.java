@@ -24,9 +24,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
@@ -48,8 +48,8 @@ import org.apache.hadoop.yarn.server.security.MasterKeyData;
 public class NMContainerTokenSecretManager extends
     BaseContainerTokenSecretManager {
 
-  private static final Log LOG = LogFactory
-      .getLog(NMContainerTokenSecretManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMContainerTokenSecretManager.class);
   
   private MasterKeyData previousMasterKey;
   private final TreeMap<Long, List<ContainerId>> recentlyStartedContainerTracker;

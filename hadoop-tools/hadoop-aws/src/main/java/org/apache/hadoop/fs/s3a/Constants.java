@@ -267,6 +267,11 @@ public final class Constants {
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 
+  /** Whether or not to allow MetadataStore to be source of truth. */
+  public static final String METADATASTORE_AUTHORITATIVE =
+      "fs.s3a.metadatastore.authoritative";
+  public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
+
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;
@@ -312,12 +317,138 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
-          S3ClientFactory.DefaultS3ClientFactory.class;
+          DefaultS3ClientFactory.class;
 
   /**
    * Maximum number of partitions in a multipart upload: {@value}.
    */
   @InterfaceAudience.Private
   public static final int MAX_MULTIPART_COUNT = 10000;
+
+  /**
+   * Classname of the S3A-specific output committer factory. This
+   * is what must be declared when attempting to use
+   */
+  @InterfaceStability.Unstable
+  public static final String S3A_OUTPUT_COMMITTER_FACTORY =
+      "org.apache.hadoop.fs.s3a.commit.S3AOutputCommitterFactory";
+
+  /* Constants. */
+  public static final String S3_METADATA_STORE_IMPL =
+      "fs.s3a.metadatastore.impl";
+
+  /** Minimum period of time (in milliseconds) to keep metadata (may only be
+   * applied when a prune command is manually run).
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_CLI_PRUNE_AGE =
+      "fs.s3a.s3guard.cli.prune.age";
+
+  /**
+   * The region of the DynamoDB service.
+   *
+   * This config has no default value. If the user does not set this, the
+   * S3Guard will operate table in the associated S3 bucket region.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_REGION_KEY =
+      "fs.s3a.s3guard.ddb.region";
+
+  /**
+   * The DynamoDB table name to use.
+   *
+   * This config has no default value. If the user does not set this, the
+   * S3Guard implementation will use the respective S3 bucket name.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.table";
+
+  /**
+   * Whether to create the DynamoDB table if the table does not exist.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CREATE_KEY =
+      "fs.s3a.s3guard.ddb.table.create";
+
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.read";
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 500;
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.write";
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
+
+  /**
+   * The maximum put or delete requests per BatchWriteItem request.
+   *
+   * Refer to Amazon API reference for this limit.
+   */
+  public static final int S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT = 25;
+
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_MAX_RETRIES =
+      "fs.s3a.s3guard.ddb.max.retries";
+  /**
+   * Max retries on batched DynamoDB operations before giving up and
+   * throwing an IOException.  Default is {@value}. See core-default.xml for
+   * more detail.
+   */
+  public static final int S3GUARD_DDB_MAX_RETRIES_DEFAULT = 9;
+
+  /**
+   * Period of time (in milliseconds) to sleep between batches of writes.
+   * Currently only applies to prune operations, as they are naturally a
+   * lower priority than other operations.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY =
+      "fs.s3a.s3guard.ddb.background.sleep";
+  public static final int S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT = 25;
+
+  /**
+   * V1 committer.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3A_OUTPUT_COMMITTER_MRV1 =
+      "org.apache.hadoop.fs.s3a.commit.S3OutputCommitterMRv1";
+
+  /**
+   * The default "Null" metadata store: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_NULL
+      = "org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore";
+
+  /**
+   * Use Local memory for the metadata: {@value}.
+   * This is not coherent across processes and must be used for testing only.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL
+      = "org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore";
+
+  /**
+   * Use DynamoDB for the metadata: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_DYNAMO
+      = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
+
+  /**
+   * Inconsistency (visibility delay) injection settings.
+   */
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_KEY =
+      "fs.s3a.failinject.inconsistency.key.substring";
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_MSEC =
+      "fs.s3a.failinject.inconsistency.msec";
+
+  @InterfaceStability.Unstable
+  public static final String FAIL_INJECT_INCONSISTENCY_PROBABILITY =
+      "fs.s3a.failinject.inconsistency.probability";
 
 }

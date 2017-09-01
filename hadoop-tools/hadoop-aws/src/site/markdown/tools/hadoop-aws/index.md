@@ -46,6 +46,7 @@ See also:
 
 * [Testing](testing.html)
 * [Troubleshooting S3a](troubleshooting_s3a.html)
+* [S3Guard](s3guard.html)
 
 ### Warning #1: Object Stores are not filesystems
 
@@ -1552,7 +1553,7 @@ for `fs.s3a.server-side-encryption-algorithm` is `AES256`.
 
 SSE-KMS is where the user specifies a Customer Master Key(CMK) that is used to
 encrypt the objects. The user may specify a specific CMK or leave the
-`fs.s3a.server-side-encryption-key` empty to use the default auto-generated key
+`fs.s3a.server-side-encryption.key` empty to use the default auto-generated key
 in AWS IAM.  Each CMK configured in AWS IAM is region specific, and cannot be
 used in a in a S3 bucket in a different region.  There is can also be policies
 assigned to the CMK that prohibit or restrict its use for users causing S3A

@@ -1064,7 +1064,17 @@ public class YarnConfiguration extends Configuration {
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";
   public static final boolean DEFAULT_LOG_AGGREGATION_ENABLED = false;
-  
+
+  public static final String LOG_AGGREGATION_FILE_FORMATS = YARN_PREFIX
+      + "log-aggregation.file-formats";
+  public static final String LOG_AGGREGATION_FILE_CONTROLLER_FMT =
+      YARN_PREFIX + "log-aggregation.file-controller.%s.class";
+
+  public static final String LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT
+      = YARN_PREFIX + "log-aggregation.%s.remote-app-log-dir";
+  public static final String LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT
+      = YARN_PREFIX + "log-aggregation.%s.remote-app-log-dir-suffix";
+
   /** 
    * How long to wait before deleting aggregated logs, -1 disables.
    * Be careful set this too small and you will spam the name node.
@@ -1772,6 +1782,10 @@ public class YarnConfiguration extends Configuration {
   YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONHISTORY_PROTOCOL =
       "security.applicationhistory.protocol.acl";
 
+  public static final String
+      YARN_SECURITY_SERVICE_AUTHORIZATION_COLLECTOR_NODEMANAGER_PROTOCOL =
+      "security.collector-nodemanager.protocol.acl";
+
   /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
    * to a running container */
   public static final String NM_SLEEP_DELAY_BEFORE_SIGKILL_MS =
@@ -2089,7 +2103,7 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "with-user-dir";
 
   /**
-   * Settings for timeline service v2.0
+   * Settings for timeline service v2.0.
    */
   public static final String TIMELINE_SERVICE_WRITER_CLASS =
       TIMELINE_SERVICE_PREFIX + "writer.class";
@@ -2102,9 +2116,20 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_PREFIX + "reader.class";
 
   public static final String DEFAULT_TIMELINE_SERVICE_READER_CLASS =
-      "org.apache.hadoop.yarn.server.timelineservice" +
-          ".storage.HBaseTimelineReaderImpl";
+      "org.apache.hadoop.yarn.server.timelineservice.storage" +
+          ".HBaseTimelineReaderImpl";
 
+  /**
+   * default schema prefix for hbase tables.
+   */
+  public static final String DEFAULT_TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX =
+      "prod.";
+
+  /**
+   * config param name to override schema prefix.
+   */
+  public static final String TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME =
+      TIMELINE_SERVICE_PREFIX + "hbase-schema.prefix";
 
   /** The setting that controls how often the timeline collector flushes the
    * timeline writer.
@@ -2123,6 +2148,58 @@ public class YarnConfiguration extends Configuration {
   public static final String APP_FINAL_VALUE_RETENTION_THRESHOLD =
       TIMELINE_SERVICE_PREFIX
       + "hbase.coprocessor.app-final-value-retention-milliseconds";
+
+  /**
+   * The name of the setting for the location of the coprocessor
+   * jar on hdfs.
+   */
+  public static final String FLOW_RUN_COPROCESSOR_JAR_HDFS_LOCATION =
+      TIMELINE_SERVICE_PREFIX
+      + "hbase.coprocessor.jar.hdfs.location";
+
+  /** default hdfs location for flowrun coprocessor jar. */
+  public static final String DEFAULT_HDFS_LOCATION_FLOW_RUN_COPROCESSOR_JAR =
+      "/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar";
+
+    /**
+   * The name for setting that points to an optional HBase configuration
+   * (hbase-site.xml file) with settings that will override the ones found on
+   * the classpath.
+   */
+  public static final String TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE =
+      TIMELINE_SERVICE_PREFIX
+      + "hbase.configuration.file";
+
+  /**
+   * The name for setting that enables or disables authentication checks
+   * for reading timeline service v2 data.
+   */
+  public static final String TIMELINE_SERVICE_READ_AUTH_ENABLED =
+      TIMELINE_SERVICE_PREFIX + "read.authentication.enabled";
+
+  /**
+   * The default setting for authentication checks for reading timeline
+   * service v2 data.
+   */
+  public static final Boolean DEFAULT_TIMELINE_SERVICE_READ_AUTH_ENABLED =
+      false;
+
+  /**
+   * The name for setting that lists the users and groups who are allowed
+   * to read timeline service v2 data. It is a comma separated list of
+   * user, followed by space, then comma separated list of groups.
+   * It will allow this list of users and groups to read the data
+   * and reject everyone else.
+   */
+  public static final String TIMELINE_SERVICE_READ_ALLOWED_USERS =
+      TIMELINE_SERVICE_PREFIX + "read.allowed.users";
+
+  /**
+   * The default value for list of the users who are allowed to read
+   * timeline service v2 data.
+   */
+  public static final String DEFAULT_TIMELINE_SERVICE_READ_ALLOWED_USERS =
+      "";
 
   /**
    * The setting that controls how long the final value of a metric of a
@@ -2144,6 +2221,8 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_NUMBER_OF_ASYNC_ENTITIES_TO_MERGE = 10;
 
+  /** default version for any flow. */
+  public static final String DEFAULT_FLOW_VERSION = "1";
 
   /**
    * The time period for which timeline v2 client will wait for draining
@@ -2742,6 +2821,15 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_ROUTER_WEBAPP_DEFAULT_INTERCEPTOR_CLASS =
       "org.apache.hadoop.yarn.server.router.webapp."
           + "DefaultRequestInterceptorREST";
+
+  /**
+   * The interceptor class used in FederationInterceptorREST should return
+   * partial AppReports.
+   */
+  public static final String ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
+      ROUTER_WEBAPP_PREFIX + "partial-result.enabled";
+  public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
+      false;
 
   ////////////////////////////////
   // Other Configs

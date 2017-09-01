@@ -36,6 +36,25 @@
     <description>The endpoint for s3a://landsat-pds URLs</description>
   </property>
 
+  <!-- Make sure S3Guard is disabled for read-only bucket tests. -->
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.metadatastore.impl</name>
+    <value>${s3guard.null}</value>
+    <description>The read-only landsat-pds repository isn't
+        managed by s3guard</description>
+  </property>
+
+  <!-- Convenience definitions. -->
+  <property>
+    <name>s3guard.null</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+  </property>
+
+  <property>
+    <name>s3guard.dynamo</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore</value>
+  </property>
+
   <!--
    This is the default endpoint, which can be used to interact
    with any v2 region.
@@ -110,6 +129,13 @@
     <value>${central.endpoint}</value>
   </property>
 
+  <!-- Scale integration tests may time out on slower connections
+       you can reduce the operation count like so to mitigate this.
+  <property>
+      <name>scale.test.operation.count</name>
+      <value>500</value>
+  </property>
+  -->
 
   <!-- Turn security off for tests by default -->
   <property>
