@@ -57,6 +57,10 @@ class PositionStripeReader extends StripeReader {
     Preconditions.checkState(index >= dataBlkNum &&
         alignedStripe.chunks[index] == null);
 
+    int bufLen = (int) alignedStripe.getSpanInBlock();
+    decodeInputs[index] = new ECChunk(codingBuffer.duplicate(), index * bufLen,
+        bufLen);
+
     alignedStripe.chunks[index] =
         new StripingChunk(decodeInputs[index].getBuffer());
 
@@ -75,7 +79,7 @@ class PositionStripeReader extends StripeReader {
     codingBuffer = dfsStripedInputStream.getBufferPool().
         getBuffer(useDirectBuffer(), bufLen * bufCount);
     ByteBuffer buffer;
-    for (int i = 0; i < decodeInputs.length; i++) {
+    for (int i = 0; i < dataBlkNum; i++) {
       buffer = codingBuffer.duplicate();
       decodeInputs[i] = new ECChunk(buffer, i * bufLen, bufLen);
     }
