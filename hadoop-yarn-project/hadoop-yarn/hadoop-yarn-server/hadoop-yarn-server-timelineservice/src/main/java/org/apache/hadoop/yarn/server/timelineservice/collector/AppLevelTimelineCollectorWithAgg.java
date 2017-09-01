@@ -112,9 +112,7 @@ public class AppLevelTimelineCollectorWithAgg
   private class AppLevelAggregator implements Runnable {
 
     private void aggregate() {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("App-level real-time aggregating");
-      }
+      LOG.debug("App-level real-time aggregating");
       if (!isReadyToAggregate()) {
         LOG.warn("App-level collector is not ready, skip aggregation. ");
         return;
@@ -137,9 +135,7 @@ public class AppLevelTimelineCollectorWithAgg
       } catch (Exception e) {
         LOG.error("Error aggregating timeline metrics", e);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("App-level real-time aggregation complete");
-      }
+      LOG.debug("App-level real-time aggregation complete");
     }
 
     @Override

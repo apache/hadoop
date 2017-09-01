@@ -86,9 +86,7 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
     typeFilterList.addFilter(new FirstKeyOnlyFilter());
     typeFilterList.addFilter(new KeyOnlyFilter());
     typeFilterList.addFilter(new PageFilter(1));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("FilterList created for scan is - " + typeFilterList);
-    }
+    LOG.debug("FilterList created for scan is - {}", typeFilterList);
 
     int counter = 0;
     while (true) {
@@ -112,10 +110,7 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
         currRowKey = getNextRowKey(prefix.getRowKeyPrefix(), currType);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Scanned " + counter + "records for "
-          + types.size() + "types");
-    }
+    LOG.debug("Scanned {} records for {} types", counter, types.size());
     return types;
   }
 
