@@ -296,6 +296,87 @@ public class TestPath {
   }
 
   @Test (timeout = 30000)
+  public void testColonInPath() throws Exception {
+
+    String path1Str = "x://dir:name/file";
+    String path2Str = "x://dir/dir:2/file";
+    String path3Str = "x://dir:name/dir:2/file";
+    String path4Str = "x://dir/d3/log:file.gz";
+    String path5Str = "file:///";
+    String path6Str = "x:/";
+    String path7Str = "/abc/bcd/dir:name/dir1:name1";
+    String path8Str = "urn:example:animal:ferret:nose";
+
+
+    Path path1 = new Path(path1Str);
+    Path path2 = new Path(path2Str);
+    Path path3 = new Path(path3Str);
+    Path path4 = new Path(path4Str);
+    Path path5 = new Path(path5Str);
+    Path path6 = new Path(path6Str);
+    Path path7 = new Path(path7Str);
+    Path path8 = new Path("./" +path8Str);
+
+    // String -> Path -> String
+    assertEquals(path1Str, new Path(path1Str).toString());
+    assertEquals(path2Str, new Path(path2Str).toString());
+    assertEquals(path3Str, new Path(path3Str).toString());
+    assertEquals(path4Str, new Path(path4Str).toString());
+    assertEquals(path5Str, new Path(path5Str).toUri().toString());
+    assertEquals(path6Str, new Path(path6Str).toString());
+    assertEquals(path7Str, new Path(path7Str).toString());
+    assertEquals("./"+path8Str, new Path(path8Str).toString());
+
+    // String -> Path -> String -> Path
+    assertEquals(path1, new Path(new Path(path1Str).toString()));
+    assertEquals(path2, new Path(new Path(path2Str).toString()));
+    assertEquals(path3, new Path(new Path(path3Str).toString()));
+    assertEquals(path4, new Path(new Path(path4Str).toString()));
+    assertEquals(path5, new Path(new Path(path5Str).toUri().toString()));
+    assertEquals(path6, new Path(new Path(path6Str).toString()));
+    assertEquals(path7, new Path(new Path(path7Str).toString()));
+    assertEquals(path8, new Path(new Path(path8Str).toString()));
+
+    // Path -> URI -> Path
+    assertEquals(path1, new Path(path1.toUri()));
+    assertEquals(path2, new Path(path2.toUri()));
+    assertEquals(path3, new Path(path3.toUri()));
+    assertEquals(path4, new Path(path4.toUri()));
+    assertEquals(path5, new Path(path5.toUri()));
+    assertEquals(path6, new Path(path6.toUri()));
+    assertEquals(path7, new Path(path7.toUri()));
+    assertEquals(path8, new Path(path8.toUri()));
+
+    // Path -> URI -> String -> Path
+    assertEquals(path1, new Path(new Path(path1Str).toUri().toString()));
+    assertEquals(path2, new Path(new Path(path2Str).toUri().toString()));
+    assertEquals(path3, new Path(new Path(path3Str).toUri().toString()));
+    assertEquals(path4, new Path(new Path(path4Str).toUri().toString()));
+    assertEquals(path5, new Path(new Path(path5Str).toUri().toString()));
+    assertEquals(path6, new Path(new Path(path6Str).toUri().toString()));
+    assertEquals(path7, new Path(new Path(path7Str).toUri().toString()));
+    assertEquals(path8, new Path(new Path(path8Str).toUri().toString()));
+
+
+    String path1Part1 = "x://dir:name";
+    String path1Part2 = "/file";
+    String path2Part1 = "x://dir/dir:2";
+    String path2Part2 = "file";
+    String path3Part1 = "x://dir:name";
+    String path3Part2 = "/dir:2/file";
+    String path4Part1 = "x://dir/d3";
+    String path4Part2 = "log:file.gz";
+    String path7Part1 = "/abc/bcd/dir:name/";
+    String path7Part2 = "dir1:name1";
+
+    assertEquals(path1Str, new Path(path1Part1, path1Part2).toString());
+    assertEquals(path2Str, new Path(path2Part1, path2Part2).toString());
+    assertEquals(path3Str, new Path(path3Part1, path3Part2).toString());
+    assertEquals(path4Str, new Path(path4Part1, path4Part2).toString());
+    assertEquals(path7Str, new Path(path7Part1, path7Part2).toString());
+  }
+
+  @Test (timeout = 30000)
   public void testURI() throws URISyntaxException, IOException {
     URI uri = new URI("file:///bar#baz");
     Path path = new Path(uri);

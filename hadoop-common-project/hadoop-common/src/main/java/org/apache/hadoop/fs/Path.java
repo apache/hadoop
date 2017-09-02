@@ -196,8 +196,7 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
     // parse uri scheme, if any
     int colon = pathString.indexOf(':');
     int slash = pathString.indexOf('/');
-    if ((colon != -1) &&
-        ((slash == -1) || (colon < slash))) {     // has a scheme
+    if ((colon != -1) && (colon == (slash-1))) {     // has a scheme
       scheme = pathString.substring(0, colon);
       start = colon+1;
     }
@@ -213,6 +212,12 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
 
     // uri path is the rest of the string -- query & fragment not supported
     String path = pathString.substring(start, pathString.length());
+
+    // add "./" in front of Linux relative paths so that a path containing
+    // a colon e.q. "a:b" will not be interpreted as scheme "a".
+    if (!WINDOWS && !path.isEmpty() && path.charAt(0) != '/') {
+      path = "./" + path;
+    }
 
     initialize(scheme, authority, path, null);
   }
