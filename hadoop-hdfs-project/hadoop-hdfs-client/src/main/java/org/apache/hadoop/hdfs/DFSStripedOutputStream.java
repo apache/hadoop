@@ -390,7 +390,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     }
     if (failCount > (numAllBlocks - numDataBlocks)) {
       throw new IOException("Failed: the number of failed blocks = "
-          + failCount + " > the number of data blocks = "
+          + failCount + " > the number of parity blocks = "
           + (numAllBlocks - numDataBlocks));
     }
     return newFailed;
