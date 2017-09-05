@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
@@ -32,8 +31,8 @@ import java.util.Map;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
@@ -225,37 +224,15 @@ final class FSDirEncryptionZoneOp {
     }
   }
 
-  static void reencryptEncryptionZone(final FSDirectory fsd,
-      final String zone, final String keyVersionName,
-      final boolean logRetryCache) throws IOException {
-    final List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
-    fsd.writeLock();
-    try {
-      final INodesInPath iip = fsd.resolvePath(pc, zone, DirOp.WRITE);
-      final XAttr xattr = fsd.ezManager
-          .reencryptEncryptionZone(iip, keyVersionName);
-      xAttrs.add(xattr);
-    } finally {
-      fsd.writeUnlock();
-    }
-    fsd.getEditLog().logSetXAttrs(zone, xAttrs, logRetryCache);
+  static List<XAttr> reencryptEncryptionZone(final FSDirectory fsd,
+      final INodesInPath iip, final String keyVersionName) throws IOException {
+    assert keyVersionName != null;
+    return fsd.ezManager.reencryptEncryptionZone(iip, keyVersionName);
   }
 
-  static void cancelReencryptEncryptionZone(final FSDirectory fsd,
-      final String zone, final boolean logRetryCache) throws IOException {
-    final List<XAttr> xattrs;
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
-    fsd.writeLock();
-    try {
-      final INodesInPath iip = fsd.resolvePath(pc, zone, DirOp.WRITE);
-      xattrs = fsd.ezManager.cancelReencryptEncryptionZone(iip);
-    } finally {
-      fsd.writeUnlock();
-    }
-    if (xattrs != null && !xattrs.isEmpty()) {
-      fsd.getEditLog().logSetXAttrs(zone, xattrs, logRetryCache);
-    }
+  static List<XAttr> cancelReencryptEncryptionZone(final FSDirectory fsd,
+      final INodesInPath iip) throws IOException {
+    return fsd.ezManager.cancelReencryptEncryptionZone(iip);
   }
 
   static BatchedListEntries<ZoneReencryptionStatus> listReencryptionStatus(
@@ -698,32 +675,58 @@ final class FSDirEncryptionZoneOp {
   }
 
   /**
-   * Get the last key version name for the given EZ. This will contact
-   * the KMS to getKeyVersions.
-   * @param zone the encryption zone
-   * @param pc the permission checker
-   * @return the last element from the list of keyVersionNames returned by KMS.
-   * @throws IOException
+   * Get the current key version name for the given EZ. This will first drain
+   * the provider's local cache, then generate a new edek.
+   * <p>
+   * The encryption key version of the newly generated edek will be used as
+   * the target key version of this re-encryption - meaning all edeks'
+   * keyVersion are compared with it, and only sent to the KMS for re-encryption
+   * when the version is different.
+   * <p>
+   * Note: KeyProvider has a getCurrentKey interface, but that is under
+   * a different ACL. HDFS should not try to operate on additional ACLs, but
+   * rather use the generate ACL it already has.
    */
-  static KeyVersion getLatestKeyVersion(final FSDirectory dir,
-      final String zone, final FSPermissionChecker pc) throws IOException {
-    final EncryptionZone ez;
+  static String getCurrentKeyVersion(final FSDirectory dir, final String zone)
+      throws IOException {
     assert dir.getProvider() != null;
+    assert !dir.hasReadLock();
+    final String keyName = FSDirEncryptionZoneOp.getKeyNameForZone(dir, zone);
+    if (keyName == null) {
+      throw new IOException(zone + " is not an encryption zone.");
+    }
+    // drain the local cache of the key provider.
+    // Do not invalidateCache on the server, since that's the responsibility
+    // when rolling the key version.
+    if (dir.getProvider() instanceof CryptoExtension) {
+      ((CryptoExtension) dir.getProvider()).drain(keyName);
+    }
+    final EncryptedKeyVersion edek;
+    try {
+      edek = dir.getProvider().generateEncryptedKey(keyName);
+    } catch (GeneralSecurityException gse) {
+      throw new IOException(gse);
+    }
+    Preconditions.checkNotNull(edek);
+    return edek.getEncryptionKeyVersionName();
+  }
+
+  /**
+   * Resolve the zone to an inode, find the encryption zone info associated with
+   * that inode, and return the key name. Does not contact the KMS.
+   */
+  static String getKeyNameForZone(final FSDirectory dir, final String zone)
+      throws IOException {
+    assert dir.getProvider() != null;
+    final INodesInPath iip;
+    final FSPermissionChecker pc = dir.getPermissionChecker();
     dir.readLock();
     try {
-      final INodesInPath iip = dir.resolvePath(pc, zone, DirOp.READ);
-      if (iip.getLastINode() == null) {
-        throw new FileNotFoundException(zone + " does not exist.");
-      }
-      dir.ezManager.checkEncryptionZoneRoot(iip.getLastINode(), iip.getPath());
-      ez = FSDirEncryptionZoneOp.getEZForPath(dir, iip);
+      iip = dir.resolvePath(pc, zone, DirOp.READ);
+      dir.ezManager.checkEncryptionZoneRoot(iip.getLastINode(), zone);
+      return dir.ezManager.getKeyName(iip);
     } finally {
       dir.readUnlock();
     }
-    // Contact KMS out of locks.
-    KeyVersion currKv = dir.getProvider().getCurrentKey(ez.getKeyName());
-    Preconditions.checkNotNull(currKv,
-        "No current key versions for key name " + ez.getKeyName());
-    return currKv;
   }
 }

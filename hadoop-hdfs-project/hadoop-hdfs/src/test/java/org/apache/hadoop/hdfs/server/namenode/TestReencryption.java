@@ -103,7 +103,7 @@ public class TestReencryption {
   private static final EnumSet<CreateEncryptionZoneFlag> NO_TRASH =
       EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
-  private String getKeyProviderURI() {
+  protected String getKeyProviderURI() {
     return JavaKeyStoreProvider.SCHEME_NAME + "://file" + new Path(
         testRootDir.toString(), "test.jks").toUri();
   }
@@ -149,7 +149,7 @@ public class TestReencryption {
     GenericTestUtils.setLogLevel(ReencryptionUpdater.LOG, Level.TRACE);
   }
 
-  private void setProvider() {
+  protected void setProvider() {
     // Need to set the client's KeyProvider to the NN's for JKS,
     // else the updates do not get flushed properly
     fs.getClient()
