@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
@@ -462,6 +464,25 @@ public abstract class AbstractContractDistCpTest
   public void testLargeFilesFromRemote() throws Exception {
     describe("copy multiple large files from remote to local");
     largeFiles(remoteFS, remoteDir, localFS, localDir);
+  }
+
+  @Test
+  public void testFilePermissionsToRemote() throws Throwable {
+    describe("Try to preserve file permissions from local to remote");
+    Path text700 = new Path(localDir, "text700");
+    Path text400 = new Path(localDir, "text400");
+    ContractTestUtils.touch(localFS, text700);
+    FsPermission o700 = new FsPermission(FsAction.ALL, null, null);
+    FsPermission o400 = new FsPermission(FsAction.READ, null, null);
+    localFS.setPermission(text700, o700);
+    localFS.setPermission(text400, o400);
+    Path target = new Path(remoteDir, "permissions");
+    DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(localDir), target)
+        .preserve(DistCpOptions.FileAttribute.PERMISSION)
+        .preserve(DistCpOptions.FileAttribute.XATTR)
+        .build();
+    runDistCp(options);
   }
 
   /**
