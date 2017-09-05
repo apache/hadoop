@@ -82,9 +82,7 @@ public class TestServiceTimelinePublisher {
     timelineClient =
         new DummyTimelineClient(ApplicationId.fromString(SERVICEID));
     serviceTimelinePublisher = new ServiceTimelinePublisher(timelineClient);
-    timelineClient.init(config);
     serviceTimelinePublisher.init(config);
-    timelineClient.start();
     serviceTimelinePublisher.start();
   }
 

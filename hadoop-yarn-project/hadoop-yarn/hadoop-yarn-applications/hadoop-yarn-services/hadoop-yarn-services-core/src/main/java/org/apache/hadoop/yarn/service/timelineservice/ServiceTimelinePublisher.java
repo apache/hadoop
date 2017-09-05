@@ -66,6 +66,7 @@ public class ServiceTimelinePublisher extends CompositeService {
   protected void serviceInit(org.apache.hadoop.conf.Configuration configuration)
       throws Exception {
     addService(timelineClient);
+    super.serviceInit(configuration);
   }
 
 
@@ -95,8 +96,8 @@ public class ServiceTimelinePublisher extends CompositeService {
     // create info keys
     Map<String, Object> entityInfos = new HashMap<String, Object>();
     entityInfos.put(ServiceTimelineMetricsConstants.NAME, service.getName());
-    entityInfos.put(ServiceTimelineMetricsConstants.STATE,
-        service.getState().toString());
+//    entityInfos.put(ServiceTimelineMetricsConstants.STATE,
+//        service.getState().toString());
     entityInfos.put(ServiceTimelineMetricsConstants.LAUNCH_TIME,
         currentTimeMillis);
     entity.addInfo(ServiceTimelineMetricsConstants.QUICK_LINKS,
@@ -232,18 +233,23 @@ public class ServiceTimelinePublisher extends CompositeService {
 
       // create info keys
       Map<String, Object> entityInfos = new HashMap<String, Object>();
-      entityInfos.put(ServiceTimelineMetricsConstants.ARTIFACT_ID,
-          component.getArtifact().getId());
-      entityInfos.put(ServiceTimelineMetricsConstants.ARTIFACT_TYPE,
-          component.getArtifact().getType().toString());
-      if (component.getResource().getProfile() != null) {
-        entityInfos.put(ServiceTimelineMetricsConstants.RESOURCE_PROFILE,
-            component.getResource().getProfile());
+      if (component.getArtifact() != null) {
+        entityInfos.put(ServiceTimelineMetricsConstants.ARTIFACT_ID,
+            component.getArtifact().getId());
+        entityInfos.put(ServiceTimelineMetricsConstants.ARTIFACT_TYPE,
+            component.getArtifact().getType().toString());
       }
-      entityInfos.put(ServiceTimelineMetricsConstants.RESOURCE_CPU,
-          component.getResource().getCpus());
-      entityInfos.put(ServiceTimelineMetricsConstants.RESOURCE_MEMORY,
-          component.getResource().getMemory());
+
+      if (component.getResource() != null) {
+        entityInfos.put(ServiceTimelineMetricsConstants.RESOURCE_CPU,
+            component.getResource().getCpus());
+        entityInfos.put(ServiceTimelineMetricsConstants.RESOURCE_MEMORY,
+            component.getResource().getMemory());
+        if (component.getResource().getProfile() != null) {
+          entityInfos.put(ServiceTimelineMetricsConstants.RESOURCE_PROFILE,
+              component.getResource().getProfile());
+        }
+      }
 
       if (component.getLaunchCommand() != null) {
         entityInfos.put(ServiceTimelineMetricsConstants.LAUNCH_COMMAND,
