@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import java.util.Set;
-
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
+
+import java.util.Set;
 
 /**
  * This interface provides a read-only view on the allocations made in this
@@ -29,38 +29,38 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.Plan
  * determine the free resources in a certain point in time, and by
  * PlanFollowerPolicy to publish this plan to the scheduler.
  */
-interface PlanView extends PlanContext {
+public interface PlanView extends PlanContext {
 
   /**
    * Return a set of {@link ReservationAllocation} identified by the user who
    * made the reservation.
    *
    * @param reservationID the unqiue id to identify the
-   *          {@link ReservationAllocation}
+   * {@link ReservationAllocation}
    * @param interval the time interval used to retrieve the reservation
-   *          allocations from. Only reservations with start time no greater
-   *          than the interval end time, and end time no less than the interval
-   *          start time will be selected.
+   *                 allocations from. Only reservations with start time no
+   *                 greater than the interval end time, and end time no less
+   *                 than the interval start time will be selected.
    * @param user the user to retrieve the reservation allocation from.
    * @return a set of {@link ReservationAllocation} identified by the user who
-   *         made the reservation
+   * made the reservation
    */
-  Set<ReservationAllocation> getReservations(ReservationId reservationID,
-      ReservationInterval interval, String user);
+  Set<ReservationAllocation> getReservations(ReservationId
+                    reservationID, ReservationInterval interval, String user);
 
   /**
    * Return a set of {@link ReservationAllocation} identified by any user.
    *
    * @param reservationID the unqiue id to identify the
-   *          {@link ReservationAllocation}
+   * {@link ReservationAllocation}
    * @param interval the time interval used to retrieve the reservation
-   *          allocations from. Only reservations with start time no greater
-   *          than the interval end time, and end time no less than the interval
-   *          start time will be selected.
+   *                 allocations from. Only reservations with start time no
+   *                 greater than the interval end time, and end time no less
+   *                 than the interval start time will be selected.
    * @return a set of {@link ReservationAllocation} identified by any user
    */
   Set<ReservationAllocation> getReservations(ReservationId reservationID,
-      ReservationInterval interval);
+                    ReservationInterval interval);
 
   /**
    * Return a {@link ReservationAllocation} identified by its
@@ -70,7 +70,7 @@ interface PlanView extends PlanContext {
    *          {@link ReservationAllocation}
    * @return {@link ReservationAllocation} identified by the specified id
    */
-  ReservationAllocation getReservationById(ReservationId reservationID);
+  public ReservationAllocation getReservationById(ReservationId reservationID);
 
   /**
    * Return a set of {@link ReservationAllocation} that belongs to a certain
@@ -78,10 +78,11 @@ interface PlanView extends PlanContext {
    *
    * @param user the user being considered
    * @param t the instant in time being considered
-   * @return set of active {@link ReservationAllocation}s for this user at this
-   *         time
+   * @return set of active {@link ReservationAllocation}s for this
+   *         user at this time
    */
-  Set<ReservationAllocation> getReservationByUserAtTime(String user, long t);
+  public Set<ReservationAllocation> getReservationByUserAtTime(String user,
+      long t);
 
   /**
    * Gets all the active reservations at the specified point of time
@@ -90,14 +91,14 @@ interface PlanView extends PlanContext {
    *          requested
    * @return set of active reservations at the specified time
    */
-  Set<ReservationAllocation> getReservationsAtTime(long tick);
+  public Set<ReservationAllocation> getReservationsAtTime(long tick);
 
   /**
    * Gets all the reservations in the plan
    * 
    * @return set of all reservations handled by this Plan
    */
-  Set<ReservationAllocation> getAllReservations();
+  public Set<ReservationAllocation> getAllReservations();
 
   /**
    * Returns the total {@link Resource} reserved for all users at the specified
@@ -125,68 +126,61 @@ interface PlanView extends PlanContext {
    * 
    * @return the time (UTC in ms) at which the first reservation starts
    */
-  long getEarliestStartTime();
+  public long getEarliestStartTime();
 
   /**
    * Returns the time (UTC in ms) at which the last reservation terminates
    *
    * @return the time (UTC in ms) at which the last reservation terminates
    */
-  long getLastEndTime();
+  public long getLastEndTime();
 
   /**
    * This method returns the amount of resources available to a given user
    * (optionally if removing a certain reservation) over the start-end time
-   * range. If the request is periodic (period is non-zero) we return the
-   * minimum amount of resources available to periodic reservations (in all
-   * "period" windows within the system maxPeriod / LCM).
+   * range.
    *
-   * @param user the user being considered
-   * @param oldId the identifier of the existing reservation
-   * @param start start of the time interval.
-   * @param end end of the time interval.
-   * @param period the ms periodicty for this request (loop and pick min till
-   *          maxPeriodicity)
+   * @param user
+   * @param oldId
+   * @param start
+   * @param end
    * @return a view of the plan as it is available to this user
-   * @throws PlanningException if operation is unsuccessful
+   * @throws PlanningException
    */
-  RLESparseResourceAllocation getAvailableResourceOverTime(String user,
-      ReservationId oldId, long start, long end, long period)
-      throws PlanningException;
+  public RLESparseResourceAllocation getAvailableResourceOverTime(String user,
+      ReservationId oldId, long start, long end) throws PlanningException;
 
   /**
    * This method returns a RLE encoded view of the user reservation count
    * utilization between start and end time.
    *
-   * @param user the user being considered
-   * @param start start of the time interval.
-   * @param end end of the time interval.
+   * @param user
+   * @param start
+   * @param end
    * @return RLE encoded view of reservation used over time
    */
-  RLESparseResourceAllocation getReservationCountForUserOverTime(String user,
-      long start, long end);
+  public RLESparseResourceAllocation getReservationCountForUserOverTime(
+      String user, long start, long end);
 
   /**
    * This method returns a RLE encoded view of the user reservation utilization
    * between start and end time.
    *
-   * @param user the user being considered
-   * @param start start of the time interval.
-   * @param end end of the time interval.
+   * @param user
+   * @param start
+   * @param end
    * @return RLE encoded view of resources used over time
    */
-  RLESparseResourceAllocation getConsumptionForUserOverTime(String user,
+  public RLESparseResourceAllocation getConsumptionForUserOverTime(String user,
       long start, long end);
 
   /**
    * Get the cumulative load over a time interval.
    *
-   * @param start start of the time interval.
-   * @param end end of the time interval.
+   * @param start Start of the time interval.
+   * @param end End of the time interval.
    * @return RLE sparse allocation.
-   * @throws PlanningException if operation is unsuccessful
    */
-  RLESparseResourceAllocation getCumulativeLoadOverTime(long start, long end)
-      throws PlanningException;
+  RLESparseResourceAllocation getCumulativeLoadOverTime(long start, long end);
 
 }
