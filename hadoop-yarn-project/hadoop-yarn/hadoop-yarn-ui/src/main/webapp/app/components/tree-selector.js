@@ -129,7 +129,7 @@ export default Ember.Component.extend({
     var nodeEnter = node.enter().append("g")
       .attr("class", "node")
       .attr("transform", function() { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-      .on("mouseover", function(d){
+      .on("click", function(d){
         if (d.queueData.get("name") !== this.get("selected")) {
             document.location.href = "#/yarn-queues/" + d.queueData.get("name") + "!";
         }
@@ -145,7 +145,7 @@ export default Ember.Component.extend({
         }, 100);
 
       }.bind(this))
-    .on("click", function (d) {
+    .on("dblclick", function (d) {
       document.location.href = "#/yarn-queue/" + d.queueData.get("name") + "/info";
     });
 
