@@ -45,7 +45,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,6 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test striped file write operation with data node failures.
@@ -391,6 +391,79 @@ public class TestDFSStripedOutputStreamWithFailure {
   }
 
   /**
+   * When the two DataNodes with partial data blocks fail.
+   */
+  @Test
+  public void runTestWithDifferentLengths() throws Exception {
+    assumeTrue("Skip this test case in the subclasses. Once is enough.",
+        this.getClass().equals(TestDFSStripedOutputStreamWithFailure.class));
+
+    final HdfsConfiguration conf = newHdfsConfiguration();
+
+    final int[] fileLengths = {
+        // Full stripe then partial on cell boundary
+        cellSize * (dataBlocks * 2 - 2),
+        // Full stripe and a partial on non-cell boundary
+        (cellSize * dataBlocks) + 123,
+    };
+    try {
+      for (int length: fileLengths) {
+        // select the two DNs with partial block to kill
+        final int[] dnIndex = {dataBlocks - 2, dataBlocks - 1};
+        final int[] killPos = getKillPositions(length, dnIndex.length);
+        try {
+          LOG.info("runTestWithMultipleFailure2: length==" + length
+              + ", killPos=" + Arrays.toString(killPos)
+              + ", dnIndex=" + Arrays.toString(dnIndex));
+          setup(conf);
+          runTest(length, killPos, dnIndex, false);
+        } catch (Throwable e) {
+          final String err = "failed, killPos=" + Arrays.toString(killPos)
+              + ", dnIndex=" + Arrays.toString(dnIndex) + ", length=" + length;
+          LOG.error(err);
+          throw e;
+        }
+      }
+    } finally {
+      tearDown();
+    }
+  }
+
+  /**
+   * Test writing very short EC files with many failures.
+   */
+  @Test
+  public void runTestWithShortStripe() throws Exception {
+    assumeTrue("Skip this test case in the subclasses. Once is enough.",
+        this.getClass().equals(TestDFSStripedOutputStreamWithFailure.class));
+
+    final HdfsConfiguration conf = newHdfsConfiguration();
+    // Write a file with a 1 cell partial stripe
+    final int length = cellSize - 123;
+    // Kill all but one DN
+    final int[] dnIndex = new int[dataBlocks + parityBlocks - 1];
+    for (int i = 0; i < dnIndex.length; i++) {
+      dnIndex[i] = i;
+    }
+    final int[] killPos = getKillPositions(length, dnIndex.length);
+
+    try {
+      LOG.info("runTestWithShortStripe: length==" + length + ", killPos="
+          + Arrays.toString(killPos) + ", dnIndex="
+          + Arrays.toString(dnIndex));
+      setup(conf);
+      runTest(length, killPos, dnIndex, false);
+    } catch (Throwable e) {
+      final String err = "failed, killPos=" + Arrays.toString(killPos)
+          + ", dnIndex=" + Arrays.toString(dnIndex) + ", length=" + length;
+      LOG.error(err);
+      throw e;
+    } finally {
+      tearDown();
+    }
+  }
+
+  /**
    * runTest implementation.
    * @param length file length
    * @param killPos killing positions in ascending order
@@ -558,7 +631,7 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   private void run(int offset) {
     int base = getBase();
-    Assume.assumeTrue(base >= 0);
+    assumeTrue(base >= 0);
     final int i = offset + base;
     final Integer length = getLength(i);
     if (length == null) {
