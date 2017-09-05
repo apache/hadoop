@@ -2423,13 +2423,13 @@ public class NativeAzureFileSystem extends FileSystem {
 
   private Path getAncestor(Path f) throws IOException {
 
-    for (Path current = f.getParent(), parent = current.getParent();
+    for (Path current = f, parent = current.getParent();
          parent != null; // Stop when you get to the root
          current = parent, parent = current.getParent()) {
 
       String currentKey = pathToKey(current);
       FileMetadata currentMetadata = store.retrieveMetadata(currentKey);
-      if (currentMetadata != null) {
+      if (currentMetadata != null && currentMetadata.isDir()) {
         Path ancestor = keyToPath(currentMetadata.getKey());
         LOG.debug("Found ancestor {}, for path: {}", ancestor.toString(), f.toString());
         return ancestor;
@@ -2446,7 +2446,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
   public boolean mkdirs(Path f, FsPermission permission, boolean noUmask) throws IOException {
 
-
     LOG.debug("Creating directory: {}", f.toString());
 
     if (containsColon(f)) {
@@ -2456,6 +2455,10 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
     Path ancestor = getAncestor(absolutePath);
+
+    if (absolutePath.equals(ancestor)) {
+      return true;
+    }
 
     performAuthCheck(ancestor, WasbAuthorizationOperations.WRITE, "mkdirs", absolutePath);
 
