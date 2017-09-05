@@ -604,6 +604,70 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
+   * Positive test for mkdirs -p with existing hierarchy
+   * @throws Throwable
+   */
+  @Test
+  public void testMkdirsWithExistingHierarchyCheckPositive1() throws Throwable {
+
+    Path testPath = new Path("/testMkdirsWithExistingHierarchyCheckPositive1");
+
+    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertIsDirectory(fs, testPath);
+
+      /* Don't need permissions to create a directory that already exists */
+      authorizer.deleteAllAuthRules();
+
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertIsDirectory(fs, testPath);
+    }
+    finally {
+      allowRecursiveDelete(fs, testPath.toString());
+      fs.delete(testPath, true);
+    }
+  }
+
+  @Test
+  public void testMkdirsWithExistingHierarchyCheckPositive2() throws Throwable {
+
+    Path testPath = new Path("/testMkdirsWithExistingHierarchyCheckPositive2");
+    Path childPath1 = new Path(testPath, "1");
+    Path childPath2 = new Path(childPath1, "2");
+    Path childPath3 = new Path(childPath2, "3");
+
+    authorizer.addAuthRule("/",
+        WasbAuthorizationOperations.WRITE.toString(), true);
+
+    authorizer.addAuthRule(childPath1.toString(),
+        WasbAuthorizationOperations.WRITE.toString(), true);
+
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.mkdirs(childPath1);
+      ContractTestUtils.assertIsDirectory(fs, childPath1);
+
+      // Path already exists => no-op.
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertIsDirectory(fs, testPath);
+
+      // Path already exists => no-op.
+      fs.mkdirs(childPath1);
+      ContractTestUtils.assertIsDirectory(fs, childPath1);
+
+      // Check permissions against existing ancestor childPath1
+      fs.mkdirs(childPath3);
+      ContractTestUtils.assertIsDirectory(fs, childPath3);
+    } finally {
+      allowRecursiveDelete(fs, testPath.toString());
+      fs.delete(testPath, true);
+    }
+  }
+  /**
    * Negative test for mkdirs access check
    * @throws Throwable
    */
