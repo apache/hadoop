@@ -108,17 +108,13 @@ public class TestAzureFileSystemInstrumentation {
 
     // Create a directory
     assertTrue(fs.mkdirs(new Path("a")));
-    // At the time of writing, it takes 1 request to create the actual directory,
-    // plus 2 requests per level to check that there's no blob with that name and
-    // 1 request per level above to create it if it doesn't exist.
-    // So for the path above (/user/<name>/a), it takes 2 requests each to check
-    // there's no blob called /user, no blob called /user/<name> and no blob
-    // called /user/<name>/a, and then 3 request for the creation of the three
-    // levels, and then 2 requests for checking/stamping the version of AS,
-    // totaling 11.
-    // Also, there's the initial 1 request for container check so total is 12.
-    // The getAncestor call at the very beginning adds another 4 calls, totalling 16.
-    base = assertWebResponsesInRange(base, 1, 16);
+    // At the time of writing
+    // getAncestor uses 2 calls for each folder level /user/<name>/a
+    // plus 1 call made by checkContainer
+    // mkdir checks the hierarchy with 2 calls per level
+    // mkdirs calls storeEmptyDir to create the empty folder, which makes 5 calls
+    // For a total of 7 + 6 + 5 = 18 web responses
+    base = assertWebResponsesInRange(base, 1, 18);
     assertEquals(1,
         AzureMetricsTestUtil.getLongCounterValue(getInstrumentation(), WASB_DIRECTORIES_CREATED));
 
