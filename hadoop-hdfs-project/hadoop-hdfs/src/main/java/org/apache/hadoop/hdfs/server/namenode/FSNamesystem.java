@@ -89,7 +89,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
-import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.hdfs.protocol.BlocksStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
@@ -7105,34 +7104,46 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new IOException("No key provider configured, re-encryption "
           + "operation is rejected");
     }
-    FSPermissionChecker pc = getPermissionChecker();
-    // get keyVersionName out of the lock. This keyVersionName will be used
-    // as the target keyVersion for the entire re-encryption.
-    // This means all edek's keyVersion will be compared with this one, and
-    // kms is only contacted if the edek's keyVersion is different.
-    final KeyVersion kv =
-        FSDirEncryptionZoneOp.getLatestKeyVersion(dir, zone, pc);
-    provider.invalidateCache(kv.getName());
+    String keyVersionName = null;
+    if (action == ReencryptAction.START) {
+      // get zone's latest key version name out of the lock.
+      keyVersionName = FSDirEncryptionZoneOp.getCurrentKeyVersion(dir, zone);
+      if (keyVersionName == null) {
+        throw new IOException("Failed to get key version name for " + zone);
+      }
+    }
     writeLock();
     try {
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode(
-          "NameNode in safemode, cannot " + action + " re-encryption on zone "
-              + zone);
-      switch (action) {
-      case START:
-        FSDirEncryptionZoneOp
-            .reencryptEncryptionZone(dir, zone, kv.getVersionName(),
-                logRetryCache);
-        break;
-      case CANCEL:
-        FSDirEncryptionZoneOp
-            .cancelReencryptEncryptionZone(dir, zone, logRetryCache);
-        break;
-      default:
-        throw new IOException(
-            "Re-encryption action " + action + " is not supported");
+      checkNameNodeSafeMode("NameNode in safemode, cannot " + action
+          + " re-encryption on zone " + zone);
+      final FSPermissionChecker pc = dir.getPermissionChecker();
+      List<XAttr> xattrs;
+      dir.writeLock();
+      try {
+        final INodesInPath iip = dir.resolvePath(pc, zone, DirOp.WRITE);
+        if (iip.getLastINode() == null) {
+          throw new FileNotFoundException(zone + " does not exist.");
+        }
+        switch (action) {
+        case START:
+          xattrs = FSDirEncryptionZoneOp
+              .reencryptEncryptionZone(dir, iip, keyVersionName);
+          break;
+        case CANCEL:
+          xattrs =
+              FSDirEncryptionZoneOp.cancelReencryptEncryptionZone(dir, iip);
+          break;
+        default:
+          throw new IOException(
+              "Re-encryption action " + action + " is not supported");
+        }
+      } finally {
+        dir.writeUnlock();
+      }
+      if (xattrs != null && !xattrs.isEmpty()) {
+        getEditLog().logSetXAttrs(zone, xattrs, logRetryCache);
       }
     } finally {
       writeUnlock();
