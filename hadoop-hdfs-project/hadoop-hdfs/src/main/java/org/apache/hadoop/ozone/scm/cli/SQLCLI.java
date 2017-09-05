@@ -346,7 +346,7 @@ public class SQLCLI  extends Configured implements Tool {
     LOG.info("Create tables for sql ksm db.");
     File dbFile = dbPath.toFile();
     try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setDbFile(dbFile).build();
+        .setConf(conf).setDbFile(dbFile).build();
          Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_VOLUME_LIST);
       executeSQL(conn, CREATE_VOLUME_INFO);
