@@ -60,23 +60,23 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(Parameterized.class)
 public class TestKSMSQLCli {
-  private static MiniOzoneCluster cluster = null;
-  private static StorageHandler storageHandler;
-  private static UserArgs userArgs;
-  private static OzoneConfiguration conf;
-  private static SQLCLI cli;
+  private MiniOzoneCluster cluster = null;
+  private StorageHandler storageHandler;
+  private UserArgs userArgs;
+  private OzoneConfiguration conf;
+  private SQLCLI cli;
 
-  private static String userName = "userTest";
-  private static String adminName = "adminTest";
-  private static String volumeName0 = "volumeTest0";
-  private static String volumeName1 = "volumeTest1";
-  private static String bucketName0 = "bucketTest0";
-  private static String bucketName1 = "bucketTest1";
-  private static String bucketName2 = "bucketTest2";
-  private static String keyName0 = "key0";
-  private static String keyName1 = "key1";
-  private static String keyName2 = "key2";
-  private static String keyName3 = "key3";
+  private String userName = "userTest";
+  private String adminName = "adminTest";
+  private String volumeName0 = "volumeTest0";
+  private String volumeName1 = "volumeTest1";
+  private String bucketName0 = "bucketTest0";
+  private String bucketName1 = "bucketTest1";
+  private String bucketName2 = "bucketTest2";
+  private String keyName0 = "key0";
+  private String keyName1 = "key1";
+  private String keyName2 = "key2";
+  private String keyName3 = "key3";
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
@@ -86,7 +86,7 @@ public class TestKSMSQLCli {
     });
   }
 
-  private static String metaStoreType;
+  private String metaStoreType;
 
   public TestKSMSQLCli(String type) {
     metaStoreType = type;
@@ -100,8 +100,8 @@ public class TestKSMSQLCli {
    *
    * @throws IOException
    */
-  @BeforeClass
-  public static void setup() throws Exception {
+  @Before
+  public void setup() throws Exception {
     conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
@@ -151,10 +151,7 @@ public class TestKSMSQLCli {
     stream.close();
 
     cluster.shutdown();
-  }
 
-  @Before
-  public void init() throws Exception {
     conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, metaStoreType);
     cli = new SQLCLI(conf);
   }
