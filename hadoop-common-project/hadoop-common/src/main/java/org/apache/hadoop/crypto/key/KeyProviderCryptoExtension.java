@@ -81,8 +81,9 @@ public class KeyProviderCryptoExtension extends
     protected EncryptedKeyVersion(String keyName,
         String encryptionKeyVersionName, byte[] encryptedKeyIv,
         KeyVersion encryptedKeyVersion) {
-      this.encryptionKeyName = keyName;
-      this.encryptionKeyVersionName = encryptionKeyVersionName;
+      this.encryptionKeyName = keyName == null ? null : keyName.intern();
+      this.encryptionKeyVersionName = encryptionKeyVersionName == null ?
+          null : encryptionKeyVersionName.intern();
       this.encryptedKeyIv = encryptedKeyIv;
       this.encryptedKeyVersion = encryptedKeyVersion;
     }
