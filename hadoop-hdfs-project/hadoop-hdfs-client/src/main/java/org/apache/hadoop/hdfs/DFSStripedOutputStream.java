@@ -215,6 +215,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       buffers = new ByteBuffer[numAllBlocks];
       for (int i = 0; i < buffers.length; i++) {
         buffers[i] = BUFFER_POOL.getBuffer(useDirectBuffer(), cellSize);
+        buffers[i].limit(cellSize);
       }
     }
 
@@ -237,6 +238,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     private void clear() {
       for (int i = 0; i< numAllBlocks; i++) {
         buffers[i].clear();
+        buffers[i].limit(cellSize);
       }
     }
 
