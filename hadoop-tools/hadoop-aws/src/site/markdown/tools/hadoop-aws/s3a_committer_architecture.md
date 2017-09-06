@@ -181,7 +181,7 @@ uncommitted data to a task attempt directory. When a task is ready to commit,
 it must notify that job driver that it is ready to commit -the job driver
 will then commit or abort the task.
 
-### Hadoop MR Commit algorithm "1"
+## Hadoop MR Commit algorithm "1"
 
 
 The "v1" commit algorithm is the default commit algorithm in Hadoop 2.x;
@@ -214,18 +214,18 @@ taskCommittedPath = '$dest/_temporary/$appAttemptId/$taskAttemptID'
 
 Tasks write in/under the task attempt path.
 
-#### Job Setup
+### Job Setup
 
 ```python
 fs.mkdir(jobAttemptPath)
 ```
 
-#### Task Setup
+### Task Setup
 
 None: directories are created on demand.
 
 
-#### Task Commit
+### Task Commit
 
 Rename task attempt path to task committed path.
 
@@ -248,7 +248,7 @@ along with overhead for listing and deleting all files (For S3, that's
 `(1 + files/500)` lists, and the same number of delete calls.
 
 
-#### Task Abort
+### Task Abort
 
 Delete task attempt path.
 
@@ -261,7 +261,7 @@ On a genuine fileystem this is an `O(1)` operation. On an object store,
 proportional to the time to list and delete files, usually in batches.
 
 
-#### Job Commit
+### Job Commit
 
 Merge all files/directories in all task commited paths into final destination path.
 Optionally; create 0-byte `_SUCCESS` file in destination path.
@@ -290,7 +290,7 @@ scale, the vulnerability increases. It could actually be reduced through
 parallel execution of the renaming of of committed tasks.
 
 
-#### Job Abort
+### Job Abort
 
 Delete all data under job attempt path.
 
@@ -299,7 +299,7 @@ def abortJob(fs, jobAttemptDir, dest):
   fs.delete(jobAttemptDir, recursive = True)
 ```
 
-#### Job Cleanup
+### Job Cleanup
 
 ```python
 def cleanupJob(fs, dest):
@@ -307,7 +307,7 @@ def cleanupJob(fs, dest):
 ```
 
 
-#### Job Recovery
+### Job Recovery
 
 1. Data under task committed paths is retained
 1. All directories under `$dest/_temporary/$appAttemptId/_temporary/` are deleted.
@@ -330,7 +330,7 @@ failure simply by rerunning the entire job. This is implicitly the strategy
 in Spark, which does not attempt to recover any in-progress jobs. The faster
 your queries, the simpler your recovery strategy needs to be.
 
-#### `mergePaths(FileSystem fs, FileStatus src, Path dest)` Algorithm
+### `mergePaths(FileSystem fs, FileStatus src, Path dest)` Algorithm
 
 `mergePaths()` is the core algorithm to merge data; it is somewhat confusing
 as the implementation mixes the strategies for both algorithms across
@@ -369,7 +369,7 @@ def mergePathsV1(fs, src, dest) :
         fs.rename(src.getPath(), dest)
 ```
 
-### v2 commit algorithm
+## v2 commit algorithm
 
 
 The v2 algorithm directly commits task output into the destination directory.
@@ -448,7 +448,7 @@ of listing directories and calling `getFileStatus()` could exceed that of the co
 calls. This is why small-scale tests of the commit algorithms against object stores
 must be considered significantly misleading.
 
-#### v2 Task Commit
+### v2 Task Commit
 
 Rename task attempt path to task committed path.
 
@@ -463,7 +463,7 @@ def commitTask(fs, jobAttemptPath, taskAttemptPath, dest):
 
 ```
 
-#### v2 Task Abort
+### v2 Task Abort
 
 Delete task attempt path.
 
@@ -475,7 +475,7 @@ def abortTask(fs, jobAttemptPath, taskAttemptPath, dest):
 Cost: O(1) for normal filesystems, O(files) for object stores.
 
 
-#### v2 Job Commit
+### v2 Job Commit
 
 As all the task output is already completed, all that is needed is
 to touch the `_SUCCESS` marker.
@@ -493,7 +493,7 @@ def isCommitJobRepeatable() :
   return True
 ```
 
-#### v2 Job Abort
+### v2 Job Abort
 
 Delete all data under job attempt path.
 
@@ -504,23 +504,23 @@ def abortJob(fs, jobAttemptDir, dest):
 
 Cost: O(1) for normal filesystems, O(files) for object stores.
 
-#### v2 Task Recovery
+### v2 Task Recovery
 
 As no data is written to the destination directory, a task can be cleaned up
 by deleting the task attempt directory.
 
-#### v2 Job Recovery
+### v2 Job Recovery
 
 Because the data has been renamed into the destination directory, it is nominally
 recoverable. However, this assumes that the number and name of generated
 files are constant on retried tasks.
 
-### Hadoop MRv1 Protocol
+## Hadoop MRv1 Protocol
 
 Adding support for the original Hadoop MRv1 Protocols would take a lot of effort.
 
 
-### Requirements of an S3A Committer
+## Requirements of an S3A Committer
 
 1. Support an eventually consistent S3 object store as a reliable direct
 destination of work through the S3A filesystem client.
@@ -532,7 +532,7 @@ task and job commit phases,
 with committers which expect a specific FileOutputFormat.
 
 
-### Features of S3 and the S3A Client
+## Features of S3 and the S3A Client
 
 
 A core problem is that
@@ -568,7 +568,7 @@ metadata. Other implementations of the S3 protocol are fully consistent; the
 proposed algorithm is designed to work with such object stores without the
 need for any DynamoDB tables.
 
-### Related work: Spark's `DirectOutputCommitter`
+## Related work: Spark's `DirectOutputCommitter`
 
 One implementation to look at is the
 [`DirectOutputCommitter` of Spark 1.6](https://github.com/apache/spark/blob/branch-1.6/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/parquet/DirectParquetOutputCommitter.scala).
@@ -588,7 +588,7 @@ was removed from Spark 2 [SPARK-10063](https://issues.apache.org/jira/browse/SPA
 There is also the issue that work-in-progress data is visible; this may or may
 not be a problem.
 
-### Related work: IBM's "Stocator" committer
+## Related work: IBM's "Stocator" committer
 
 IBM's [Stocator](https://github.com/SparkTC/stocator) can transform indirect
 writes of V1/V2 committers into direct writes to the destination directory.
@@ -613,7 +613,7 @@ strongly dependent upon and tightly integrated with the S3A Filesystem.
 
 The simplicity of the Stocator committer is somethign to appreciate.
 
-### Background: The S3 multi-part PUT mechanism
+## Background: The S3 multi-part PUT mechanism
 
 In the [S3 REST API](http://docs.aws.amazon.com/AmazonS3/latest/dev/uploadobjusingmpu.html),
 multipart uploads allow clients to upload a series of "Parts" of a file,
@@ -789,14 +789,14 @@ If the process dies during job commit, cleaning up is a manual process.
 File names include a UUID for each write so that files can be identified and removed.
 
 
-#### Failure during task execution
+**Failure during task execution**
 
 All data is written to local temporary files; these need to be cleaned up.
 
 The job must ensure that the local (pending) data is purged. *TODO*: test this
 
 
-#### Failure during task commit
+**Failure during task commit**
 
 
 A process failure during the upload process will result in the
@@ -808,11 +808,11 @@ Per-file persistence, or incremental overwrites of the upload list may
 reduce the problems here, but there would still be a small risk of
 an outstanding multipart upload not being recorded
 
-#### Explicit Task abort before task commit.
+**Explicit Task abort before task commit**
 
 Task will delete all local data; no uploads will be initiated.
 
-#### Failure to communicate with S3 during data upload
+**Failure to communicate with S3 during data upload**
 
 If an upload fails, tasks will
 
@@ -820,41 +820,41 @@ If an upload fails, tasks will
 * remove temporary files on the local FS.
 
 
-#### Explicit Job Abort
+**Explicit Job Abort**
 
 All in-progress tasks are aborted and cleaned up. The pending commit data
 of all completed tasks can be loaded, the PUT requests aborted.
 
 
-#### Executor failure before Job Commit
+**Executor failure before Job Commit**
 
 Consider entire job lost; rerun required. All pending requests for the job
 will need to be identified and cancelled;
 
-#### Executor failure during Job Commit
+**Executor failure during Job Commit**
 
 PUT requests which have been finalized will be persisted, those which
 have not been finalized will remain outstanding. As the data for all the
 commits will be in the cluster FS, it will be possible for a cleanup to
 load these and abort them.
 
-#### Job failure prior to commit
+**Job failure prior to commit**
 
 * Consider the entire job lost.
 * Executing tasks will not complete, and in aborting, delete local data.
 * Tasks which have completed will have pending commits. These will need
 to be identified and cancelled.
 
-#### Entire application failure before any task commit
+**Entire application failure before any task commit**
 
 Data is left on local systems, in the temporary directories.
 
-#### Entire application failure after one or more task commits, before job commit
+**Entire application failure after one or more task commits, before job commit**
 
 * A multipart PUT request will be outstanding for every pending write.
 * A temporary directory in HDFS will list all known pending requests.
 
-#### Job complete/abort after >1 task failure
+**Job complete/abort after >1 task failure**
 
 1. All pending put data listed in the job completion directory needs to be loaded
 and then cancelled.
@@ -881,8 +881,10 @@ may want to consider having job setup list and cancel all pending commits
 to the destination directory, on the assumption that these are from a previous
 incomplete operation.
 
-We should adds command to the s3guard CLI to probe for, list and abort pending requests under
+We should add a "commit" command to the S3guard CLI to probe for, list and abort pending requests under
 a path, e.g. `--has-pending <path>`, `--list-pending <path>`, `--abort-pending <path>`.
+
+
 
 
 

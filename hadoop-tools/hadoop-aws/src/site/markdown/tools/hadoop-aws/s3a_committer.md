@@ -12,12 +12,12 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# The S3A Committers
+# The S3Guard Committers
 
-<!-- DISABLEDMACRO{toc|fromDepth=0|toDepth=5} -->
+<!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
-This page covers the S3A Committers, which can commit work directly
-to an S3 object store which supports consistent metadata.
+This page covers the S3Guard Committers, which can commit work directly
+to an S3 object store.
 
 These committers are designed to solve a fundamental problem which
 the standard committers of work cannot do to S3: consistent, high performance,
@@ -29,7 +29,7 @@ For details on their internal design, see
 
 
 
-### Why you Must Not Use the normal committers to write to Amazon S3
+## Introduction: Using the "classic" committers to write to Amazon S3 is dangerous
 
 Normally, Hadoop uses the `FileOutputFormatCommitter` to manage the
 promotion of files created in a single task attempt to the final output of
@@ -48,7 +48,7 @@ or it is at the destination, -in which case the rename actually successed.
 
 The `s3a://` filesystem client cannot meet these requirements.
 
-1. It has inconsistent directory listings
+1. It has inconsistent directory listings unless S3Guard is enabled.
 1. It mimics `rename()` by copying files and then deleting the originals.
 This can fail partway through, and there is nothing to prevent any other process
 in the cluster attempting a rename at the same time
@@ -67,8 +67,27 @@ To address this problem there is now explicit support in the `hadop-aws`
 module for committing work to Amazon S3 via the S3A filesystem client.
 
 
+## Meet the S3Guard Commmitters
 
 
+There are two new commit mechanisms for writing data, *the staging committer*
+and *the magic committer*.
+
+The underlying architecture of these committers is quite complex, and
+covered in [the committer architecture documentation](./s3a_committer_architecture.html).
+
+The key concept to know of is S3's "Multipart upload mechanism", which allows
+an S3 client to write data to S3 in multiple HTTP POST requests, only completing
+the write operation wit
+ 
+ This is already
+used when writing
+
+
+### The Staging Committer
+
+This is based on work from Netflix. It "stages" data into the local filesystem,
+uploads 
 
 
 ## Choosing a committer
@@ -110,7 +129,11 @@ configuration, and the performance of the operations compared.
 
 
 
-### Staging Committer Options
+## Staging Committer 
+
+
+
+
 
 The initial option set:
 
