@@ -17,14 +17,22 @@
  */
 package org.apache.hadoop.test;
 
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 
 /**
  * A base class for JUnit4 tests that sets a default timeout for all tests
- * that subclass this test
+ * that subclass this test.
+ *
+ * Threads are named to the method being executed, for ease of diagnostics
+ * in logs and thread dumps.
  */
-public abstract class HadoopTestBase {
+public abstract class HadoopTestBase extends Assert {
+
   /**
    * System property name to set the test timeout: {@value}
    */
@@ -63,5 +71,36 @@ public abstract class HadoopTestBase {
       millis = TEST_DEFAULT_TIMEOUT_VALUE;
     }
     return new Timeout(millis);
+  }
+
+  /**
+   * The method name.
+   */
+  @Rule
+  public TestName methodName = new TestName();
+
+  /**
+   * Get the method name; defaults to the value of {@link #methodName}.
+   * Subclasses may wish to override it, which will tune the thread naming.
+   * @return the name of the method.
+   */
+  protected String getMethodName() {
+    return methodName.getMethodName();
+  }
+
+  /**
+   * Static initializer names this thread "JUnit".
+   */
+  @BeforeClass
+  public static void nameTestThread() {
+    Thread.currentThread().setName("JUnit");
+  }
+
+  /**
+   * Before each method, the thread is renamed to match the method name.
+   */
+  @Before
+  public void nameThreadToMethod() {
+    Thread.currentThread().setName("JUnit-" + getMethodName());
   }
 }

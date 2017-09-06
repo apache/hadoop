@@ -721,3 +721,94 @@ http.headers (LoggingManagedHttpClientConnection.java:onResponseReceived(127)) -
 http.headers (LoggingManagedHttpClientConnection.java:onResponseReceived(127)) - http-outgoing-0 << Server: AmazonS3
 execchain.MainClientExec (MainClientExec.java:execute(284)) - Connection can be kept alive for 60000 MILLISECONDS
 ```
+
+
+## <a name="retries"></a>  Reducing failures by configuring retry policy
+
+The S3A client can ba configured to rety those operations which are considered
+retriable. That can be because they are idempotent, or
+because there failure happened before the request was processed by S3.
+
+The number of retries and interval between each retry can be configured:
+
+```xml
+<property>
+  <name>fs.s3a.retry.limit</name>
+  <value>4</value>
+  <description>
+    Number of times to retry any repeatable S3 client request on failure,
+    excluding throttling requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.interval</name>
+  <value>500ms</value>
+  <description>
+    Interval between retry attempts.
+  </description>
+</property>
+```
+
+Not all failures are retried. Specifically excluded are those considered
+unrecoverable:
+
+* Low-level networking: `UnknownHostException`, `NoRouteToHostException`.
+* 302 redirects
+* Missing resources, 404/FileNotFoundException
+* HTTP 416 response/EOFException. This can surface if the length of a file changes
+  while another client is reading it.
+* Invalid S3 requests.
+* Failures during execution or result processing of non-idempotent operations.
+
+In future, others may be added to this list.
+
+When one of these failures arises in the S3/S3A client, the retry mechanism
+is bypassed.
+
+<b>Warning</b>: the s3a client considers DELETE, PUT and COPY operations to
+be idempotent, and will retry them on failure. These are only really idempotent
+if no other client is attempting to manipulate the same objects, such as:
+renaming() the directory tree or uploading files to the same location.
+Please don't do that. Given that the emulated directory rename and delete operations
+aren't atomic, even without retries, multiple S3 clients working with the same
+paths can interfere with each other
+
+#### <a name="retries"></a> Throttling
+
+When many requests are made of a specific S3 bucket (or shard inside it),
+S3 will respond with a 503 "throttled" response.
+This reponse is ultimately transient, provided overall load decreases.
+Furthermore, because it is sent before any changes are made to the object store,
+is inherently idempotent. For this reason, the client will always attempt to
+retry throttled requests.
+
+The limit of the number of times a throttled request can be retried,
+and the proportional interval increase between attempts, can be configured
+independently of the other retry limits.
+
+```xml
+<property>
+  <name>fs.s3a.retry.throttle.limit</name>
+  <value>10</value>
+  <description>
+    Number of times to retry any throttled request.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.throttle.interval</name>
+  <value>1000ms</value>
+  <description>
+    Interval between retry attempts on throttled requests.
+  </description>
+</property>
+```
+
+If a client is failing due to `AWSServiceThrottledException` failures,
+increasing the interval and limit *may* address this. However, it
+it is a sign of AWS services being overloaded by the sheer number of clients
+and rate of requests. Spreading data across different buckets, and/or using
+a more balanced directory structure may be beneficial.
+Consult [the AWS documentation](http://docs.aws.amazon.com/AmazonS3/latest/dev/request-rate-perf-considerations.html).
+

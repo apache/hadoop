@@ -21,9 +21,14 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBLocalClientFactory;
@@ -42,6 +47,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
@@ -59,6 +65,7 @@ public final class S3ATestUtils {
    * a property has been unset.
    */
   public static final String UNSET_PROPERTY = "unset";
+  public static final int PURGE_DELAY_SECONDS = 60 * 60;
 
   /**
    * Get S3A FS name.
@@ -120,13 +127,17 @@ public final class S3ATestUtils {
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
     if (purge) {
-      conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
-      // but a long delay so that parallel multipart tests don't
+      // purge with but a delay so that parallel multipart tests don't
       // suddenly start timing out
-      conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 30 * 60);
+      enableMultipartPurge(conf, PURGE_DELAY_SECONDS);
     }
     fs1.initialize(testURI, conf);
     return fs1;
+  }
+
+  public static void enableMultipartPurge(Configuration conf, int seconds) {
+    conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
+    conf.setInt(PURGE_EXISTING_MULTIPART_AGE, seconds);
   }
 
   /**
@@ -302,7 +313,7 @@ public final class S3ATestUtils {
    * @param conf configuration to patch
    */
   public static void disableFilesystemCaching(Configuration conf) {
-    conf.setBoolean("fs.s3a.impl.disable.cache", true);
+    conf.setBoolean(FS_S3A_IMPL_DISABLE_CACHE, true);
   }
 
   /**
@@ -731,5 +742,95 @@ public final class S3ATestUtils {
     S3ABlockOutputStream blockOutputStream
         = (S3ABlockOutputStream) out.getWrappedStream();
     return blockOutputStream.getStatistics();
+  }
+
+  /**
+   * Read in a file and convert to an ascii string.
+   * @param fs filesystem
+   * @param path path to read
+   * @return the bytes read and converted to a string
+   * @throws IOException IO problems
+   */
+  public static String read(FileSystem fs,
+      Path path) throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    try (FSDataInputStream in = fs.open(path)) {
+      byte[] buf = new byte[(int)status.getLen()];
+      in.readFully(0, buf);
+      return new String(buf);
+    }
+  }
+
+  /**
+   * An interface for use in lambda-expressions working with
+   * directory tree listings.
+   */
+  public interface CallOnLocatedFileStatus {
+    void call(LocatedFileStatus status) throws Exception;
+  }
+
+  /**
+   * Iterate over files.
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @throws Exception anything in the closure, or iteration logic.
+   */
+  public static void iterateOverFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      CallOnLocatedFileStatus eval) throws Exception {
+    while(iterator.hasNext()) {
+      eval.call(iterator.next());
+    }
+  }
+
+  /**
+   * List a directory.
+   * @param fileSystem FS
+   * @param path path
+   * @throws IOException failure.
+   */
+  public static void lsR(FileSystem fileSystem, Path path, boolean recursive)
+      throws Exception {
+    if (path == null) {
+      // surfaces when someone calls getParent() on something at the top
+      // of the path
+      LOG.info("Empty path");
+      return;
+    }
+    iterateOverFiles(fileSystem.listFiles(path, recursive),
+        (LocatedFileStatus status) -> LOG.info("  {}", status));
+  }
+
+  /**
+   * Path filter which ignores any file which starts with . or _.
+   */
+  public static class FilterTempFiles implements PathFilter {
+    @Override
+    public boolean accept(Path path) {
+      String name = path.getName();
+      return !name.startsWith("_") && !name.startsWith(".");
+    }
+  }
+
+  public static final PathFilter TEMP_FILE_FILTER = new FilterTempFiles();
+
+  /**
+   * Turn on the inconsistent S3A FS client in a configuration,
+   * with 100% probability of inconsistency, default delays.
+   * For this to go live, the paths must include the element
+   * {@link InconsistentAmazonS3Client#DEFAULT_DELAY_KEY_SUBSTRING}.
+   * @param conf configuration to patch
+   * @param delay delay in millis
+   */
+  public static void enableInconsistentS3Client(Configuration conf,
+      long delay) {
+    LOG.info("Enabling inconsistent S3 client");
+    conf.setClass(S3_CLIENT_FACTORY_IMPL, InconsistentS3ClientFactory.class,
+        S3ClientFactory.class);
+    conf.set(FAIL_INJECT_INCONSISTENCY_KEY, DEFAULT_DELAY_KEY_SUBSTRING);
+    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, delay);
+    conf.setFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY, 0.0f);
+    conf.setFloat(FAIL_INJECT_THROTTLE_PROBABILITY, 0.0f);
+
   }
 }

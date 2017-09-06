@@ -47,6 +47,7 @@ public enum Statistic {
   FAKE_DIRECTORIES_DELETED("fake_directories_deleted",
       "Total number of fake directory deletes submitted to object store."),
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored"),
+  THROTTLED_REQUESTS("throttled_requests", "Requests throttled and retried"),
   INVOCATION_COPY_FROM_LOCAL_FILE(CommonStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()"),
   INVOCATION_EXISTS(CommonStatisticNames.OP_EXISTS,
@@ -77,6 +78,8 @@ public enum Statistic {
       "Number of continued object listings made"),
   OBJECT_METADATA_REQUESTS("object_metadata_requests",
       "Number of requests for object metadata"),
+  OBJECT_MULTIPART_UPLOAD_INITIATED("object_multipart_initiated",
+      "Object multipart upload initiated"),
   OBJECT_MULTIPART_UPLOAD_ABORTED("object_multipart_aborted",
       "Object multipart upload aborted"),
   OBJECT_PUT_REQUESTS("object_put_requests",
@@ -142,7 +145,39 @@ public enum Statistic {
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
       "Total queue duration of all block uploads"),
 
-  // S3Guard stats
+  // S3guard committer stats
+  COMMITTER_COMMITS_CREATED(
+      "committer_commits_created",
+      "Number of commits created"),
+  COMMITTER_COMMITS_COMPLETED(
+      "committer_commits_completed",
+      "Number of file commits completed"),
+  COMMITTER_JOBS_SUCCEEDED(
+      "committer_jobs_completed",
+      "Number of successful jobs"),
+  COMMITTER_JOBS_FAILED(
+      "committer_jobs_failed",
+      "Number of failed jobs"),
+  COMMITTER_TASKS_SUCCEEDED(
+      "committer_tasks_completed",
+      "Number of successful tasks"),
+  COMMITTER_TASKS_FAILED(
+      "committer_tasks_failed",
+      "Number of failed tasks"),
+  COMMITTER_BYTES_COMMITTED(
+      "committer_bytes_committed",
+      "Amount of data committed"),
+  COMMITTER_COMMITS_FAILED(
+      "committer_commits_failed",
+      "Number of commits failed"),
+  COMMITTER_COMMITS_ABORTED(
+      "committer_commits_aborted",
+      "Number of commits aborted"),
+  COMMITTER_COMMITS_REVERTED(
+      "committer_commits_reverted",
+      "Number of commits reverted"),
+
+  // S3guard stats
   S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
       "s3guard_metadatastore_put_path_request",
       "s3guard metadata store put one metadata path request"),

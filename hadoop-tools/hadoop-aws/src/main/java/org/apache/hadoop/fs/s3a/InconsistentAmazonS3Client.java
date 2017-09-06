@@ -21,19 +21,28 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
+import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.UploadPartRequest;
+import com.amazonaws.services.s3.model.UploadPartResult;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -49,6 +58,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A wrapper around {@link com.amazonaws.services.s3.AmazonS3} that injects
@@ -86,6 +96,21 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
 
   /** Time in milliseconds to delay visibility of newly modified object. */
   private long delayKeyMsec;
+
+  /**
+   * Probability of throttling a request.
+   */
+  private float throttleProbability;
+
+  /**
+   * Counter of failures since last reset.
+   */
+  private final AtomicLong failureCounter = new AtomicLong(0);
+
+  /**
+   * limit for failures before operations succeed; if 0 then "no limit".
+   */
+  private int failureLimit = 0;
 
   /**
    * Composite of data we need to track about recently deleted objects:
@@ -134,12 +159,25 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     if (delayKeySubstring.equals(MATCH_ALL_KEYS)) {
       delayKeySubstring = "";
     }
-    delayKeyProbability = conf.getFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY,
-        DEFAULT_DELAY_KEY_PROBABILITY);
+    delayKeyProbability = validProbability(
+        conf.getFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY,
+            DEFAULT_DELAY_KEY_PROBABILITY));
     delayKeyMsec = conf.getLong(FAIL_INJECT_INCONSISTENCY_MSEC,
         DEFAULT_DELAY_KEY_MSEC);
-    LOG.info("Enabled with {} msec delay, substring {}, probability {}",
-        delayKeyMsec, delayKeySubstring, delayKeyProbability);
+    setThrottleProbability(conf.getFloat(FAIL_INJECT_THROTTLE_PROBABILITY,
+        0.0f));
+    LOG.info("{}", this);
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "Inconsistent S3 Client with"
+            + " %s msec delay, substring %s, delay probability %s;"
+            + " throttle probability %s"
+            + "; failure limit %d, failure count %d",
+        delayKeyMsec, delayKeySubstring, delayKeyProbability,
+        throttleProbability, failureLimit, failureCounter.get());
   }
 
   /**
@@ -174,7 +212,8 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   public DeleteObjectsResult deleteObjects(DeleteObjectsRequest
       deleteObjectsRequest)
       throws AmazonClientException, AmazonServiceException {
-    for (DeleteObjectsRequest.KeyVersion keyVersion :
+      maybeFail();
+      for (DeleteObjectsRequest.KeyVersion keyVersion :
         deleteObjectsRequest.getKeys()) {
       registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest
           .getBucketName());
@@ -187,6 +226,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
       throws AmazonClientException, AmazonServiceException {
     String key = deleteObjectRequest.getKey();
     LOG.debug("key {}", key);
+    maybeFail();
     registerDeleteObject(key, deleteObjectRequest.getBucketName());
     super.deleteObject(deleteObjectRequest);
   }
@@ -196,6 +236,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   public PutObjectResult putObject(PutObjectRequest putObjectRequest)
       throws AmazonClientException, AmazonServiceException {
     LOG.debug("key {}", putObjectRequest.getKey());
+    maybeFail();
     registerPutObject(putObjectRequest);
     return super.putObject(putObjectRequest);
   }
@@ -205,6 +246,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   public ObjectListing listObjects(ListObjectsRequest listObjectsRequest)
       throws AmazonClientException, AmazonServiceException {
     LOG.debug("prefix {}", listObjectsRequest.getPrefix());
+    maybeFail();
     ObjectListing listing = super.listObjects(listObjectsRequest);
     listing = filterListObjects(listing);
     listing = restoreListObjects(listObjectsRequest, listing);
@@ -469,6 +511,107 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   private void enqueueDelayedPut(String key) {
     LOG.debug("delaying put of {}", key);
     delayedPutKeys.put(key, System.currentTimeMillis());
+  }
+
+  @Override
+  public CompleteMultipartUploadResult completeMultipartUpload(
+      CompleteMultipartUploadRequest completeMultipartUploadRequest)
+      throws SdkClientException, AmazonServiceException {
+    maybeFail();
+    return super.completeMultipartUpload(completeMultipartUploadRequest);
+  }
+
+  @Override
+  public UploadPartResult uploadPart(UploadPartRequest uploadPartRequest)
+      throws SdkClientException, AmazonServiceException {
+    maybeFail();
+    return super.uploadPart(uploadPartRequest);
+  }
+
+  @Override
+  public InitiateMultipartUploadResult initiateMultipartUpload(
+      InitiateMultipartUploadRequest initiateMultipartUploadRequest)
+      throws SdkClientException, AmazonServiceException {
+    maybeFail();
+    return super.initiateMultipartUpload(initiateMultipartUploadRequest);
+  }
+
+  @Override
+  public MultipartUploadListing listMultipartUploads(
+      ListMultipartUploadsRequest listMultipartUploadsRequest)
+      throws SdkClientException, AmazonServiceException {
+    maybeFail();
+    return super.listMultipartUploads(listMultipartUploadsRequest);
+  }
+
+  public float getDelayKeyProbability() {
+    return delayKeyProbability;
+  }
+
+  public long getDelayKeyMsec() {
+    return delayKeyMsec;
+  }
+
+  /**
+   * Get the probability of the request being throttled.
+   * @return a value 0 - 1.0f.
+   */
+  public float getThrottleProbability() {
+    return throttleProbability;
+  }
+
+  /**
+   * Set the probability of throttling a request.
+   * @param throttleProbability the probability of a request being throttled.
+   */
+  public void setThrottleProbability(float throttleProbability) {
+    this.throttleProbability = validProbability(throttleProbability);
+  }
+
+  /**
+   * Validate a probability option.
+   * @param p probability
+   * @return the probability, if valid
+   * @throws IllegalArgumentException if the probability is out of range.
+   */
+  private float validProbability(float p) {
+    Preconditions.checkArgument(p >= 0.0f && p <= 1.0f,
+        "Probability out of range 0 to 1 %s", p);
+    return p;
+  }
+
+  /**
+   * Conditionally fail the operation.
+   * @throws AmazonClientException if the client chooses to fail
+   * the request.
+   */
+  private void maybeFail() throws AmazonClientException {
+    // code structure here is to line up for more failures later
+    AmazonServiceException ex = null;
+    if (trueWithProbability(throttleProbability)) {
+      // throttle the request
+      ex = new AmazonServiceException("throttled "
+          + " count = " + (failureCounter.get() + 1), null);
+      ex.setStatusCode(503);
+    }
+
+    if (ex != null) {
+      long count = failureCounter.incrementAndGet();
+      if (failureLimit == 0
+          || (failureLimit > 0 && count < failureLimit)) {
+        throw ex;
+      }
+    }
+  }
+
+  /**
+   * Set the limit on failures before all operations pass through.
+   * This resets the failure count.
+   * @param limit limit; "0" means "no limit"
+   */
+  public void setFailureLimit(int limit) {
+    this.failureLimit = limit;
+    failureCounter.set(0);
   }
 
   /** Since ObjectListing is immutable, we just override it with wrapper. */

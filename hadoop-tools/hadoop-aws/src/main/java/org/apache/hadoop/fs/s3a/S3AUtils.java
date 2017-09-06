@@ -32,12 +32,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.http.conn.ConnectTimeoutException;
 
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -46,6 +49,7 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.Collection;
@@ -63,8 +67,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 @InterfaceStability.Evolving
 public final class S3AUtils {
 
-  /** Reuse the S3AFileSystem log. */
-  private static final Logger LOG = S3AFileSystem.LOG;
+  private static final Logger LOG = LoggerFactory.getLogger(S3AUtils.class);
   static final String CONSTRUCTOR_EXCEPTION = "constructor exception";
   static final String INSTANTIATION_EXCEPTION
       = "instantiation exception";
@@ -137,13 +140,13 @@ public final class S3AUtils {
         path != null ? (" on " + path) : "",
         exception);
     if (!(exception instanceof AmazonServiceException)) {
-      if (containsInterruptedException(exception)) {
-        return (IOException)new InterruptedIOException(message)
-            .initCause(exception);
+      Exception innerCause = containsInterruptedException(exception);
+      if (innerCause != null) {
+        // interrupted IO, or a socket exception underneath that class
+        return translateInterruptedException(exception, innerCause, message);
       }
       return new AWSClientIOException(message, exception);
     } else {
-
       IOException ioe;
       AmazonServiceException ase = (AmazonServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
@@ -151,9 +154,11 @@ public final class S3AUtils {
           ? (AmazonS3Exception) ase
           : null;
       int status = ase.getStatusCode();
+      message = message + ":" + ase.getErrorCode();
       switch (status) {
 
       case 301:
+      case 307:
         if (s3Exception != null) {
           if (s3Exception.getAdditionalDetails() != null &&
               s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
@@ -163,11 +168,16 @@ public final class S3AUtils {
                 + "the bucket.",
                 s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
           }
-          ioe = new AWSS3IOException(message, s3Exception);
+          ioe = new AWSRedirectException(message, s3Exception);
         } else {
-          ioe = new AWSServiceIOException(message, ase);
+          ioe = new AWSRedirectException(message, ase);
         }
         break;
+
+      case 400:
+        ioe = new AWSBadRequestException(message, ase);
+        break;
+
       // permissions
       case 401:
       case 403:
@@ -186,6 +196,12 @@ public final class S3AUtils {
       // a shorter one while it is being read.
       case 416:
         ioe = new EOFException(message);
+        ioe.initCause(ase);
+        break;
+
+      // throttling
+      case 503:
+        ioe = new AWSServiceThrottledException(message, ase);
         break;
 
       default:
@@ -226,18 +242,45 @@ public final class S3AUtils {
    * Recurse down the exception loop looking for any inner details about
    * an interrupted exception.
    * @param thrown exception thrown
-   * @return true if down the execution chain the operation was an interrupt
+   * @return the actual exception if the operation was an interrupt
    */
-  static boolean containsInterruptedException(Throwable thrown) {
+  static Exception containsInterruptedException(Throwable thrown) {
     if (thrown == null) {
-      return false;
+      return null;
     }
     if (thrown instanceof InterruptedException ||
         thrown instanceof InterruptedIOException) {
-      return true;
+      return (Exception)thrown;
     }
     // tail recurse
     return containsInterruptedException(thrown.getCause());
+  }
+
+  /**
+   * Handles translation of interrupted exception. This includes
+   * preserving the class of the fault for better retry logic
+   * @param exception outer exception
+   * @param innerCause inner cause (which is guaranteed to be some form
+   * of interrupted exception
+   * @param message message for the new exception.
+   * @return an IOE which can be rethrown
+   */
+  private static InterruptedIOException translateInterruptedException(
+      AmazonClientException exception,
+      final Exception innerCause,
+      String message) {
+    InterruptedIOException ioe;
+    if (innerCause instanceof SocketTimeoutException) {
+      ioe = new SocketTimeoutException(message);
+    } else if (innerCause instanceof ConnectTimeoutException) {
+      // any connection failure
+      ioe = new ConnectTimeoutException(message);
+    } else {
+      // any other exception
+      ioe = new InterruptedIOException(message);
+    }
+    ioe.initCause(exception);
+    return ioe;
   }
 
   /**
@@ -587,7 +630,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get a long option >= the minimum allowed value, supporting memory
+   * Get a long option &gt;= the minimum allowed value, supporting memory
    * prefixes K,M,G,T,P.
    * @param conf configuration
    * @param key key to look up
@@ -596,7 +639,7 @@ public final class S3AUtils {
    * @return the value
    * @throws IllegalArgumentException if the value is below the minimum
    */
-  static long longBytesOption(Configuration conf,
+  public static long longBytesOption(Configuration conf,
                              String key,
                              long defVal,
                              long min) {
@@ -744,6 +787,39 @@ public final class S3AUtils {
       }
     }
     return dest;
+  }
+
+
+  /**
+   * Delete a path quietly: failures are logged at DEBUG.
+   * @param fs filesystem
+   * @param path path
+   * @param recursive recursive?
+   */
+  public static void deleteQuietly(FileSystem fs,
+      Path path,
+      boolean recursive) {
+    try {
+      fs.delete(path, recursive);
+    } catch (IOException e) {
+      LOG.debug("Failed to delete {}", path, e);
+    }
+  }
+
+  /**
+   * Delete a path: failures are logged at WARN.
+   * @param fs filesystem
+   * @param path path
+   * @param recursive recursive?
+   */
+  public static void deleteWithWarning(FileSystem fs,
+      Path path,
+      boolean recursive) {
+    try {
+      fs.delete(path, recursive);
+    } catch (IOException e) {
+      LOG.warn("Failed to delete {}", path, e);
+    }
   }
 
   /**
