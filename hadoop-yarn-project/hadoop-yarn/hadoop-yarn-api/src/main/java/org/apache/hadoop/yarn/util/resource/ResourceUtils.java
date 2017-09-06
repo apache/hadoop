@@ -42,10 +42,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -63,13 +61,6 @@ public class ResourceUtils {
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
 
-  private static final Set<String> DISALLOWED_NAMES = new HashSet<>();
-  static {
-    DISALLOWED_NAMES.add("memory");
-    DISALLOWED_NAMES.add(MEMORY);
-    DISALLOWED_NAMES.add(VCORES);
-  }
-
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
       new ConcurrentHashMap<String, Integer>();
@@ -85,9 +76,21 @@ public class ResourceUtils {
   private ResourceUtils() {
   }
 
-  private static void checkMandatatoryResources(
+  private static void checkMandatoryResources(
       Map<String, ResourceInformation> resourceInformationMap)
       throws YarnRuntimeException {
+    /*
+     * Supporting 'memory' also as invalid resource name, in addition to
+     * 'MEMORY' for historical reasons
+     */
+    String key = "memory";
+    if (resourceInformationMap.containsKey(key)) {
+      LOG.warn("Attempt to define resource '" + key +
+          "', but it is not allowed.");
+      throw new YarnRuntimeException("Attempt to re-define mandatory resource '"
+          + key + "'.");
+    }
+
     if (resourceInformationMap.containsKey(MEMORY)) {
       ResourceInformation memInfo = resourceInformationMap.get(MEMORY);
       String memUnits = ResourceInformation.MEMORY_MB.getUnits();
@@ -113,7 +116,7 @@ public class ResourceUtils {
     }
   }
 
-  private static void addManadtoryResources(
+  private static void addMandatoryResources(
       Map<String, ResourceInformation> res) {
     ResourceInformation ri;
     if (!res.containsKey(MEMORY)) {
@@ -229,11 +232,6 @@ public class ResourceUtils {
               "Incomplete configuration for resource type '" + resourceName
                   + "'. One of name, units or type is configured incorrectly.");
         }
-        if (DISALLOWED_NAMES.contains(resourceName)) {
-          throw new YarnRuntimeException(
-              "Resource type cannot be named '" + resourceName
-                  + "'. That name is disallowed.");
-        }
         ResourceTypes resourceType = ResourceTypes.valueOf(resourceTypeName);
         LOG.info("Adding resource type - name = " + resourceName + ", units = "
             + resourceUnits + ", type = " + resourceTypeName);
@@ -246,8 +244,8 @@ public class ResourceUtils {
                 minimumAllocation, maximumAllocation));
       }
     }
-    checkMandatatoryResources(resourceInformationMap);
-    addManadtoryResources(resourceInformationMap);
+    checkMandatoryResources(resourceInformationMap);
+    addMandatoryResources(resourceInformationMap);
     setMinimumAllocationForMandatoryResources(resourceInformationMap, conf);
     setMaximumAllocationForMandatoryResources(resourceInformationMap, conf);
     resourceTypes = Collections.unmodifiableMap(resourceInformationMap);
@@ -454,8 +452,8 @@ public class ResourceUtils {
         if (!initializedNodeResources) {
           Map<String, ResourceInformation> nodeResources = initializeNodeResourceInformation(
               conf);
-          addManadtoryResources(nodeResources);
-          checkMandatatoryResources(nodeResources);
+          addMandatoryResources(nodeResources);
+          checkMandatoryResources(nodeResources);
           setMinimumAllocationForMandatoryResources(nodeResources, conf);
           setMaximumAllocationForMandatoryResources(nodeResources, conf);
           readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
