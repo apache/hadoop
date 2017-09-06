@@ -44,11 +44,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.io.output.WriterOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -61,6 +58,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.file.tfile.TFile;
@@ -71,7 +69,8 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Times;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -81,7 +80,8 @@ import com.google.common.collect.Sets;
 @Evolving
 public class AggregatedLogFormat {
 
-  private static final Log LOG = LogFactory.getLog(AggregatedLogFormat.class);
+  private final static Logger LOG = LoggerFactory.getLogger(
+      AggregatedLogFormat.class);
   private static final LogKey APPLICATION_ACL_KEY = new LogKey("APPLICATION_ACL");
   private static final LogKey APPLICATION_OWNER_KEY = new LogKey("APPLICATION_OWNER");
   private static final LogKey VERSION_KEY = new LogKey("VERSION");
@@ -245,7 +245,7 @@ public class AggregatedLogFormat {
           in = secureOpenFile(logFile);
         } catch (IOException e) {
           logErrorMessage(logFile, e);
-          IOUtils.closeQuietly(in);
+          IOUtils.cleanupWithLogger(LOG, in);
           continue;
         }
 
@@ -283,7 +283,7 @@ public class AggregatedLogFormat {
           String message = logErrorMessage(logFile, e);
           out.write(message.getBytes(Charset.forName("UTF-8")));
         } finally {
-          IOUtils.closeQuietly(in);
+          IOUtils.cleanupWithLogger(LOG, in);
         }
       }
     }
@@ -554,7 +554,7 @@ public class AggregatedLogFormat {
       } catch (Exception e) {
         LOG.warn("Exception closing writer", e);
       } finally {
-        IOUtils.closeQuietly(this.fsDataOStream);
+        IOUtils.cleanupWithLogger(LOG, this.fsDataOStream);
       }
     }
   }
@@ -602,7 +602,7 @@ public class AggregatedLogFormat {
         }
         return null;
       } finally {
-        IOUtils.closeQuietly(ownerScanner);
+        IOUtils.cleanupWithLogger(LOG, ownerScanner);
       }
     }
 
@@ -648,7 +648,7 @@ public class AggregatedLogFormat {
         }
         return acls;
       } finally {
-        IOUtils.closeQuietly(aclScanner);
+        IOUtils.cleanupWithLogger(LOG, aclScanner);
       }
     }
 
@@ -773,8 +773,7 @@ public class AggregatedLogFormat {
           }
         }
       } finally {
-        IOUtils.closeQuietly(ps);
-        IOUtils.closeQuietly(os);
+        IOUtils.cleanupWithLogger(LOG, ps, os);
       }
     }
 
@@ -1000,9 +999,7 @@ public class AggregatedLogFormat {
     }
 
     public void close() {
-      IOUtils.closeQuietly(scanner);
-      IOUtils.closeQuietly(reader);
-      IOUtils.closeQuietly(fsDataIStream);
+      IOUtils.cleanupWithLogger(LOG, scanner, reader, fsDataIStream);
     }
   }
 
