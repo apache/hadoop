@@ -119,6 +119,13 @@ public enum DistCpOptionSwitch {
       new Option("log", true, "Folder on DFS where distcp execution logs are saved")),
 
   /**
+   * Log additional info (path, size) in the SKIP/COPY log.
+   */
+  VERBOSE_LOG(DistCpConstants.CONF_LABEL_VERBOSE_LOG,
+      new Option("v", false,
+          "Log additional info (path, size) in the SKIP/COPY log")),
+
+  /**
    * Copy strategy is use. This could be dynamic or uniform size etc.
    * DistCp would use an appropriate input format based on this.
    */
