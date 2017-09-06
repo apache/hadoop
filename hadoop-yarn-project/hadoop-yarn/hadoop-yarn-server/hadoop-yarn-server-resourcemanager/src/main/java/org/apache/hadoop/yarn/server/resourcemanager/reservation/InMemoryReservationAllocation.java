@@ -42,6 +42,7 @@ public class InMemoryReservationAllocation implements ReservationAllocation {
   private final Map<ReservationInterval, Resource> allocationRequests;
   private boolean hasGang = false;
   private long acceptedAt = -1;
+  private long periodicity = 0;
 
   private RLESparseResourceAllocation resourcesOverTime;
 
@@ -67,9 +68,16 @@ public class InMemoryReservationAllocation implements ReservationAllocation {
     this.allocationRequests = allocations;
     this.planName = planName;
     this.hasGang = hasGang;
-    resourcesOverTime = new RLESparseResourceAllocation(calculator);
-    for (Map.Entry<ReservationInterval, Resource> r : allocations
-        .entrySet()) {
+    if (contract != null && contract.getRecurrenceExpression() != null) {
+      this.periodicity = Long.parseLong(contract.getRecurrenceExpression());
+    }
+    if (periodicity > 0) {
+      resourcesOverTime =
+          new PeriodicRLESparseResourceAllocation(calculator, periodicity);
+    } else {
+      resourcesOverTime = new RLESparseResourceAllocation(calculator);
+    }
+    for (Map.Entry<ReservationInterval, Resource> r : allocations.entrySet()) {
       resourcesOverTime.addInterval(r.getKey(), r.getValue());
     }
   }
@@ -133,8 +141,24 @@ public class InMemoryReservationAllocation implements ReservationAllocation {
   }
 
   @Override
-  public RLESparseResourceAllocation getResourcesOverTime(){
+  public RLESparseResourceAllocation getResourcesOverTime() {
     return resourcesOverTime;
+  }
+
+  @Override
+  public RLESparseResourceAllocation getResourcesOverTime(long start,
+      long end) {
+    return resourcesOverTime.getRangeOverlapping(start, end);
+  }
+
+  @Override
+  public long getPeriodicity() {
+    return periodicity;
+  }
+
+  @Override
+  public void setPeriodicity(long period) {
+    periodicity = period;
   }
 
   @Override
@@ -142,8 +166,8 @@ public class InMemoryReservationAllocation implements ReservationAllocation {
     StringBuilder sBuf = new StringBuilder();
     sBuf.append(getReservationId()).append(" user:").append(getUser())
         .append(" startTime: ").append(getStartTime()).append(" endTime: ")
-        .append(getEndTime()).append(" alloc:\n[")
-        .append(resourcesOverTime.toString()).append("] ");
+        .append(getEndTime()).append(" Periodiciy: ").append(periodicity)
+        .append(" alloc:\n[").append(resourcesOverTime.toString()).append("] ");
     return sBuf.toString();
   }
 
