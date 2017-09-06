@@ -76,13 +76,10 @@ over long-haul connections. Please help us identify and fix these problems
 
 ## Setting up the tests
 
-To integration test the S3* filesystem clients, you need to provide two files
-which pass in authentication details to the test runner.
+To integration test the S3* filesystem clients, you need to provide
+`auth-keys.xml` which passes in authentication details to the test runner.
 
-1. `auth-keys.xml`
-1. `contract-test-options.xml`
-
-These are both Hadoop XML configuration files, which must be placed into
+It is a Hadoop XML configuration file, which must be placed into
 `hadoop-tools/hadoop-aws/src/test/resources`.
 
 ### File `core-site.xml`
@@ -106,6 +103,8 @@ each filesystem for its testing.
 
 1. `test.fs.s3n.name` : the URL of the bucket for S3n tests
 1. `test.fs.s3a.name` : the URL of the bucket for S3a tests
+1. `fs.contract.test.fs.s3n` : the URL of the bucket for S3n filesystem contract tests
+1. `fs.contract.test.fs.s3a` : the URL of the bucket for S3a filesystem contract tests
 
 *Note* that running s3a and s3n tests in parallel mode, against the same bucket
 is unreliable.  We recommend using separate buckets or testing one connector
@@ -128,8 +127,8 @@ Example:
   </property>
 
   <property>
-    <name>test.fs.s3a.name</name>
-    <value>s3a://test-aws-s3a/</value>
+    <name>fs.contract.test.fs.s3n</name>
+    <value>${test.fs.s3n.name}</value>
   </property>
 
   <property>
@@ -140,6 +139,16 @@ Example:
   <property>
     <name>fs.s3n.awsSecretAccessKey</name>
     <value>DONOTEVERSHARETHISSECRETKEY!</value>
+  </property>
+
+  <property>
+    <name>test.fs.s3a.name</name>
+    <value>s3a://test-aws-s3a/</value>
+  </property>
+
+  <property>
+    <name>fs.contract.test.fs.s3a</name>
+    <value>${test.fs.s3a.name}</value>
   </property>
 
   <property>
@@ -162,107 +171,6 @@ Example:
 
 </configuration>
 ```
-
-### File `contract-test-options.xml`
-
-The file `hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml`
-must be created and configured for the test filesystems.
-
-If a specific file `fs.contract.test.fs.*` test path is not defined for
-any of the filesystems, those tests will be skipped.
-
-The standard S3 authentication details must also be provided. This can be
-through copy-and-paste of the `auth-keys.xml` credentials, or it can be
-through direct XInclude inclusion.
-
-Here is an an example `contract-test-options.xml` which places all test options
-into the `auth-keys.xml` file, so offering a single place to keep credentials
-and define test endpoint bindings.
-
-```xml
-<configuration>
-  <include xmlns="http://www.w3.org/2001/XInclude"
-    href="auth-keys.xml"/>
-</configuration>
-```
-
-### s3n://
-
-
-In the file `src/test/resources/contract-test-options.xml`, the filesystem
-name must be defined in the property `fs.contract.test.fs.s3n`.
-The standard configuration options to define the S3N authentication details
-must also be provided.
-
-Example:
-
-```xml
-<property>
-  <name>fs.contract.test.fs.s3n</name>
-  <value>s3n://test-aws-s3n/</value>
-</property>
-```
-
-### s3a://
-
-
-In the file `src/test/resources/contract-test-options.xml`, the filesystem
-name must be defined in the property `fs.contract.test.fs.s3a`.
-The standard configuration options to define the S3N authentication details
-must also be provided.
-
-Example:
-
-```xml
-<property>
-  <name>fs.contract.test.fs.s3a</name>
-  <value>s3a://test-aws-s3a/</value>
-</property>
-```
-
-### Complete example of `contract-test-options.xml`
-
-
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<!---
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License. See accompanying LICENSE file.
--->
-
-<configuration>
-
-  <include xmlns="http://www.w3.org/2001/XInclude"
-  href="auth-keys.xml"/>
-
-  <property>
-    <name>fs.contract.test.fs.s3a</name>
-    <value>s3a://test-aws-s3a/</value>
-  </property>
-
-  <property>
-    <name>fs.contract.test.fs.s3n</name>
-    <value>s3n://test-aws-s3n/</value>
-  </property>
-
-</configuration>
-```
-
-This example pulls in the `auth-keys.xml` file for the credentials.
-This provides one single place to keep the keys up to date —and means
-that the file `contract-test-options.xml` does not contain any
-secret credentials itself. As the auth keys XML file is kept out of the
-source code tree, it is not going to get accidentally committed.
 
 ### Configuring S3a Encryption
 
@@ -346,8 +254,7 @@ like `ITestS3A*` shown above, it may cause unpredictable test failures.
 ### Testing against different regions
 
 S3A can connect to different regions —the tests support this. Simply
-define the target region in `contract-test-options.xml` or any `auth-keys.xml`
-file referenced.
+define the target region in `auth-keys.xml`.
 
 ```xml
 <property>
