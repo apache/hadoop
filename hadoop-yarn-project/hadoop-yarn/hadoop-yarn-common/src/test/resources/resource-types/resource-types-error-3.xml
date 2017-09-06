@@ -18,7 +18,7 @@ limitations under the License. See accompanying LICENSE file.
 
  <property>
    <name>yarn.resource-types</name>
-   <value>vcores,resource1</value>
+   <value>resource1,resource1</value>
  </property>
 
  <property>
