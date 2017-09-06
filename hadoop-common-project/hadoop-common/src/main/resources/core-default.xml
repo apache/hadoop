@@ -1428,6 +1428,19 @@
   <description>The implementation class of the S3A AbstractFileSystem.</description>
 </property>
 
+<!-- Ozone file system properties -->
+<property>
+  <name>fs.ozfs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
+  <description>The implementation class of the Ozone FileSystem.</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.ozfs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.OzFs</value>
+  <description>The implementation class of the OzFs AbstractFileSystem.</description>
+</property>
+
 <!-- Azure file system properties -->
 <property>
   <name>fs.wasb.impl</name>
