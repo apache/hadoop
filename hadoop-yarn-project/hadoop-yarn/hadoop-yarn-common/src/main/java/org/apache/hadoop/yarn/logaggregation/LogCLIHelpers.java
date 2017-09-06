@@ -128,8 +128,17 @@ public class LogCLIHelpers implements Configurable {
   @VisibleForTesting
   public int dumpAContainerLogsForLogType(ContainerLogsRequest options,
       boolean outputFailure) throws IOException {
-    boolean foundAnyLogs = this.getFileController(options.getAppId(),
-        options.getAppOwner()).readAggregatedLogs(options, null);
+    LogAggregationFileController fc = null;
+    try {
+      fc = this.getFileController(
+          options.getAppId(), options.getAppOwner());
+    } catch (IOException ex) {
+      System.err.println(ex);
+    }
+    boolean foundAnyLogs = false;
+    if (fc != null) {
+      foundAnyLogs = fc.readAggregatedLogs(options, null);
+    }
     if (!foundAnyLogs) {
       if (outputFailure) {
         containerLogNotFound(options.getContainerId());
@@ -142,9 +151,17 @@ public class LogCLIHelpers implements Configurable {
   @Private
   public int dumpAContainerLogsForLogTypeWithoutNodeId(
       ContainerLogsRequest options) throws IOException {
-    boolean foundAnyLogs = getFileController(options.getAppId(),
-        options.getAppOwner()).readAggregatedLogs(
-        options, null);
+    LogAggregationFileController fc = null;
+    try {
+      fc = this.getFileController(
+          options.getAppId(), options.getAppOwner());
+    } catch (IOException ex) {
+      System.err.println(ex);
+    }
+    boolean foundAnyLogs = false;
+    if (fc != null) {
+      foundAnyLogs = fc.readAggregatedLogs(options, null);
+    }
     if (!foundAnyLogs) {
       containerLogNotFound(options.getContainerId());
       return -1;
@@ -155,9 +172,17 @@ public class LogCLIHelpers implements Configurable {
   @Private
   public int dumpAllContainersLogs(ContainerLogsRequest options)
       throws IOException {
-    boolean foundAnyLogs = getFileController(options.getAppId(),
-        options.getAppOwner()).readAggregatedLogs(
-        options, null);
+    LogAggregationFileController fc = null;
+    try {
+      fc = this.getFileController(
+          options.getAppId(), options.getAppOwner());
+    } catch (IOException ex) {
+      System.err.println(ex);
+    }
+    boolean foundAnyLogs = false;
+    if (fc != null) {
+      foundAnyLogs = fc.readAggregatedLogs(options, null);
+    }
     if (!foundAnyLogs) {
       emptyLogDir(LogAggregationUtils.getRemoteAppLogDir(
           conf, options.getAppId(), options.getAppOwner())

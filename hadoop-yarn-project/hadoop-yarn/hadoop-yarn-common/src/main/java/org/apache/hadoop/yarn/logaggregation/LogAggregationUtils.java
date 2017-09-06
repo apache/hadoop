@@ -38,11 +38,11 @@ public class LogAggregationUtils {
 
   /**
    * Constructs the full filename for an application's log file per node.
-   * @param remoteRootLogDir
-   * @param appId
-   * @param user
-   * @param nodeId
-   * @param suffix
+   * @param remoteRootLogDir the aggregated remote root log dir
+   * @param appId the application Id
+   * @param user the application owner
+   * @param nodeId the node id
+   * @param suffix the log dir suffix
    * @return the remote log file.
    */
   public static Path getRemoteNodeLogFileForApp(Path remoteRootLogDir,
@@ -53,10 +53,10 @@ public class LogAggregationUtils {
 
   /**
    * Gets the remote app log dir.
-   * @param remoteRootLogDir
-   * @param appId
-   * @param user
-   * @param suffix
+   * @param remoteRootLogDir the aggregated log remote root log dir
+   * @param appId the application id
+   * @param user the application owner
+   * @param suffix the log directory suffix
    * @return the remote application specific log dir.
    */
   public static Path getRemoteAppLogDir(Path remoteRootLogDir,
@@ -67,9 +67,9 @@ public class LogAggregationUtils {
 
   /**
    * Gets the remote suffixed log dir for the user.
-   * @param remoteRootLogDir
-   * @param user
-   * @param suffix
+   * @param remoteRootLogDir the aggregated log remote root log dir
+   * @param user the application owner
+   * @param suffix the log dir suffix
    * @return the remote suffixed log dir.
    */
   public static Path getRemoteLogSuffixedDir(Path remoteRootLogDir,
@@ -83,8 +83,8 @@ public class LogAggregationUtils {
 
   /**
    * Gets the remote log user dir.
-   * @param remoteRootLogDir
-   * @param user
+   * @param remoteRootLogDir the aggregated log remote root log dir
+   * @param user the application owner
    * @return the remote per user log dir.
    */
   public static Path getRemoteLogUserDir(Path remoteRootLogDir, String user) {
@@ -93,7 +93,7 @@ public class LogAggregationUtils {
 
   /**
    * Returns the suffix component of the log dir.
-   * @param conf
+   * @param conf the configuration
    * @return the suffix which will be appended to the user log dir.
    */
   public static String getRemoteNodeLogDirSuffix(Configuration conf) {
@@ -104,7 +104,7 @@ public class LogAggregationUtils {
   
   /**
    * Converts a nodeId to a form used in the app log file name.
-   * @param nodeId
+   * @param nodeId the nodeId
    * @return the node string to be used to construct the file name.
    */
   @VisibleForTesting
