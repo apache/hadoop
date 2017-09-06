@@ -201,6 +201,7 @@ public abstract class LogAggregationFileController {
    * Output container log.
    * @param logRequest {@link ContainerLogsRequest}
    * @param os the output stream
+   * @return true if we can read the aggregated logs successfully
    * @throws IOException if we can not access the log file.
    */
   public abstract boolean readAggregatedLogs(ContainerLogsRequest logRequest,
@@ -228,9 +229,9 @@ public abstract class LogAggregationFileController {
   /**
    * Returns the owner of the application.
    *
-   * @param the aggregatedLog path.
-   * @return the application owner.
-   * @throws IOException
+   * @param aggregatedLogPath the aggregatedLog path
+   * @return the application owner
+   * @throws IOException if we can not get the application owner
    */
   public abstract String getApplicationOwner(Path aggregatedLogPath)
       throws IOException;
@@ -239,9 +240,9 @@ public abstract class LogAggregationFileController {
    * Returns ACLs for the application. An empty map is returned if no ACLs are
    * found.
    *
-   * @param the aggregatedLog path.
+   * @param aggregatedLogPath the aggregatedLog path.
    * @return a map of the Application ACLs.
-   * @throws IOException
+   * @throws IOException if we can not get the application acls
    */
   public abstract Map<ApplicationAccessType, String> getApplicationAcls(
       Path aggregatedLogPath) throws IOException;
