@@ -26,4 +26,8 @@ limitations under the License. See accompanying LICENSE file.
    <value>G</value>
  </property>
 
+ <property>
+   <name>yarn.resource-types.vcores.units</name>
+   <value>Az</value>
+ </property>
 </configuration>
