@@ -77,8 +77,8 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
     ResourceCalculator resCalc = plan.getResourceCalculator();
     Resource capacity = plan.getTotalCapacity();
 
-    RLESparseResourceAllocation netRLERes = plan.getAvailableResourceOverTime(
-        user, oldId, stageArrival, stageDeadline, 0);
+    RLESparseResourceAllocation netRLERes = plan
+        .getAvailableResourceOverTime(user, oldId, stageArrival, stageDeadline);
 
     long step = plan.getStep();
 

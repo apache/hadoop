@@ -28,58 +28,54 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.Plan
 public interface PlanEdit extends PlanContext, PlanView {
 
   /**
-   * Add a new {@link ReservationAllocation} to the plan.
+   * Add a new {@link ReservationAllocation} to the plan
    * 
    * @param reservation the {@link ReservationAllocation} to be added to the
    *          plan
    * @param isRecovering flag to indicate if reservation is being added as part
    *          of failover or not
    * @return true if addition is successful, false otherwise
-   * @throws PlanningException if addition is unsuccessful
    */
-  boolean addReservation(ReservationAllocation reservation,
+  public boolean addReservation(ReservationAllocation reservation,
       boolean isRecovering) throws PlanningException;
 
   /**
    * Updates an existing {@link ReservationAllocation} in the plan. This is
-   * required for re-negotiation.
+   * required for re-negotiation
    * 
    * @param reservation the {@link ReservationAllocation} to be updated the plan
    * @return true if update is successful, false otherwise
-   * @throws PlanningException if update is unsuccessful
    */
-  boolean updateReservation(ReservationAllocation reservation)
+  public boolean updateReservation(ReservationAllocation reservation)
       throws PlanningException;
 
   /**
    * Delete an existing {@link ReservationAllocation} from the plan identified
    * uniquely by its {@link ReservationId}. This will generally be used for
-   * garbage collection.
+   * garbage collection
    * 
    * @param reservationID the {@link ReservationAllocation} to be deleted from
    *          the plan identified uniquely by its {@link ReservationId}
    * @return true if delete is successful, false otherwise
-   * @throws PlanningException if deletion is unsuccessful
    */
-  boolean deleteReservation(ReservationId reservationID)
+  public boolean deleteReservation(ReservationId reservationID)
       throws PlanningException;
 
   /**
    * Method invoked to garbage collect old reservations. It cleans up expired
-   * reservations that have fallen out of the sliding archival window.
+   * reservations that have fallen out of the sliding archival window
    * 
    * @param tick the current time from which the archival window is computed
-   * @throws PlanningException if archival is unsuccessful
    */
-  void archiveCompletedReservations(long tick) throws PlanningException;
+  public void archiveCompletedReservations(long tick) throws PlanningException;
 
   /**
    * Sets the overall capacity in terms of {@link Resource} assigned to this
-   * plan.
+   * plan
    * 
    * @param capacity the overall capacity in terms of {@link Resource} assigned
    *          to this plan
    */
-  void setTotalCapacity(Resource capacity);
+  public void setTotalCapacity(Resource capacity);
 
 }

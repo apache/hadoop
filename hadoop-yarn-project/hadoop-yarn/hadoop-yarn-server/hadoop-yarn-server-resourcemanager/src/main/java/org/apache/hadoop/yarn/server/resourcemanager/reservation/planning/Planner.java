@@ -34,7 +34,7 @@ public interface Planner {
    *
    * @param plan the {@link Plan} to replan
    * @param contracts the list of reservation requests
-   * @throws PlanningException if operation is unsuccessful
+   * @throws PlanningException
    */
   public void plan(Plan plan, List<ReservationDefinition> contracts)
       throws PlanningException;
