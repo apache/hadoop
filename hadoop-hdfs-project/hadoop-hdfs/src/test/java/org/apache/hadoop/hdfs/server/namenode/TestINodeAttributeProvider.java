@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,19 +34,25 @@ import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.INodeAttributeProvider.AccessControlEnforcer;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
 public class TestINodeAttributeProvider {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestINodeAttributeProvider.class);
+
   private MiniDFSCluster miniDFS;
   private static final Set<String> CALLED = new HashSet<String>();
+  private static final short HDFS_PERMISSION = 0777;
+  private static final short PROVIDER_PERMISSION = 0770;
 
   public static class MyAuthorizationProvider extends INodeAttributeProvider {
 
@@ -112,7 +119,8 @@ public class TestINodeAttributeProvider {
 
         @Override
         public long getPermissionLong() {
-          return (useDefault) ? inode.getPermissionLong() : 0770;
+          return (useDefault) ? inode.getPermissionLong() :
+            (long)PROVIDER_PERMISSION;
         }
 
         @Override
@@ -177,6 +185,9 @@ public class TestINodeAttributeProvider {
     conf.set(DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_KEY,
         MyAuthorizationProvider.class.getName());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.set(
+        DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_BYPASS_USERS_KEY,
+        " u2,, ,u3, ");
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
     miniDFS = new MiniDFSCluster.Builder(conf).build();
   }
@@ -195,8 +206,11 @@ public class TestINodeAttributeProvider {
   public void testDelegationToProvider() throws Exception {
     Assert.assertTrue(CALLED.contains("start"));
     FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
-    fs.mkdirs(new Path("/tmp"));
-    fs.setPermission(new Path("/tmp"), new FsPermission((short) 0777));
+    final Path tmpPath = new Path("/tmp");
+    final Path fooPath = new Path("/tmp/foo");
+
+    fs.mkdirs(tmpPath);
+    fs.setPermission(tmpPath, new FsPermission(HDFS_PERMISSION));
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting("u1",
         new String[]{"g1"});
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
@@ -204,22 +218,99 @@ public class TestINodeAttributeProvider {
       public Void run() throws Exception {
         FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
         CALLED.clear();
-        fs.mkdirs(new Path("/tmp/foo"));
+        fs.mkdirs(fooPath);
         Assert.assertTrue(CALLED.contains("getAttributes"));
         Assert.assertTrue(CALLED.contains("checkPermission|null|null|null"));
         Assert.assertTrue(CALLED.contains("checkPermission|WRITE|null|null"));
+
         CALLED.clear();
-        fs.listStatus(new Path("/tmp/foo"));
+        fs.listStatus(fooPath);
         Assert.assertTrue(CALLED.contains("getAttributes"));
         Assert.assertTrue(
             CALLED.contains("checkPermission|null|null|READ_EXECUTE"));
+
         CALLED.clear();
-        fs.getAclStatus(new Path("/tmp/foo"));
+        fs.getAclStatus(fooPath);
         Assert.assertTrue(CALLED.contains("getAttributes"));
         Assert.assertTrue(CALLED.contains("checkPermission|null|null|null"));
         return null;
       }
     });
+  }
+
+  private class AssertHelper {
+    private boolean bypass = true;
+    AssertHelper(boolean bp) {
+      bypass = bp;
+    }
+    public void doAssert(boolean x) {
+      if (bypass) {
+        Assert.assertFalse(x);
+      } else {
+        Assert.assertTrue(x);
+      }
+    }
+  }
+
+  private void testBypassProviderHelper(final String[] users,
+      final short expectedPermission, final boolean bypass) throws Exception {
+    final AssertHelper asserter = new AssertHelper(bypass);
+
+    Assert.assertTrue(CALLED.contains("start"));
+
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authz);
+    fs.setPermission(authz, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(HDFS_PERMISSION));
+    for(String user : users) {
+      UserGroupInformation ugiBypass =
+          UserGroupInformation.createUserForTesting(user,
+              new String[]{"g1"});
+      ugiBypass.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+          Assert.assertEquals(expectedPermission,
+              fs.getFileStatus(authzChild).getPermission().toShort());
+          asserter.doAssert(CALLED.contains("getAttributes"));
+          asserter.doAssert(CALLED.contains("checkPermission|null|null|null"));
+
+          CALLED.clear();
+          Assert.assertEquals(expectedPermission,
+              fs.listStatus(userPath)[0].getPermission().toShort());
+          asserter.doAssert(CALLED.contains("getAttributes"));
+          asserter.doAssert(
+              CALLED.contains("checkPermission|null|null|READ_EXECUTE"));
+
+          CALLED.clear();
+          fs.getAclStatus(authzChild);
+          asserter.doAssert(CALLED.contains("getAttributes"));
+          asserter.doAssert(CALLED.contains("checkPermission|null|null|null"));
+          return null;
+        }
+      });
+    }
+  }
+
+  @Test
+  public void testAuthzDelegationToProvider() throws Exception {
+    LOG.info("Test not bypassing provider");
+    String[] users = {"u1"};
+    testBypassProviderHelper(users, PROVIDER_PERMISSION, false);
+  }
+
+  @Test
+  public void testAuthzBypassingProvider() throws Exception {
+    LOG.info("Test bypassing provider");
+    String[] users = {"u2", "u3"};
+    testBypassProviderHelper(users, HDFS_PERMISSION, true);
   }
 
   @Test
