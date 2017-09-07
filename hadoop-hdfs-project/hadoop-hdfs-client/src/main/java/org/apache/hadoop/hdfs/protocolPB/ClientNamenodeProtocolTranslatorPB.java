@@ -120,8 +120,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFil
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
@@ -246,13 +246,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   private final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
       GetFsStatusRequestProto.newBuilder().build();
 
-  private final static GetFsBlocksStatsRequestProto
-      VOID_GET_FS_REPLICABLOCKS_STATS_REQUEST =
-      GetFsBlocksStatsRequestProto.newBuilder().build();
+  private final static GetFsReplicatedBlockStatsRequestProto
+      VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST =
+      GetFsReplicatedBlockStatsRequestProto.newBuilder().build();
 
-  private final static GetFsECBlockGroupsStatsRequestProto
-      VOID_GET_FS_ECBLOCKGROUPS_STATS_REQUEST =
-      GetFsECBlockGroupsStatsRequestProto.newBuilder().build();
+  private final static GetFsECBlockGroupStatsRequestProto
+      VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST =
+      GetFsECBlockGroupStatsRequestProto.newBuilder().build();
 
   private final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST =
       RollEditsRequestProto.getDefaultInstance();
@@ -695,20 +695,20 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ReplicatedBlockStats getBlocksStats() throws IOException {
+  public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
     try {
-      return PBHelperClient.convert(rpcProxy.getFsBlocksStats(null,
-          VOID_GET_FS_REPLICABLOCKS_STATS_REQUEST));
+      return PBHelperClient.convert(rpcProxy.getFsReplicatedBlockStats(null,
+          VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public ECBlockGroupStats getECBlockGroupsStats() throws IOException {
+  public ECBlockGroupStats getECBlockGroupStats() throws IOException {
     try {
-      return PBHelperClient.convert(rpcProxy.getFsECBlockGroupsStats(null,
-          VOID_GET_FS_ECBLOCKGROUPS_STATS_REQUEST));
+      return PBHelperClient.convert(rpcProxy.getFsECBlockGroupStats(null,
+          VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

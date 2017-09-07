@@ -778,9 +778,9 @@ public class TestDFSAdmin {
     assertEquals(numCorruptBlocks + numCorruptECBlockGroups,
         client.getCorruptBlocksCount());
     assertEquals(numCorruptBlocks, client.getNamenode()
-        .getBlocksStats().getCorruptBlocksStat());
+        .getReplicatedBlockStats().getCorruptBlocks());
     assertEquals(numCorruptECBlockGroups, client.getNamenode()
-        .getECBlockGroupsStats().getCorruptBlockGroupsStat());
+        .getECBlockGroupStats().getCorruptBlockGroups());
   }
 
   @Test

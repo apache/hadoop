@@ -534,30 +534,31 @@ public class DFSAdmin extends FsShell {
      * minutes. Use "-metaSave" to list of all such blocks and accurate 
      * counts.
      */
-    ReplicatedBlockStats replicatedBlockStats = dfs.getClient().getNamenode().getBlocksStats();
+    ReplicatedBlockStats replicatedBlockStats =
+        dfs.getClient().getNamenode().getReplicatedBlockStats();
     System.out.println("Replicated Blocks:");
     System.out.println("\tUnder replicated blocks: " +
-        replicatedBlockStats.getLowRedundancyBlocksStat());
+        replicatedBlockStats.getLowRedundancyBlocks());
     System.out.println("\tBlocks with corrupt replicas: " +
-        replicatedBlockStats.getCorruptBlocksStat());
+        replicatedBlockStats.getCorruptBlocks());
     System.out.println("\tMissing blocks: " +
-        replicatedBlockStats.getMissingReplicaBlocksStat());
+        replicatedBlockStats.getMissingReplicaBlocks());
     System.out.println("\tMissing blocks (with replication factor 1): " +
-        replicatedBlockStats.getMissingReplicationOneBlocksStat());
+        replicatedBlockStats.getMissingReplicationOneBlocks());
     System.out.println("\tPending deletion blocks: " +
-        replicatedBlockStats.getPendingDeletionBlocksStat());
+        replicatedBlockStats.getPendingDeletionBlocks());
 
     ECBlockGroupStats ecBlockGroupStats =
-        dfs.getClient().getNamenode().getECBlockGroupsStats();
+        dfs.getClient().getNamenode().getECBlockGroupStats();
     System.out.println("Erasure Coded Block Groups: ");
     System.out.println("\tLow redundancy block groups: " +
-        ecBlockGroupStats.getLowRedundancyBlockGroupsStat());
+        ecBlockGroupStats.getLowRedundancyBlockGroups());
     System.out.println("\tBlock groups with corrupt internal blocks: " +
-        ecBlockGroupStats.getCorruptBlockGroupsStat());
+        ecBlockGroupStats.getCorruptBlockGroups());
     System.out.println("\tMissing block groups: " +
-        ecBlockGroupStats.getMissingBlockGroupsStat());
-    System.out.println("\tPending deletion block groups: " +
-        ecBlockGroupStats.getPendingDeletionBlockGroupsStat());
+        ecBlockGroupStats.getMissingBlockGroups());
+    System.out.println("\tPending deletion blocks: " +
+        ecBlockGroupStats.getPendingDeletionBlocks());
 
     System.out.println();
 
