@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDelet
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 
 
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -124,6 +126,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       rcsCopy.setRemainingRetryAttempts(rcs.getRemainingRetryAttempts());
       rcsCopy.setWorkDir(rcs.getWorkDir());
       rcsCopy.setLogDir(rcs.getLogDir());
+      rcsCopy.setResourceMappings(rcs.getResourceMappings());
       result.add(rcsCopy);
     }
     return result;
@@ -509,6 +512,17 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   public synchronized void removeAMRMProxyAppContext(
       ApplicationAttemptId attempt) throws IOException {
     amrmProxyState.getAppContexts().remove(attempt);
+  }
+
+  @Override
+  public void storeAssignedResources(ContainerId containerId,
+      String resourceType, List<Serializable> assignedResources)
+      throws IOException {
+    ResourceMappings.AssignedResources ar =
+        new ResourceMappings.AssignedResources();
+    ar.updateAssignedResources(assignedResources);
+    containerStates.get(containerId).getResourceMappings()
+        .addAssignedResources(resourceType, ar);
   }
 
   private static class TrackerState {
