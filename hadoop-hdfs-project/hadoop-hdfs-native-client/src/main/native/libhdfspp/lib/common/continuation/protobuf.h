@@ -49,6 +49,7 @@ struct ReadDelimitedPBMessageContinuation : public Continuation {
         uint32_t size = 0;
         bool v = is.ReadVarint32(&size);
         assert(v);
+        (void)v; //avoids unused variable warning
         is.PushLimit(size);
         msg_->Clear();
         v = msg_->MergeFromCodedStream(&is);

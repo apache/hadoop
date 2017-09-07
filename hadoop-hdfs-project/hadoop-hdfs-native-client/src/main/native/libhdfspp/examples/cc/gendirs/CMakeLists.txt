@@ -24,4 +24,4 @@ include_directories( ${LIBHDFSPP_DIR}/include )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
 add_executable(gendirs gendirs.cc)
-target_link_libraries(gendirs hdfspp_static)
+target_link_libraries(gendirs tools_common hdfspp_static)

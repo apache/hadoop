@@ -37,11 +37,9 @@
    **/
 
 #include "hdfspp/hdfspp.h"
-#include "common/hdfs_configuration.h"
-#include "common/configuration_loader.h"
-
 #include <google/protobuf/stubs/common.h>
 #include <future>
+#include "tools_common.h"
 
 #define DEFAULT_PERMISSIONS 0755
 
@@ -80,32 +78,12 @@ int main(int argc, char *argv[]) {
   int depth = std::stoi(argv[2]);
   int fanout = std::stoi(argv[3]);
 
-  hdfs::Options options;
-  //Setting the config path to the default: "$HADOOP_CONF_DIR" or "/etc/hadoop/conf"
-  hdfs::ConfigurationLoader loader;
-  //Loading default config files core-site.xml and hdfs-site.xml from the config path
-  hdfs::optional<hdfs::HdfsConfiguration> config = loader.LoadDefaultResources<hdfs::HdfsConfiguration>();
-  //TODO: HDFS-9539 - after this is resolved, valid config will always be returned.
-  if(config){
-    //Loading options from the config
-    options = config->GetOptions();
-  }
-  //TODO: HDFS-9539 - until then we increase the time-out to allow all recursive async calls to finish
-  options.rpc_timeout = std::numeric_limits<int>::max();
-  hdfs::IoService * io_service = hdfs::IoService::New();
-  //Wrapping fs into a unique pointer to guarantee deletion
-  std::shared_ptr<hdfs::FileSystem> fs(hdfs::FileSystem::New(io_service, "", options));
+  //Building a URI object from the given uri path
+  hdfs::URI uri = hdfs::parse_path_or_exit(path);
+
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri, true);
   if (!fs) {
-    std::cerr << "Could not connect the file system." << std::endl;
-    exit(EXIT_FAILURE);
-  }
-  hdfs::Status status = fs->ConnectToDefaultFs();
-  if (!status.ok()) {
-    if(!options.defaultFS.get_host().empty()){
-      std::cerr << "Error connecting to " << options.defaultFS << ". " << status.ToString() << std::endl;
-    } else {
-      std::cerr << "Error connecting to the cluster: defaultFS is empty. " << status.ToString() << std::endl;
-    }
+    std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
   }
 

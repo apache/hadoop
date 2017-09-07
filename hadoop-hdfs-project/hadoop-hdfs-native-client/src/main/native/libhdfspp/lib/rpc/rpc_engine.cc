@@ -68,7 +68,7 @@ void RpcEngine::Connect(const std::string &cluster_name,
   }
 
   // Construct retry policy after we determine if config is HA
-  retry_policy_ = std::move(MakeRetryPolicy(options_));
+  retry_policy_ = MakeRetryPolicy(options_);
 
   conn_ = InitializeConnection();
   conn_->Connect(last_endpoints_, auth_info_, handler);
@@ -133,7 +133,7 @@ std::string RpcEngine::getRandomClientId()
 
 void RpcEngine::TEST_SetRpcConnection(std::shared_ptr<RpcConnection> conn) {
   conn_ = conn;
-  retry_policy_ = std::move(MakeRetryPolicy(options_));
+  retry_policy_ = MakeRetryPolicy(options_);
 }
 
 void RpcEngine::TEST_SetRetryPolicy(std::unique_ptr<const RetryPolicy> policy) {
@@ -188,7 +188,7 @@ void RpcEngine::AsyncRpcCommsError(
     const Status &status,
     std::shared_ptr<RpcConnection> failedConnection,
     std::vector<std::shared_ptr<Request>> pendingRequests) {
-  LOG_ERROR(kRPC, << "RpcEngine::AsyncRpcCommsError called; status=\"" << status.ToString() << "\" conn=" << failedConnection.get() << " reqs=" << pendingRequests.size());
+  LOG_ERROR(kRPC, << "RpcEngine::AsyncRpcCommsError called; status=\"" << status.ToString() << "\" conn=" << failedConnection.get() << " reqs=" << std::to_string(pendingRequests.size()));
 
   io_service().post([this, status, failedConnection, pendingRequests]() {
     RpcCommsError(status, failedConnection, pendingRequests);
@@ -199,7 +199,7 @@ void RpcEngine::RpcCommsError(
     const Status &status,
     std::shared_ptr<RpcConnection> failedConnection,
     std::vector<std::shared_ptr<Request>> pendingRequests) {
-  LOG_WARN(kRPC, << "RpcEngine::RpcCommsError called; status=\"" << status.ToString() << "\" conn=" << failedConnection.get() << " reqs=" << pendingRequests.size());
+  LOG_WARN(kRPC, << "RpcEngine::RpcCommsError called; status=\"" << status.ToString() << "\" conn=" << failedConnection.get() << " reqs=" << std::to_string(pendingRequests.size()));
 
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
 
@@ -252,7 +252,7 @@ void RpcEngine::RpcCommsError(
           head_action && head_action->action != RetryAction::FAIL;
 
   if (haveRequests) {
-    LOG_TRACE(kRPC, << "Have " << pendingRequests.size() << " requests to resend");
+    LOG_TRACE(kRPC, << "Have " << std::to_string(pendingRequests.size()) << " requests to resend");
     bool needNewConnection = !conn_;
     if (needNewConnection) {
       LOG_DEBUG(kRPC, << "Creating a new NN conection");

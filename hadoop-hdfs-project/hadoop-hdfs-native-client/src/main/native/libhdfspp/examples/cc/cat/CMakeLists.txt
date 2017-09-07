@@ -24,4 +24,4 @@ include_directories( ${LIBHDFSPP_DIR}/include )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
 add_executable(cat cat.cc)
-target_link_libraries(cat hdfspp_static)
+target_link_libraries(cat tools_common hdfspp_static)

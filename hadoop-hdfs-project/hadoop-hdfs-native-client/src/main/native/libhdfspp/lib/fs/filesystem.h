@@ -203,9 +203,9 @@ public:
   /* all monitored events will need to lookup handlers */
   std::shared_ptr<LibhdfsEvents> get_event_handlers();
 
-  Options get_options();
+  Options get_options() override;
 
-  std::string get_cluster_name();
+  std::string get_cluster_name() override;
 
 private:
   /**

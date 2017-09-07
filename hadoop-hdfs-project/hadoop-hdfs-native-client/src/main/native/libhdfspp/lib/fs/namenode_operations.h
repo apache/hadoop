@@ -41,7 +41,7 @@ namespace hdfs {
 
 class NameNodeOperations {
 public:
-  MEMCHECKED_CLASS(NameNodeOperations);
+  MEMCHECKED_CLASS(NameNodeOperations)
   NameNodeOperations(::asio::io_service *io_service, const Options &options,
             const std::string &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version) :

@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+include_directories( ../../tools )
+
 add_subdirectory(cat)
 add_subdirectory(gendirs)
 add_subdirectory(find)

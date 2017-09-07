@@ -21,9 +21,6 @@
 #define TOOLS_COMMON_H_
 
 #include "hdfspp/hdfspp.h"
-#include "hdfspp/uri.h"
-#include "common/hdfs_configuration.h"
-#include "common/configuration_loader.h"
 #include <mutex>
 
 namespace hdfs {

@@ -52,7 +52,7 @@ void FileHandleImpl::PositionRead(
     const std::function<void(const Status &, size_t)> &handler) {
   LOG_DEBUG(kFileHandle, << "FileHandleImpl::PositionRead("
                          << FMT_THIS_ADDR << ", buf=" << buf
-                         << ", buf_size=" << buf_size << ") called");
+                         << ", buf_size=" << std::to_string(buf_size) << ") called");
 
   /* prevent usage after cancelation */
   if(cancel_state_->is_canceled()) {
@@ -78,7 +78,7 @@ void FileHandleImpl::PositionRead(
 Status FileHandleImpl::PositionRead(void *buf, size_t buf_size, off_t offset, size_t *bytes_read) {
   LOG_DEBUG(kFileHandle, << "FileHandleImpl::[sync]PositionRead("
                          << FMT_THIS_ADDR << ", buf=" << buf
-                         << ", buf_size=" << buf_size
+                         << ", buf_size=" << std::to_string(buf_size)
                          << ", offset=" << offset << ") called");
 
   auto callstate = std::make_shared<std::promise<std::tuple<Status, size_t>>>();
@@ -106,7 +106,7 @@ Status FileHandleImpl::PositionRead(void *buf, size_t buf_size, off_t offset, si
 Status FileHandleImpl::Read(void *buf, size_t buf_size, size_t *bytes_read) {
   LOG_DEBUG(kFileHandle, << "FileHandleImpl::Read("
                          << FMT_THIS_ADDR << ", buf=" << buf
-                         << ", buf_size=" << buf_size << ") called");
+                         << ", buf_size=" << std::to_string(buf_size) << ") called");
 
   Status stat = PositionRead(buf, buf_size, offset_, bytes_read);
   if(!stat.ok()) {
@@ -237,7 +237,7 @@ void FileHandleImpl::AsyncPreadSome(
 
   LOG_DEBUG(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
             << FMT_THIS_ADDR << "), ...) Datanode hostname=" << dnHostName << ", IP Address=" << dnIpAddr
-            << ", file path=\"" << path_ << "\", offset=" << offset << ", read size=" << size_within_block);
+            << ", file path=\"" << path_ << "\", offset=" << std::to_string(offset) << ", read size=" << size_within_block);
 
   // This is where we will put the logic for re-using a DN connection; we can
   //    steal the FileHandle's dn and put it back when we're done

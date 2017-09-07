@@ -31,8 +31,6 @@ namespace pbio = ::google::protobuf::io;
 using namespace ::hadoop::common;
 using namespace ::std::placeholders;
 
-static const int kNoRetry = -1;
-
 static void AddHeadersToPacket(
     std::string *res, std::initializer_list<const pb::MessageLite *> headers,
     const std::string *payload) {

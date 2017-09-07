@@ -30,6 +30,8 @@ cmake_minimum_required(VERSION 2.8)
 
 enable_testing()
 include (CTest)
+
+SET(BUILD_SHARED_HDFSPP TRUE CACHE STRING "BUILD_SHARED_HDFSPP defaulting to 'TRUE'")
 SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
 
 # If there's a better way to inform FindCyrusSASL.cmake, let's make this cleaner:
@@ -246,6 +248,7 @@ if(NEED_LINK_DL)
    set(LIB_DL dl)
 endif()
 
+set(LIBHDFSPP_VERSION "0.1.0")
 set(LIBHDFSPP_ALL_OBJECTS $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:fs_obj> $<TARGET_OBJECTS:rpc_obj> $<TARGET_OBJECTS:reader_obj> $<TARGET_OBJECTS:proto_obj> $<TARGET_OBJECTS:connection_obj> $<TARGET_OBJECTS:common_obj> $<TARGET_OBJECTS:uriparser2_obj>)
 if (HADOOP_BUILD)
   hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
@@ -256,6 +259,7 @@ if (HADOOP_BUILD)
     ${SASL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
   )
+  set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
 else (HADOOP_BUILD)
   add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   target_link_libraries(hdfspp_static
@@ -265,18 +269,11 @@ else (HADOOP_BUILD)
     ${SASL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     )
-  add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
-  target_link_libraries(hdfspp_static
-    ${LIB_DL}
-    ${PROTOBUF_LIBRARY}
-    ${OPENSSL_LIBRARIES}
-    ${SASL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT}
-    )
+  if(BUILD_SHARED_HDFSPP)
+    add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
+    set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
+  endif(BUILD_SHARED_HDFSPP)
 endif (HADOOP_BUILD)
-set(LIBHDFSPP_VERSION "0.1.0")
-set_target_properties(hdfspp PROPERTIES
-  SOVERSION ${LIBHDFSPP_VERSION})
 
 # Set up make install targets
 # Can be installed to a particular location via "make DESTDIR=... install"
@@ -286,7 +283,9 @@ install(FILES ${LIBHDFSPP_HEADER_FILES} DESTINATION include/hdfspp)
 install(FILES ${LIBHDFS_HEADER_FILES} DESTINATION include/hdfs)
 
 install(TARGETS hdfspp_static ARCHIVE DESTINATION lib)
-install(TARGETS hdfspp LIBRARY DESTINATION lib)
+if(BUILD_SHARED_HDFSPP)
+  install(TARGETS hdfspp LIBRARY DESTINATION lib)
+endif(BUILD_SHARED_HDFSPP)
 
 add_custom_target(
     InstallToBuildDirectory

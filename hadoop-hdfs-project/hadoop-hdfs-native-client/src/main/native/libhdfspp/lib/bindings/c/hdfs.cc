@@ -1295,13 +1295,13 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
       return -1;
     }
 
-    ssize_t offset = 0;
+    off_t offset = 0;
     Status stat = file->get_impl()->Seek(&offset, std::ios_base::cur);
     if (!stat.ok()) {
       return Error(stat);
     }
 
-    return offset;
+    return (tOffset)offset;
   } catch (const std::exception & e) {
     return ReportException(e);
   } catch (...) {

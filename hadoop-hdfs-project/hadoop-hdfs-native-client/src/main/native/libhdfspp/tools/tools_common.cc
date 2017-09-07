@@ -22,15 +22,29 @@
 namespace hdfs {
 
   std::shared_ptr<hdfs::FileSystem> doConnect(hdfs::URI & uri, bool max_timeout) {
+
+    //This sets the config path to the default: "$HADOOP_CONF_DIR" or "/etc/hadoop/conf"
+    //and loads default config files core-site.xml and hdfs-site.xml from the config path
+    hdfs::ConfigParser parser;
+    if(!parser.LoadDefaultResources()){
+      std::cerr << "Could not load default resources. " << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    auto stats = parser.ValidateResources();
+    //validating core-site.xml
+    if(!stats[0].second.ok()){
+      std::cerr << stats[0].first << " is invalid: " << stats[0].second.ToString() << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    //validating hdfs-site.xml
+    if(!stats[1].second.ok()){
+      std::cerr << stats[1].first << " is invalid: " << stats[1].second.ToString() << std::endl;
+      exit(EXIT_FAILURE);
+    }
     hdfs::Options options;
-    //Setting the config path to the default: "$HADOOP_CONF_DIR" or "/etc/hadoop/conf"
-    hdfs::ConfigurationLoader loader;
-    //Loading default config files core-site.xml and hdfs-site.xml from the config path
-    hdfs::optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
-    //TODO: HDFS-9539 - after this is resolved, valid config will always be returned.
-    if(config){
-      //Loading options from the config
-      options = config->GetOptions();
+    if(!parser.get_options(options)){
+      std::cerr << "Could not load Options object. " << std::endl;
+      exit(EXIT_FAILURE);
     }
     if(max_timeout){
       //TODO: HDFS-9539 - until then we increase the time-out to allow all recursive async calls to finish
