@@ -89,8 +89,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
@@ -4082,8 +4083,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * <p>
    * @see ClientProtocol#getBlocksStats()
    */
-  BlocksStats getBlocksStats() {
-    return new BlocksStats(getLowRedundancyReplicatedBlocks(),
+  ReplicatedBlockStats getBlocksStats() {
+    return new ReplicatedBlockStats(getLowRedundancyReplicatedBlocks(),
         getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
         getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
         getPendingDeletionReplicatedBlocks());
@@ -4095,8 +4096,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * <p>
    * @see ClientProtocol#getECBlockGroupsStats()
    */
-  ECBlockGroupsStats getECBlockGroupsStats() {
-    return new ECBlockGroupsStats(getLowRedundancyECBlockGroups(),
+  ECBlockGroupStats getECBlockGroupsStats() {
+    return new ECBlockGroupStats(getLowRedundancyECBlockGroups(),
         getCorruptECBlockGroups(), getMissingECBlockGroups(),
         getBytesInFutureECBlockGroups(), getPendingDeletionECBlockGroups());
   }
