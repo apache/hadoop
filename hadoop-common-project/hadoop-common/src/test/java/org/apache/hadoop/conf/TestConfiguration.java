@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -53,7 +54,6 @@ import static org.junit.Assert.assertArrayEquals;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -135,6 +135,7 @@ public class TestConfiguration {
 
   private void endConfig() throws IOException{
     out.write("</configuration>\n");
+    out.flush();
     out.close();
   }
 
@@ -574,6 +575,34 @@ public class TestConfiguration {
       out.write(s);
       out.write("</source>");
     }
+    out.write("</property>\n");
+  }
+
+  private void appendPropertyByTag(String name, String val, String tags,
+      String... sources) throws IOException {
+    appendPropertyByTag(name, val, false, tags, sources);
+  }
+
+  private void appendPropertyByTag(String name, String val, boolean isFinal,
+      String tag, String... sources) throws IOException {
+    out.write("<property>");
+    out.write("<name>");
+    out.write(name);
+    out.write("</name>");
+    out.write("<value>");
+    out.write(val);
+    out.write("</value>");
+    if (isFinal) {
+      out.write("<final>true</final>");
+    }
+    for (String s : sources) {
+      out.write("<source>");
+      out.write(s);
+      out.write("</source>");
+    }
+    out.write("<tag>");
+    out.write(tag);
+    out.write("</tag>");
     out.write("</property>\n");
   }
 
@@ -2214,5 +2243,86 @@ public class TestConfiguration {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
     });
+  }
+
+  @Test
+  public void testGetAllPropertiesByTags() throws Exception {
+
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendPropertyByTag("dfs.cblock.trace.io", "false", "DEBUG");
+    appendPropertyByTag("dfs.replication", "1", "PERFORMANCE,REQUIRED");
+    appendPropertyByTag("dfs.namenode.logging.level", "INFO", "CLIENT,DEBUG");
+    endConfig();
+
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    conf.getProps();
+
+    List<PropertyTag> tagList = new ArrayList<>();
+    tagList.add(CorePropertyTag.REQUIRED);
+    tagList.add(CorePropertyTag.PERFORMANCE);
+    tagList.add(CorePropertyTag.DEBUG);
+    tagList.add(CorePropertyTag.CLIENT);
+
+    Properties properties = conf.getAllPropertiesByTags(tagList);
+    assertEq(3, properties.size());
+    assertEq(true, properties.containsKey("dfs.namenode.logging.level"));
+    assertEq(true, properties.containsKey("dfs.replication"));
+    assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
+    assertEq(false, properties.containsKey("namenode.host"));
+  }
+
+  @Test
+  public void testGetAllPropertiesWithSourceByTags() throws Exception {
+
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendPropertyByTag("dfs.cblock.trace.io", "false", "DEBUG",
+        "hdfs-default.xml", "core-site.xml");
+    appendPropertyByTag("dfs.replication", "1", "PERFORMANCE,HDFS",
+        "hdfs-default.xml");
+    appendPropertyByTag("yarn.resourcemanager.work-preserving-recovery"
+        + ".enabled", "INFO", "CLIENT,DEBUG", "yarn-default.xml", "yarn-site"
+        + ".xml");
+    endConfig();
+
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    conf.getProps();
+
+    List<PropertyTag> tagList = new ArrayList<>();
+    tagList.add(CorePropertyTag.REQUIRED);
+
+    Properties properties;
+    properties = conf.getAllPropertiesByTags(tagList);
+    assertNotEquals(3, properties.size());
+
+    tagList.add(HDFSPropertyTag.DEBUG);
+    tagList.add(YarnPropertyTag.CLIENT);
+    tagList.add(HDFSPropertyTag.PERFORMANCE);
+    tagList.add(HDFSPropertyTag.HDFS);
+    properties = conf.getAllPropertiesByTags(tagList);
+    assertEq(3, properties.size());
+
+    assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
+    assertEq(true, properties.containsKey("dfs.replication"));
+    assertEq(true, properties
+        .containsKey("yarn.resourcemanager.work-preserving-recovery.enabled"));
+    assertEq(false, properties.containsKey("namenode.host"));
+
+    tagList.clear();
+    tagList.add(HDFSPropertyTag.DEBUG);
+    properties = conf.getAllPropertiesByTags(tagList);
+    assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
+    assertEq(false, properties.containsKey("yarn.resourcemanager"
+        + ".work-preserving-recovery"));
+
+    tagList.clear();
+    tagList.add(YarnPropertyTag.DEBUG);
+    properties = conf.getAllPropertiesByTags(tagList);
+    assertEq(false, properties.containsKey("dfs.cblock.trace.io"));
+    assertEq(true, properties.containsKey("yarn.resourcemanager"
+        + ".work-preserving-recovery.enabled"));
   }
 }
