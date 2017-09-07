@@ -144,6 +144,7 @@
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
       <item name="YARN Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="Shared Cache" href="hadoop-yarn/hadoop-yarn-site/SharedCache.html"/>
+      <item name="Resource Profiles" href="hadoop-yarn/hadoop-yarn-site/ResourceProfiles.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
