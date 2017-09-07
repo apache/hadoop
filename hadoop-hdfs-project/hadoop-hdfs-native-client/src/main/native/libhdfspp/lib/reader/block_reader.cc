@@ -177,6 +177,7 @@ struct BlockReaderImpl::ReadPacketHeader : continuation::Continuation
         bool v = parent_->header_.ParseFromArray(&buf_[kHeaderStart],
                                                  header_length());
         assert(v && "Failed to parse the header");
+        (void)v; //avoids unused variable warning
         parent_->state_ = kReadChecksum;
       }
       if(parent_->event_handlers_) {

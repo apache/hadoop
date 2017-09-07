@@ -54,6 +54,7 @@ RetryAction FixedDelayWithFailover::ShouldRetry(const Status &s, uint64_t retrie
     uint64_t failovers,
     bool isIdempotentOrAtMostOnce) const {
   (void)isIdempotentOrAtMostOnce;
+  (void)max_failover_conn_retries_;
   LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry(retries=" << retries << ", failovers=" << failovers << ")");
 
   if(failovers < max_failover_retries_ && (s.code() == ::asio::error::timed_out || s.get_server_exception_type() == Status::kStandbyException) )

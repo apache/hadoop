@@ -17,6 +17,7 @@
  */
 
 #include "configuration_loader.h"
+#include "common/logging.h"
 
 #include <fstream>
 #include <strings.h>
@@ -74,7 +75,11 @@ void ConfigurationLoader::SetDefaultSearchPath() {
   //    /etc/hadoop/conf
   const char * hadoop_conf_dir_env = getenv("HADOOP_CONF_DIR");
   if (hadoop_conf_dir_env) {
-    AddToSearchPath(hadoop_conf_dir_env);
+    std::stringstream ss(hadoop_conf_dir_env);
+    std::string path;
+    while (std::getline(ss, path, kSearchPathSeparator)) {
+      AddToSearchPath(path);
+    }
   } else {
     AddToSearchPath("/etc/hadoop/conf");
   }
@@ -134,6 +139,63 @@ std::string ConfigurationLoader::GetSearchPath()
   }
 
   return result.str();
+}
+
+Status validateStream(std::istream & stream) {
+  std::streampos start = stream.tellg();
+  stream.seekg(0, std::ios::end);
+  std::streampos end = stream.tellg();
+  stream.seekg(start, std::ios::beg);
+
+  int length = end - start;
+
+  if (length <= 0 || start == -1 || end == -1)
+    return Status::Error("The configuration file is empty");
+
+  LOG_DEBUG(kFileSystem, << "validateStream will read a config file of length " << length);
+
+  std::vector<char> raw_bytes((int64_t)length + 1);
+  stream.read(&raw_bytes[0], length);
+  raw_bytes[length] = 0;
+
+  try {
+    rapidxml::xml_document<> dom;
+    dom.parse<rapidxml::parse_trim_whitespace|rapidxml::parse_validate_closing_tags>(&raw_bytes[0]);
+
+    /* File must contain a single <configuration> stanza */
+    auto config_node = dom.first_node("configuration", 0, false);
+    if (!config_node) {
+      return Status::Error("The configuration file is missing a 'configuration' tag");
+    }
+    return Status::OK();
+  } catch (const rapidxml::parse_error &e) {
+    size_t location = e.where<char>() - &raw_bytes[0];
+    std::string msg = "The configuration file has invalid xml around character " + std::to_string(location);
+    return Status::Error(msg.c_str());
+  }
+}
+
+std::vector<std::pair<std::string, Status> > ConfigurationLoader::ValidateResources(std::vector<std::string> filenames) const
+{
+  std::vector<std::pair<std::string, Status> > stats;
+  bool found;
+  for(auto file: filenames) {
+    found = false;
+    for(auto dir: search_path_) {
+      std::ifstream stream(dir + file);
+      if ( stream.is_open() ) {
+        found = true;
+        stats.push_back(std::make_pair(file,validateStream(stream)));
+      } else {
+        LOG_DEBUG(kFileSystem, << dir << file << " was not found");
+      }
+    }
+    if(!found) {
+      std::string msg("No directory in the current search path contains the file [" + file + "]");
+      stats.push_back(std::make_pair(file,Status::PathNotFound(msg.c_str())));
+    }
+  }
+  return stats;
 }
 
 bool ConfigurationLoader::UpdateMapWithFile(ConfigMap & map, const std::string & path) const

@@ -18,6 +18,7 @@
 #ifndef TESTS_CONFIGURATION_H_
 #define TESTS_CONFIGURATION_H_
 
+#include "hdfspp/config_parser.h"
 #include "common/configuration.h"
 #include "common/configuration_loader.h"
 #include <cstdio>
@@ -50,6 +51,28 @@ void simpleConfigStream(std::stringstream& out, Args... args) {
   out << "</configuration>";
 }
 
+template <typename T, typename U>
+void damagedConfigStreamProperty(std::stringstream& out, T key, U value) {
+  out << "<propertyy>"
+      << "<name>" << key << "</name>"
+      << "<value>" << value << "</value>"
+      << "</property>";
+}
+
+template <typename T, typename U, typename... Args>
+void damagedConfigStreamProperty(std::stringstream& out, T key, U value,
+                                Args... args) {
+  damagedConfigStreamProperty(out, key, value);
+  damagedConfigStreamProperty(out, args...);
+}
+
+template <typename... Args>
+void damagedConfigStream(std::stringstream& out, Args... args) {
+  out << "<configuration>";
+  damagedConfigStreamProperty(out, args...);
+  out << "</configuration>";
+}
+
 template <typename... Args>
 optional<Configuration> simpleConfig(Args... args) {
   std::stringstream stream;
@@ -66,6 +89,16 @@ template <typename... Args>
 void writeSimpleConfig(const std::string& filename, Args... args) {
   std::stringstream stream;
   simpleConfigStream(stream, args...);
+
+  std::ofstream out;
+  out.open(filename);
+  out << stream.rdbuf();
+}
+
+template <typename... Args>
+void writeDamagedConfig(const std::string& filename, Args... args) {
+  std::stringstream stream;
+  damagedConfigStream(stream, args...);
 
   std::ofstream out;
   out.open(filename);

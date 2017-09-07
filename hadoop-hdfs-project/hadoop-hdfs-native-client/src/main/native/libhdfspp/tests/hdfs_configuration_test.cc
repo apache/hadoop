@@ -19,6 +19,7 @@
 #include "common/hdfs_configuration.h"
 #include "configuration_test.h"
 #include <gmock/gmock.h>
+#include <iostream>
 
 using ::testing::_;
 
@@ -110,6 +111,53 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
     EXPECT_EQ("value2", config->GetWithDefault("key2", ""));
+  }
+
+
+}
+
+TEST(HdfsConfigurationTest, TestConfigParserAPI) {
+  // Config parser API
+  {
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
+
+    ConfigParser parser(tempDir.path);
+
+    EXPECT_EQ("value1", parser.get_string_or("key1", ""));
+    EXPECT_EQ("value2", parser.get_string_or("key2", ""));
+
+    auto stats = parser.ValidateResources();
+
+    EXPECT_EQ("core-site.xml", stats[0].first);
+    EXPECT_EQ("OK", stats[0].second.ToString());
+
+    EXPECT_EQ("hdfs-site.xml", stats[1].first);
+    EXPECT_EQ("OK", stats[1].second.ToString());
+  }
+
+  {
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeDamagedConfig(hdfsSite.filename, "key2", "value2");
+
+    ConfigParser parser(tempDir.path);
+
+    EXPECT_EQ("value1", parser.get_string_or("key1", ""));
+    EXPECT_EQ("", parser.get_string_or("key2", ""));
+
+    auto stats = parser.ValidateResources();
+
+    EXPECT_EQ("core-site.xml", stats[0].first);
+    EXPECT_EQ("OK", stats[0].second.ToString());
+
+    EXPECT_EQ("hdfs-site.xml", stats[1].first);
+    EXPECT_EQ("Exception:The configuration file has invalid xml around character 74", stats[1].second.ToString());
   }
 }
 

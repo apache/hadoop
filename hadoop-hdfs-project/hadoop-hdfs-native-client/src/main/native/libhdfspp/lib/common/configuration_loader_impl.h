@@ -111,6 +111,11 @@ optional<T> ConfigurationLoader::LoadDefaultResources() {
   }
 }
 
+template<class T>
+std::vector<std::pair<std::string, Status> > ConfigurationLoader::ValidateDefaultResources() const{
+  return ValidateResources(T::GetDefaultFilenames());
+}
+
 
 }
 

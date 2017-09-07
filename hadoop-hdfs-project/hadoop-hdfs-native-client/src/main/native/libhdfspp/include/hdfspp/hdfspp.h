@@ -26,6 +26,7 @@
 #include "hdfspp/fsinfo.h"
 #include "hdfspp/content_summary.h"
 #include "hdfspp/uri.h"
+#include "hdfspp/config_parser.h"
 #include "hdfspp/locks.h"
 
 #include <functional>

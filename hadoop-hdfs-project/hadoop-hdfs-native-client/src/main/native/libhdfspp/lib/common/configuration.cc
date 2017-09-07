@@ -72,8 +72,8 @@ optional<int64_t> Configuration::GetInt(const std::string& key) const {
   if (raw) {
     errno = 0;
     char* end = nullptr;
-    auto result =
-        std::experimental::make_optional(strtol(raw->c_str(), &end, 10));
+    optional<int64_t> result =
+        std::experimental::make_optional(static_cast<int64_t>(strtol(raw->c_str(), &end, 10)));
     if (end == raw->c_str()) {
       /* strtoll will set end to input if no conversion was done */
       return optional<int64_t>();

@@ -38,14 +38,14 @@ namespace hdfs {
 template <class Socket>
 class RpcConnectionImpl : public RpcConnection {
 public:
-  MEMCHECKED_CLASS(RpcConnectionImpl);
+  MEMCHECKED_CLASS(RpcConnectionImpl)
 
   RpcConnectionImpl(RpcEngine *engine);
   virtual ~RpcConnectionImpl() override;
 
   virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
                        const AuthInfo & auth_info,
-                       RpcCallback &handler);
+                       RpcCallback &handler) override;
   virtual void ConnectAndFlush(
       const std::vector<::asio::ip::tcp::endpoint> &server) override;
   virtual void SendHandshake(RpcCallback &handler) override;

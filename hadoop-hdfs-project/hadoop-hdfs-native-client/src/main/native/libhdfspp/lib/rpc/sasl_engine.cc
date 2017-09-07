@@ -53,7 +53,7 @@ Status SaslEngine::SetPasswordInfo(const std::string &id,
 bool SaslEngine::ChooseMech(const std::vector<SaslMethod> &resp_auths) {
   Status status = Status::OK();
 
-  if (resp_auths.empty()) return NULL;
+  if (resp_auths.empty()) return false;
 
   for (SaslMethod auth: resp_auths) {
      if ( auth.mechanism != "GSSAPI") continue; // Hack: only GSSAPI for now
@@ -74,7 +74,7 @@ bool SaslEngine::ChooseMech(const std::vector<SaslMethod> &resp_auths) {
   // Clear out the chosen mech
   chosen_mech_ = SaslMethod();
 
-  return NULL;
+  return false;
 } // choose_mech()
 
 } // namespace hdfs

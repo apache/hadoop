@@ -24,4 +24,4 @@ include_directories( ${LIBHDFSPP_DIR}/include )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
 add_executable(find find.cc)
-target_link_libraries(find hdfspp_static)
+target_link_libraries(find tools_common hdfspp_static)

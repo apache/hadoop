@@ -20,6 +20,7 @@
 #define COMMON_CONFIGURATION_BUILDER_H_
 
 #include "configuration.h"
+#include "hdfspp/status.h"
 
 namespace hdfs {
 
@@ -75,6 +76,13 @@ public:
   optional<T> LoadDefaultResources();
 
 
+  // Returns a vector of filenames and the corresponding status when validation is attempted.
+  //    If the files can be successfully validated, then the status returned for that file is Status::OK
+  //    The files that are validated are those returned by T::GetDefaultFilenames().
+  //    T must be Configuration or a subclass
+  template<class T>
+  std::vector<std::pair<std::string, Status>> ValidateDefaultResources() const;
+
   /****************************************************************************
    *                    SEARCH PATH METHODS
    ***************************************************************************/
@@ -97,6 +105,8 @@ public:
 
 protected:
   using ConfigMap = Configuration::ConfigMap;
+
+  std::vector<std::pair<std::string, Status>> ValidateResources(std::vector<std::string> filenames) const;
 
   // Updates the src map with data from the XML in the path
   //   The search path will be searched for the filename
