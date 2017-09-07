@@ -89,7 +89,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
-import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
@@ -4081,9 +4080,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get statistics pertaining to blocks of type {@link BlockType#CONTIGUOUS}
    * in the filesystem.
    * <p>
-   * @see ClientProtocol#getBlocksStats()
+   * @see ClientProtocol#getReplicatedBlockStats()
    */
-  ReplicatedBlockStats getBlocksStats() {
+  ReplicatedBlockStats getReplicatedBlockStats() {
     return new ReplicatedBlockStats(getLowRedundancyReplicatedBlocks(),
         getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
         getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
@@ -4094,12 +4093,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get statistics pertaining to blocks of type {@link BlockType#STRIPED}
    * in the filesystem.
    * <p>
-   * @see ClientProtocol#getECBlockGroupsStats()
+   * @see ClientProtocol#getECBlockGroupStats()
    */
-  ECBlockGroupStats getECBlockGroupsStats() {
+  ECBlockGroupStats getECBlockGroupStats() {
     return new ECBlockGroupStats(getLowRedundancyECBlockGroups(),
         getCorruptECBlockGroups(), getMissingECBlockGroups(),
-        getBytesInFutureECBlockGroups(), getPendingDeletionECBlockGroups());
+        getBytesInFutureECBlockGroups(), getPendingDeletionECBlocks());
   }
 
   @Override // FSNamesystemMBean
@@ -4712,10 +4711,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // ECBlockGroupsMBean
-  @Metric({"PendingDeletionECBlockGroups", "Number of erasure coded block " +
-      "groups that are pending deletion"})
-  public long getPendingDeletionECBlockGroups() {
-    return blockManager.getPendingDeletionECBlockGroups();
+  @Metric({"PendingDeletionECBlocks", "Number of erasure coded blocks " +
+      "that are pending deletion"})
+  public long getPendingDeletionECBlocks() {
+    return blockManager.getPendingDeletionECBlocks();
   }
 
   @Override

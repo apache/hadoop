@@ -24,66 +24,66 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Get statistics pertaining to blocks of type {@link BlockType#CONTIGUOUS}
  * in the filesystem.
  * <p>
- * @see ClientProtocol#getBlocksStats()
+ * @see ClientProtocol#getReplicatedBlockStats()
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class ReplicatedBlockStats {
-  private final long lowRedundancyBlocksStat;
-  private final long corruptBlocksStat;
-  private final long missingBlocksStat;
-  private final long missingReplicationOneBlocksStat;
-  private final long bytesInFutureBlocksStat;
-  private final long pendingDeletionBlocksStat;
+  private final long lowRedundancyBlocks;
+  private final long corruptBlocks;
+  private final long missingBlocks;
+  private final long missingReplicationOneBlocks;
+  private final long bytesInFutureBlocks;
+  private final long pendingDeletionBlocks;
 
-  public ReplicatedBlockStats(long lowRedundancyBlocksStat,
-      long corruptBlocksStat, long missingBlocksStat,
-      long missingReplicationOneBlocksStat, long bytesInFutureBlocksStat,
-      long pendingDeletionBlocksStat) {
-    this.lowRedundancyBlocksStat = lowRedundancyBlocksStat;
-    this.corruptBlocksStat = corruptBlocksStat;
-    this.missingBlocksStat = missingBlocksStat;
-    this.missingReplicationOneBlocksStat = missingReplicationOneBlocksStat;
-    this.bytesInFutureBlocksStat = bytesInFutureBlocksStat;
-    this.pendingDeletionBlocksStat = pendingDeletionBlocksStat;
+  public ReplicatedBlockStats(long lowRedundancyBlocks,
+      long corruptBlocks, long missingBlocks,
+      long missingReplicationOneBlocks, long bytesInFutureBlocks,
+      long pendingDeletionBlocks) {
+    this.lowRedundancyBlocks = lowRedundancyBlocks;
+    this.corruptBlocks = corruptBlocks;
+    this.missingBlocks = missingBlocks;
+    this.missingReplicationOneBlocks = missingReplicationOneBlocks;
+    this.bytesInFutureBlocks = bytesInFutureBlocks;
+    this.pendingDeletionBlocks = pendingDeletionBlocks;
   }
 
-  public long getLowRedundancyBlocksStat() {
-    return lowRedundancyBlocksStat;
+  public long getLowRedundancyBlocks() {
+    return lowRedundancyBlocks;
   }
 
-  public long getCorruptBlocksStat() {
-    return corruptBlocksStat;
+  public long getCorruptBlocks() {
+    return corruptBlocks;
   }
 
-  public long getMissingReplicaBlocksStat() {
-    return missingBlocksStat;
+  public long getMissingReplicaBlocks() {
+    return missingBlocks;
   }
 
-  public long getMissingReplicationOneBlocksStat() {
-    return missingReplicationOneBlocksStat;
+  public long getMissingReplicationOneBlocks() {
+    return missingReplicationOneBlocks;
   }
 
-  public long getBytesInFutureBlocksStat() {
-    return bytesInFutureBlocksStat;
+  public long getBytesInFutureBlocks() {
+    return bytesInFutureBlocks;
   }
 
-  public long getPendingDeletionBlocksStat() {
-    return pendingDeletionBlocksStat;
+  public long getPendingDeletionBlocks() {
+    return pendingDeletionBlocks;
   }
 
   @Override
   public String toString() {
     StringBuilder statsBuilder = new StringBuilder();
-    statsBuilder.append("ReplicatedBlocksStats=[")
-        .append("LowRedundancyBlocks=").append(getLowRedundancyBlocksStat())
-        .append(", CorruptBlocks=").append(getCorruptBlocksStat())
-        .append(", MissingReplicaBlocks=").append(getMissingReplicaBlocksStat())
+    statsBuilder.append("ReplicatedBlockStats=[")
+        .append("LowRedundancyBlocks=").append(getLowRedundancyBlocks())
+        .append(", CorruptBlocks=").append(getCorruptBlocks())
+        .append(", MissingReplicaBlocks=").append(getMissingReplicaBlocks())
         .append(", MissingReplicationOneBlocks=").append(
-            getMissingReplicationOneBlocksStat())
-        .append(", BytesInFutureBlocks=").append(getBytesInFutureBlocksStat())
+            getMissingReplicationOneBlocks())
+        .append(", BytesInFutureBlocks=").append(getBytesInFutureBlocks())
         .append(", PendingDeletionBlocks=").append(
-            getPendingDeletionBlocksStat())
+            getPendingDeletionBlocks())
         .append("]");
     return statsBuilder.toString();
   }

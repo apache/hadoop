@@ -24,45 +24,45 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Get statistics pertaining to blocks of type {@link BlockType#STRIPED}
  * in the filesystem.
  * <p>
- * @see ClientProtocol#getECBlockGroupsStats()
+ * @see ClientProtocol#getECBlockGroupStats()
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class ECBlockGroupStats {
-  private final long lowRedundancyBlockGroupsStat;
-  private final long corruptBlockGroupsStat;
-  private final long missingBlockGroupsStat;
-  private final long bytesInFutureBlockGroupsStat;
-  private final long pendingDeletionBlockGroupsStat;
+  private final long lowRedundancyBlockGroups;
+  private final long corruptBlockGroups;
+  private final long missingBlockGroups;
+  private final long bytesInFutureBlockGroups;
+  private final long pendingDeletionBlocks;
 
-  public ECBlockGroupStats(long lowRedundancyBlockGroupsStat, long
-      corruptBlockGroupsStat, long missingBlockGroupsStat, long
-      bytesInFutureBlockGroupsStat, long pendingDeletionBlockGroupsStat) {
-    this.lowRedundancyBlockGroupsStat = lowRedundancyBlockGroupsStat;
-    this.corruptBlockGroupsStat = corruptBlockGroupsStat;
-    this.missingBlockGroupsStat = missingBlockGroupsStat;
-    this.bytesInFutureBlockGroupsStat = bytesInFutureBlockGroupsStat;
-    this.pendingDeletionBlockGroupsStat = pendingDeletionBlockGroupsStat;
+  public ECBlockGroupStats(long lowRedundancyBlockGroups,
+      long corruptBlockGroups, long missingBlockGroups,
+      long bytesInFutureBlockGroups, long pendingDeletionBlocks) {
+    this.lowRedundancyBlockGroups = lowRedundancyBlockGroups;
+    this.corruptBlockGroups = corruptBlockGroups;
+    this.missingBlockGroups = missingBlockGroups;
+    this.bytesInFutureBlockGroups = bytesInFutureBlockGroups;
+    this.pendingDeletionBlocks = pendingDeletionBlocks;
   }
 
-  public long getBytesInFutureBlockGroupsStat() {
-    return bytesInFutureBlockGroupsStat;
+  public long getBytesInFutureBlockGroups() {
+    return bytesInFutureBlockGroups;
   }
 
-  public long getCorruptBlockGroupsStat() {
-    return corruptBlockGroupsStat;
+  public long getCorruptBlockGroups() {
+    return corruptBlockGroups;
   }
 
-  public long getLowRedundancyBlockGroupsStat() {
-    return lowRedundancyBlockGroupsStat;
+  public long getLowRedundancyBlockGroups() {
+    return lowRedundancyBlockGroups;
   }
 
-  public long getMissingBlockGroupsStat() {
-    return missingBlockGroupsStat;
+  public long getMissingBlockGroups() {
+    return missingBlockGroups;
   }
 
-  public long getPendingDeletionBlockGroupsStat() {
-    return pendingDeletionBlockGroupsStat;
+  public long getPendingDeletionBlocks() {
+    return pendingDeletionBlocks;
   }
 
   @Override
@@ -70,13 +70,13 @@ public final class ECBlockGroupStats {
     StringBuilder statsBuilder = new StringBuilder();
     statsBuilder.append("ECBlockGroupStats=[")
         .append("LowRedundancyBlockGroups=").append(
-            getLowRedundancyBlockGroupsStat())
-        .append(", CorruptBlockGroups=").append(getCorruptBlockGroupsStat())
-        .append(", MissingBlockGroups=").append(getMissingBlockGroupsStat())
+            getLowRedundancyBlockGroups())
+        .append(", CorruptBlockGroups=").append(getCorruptBlockGroups())
+        .append(", MissingBlockGroups=").append(getMissingBlockGroups())
         .append(", BytesInFutureBlockGroups=").append(
-            getBytesInFutureBlockGroupsStat())
-        .append(", PendingDeletionBlockGroups=").append(
-            getPendingDeletionBlockGroupsStat())
+            getBytesInFutureBlockGroups())
+        .append(", PendingDeletionBlocks=").append(
+            getPendingDeletionBlocks())
         .append("]");
     return statsBuilder.toString();
   }

@@ -233,47 +233,47 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Used by metrics. */
   public long getLowRedundancyBlocks() {
-    return neededReconstruction.getLowRedundancyBlocksStat();
+    return neededReconstruction.getLowRedundancyBlocks();
   }
 
   /** Used by metrics. */
   public long getCorruptBlocks() {
-    return corruptReplicas.getCorruptBlocksStat();
+    return corruptReplicas.getCorruptBlocks();
   }
 
   /** Used by metrics. */
   public long getMissingBlocks() {
-    return neededReconstruction.getCorruptBlocksStat();
+    return neededReconstruction.getCorruptBlocks();
   }
 
   /** Used by metrics. */
   public long getMissingReplicationOneBlocks() {
-    return neededReconstruction.getCorruptReplicationOneBlocksStat();
+    return neededReconstruction.getCorruptReplicationOneBlocks();
   }
 
   /** Used by metrics. */
   public long getPendingDeletionReplicatedBlocks() {
-    return invalidateBlocks.getBlocksStat();
+    return invalidateBlocks.getBlocks();
   }
 
   /** Used by metrics. */
   public long getLowRedundancyECBlockGroups() {
-    return neededReconstruction.getLowRedundancyECBlockGroupsStat();
+    return neededReconstruction.getLowRedundancyECBlockGroups();
   }
 
   /** Used by metrics. */
   public long getCorruptECBlockGroups() {
-    return corruptReplicas.getCorruptECBlockGroupsStat();
+    return corruptReplicas.getCorruptECBlockGroups();
   }
 
   /** Used by metrics. */
   public long getMissingECBlockGroups() {
-    return neededReconstruction.getCorruptECBlockGroupsStat();
+    return neededReconstruction.getCorruptECBlockGroups();
   }
 
   /** Used by metrics. */
-  public long getPendingDeletionECBlockGroups() {
-    return invalidateBlocks.getECBlockGroupsStat();
+  public long getPendingDeletionECBlocks() {
+    return invalidateBlocks.getECBlocks();
   }
 
   /**
@@ -748,7 +748,7 @@ public class BlockManager implements BlockStatsMXBean {
     invalidateBlocks.dump(out);
 
     //Dump corrupt blocks and their storageIDs
-    Set<Block> corruptBlocks = corruptReplicas.getCorruptBlocks();
+    Set<Block> corruptBlocks = corruptReplicas.getCorruptBlocksSet();
     out.println("Corrupt Blocks:");
     for(Block block : corruptBlocks) {
       Collection<DatanodeDescriptor> corruptNodes =

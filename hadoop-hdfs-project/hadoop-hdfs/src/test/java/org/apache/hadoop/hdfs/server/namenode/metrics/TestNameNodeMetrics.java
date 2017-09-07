@@ -449,7 +449,7 @@ public class TestNameNodeMetrics {
     assertEquals("Pending deletion blocks metrics not matching!",
         namesystem.getPendingDeletionBlocks(),
         namesystem.getPendingDeletionReplicatedBlocks() +
-            namesystem.getPendingDeletionECBlockGroups());
+            namesystem.getPendingDeletionECBlocks());
   }
 
   /** Corrupt a block and ensure metrics reflects it */

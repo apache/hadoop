@@ -1163,17 +1163,17 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public ReplicatedBlockStats getBlocksStats() throws IOException {
+  public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ);
-    return namesystem.getBlocksStats();
+    return namesystem.getReplicatedBlockStats();
   }
 
   @Override // ClientProtocol
-  public ECBlockGroupStats getECBlockGroupsStats() throws IOException {
+  public ECBlockGroupStats getECBlockGroupStats() throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ);
-    return namesystem.getECBlockGroupsStats();
+    return namesystem.getECBlockGroupStats();
   }
 
   @Override // ClientProtocol

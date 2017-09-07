@@ -1657,8 +1657,8 @@ public class DFSTestUtil {
 
   /**
    * Verify the aggregated {@link ClientProtocol#getStats()} block counts equal
-   * the sum of {@link ClientProtocol#getBlocksStats()} and
-   * {@link ClientProtocol#getECBlockGroupsStats()}.
+   * the sum of {@link ClientProtocol#getReplicatedBlockStats()} and
+   * {@link ClientProtocol#getECBlockGroupStats()}.
    * @throws Exception
    */
   public static  void verifyClientStats(Configuration conf,
@@ -1668,35 +1668,35 @@ public class DFSTestUtil {
         ClientProtocol.class).getProxy();
     long[] aggregatedStats = cluster.getNameNode().getRpcServer().getStats();
     ReplicatedBlockStats replicatedBlockStats =
-        client.getBlocksStats();
-    ECBlockGroupStats ecBlockGroupStats = client.getECBlockGroupsStats();
+        client.getReplicatedBlockStats();
+    ECBlockGroupStats ecBlockGroupStats = client.getECBlockGroupStats();
 
     assertEquals("Under replicated stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
         aggregatedStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX]);
     assertEquals("Low redundancy stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
-        replicatedBlockStats.getLowRedundancyBlocksStat() +
-            ecBlockGroupStats.getLowRedundancyBlockGroupsStat());
+        replicatedBlockStats.getLowRedundancyBlocks() +
+            ecBlockGroupStats.getLowRedundancyBlockGroups());
     assertEquals("Corrupt blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX],
-        replicatedBlockStats.getCorruptBlocksStat() +
-            ecBlockGroupStats.getCorruptBlockGroupsStat());
+        replicatedBlockStats.getCorruptBlocks() +
+            ecBlockGroupStats.getCorruptBlockGroups());
     assertEquals("Missing blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX],
-        replicatedBlockStats.getMissingReplicaBlocksStat() +
-            ecBlockGroupStats.getMissingBlockGroupsStat());
+        replicatedBlockStats.getMissingReplicaBlocks() +
+            ecBlockGroupStats.getMissingBlockGroups());
     assertEquals("Missing blocks with replication factor one not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX],
-        replicatedBlockStats.getMissingReplicationOneBlocksStat());
+        replicatedBlockStats.getMissingReplicationOneBlocks());
     assertEquals("Bytes in future blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX],
-        replicatedBlockStats.getBytesInFutureBlocksStat() +
-            ecBlockGroupStats.getBytesInFutureBlockGroupsStat());
+        replicatedBlockStats.getBytesInFutureBlocks() +
+            ecBlockGroupStats.getBytesInFutureBlockGroups());
     assertEquals("Pending deletion blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX],
-        replicatedBlockStats.getPendingDeletionBlocksStat() +
-            ecBlockGroupStats.getPendingDeletionBlockGroupsStat());
+        replicatedBlockStats.getPendingDeletionBlocks() +
+            ecBlockGroupStats.getPendingDeletionBlocks());
   }
 
   /**
