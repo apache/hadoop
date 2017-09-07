@@ -71,68 +71,83 @@ request. For example:
 The following properties should be set in yarn-site.xml:
 
 ```xml
-<property>
-  <name>yarn.nodemanager.container-executor.class</name>
-  <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
-  <description>
-    This is the container executor setting that ensures that all applications
-    are started with the LinuxContainerExecutor.
-  </description>
-</property>
+<configuration>
+  <property>
+    <name>yarn.nodemanager.container-executor.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
+    <description>
+      This is the container executor setting that ensures that all applications
+      are started with the LinuxContainerExecutor.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.linux-container-executor.group</name>
-  <value>hadoop</value>
-  <description>
-    The POSIX group of the NodeManager. It should match the setting in
-    "container-executor.cfg". This configuration is required for validating
-    the secure access of the container-executor binary.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.group</name>
+    <value>hadoop</value>
+    <description>
+      The POSIX group of the NodeManager. It should match the setting in
+      "container-executor.cfg". This configuration is required for validating
+      the secure access of the container-executor binary.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users</name>
-  <value>false</value>
-  <description>
-    Whether all applications should be run as the NodeManager process' owner.
-    When false, applications are launched instead as the application owner.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users</name>
+    <value>false</value>
+    <description>
+      Whether all applications should be run as the NodeManager process' owner.
+      When false, applications are launched instead as the application owner.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
-  <value>host,none,bridge</value>
-  <description>
-    Optional. A comma-separated set of networks allowed when launching
-    containers. Valid values are determined by Docker networks available from
-    `docker network ls`
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.allowed-runtimes</name>
+    <value>default,docker</value>
+    <description>
+      Comma separated list of runtimes that are allowed when using
+      LinuxContainerExecutor. The allowed values are default, docker, and
+      javasandbox.
+    </description>
+  </property>
 
-<property>
-  <description>The network used when launching Docker containers when no
-    network is specified in the request. This network must be one of the
-    (configurable) set of allowed container networks.</description>
-  <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
-  <value>host</value>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
+    <value>host,none,bridge</value>
+    <description>
+      Optional. A comma-separated set of networks allowed when launching
+      containers. Valid values are determined by Docker networks available from
+      `docker network ls`
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed</name>
-  <value>false</value>
-  <description>
-    Optional. Whether applications are allowed to run in privileged containers.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
+    <value>host</value>
+    <description>
+      The network used when launching Docker containers when no
+      network is specified in the request. This network must be one of the
+      (configurable) set of allowed container networks.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.acl</name>
-  <value></value>
-  <description>
-    Optional. A comma-separated list of users who are allowed to request
-    privileged contains if privileged containers are allowed.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed</name>
+    <value>false</value>
+    <description>
+      Optional. Whether applications are allowed to run in privileged
+      containers.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.acl</name>
+    <value></value>
+    <description>
+      Optional. A comma-separated list of users who are allowed to request
+      privileged contains if privileged containers are allowed.
+    </description>
+  </property>
+</configuration>
 ```
 
 In addition, a container-executer.cfg file must exist and contain settings for
