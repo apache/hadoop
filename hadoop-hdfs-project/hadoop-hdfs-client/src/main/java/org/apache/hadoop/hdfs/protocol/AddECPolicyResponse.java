@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
+
 /**
  * A response of add an ErasureCoding policy.
  */
@@ -38,7 +40,7 @@ public class AddECPolicyResponse {
   }
 
   public AddECPolicyResponse(ErasureCodingPolicy policy,
-      IllegalECPolicyException e) {
+      HadoopIllegalArgumentException e) {
     this(policy, e.getMessage());
   }
 
