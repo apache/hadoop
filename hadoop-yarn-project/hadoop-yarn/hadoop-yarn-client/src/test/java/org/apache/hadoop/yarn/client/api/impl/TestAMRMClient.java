@@ -1428,6 +1428,7 @@ public class TestAMRMClient {
     amClient.ask.clear();
   }
 
+  @SuppressWarnings("deprecation")
   private void updateContainerExecType(AllocateResponse allocResponse,
       ExecutionType expectedExecType, NMClientImpl nmClient)
       throws IOException, YarnException {
