@@ -172,7 +172,6 @@ public class LogAggregationTFileController
     byte[] buf = new byte[65535];
     while (nodeFiles != null && nodeFiles.hasNext()) {
       final FileStatus thisNodeFile = nodeFiles.next();
-      LOG.error(thisNodeFile.getPath().toString());
       String nodeName = thisNodeFile.getPath().getName();
       if (nodeName.equals(appId + ".har")) {
         Path p = new Path("har:///"
