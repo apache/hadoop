@@ -557,6 +557,12 @@ public class LeaseManager {
           if (!p.startsWith("/")) {
             throw new IOException("Invalid path in the lease " + p);
           }
+          final INodeFile lastINode = iip.getLastINode().asFile();
+          if (fsnamesystem.isFileDeleted(lastINode)) {
+            // INode referred by the lease could have been deleted.
+            removeLease(lastINode.getId());
+            continue;
+          }
           boolean completed = false;
           try {
             completed = fsnamesystem.internalReleaseLease(

@@ -4993,6 +4993,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   boolean isFileDeleted(INodeFile file) {
+    assert hasReadLock();
     // Not in the inodeMap or in the snapshot but marked deleted.
     if (dir.getInode(file.getId()) == null) {
       return true;
