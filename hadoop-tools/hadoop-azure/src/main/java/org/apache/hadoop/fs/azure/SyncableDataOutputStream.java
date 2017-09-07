@@ -24,6 +24,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Support the Syncable interface on top of a DataOutputStream.
@@ -36,6 +37,16 @@ public class SyncableDataOutputStream extends DataOutputStream
 
   public SyncableDataOutputStream(OutputStream out) {
     super(out);
+  }
+
+  /**
+   * Get a reference to the wrapped output stream.
+   *
+   * @return the underlying output stream
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS"})
+  public OutputStream getOutStream() {
+    return out;
   }
 
   @Override
