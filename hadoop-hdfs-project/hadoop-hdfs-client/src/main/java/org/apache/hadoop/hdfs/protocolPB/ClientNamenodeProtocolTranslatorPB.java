@@ -61,7 +61,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -73,7 +73,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -695,7 +695,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public BlocksStats getBlocksStats() throws IOException {
+  public ReplicatedBlockStats getBlocksStats() throws IOException {
     try {
       return PBHelperClient.convert(rpcProxy.getFsBlocksStats(null,
           VOID_GET_FS_REPLICABLOCKS_STATS_REQUEST));
@@ -705,7 +705,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ECBlockGroupsStats getECBlockGroupsStats() throws IOException {
+  public ECBlockGroupStats getECBlockGroupsStats() throws IOException {
     try {
       return PBHelperClient.convert(rpcProxy.getFsECBlockGroupsStats(null,
           VOID_GET_FS_ECBLOCKGROUPS_STATS_REQUEST));

@@ -76,7 +76,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
@@ -92,7 +92,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
@@ -1810,17 +1810,17 @@ public class PBHelperClient {
     return result;
   }
 
-  public static BlocksStats convert(
+  public static ReplicatedBlockStats convert(
       GetFsBlocksStatsResponseProto res) {
-    return new BlocksStats(res.getLowRedundancy(),
+    return new ReplicatedBlockStats(res.getLowRedundancy(),
         res.getCorruptBlocks(), res.getMissingBlocks(),
         res.getMissingReplOneBlocks(), res.getBlocksInFuture(),
         res.getPendingDeletionBlocks());
   }
 
-  public static ECBlockGroupsStats convert(
+  public static ECBlockGroupStats convert(
       GetFsECBlockGroupsStatsResponseProto res) {
-    return new ECBlockGroupsStats(res.getLowRedundancy(),
+    return new ECBlockGroupStats(res.getLowRedundancy(),
         res.getCorruptBlocks(), res.getMissingBlocks(),
         res.getBlocksInFuture(), res.getPendingDeletionBlocks());
   }
@@ -2237,36 +2237,36 @@ public class PBHelperClient {
   }
 
   public static GetFsBlocksStatsResponseProto convert(
-      BlocksStats blocksStats) {
+      ReplicatedBlockStats replicatedBlockStats) {
     GetFsBlocksStatsResponseProto.Builder result =
         GetFsBlocksStatsResponseProto.newBuilder();
     result.setLowRedundancy(
-        blocksStats.getLowRedundancyBlocksStat());
+        replicatedBlockStats.getLowRedundancyBlocksStat());
     result.setCorruptBlocks(
-        blocksStats.getCorruptBlocksStat());
+        replicatedBlockStats.getCorruptBlocksStat());
     result.setMissingBlocks(
-        blocksStats.getMissingReplicaBlocksStat());
+        replicatedBlockStats.getMissingReplicaBlocksStat());
     result.setMissingReplOneBlocks(
-        blocksStats.getMissingReplicationOneBlocksStat());
+        replicatedBlockStats.getMissingReplicationOneBlocksStat());
     result.setBlocksInFuture(
-        blocksStats.getBytesInFutureBlocksStat());
+        replicatedBlockStats.getBytesInFutureBlocksStat());
     result.setPendingDeletionBlocks(
-        blocksStats.getPendingDeletionBlocksStat());
+        replicatedBlockStats.getPendingDeletionBlocksStat());
     return result.build();
   }
 
   public static GetFsECBlockGroupsStatsResponseProto convert(
-      ECBlockGroupsStats ecBlockGroupsStats) {
+      ECBlockGroupStats ecBlockGroupStats) {
     GetFsECBlockGroupsStatsResponseProto.Builder result =
         GetFsECBlockGroupsStatsResponseProto.newBuilder();
     result.setLowRedundancy(
-        ecBlockGroupsStats.getLowRedundancyBlockGroupsStat());
-    result.setCorruptBlocks(ecBlockGroupsStats.getCorruptBlockGroupsStat());
-    result.setMissingBlocks(ecBlockGroupsStats.getMissingBlockGroupsStat());
+        ecBlockGroupStats.getLowRedundancyBlockGroupsStat());
+    result.setCorruptBlocks(ecBlockGroupStats.getCorruptBlockGroupsStat());
+    result.setMissingBlocks(ecBlockGroupStats.getMissingBlockGroupsStat());
     result.setBlocksInFuture(
-        ecBlockGroupsStats.getBytesInFutureBlockGroupsStat());
+        ecBlockGroupStats.getBytesInFutureBlockGroupsStat());
     result.setPendingDeletionBlocks(
-        ecBlockGroupsStats.getPendingDeletionBlockGroupsStat());
+        ecBlockGroupStats.getPendingDeletionBlockGroupsStat());
     return result.build();
   }
 

@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class BlocksStats {
+public final class ReplicatedBlockStats {
   private final long lowRedundancyBlocksStat;
   private final long corruptBlocksStat;
   private final long missingBlocksStat;
@@ -36,7 +36,7 @@ public final class BlocksStats {
   private final long bytesInFutureBlocksStat;
   private final long pendingDeletionBlocksStat;
 
-  public BlocksStats(long lowRedundancyBlocksStat,
+  public ReplicatedBlockStats(long lowRedundancyBlocksStat,
       long corruptBlocksStat, long missingBlocksStat,
       long missingReplicationOneBlocksStat, long bytesInFutureBlocksStat,
       long pendingDeletionBlocksStat) {

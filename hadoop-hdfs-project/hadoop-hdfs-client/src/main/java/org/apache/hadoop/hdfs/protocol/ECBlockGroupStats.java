@@ -28,14 +28,14 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class ECBlockGroupsStats {
+public final class ECBlockGroupStats {
   private final long lowRedundancyBlockGroupsStat;
   private final long corruptBlockGroupsStat;
   private final long missingBlockGroupsStat;
   private final long bytesInFutureBlockGroupsStat;
   private final long pendingDeletionBlockGroupsStat;
 
-  public ECBlockGroupsStats(long lowRedundancyBlockGroupsStat, long
+  public ECBlockGroupStats(long lowRedundancyBlockGroupsStat, long
       corruptBlockGroupsStat, long missingBlockGroupsStat, long
       bytesInFutureBlockGroupsStat, long pendingDeletionBlockGroupsStat) {
     this.lowRedundancyBlockGroupsStat = lowRedundancyBlockGroupsStat;
@@ -68,7 +68,7 @@ public final class ECBlockGroupsStats {
   @Override
   public String toString() {
     StringBuilder statsBuilder = new StringBuilder();
-    statsBuilder.append("ECBlockGroupsStats=[")
+    statsBuilder.append("ECBlockGroupStats=[")
         .append("LowRedundancyBlockGroups=").append(
             getLowRedundancyBlockGroupsStat())
         .append(", CorruptBlockGroups=").append(getCorruptBlockGroupsStat())
