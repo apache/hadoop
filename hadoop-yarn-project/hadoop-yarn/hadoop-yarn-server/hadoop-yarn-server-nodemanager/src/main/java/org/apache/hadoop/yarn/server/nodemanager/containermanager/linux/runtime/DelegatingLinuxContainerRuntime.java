@@ -20,9 +20,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
@@ -31,6 +33,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.EnumSet;
 import java.util.Map;
 
 /**
@@ -49,28 +52,50 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
        LoggerFactory.getLogger(DelegatingLinuxContainerRuntime.class);
   private DefaultLinuxContainerRuntime defaultLinuxContainerRuntime;
   private DockerLinuxContainerRuntime dockerLinuxContainerRuntime;
+  private EnumSet<LinuxContainerRuntimeConstants.RuntimeType> allowedRuntimes =
+      EnumSet.noneOf(LinuxContainerRuntimeConstants.RuntimeType.class);
 
   @Override
   public void initialize(Configuration conf)
       throws ContainerExecutionException {
-    PrivilegedOperationExecutor privilegedOperationExecutor =
-        PrivilegedOperationExecutor.getInstance(conf);
-    defaultLinuxContainerRuntime = new DefaultLinuxContainerRuntime(
-        privilegedOperationExecutor);
-    defaultLinuxContainerRuntime.initialize(conf);
-    dockerLinuxContainerRuntime = new DockerLinuxContainerRuntime(
-        privilegedOperationExecutor);
-    dockerLinuxContainerRuntime.initialize(conf);
+    String[] configuredRuntimes = conf.getTrimmedStrings(
+        YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
+        YarnConfiguration.DEFAULT_LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES);
+    for (String configuredRuntime : configuredRuntimes) {
+      try {
+        allowedRuntimes.add(
+            LinuxContainerRuntimeConstants.RuntimeType.valueOf(
+                configuredRuntime.toUpperCase()));
+      } catch (IllegalArgumentException e) {
+        throw new ContainerExecutionException("Invalid runtime set in "
+            + YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES + " : "
+            + configuredRuntime);
+      }
+    }
+    if (isRuntimeAllowed(LinuxContainerRuntimeConstants.RuntimeType.DOCKER)) {
+      dockerLinuxContainerRuntime = new DockerLinuxContainerRuntime(
+          PrivilegedOperationExecutor.getInstance(conf));
+      dockerLinuxContainerRuntime.initialize(conf);
+    }
+    if (isRuntimeAllowed(LinuxContainerRuntimeConstants.RuntimeType.DEFAULT)) {
+      defaultLinuxContainerRuntime = new DefaultLinuxContainerRuntime(
+          PrivilegedOperationExecutor.getInstance(conf));
+      defaultLinuxContainerRuntime.initialize(conf);
+    }
   }
 
-  private LinuxContainerRuntime pickContainerRuntime(Container container) {
-    Map<String, String> env = container.getLaunchContext().getEnvironment();
+  @VisibleForTesting
+  LinuxContainerRuntime pickContainerRuntime(
+      Map<String, String> environment) throws ContainerExecutionException {
     LinuxContainerRuntime runtime;
-
-    if (DockerLinuxContainerRuntime.isDockerContainerRequested(env)){
+    if (dockerLinuxContainerRuntime != null &&
+        DockerLinuxContainerRuntime.isDockerContainerRequested(environment)){
       runtime = dockerLinuxContainerRuntime;
-    } else  {
+    } else if (defaultLinuxContainerRuntime != null &&
+        !DockerLinuxContainerRuntime.isDockerContainerRequested(environment)) {
       runtime = defaultLinuxContainerRuntime;
+    } else {
+      throw new ContainerExecutionException("Requested runtime not allowed.");
     }
 
     if (LOG.isDebugEnabled()) {
@@ -79,6 +104,11 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     }
 
     return runtime;
+  }
+
+  private LinuxContainerRuntime pickContainerRuntime(Container container)
+      throws ContainerExecutionException {
+    return pickContainerRuntime(container.getLaunchContext().getEnvironment());
   }
 
   @Override
@@ -118,8 +148,15 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
-  public String[] getIpAndHost(Container container) {
+  public String[] getIpAndHost(Container container)
+      throws ContainerExecutionException {
     LinuxContainerRuntime runtime = pickContainerRuntime(container);
     return runtime.getIpAndHost(container);
+  }
+
+  @VisibleForTesting
+  boolean isRuntimeAllowed(
+      LinuxContainerRuntimeConstants.RuntimeType runtimeType) {
+    return allowedRuntimes.contains(runtimeType);
   }
 }
