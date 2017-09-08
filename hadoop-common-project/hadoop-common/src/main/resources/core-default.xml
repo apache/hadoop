@@ -2656,8 +2656,7 @@
       fs.adl.oauth2.credential, and fs.adl.oauth2.refresh.url.
       The RefreshToken type requires property fs.adl.oauth2.client.id and
       fs.adl.oauth2.refresh.token.
-      The MSI type requires properties fs.adl.oauth2.msi.port and
-      fs.adl.oauth2.msi.tenantguid.
+      The MSI type reads optional property fs.adl.oauth2.msi.port, if specified.
       The DeviceCode type requires property
       fs.adl.oauth2.devicecode.clientapp.id.
       The Custom type requires property fs.adl.oauth2.access.token.provider.
@@ -2701,17 +2700,8 @@
     <value></value>
     <description>
       The localhost port for the MSI token service. This is the port specified
-      when creating the Azure VM.
-      Used by MSI token provider.
-    </description>
-  </property>
-
-  <property>
-    <name>fs.adl.oauth2.msi.tenantguid</name>
-    <value></value>
-    <description>
-      The tenant guid for the Azure AAD tenant under which the azure data lake
-      store account is created.
+      when creating the Azure VM. The default, if this setting is not specified,
+      is 50342.
       Used by MSI token provider.
     </description>
   </property>
