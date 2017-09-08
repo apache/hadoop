@@ -1802,7 +1802,9 @@ public class LeafQueue extends AbstractCSQueue {
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
       return;
     }
-
+    if (rmContainer.getExecutionType() != ExecutionType.GUARANTEED) {
+      return;
+    }
     // Careful! Locking order is important!
     try {
       writeLock.lock();
