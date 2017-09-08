@@ -22,6 +22,9 @@ Release 2.6.6 - UNRELEASED
     YARN-7590. Improve container-executor validation check.
     Contributed by Eric Yang.
 
+    HADOOP-14842. Hadoop 2.8.2 release build process get stuck due to java
+    issue. Contributed by Junping Du.
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES
@@ -4368,7 +4371,7 @@ Release 0.23.1 - 2012-02-17
 
    HADOOP-7841. Run tests with non-secure random. (tlipcon)
 
-    HADOOP-7851. Configuration.getClasses() never returns the default value. 
+    HADOOP-7851. Configuration.getClasses() never returns the default value.
                  (Uma Maheswara Rao G via amarrk)
 
    HADOOP-7787. Make source tarball use conventional name.
