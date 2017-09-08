@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -525,6 +526,9 @@ public class AppSchedulingInfo {
   }
 
   public void recoverContainer(RMContainer rmContainer, String partition) {
+    if (rmContainer.getExecutionType() != ExecutionType.GUARANTEED) {
+      return;
+    }
     try {
       this.writeLock.lock();
       QueueMetrics metrics = queue.getMetrics();
