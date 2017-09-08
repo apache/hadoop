@@ -53,8 +53,8 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -167,6 +167,7 @@ public class S3AFileSystem extends FileSystem {
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
+  private boolean useListV1;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -260,6 +261,13 @@ public class S3AFileSystem extends FileSystem {
           new LinkedBlockingQueue<Runnable>(),
           BlockingThreadPoolExecutorService.newDaemonThreadFactory(
               "s3a-transfer-unbounded"));
+
+      int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
+      if (listVersion < 1 || listVersion > 2) {
+        LOG.warn("Configured fs.s3a.list.version {} is invalid, forcing " +
+            "version 2", listVersion);
+      }
+      useListV1 = (listVersion == 1);
 
       initTransferManager();
 
@@ -1056,21 +1064,37 @@ public class S3AFileSystem extends FileSystem {
    * @param request request to initiate
    * @return the results
    */
-  protected ObjectListing listObjects(ListObjectsRequest request) {
+  protected S3ListResult listObjects(S3ListRequest request) {
     incrementStatistic(OBJECT_LIST_REQUESTS);
     incrementReadOperations();
-    return s3.listObjects(request);
+    if (useListV1) {
+      Preconditions.checkArgument(request.isV1());
+      return S3ListResult.v1(s3.listObjects(request.getV1()));
+    } else {
+      Preconditions.checkArgument(!request.isV1());
+      return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+    }
   }
 
   /**
    * List the next set of objects.
-   * @param objects paged result
+   * @param request last list objects request to continue
+   * @param prevResult last paged result to continue from
    * @return the next result object
    */
-  protected ObjectListing continueListObjects(ObjectListing objects) {
+  protected S3ListResult continueListObjects(S3ListRequest request,
+      S3ListResult prevResult) {
     incrementStatistic(OBJECT_CONTINUE_LIST_REQUESTS);
     incrementReadOperations();
-    return s3.listNextBatchOfObjects(objects);
+    if (useListV1) {
+      Preconditions.checkArgument(request.isV1());
+      return S3ListResult.v1(s3.listNextBatchOfObjects(prevResult.getV1()));
+    } else {
+      Preconditions.checkArgument(!request.isV1());
+      request.getV2().setContinuationToken(prevResult.getV2()
+          .getNextContinuationToken());
+      return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+    }
   }
 
   /**
@@ -1464,9 +1488,9 @@ public class S3AFileSystem extends FileSystem {
       } else {
         LOG.debug("Getting objects for directory prefix {} to delete", key);
 
-        ListObjectsRequest request = createListObjectsRequest(key, null);
+        S3ListRequest request = createListObjectsRequest(key, null);
 
-        ObjectListing objects = listObjects(request);
+        S3ListResult objects = listObjects(request);
         List<DeleteObjectsRequest.KeyVersion> keys =
             new ArrayList<>(objects.getObjectSummaries().size());
         while (true) {
@@ -1481,7 +1505,7 @@ public class S3AFileSystem extends FileSystem {
           }
 
           if (objects.isTruncated()) {
-            objects = continueListObjects(objects);
+            objects = continueListObjects(request, objects);
           } else {
             if (!keys.isEmpty()) {
               // TODO: HADOOP-13761 S3Guard: retries
@@ -1589,7 +1613,7 @@ public class S3AFileSystem extends FileSystem {
         return S3Guard.dirMetaToStatuses(dirMeta);
       }
 
-      ListObjectsRequest request = createListObjectsRequest(key, "/");
+      S3ListRequest request = createListObjectsRequest(key, "/");
       LOG.debug("listStatus: doing listObjects for directory {}", key);
 
       Listing.FileStatusListingIterator files =
@@ -1619,16 +1643,38 @@ public class S3AFileSystem extends FileSystem {
    * @return the request
    */
   @VisibleForTesting
-  ListObjectsRequest createListObjectsRequest(String key,
+  S3ListRequest createListObjectsRequest(String key,
       String delimiter) {
-    ListObjectsRequest request = new ListObjectsRequest();
-    request.setBucketName(bucket);
-    request.setMaxKeys(maxKeys);
-    request.setPrefix(key);
-    if (delimiter != null) {
-      request.setDelimiter(delimiter);
+    return createListObjectsRequest(key, delimiter, null);
+  }
+
+  private S3ListRequest createListObjectsRequest(String key,
+      String delimiter, Integer overrideMaxKeys) {
+    if (!useListV1) {
+      ListObjectsV2Request request =
+          new ListObjectsV2Request().withBucketName(bucket)
+              .withMaxKeys(maxKeys)
+              .withPrefix(key);
+      if (delimiter != null) {
+        request.setDelimiter(delimiter);
+      }
+      if (overrideMaxKeys != null) {
+        request.setMaxKeys(overrideMaxKeys);
+      }
+      return S3ListRequest.v2(request);
+    } else {
+      ListObjectsRequest request = new ListObjectsRequest();
+      request.setBucketName(bucket);
+      request.setMaxKeys(maxKeys);
+      request.setPrefix(key);
+      if (delimiter != null) {
+        request.setDelimiter(delimiter);
+      }
+      if (overrideMaxKeys != null) {
+        request.setMaxKeys(overrideMaxKeys);
+      }
+      return S3ListRequest.v1(request);
     }
-    return request;
   }
 
   /**
@@ -1885,13 +1931,9 @@ public class S3AFileSystem extends FileSystem {
 
     try {
       key = maybeAddTrailingSlash(key);
-      ListObjectsRequest request = new ListObjectsRequest();
-      request.setBucketName(bucket);
-      request.setPrefix(key);
-      request.setDelimiter("/");
-      request.setMaxKeys(1);
+      S3ListRequest request = createListObjectsRequest(key, "/", 1);
 
-      ObjectListing objects = listObjects(request);
+      S3ListResult objects = listObjects(request);
 
       Collection<String> prefixes = objects.getCommonPrefixes();
       Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
@@ -2441,6 +2483,7 @@ public class S3AFileSystem extends FileSystem {
     }
     sb.append(", metastore=").append(metadataStore);
     sb.append(", authoritative=").append(allowAuthoritative);
+    sb.append(", useListV1=").append(useListV1);
     sb.append(", boundedExecutor=").append(boundedThreadPool);
     sb.append(", unboundedExecutor=").append(unboundedThreadPool);
     sb.append(", statistics {")

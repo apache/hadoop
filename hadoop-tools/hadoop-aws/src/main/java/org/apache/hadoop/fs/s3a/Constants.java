@@ -451,4 +451,13 @@ public final class Constants {
   public static final String FAIL_INJECT_INCONSISTENCY_PROBABILITY =
       "fs.s3a.failinject.inconsistency.probability";
 
+  /**
+   * S3 API level parameters.
+   */
+  @InterfaceStability.Unstable
+  public static final String LIST_VERSION = "fs.s3a.list.version";
+
+  @InterfaceStability.Unstable
+  public static final int DEFAULT_LIST_VERSION = 2;
+
 }

@@ -1428,6 +1428,15 @@
   <description>The implementation class of the S3A AbstractFileSystem.</description>
 </property>
 
+<property>
+  <name>fs.s3a.list.version</name>
+  <value>2</value>
+  <description>
+    Select which version of the S3 SDK's List Objects API to use.  Currently
+    support 2 (default) and 1 (older API).
+  </description>
+</property>
+
 <!-- Azure file system properties -->
 <property>
   <name>fs.wasb.impl</name>
