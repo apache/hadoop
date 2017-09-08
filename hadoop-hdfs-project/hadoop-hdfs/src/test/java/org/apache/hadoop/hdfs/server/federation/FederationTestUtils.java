@@ -26,11 +26,17 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+
+import javax.management.JMX;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -133,6 +139,13 @@ public final class FederationTestUtils {
 
   public static boolean verifyDate(Date d1, Date d2, long precision) {
     return Math.abs(d1.getTime() - d2.getTime()) < precision;
+  }
+
+  public static <T> T getBean(String name, Class<T> obj)
+      throws MalformedObjectNameException {
+    MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+    ObjectName poolName = new ObjectName(name);
+    return JMX.newMXBeanProxy(mBeanServer, poolName, obj);
   }
 
   public static boolean addDirectory(FileSystem context, String path)

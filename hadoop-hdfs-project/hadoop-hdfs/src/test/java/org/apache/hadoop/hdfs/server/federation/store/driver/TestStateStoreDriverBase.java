@@ -35,6 +35,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -375,6 +376,74 @@ public class TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testFetchErrors(driver, MembershipState.class);
     testFetchErrors(driver, MountTable.class);
+  }
+
+  public void testMetrics(StateStoreDriver driver)
+      throws IOException, IllegalArgumentException, IllegalAccessException {
+
+    MountTable insertRecord =
+        this.generateFakeRecord(MountTable.class);
+
+    // Put single
+    StateStoreMetrics metrics = stateStore.getMetrics();
+    assertEquals(0, metrics.getWriteOps());
+    driver.put(insertRecord, true, false);
+    assertEquals(1, metrics.getWriteOps());
+
+    // Put multiple
+    metrics.reset();
+    assertEquals(0, metrics.getWriteOps());
+    driver.put(insertRecord, true, false);
+    assertEquals(1, metrics.getWriteOps());
+
+    // Get Single
+    metrics.reset();
+    assertEquals(0, metrics.getReadOps());
+
+    final String querySourcePath = insertRecord.getSourcePath();
+    MountTable partial = MountTable.newInstance();
+    partial.setSourcePath(querySourcePath);
+    final Query<MountTable> query = new Query<>(partial);
+    driver.get(MountTable.class, query);
+    assertEquals(1, metrics.getReadOps());
+
+    // GetAll
+    metrics.reset();
+    assertEquals(0, metrics.getReadOps());
+    driver.get(MountTable.class);
+    assertEquals(1, metrics.getReadOps());
+
+    // GetMultiple
+    metrics.reset();
+    assertEquals(0, metrics.getReadOps());
+    driver.getMultiple(MountTable.class, query);
+    assertEquals(1, metrics.getReadOps());
+
+    // Insert fails
+    metrics.reset();
+    assertEquals(0, metrics.getFailureOps());
+    driver.put(insertRecord, false, true);
+    assertEquals(1, metrics.getFailureOps());
+
+    // Remove single
+    metrics.reset();
+    assertEquals(0, metrics.getRemoveOps());
+    driver.remove(insertRecord);
+    assertEquals(1, metrics.getRemoveOps());
+
+    // Remove multiple
+    metrics.reset();
+    driver.put(insertRecord, true, false);
+    assertEquals(0, metrics.getRemoveOps());
+    driver.remove(MountTable.class, query);
+    assertEquals(1, metrics.getRemoveOps());
+
+    // Remove all
+    metrics.reset();
+    driver.put(insertRecord, true, false);
+    assertEquals(0, metrics.getRemoveOps());
+    driver.removeAll(MountTable.class);
+    assertEquals(1, metrics.getRemoveOps());
   }
 
   /**
