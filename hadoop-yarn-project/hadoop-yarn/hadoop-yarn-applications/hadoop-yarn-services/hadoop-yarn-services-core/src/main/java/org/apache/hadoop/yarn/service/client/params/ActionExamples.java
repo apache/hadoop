@@ -18,20 +18,9 @@
 
 package org.apache.hadoop.yarn.service.client.params;
 
-import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
-@Parameters(commandNames = { SliderActions.ACTION_UPDATE},
-            commandDescription = SliderActions.DESCRIBE_ACTION_UPDATE)
-
-public class ActionUpdateArgs extends AbstractActionArgs {
-
-  @Parameter(names = {
-      ARG_LIFETIME }, description = "Lifetime of the service from the time of request")
-  public long lifetime;
-
-  @Override
-  public String getActionName() {
-    return SliderActions.ACTION_UPDATE;
-  }
+@Parameters(commandNames = { SliderActions.ACTION_EXAMPLES},
+    commandDescription = SliderActions.DESCRIBE_ACTION_EXAMPLES)
+public class ActionExamples {
 }

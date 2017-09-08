@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.client.params.ClientArgs;
@@ -43,7 +42,7 @@ import java.util.List;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS;
-import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_APPDEF;
+import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_FILE;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 import static org.mockito.Mockito.*;
 
@@ -54,9 +53,9 @@ public class TestServiceCLI {
   private ServiceCLI cli;
   private SliderFileSystem fs;
 
-  private void buildApp(String appName, String appDef) throws Throwable {
+  private void buildApp(String appDef) throws Throwable {
     String[] args =
-        { "build", appName, ARG_APPDEF, ExampleAppJson.resourceName(appDef) };
+        { "build", ARG_FILE, ExampleAppJson.resourceName(appDef)};
     ClientArgs clientArgs = new ClientArgs(args);
     clientArgs.parse();
     cli.exec(clientArgs);
@@ -115,34 +114,35 @@ public class TestServiceCLI {
   // Test flex components count are persisted.
   @Test
   public void testFlexComponents() throws Throwable {
-    buildApp("service-1", ExampleAppJson.APP_JSON);
-
-    checkCompCount("master", 1L);
+    String serviceName = "app-1";
+    buildApp(ExampleAppJson.APP_JSON);
+    checkCompCount("master",serviceName,  1L);
 
     // increase by 2
-    String[] flexUpArgs = {"flex", "service-1", "--component", "master" , "+2"};
+    String[] flexUpArgs = {"flex", serviceName, "--component", "master" , "+2"};
     ClientArgs clientArgs = new ClientArgs(flexUpArgs);
     clientArgs.parse();
     cli.exec(clientArgs);
-    checkCompCount("master", 3L);
+    checkCompCount("master", serviceName, 3L);
 
     // decrease by 1
-    String[] flexDownArgs = {"flex", "service-1", "--component", "master", "-1"};
+    String[] flexDownArgs = {"flex", serviceName, "--component", "master", "-1"};
     clientArgs = new ClientArgs(flexDownArgs);
     clientArgs.parse();
     cli.exec(clientArgs);
-    checkCompCount("master", 2L);
+    checkCompCount("master", serviceName, 2L);
 
-    String[] flexAbsoluteArgs = {"flex", "service-1", "--component", "master", "10"};
+    String[] flexAbsoluteArgs = {"flex", serviceName, "--component", "master", "10"};
     clientArgs = new ClientArgs(flexAbsoluteArgs);
     clientArgs.parse();
     cli.exec(clientArgs);
-    checkCompCount("master", 10L);
+    checkCompCount("master", serviceName, 10L);
   }
 
-  private void checkCompCount(String compName, long count) throws IOException {
+  private void checkCompCount(String compName, String serviceName, long count)
+      throws IOException {
     List<Component> components =
-        ServiceApiUtil.getComponents(fs, "service-1");
+        ServiceApiUtil.getComponents(fs, serviceName);
     for (Component component : components) {
       if (component.getName().equals(compName)) {
         Assert.assertEquals(count, component.getNumberOfContainers().longValue());

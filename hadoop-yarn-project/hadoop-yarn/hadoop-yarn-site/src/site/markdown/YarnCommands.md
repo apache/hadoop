@@ -22,7 +22,7 @@ Overview
 
 YARN commands are invoked by the bin/yarn script. Running the yarn script without any arguments prints the description for all commands.
 
-Usage: `yarn [SHELL_OPTIONS] COMMAND [GENERIC_OPTIONS] [COMMAND_OPTIONS]`
+Usage: `yarn [SHELL_OPTIONS] COMMAND [GENERIC_OPTIONS] [SUB_COMMAND] [COMMAND_OPTIONS]`
 
 YARN has an option parsing framework that employs parsing generic options as well as running classes.
 
@@ -68,6 +68,56 @@ Usage: `yarn applicationattempt [options] `
 | -status \<Application Attempt Id\> | Prints the status of the application attempt. |
 
 prints applicationattempt(s) report
+
+### `service`
+Usage `yarn service [sub-command] [service-name] [options]`
+
+#### `SUB_COMMAND`
+
+* `build`:  Build a service with its specifications, but do not start it.
+    ```
+    Usage: yarn service build --file [file]
+    ```
+
+  | COMMAND\_OPTIONS | Description |
+  |:---- |:---- |
+  | --file or -f | The local path to the service definition file |
+
+* `create`:  create a service, it's equivalent to first invoke build and then start.
+   ```
+   Usage: yarn service create --file [file]
+   ```
+  | COMMAND\_OPTIONS | Description |
+  |:---- |:---- |
+  | --file or -f | The local path to the service definition file |
+
+* `dependency`:  Yarn service framework dependency (libraries) management.
+  ```
+  Usage: yarn service dependency [options]
+  ```
+  | COMMAND\_OPTIONS | Description |
+  |:---- |:---- |
+  | --upload | Pre-upload the dependency jars onto HDFS to expediate service launch process. |
+
+* `destroy`:  Destroy a stopped service, service must be stopped first before destroying.
+  ```
+  Usage: yarn service destroy [service-name]
+  ```
+* `flex`:   Flex a service's component by increasing or decreasing the number of containers.
+  ```
+  Usage: yarn service flex [service-name] --component [component-name] [count]
+  ```
+  | COMMAND\_OPTIONS | Description |
+  |:---- |:---- |
+  | --component [component-name] [count] | Specifies the component name and its number of containers. e.g. +1 incr by 1, -2 decr by 2, and 3 makes final count 3.|
+* `status`:  Get the status of a service.
+  ```
+  Usage: yarn service status [service-name]
+  ```
+* `start`:  Start a service with pre-built specification or a previously stopped service.
+  ```
+  Usage: yarn service start [service-name]
+  ```
 
 ### `classpath`
 
@@ -272,6 +322,10 @@ Start the Shared Cache Manager
 Usage: `yarn timelineserver`
 
 Start the TimeLineServer
+
+### apiserver
+Usage: `yarn apiserver`
+Start the API-server for deploying/managing services on YARN
 
 Files
 -----

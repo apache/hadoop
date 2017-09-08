@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
-import org.apache.hadoop.yarn.service.client.params.SliderAMArgs;
+import org.apache.hadoop.yarn.service.client.params.ServiceAMArgs;
 import org.apache.hadoop.yarn.service.monitor.ServiceMonitor;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
@@ -51,7 +51,7 @@ public class ServiceMaster extends CompositeService {
   private static final Logger LOG =
       LoggerFactory.getLogger(ServiceMaster.class);
 
-  private static SliderAMArgs amArgs;
+  private static ServiceAMArgs amArgs;
   protected ServiceContext context;
 
   public ServiceMaster(String name) {
@@ -108,7 +108,7 @@ public class ServiceMaster extends CompositeService {
   }
 
   protected Path getAppDir() {
-    return new Path(amArgs.getAppDefPath()).getParent();
+    return new Path(amArgs.getServiceDefPath()).getParent();
   }
 
   protected ServiceScheduler createServiceScheduler(ServiceContext context)
@@ -119,7 +119,7 @@ public class ServiceMaster extends CompositeService {
   protected void loadApplicationJson(ServiceContext context,
       SliderFileSystem fs) throws IOException {
     context.service = ServiceApiUtil
-        .loadServiceFrom(fs, new Path(amArgs.getAppDefPath()));
+        .loadServiceFrom(fs, new Path(amArgs.getServiceDefPath()));
     LOG.info(context.service.toString());
   }
 
@@ -138,7 +138,7 @@ public class ServiceMaster extends CompositeService {
   public static void main(String[] args) throws Exception {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(ServiceMaster.class, args, LOG);
-    amArgs = new SliderAMArgs(args);
+    amArgs = new ServiceAMArgs(args);
     amArgs.parse();
     try {
       ServiceMaster serviceMaster = new ServiceMaster("Service Master");

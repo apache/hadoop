@@ -27,7 +27,8 @@ package org.apache.hadoop.yarn.service.client.params;
  */
 public interface Arguments {
 
-  String ARG_APPDEF = "--appdef";
+  String ARG_FILE = "--file";
+  String ARG_FILE_SHORT = "-f";
   String ARG_BASE_PATH = "--basepath";
   String ARG_COMPONENT = "--component";
   String ARG_COMPONENT_SHORT = "--comp";
@@ -95,9 +96,7 @@ public interface Arguments {
  RIGHT PLACE IN THE LIST
  */
 
-  /**
-   * server: URI for the cluster
-   */
-  String ARG_CLUSTER_URI = "-cluster-uri";
+  // Tha path in hdfs to be read by Service AM
+  String ARG_SERVICE_DEF_PATH = "-cluster-uri";
 
 }

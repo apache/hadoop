@@ -19,13 +19,8 @@
 package org.apache.hadoop.yarn.service.client.params;
 
 import com.beust.jcommander.Parameter;
-import com.beust.jcommander.ParametersDelegate;
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Abstract Action to build things; shares args across build and
@@ -33,12 +28,12 @@ import java.util.Map;
  */
 public abstract class AbstractClusterBuildingActionArgs
     extends AbstractActionArgs {
-  @Parameter(names = {ARG_APPDEF},
-      description = "Template service definition file in JSON format.")
-  public File appDef;
+  @Parameter(names = { ARG_FILE, ARG_FILE_SHORT },  required = true,
+      description = "The path to the service definition file in JSON format.")
+  public File file;
 
-  public File getAppDef() {
-    return appDef;
+  public File getFile() {
+    return file;
   }
 
   @Parameter(names = {
@@ -48,11 +43,4 @@ public abstract class AbstractClusterBuildingActionArgs
   @Parameter(names = {
       ARG_LIFETIME }, description = "Lifetime of the service from the time of request")
   public long lifetime;
-
-  @ParametersDelegate
-  public ComponentArgsDelegate componentDelegate = new ComponentArgsDelegate();
-
-  @ParametersDelegate
-  public OptionArgsDelegate optionsDelegate =
-      new OptionArgsDelegate();
 }

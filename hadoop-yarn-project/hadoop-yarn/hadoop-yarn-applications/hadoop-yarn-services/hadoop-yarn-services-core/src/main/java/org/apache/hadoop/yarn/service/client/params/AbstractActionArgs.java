@@ -41,22 +41,10 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
   }
 
   /**
-   * URI/binding to the filesystem
-   */
-  @Parameter(names = {ARG_FILESYSTEM, ARG_FILESYSTEM_LONG},
-             description = "Filesystem Binding")
-  public String filesystemBinding;
-
-  @Parameter(names = {ARG_BASE_PATH},
-             description = "Service base path on the filesystem",
-             converter =  PathArgumentConverter.class)
-  public Path basePath;
-
-  /**
    * This is the default parameter
    */
   @Parameter
-  public final List<String> parameters = new ArrayList<>();
+  public List<String> parameters = new ArrayList<>();
 
   /**
    * get the name: relies on arg 1 being the cluster name in all operations 
@@ -76,28 +64,21 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
 
    */
 
-  @Parameter(names = ARG_DEFINE, arity = 1, description = "Definitions")
-  public final List<String> definitions = new ArrayList<>();
+  @Parameter(names = ARG_DEFINE, arity = 1, description = "Definitions", hidden = true)
+  public List<String> definitions = new ArrayList<>();
 
   /**
    * System properties
    */
   @Parameter(names = {ARG_SYSPROP}, arity = 1,
              description = "system properties in the form name value" +
-                           " These are set after the JVM is started.")
-  public final List<String> sysprops = new ArrayList<>(0);
+                           " These are set after the JVM is started.",
+              hidden = true)
+  public List<String> sysprops = new ArrayList<>(0);
 
 
-  @Parameter(names = {ARG_MANAGER_SHORT, ARG_MANAGER},
-             description = "Binding (usually hostname:port) of the YARN resource manager")
-  public String manager;
-
-
-  @Parameter(names = ARG_DEBUG, description = "Debug mode")
+  @Parameter(names = ARG_DEBUG, description = "Debug mode", hidden = true)
   public boolean debug = false;
-
-  @Parameter(names = {ARG_HELP}, description = "Help", help = true)
-  public boolean help = false;
 
   /**
    * Get the min #of params expected

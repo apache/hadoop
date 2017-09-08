@@ -155,10 +155,12 @@
       <item name="Timeline Service V.2" href="hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html#Timeline_Service_v.2_REST_API"/>
     </menu>
 
-    <menu name="YARN Native Services" inherit="top">
-      <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesIntro.html"/>
-      <item name="Native Services API" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesAPI.html"/>
-      <item name="Native Services Discovery" href="hadoop-yarn/hadoop-yarn-site/native-services/NativeServicesDiscovery.html"/>
+    <menu name="YARN Service" inherit="top">
+      <item name="Overview" href="hadoop-yarn/hadoop-yarn-site/yarn-service/Overview.html"/>
+      <item name="QuickStart" href="hadoop-yarn/hadoop-yarn-site/yarn-service/QuickStart.html"/>
+      <item name="Concepts" href="hadoop-yarn/hadoop-yarn-site/yarn-service/Concepts.html"/>
+      <item name="Yarn Service API" href="hadoop-yarn/hadoop-yarn-site/yarn-service/YarnServiceAPI.html"/>
+      <item name="Service Discovery" href="hadoop-yarn/hadoop-yarn-site/yarn-service/ServiceDiscovery.html"/>
     </menu>
 
     <menu name="Hadoop Compatible File Systems" inherit="top">

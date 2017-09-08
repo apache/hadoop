@@ -85,16 +85,6 @@ public class ClientArgs extends CommonArgs {
   public void applyDefinitions(Configuration conf) throws
                                                    BadCommandArgumentsException {
     super.applyDefinitions(conf);
-    //RM
-    if (getManager() != null) {
-      log.debug("Setting RM to {}", getManager());
-      conf.set(YarnConfiguration.RM_ADDRESS, getManager());
-    }
-    if (getBasePath() != null) {
-      log.debug("Setting basePath to {}", getBasePath());
-      conf.set(YarnServiceConf.YARN_SERVICE_BASE_PATH,
-          getBasePath().toString());
-    }
   }
 
 

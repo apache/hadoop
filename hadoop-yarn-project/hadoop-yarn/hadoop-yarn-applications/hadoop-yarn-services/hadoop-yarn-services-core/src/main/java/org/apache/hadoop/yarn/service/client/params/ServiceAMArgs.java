@@ -22,11 +22,11 @@ package org.apache.hadoop.yarn.service.client.params;
 /**
  * Parameters sent by the Client to the AM
  */
-public class SliderAMArgs extends CommonArgs {
+public class ServiceAMArgs extends CommonArgs {
 
-  SliderAMCreateAction createAction = new SliderAMCreateAction();
+  ServiceAMCreateAction createAction = new ServiceAMCreateAction();
 
-  public SliderAMArgs(String[] args) {
+  public ServiceAMArgs(String[] args) {
     super(args);
   }
 
@@ -35,16 +35,9 @@ public class SliderAMArgs extends CommonArgs {
     addActions(createAction);
   }
 
-  public String getImage() {
-    return createAction.image;
-  }
-
-  /**
-   * This is the URI in the FS to the Slider cluster; the conf file (and any
-   * other cluster-specifics) can be picked up here
-   */
-  public String getAppDefPath() {
-    return createAction.sliderClusterURI;
+  // This is the path in hdfs to the service definition JSON file
+  public String getServiceDefPath() {
+    return createAction.serviceDefPath;
   }
 
   /**
