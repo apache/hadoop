@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.store.records;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,28 @@ import org.slf4j.LoggerFactory;
 public abstract class MountTable extends BaseRecord {
 
   private static final Logger LOG = LoggerFactory.getLogger(MountTable.class);
+
+
+  /** Comparator for paths which considers the /. */
+  public static final Comparator<String> PATH_COMPARATOR =
+      new Comparator<String>() {
+        @Override
+        public int compare(String o1, String o2) {
+          String s1 = o1.replace('/', ' ');
+          String s2 = o2.replace('/', ' ');
+          return s1.compareTo(s2);
+        }
+      };
+
+  /** Comparator based on the mount table source. */
+  public static final Comparator<MountTable> SOURCE_COMPARATOR =
+      new Comparator<MountTable>() {
+        public int compare(MountTable m1, MountTable m2) {
+          String src1 = m1.getSourcePath();
+          String src2 = m2.getSourcePath();
+          return PATH_COMPARATOR.compare(src1, src2);
+        }
+      };
 
 
   /**

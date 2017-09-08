@@ -120,6 +120,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,6 +159,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
 
   /** RPC clients to connect to the Namenodes. */
   private final RouterRpcClient rpcClient;
+
+  /** Monitor metrics for the RPC calls. */
+  private final RouterRpcMonitor rpcMonitor;
 
 
   /** Interface to identify the active NN for a nameservice or blockpool ID. */
@@ -256,14 +260,28 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     this.rpcAddress = new InetSocketAddress(
         confRpcAddress.getHostName(), listenAddress.getPort());
 
+    // Create metrics monitor
+    Class<? extends RouterRpcMonitor> rpcMonitorClass = this.conf.getClass(
+        DFSConfigKeys.DFS_ROUTER_METRICS_CLASS,
+        DFSConfigKeys.DFS_ROUTER_METRICS_CLASS_DEFAULT,
+        RouterRpcMonitor.class);
+    this.rpcMonitor = ReflectionUtils.newInstance(rpcMonitorClass, conf);
+
     // Create the client
     this.rpcClient = new RouterRpcClient(this.conf, this.router.getRouterId(),
-        this.namenodeResolver);
+        this.namenodeResolver, this.rpcMonitor);
   }
 
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
+
+    if (this.rpcMonitor == null) {
+      LOG.error("Cannot instantiate Router RPC metrics class");
+    } else {
+      this.rpcMonitor.init(this.conf, this, this.router.getStateStore());
+    }
+
     super.serviceInit(configuration);
   }
 
@@ -281,6 +299,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     if (this.rpcServer != null) {
       this.rpcServer.stop();
     }
+    if (rpcMonitor != null) {
+      this.rpcMonitor.close();
+    }
     super.serviceStop();
   }
 
@@ -291,6 +312,15 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    */
   public RouterRpcClient getRPCClient() {
     return rpcClient;
+  }
+
+  /**
+   * Get the RPC monitor and metrics.
+   *
+   * @return RPC monitor and metrics.
+   */
+  public RouterRpcMonitor getRPCMonitor() {
+    return rpcMonitor;
   }
 
   /**
@@ -330,6 +360,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     checkOperation(op);
 
     if (!supported) {
+      if (rpcMonitor != null) {
+        rpcMonitor.proxyOpNotImplemented();
+      }
       String methodName = getMethodName();
       throw new UnsupportedOperationException(
           "Operation \"" + methodName + "\" is not supported");
@@ -345,6 +378,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    *                          client requests.
    */
   private void checkOperation(OperationCategory op) throws StandbyException {
+    // Log the function we are currently calling.
+    if (rpcMonitor != null) {
+      rpcMonitor.startOp();
+    }
     // Log the function we are currently calling.
     if (LOG.isDebugEnabled()) {
       String methodName = getMethodName();
@@ -1912,16 +1949,22 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    */
   private List<RemoteLocation> getLocationsForPath(
       String path, boolean failIfLocked) throws IOException {
-    // Check the location for this path
-    final PathLocation location =
-        this.subclusterResolver.getDestinationForPath(path);
-    if (location == null) {
-      throw new IOException("Cannot find locations for " + path + " in " +
-          this.subclusterResolver);
-    }
+    try {
+      // Check the location for this path
+      final PathLocation location =
+          this.subclusterResolver.getDestinationForPath(path);
+      if (location == null) {
+        throw new IOException("Cannot find locations for " + path + " in " +
+            this.subclusterResolver);
+      }
 
-    // Log the access to a path
-    return location.getDestinations();
+      return location.getDestinations();
+    } catch (IOException ioe) {
+      if (this.rpcMonitor != null) {
+        this.rpcMonitor.routerFailureStateStore();
+      }
+      throw ioe;
+    }
   }
 
   /**

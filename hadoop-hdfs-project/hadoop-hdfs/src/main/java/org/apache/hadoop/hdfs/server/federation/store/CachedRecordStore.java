@@ -26,6 +26,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
@@ -138,6 +139,13 @@ public abstract class CachedRecordStore<R extends BaseRecord>
         this.initialized = true;
       } finally {
         writeLock.unlock();
+      }
+
+      // Update the metrics for the cache State Store size
+      StateStoreMetrics metrics = getDriver().getMetrics();
+      if (metrics != null) {
+        String recordName = getRecordClass().getSimpleName();
+        metrics.setCacheSize(recordName, this.records.size());
       }
 
       lastUpdate = Time.monotonicNow();
