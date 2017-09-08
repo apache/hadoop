@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.store.driver.impl;
 import static org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils.filterMultiple;
 import static org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils.getRecordName;
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -123,6 +124,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   public <T extends BaseRecord> QueryResult<T> get(Class<T> clazz, String sub)
       throws IOException {
     verifyDriverReady();
+    long start = monotonicNow();
     List<T> ret = new ArrayList<>();
     String znode = getZNodeForClass(clazz);
     try {
@@ -157,11 +159,14 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
         }
       }
     } catch (Exception e) {
+      getMetrics().addFailure(monotonicNow() - start);
       String msg = "Cannot get children for \"" + znode + "\": " +
           e.getMessage();
       LOG.error(msg);
       throw new IOException(msg);
     }
+    long end = monotonicNow();
+    getMetrics().addRead(end - start);
     return new QueryResult<T>(ret, getTime());
   }
 
@@ -178,6 +183,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     Class<? extends BaseRecord> recordClass = record0.getClass();
     String znode = getZNodeForClass(recordClass);
 
+    long start = monotonicNow();
     boolean status = true;
     for (T record : records) {
       String primaryKey = getPrimaryKey(record);
@@ -186,6 +192,12 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       if (!writeNode(recordZNode, data, update, error)){
         status = false;
       }
+    }
+    long end = monotonicNow();
+    if (status) {
+      getMetrics().addWrite(end - start);
+    } else {
+      getMetrics().addFailure(end - start);
     }
     return status;
   }
@@ -199,12 +211,14 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     }
 
     // Read the current data
+    long start = monotonicNow();
     List<T> records = null;
     try {
       QueryResult<T> result = get(clazz);
       records = result.getRecords();
     } catch (IOException ex) {
       LOG.error("Cannot get existing records", ex);
+      getMetrics().addFailure(monotonicNow() - start);
       return 0;
     }
 
@@ -226,7 +240,12 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
         }
       } catch (Exception e) {
         LOG.error("Cannot remove \"{}\"", existingRecord, e);
+        getMetrics().addFailure(monotonicNow() - start);
       }
+    }
+    long end = monotonicNow();
+    if (removed > 0) {
+      getMetrics().addRemove(end - start);
     }
     return removed;
   }
@@ -234,6 +253,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   @Override
   public <T extends BaseRecord> boolean removeAll(Class<T> clazz)
       throws IOException {
+    long start = monotonicNow();
     boolean status = true;
     String znode = getZNodeForClass(clazz);
     LOG.info("Deleting all children under {}", znode);
@@ -247,6 +267,12 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     } catch (Exception e) {
       LOG.error("Cannot remove {}: {}", znode, e.getMessage());
       status = false;
+    }
+    long time = monotonicNow() - start;
+    if (status) {
+      getMetrics().addRemove(time);
+    } else {
+      getMetrics().addFailure(time);
     }
     return status;
   }

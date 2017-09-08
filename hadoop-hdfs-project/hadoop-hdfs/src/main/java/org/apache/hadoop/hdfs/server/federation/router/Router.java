@@ -36,10 +36,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -95,6 +99,12 @@ public class Router extends CompositeService {
   private ActiveNamenodeResolver namenodeResolver;
   /** Updates the namenode status in the namenode resolver. */
   private Collection<NamenodeHeartbeatService> namenodeHearbeatServices;
+
+  /** Router metrics. */
+  private RouterMetricsService metrics;
+
+  /** JVM pauses (GC and others). */
+  private JvmPauseMonitor pauseMonitor;
 
 
   /** Usage string for help message. */
@@ -174,17 +184,45 @@ public class Router extends CompositeService {
       }
     }
 
+    // Router metrics system
+    if (conf.getBoolean(
+        DFSConfigKeys.DFS_ROUTER_METRICS_ENABLE,
+        DFSConfigKeys.DFS_ROUTER_METRICS_ENABLE_DEFAULT)) {
+
+      DefaultMetricsSystem.initialize("Router");
+
+      this.metrics = new RouterMetricsService(this);
+      addService(this.metrics);
+
+      // JVM pause monitor
+      this.pauseMonitor = new JvmPauseMonitor();
+      this.pauseMonitor.init(conf);
+    }
+
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
 
+    if (this.pauseMonitor != null) {
+      this.pauseMonitor.start();
+      JvmMetrics jvmMetrics = this.metrics.getJvmMetrics();
+      if (jvmMetrics != null) {
+        jvmMetrics.setPauseMonitor(pauseMonitor);
+      }
+    }
+
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
+
+    // JVM pause monitor
+    if (this.pauseMonitor != null) {
+      this.pauseMonitor.stop();
+    }
 
     super.serviceStop();
   }
@@ -416,6 +454,30 @@ public class Router extends CompositeService {
    */
   public StateStoreService getStateStore() {
     return this.stateStore;
+  }
+
+  /**
+   * Get the metrics system for the Router.
+   *
+   * @return Router metrics.
+   */
+  public RouterMetrics getRouterMetrics() {
+    if (this.metrics != null) {
+      return this.metrics.getRouterMetrics();
+    }
+    return null;
+  }
+
+  /**
+   * Get the federation metrics.
+   *
+   * @return Federation metrics.
+   */
+  public FederationMetrics getMetrics() {
+    if (this.metrics != null) {
+      return this.metrics.getFederationMetrics();
+    }
+    return null;
   }
 
   /**

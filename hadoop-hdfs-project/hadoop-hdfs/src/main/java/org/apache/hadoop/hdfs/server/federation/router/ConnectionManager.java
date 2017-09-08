@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -35,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -280,6 +282,27 @@ public class ConnectionManager {
    */
   public int getNumCreatingConnections() {
     return this.creatorQueue.size();
+  }
+
+  /**
+   * Get a JSON representation of the connection pool.
+   *
+   * @return JSON representation of all the connection pools.
+   */
+  public String getJSON() {
+    final Map<String, String> info = new TreeMap<>();
+    readLock.lock();
+    try {
+      for (Entry<ConnectionPoolId, ConnectionPool> entry :
+          this.pools.entrySet()) {
+        ConnectionPoolId connectionPoolId = entry.getKey();
+        ConnectionPool pool = entry.getValue();
+        info.put(connectionPoolId.toString(), pool.getJSON());
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return JSON.toString(info);
   }
 
   /**

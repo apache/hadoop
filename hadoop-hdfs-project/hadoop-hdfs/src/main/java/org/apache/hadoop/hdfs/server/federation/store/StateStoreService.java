@@ -25,15 +25,23 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
+import javax.management.StandardMBean;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMBean;
+import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MembershipStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
@@ -87,6 +95,8 @@ public class StateStoreService extends CompositeService {
   /** Service to maintain data store connection. */
   private StateStoreConnectionMonitorService monitorService;
 
+  /** StateStore metrics. */
+  private StateStoreMetrics metrics;
 
   /** Supported record stores. */
   private final Map<
@@ -152,6 +162,21 @@ public class StateStoreService extends CompositeService {
     this.cacheUpdater = new StateStoreCacheUpdateService(this);
     addService(this.cacheUpdater);
 
+    // Create metrics for the State Store
+    this.metrics = StateStoreMetrics.create(conf);
+
+    // Adding JMX interface
+    try {
+      StandardMBean bean = new StandardMBean(metrics, StateStoreMBean.class);
+      ObjectName registeredObject =
+          MBeans.register("Router", "StateStore", bean);
+      LOG.info("Registered StateStoreMBean: {}", registeredObject);
+    } catch (NotCompliantMBeanException e) {
+      throw new RuntimeException("Bad StateStoreMBean setup", e);
+    } catch (MetricsException e) {
+      LOG.info("Failed to register State Store bean {}", e.getMessage());
+    }
+
     super.serviceInit(this.conf);
   }
 
@@ -164,6 +189,11 @@ public class StateStoreService extends CompositeService {
   @Override
   protected void serviceStop() throws Exception {
     closeDriver();
+
+    if (metrics != null) {
+      metrics.shutdown();
+      metrics = null;
+    }
 
     super.serviceStop();
   }
@@ -228,7 +258,8 @@ public class StateStoreService extends CompositeService {
     synchronized (this.driver) {
       if (!isDriverReady()) {
         String driverName = this.driver.getClass().getSimpleName();
-        if (this.driver.init(conf, getIdentifier(), getSupportedRecords())) {
+        if (this.driver.init(
+            conf, getIdentifier(), getSupportedRecords(), metrics)) {
           LOG.info("Connection to the State Store driver {} is open and ready",
               driverName);
           this.refreshCaches();
@@ -396,6 +427,15 @@ public class StateStoreService extends CompositeService {
       }
     }
     throw new IOException("Registered cache was not found for " + clazz);
+  }
+
+  /**
+   * Get the metrics for the State Store.
+   *
+   * @return State Store metrics.
+   */
+  public StateStoreMetrics getMetrics() {
+    return metrics;
   }
 
 }

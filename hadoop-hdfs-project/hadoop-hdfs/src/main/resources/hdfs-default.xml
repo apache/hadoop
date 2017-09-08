@@ -4449,7 +4449,24 @@
     </description>
   </property>
 
-    <property>
+  <property>
+    <name>dfs.federation.router.metrics.enable</name>
+    <value>true</value>
+    <description>
+      If the metrics in the router are enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor</value>
+    <description>
+      Class to monitor the RPC system in the router. It must implement the
+      RouterRpcMonitor interface.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.admin.enable</name>
     <value>true</value>
     <description>
