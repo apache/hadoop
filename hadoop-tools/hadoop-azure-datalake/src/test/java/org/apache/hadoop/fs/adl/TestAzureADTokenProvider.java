@@ -43,8 +43,6 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys
 import static org.apache.hadoop.fs.adl.AdlConfKeys
     .AZURE_AD_TOKEN_PROVIDER_TYPE_KEY;
 import static org.apache.hadoop.fs.adl.AdlConfKeys.DEVICE_CODE_CLIENT_APP_ID;
-import static org.apache.hadoop.fs.adl.AdlConfKeys.MSI_PORT;
-import static org.apache.hadoop.fs.adl.AdlConfKeys.MSI_TENANT_GUID;
 import static org.apache.hadoop.fs.adl.TokenProviderType.*;
 import static org.junit.Assert.assertEquals;
 
@@ -107,8 +105,6 @@ public class TestAzureADTokenProvider {
           throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
     conf.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, MSI);
-    conf.set(MSI_PORT, "54321");
-    conf.set(MSI_TENANT_GUID, "TENANT_GUID");
 
     URI uri = new URI("adl://localhost:8080");
     AdlFileSystem fileSystem = new AdlFileSystem();
