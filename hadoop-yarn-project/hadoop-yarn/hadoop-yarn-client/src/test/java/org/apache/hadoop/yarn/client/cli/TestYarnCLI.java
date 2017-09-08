@@ -48,6 +48,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -2148,17 +2149,16 @@ public class TestYarnCLI {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 6);
 
-    ApplicationReport appReport = ApplicationReport.newInstance(applicationId,
-        ApplicationAttemptId.newInstance(applicationId, 1), "user", "queue",
-        "appname", "host", 124, null, YarnApplicationState.RUNNING,
-        "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
-        "N/A", 0.53789f, "YARN", null);
-    ApplicationTimeout timeout = ApplicationTimeout
-        .newInstance(ApplicationTimeoutType.LIFETIME, "N/A", -1);
-    appReport.setApplicationTimeouts(
-        Collections.singletonMap(timeout.getTimeoutType(), timeout));
-    when(client.getApplicationReport(any(ApplicationId.class)))
-        .thenReturn(appReport);
+    UpdateApplicationTimeoutsResponse response =
+        mock(UpdateApplicationTimeoutsResponse.class);
+    String formatISO8601 =
+        Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
+    when(response.getApplicationTimeouts()).thenReturn(Collections
+        .singletonMap(ApplicationTimeoutType.LIFETIME, formatISO8601));
+
+    when(client
+        .updateApplicationTimeouts(any(UpdateApplicationTimeoutsRequest.class)))
+            .thenReturn(response);
 
     int result = cli.run(new String[] { "application", "-appId",
         applicationId.toString(), "-updateLifetime", "10" });

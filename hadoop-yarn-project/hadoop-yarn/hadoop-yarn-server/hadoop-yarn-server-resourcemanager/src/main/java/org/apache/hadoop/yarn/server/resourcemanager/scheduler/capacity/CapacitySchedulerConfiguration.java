@@ -1496,4 +1496,30 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public int getMaxAssignPerHeartbeat() {
     return getInt(MAX_ASSIGN_PER_HEARTBEAT, DEFAULT_MAX_ASSIGN_PER_HEARTBEAT);
   }
+
+  public static final String MAXIMUM_LIFETIME_SUFFIX =
+      "maximum-application-lifetime";
+
+  public static final String DEFAULT_LIFETIME_SUFFIX =
+      "default-application-lifetime";
+
+  public long getMaximumLifetimePerQueue(String queue) {
+    long maximumLifetimePerQueue = getLong(
+        getQueuePrefix(queue) + MAXIMUM_LIFETIME_SUFFIX, (long) UNDEFINED);
+    return maximumLifetimePerQueue;
+  }
+
+  public void setMaximumLifetimePerQueue(String queue, long maximumLifetime) {
+    setLong(getQueuePrefix(queue) + MAXIMUM_LIFETIME_SUFFIX, maximumLifetime);
+  }
+
+  public long getDefaultLifetimePerQueue(String queue) {
+    long maximumLifetimePerQueue = getLong(
+        getQueuePrefix(queue) + DEFAULT_LIFETIME_SUFFIX, (long) UNDEFINED);
+    return maximumLifetimePerQueue;
+  }
+
+  public void setDefaultLifetimePerQueue(String queue, long defaultLifetime) {
+    setLong(getQueuePrefix(queue) + DEFAULT_LIFETIME_SUFFIX, defaultLifetime);
+  }
 }

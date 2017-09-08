@@ -1654,6 +1654,7 @@ public class ClientRMService extends AbstractService implements
         RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
             AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService",
             applicationId);
+        response.setApplicationTimeouts(applicationTimeouts);
         return response;
       }
       String msg =
@@ -1665,7 +1666,8 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmAppManager.updateApplicationTimeout(application, applicationTimeouts);
+      applicationTimeouts = rmAppManager.updateApplicationTimeout(application,
+          applicationTimeouts);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
@@ -1675,6 +1677,7 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
         AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService", applicationId);
+    response.setApplicationTimeouts(applicationTimeouts);
     return response;
   }
 
