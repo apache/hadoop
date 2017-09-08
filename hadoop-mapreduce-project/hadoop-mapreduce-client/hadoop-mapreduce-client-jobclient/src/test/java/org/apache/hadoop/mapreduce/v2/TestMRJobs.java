@@ -95,11 +95,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -402,6 +404,10 @@ public class TestMRJobs {
 
   @Test(timeout = 3000000)
   public void testJobWithChangePriority() throws Exception {
+    Configuration sleepConf = new Configuration(mrCluster.getConfig());
+    // Assumption can be removed when FS priority support is implemented
+    Assume.assumeFalse(sleepConf.get(YarnConfiguration.RM_SCHEDULER)
+            .equals(FairScheduler.class.getCanonicalName()));
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
@@ -409,7 +415,6 @@ public class TestMRJobs {
       return;
     }
 
-    Configuration sleepConf = new Configuration(mrCluster.getConfig());
     // set master address to local to test that local mode applied if framework
     // equals local
     sleepConf.set(MRConfig.MASTER_ADDRESS, "local");
