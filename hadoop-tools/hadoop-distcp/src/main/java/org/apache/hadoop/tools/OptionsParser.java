@@ -188,6 +188,10 @@ public class OptionsParser {
 
     parseCopyBufferSize(command, option);
 
+    if (command.hasOption(DistCpOptionSwitch.VERBOSE_LOG.getSwitch())) {
+      option.setVerboseLog(true);
+    }
+
     return option;
   }
 

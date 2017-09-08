@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools;
 
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
@@ -408,7 +409,7 @@ public class TestOptionsParser {
         + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
         + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
         + "targetPathExists=true, filtersFile='null', blocksPerChunk=0, "
-        + "copyBufferSize=8192}";
+        + "copyBufferSize=8192, verboseLog=false}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -812,5 +813,28 @@ public class TestOptionsParser {
       Assert.fail("Non numberic copybuffersize parsed successfully!");
     } catch (IllegalArgumentException ignore) {
     }
+  }
+
+  @Test
+  public void testVerboseLog() {
+    DistCpOptions options = OptionsParser
+        .parse(new String[] {"hdfs://localhost:9820/source/first",
+            "hdfs://localhost:9820/target/"});
+    Assert.assertFalse(options.shouldVerboseLog());
+
+    try {
+      OptionsParser
+          .parse(new String[] {"-v", "hdfs://localhost:8020/source/first",
+              "hdfs://localhost:8020/target/"});
+      Assert.fail("-v should fail if -log option is not specified");
+    } catch (IllegalArgumentException e) {
+      assertExceptionContains("-v is valid only with -log option", e);
+    }
+
+    options = OptionsParser
+        .parse(new String[] {"-log", "hdfs://localhost:8020/logs", "-v",
+            "hdfs://localhost:8020/source/first",
+            "hdfs://localhost:8020/target/"});
+    Assert.assertTrue(options.shouldVerboseLog());
   }
 }

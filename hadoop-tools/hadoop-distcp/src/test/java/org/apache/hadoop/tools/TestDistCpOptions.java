@@ -313,7 +313,7 @@ public class TestDistCpOptions {
         + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
         + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
         + "targetPathExists=true, filtersFile='null', blocksPerChunk=0, "
-        + "copyBufferSize=8192}";
+        + "copyBufferSize=8192, verboseLog=false}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -509,5 +509,25 @@ public class TestDistCpOptions {
 
     options.setFiltersFile("/tmp/filters.txt");
     Assert.assertEquals("/tmp/filters.txt", options.getFiltersFile());
+  }
+
+  @Test
+  public void testVerboseLog() {
+    final DistCpOptions options = new DistCpOptions(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"));
+    Assert.assertFalse(options.shouldVerboseLog());
+
+    try {
+      options.setVerboseLog(true);
+      fail("-v should fail if -log option is not specified");
+    } catch (IllegalArgumentException e) {
+      assertExceptionContains("-v is valid only with -log option", e);
+    }
+
+    final Path logPath = new Path("hdfs://localhost:8020/logs");
+    options.setLogPath(logPath);
+    options.setVerboseLog(true);
+    Assert.assertTrue(options.shouldVerboseLog());
   }
 }

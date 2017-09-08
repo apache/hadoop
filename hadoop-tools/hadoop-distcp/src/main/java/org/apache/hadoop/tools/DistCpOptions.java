@@ -56,6 +56,9 @@ public class DistCpOptions {
   // content at their s1, if src is not the same as tgt.
   private boolean useRdiff = false;
 
+  /** Whether to log additional info (path, size) in the SKIP/COPY log. */
+  private boolean verboseLog = false;
+
   // For both -diff and -rdiff, given the example command line switches, two
   // steps are taken:
   //   1. Sync Step. This step does renaming/deletion ops in the snapshot diff,
@@ -180,6 +183,7 @@ public class DistCpOptions {
       this.filtersFile = that.getFiltersFile();
       this.blocksPerChunk = that.blocksPerChunk;
       this.copyBufferSize = that.copyBufferSize;
+      this.verboseLog = that.verboseLog;
     }
   }
 
@@ -656,6 +660,15 @@ public class DistCpOptions {
     return this.copyBufferSize;
   }
 
+  public void setVerboseLog(boolean newVerboseLog) {
+    validate(DistCpOptionSwitch.VERBOSE_LOG, newVerboseLog);
+    this.verboseLog = newVerboseLog;
+  }
+
+  public boolean shouldVerboseLog() {
+    return verboseLog;
+  }
+
   public void validate(DistCpOptionSwitch option, boolean value) {
 
     boolean syncFolder = (option == DistCpOptionSwitch.SYNC_FOLDERS ?
@@ -671,6 +684,8 @@ public class DistCpOptions {
     boolean append = (option == DistCpOptionSwitch.APPEND ? value : this.append);
     boolean useDiff = (option == DistCpOptionSwitch.DIFF ? value : this.useDiff);
     boolean useRdiff = (option == DistCpOptionSwitch.RDIFF ? value : this.useRdiff);
+    boolean shouldVerboseLog = (option == DistCpOptionSwitch.VERBOSE_LOG ?
+        value : this.verboseLog);
 
     if (syncFolder && atomicCommit) {
       throw new IllegalArgumentException("Atomic commit can't be used with " +
@@ -716,6 +731,10 @@ public class DistCpOptions {
       throw new IllegalArgumentException(
           "-diff and -rdiff are mutually exclusive");
     }
+
+    if (shouldVerboseLog && logPath == null) {
+      throw new IllegalArgumentException("-v is valid only with -log option");
+    }
   }
 
   /**
@@ -754,6 +773,8 @@ public class DistCpOptions {
         String.valueOf(blocksPerChunk));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.COPY_BUFFER_SIZE,
         String.valueOf(copyBufferSize));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.VERBOSE_LOG,
+        String.valueOf(verboseLog));
   }
 
   /**
@@ -792,6 +813,7 @@ public class DistCpOptions {
         ", filtersFile='" + filtersFile + '\'' +
         ", blocksPerChunk=" + blocksPerChunk +
         ", copyBufferSize=" + copyBufferSize +
+        ", verboseLog=" + verboseLog +
         '}';
   }
 
