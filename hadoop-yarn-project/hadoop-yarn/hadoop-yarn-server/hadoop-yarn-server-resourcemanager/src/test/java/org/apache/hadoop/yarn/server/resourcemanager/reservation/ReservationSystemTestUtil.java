@@ -1,4 +1,4 @@
-/*******************************************************************************
+/******************************************************************************
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
+ *****************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import static org.mockito.Matchers.any;
@@ -466,4 +466,28 @@ public class ReservationSystemTestUtil {
   public static Resource calculateClusterResource(int numContainers) {
     return Resource.newInstance(numContainers * 1024, numContainers);
   }
+
+
+  public static Map<ReservationInterval, Resource> toAllocation(
+      RLESparseResourceAllocation rle, long start, long end) {
+    Map<ReservationInterval, Resource> resAlloc = new TreeMap<>();
+
+    for (Map.Entry<Long, Resource> e : rle.getCumulative().entrySet()) {
+      Long nextKey = rle.getCumulative().higherKey(e.getKey());
+      if (nextKey == null) {
+        break;
+      } else {
+        if (e.getKey() >= start && e.getKey() <= end && nextKey >= start
+            && nextKey <= end) {
+          resAlloc.put(new ReservationInterval(e.getKey(), nextKey),
+              e.getValue());
+        }
+      }
+    }
+
+    return resAlloc;
+  }
+
+
+
 }
