@@ -895,6 +895,15 @@ from placing its declaration on the command line.
       any call to setReadahead() is made to an open stream.</description>
     </property>
 
+    <property>
+      <name>fs.s3a.list.version</name>
+      <value>2</value>
+      <description>
+        Select which version of the S3 SDK's List Objects API to use.  Currently
+        support 2 (default) and 1 (older API).
+      </description>
+    </property>
+
 ### Configuring different S3 buckets
 
 Different S3 buckets can be accessed with different S3A client configurations.

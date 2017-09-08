@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.AmazonS3;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -488,6 +488,10 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
   @Test
   public void testInconsistentS3ClientDeletes() throws Throwable {
+    // Test only implemented for v2 S3 list API
+    Assume.assumeTrue(getConfiguration()
+        .getInt(LIST_VERSION, DEFAULT_LIST_VERSION) == 2);
+
     S3AFileSystem fs = getFileSystem();
     Path root = path("testInconsistentClient" + DEFAULT_DELAY_KEY_SUBSTRING);
     for (int i = 0; i < 3; i++) {
@@ -502,17 +506,17 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     AmazonS3 client = fs.getAmazonS3Client();
     String key = fs.pathToKey(root) + "/";
 
-    ObjectListing preDeleteDelimited = client.listObjects(
-        fs.createListObjectsRequest(key, "/"));
-    ObjectListing preDeleteUndelimited = client.listObjects(
-        fs.createListObjectsRequest(key, null));
+    ListObjectsV2Result preDeleteDelimited = client.listObjectsV2(
+        fs.createListObjectsRequest(key, "/").getV2());
+    ListObjectsV2Result preDeleteUndelimited = client.listObjectsV2(
+        fs.createListObjectsRequest(key, null).getV2());
 
     fs.delete(root, true);
 
-    ObjectListing postDeleteDelimited = client.listObjects(
-        fs.createListObjectsRequest(key, "/"));
-    ObjectListing postDeleteUndelimited = client.listObjects(
-        fs.createListObjectsRequest(key, null));
+    ListObjectsV2Result postDeleteDelimited = client.listObjectsV2(
+        fs.createListObjectsRequest(key, "/").getV2());
+    ListObjectsV2Result postDeleteUndelimited = client.listObjectsV2(
+        fs.createListObjectsRequest(key, null).getV2());
 
     assertEquals("InconsistentAmazonS3Client added back objects incorrectly " +
             "in a non-recursive listing",
