@@ -33,8 +33,9 @@ export default BaseChartComponent.extend({
   totalContainers: 0,
 
   bindTP: function(element, cell) {
+    var currentToolTip = this.tooltip;
     element.on("mouseover", function() {
-      this.tooltip
+      currentToolTip
         .style("left", (d3.event.pageX) + "px")
         .style("top", (d3.event.pageY - 28) + "px");
       cell.style("opacity", 1.0);
@@ -42,14 +43,20 @@ export default BaseChartComponent.extend({
       .on("mousemove", function() {
         // Handle pie chart case
         var text = cell.attr("tooltiptext");
-
-        this.tooltip.style("opacity", 0.9);
-        this.tooltip.html(text)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
-      }.bind(this))
+        currentToolTip
+            .style("background", "black")
+            .style("opacity", 0.7);
+        currentToolTip
+            .html(text)
+            .style('font-size', '12px')
+            .style('color', 'white')
+            .style('font-weight', '400');
+        currentToolTip
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+  }.bind(this))
       .on("mouseout", function() {
-        this.tooltip.style("opacity", 0);
+        currentToolTip.style("opacity", 0);
         cell.style("opacity", 0.8);
       }.bind(this));
   },
@@ -115,7 +122,10 @@ export default BaseChartComponent.extend({
     var xOffset = layout.margin;
     var yOffset = layout.margin * 3;
 
-    var colorFunc = d3.interpolate(d3.rgb("#bdddf5"), d3.rgb("#0f3957"));
+    var gradientStartColor = "#2ca02c";
+    var gradientEndColor = "#ffb014";
+
+    var colorFunc = d3.interpolateRgb(d3.rgb(gradientStartColor), d3.rgb(gradientEndColor));
 
     var sampleXOffset = (layout.x2 - layout.x1) / 2 - 2.5 * this.SAMPLE_CELL_WIDTH -
       2 * this.CELL_MARGIN;
@@ -128,7 +138,7 @@ export default BaseChartComponent.extend({
       var rect = g.append("rect")
         .attr("x", sampleXOffset)
         .attr("y", sampleYOffset)
-        .attr("fill", this.selectedCategory === i ? "#2ca02c" : colorFunc(ratio))
+        .attr("fill", this.selectedCategory === i ? "#2c7bb6" : colorFunc(ratio))
         .attr("width", this.SAMPLE_CELL_WIDTH)
         .attr("height", this.SAMPLE_HEIGHT)
         .attr("class", "hyperlink");
