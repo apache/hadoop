@@ -56,7 +56,6 @@ public final class AdlConfKeys {
 
   // MSI Auth Configuration
   public static final String MSI_PORT = "fs.adl.oauth2.msi.port";
-  public static final String MSI_TENANT_GUID = "fs.adl.oauth2.msi.tenantguid";
 
   // DeviceCode Auth configuration
   public static final String DEVICE_CODE_CLIENT_APP_ID =

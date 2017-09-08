@@ -164,15 +164,11 @@ Identity extension within the VM. The advantage of doing this is that the
 credentials are managed by the extension, and do not have to be put into
 core-site.xml.
 
-To use MSI, the following two steps are needed:
-1. Modify the VM deployment template to specify the port number of the token
- service exposed to localhost by the identity extension in the VM.
-2. Get your Azure ActiveDirectory Tenant ID:
-   1. Go to [the portal](https://portal.azure.com)
-   2. Under services in left nav, look for Azure Active Directory and click on it.
-   3. Click on Properties
-   4. Note down the GUID shown under "Directory ID" - this is your AAD tenant ID
-
+To use MSI, modify the VM deployment template to use the identity extension. Note the
+port number you specified in the template: this is the port number for the REST endpoint
+of the token service exposed to localhost by the identity extension in the VM. The default
+recommended port number is 50342 - if the recommended port number is used, then the msi.port
+setting below can be omitted in the configuration.
 
 ##### Configure core-site.xml
 Add the following properties to your `core-site.xml`
@@ -185,12 +181,7 @@ Add the following properties to your `core-site.xml`
 
 <property>
   <name>fs.adl.oauth2.msi.port</name>
-  <value>PORT NUMBER FROM STEP 1 ABOVE</value>
-</property>
-
-<property>
-  <name>fs.adl.oauth2.msi.TenantGuid</name>
-  <value>AAD TENANT ID GUID FROM STEP 2 ABOVE</value>
+  <value>PORT NUMBER FROM ABOVE (if different from the default of 50342)</value>
 </property>
 ```
 
