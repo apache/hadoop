@@ -30,6 +30,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Private
 public class LogAggregationUtils {
@@ -192,6 +195,30 @@ public class LogAggregationUtils {
         FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
     nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
         conf).listStatus(remoteAppLogDir);
+    return nodeFiles;
+  }
+
+  /**
+   * Get all available log files under remote app log directory.
+   * @param conf the configuration
+   * @param appId the applicationId
+   * @param appOwner the application owner
+   * @param remoteRootLogDir the remote root log directory
+   * @param suffix the log directory suffix
+   * @return the list of available log files
+   * @throws IOException if there is no log file available
+   */
+  public static List<FileStatus> getRemoteNodeFileList(
+      Configuration conf, ApplicationId appId, String appOwner,
+      org.apache.hadoop.fs.Path remoteRootLogDir, String suffix)
+      throws IOException {
+    Path remoteAppLogDir = getRemoteAppLogDir(conf, appId, appOwner,
+        remoteRootLogDir, suffix);
+    List<FileStatus> nodeFiles = new ArrayList<>();
+    Path qualifiedLogDir =
+        FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
+    nodeFiles.addAll(Arrays.asList(FileContext.getFileContext(
+        qualifiedLogDir.toUri(), conf).util().listStatus(remoteAppLogDir)));
     return nodeFiles;
   }
 

@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
-import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManagerOnTimelineStore;
@@ -851,7 +851,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     for (ContainerLogsInfo logInfo : responseText) {
       if(logInfo.getLogType().equals(
           ContainerLogAggregationType.AGGREGATED.toString())) {
-        List<PerContainerLogFileInfo> logMeta = logInfo
+        List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
         assertEquals(logMeta.get(0).getFileName(), fileName);
@@ -879,7 +879,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     for (ContainerLogsInfo logInfo : responseText) {
       if(logInfo.getLogType().equals(
           ContainerLogAggregationType.AGGREGATED.toString())) {
-        List<PerContainerLogFileInfo> logMeta = logInfo
+        List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
         assertEquals(logMeta.get(0).getFileName(), fileName);
@@ -917,7 +917,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(responseText.size() == 1);
     assertEquals(responseText.get(0).getLogType(),
         ContainerLogAggregationType.AGGREGATED.toString());
-    List<PerContainerLogFileInfo> logMeta = responseText.get(0)
+    List<ContainerLogFileInfo> logMeta = responseText.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
     assertEquals(logMeta.get(0).getFileName(), fileName);
