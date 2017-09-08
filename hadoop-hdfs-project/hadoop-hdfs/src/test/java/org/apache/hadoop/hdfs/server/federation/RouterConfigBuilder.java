@@ -32,6 +32,7 @@ public class RouterConfigBuilder {
   private boolean enableHeartbeat = false;
   private boolean enableLocalHeartbeat = false;
   private boolean enableStateStore = false;
+  private boolean enableMetrics = false;
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -47,6 +48,7 @@ public class RouterConfigBuilder {
     this.enableHeartbeat = true;
     this.enableLocalHeartbeat = true;
     this.enableStateStore = true;
+    this.enableMetrics = true;
     return this;
   }
 
@@ -75,6 +77,11 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder metrics(boolean enable) {
+    this.enableMetrics = enable;
+    return this;
+  }
+
   public RouterConfigBuilder rpc() {
     return this.rpc(true);
   }
@@ -91,6 +98,10 @@ public class RouterConfigBuilder {
     return this.stateStore(true);
   }
 
+  public RouterConfigBuilder metrics() {
+    return this.metrics(true);
+  }
+
   public Configuration build() {
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_STORE_ENABLE,
         this.enableStateStore);
@@ -101,6 +112,8 @@ public class RouterConfigBuilder {
         this.enableHeartbeat);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,
         this.enableLocalHeartbeat);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_METRICS_ENABLE,
+        this.enableMetrics);
     return conf;
   }
 }

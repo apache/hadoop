@@ -154,7 +154,7 @@ public abstract class MembershipState extends BaseRecord
 
   public abstract void setStats(MembershipStats stats);
 
-  public abstract MembershipStats getStats() throws IOException;
+  public abstract MembershipStats getStats();
 
   public abstract void setLastContact(long contact);
 

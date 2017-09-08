@@ -288,7 +288,7 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
   }
 
   @Override
-  public MembershipStats getStats() throws IOException {
+  public MembershipStats getStats() {
     NamenodeMembershipStatsRecordProto statsProto =
         this.translator.getProtoOrBuilder().getStats();
     MembershipStats stats =
@@ -298,7 +298,8 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
       statsPB.setProto(statsProto);
       return statsPB;
     } else {
-      throw new IOException("Cannot get stats for the membership");
+      throw new IllegalArgumentException(
+          "Cannot get stats for the membership");
     }
   }
 

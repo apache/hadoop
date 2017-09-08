@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
@@ -46,6 +47,9 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
   /** Identifier for the driver. */
   private String identifier;
 
+  /** State Store metrics. */
+  private StateStoreMetrics metrics;
+
 
   /**
    * Initialize the state store connection.
@@ -56,10 +60,12 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
    * @return If initialized and ready, false if failed to initialize driver.
    */
   public boolean init(final Configuration config, final String id,
-      final Collection<Class<? extends BaseRecord>> records) {
+      final Collection<Class<? extends BaseRecord>> records,
+      final StateStoreMetrics stateStoreMetrics) {
 
     this.conf = config;
     this.identifier = id;
+    this.metrics = stateStoreMetrics;
 
     if (this.identifier == null) {
       LOG.warn("The identifier for the State Store connection is not set");
@@ -98,6 +104,15 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
    */
   public String getIdentifier() {
     return this.identifier;
+  }
+
+  /**
+   * Get the metrics for the State Store.
+   *
+   * @return State Store metrics.
+   */
+  public StateStoreMetrics getMetrics() {
+    return this.metrics;
   }
 
   /**
