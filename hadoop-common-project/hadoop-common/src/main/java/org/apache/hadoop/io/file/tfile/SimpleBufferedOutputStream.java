@@ -25,7 +25,7 @@ import java.io.OutputStream;
  * A simplified BufferedOutputStream with borrowed buffer, and allow users to
  * see how much data have been buffered.
  */
-class SimpleBufferedOutputStream extends FilterOutputStream {
+public class SimpleBufferedOutputStream extends FilterOutputStream {
   protected byte buf[]; // the borrowed buffer
   protected int count = 0; // bytes used in buffer.
 

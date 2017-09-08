@@ -25,9 +25,6 @@ import com.google.common.collect.Sets;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -91,12 +89,23 @@ public abstract class LogAggregationFileController {
   protected static final FsPermission APP_DIR_PERMISSIONS = FsPermission
       .createImmutable((short) 0770);
 
+  /**
+   * Umask for the log file.
+   */
+  protected static final FsPermission APP_LOG_FILE_UMASK = FsPermission
+      .createImmutable((short) (0640 ^ 0777));
+
   // This is temporary solution. The configuration will be deleted once
   // we find a more scalable method to only write a single log file per LRS.
   private static final String NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP
       = YarnConfiguration.NM_PREFIX + "log-aggregation.num-log-files-per-app";
   private static final int
       DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP = 30;
+
+  // This is temporary solution. The configuration will be deleted once we have
+  // the FileSystem API to check whether append operation is supported or not.
+  public static final String LOG_AGGREGATION_FS_SUPPORT_APPEND
+      = YarnConfiguration.YARN_PREFIX+ "log-aggregation.fs-support-append";
 
   protected Configuration conf;
   protected Path remoteRootLogDir;
@@ -177,19 +186,6 @@ public abstract class LogAggregationFileController {
    */
   public abstract void postWrite(LogAggregationFileControllerContext record)
       throws Exception;
-
-  protected PrintStream createPrintStream(String localDir, String nodeId,
-      String containerId) throws IOException {
-    PrintStream out = System.out;
-    if(localDir != null && !localDir.isEmpty()) {
-      Path nodePath = new Path(localDir, LogAggregationUtils
-          .getNodeString(nodeId));
-      Files.createDirectories(Paths.get(nodePath.toString()));
-      Path containerLogPath = new Path(nodePath, containerId);
-      out = new PrintStream(containerLogPath.toString(), "UTF-8");
-    }
-    return out;
-  }
 
   protected void closePrintStream(OutputStream out) {
     if (out != System.out) {
@@ -480,5 +476,22 @@ public abstract class LogAggregationFileController {
     } catch (Exception e) {
       LOG.error("Failed to clean old logs", e);
     }
+  }
+
+  /**
+   * Create the aggregated log suffix. The LogAggregationFileController
+   * should call this to get the suffix and append the suffix to the end
+   * of each log. This would keep the aggregated log format consistent.
+   *
+   * @param fileName the File Name
+   * @return the aggregated log suffix String
+   */
+  protected String aggregatedLogSuffix(String fileName) {
+    StringBuilder sb = new StringBuilder();
+    String endOfFile = "End of LogType:" + fileName;
+    sb.append("\n" + endOfFile + "\n");
+    sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
+        + "\n\n");
+    return sb.toString();
   }
 }

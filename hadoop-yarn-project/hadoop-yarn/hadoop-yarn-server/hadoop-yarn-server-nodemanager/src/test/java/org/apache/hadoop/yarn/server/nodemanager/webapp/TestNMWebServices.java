@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
-import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -537,7 +537,7 @@ public class TestNMWebServices extends JerseyTestBase {
     assertTrue(responseList.size() == 1);
     assertEquals(responseList.get(0).getLogType(),
         ContainerLogAggregationType.LOCAL.toString());
-    List<PerContainerLogFileInfo> logMeta = responseList.get(0)
+    List<ContainerLogFileInfo> logMeta = responseList.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
     assertEquals(logMeta.get(0).getFileName(), filename);
@@ -564,13 +564,13 @@ public class TestNMWebServices extends JerseyTestBase {
       for (ContainerLogsInfo logInfo : responseList) {
         if(logInfo.getLogType().equals(
             ContainerLogAggregationType.AGGREGATED.toString())) {
-          List<PerContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
+          List<ContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
           assertEquals(meta.get(0).getFileName(), aggregatedLogFile);
         } else {
           assertEquals(logInfo.getLogType(),
               ContainerLogAggregationType.LOCAL.toString());
-          List<PerContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
+          List<ContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
           assertEquals(meta.get(0).getFileName(), filename);
         }
