@@ -32,7 +32,6 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
@@ -698,9 +697,7 @@ final class FSDirEncryptionZoneOp {
     // drain the local cache of the key provider.
     // Do not invalidateCache on the server, since that's the responsibility
     // when rolling the key version.
-    if (dir.getProvider() instanceof CryptoExtension) {
-      ((CryptoExtension) dir.getProvider()).drain(keyName);
-    }
+    dir.getProvider().drain(keyName);
     final EncryptedKeyVersion edek;
     try {
       edek = dir.getProvider().generateEncryptedKey(keyName);

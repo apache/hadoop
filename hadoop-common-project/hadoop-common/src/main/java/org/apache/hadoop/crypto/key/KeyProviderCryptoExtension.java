@@ -555,6 +555,16 @@ public class KeyProviderCryptoExtension extends
   }
 
   /**
+   * Calls {@link CryptoExtension#drain(String)} for the given key name on the
+   * underlying {@link CryptoExtension}.
+   *
+   * @param keyName
+   */
+  public void drain(String keyName) {
+    getExtension().drain(keyName);
+  }
+
+  /**
    * Batched version of {@link #reencryptEncryptedKey(EncryptedKeyVersion)}.
    * <p>
    * For each encrypted key version, re-encrypts an encrypted key version,
