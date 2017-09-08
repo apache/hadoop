@@ -41,6 +41,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -359,10 +360,21 @@ public class ApplicationCLI extends YarnCLI {
         + timeoutType.toString() + " of an application " + applicationId);
     UpdateApplicationTimeoutsRequest request = UpdateApplicationTimeoutsRequest
         .newInstance(appId, Collections.singletonMap(timeoutType, newTimeout));
-    client.updateApplicationTimeouts(request);
+    UpdateApplicationTimeoutsResponse updateApplicationTimeouts =
+        client.updateApplicationTimeouts(request);
+    String updatedTimeout =
+        updateApplicationTimeouts.getApplicationTimeouts().get(timeoutType);
+
+    if (timeoutType.equals(ApplicationTimeoutType.LIFETIME)
+        && !newTimeout.equals(updatedTimeout)) {
+      sysout.println("Updated lifetime of an application  " + applicationId
+          + " to queue max/default lifetime." + " New expiry time is "
+          + updatedTimeout);
+      return;
+    }
     sysout.println(
         "Successfully updated " + timeoutType.toString() + " of an application "
-            + applicationId + ". New expiry time is " + newTimeout);
+            + applicationId + ". New expiry time is " + updatedTimeout);
   }
 
   /**
