@@ -1283,4 +1283,15 @@ public abstract class AbstractYarnScheduler
     this.rmContext.getDispatcher().getEventHandler()
         .handle(new ReleaseContainerEvent(container));
   }
+
+  @Override
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
+    // -1 indicates, lifetime is not configured.
+    return -1;
+  }
+
+  @Override
+  public long getMaximumApplicationLifetime(String queueName) {
+    return -1;
+  }
 }
