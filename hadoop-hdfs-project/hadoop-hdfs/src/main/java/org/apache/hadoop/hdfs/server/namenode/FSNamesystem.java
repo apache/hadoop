@@ -7111,6 +7111,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (keyVersionName == null) {
         throw new IOException("Failed to get key version name for " + zone);
       }
+      LOG.info("Re-encryption using key version " + keyVersionName
+          + " for zone " + zone);
     }
     writeLock();
     try {

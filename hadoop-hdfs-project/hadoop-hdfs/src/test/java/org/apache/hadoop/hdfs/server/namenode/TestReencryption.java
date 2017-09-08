@@ -91,7 +91,7 @@ public class TestReencryption {
   private FileSystemTestHelper fsHelper;
 
   private MiniDFSCluster cluster;
-  private HdfsAdmin dfsAdmin;
+  protected HdfsAdmin dfsAdmin;
   private DistributedFileSystem fs;
   private FSNamesystem fsn;
   private File testRootDir;
@@ -199,8 +199,7 @@ public class TestReencryption {
     verifyZoneStatus(zone, null, 0);
 
     // test re-encrypt after keyroll
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(2);
     FileEncryptionInfo fei1 = getFileEncryptionInfo(encFile1);
@@ -316,8 +315,7 @@ public class TestReencryption {
     final Path notReencrypted = new Path(zone, "f0");
     final FileEncryptionInfo fei = getFileEncryptionInfo(lastReencryptedFile);
     final FileEncryptionInfo feiLast = getFileEncryptionInfo(notReencrypted);
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // mark pause after first checkpoint (5 files)
     getEzManager().pauseForTestingAfterNthSubmission(1);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -363,8 +361,7 @@ public class TestReencryption {
               0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // test zone deleted during re-encrypt's checkpointing
     getEzManager().pauseForTestingAfterNthSubmission(1);
     getEzManager().resetMetricsForTesting();
@@ -409,8 +406,7 @@ public class TestReencryption {
     final Path encFile9 = new Path(zone, "9");
     final FileEncryptionInfo fei0 = getFileEncryptionInfo(encFile0);
     final FileEncryptionInfo fei9 = getFileEncryptionInfo(encFile9);
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
 
@@ -443,8 +439,7 @@ public class TestReencryption {
     fsWrapper.rename(new Path(zone, "f"), new Path(zone, "f1"));
 
     // re-encrypt
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
 
@@ -495,8 +490,7 @@ public class TestReencryption {
     final Path encFile9 = new Path(subdir, "9");
     final FileEncryptionInfo fei0 = getFileEncryptionInfo(encFile0);
     final FileEncryptionInfo fei9 = getFileEncryptionInfo(encFile9);
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // mark pause after first checkpoint (5 files)
     getEzManager().pauseForTestingAfterNthSubmission(1);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -540,8 +534,7 @@ public class TestReencryption {
     final Path encFile9 = new Path(zone, "9");
     final FileEncryptionInfo fei0 = getFileEncryptionInfo(encFile0);
     final FileEncryptionInfo fei9 = getFileEncryptionInfo(encFile9);
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
 
@@ -585,8 +578,7 @@ public class TestReencryption {
     final Path encFile9 = new Path(zone, "9");
     final FileEncryptionInfo fei0 = getFileEncryptionInfo(encFile0);
     final FileEncryptionInfo fei9 = getFileEncryptionInfo(encFile9);
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // disable re-encrypt for testing, and issue a command
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -645,8 +637,7 @@ public class TestReencryption {
     final Path encFile9 = new Path(zone, "9");
     final FileEncryptionInfo fei0 = getFileEncryptionInfo(encFile0);
     final FileEncryptionInfo fei9 = getFileEncryptionInfo(encFile9);
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // disable re-encrypt for testing, and issue a command
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -770,8 +761,7 @@ public class TestReencryption {
               0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Disable re-encrypt, send re-encrypt on '/', verify queue
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zoneRoot, ReencryptAction.START);
@@ -816,8 +806,7 @@ public class TestReencryption {
           .createFile(fs, new Path(zone, "file" + i), len, (short) 1, 0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -883,8 +872,7 @@ public class TestReencryption {
           .createFile(fs, new Path(subdir, "file" + i), len, (short) 1, 0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -930,8 +918,7 @@ public class TestReencryption {
           .createFile(fs, new Path(subdir, "file" + i), len, (short) 1, 0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -984,8 +971,7 @@ public class TestReencryption {
           0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1029,8 +1015,7 @@ public class TestReencryption {
           0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1071,8 +1056,7 @@ public class TestReencryption {
           .createFile(fs, new Path(zone, "file" + i), len, (short) 1, 0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1122,8 +1106,7 @@ public class TestReencryption {
           .createFile(fs, new Path(zone, "file" + i), len, (short) 1, 0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1162,8 +1145,7 @@ public class TestReencryption {
           .createFile(fs, new Path(zone, "file" + i), len, (short) 1, 0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1220,8 +1202,7 @@ public class TestReencryption {
           .createFile(fs, new Path(subdir, "file" + i), len, (short) 1, 0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // Issue the command re-encrypt and pause it
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1283,8 +1264,7 @@ public class TestReencryption {
     // test re-encrypt on snapshot dir
     final Path encFile1 = new Path(zone, "0");
     final FileEncryptionInfo fei0 = getFileEncryptionInfo(encFile1);
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     try {
       dfsAdmin.reencryptEncryptionZone(zoneSnap, ReencryptAction.START);
       fail("Reencrypt command on snapshot path should fail.");
@@ -1423,8 +1403,7 @@ public class TestReencryption {
     fsWrapper.mkdir(subdir, FsPermission.getDirDefault(), true);
     DFSTestUtil.createFile(fs, new Path(subdir, "f"), len, (short) 1, 0xFEED);
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // disable, test basic
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1442,8 +1421,7 @@ public class TestReencryption {
       assertExceptionContains("not under re-encryption", expected);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // test cancelling half-way
     getEzManager().pauseForTestingAfterNthSubmission(1);
     getEzManager().resumeReencryptForTesting();
@@ -1537,8 +1515,7 @@ public class TestReencryption {
 
     // re-encrypt 10 files, so 2 callables. Hang 1, pause the updater so the
     // callable is taken from the executor but not processed.
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForQueuedZones(1);
@@ -1593,8 +1570,7 @@ public class TestReencryption {
     fsWrapper.mkdir(subdir, FsPermission.getDirDefault(), true);
     DFSTestUtil.createFile(fs, new Path(subdir, "f"), len, (short) 1, 0xFEED);
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // disable, test basic
     getEzManager().pauseReencryptUpdaterForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1625,8 +1601,7 @@ public class TestReencryption {
     }
 
     // re-encrypt the zone
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
 
@@ -1678,8 +1653,7 @@ public class TestReencryption {
               0xFEED);
     }
 
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
+    rollKey(TEST_KEY);
     // mark pause after first checkpoint (5 files)
     getEzManager().pauseForTestingAfterNthSubmission(1);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
@@ -1736,9 +1710,7 @@ public class TestReencryption {
     }
 
     // re-encrypt the zone
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
-
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
     assertEquals(0, injector.exceptionCount);
@@ -1790,9 +1762,7 @@ public class TestReencryption {
     }
 
     // re-encrypt the zone
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
-
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
     assertEquals(0, injector.exceptionCount);
@@ -1845,9 +1815,7 @@ public class TestReencryption {
     }
 
     // re-encrypt the zone
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
-
+    rollKey(TEST_KEY);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
     assertEquals(0, injector.exceptionCount);
@@ -1899,9 +1867,7 @@ public class TestReencryption {
     }
 
     // re-encrypt the zone
-    fsn.getProvider().rollNewVersion(TEST_KEY);
-    fsn.getProvider().flush();
-
+    rollKey(TEST_KEY);
     Whitebox.setInternalState(getUpdater(), "faultRetryInterval", 50);
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForReencryptedZones(1);
@@ -1928,5 +1894,12 @@ public class TestReencryption {
   private ReencryptionUpdater getUpdater() {
     return (ReencryptionUpdater) Whitebox
         .getInternalState(getHandler(), "reencryptionUpdater");
+  }
+
+  protected void rollKey(final String keyName) throws Exception {
+    dfsAdmin.getKeyProvider().rollNewVersion(keyName);
+    // need to flush for jceks provider to make the key version it returned
+    // after NN  restart consistent.
+    dfsAdmin.getKeyProvider().flush();
   }
 }
