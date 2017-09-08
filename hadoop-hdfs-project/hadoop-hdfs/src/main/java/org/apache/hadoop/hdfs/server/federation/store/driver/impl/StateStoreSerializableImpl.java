@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 
@@ -41,8 +42,9 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   @Override
   public boolean init(final Configuration config, final String id,
-      final Collection<Class<? extends BaseRecord>> records) {
-    boolean ret = super.init(config, id, records);
+      final Collection<Class<? extends BaseRecord>> records,
+      final StateStoreMetrics metrics) {
+    boolean ret = super.init(config, id, records, metrics);
 
     this.serializer = StateStoreSerializer.getSerializer(config);
 

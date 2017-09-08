@@ -97,6 +97,8 @@ public class RouterRpcClient {
   private final ExecutorService executorService;
   /** Retry policy for router -> NN communication. */
   private final RetryPolicy retryPolicy;
+  /** Optional perf monitor. */
+  private final RouterRpcMonitor rpcMonitor;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -111,8 +113,7 @@ public class RouterRpcClient {
    * @param monitor Optional performance monitor.
    */
   public RouterRpcClient(Configuration conf, String identifier,
-      ActiveNamenodeResolver resolver) {
-
+      ActiveNamenodeResolver resolver, RouterRpcMonitor monitor) {
     this.routerId = identifier;
 
     this.namenodeResolver = resolver;
@@ -124,6 +125,8 @@ public class RouterRpcClient {
         .setNameFormat("RPC Router Client-%d")
         .build();
     this.executorService = Executors.newCachedThreadPool(threadFactory);
+
+    this.rpcMonitor = monitor;
 
     int maxFailoverAttempts = conf.getInt(
         HdfsClientConfigKeys.Failover.MAX_ATTEMPTS_KEY,
@@ -189,6 +192,15 @@ public class RouterRpcClient {
    */
   public int getNumCreatingConnections() {
     return this.connectionManager.getNumCreatingConnections();
+  }
+
+  /**
+   * JSON representation of the connection pool.
+   *
+   * @return String representation of the JSON.
+   */
+  public String getJSON() {
+    return this.connectionManager.getJSON();
   }
 
   /**
@@ -294,6 +306,9 @@ public class RouterRpcClient {
     }
 
     Object ret = null;
+    if (rpcMonitor != null) {
+      rpcMonitor.proxyOp();
+    }
     boolean failover = false;
     Map<FederationNamenodeContext, IOException> ioes = new LinkedHashMap<>();
     for (FederationNamenodeContext namenode : namenodes) {
@@ -310,18 +325,31 @@ public class RouterRpcClient {
           InetSocketAddress address = client.getAddress();
           namenodeResolver.updateActiveNamenode(nsId, address);
         }
+        if (this.rpcMonitor != null) {
+          this.rpcMonitor.proxyOpComplete(true);
+        }
         return ret;
       } catch (IOException ioe) {
         ioes.put(namenode, ioe);
         if (ioe instanceof StandbyException) {
           // Fail over indicated by retry policy and/or NN
+          if (this.rpcMonitor != null) {
+            this.rpcMonitor.proxyOpFailureStandby();
+          }
           failover = true;
         } else if (ioe instanceof RemoteException) {
+          if (this.rpcMonitor != null) {
+            this.rpcMonitor.proxyOpComplete(true);
+          }
           // RemoteException returned by NN
           throw (RemoteException) ioe;
         } else {
           // Other communication error, this is a failure
           // Communication retries are handled by the retry policy
+          if (this.rpcMonitor != null) {
+            this.rpcMonitor.proxyOpFailureCommunicate();
+            this.rpcMonitor.proxyOpComplete(false);
+          }
           throw ioe;
         }
       } finally {
@@ -329,6 +357,9 @@ public class RouterRpcClient {
           connection.release();
         }
       }
+    }
+    if (this.rpcMonitor != null) {
+      this.rpcMonitor.proxyOpComplete(false);
     }
 
     // All namenodes were unavailable or in standby
@@ -744,6 +775,10 @@ public class RouterRpcClient {
           }
         });
       }
+    }
+
+    if (rpcMonitor != null) {
+      rpcMonitor.proxyOp();
     }
 
     try {

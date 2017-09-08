@@ -29,6 +29,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFau
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaLruTracker;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcMonitor;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
@@ -1148,6 +1150,15 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_ROUTER_RPC_ENABLE =
       FEDERATION_ROUTER_PREFIX + "rpc.enable";
   public static final boolean DFS_ROUTER_RPC_ENABLE_DEFAULT = true;
+
+  public static final String DFS_ROUTER_METRICS_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "metrics.enable";
+  public static final boolean DFS_ROUTER_METRICS_ENABLE_DEFAULT = true;
+  public static final String DFS_ROUTER_METRICS_CLASS =
+      FEDERATION_ROUTER_PREFIX + "metrics.class";
+  public static final Class<? extends RouterRpcMonitor>
+      DFS_ROUTER_METRICS_CLASS_DEFAULT =
+          FederationRPCPerformanceMonitor.class;
 
   // HDFS Router heartbeat
   public static final String DFS_ROUTER_HEARTBEAT_ENABLE =

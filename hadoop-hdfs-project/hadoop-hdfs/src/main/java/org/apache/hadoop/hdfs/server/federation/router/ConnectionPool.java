@@ -20,8 +20,10 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -255,6 +258,26 @@ public class ConnectionPool {
   @Override
   public String toString() {
     return this.connectionPoolId.toString();
+  }
+
+  /**
+   * JSON representation of the connection pool.
+   *
+   * @return String representation of the JSON.
+   */
+  public String getJSON() {
+    final Map<String, String> info = new LinkedHashMap<>();
+    info.put("active", Integer.toString(getNumActiveConnections()));
+    info.put("total", Integer.toString(getNumConnections()));
+    if (LOG.isDebugEnabled()) {
+      List<ConnectionContext> tmpConnections = this.connections;
+      for (int i=0; i<tmpConnections.size(); i++) {
+        ConnectionContext connection = tmpConnections.get(i);
+        info.put(i + " active", Boolean.toString(connection.isActive()));
+        info.put(i + " closed", Boolean.toString(connection.isClosed()));
+      }
+    }
+    return JSON.toString(info);
   }
 
   /**
