@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.service.client.params;
 
 /**
- * Actions.
- * Only some of these are supported by specific Slider Services; they
- * are listed here to ensure the names are consistent
+ * Actions by client
  */
 public interface SliderActions {
   String ACTION_BUILD = "build";
@@ -32,11 +30,11 @@ public interface SliderActions {
   String ACTION_UPGRADE = "upgrade";
   String ACTION_DESTROY = "destroy";
   String ACTION_EXISTS = "exists";
+  String ACTION_EXAMPLES = "examples";
   String ACTION_FLEX = "flex";
   String ACTION_STOP = "stop";
   String ACTION_HELP = "help";
   String ACTION_INSTALL_KEYTAB = "install-keytab";
-  String ACTION_KDIAG = "kdiag";
   String ACTION_KEYTAB = "keytab";
   String ACTION_LIST = "list";
 
@@ -50,7 +48,7 @@ public interface SliderActions {
   String DESCRIBE_ACTION_BUILD =
     "Build a service specification, but do not start it";
   String DESCRIBE_ACTION_CREATE =
-      "Build and start a service, it's equivalent to first invoke build and then start";
+      "Create a service, it's equivalent to first invoke build and then start";
   String DESCRIBE_ACTION_DEPENDENCY =
       "Yarn service framework dependency (libraries) management";
   String DESCRIBE_ACTION_UPDATE =
@@ -61,6 +59,7 @@ public interface SliderActions {
         "Destroy a stopped service, service must be stopped first before destroying.";
   String DESCRIBE_ACTION_EXISTS =
             "Probe for a service running";
+  String DESCRIBE_ACTION_EXAMPLES = "Run an example service on YARN";
   String DESCRIBE_ACTION_FLEX = "Flex a service's component by increasing or decreasing the number of containers.";
   String DESCRIBE_ACTION_FREEZE =
               "Stop a running service";

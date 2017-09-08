@@ -12,33 +12,19 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# YARN Simplified API layer for services
+# YARN Service API 
 
-## Overview
-Bringing a new service on YARN today is not a simple experience. The APIs of
-existing frameworks are either too low level (native YARN), require writing
-new code (for frameworks with programmatic APIs) or writing a complex spec
-(for declarative frameworks). In addition to building critical building blocks
-inside YARN (as part of other efforts at
-[YARN-4692](https://issues.apache.org/jira/browse/YARN-4692)), there is a need for
-simplifying the user facing story for building services. Experience of projects
-like Apache Slider running real-life services like HBase, Storm, Accumulo,
-Solr etc, gives us some very good insights on how simplified APIs for services
-should look like.
+Bringing a new service on YARN today is not a simple experience. The APIs of existing 
+frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs)
+or writing a complex spec (for declarative frameworks).
 
-To this end, we should look at a new simple-services API layer backed by REST
-interfaces. This API can be used to create and manage the lifecycle of YARN
-services. Services here can range from simple single-component service to
-complex multi-component assemblies needing orchestration.
-[YARN-4793](https://issues.apache.org/jira/browse/YARN-4793) tracks this
-effort.
+This simplified REST API can be used to create and manage the lifecycle of YARN services. 
+In most cases, the application owner will not be forced to make any changes to their applications. 
+This is primarily true if the application is packaged with containerization technologies like Docker.
 
-This document spotlights on this specification. In most of the cases, the
-application owner will not be forced to make any changes to their applications.
-This is primarily true if the application is packaged with containerization
-technologies like docker. Irrespective of how complex the application is,
-there will be hooks provided at appropriate layers to allow pluggable and
-customizable application behavior.
+This document describes the API specifications (aka. YarnFile) for deploying/managing
+containerized services on YARN. The same JSON spec can be used for both REST API
+and CLI to manage the services. 
 
 
 ### Version information
@@ -51,7 +37,7 @@ License URL: http://www.apache.org/licenses/LICENSE-2.0.html
 ### URI scheme
 Host: host.mycompany.com
 
-BasePath: /ws/v1/
+Port: 9191(default)
 
 Schemes: HTTP
 
@@ -68,7 +54,7 @@ Schemes: HTTP
 ## Paths
 ### Create a service
 ```
-POST /services
+POST /ws/v1/services
 ```
 
 #### Description
@@ -92,7 +78,7 @@ Create a service. The request JSON is a service object with details required for
 
 ### (TBD) List of services running in the cluster.
 ```
-GET /services
+GET /ws/v1/services
 ```
 
 #### Description
@@ -108,7 +94,7 @@ Get a list of all currently running services (response includes a minimal projec
 
 ### Get current version of the API server.
 ```
-GET /services/version
+GET /ws/v1/services/version
 ```
 
 #### Description
@@ -123,7 +109,7 @@ Get current version of the API server.
 
 ### Update a service or upgrade the binary version of the components of a running service
 ```
-PUT /services/{service_name}
+PUT /ws/v1/services/{service_name}
 ```
 
 #### Description
@@ -147,7 +133,7 @@ Update the runtime properties of a service. Currently the following operations a
 
 ### Destroy a service
 ```
-DELETE /services/{service_name}
+DELETE /ws/v1/services/{service_name}
 ```
 
 #### Description
@@ -170,7 +156,7 @@ Destroy a service and release all resources. This API might have to return JSON 
 
 ### Get details of a service.
 ```
-GET /services/{service_name}
+GET /ws/v1/services/{service_name}
 ```
 
 #### Description
@@ -193,7 +179,7 @@ Return the details (including containers) of a running service
 
 ### Flex a component's number of instances.
 ```
-PUT /services/{service_name}/components/{component_name}
+PUT /ws/v1/services/{service_name}/components/{component_name}
 ```
 
 #### Description

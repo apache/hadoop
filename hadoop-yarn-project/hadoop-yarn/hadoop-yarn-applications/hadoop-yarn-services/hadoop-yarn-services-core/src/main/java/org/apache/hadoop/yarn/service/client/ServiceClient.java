@@ -158,7 +158,7 @@ public class ServiceClient extends CompositeService
 
   private Service loadAppJsonFromLocalFS(
       AbstractClusterBuildingActionArgs args) throws IOException {
-    File file = args.getAppDef();
+    File file = args.getFile();
     Path filePath = new Path(file.getAbsolutePath());
     LOG.info("Loading app json from: " + filePath);
     Service service = jsonSerDeser
@@ -166,7 +166,6 @@ public class ServiceClient extends CompositeService
     if (args.lifetime > 0) {
       service.setLifetime(args.lifetime);
     }
-    service.setName(args.getClusterName());
     return service;
   }
 
@@ -407,7 +406,8 @@ public class ServiceClient extends CompositeService
 
   public int actionDestroy(String serviceName) throws Exception {
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
-    verifyNoLiveAppInRM(serviceName, "Destroy");
+    verifyNoLiveAppInRM(serviceName, "destroy");
+
     Path appDir = fs.buildClusterDirPath(serviceName);
     FileSystem fileSystem = fs.getFileSystem();
     // remove from the appId cache
@@ -498,9 +498,15 @@ public class ServiceClient extends CompositeService
     request.setApplicationStates(liveStates);
     List<ApplicationReport> reports = yarnClient.getApplications(request);
     if (!reports.isEmpty()) {
-      throw new YarnException(
-          "Failed to " + action + " service, as " + serviceName
-              + " already exists.");
+      String message = "";
+      if (action.equals("destroy")) {
+        message = "Failed to destroy service " + serviceName
+            + ", because it is still running.";
+      } else {
+        message = "Failed to " + action + " service " + serviceName
+            + ", because it already exists.";
+      }
+      throw new YarnException(message);
     }
   }
 
@@ -592,7 +598,7 @@ public class ServiceClient extends CompositeService
     CLI.add(ServiceMaster.class.getCanonicalName());
     CLI.add(ACTION_CREATE, serviceName);
     //TODO debugAM CLI.add(Arguments.ARG_DEBUG)
-    CLI.add(Arguments.ARG_CLUSTER_URI, new Path(appRootDir, serviceName + ".json"));
+    CLI.add(Arguments.ARG_SERVICE_DEF_PATH, new Path(appRootDir, serviceName + ".json"));
     // pass the registry binding
     CLI.addConfOptionToCLI(conf, RegistryConstants.KEY_REGISTRY_ZK_ROOT,
         RegistryConstants.DEFAULT_ZK_REGISTRY_ROOT);

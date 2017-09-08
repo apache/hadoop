@@ -156,12 +156,8 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
     try {
       commander.parse(args);
     } catch (ParameterException e) {
-      throw new BadCommandArgumentsException(e, "%s in %s",
-                                             e.toString(),
-                                             (args != null
-                                              ? (SliderUtils.join(args,
-                                                 " ", false))
-                                              : "[]"));
+      commander.usage(args[0]);
+      throw e;
     }
     //now copy back to this class some of the attributes that are common to all
     //actions
@@ -251,30 +247,10 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
     applyDefinitions(definitionMap, conf);
   }
 
-
-  /**
-   * If the Filesystem binding was provided, it overrides anything in
-   * the configuration
-   * @param conf configuration
-   */
-  public void applyFileSystemBinding(Configuration conf) {
-    ArgOps.applyFileSystemBinding(getFilesystemBinding(), conf);
-  }
-
   public boolean isDebug() {
     return coreAction.debug;
   }
 
-
-  public String getFilesystemBinding() {
-    return coreAction.filesystemBinding;
-  }
-
-  public Path getBasePath() { return coreAction.basePath; }
-
-  public String getManager() {
-    return coreAction.manager;
-  }
 
   public String getAction() {
     return commander.getParsedCommand();

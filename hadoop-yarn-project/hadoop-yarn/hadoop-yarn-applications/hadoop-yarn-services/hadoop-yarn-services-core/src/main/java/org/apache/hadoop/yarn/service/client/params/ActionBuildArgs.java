@@ -28,4 +28,9 @@ public class ActionBuildArgs extends AbstractClusterBuildingActionArgs {
   public String getActionName() {
     return SliderActions.ACTION_BUILD;
   }
+
+  @Override
+  public int getMinParams() {
+    return 0;
+  }
 }

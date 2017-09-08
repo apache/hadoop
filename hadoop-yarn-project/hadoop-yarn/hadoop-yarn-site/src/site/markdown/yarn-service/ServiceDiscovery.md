@@ -40,7 +40,7 @@ The following core functions are supported by the DNS-Server:
 
 1. Supports creation of DNS records for end-points of the deployed YARN applications
 2. Record names remain unchanged during restart of containers and/or applications
-3. Supports reverse lookups (name based on IP).
+3. Supports reverse lookups (name based on IP). Note, this works only for Docker containers.
 4. Supports security using the standards defined by The Domain Name System Security
 Extensions (DNSSEC)
 5. Highly available
@@ -55,7 +55,7 @@ a DNS server for a Hadoop cluster zone/domain. The server is not intended to act
 primary DNS server and does not forward requests to other servers.
 2. The DNS Server exposes a port that can receive both TCP and UDP requests per
 DNS standards. The default port for DNS protocols is in a restricted, administrative port
-range (53), so the port is configurable for deployments in which the service may
+range (5353), so the port is configurable for deployments in which the service may
 not be managed via an administrative account.
 
 ## DNS Record Name Structure
@@ -101,7 +101,6 @@ application name. These application names have to be unique for a given user.
 
 The primary functions of the DNS service are illustrated in the following diagram:
 
-
 ![DNS Functional Overview](../images/dns_overview.png "DNS Functional Overview")
 
 ### DNS record creation
@@ -120,11 +119,18 @@ requiring similar parsing logic to identify the specific records that should be 
 
 ### DNS Service initialization
 * The DNS service initializes both UDP and TCP listeners on a configured port. As
-noted above, the default port of 53 is in a restricted range that is only accessible to an
+noted above, the default port of 5353 is in a restricted range that is only accessible to an
 account with administrative privileges.
 * Subsequently, the DNS service listens for inbound DNS requests. Those requests are
 standard DNS requests from users or other DNS servers (for example, DNS servers that have the
 YARN DNS service configured as a forwarder).
+
+## Start the DNS Server
+By default, the DNS runs on non-privileged port `5353`.
+If it is configured to use the standard privileged port `53`, the DNS server needs to be run as root:
+```
+sudo su - -c "yarn org.apache.hadoop.registry.server.dns.RegistryDNSServer > /${HADOOP_LOG_FOLDER}/registryDNS.log 2>&1 &" root
+```
 
 ## Configuration
 The YARN DNS server reads its configuration properties from the yarn-site.xml file.  The following are the DNS associated configuration properties:
@@ -134,7 +140,7 @@ The YARN DNS server reads its configuration properties from the yarn-site.xml fi
 | hadoop.registry.dns.enabled | The DNS functionality is enabled for the cluster. Default is false. |
 | hadoop.registry.dns.domain-name  | The domain name for Hadoop cluster associated records.  |
 | hadoop.registry.dns.bind-address | Address associated with the network interface to which the DNS listener should bind.  |
-| hadoop.registry.dns.bind-port | The port number for the DNS listener. The default port is 53. However, since that port falls in a administrator-only range, typical deployments may need to specify an alternate port.  |
+| hadoop.registry.dns.bind-port | The port number for the DNS listener. The default port is 5353. However, since that port falls in a administrator-only range, typical deployments may need to specify an alternate port.  |
 | hadoop.registry.dns.dnssec.enabled | Indicates whether the DNSSEC support is enabled. Default is false.  |
 | hadoop.registry.dns.public-key  | The base64 representation of the server’s public key. Leveraged for creating the DNSKEY Record provided for DNSSEC client requests.  |
 | hadoop.registry.dns.private-key-file  | The path to the standard DNSSEC private key file. Must only be readable by the DNS launching identity. See [dnssec-keygen](https://ftp.isc.org/isc/bind/cur/9.9/doc/arm/man.dnssec-keygen.html) documentation.  |

@@ -48,17 +48,16 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 # the domain of the service
 host: host.mycompany.com
+port: 9191(default)
 # array of all schemes that your API supports
 schemes:
   - http
-# will be prefixed to all paths
-basePath: /ws/v1/
 consumes:
   - application/json
 produces:
   - application/json
 paths:
-  /services/version:
+  /ws/v1/services/version:
     get:
       summary: Get current version of the API server.
       description: Get current version of the API server.
@@ -66,7 +65,7 @@ paths:
         200:
           description: Successful request
 
-  /services:
+  /ws/v1/services:
     get:
       summary: (TBD) List of services running in the cluster.
       description: Get a list of all currently running services (response includes a minimal projection of the service info). For more details do a GET on a specific service name.
@@ -103,7 +102,7 @@ paths:
           schema:
             $ref: '#/definitions/ServiceStatus'
 
-  /services/{service_name}:
+  /ws/v1/services/{service_name}:
     put:
       summary: Update a service or upgrade the binary version of the components of a running service
       description: Update the runtime properties of a service. Currently the following operations are supported - update lifetime, stop/start a service.
@@ -174,7 +173,7 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/ServiceStatus'
-  /services/{service_name}/components/{component_name}:
+  /ws/v1/services/{service_name}/components/{component_name}:
     put:
       summary: Flex a component's number of instances.
       description: Set a component's desired number of instanes

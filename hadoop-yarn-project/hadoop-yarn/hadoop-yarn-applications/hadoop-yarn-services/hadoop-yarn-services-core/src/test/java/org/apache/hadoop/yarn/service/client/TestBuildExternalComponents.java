@@ -36,7 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_APPDEF;
+import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_FILE;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 
 /**
@@ -56,12 +56,12 @@ public class TestBuildExternalComponents {
     }
   }
 
-  // 1. Build the appDef and store on fs
+  // 1. Build the def file and store on fs
   // 2. check component names
   private void buildAndCheckComponents(String appName, String appDef,
       SliderFileSystem sfs, Set<String> names) throws Throwable {
     String[] args =
-        { "build", appName, ARG_APPDEF, ExampleAppJson.resourceName(appDef) };
+        { "build", ARG_FILE, ExampleAppJson.resourceName(appDef) };
     ClientArgs clientArgs = new ClientArgs(args);
     clientArgs.parse();
     ServiceCLI cli = new ServiceCLI() {

@@ -20,54 +20,18 @@ package org.apache.hadoop.yarn.service.client.params;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.beust.jcommander.ParametersDelegate;
-
-import java.io.File;
-
 
 @Parameters(commandNames = { SliderActions.ACTION_CREATE},
             commandDescription = SliderActions.DESCRIBE_ACTION_CREATE)
 
-public class SliderAMCreateAction extends AbstractActionArgs implements
-    LaunchArgsAccessor {
-
+public class ServiceAMCreateAction extends AbstractActionArgs {
 
   @Override
   public String getActionName() {
     return SliderActions.ACTION_CREATE;
   }
 
-  @Parameter(names = ARG_IMAGE, description = "image", required = false)
-  public String image;
-
-  /**
-   * This is the URI in the FS to the Slider cluster; the conf file (and any
-   * other cluster-specifics) can be picked up here
-   */
-  @Parameter(names = ARG_CLUSTER_URI,
-             description = "URI to the Slider cluster", required = true)
-  public String sliderClusterURI;
-
-  @ParametersDelegate LaunchArgsDelegate launchArgs = new LaunchArgsDelegate();
-
-  @Override
-  public String getRmAddress() {
-    return launchArgs.getRmAddress();
-  }
-
-  @Override
-  public int getWaittime() {
-    return launchArgs.getWaittime();
-  }
-
-  @Override
-  public void setWaittime(int waittime) {
-    launchArgs.setWaittime(waittime);
-  }
-
-  @Override
-  public File getOutputFile() {
-    return launchArgs.getOutputFile();
-  }
-  
+  @Parameter(names = ARG_SERVICE_DEF_PATH,
+             description = "Path to the service definition JSON file", required = true)
+  public String serviceDefPath;
 }

@@ -32,8 +32,8 @@ public class ActionDependencyArgs extends AbstractActionArgs {
     return SliderActions.ACTION_DEPENDENCY;
   }
 
-  @Parameter(names = { ARG_UPLOAD }, 
-             description = "Upload AM and agent libraries to HDFS for this client")
+  @Parameter(names = { ARG_UPLOAD }, required = true,
+             description = "Upload AM libraries to HDFS for this client version")
   public boolean upload;
 
   @Parameter(names = { ARG_OVERWRITE },

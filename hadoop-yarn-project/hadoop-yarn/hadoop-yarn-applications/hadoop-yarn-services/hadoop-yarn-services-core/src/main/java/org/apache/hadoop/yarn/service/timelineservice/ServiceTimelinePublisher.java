@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.slf4j.Logger;
@@ -96,8 +97,8 @@ public class ServiceTimelinePublisher extends CompositeService {
     // create info keys
     Map<String, Object> entityInfos = new HashMap<String, Object>();
     entityInfos.put(ServiceTimelineMetricsConstants.NAME, service.getName());
-//    entityInfos.put(ServiceTimelineMetricsConstants.STATE,
-//        service.getState().toString());
+    entityInfos.put(ServiceTimelineMetricsConstants.STATE,
+        ServiceState.STARTED.toString());
     entityInfos.put(ServiceTimelineMetricsConstants.LAUNCH_TIME,
         currentTimeMillis);
     entity.addInfo(ServiceTimelineMetricsConstants.QUICK_LINKS,

@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.yarn.service.client;
 
+import com.beust.jcommander.ParameterException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.client.params.ClientArgs;
-import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,7 +102,7 @@ public class ServiceCLI {
     ClientArgs clientArgs = new ClientArgs(args);
     try {
       clientArgs.parse();
-    } catch (BadCommandArgumentsException e) {
+    } catch (ParameterException | SliderException e) {
       System.err.println(e.getMessage());
       System.exit(-1);
     }
