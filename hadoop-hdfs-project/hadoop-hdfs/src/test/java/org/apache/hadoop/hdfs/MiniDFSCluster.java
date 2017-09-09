@@ -166,6 +166,7 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public static class Builder {
     private int nameNodePort = 0;
+    private int nameNodeServicePort = 0;
     private int nameNodeHttpPort = 0;
     private final Configuration conf;
     private int numDataNodes = 1;
@@ -206,6 +207,14 @@ public class MiniDFSCluster implements AutoCloseable {
      */
     public Builder nameNodePort(int val) {
       this.nameNodePort = val;
+      return this;
+    }
+
+    /**
+     * Default: 0
+     */
+    public Builder nameNodeServicePort(int val) {
+      this.nameNodeServicePort = val;
       return this;
     }
     
@@ -399,8 +408,8 @@ public class MiniDFSCluster implements AutoCloseable {
     }
 
     /**
-     * Default: false
-     * When true the hosts file/include file for the cluster is setup
+     * Default: false.
+     * When true the hosts file/include file for the cluster is setup.
      */
     public Builder setupHostsFile(boolean val) {
       this.setupHostsFile = val;
@@ -410,7 +419,7 @@ public class MiniDFSCluster implements AutoCloseable {
     /**
      * Default: a single namenode.
      * See {@link MiniDFSNNTopology#simpleFederatedTopology(int)} to set up
-     * federated nameservices
+     * federated nameservices.
      */
     public Builder nnTopology(MiniDFSNNTopology topology) {
       this.nnTopology = topology;
@@ -461,7 +470,8 @@ public class MiniDFSCluster implements AutoCloseable {
     if (builder.nnTopology == null) {
       // If no topology is specified, build a single NN. 
       builder.nnTopology = MiniDFSNNTopology.simpleSingleNN(
-          builder.nameNodePort, builder.nameNodeHttpPort);
+          builder.nameNodePort, builder.nameNodeServicePort,
+          builder.nameNodeHttpPort);
     }
     assert builder.storageTypes == null ||
            builder.storageTypes.length == builder.numDataNodes;
@@ -770,7 +780,7 @@ public class MiniDFSCluster implements AutoCloseable {
                        manageNameDfsDirs, true, manageDataDfsDirs, manageDataDfsDirs,
                        operation, null, racks, hosts,
                        null, simulatedCapacities, null, true, false,
-                       MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0),
+                       MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0, 0),
                        true, false, false, null, true, false);
   }
 
@@ -1249,6 +1259,11 @@ public class MiniDFSCluster implements AutoCloseable {
         DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId,
         nnConf.getNnId());
     conf.set(key, "127.0.0.1:" + nnConf.getIpcPort());
+
+    key = DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nameserviceId,
+        nnConf.getNnId());
+    conf.set(key, "127.0.0.1:" + nnConf.getServicePort());
   }
   
   private static String[] createArgs(StartupOption operation) {
@@ -1282,6 +1297,8 @@ public class MiniDFSCluster implements AutoCloseable {
     // the conf
     hdfsConf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
         nameserviceId, nnId), nn.getNameNodeAddressHostPortString());
+    hdfsConf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        nameserviceId, nnId), nn.getServiceRpcAddressHostPortString());
     if (nn.getHttpAddress() != null) {
       hdfsConf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY,
           nameserviceId, nnId), NetUtils.getHostPortString(nn.getHttpAddress()));
@@ -1335,6 +1352,14 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public Configuration getConfiguration(int nnIndex) {
     return getNN(nnIndex).conf;
+  }
+
+  /**
+   * Return the cluster-wide configuration.
+   * @return
+   */
+  public Configuration getClusterConfiguration() {
+    return conf;
   }
 
   private NameNodeInfo getNN(int nnIndex) {
@@ -1927,6 +1952,16 @@ public class MiniDFSCluster implements AutoCloseable {
    */     
   public int getNameNodePort(int nnIndex) {
     return getNN(nnIndex).nameNode.getNameNodeAddress().getPort();
+  }
+
+  /**
+   * Gets the service rpc port used by the NameNode, because the caller
+   * supplied port is not necessarily the actual port used.
+   * Assumption: cluster has a single namenode
+   */
+  public int getNameNodeServicePort() {
+    checkSingleNameNode();
+    return getNameNodeServicePort(0);
   }
 
   /**
@@ -2556,12 +2591,14 @@ public class MiniDFSCluster implements AutoCloseable {
     }
 
     NameNodeInfo info = getNN(nnIndex);
-    InetSocketAddress addr = info.nameNode.getServiceRpcAddress();
-    assert addr.getPort() != 0;
-    DFSClient client = new DFSClient(addr, conf);
+    InetSocketAddress nameNodeAddress = info.nameNode.getNameNodeAddress();
+    assert nameNodeAddress.getPort() != 0;
+    DFSClient client = new DFSClient(nameNodeAddress, conf);
 
     // ensure all datanodes have registered and sent heartbeat to the namenode
-    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
+    InetSocketAddress serviceAddress = info.nameNode.getServiceRpcAddress();
+    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE),
+        serviceAddress)) {
       try {
         LOG.info("Waiting for cluster to become active");
         Thread.sleep(100);
@@ -3056,13 +3093,18 @@ public class MiniDFSCluster implements AutoCloseable {
     }
   }
 
+  public void addNameNode(Configuration conf, int namenodePort)
+      throws IOException{
+    addNameNode(conf, namenodePort, 0);
+  }
+
   /**
    * Add a namenode to a federated cluster and start it. Configuration of
    * datanodes in the cluster is refreshed to register with the new namenode.
    * 
    * @return newly started namenode
    */
-  public void addNameNode(Configuration conf, int namenodePort)
+  public void addNameNode(Configuration conf, int namenodePort, int servicePort)
       throws IOException {
     if(!federation)
       throw new IOException("cannot add namenode to non-federated cluster");
@@ -3076,7 +3118,9 @@ public class MiniDFSCluster implements AutoCloseable {
   
     String nnId = null;
     initNameNodeAddress(conf, nameserviceId,
-        new NNConf(nnId).setIpcPort(namenodePort));
+        new NNConf(nnId)
+            .setIpcPort(namenodePort)
+            .setServicePort(servicePort));
     // figure out the current number of NNs
     NameNodeInfo[] infos = this.getNameNodeInfos(nameserviceId);
     int nnIndex = infos == null ? 0 : infos.length;

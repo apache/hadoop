@@ -505,18 +505,17 @@ public class NameNode extends ReconfigurableBase implements
   
   /**
    * Fetches the address for services to use when connecting to namenode
-   * based on the value of fallback returns null if the special
-   * address is not specified or returns the default namenode address
-   * to be used by both clients and services.
    * Services here are datanodes, backup node, any non client connection
    */
-  public static InetSocketAddress getServiceAddress(Configuration conf,
-                                                        boolean fallback) {
-    String addr = conf.getTrimmed(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
-    if (addr == null || addr.isEmpty()) {
-      return fallback ? DFSUtilClient.getNNAddress(conf) : null;
+  public static InetSocketAddress getServiceAddress(Configuration conf) {
+    String address = conf.getTrimmed(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+    if (address == null || address.isEmpty()) {
+      InetSocketAddress rpcAddress = DFSUtilClient.getNNAddress(conf);
+      return NetUtils.createSocketAddr(rpcAddress.getHostName(),
+          HdfsClientConfigKeys.DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
     }
-    return DFSUtilClient.getNNAddress(addr);
+    return NetUtils.createSocketAddr(address,
+        HdfsClientConfigKeys.DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
   }
 
   //
@@ -554,7 +553,7 @@ public class NameNode extends ReconfigurableBase implements
    * If the service rpc is not configured returns null
    */
   protected InetSocketAddress getServiceRpcServerAddress(Configuration conf) {
-    return NameNode.getServiceAddress(conf, false);
+    return NameNode.getServiceAddress(conf);
   }
 
   protected InetSocketAddress getRpcServerAddress(Configuration conf) {
@@ -615,7 +614,8 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   /**
-   * Modifies the configuration passed to contain the service rpc address setting
+   * Modifies the configuration passed to contain the service rpc address
+   * setting.
    */
   protected void setRpcServiceServerAddress(Configuration conf,
       InetSocketAddress serviceRPCAddress) {
@@ -1068,6 +1068,13 @@ public class NameNode extends ReconfigurableBase implements
   public InetSocketAddress getServiceRpcAddress() {
     final InetSocketAddress serviceAddr = rpcServer.getServiceRpcAddress();
     return serviceAddr == null ? getNameNodeAddress() : serviceAddr;
+  }
+
+  /**
+   * @return NameNode service RPC address in "host:port" string form
+   */
+  public String getServiceRpcAddressHostPortString() {
+    return NetUtils.getHostPortString(getServiceRpcAddress());
   }
 
   /**

@@ -43,12 +43,13 @@ public class MiniDFSNNTopology {
    * Set up a simple non-federated non-HA NN.
    */
   public static MiniDFSNNTopology simpleSingleNN(
-      int nameNodePort, int nameNodeHttpPort) {
+      int rpcPort, int servicePort, int httpPort) {
     return new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf(null)
         .addNN(new MiniDFSNNTopology.NNConf(null)
-          .setHttpPort(nameNodeHttpPort)
-          .setIpcPort(nameNodePort)));
+          .setIpcPort(rpcPort)
+          .setServicePort(servicePort)
+          .setHttpPort(httpPort)));
   }
   
 
@@ -221,6 +222,7 @@ public class MiniDFSNNTopology {
     private final String nnId;
     private int httpPort;
     private int ipcPort;
+    private int servicePort;
     private String clusterId;
     
     public NNConf(String nnId) {
@@ -233,6 +235,10 @@ public class MiniDFSNNTopology {
 
     int getIpcPort() {
       return ipcPort;
+    }
+
+    int getServicePort() {
+      return servicePort;
     }
     
     int getHttpPort() {
@@ -250,6 +256,11 @@ public class MiniDFSNNTopology {
 
     public NNConf setIpcPort(int ipcPort) {
       this.ipcPort = ipcPort;
+      return this;
+    }
+
+    public NNConf setServicePort(int servicePort) {
+      this.servicePort = servicePort;
       return this;
     }
 

@@ -44,6 +44,11 @@ public class TestRefreshNamenodes {
   private final int nnPort3 = 2227;
   private final int nnPort4 = 2230;
 
+  private final int nnServicePort1 = 2222;
+  private final int nnServicePort2 = 2225;
+  private final int nnServicePort3 = 2228;
+  private final int nnServicePort4 = 2231;
+
   @Test
   public void testRefreshNamenodes() throws IOException {
     // Start cluster with a single NN and DN
@@ -52,7 +57,9 @@ public class TestRefreshNamenodes {
     try {
       MiniDFSNNTopology topology = new MiniDFSNNTopology()
         .addNameservice(new NSConf("ns1").addNN(
-            new NNConf(null).setIpcPort(nnPort1)))
+            new NNConf(null)
+                .setIpcPort(nnPort1)
+                .setServicePort(nnServicePort1)))
         .setFederation(true);
       cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(topology)
@@ -61,20 +68,20 @@ public class TestRefreshNamenodes {
       DataNode dn = cluster.getDataNodes().get(0);
       assertEquals(1, dn.getAllBpOs().size());
 
-      cluster.addNameNode(conf, nnPort2);
+      cluster.addNameNode(conf, nnPort2, nnServicePort2);
       assertEquals(2, dn.getAllBpOs().size());
 
-      cluster.addNameNode(conf, nnPort3);
+      cluster.addNameNode(conf, nnPort3, nnServicePort3);
       assertEquals(3, dn.getAllBpOs().size());
 
-      cluster.addNameNode(conf, nnPort4);
+      cluster.addNameNode(conf, nnPort4, nnServicePort4);
 
       // Ensure a BPOfferService in the datanodes corresponds to
       // a namenode in the cluster
       Set<InetSocketAddress> nnAddrsFromCluster = Sets.newHashSet();
       for (int i = 0; i < 4; i++) {
         assertTrue(nnAddrsFromCluster.add(
-            cluster.getNameNode(i).getNameNodeAddress()));
+            cluster.getNameNode(i).getServiceRpcAddress()));
       }
       
       Set<InetSocketAddress> nnAddrsFromDN = Sets.newHashSet();

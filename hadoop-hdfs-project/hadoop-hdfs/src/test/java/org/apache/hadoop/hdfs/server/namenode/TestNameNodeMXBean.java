@@ -661,12 +661,15 @@ public class TestNameNodeMXBean {
     for (int i = 0; i < 5; i++) {
       try{
         // Have to specify IPC ports so the NNs can talk to each other.
-        int[] ports = ServerSocketUtil.getPorts(2);
+        int[] ports = ServerSocketUtil.getPorts(4);
         MiniDFSNNTopology topology = new MiniDFSNNTopology()
             .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-                .addNN(new MiniDFSNNTopology.NNConf("nn1").setIpcPort(ports[0]))
-                .addNN(
-                    new MiniDFSNNTopology.NNConf("nn2").setIpcPort(ports[1])));
+                .addNN(new MiniDFSNNTopology.NNConf("nn1")
+                    .setIpcPort(ports[0])
+                    .setServicePort(ports[1]))
+                .addNN(new MiniDFSNNTopology.NNConf("nn2")
+                    .setIpcPort(ports[2])
+                    .setServicePort(ports[3])));
 
         cluster = new MiniDFSCluster.Builder(conf)
             .nnTopology(topology).numDataNodes(0)

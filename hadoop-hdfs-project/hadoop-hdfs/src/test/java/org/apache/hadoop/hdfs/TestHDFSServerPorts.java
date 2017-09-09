@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.test.PathUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -277,17 +278,14 @@ public class TestHDFSServerPorts {
       // different http port
       conf2.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
       started = canStartNameNode(conf2);
+      assertFalse("Should've failed on service port", started);
 
-      if (withService) {
-        assertFalse("Should've failed on service port", started);
-
-        // reset conf2 since NameNode modifies it
-        FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
-        conf2.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
-        // Set Service address      
-        conf2.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,  THIS_HOST);
-        started = canStartNameNode(conf2);        
-      }
+      // reset conf2 since NameNode modifies it
+      FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
+      // Set Service address
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,  THIS_HOST);
+      started = canStartNameNode(conf2);
       assertTrue(started);
     } finally {
       stopNameNode(nn);
@@ -359,38 +357,39 @@ public class TestHDFSServerPorts {
     }
   }
     
-    /**
-     * Verify BackupNode port usage.
-     */
-    @Test(timeout = 300000)
-    public void testBackupNodePorts() throws Exception {
-      NameNode nn = null;
-      try {
-        nn = startNameNode();
+  /**
+   * Verify BackupNode port usage.
+   */
+  @Ignore
+  @Test(timeout = 300000)
+  public void testBackupNodePorts() throws Exception {
+    NameNode nn = null;
+    try {
+      nn = startNameNode();
 
-        Configuration backup_config = new HdfsConfiguration(config);
-        backup_config.set(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, THIS_HOST);
-        // bind http server to the same port as name-node
-        backup_config.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
-            backup_config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
+      Configuration backup_config = new HdfsConfiguration(config);
+      backup_config.set(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, THIS_HOST);
+      // bind http server to the same port as name-node
+      backup_config.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
+          backup_config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
 
-        LOG.info("= Starting 1 on: " + backup_config.get(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
+      LOG.info("= Starting 1 on: " + backup_config.get(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
 
-        assertFalse("Backup started on same port as Namenode", 
-                           canStartBackupNode(backup_config)); // should fail
+      assertFalse("Backup started on same port as Namenode",
+                         canStartBackupNode(backup_config)); // should fail
 
-        // bind http server to a different port
-        backup_config.set(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, THIS_HOST);
-        LOG.info("= Starting 2 on: " + backup_config.get(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
+      // bind http server to a different port
+      backup_config.set(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, THIS_HOST);
+      LOG.info("= Starting 2 on: " + backup_config.get(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
 
-        boolean started = canStartBackupNode(backup_config);
-        assertTrue("Backup Namenode should've started", started); // should start now
-      } finally {
-        stopNameNode(nn);
-      }
+      boolean started = canStartBackupNode(backup_config);
+      assertTrue("Backup Namenode should've started", started); // should start now
+    } finally {
+      stopNameNode(nn);
+    }
   }
 }
