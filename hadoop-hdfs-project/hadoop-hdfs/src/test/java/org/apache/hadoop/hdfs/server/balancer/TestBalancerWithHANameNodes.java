@@ -89,8 +89,9 @@ public class TestBalancerWithHANameNodes {
           / numOfDatanodes, (short) numOfDatanodes, 1);
 
       // start up an empty node with the same capacity and on the same rack
-      cluster.startDataNodes(conf, 1, true, null, new String[] { newNodeRack },
-          new long[] { newNodeCapacity });
+      cluster.startDataNodes(cluster.getClusterConfiguration(),
+          1, true, null, new String[] {newNodeRack},
+          new long[] {newNodeCapacity});
       totalCapacity += newNodeCapacity;
       TestBalancer.waitForHeartBeat(totalUsedSpace, totalCapacity, client,
           cluster);

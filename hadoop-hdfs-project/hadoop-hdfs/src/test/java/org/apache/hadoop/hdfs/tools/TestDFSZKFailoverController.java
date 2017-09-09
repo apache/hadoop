@@ -88,9 +88,11 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
     .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
         .addNN(new MiniDFSNNTopology.NNConf("nn1")
-            .setIpcPort(ServerSocketUtil.getPort(10021, 100)))
+            .setIpcPort(ServerSocketUtil.getPort(10021, 100))
+            .setServicePort(ServerSocketUtil.getPort(10025, 100)))
         .addNN(new MiniDFSNNTopology.NNConf("nn2")
-            .setIpcPort(ServerSocketUtil.getPort(10022, 100))));
+            .setIpcPort(ServerSocketUtil.getPort(10022, 100))
+            .setServicePort(ServerSocketUtil.getPort(10026, 100))));
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(topology)
         .numDataNodes(0)

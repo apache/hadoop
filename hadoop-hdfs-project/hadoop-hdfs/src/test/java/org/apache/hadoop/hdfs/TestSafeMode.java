@@ -324,7 +324,7 @@ public class TestSafeMode {
     } catch (RemoteException re) {
       assertEquals(SafeModeException.class.getName(), re.getClassName());
       GenericTestUtils.assertExceptionContains(
-          NameNode.getServiceAddress(conf, true).getHostName(), re);
+          NameNode.getServiceAddress(conf).getHostName(), re);
     } catch (IOException ioe) {
       fail("Encountered exception" + " " + StringUtils.stringifyException(ioe));
     }
