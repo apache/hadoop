@@ -17,6 +17,35 @@
  */
 package org.apache.hadoop.hdfs;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
+import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Time;
+import org.apache.htrace.core.TraceScope;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -32,45 +61,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
-import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.apache.hadoop.io.ByteBufferPool;
-import org.apache.hadoop.io.ElasticByteBufferPool;
-import org.apache.hadoop.io.MultipleIOException;
-import org.apache.hadoop.io.erasurecode.CodecUtil;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
-import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
-import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.Time;
-
-import com.google.common.base.Preconditions;
-import org.apache.htrace.core.TraceScope;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -216,6 +215,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       buffers = new ByteBuffer[numAllBlocks];
       for (int i = 0; i < buffers.length; i++) {
         buffers[i] = BUFFER_POOL.getBuffer(useDirectBuffer(), cellSize);
+        buffers[i].limit(cellSize);
       }
     }
 
@@ -238,6 +238,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     private void clear() {
       for (int i = 0; i< numAllBlocks; i++) {
         buffers[i].clear();
+        buffers[i].limit(cellSize);
       }
     }
 
@@ -391,7 +392,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     }
     if (failCount > (numAllBlocks - numDataBlocks)) {
       throw new IOException("Failed: the number of failed blocks = "
-          + failCount + " > the number of data blocks = "
+          + failCount + " > the number of parity blocks = "
           + (numAllBlocks - numDataBlocks));
     }
     return newFailed;
@@ -642,7 +643,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       // wait till all the healthy streamers to
       // 1) get the updated block info
       // 2) create new block outputstream
-      newFailed = waitCreatingNewStreams(healthySet);
+      newFailed = waitCreatingStreamers(healthySet);
       if (newFailed.size() + failedStreamers.size() >
           numAllBlocks - numDataBlocks) {
         throw new IOException(
@@ -669,6 +670,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
     }
   }
 
+  /**
+   * Check if the streamers were successfully updated, adding failed streamers
+   * in the <i>failed</i> return parameter.
+   * @param failed Return parameter containing failed streamers from
+   *               <i>streamers</i>.
+   * @param streamers Set of streamers that are being updated
+   * @return total number of successful updates and failures
+   */
   private int checkStreamerUpdates(Set<StripedDataStreamer> failed,
       Set<StripedDataStreamer> streamers) {
     for (StripedDataStreamer streamer : streamers) {
@@ -683,7 +692,15 @@ public class DFSStripedOutputStream extends DFSOutputStream
     return coordinator.updateStreamerMap.size() + failed.size();
   }
 
-  private Set<StripedDataStreamer> waitCreatingNewStreams(
+  /**
+   * Waits for streamers to be created.
+   *
+   * @param healthyStreamers Set of healthy streamers
+   * @return Set of streamers that failed.
+   *
+   * @throws IOException
+   */
+  private Set<StripedDataStreamer> waitCreatingStreamers(
       Set<StripedDataStreamer> healthyStreamers) throws IOException {
     Set<StripedDataStreamer> failed = new HashSet<>();
     final int expectedNum = healthyStreamers.size();
@@ -774,10 +791,12 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
     }
 
-    // should update the block group length based on the acked length
+    // Update the NameNode with the acked length of the block group
+    // Save and restore the unacked length
     final long sentBytes = currentBlockGroup.getNumBytes();
-    final long ackedBytes = getNumAckedStripes() * cellSize * numDataBlocks;
-    Preconditions.checkState(ackedBytes <= sentBytes);
+    final long ackedBytes = getAckedLength();
+    Preconditions.checkState(ackedBytes <= sentBytes,
+        "Acked:" + ackedBytes + ", Sent:" + sentBytes);
     currentBlockGroup.setNumBytes(ackedBytes);
     newBG.setNumBytes(ackedBytes);
     dfsClient.namenode.updatePipeline(dfsClient.clientName, currentBlockGroup,
@@ -787,23 +806,140 @@ public class DFSStripedOutputStream extends DFSOutputStream
   }
 
   /**
-   * Get the number of acked stripes. An acked stripe means at least data block
-   * number size cells of the stripe were acked.
+   * Return the length of each block in the block group.
+   * Unhealthy blocks have a length of -1.
+   *
+   * @return List of block lengths.
    */
-  private long getNumAckedStripes() {
-    int minStripeNum = Integer.MAX_VALUE;
+  private List<Long> getBlockLengths() {
+    List<Long> blockLengths = new ArrayList<>(numAllBlocks);
     for (int i = 0; i < numAllBlocks; i++) {
       final StripedDataStreamer streamer = getStripedDataStreamer(i);
+      long numBytes = -1;
       if (streamer.isHealthy()) {
-        int curStripeNum = 0;
         if (streamer.getBlock() != null) {
-          curStripeNum = (int) (streamer.getBlock().getNumBytes() / cellSize);
+          numBytes = streamer.getBlock().getNumBytes();
         }
-        minStripeNum = Math.min(curStripeNum, minStripeNum);
+      }
+      blockLengths.add(numBytes);
+    }
+    return blockLengths;
+  }
+
+  /**
+   * Get the length of acked bytes in the block group.
+   *
+   * <p>
+   *   A full stripe is acked when at least numDataBlocks streamers have
+   *   the corresponding cells of the stripe, and all previous full stripes are
+   *   also acked. This enforces the constraint that there is at most one
+   *   partial stripe.
+   * </p>
+   * <p>
+   *   Partial stripes write all parity cells. Empty data cells are not written.
+   *   Parity cells are the length of the longest data cell(s). For example,
+   *   with RS(3,2), if we have data cells with lengths [1MB, 64KB, 0], the
+   *   parity blocks will be length [1MB, 1MB].
+   * </p>
+   * <p>
+   *   To be considered acked, a partial stripe needs at least numDataBlocks
+   *   empty or written cells.
+   * </p>
+   * <p>
+   *   Currently, partial stripes can only happen when closing the file at a
+   *   non-stripe boundary, but this could also happen during (currently
+   *   unimplemented) hflush/hsync support.
+   * </p>
+   */
+  private long getAckedLength() {
+    // Determine the number of full stripes that are sufficiently durable
+    final long sentBytes = currentBlockGroup.getNumBytes();
+    final long numFullStripes = sentBytes / numDataBlocks / cellSize;
+    final long fullStripeLength = numFullStripes * numDataBlocks * cellSize;
+    assert fullStripeLength <= sentBytes : "Full stripe length can't be " +
+        "greater than the block group length";
+
+    long ackedLength = 0;
+
+    // Determine the length contained by at least `numDataBlocks` blocks.
+    // Since it's sorted, all the blocks after `offset` are at least as long,
+    // and there are at least `numDataBlocks` at or after `offset`.
+    List<Long> blockLengths = Collections.unmodifiableList(getBlockLengths());
+    List<Long> sortedBlockLengths = new ArrayList<>(blockLengths);
+    Collections.sort(sortedBlockLengths);
+    if (numFullStripes > 0) {
+      final int offset = sortedBlockLengths.size() - numDataBlocks;
+      ackedLength = sortedBlockLengths.get(offset) * numDataBlocks;
+    }
+
+    // If the acked length is less than the expected full stripe length, then
+    // we're missing a full stripe. Return the acked length.
+    if (ackedLength < fullStripeLength) {
+      return ackedLength;
+    }
+    // If the expected length is exactly a stripe boundary, then we're also done
+    if (ackedLength == sentBytes) {
+      return ackedLength;
+    }
+
+    /*
+    Otherwise, we're potentially dealing with a partial stripe.
+    The partial stripe is laid out as follows:
+
+      0 or more full data cells, `cellSize` in length.
+      0 or 1 partial data cells.
+      0 or more empty data cells.
+      `numParityBlocks` parity cells, the length of the longest data cell.
+
+    If the partial stripe is sufficiently acked, we'll update the ackedLength.
+    */
+
+    // How many full and empty data cells do we expect?
+    final int numFullDataCells = (int)
+        ((sentBytes - fullStripeLength) / cellSize);
+    final int partialLength = (int) (sentBytes - fullStripeLength) % cellSize;
+    final int numPartialDataCells = partialLength == 0 ? 0 : 1;
+    final int numEmptyDataCells = numDataBlocks - numFullDataCells -
+        numPartialDataCells;
+    // Calculate the expected length of the parity blocks.
+    final int parityLength = numFullDataCells > 0 ? cellSize : partialLength;
+
+    final long fullStripeBlockOffset = fullStripeLength / numDataBlocks;
+
+    // Iterate through each type of streamers, checking the expected length.
+    long[] expectedBlockLengths = new long[numAllBlocks];
+    int idx = 0;
+    // Full cells
+    for (; idx < numFullDataCells; idx++) {
+      expectedBlockLengths[idx] = fullStripeBlockOffset + cellSize;
+    }
+    // Partial cell
+    for (; idx < numFullDataCells + numPartialDataCells; idx++) {
+      expectedBlockLengths[idx] = fullStripeBlockOffset + partialLength;
+    }
+    // Empty cells
+    for (; idx < numFullDataCells + numPartialDataCells + numEmptyDataCells;
+         idx++) {
+      expectedBlockLengths[idx] = fullStripeBlockOffset;
+    }
+    // Parity cells
+    for (; idx < numAllBlocks; idx++) {
+      expectedBlockLengths[idx] = fullStripeBlockOffset + parityLength;
+    }
+
+    // Check expected lengths against actual streamer lengths.
+    // Update if we have sufficient durability.
+    int numBlocksWithCorrectLength = 0;
+    for (int i = 0; i < numAllBlocks; i++) {
+      if (blockLengths.get(i) == expectedBlockLengths[i]) {
+        numBlocksWithCorrectLength++;
       }
     }
-    assert minStripeNum != Integer.MAX_VALUE;
-    return minStripeNum;
+    if (numBlocksWithCorrectLength >= numDataBlocks) {
+      ackedLength = sentBytes;
+    }
+
+    return ackedLength;
   }
 
   private int stripeDataSize() {

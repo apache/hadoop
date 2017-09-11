@@ -20,13 +20,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,7 +38,8 @@ import java.io.Writer;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class DockerClient {
-  private static final Log LOG = LogFactory.getLog(DockerClient.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(DockerClient.class);
   private static final String TMP_FILE_PREFIX = "docker.";
   private static final String TMP_FILE_SUFFIX = ".cmd";
   private final String tmpDirPath;

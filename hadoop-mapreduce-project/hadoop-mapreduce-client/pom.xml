@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-beta1-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-mapreduce-client</artifactId>
-  <version>3.0.0-beta1-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce Client</name>
   <packaging>pom</packaging>
 
@@ -238,14 +238,6 @@
                       <outputDirectory>${project.build.directory}</outputDirectory>
                       <destFileName>hadoop-annotations.jar</destFileName>
                     </artifactItem>
-                    <artifactItem>
-                      <groupId>xerces</groupId>
-                      <artifactId>xercesImpl</artifactId>
-                      <version>${xerces.version.jdiff}</version>
-                      <overWrite>false</overWrite>
-                      <outputDirectory>${project.build.directory}</outputDirectory>
-                      <destFileName>xerces.jar</destFileName>
-                    </artifactItem>
                   </artifactItems>
                 </configuration>
               </execution>
@@ -283,7 +275,7 @@
                            sourceFiles="${dev-support.relative.dir}/jdiff/Null.java"
                            maxmemory="${jdiff.javadoc.maxmemory}">
                     <doclet name="org.apache.hadoop.classification.tools.IncludePublicAnnotationsJDiffDoclet"
-                            path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar:${project.build.directory}/xerces.jar">
+                            path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar">
                       <param name="-oldapi" value="${project.name} ${jdiff.stable.api}"/>
                       <param name="-newapi" value="${project.name} ${project.version}"/>
                       <param name="-oldapidir" value="${basedir}/${dev-support.relative.dir}/jdiff"/>

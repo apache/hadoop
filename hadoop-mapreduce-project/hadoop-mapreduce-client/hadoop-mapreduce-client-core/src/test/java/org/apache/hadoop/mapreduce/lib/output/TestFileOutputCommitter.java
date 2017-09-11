@@ -27,7 +27,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Assert;
 
@@ -55,7 +58,7 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 @SuppressWarnings("unchecked")
-public class TestFileOutputCommitter extends TestCase {
+public class TestFileOutputCommitter {
   private static final Path outDir = new Path(
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),
@@ -87,12 +90,12 @@ public class TestFileOutputCommitter extends TestCase {
     fs.delete(outDir, true);
   }
   
-  @Override
+  @Before
   public void setUp() throws IOException {
     cleanup();
   }
-  
-  @Override
+
+  @After
   public void tearDown() throws IOException {
     cleanup();
   }
@@ -195,14 +198,17 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testRecoveryV1() throws Exception {
     testRecoveryInternal(1, 1);
   }
 
+  @Test
   public void testRecoveryV2() throws Exception {
     testRecoveryInternal(2, 2);
   }
 
+  @Test
   public void testRecoveryUpgradeV1V2() throws Exception {
     testRecoveryInternal(1, 2);
   }
@@ -278,18 +284,22 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testCommitterV1() throws Exception {
     testCommitterInternal(1);
   }
 
+  @Test
   public void testCommitterV2() throws Exception {
     testCommitterInternal(2);
   }
-  
+
+  @Test
   public void testCommitterWithDuplicatedCommitV1() throws Exception {
     testCommitterWithDuplicatedCommitInternal(1);
   }
 
+  @Test
   public void testCommitterWithDuplicatedCommitV2() throws Exception {
     testCommitterWithDuplicatedCommitInternal(2);
   }
@@ -336,11 +346,13 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testCommitterWithFailureV1() throws Exception {
     testCommitterWithFailureInternal(1, 1);
     testCommitterWithFailureInternal(1, 2);
   }
 
+  @Test
   public void testCommitterWithFailureV2() throws Exception {
     testCommitterWithFailureInternal(2, 1);
     testCommitterWithFailureInternal(2, 2);
@@ -390,10 +402,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testCommitterRepeatableV1() throws Exception {
     testCommitterRetryInternal(1);
   }
 
+  @Test
   public void testCommitterRepeatableV2() throws Exception {
     testCommitterRetryInternal(2);
   }
@@ -493,14 +507,17 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testMapFileOutputCommitterV1() throws Exception {
     testMapFileOutputCommitterInternal(1);
   }
-  
+
+  @Test
   public void testMapFileOutputCommitterV2() throws Exception {
     testMapFileOutputCommitterInternal(2);
   }
 
+  @Test
   public void testInvalidVersionNumber() throws IOException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -552,10 +569,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testAbortV1() throws IOException, InterruptedException {
     testAbortInternal(1);
   }
 
+  @Test
   public void testAbortV2() throws IOException, InterruptedException {
     testAbortInternal(2);
   }
@@ -575,7 +594,7 @@ public class TestFileOutputCommitter extends TestCase {
     }
   }
 
-  
+
   private void testFailAbortInternal(int version)
       throws IOException, InterruptedException {
     Job job = Job.getInstance();
@@ -631,10 +650,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testFailAbortV1() throws Exception {
     testFailAbortInternal(1);
   }
 
+  @Test
   public void testFailAbortV2() throws Exception {
     testFailAbortInternal(2);
   }
@@ -732,10 +753,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testConcurrentCommitTaskWithSubDirV1() throws Exception {
     testConcurrentCommitTaskWithSubDir(1);
   }
 
+  @Test
   public void testConcurrentCommitTaskWithSubDirV2() throws Exception {
     testConcurrentCommitTaskWithSubDir(2);
   }

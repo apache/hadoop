@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -42,7 +43,6 @@ import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import com.google.common.base.Supplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -167,6 +167,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -662,6 +663,36 @@ public class TestCapacityScheduler {
     conf.setUserLimitFactor(B3, 100.0f);
 
     LOG.info("Setup top-level queues a and b");
+    return conf;
+  }
+
+  /**
+   * @param conf, to be modified
+   * @return, CS configuration which has deleted all childred of queue(b)
+   *           root
+   *          /     \
+   *        a        b
+   *       / \
+   *      a1  a2
+   */
+  private CapacitySchedulerConfiguration setupQueueConfWithOutChildrenOfB(
+      CapacitySchedulerConfiguration conf) {
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"a","b"});
+
+    conf.setCapacity(A, A_CAPACITY);
+    conf.setCapacity(B, B_CAPACITY);
+
+    // Define 2nd-level queues
+    conf.setQueues(A, new String[] {"a1","a2"});
+    conf.setCapacity(A1, A1_CAPACITY);
+    conf.setUserLimitFactor(A1, 100.0f);
+    conf.setCapacity(A2, A2_CAPACITY);
+    conf.setUserLimitFactor(A2, 100.0f);
+
+    LOG.info("Setup top-level queues a and b (without children)");
     return conf;
   }
 
@@ -4643,6 +4674,10 @@ public class TestCapacityScheduler {
     try {
       cs.reinitialize(conf, mockContext);
     } catch (IOException e) {
+      LOG.error(
+          "Expected to NOT throw exception when refresh queue tries to delete"
+              + " a queue WITHOUT running apps",
+          e);
       fail("Expected to NOT throw exception when refresh queue tries to delete"
           + " a queue WITHOUT running apps");
     }
@@ -4704,6 +4739,83 @@ public class TestCapacityScheduler {
     assertNull(message, queueB);
     assertNull(message,
         cs.getCapacitySchedulerQueueManager().getQueues().get("b"));
+    assertNull(message,
+        cs.getCapacitySchedulerQueueManager().getQueues().get("b1"));
+    assertNull(message,
+        cs.getCapacitySchedulerQueueManager().getQueues().get("b2"));
+
+    cs.stop();
+  }
+
+  /**
+   * Test for all child queue deletion and thus making parent queue a child.
+   * @throws Exception
+   */
+  @Test
+  public void testRefreshQueuesWithAllChildQueuesDeleted() throws Exception {
+    CapacityScheduler cs = new CapacityScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    RMContextImpl rmContext = new RMContextImpl(null, null, null, null, null,
+        null, new RMContainerTokenSecretManager(conf),
+        new NMTokenSecretManagerInRM(conf),
+        new ClientToAMTokenSecretManagerInRM(), null);
+    setupQueueConfiguration(conf);
+    cs.setConf(new YarnConfiguration());
+    cs.setRMContext(resourceManager.getRMContext());
+    cs.init(conf);
+    cs.start();
+    cs.reinitialize(conf, rmContext);
+    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+
+    // test delete all leaf queues when there is no application running.
+    Map<String, CSQueue> queues =
+        cs.getCapacitySchedulerQueueManager().getQueues();
+
+    CSQueue bQueue = Mockito.spy((LeafQueue) queues.get("b1"));
+    when(bQueue.getState()).thenReturn(QueueState.RUNNING)
+        .thenReturn(QueueState.STOPPED);
+    queues.put("b1", bQueue);
+
+    bQueue = Mockito.spy((LeafQueue) queues.get("b2"));
+    when(bQueue.getState()).thenReturn(QueueState.STOPPED);
+    queues.put("b2", bQueue);
+
+    bQueue = Mockito.spy((LeafQueue) queues.get("b3"));
+    when(bQueue.getState()).thenReturn(QueueState.STOPPED);
+    queues.put("b3", bQueue);
+
+    conf = new CapacitySchedulerConfiguration();
+    setupQueueConfWithOutChildrenOfB(conf);
+
+    // test convert parent queue to leaf queue(root.b) when there is no
+    // application running.
+    try {
+      cs.reinitialize(conf, mockContext);
+      fail("Expected to throw exception when refresh queue tries to make parent"
+          + " queue a child queue when one of its children is still running.");
+    } catch (IOException e) {
+      //do not do anything, expected exception
+    }
+
+    // test delete leaf queues(root.b.b1,b2,b3) when there is no application
+    // running.
+    try {
+      cs.reinitialize(conf, mockContext);
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Expected to NOT throw exception when refresh queue tries to delete"
+          + " all children of a parent queue(without running apps).");
+    }
+    CSQueue rootQueue = cs.getRootQueue();
+    CSQueue queueB = findQueue(rootQueue, B);
+    assertNotNull("Parent Queue B should not be deleted", queueB);
+    Assert.assertTrue("As Queue'B children are not deleted",
+        queueB instanceof LeafQueue);
+
+    String message =
+        "Refresh needs to support delete of all children of Parent queue.";
+    assertNull(message,
+        cs.getCapacitySchedulerQueueManager().getQueues().get("b3"));
     assertNull(message,
         cs.getCapacitySchedulerQueueManager().getQueues().get("b1"));
     assertNull(message,
@@ -4795,6 +4907,96 @@ public class TestCapacityScheduler {
     Assert.assertEquals(4096, amResourceLimit.getMemorySize());
     Assert.assertEquals(4, amResourceLimit.getVirtualCores());
     rm.stop();
+  }
+
+  @Test(timeout = 30000)
+  public void testcheckAndGetApplicationLifetime() throws Exception {
+    long maxLifetime = 10;
+    long defaultLifetime = 5;
+    // positive integer value
+    CapacityScheduler cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(9, cs.checkAndGetApplicationLifetime("default", 9));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(maxLifetime,
+        cs.getMaximumApplicationLifetime("default"));
+
+    maxLifetime = -1;
+    defaultLifetime = -1;
+    // test for default values
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(100, cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(0, cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(maxLifetime,
+        cs.getMaximumApplicationLifetime("default"));
+
+    maxLifetime = 10;
+    defaultLifetime = 10;
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(maxLifetime,
+        cs.getMaximumApplicationLifetime("default"));
+
+    maxLifetime = 0;
+    defaultLifetime = 0;
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(100, cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(-1, cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(0, cs.checkAndGetApplicationLifetime("default", 0));
+
+    maxLifetime = 10;
+    defaultLifetime = -1;
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
+
+    maxLifetime = 5;
+    defaultLifetime = 10;
+    try {
+      setUpCSQueue(maxLifetime, defaultLifetime);
+      Assert.fail("Expected to fails since maxLifetime < defaultLifetime.");
+    } catch (YarnRuntimeException ye) {
+      Assert.assertTrue(
+          ye.getMessage().contains("can't exceed maximum lifetime"));
+    }
+  }
+
+  private CapacityScheduler setUpCSQueue(long maxLifetime,
+      long defaultLifetime) {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"default"});
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".default", 100);
+    csConf.setMaximumLifetimePerQueue(
+        CapacitySchedulerConfiguration.ROOT + ".default", maxLifetime);
+    csConf.setDefaultLifetimePerQueue(
+        CapacitySchedulerConfiguration.ROOT + ".default", defaultLifetime);
+
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+    CapacityScheduler cs = new CapacityScheduler();
+
+    RMContext rmContext = TestUtils.getMockRMContext();
+    cs.setConf(conf);
+    cs.setRMContext(rmContext);
+    cs.init(conf);
+
+    return cs;
   }
 
   private void waitforNMRegistered(ResourceScheduler scheduler, int nodecount,

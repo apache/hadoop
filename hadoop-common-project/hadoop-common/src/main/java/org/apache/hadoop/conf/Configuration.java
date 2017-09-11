@@ -259,7 +259,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   private static final WeakHashMap<Configuration,Object> REGISTRY = 
     new WeakHashMap<Configuration,Object>();
-  
+
+  /**
+   * Map to register all classes holding property tag enums.
+   */
+  private static final Map<String, Class>
+      REGISTERED_TAG_CLASS = new HashMap<>();
+  /**
+   * Map to hold properties by there tag groupings.
+   */
+  private final Map<PropertyTag, Properties> propertyTagsMap =
+      new ConcurrentHashMap<>();
+
   /**
    * List of default Resources. Resources are loaded in the order of the list 
    * entries
@@ -308,18 +319,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.customMessage = customMessage;
     }
 
+    private final String getWarningMessage(String key) {
+      return getWarningMessage(key, null);
+    }
+
     /**
      * Method to provide the warning message. It gives the custom message if
      * non-null, and default message otherwise.
      * @param key the associated deprecated key.
+     * @param source the property source.
      * @return message that is to be logged when a deprecated key is used.
      */
-    private final String getWarningMessage(String key) {
+    private String getWarningMessage(String key, String source) {
       String warningMessage;
       if(customMessage == null) {
         StringBuilder message = new StringBuilder(key);
-        String deprecatedKeySuffix = " is deprecated. Instead, use ";
-        message.append(deprecatedKeySuffix);
+        if (source != null) {
+          message.append(" in " + source);
+        }
+        message.append(" is deprecated. Instead, use ");
         for (int i = 0; i < newKeys.length; i++) {
           message.append(newKeys[i]);
           if(i != newKeys.length-1) {
@@ -593,6 +611,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return deprecationContext.get().getDeprecatedKeyMap().containsKey(key);
   }
 
+  private static String getDeprecatedKey(String key) {
+    return deprecationContext.get().getReverseDeprecatedKeyMap().get(key);
+  }
+
+  private static DeprecatedKeyInfo getDeprecatedKeyInfo(String key) {
+    return deprecationContext.get().getDeprecatedKeyMap().get(key);
+  }
+
   /**
    * Sets all deprecated properties that are not currently set but have a
    * corresponding new property that is set. Useful for iterating the
@@ -723,6 +749,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
     updatingResource = new ConcurrentHashMap<String, String[]>();
+
+    // Register all classes holding property tags with
+    REGISTERED_TAG_CLASS.put("core", CorePropertyTag.class);
+    REGISTERED_TAG_CLASS.put("hdfs", HDFSPropertyTag.class);
+    REGISTERED_TAG_CLASS.put("yarn", YarnPropertyTag.class);
+
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -750,6 +782,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
      this.finalParameters = Collections.newSetFromMap(
          new ConcurrentHashMap<String, Boolean>());
      this.finalParameters.addAll(other.finalParameters);
+     this.REGISTERED_TAG_CLASS.putAll(other.REGISTERED_TAG_CLASS);
+     this.propertyTagsMap.putAll(other.propertyTagsMap);
    }
    
     synchronized(Configuration.class) {
@@ -1268,6 +1302,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   @VisibleForTesting
   void logDeprecation(String message) {
     LOG_DEPRECATION.info(message);
+  }
+
+  void logDeprecationOnce(String name, String source) {
+    DeprecatedKeyInfo keyInfo = getDeprecatedKeyInfo(name);
+    if (keyInfo != null && !keyInfo.getAndSetAccessed()) {
+      LOG_DEPRECATION.info(keyInfo.getWarningMessage(name, source));
+    }
   }
 
   /**
@@ -2080,6 +2121,47 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Get the credential entry by name from a credential provider.
+   *
+   * Handle key deprecation.
+   *
+   * @param provider a credential provider
+   * @param name alias of the credential
+   * @return the credential entry or null if not found
+   */
+  private CredentialEntry getCredentialEntry(CredentialProvider provider,
+                                             String name) throws IOException {
+    CredentialEntry entry = provider.getCredentialEntry(name);
+    if (entry != null) {
+      return entry;
+    }
+
+    // The old name is stored in the credential provider.
+    String oldName = getDeprecatedKey(name);
+    if (oldName != null) {
+      entry = provider.getCredentialEntry(oldName);
+      if (entry != null) {
+        logDeprecationOnce(oldName, provider.toString());
+        return entry;
+      }
+    }
+
+    // The name is deprecated.
+    DeprecatedKeyInfo keyInfo = getDeprecatedKeyInfo(name);
+    if (keyInfo != null && keyInfo.newKeys != null) {
+      for (String newName : keyInfo.newKeys) {
+        entry = provider.getCredentialEntry(newName);
+        if (entry != null) {
+          logDeprecationOnce(name, null);
+          return entry;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Try and resolve the provided element name as a credential provider
    * alias.
    * @param name alias of the provisioned credential
@@ -2096,7 +2178,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (providers != null) {
         for (CredentialProvider provider : providers) {
           try {
-            CredentialEntry entry = provider.getCredentialEntry(name);
+            CredentialEntry entry = getCredentialEntry(provider, name);
             if (entry != null) {
               pass = entry.getCredential();
               break;
@@ -2760,6 +2842,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               } else if ("source".equals(propertyAttr)) {
                 confSource.add(StringInterner.weakIntern(
                     reader.getAttributeValue(i)));
+              } else if ("tag".equals(propertyAttr)) {
+                //Read tags and put them in propertyTagsMap
+                readTagFromConfig(reader.getAttributeValue(i), confName,
+                    confValue, confSource);
               }
             }
             break;
@@ -2767,6 +2853,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           case "value":
           case "final":
           case "source":
+          case "tag":
             parseToken = true;
             token.setLength(0);
             break;
@@ -2848,6 +2935,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           case "source":
             confSource.add(StringInterner.weakIntern(token.toString()));
             break;
+          case "tag":
+            if (token.length() > 0) {
+              //Read tags and put them in propertyTagsMap
+              readTagFromConfig(token.toString(), confName,
+                  confValue, confSource);
+            }
+            break;
           case "include":
             if (fallbackAllowed && !fallbackEntered) {
               throw new IOException("Fetch fail on include for '"
@@ -2896,6 +2990,48 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (XMLStreamException e) {
       LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
+    }
+  }
+
+  private void readTagFromConfig(String attributeValue, String confName, String
+      confValue, List<String> confSource) {
+    for (String tagStr : attributeValue.split(",")) {
+      tagStr = tagStr.trim();
+      try {
+        if (confSource.size() > 0) {
+          for (String source : confSource) {
+            PropertyTag tag1 = this.getPropertyTag(tagStr,
+                source.split("-")[0]);
+            if (propertyTagsMap.containsKey(tag1)) {
+              propertyTagsMap.get(tag1)
+                  .setProperty(confName, confValue);
+            } else {
+              Properties props = new Properties();
+              props.setProperty(confName, confValue);
+              propertyTagsMap.put(tag1, props);
+            }
+          }
+        } else {
+          //If no source is set try to find tag in CorePropertyTag
+          if (propertyTagsMap
+              .containsKey(CorePropertyTag.valueOf(tagStr)
+              )) {
+            propertyTagsMap.get(CorePropertyTag.valueOf(tagStr))
+                .setProperty(confName, confValue);
+          } else {
+            Properties props = new Properties();
+            props.setProperty(confName, confValue);
+            propertyTagsMap.put(CorePropertyTag.valueOf(tagStr),
+                props);
+          }
+        }
+      } catch (IllegalArgumentException iae) {
+        //Log the invalid tag and continue to parse rest of the
+        // properties.
+        LOG.info("Invalid tag '" + tagStr + "' found for "
+            + "property:" + confName, iae);
+      }
+
     }
   }
 
@@ -3146,7 +3282,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
       dumpGenerator.writeStartObject();
       dumpGenerator.writeFieldName("property");
-      appendJSONProperty(dumpGenerator, config, propertyName);
+      appendJSONProperty(dumpGenerator, config, propertyName,
+          new ConfigRedactor(config));
       dumpGenerator.writeEndObject();
       dumpGenerator.flush();
     }
@@ -3186,11 +3323,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     dumpGenerator.writeFieldName("properties");
     dumpGenerator.writeStartArray();
     dumpGenerator.flush();
+    ConfigRedactor redactor = new ConfigRedactor(config);
     synchronized (config) {
       for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
-        appendJSONProperty(dumpGenerator,
-            config,
-            item.getKey().toString());
+        appendJSONProperty(dumpGenerator, config, item.getKey().toString(),
+            redactor);
       }
     }
     dumpGenerator.writeEndArray();
@@ -3208,12 +3345,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws IOException
    */
   private static void appendJSONProperty(JsonGenerator jsonGen,
-      Configuration config, String name) throws IOException {
+      Configuration config, String name, ConfigRedactor redactor)
+      throws IOException {
     // skip writing if given property name is empty or null
     if(!Strings.isNullOrEmpty(name) && jsonGen != null) {
       jsonGen.writeStartObject();
       jsonGen.writeStringField("key", name);
-      jsonGen.writeStringField("value", config.get(name));
+      jsonGen.writeStringField("value",
+          redactor.redact(name, config.get(name)));
       jsonGen.writeBooleanField("isFinal",
           config.finalParameters.contains(name));
       String[] resources = config.updatingResource.get(name);
@@ -3371,5 +3510,46 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     return false;
+  }
+
+  /**
+   * Get all properties belonging to tag.
+   * @return Properties with matching properties
+   */
+  public Properties getAllPropertiesByTag(final PropertyTag tag) {
+    Properties props = new Properties();
+    if (propertyTagsMap.containsKey(tag)) {
+      props.putAll(propertyTagsMap.get(tag));
+    }
+    return props;
+  }
+
+  /**
+   * Get all properties belonging to list of input tags. Calls
+   * getAllPropertiesByTag internally.
+   *
+   * @return Properties with all matching properties
+   */
+  public Properties getAllPropertiesByTags(final List<PropertyTag> tagList) {
+    Properties prop = new Properties();
+    for (PropertyTag tag : tagList) {
+      prop.putAll(this.getAllPropertiesByTag(tag));
+    }
+    return prop;
+  }
+
+  /**
+   * Get Property tag Enum corresponding to given source.
+   *
+   * @param tagStr String representation of Enum
+   * @param group Group to which enum belongs.Ex hdfs,yarn
+   * @return Properties with all matching properties
+   */
+  private PropertyTag getPropertyTag(String tagStr, String group) {
+    PropertyTag tag = null;
+    if (REGISTERED_TAG_CLASS.containsKey(group)) {
+      tag = (PropertyTag) Enum.valueOf(REGISTERED_TAG_CLASS.get(group), tagStr);
+    }
+    return tag;
   }
 }

@@ -25,9 +25,12 @@ import static org.mockito.Mockito.*;
 import java.io.FileNotFoundException;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -93,12 +96,7 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     when(s3.getObjectMetadata(argThat(
       correctGetMetadataRequest(BUCKET, key + "/"))
     )).thenThrow(NOT_FOUND);
-    ObjectListing objects = mock(ObjectListing.class);
-    when(objects.getCommonPrefixes()).thenReturn(
-        Collections.singletonList("dir/"));
-    when(objects.getObjectSummaries()).thenReturn(
-        Collections.<S3ObjectSummary>emptyList());
-    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+    setupListMocks(Collections.singletonList("dir/"), Collections.emptyList());
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -118,12 +116,7 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     when(s3.getObjectMetadata(argThat(
       correctGetMetadataRequest(BUCKET, key + "/")
     ))).thenThrow(NOT_FOUND);
-    ObjectListing objects = mock(ObjectListing.class);
-    when(objects.getCommonPrefixes()).thenReturn(
-        Collections.<String>emptyList());
-    when(objects.getObjectSummaries()).thenReturn(
-        Collections.<S3ObjectSummary>emptyList());
-    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+    setupListMocks(Collections.emptyList(), Collections.emptyList());
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -140,14 +133,26 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     when(s3.getObjectMetadata(argThat(
       correctGetMetadataRequest(BUCKET, key + "/")
     ))).thenThrow(NOT_FOUND);
-    ObjectListing objects = mock(ObjectListing.class);
-    when(objects.getCommonPrefixes()).thenReturn(
-        Collections.<String>emptyList());
-    when(objects.getObjectSummaries()).thenReturn(
-        Collections.<S3ObjectSummary>emptyList());
-    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+    setupListMocks(Collections.emptyList(), Collections.emptyList());
     exception.expect(FileNotFoundException.class);
     fs.getFileStatus(path);
+  }
+
+  private void setupListMocks(List<String> prefixes,
+      List<S3ObjectSummary> summaries) {
+
+    // V1 list API mock
+    ObjectListing objects = mock(ObjectListing.class);
+    when(objects.getCommonPrefixes()).thenReturn(prefixes);
+    when(objects.getObjectSummaries()).thenReturn(summaries);
+    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+
+    // V2 list API mock
+    ListObjectsV2Result v2Result = mock(ListObjectsV2Result.class);
+    when(v2Result.getCommonPrefixes()).thenReturn(prefixes);
+    when(v2Result.getObjectSummaries()).thenReturn(summaries);
+    when(s3.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(v2Result);
   }
 
   private Matcher<GetObjectMetadataRequest> correctGetMetadataRequest(

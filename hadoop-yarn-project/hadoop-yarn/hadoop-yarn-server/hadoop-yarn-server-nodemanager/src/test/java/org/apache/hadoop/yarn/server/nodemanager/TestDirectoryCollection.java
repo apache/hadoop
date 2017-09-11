@@ -128,8 +128,12 @@ public class TestDirectoryCollection {
     DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F);
     dc.checkDirs();
     Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirA));
+    Assert.assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL, dc.getDirectoryErrorInfo(dirA).cause);
+
     // no good dirs
     Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
 
@@ -139,16 +143,21 @@ public class TestDirectoryCollection {
             testDir.getTotalSpace());
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
     Assert.assertEquals(utilizedSpacePerc,
       dc.getGoodDirsDiskUtilizationPercentage());
 
     dc = new DirectoryCollection(dirs, testDir.getTotalSpace() / (1024 * 1024));
     dc.checkDirs();
     Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirA));
     // no good dirs
     Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
 
@@ -158,8 +167,11 @@ public class TestDirectoryCollection {
             testDir.getTotalSpace());
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
     Assert.assertEquals(utilizedSpacePerc,
       dc.getGoodDirsDiskUtilizationPercentage());
   }
@@ -209,12 +221,17 @@ public class TestDirectoryCollection {
     Assert.assertEquals(0, dc.getGoodDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirA));
+    Assert.assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL, dc.getDirectoryErrorInfo(dirA).cause);
 
     dc.setDiskUtilizationPercentageCutoff(100.0F, 100.0F);
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
 
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
 
@@ -232,12 +249,18 @@ public class TestDirectoryCollection {
     Assert.assertEquals(0, dc.getGoodDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertEquals(1, dc.getErroredDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirB));
+    Assert.assertEquals(DirectoryCollection.DiskErrorCause.OTHER, dc.getDirectoryErrorInfo(dirB).cause);
+
     permDirB = new FsPermission((short) 0700);
     localFs.setPermission(pathB, permDirB);
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
   }
 
   @Test

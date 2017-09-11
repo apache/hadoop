@@ -19,7 +19,8 @@
 package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.IOException;
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,8 +29,9 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-public class TestFileOutputFormat extends TestCase {
+public class TestFileOutputFormat {
 
+  @Test
   public void testSetOutputPathException() throws Exception {
     Job job = Job.getInstance();
     try {
@@ -42,6 +44,7 @@ public class TestFileOutputFormat extends TestCase {
     }
   }
 
+  @Test
   public void testCheckOutputSpecsException() throws Exception {
     Job job = Job.getInstance();
     Path outDir = new Path(System.getProperty("test.build.data", "/tmp"),

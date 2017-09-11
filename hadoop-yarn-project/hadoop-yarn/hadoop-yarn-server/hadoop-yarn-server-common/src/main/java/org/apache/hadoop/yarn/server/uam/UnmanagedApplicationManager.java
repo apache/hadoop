@@ -83,7 +83,7 @@ public class UnmanagedApplicationManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(UnmanagedApplicationManager.class);
   private static final long AM_STATE_WAIT_TIMEOUT_MS = 10000;
-  private static final String APP_NAME = "UnmanagedAM";
+  public static final String APP_NAME = "UnmanagedAM";
   private static final String DEFAULT_QUEUE_CONFIG = "uam.default.queue.name";
 
   private BlockingQueue<AsyncAllocateRequestInfo> requestQueue;

@@ -1309,15 +1309,132 @@
 </property>
 
 <property>
+    <name>fs.s3a.metadatastore.authoritative</name>
+    <value>false</value>
+    <description>
+        When true, allow MetadataStore implementations to act as source of
+        truth for getting file status and directory listings.  Even if this
+        is set to true, MetadataStore implementations may choose not to
+        return authoritative results.  If the configured MetadataStore does
+        not support being authoritative, this setting will have no effect.
+    </description>
+</property>
+
+<property>
+    <name>fs.s3a.metadatastore.impl</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+    <description>
+        Fully-qualified name of the class that implements the MetadataStore
+        to be used by s3a.  The default class, NullMetadataStore, has no
+        effect: s3a will continue to treat the backing S3 service as the one
+        and only source of truth for file and directory metadata.
+    </description>
+</property>
+
+<property>
+    <name>fs.s3a.s3guard.cli.prune.age</name>
+    <value>86400000</value>
+    <description>
+        Default age (in milliseconds) after which to prune metadata from the
+        metadatastore when the prune command is run.  Can be overridden on the
+        command-line.
+    </description>
+</property>
+
+
+<property>
   <name>fs.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
   <description>The implementation class of the S3A Filesystem</description>
 </property>
 
 <property>
+  <name>fs.s3a.s3guard.ddb.region</name>
+  <value></value>
+  <description>
+    AWS DynamoDB region to connect to. An up-to-date list is
+    provided in the AWS Documentation: regions and endpoints. Without this
+    property, the S3Guard will operate table in the associated S3 bucket region.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table</name>
+  <value></value>
+  <description>
+    The DynamoDB table name to operate. Without this property, the respective
+    S3 bucket name will be used.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.create</name>
+  <value>false</value>
+  <description>
+    If true, the S3A client will create the table if it does not already exist.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
+  <value>500</value>
+  <description>
+    Provisioned throughput requirements for read operations in terms of capacity
+    units for the DynamoDB table.  This config value will only be used when
+    creating a new DynamoDB table, though later you can manually provision by
+    increasing or decreasing read capacity as needed for existing tables.
+    See DynamoDB documents for more information.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
+  <value>100</value>
+  <description>
+    Provisioned throughput requirements for write operations in terms of
+    capacity units for the DynamoDB table.  Refer to related config
+    fs.s3a.s3guard.ddb.table.capacity.read before usage.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.max.retries</name>
+  <value>9</value>
+    <description>
+      Max retries on batched DynamoDB operations before giving up and
+      throwing an IOException.  Each retry is delayed with an exponential
+      backoff timer which starts at 100 milliseconds and approximately
+      doubles each time.  The minimum wait before throwing an exception is
+      sum(100, 200, 400, 800, .. 100*2^N-1 ) == 100 * ((2^N)-1)
+      So N = 9 yields at least 51.1 seconds (51,100) milliseconds of blocking
+      before throwing an IOException.
+    </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.background.sleep</name>
+  <value>25</value>
+  <description>
+    Length (in milliseconds) of pause between each batch of deletes when
+    pruning metadata.  Prevents prune operations (which can typically be low
+    priority background operations) from overly interfering with other I/O
+    operations.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3A</value>
   <description>The implementation class of the S3A AbstractFileSystem.</description>
+</property>
+
+<property>
+  <name>fs.s3a.list.version</name>
+  <value>2</value>
+  <description>
+    Select which version of the S3 SDK's List Objects API to use.  Currently
+    support 2 (default) and 1 (older API).
+  </description>
 </property>
 
 <!-- Azure file system properties -->
@@ -1380,7 +1497,15 @@
     This flag is relevant only when fs.azure.authorization is enabled.
   </description>
 </property>
-
+<property>
+  <name>fs.azure.saskey.usecontainersaskeyforallaccess</name>
+  <value>true</value>
+  <description>
+    Use container saskey for access to all blobs within the container.
+    Blob-specific saskeys are not used when this setting is enabled.
+    This setting provides better performance compared to blob-specific saskeys.
+  </description>
+</property>
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
@@ -2586,11 +2711,15 @@
     <value>ClientCredential</value>
     <description>
       Defines Azure Active Directory OAuth2 access token provider type.
-      Supported types are ClientCredential, RefreshToken, and Custom.
+      Supported types are ClientCredential, RefreshToken, MSI, DeviceCode,
+      and Custom.
       The ClientCredential type requires property fs.adl.oauth2.client.id,
       fs.adl.oauth2.credential, and fs.adl.oauth2.refresh.url.
       The RefreshToken type requires property fs.adl.oauth2.client.id and
       fs.adl.oauth2.refresh.token.
+      The MSI type reads optional property fs.adl.oauth2.msi.port, if specified.
+      The DeviceCode type requires property
+      fs.adl.oauth2.devicecode.clientapp.id.
       The Custom type requires property fs.adl.oauth2.access.token.provider.
     </description>
   </property>
@@ -2624,6 +2753,27 @@
     <value></value>
     <description>
       The class name of the OAuth2 access token provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.msi.port</name>
+    <value></value>
+    <description>
+      The localhost port for the MSI token service. This is the port specified
+      when creating the Azure VM. The default, if this setting is not specified,
+      is 50342.
+      Used by MSI token provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.devicecode.clientapp.id</name>
+    <value></value>
+    <description>
+      The app id of the AAD native app in whose context the auth request
+      should be made.
+      Used by DeviceCode token provider.
     </description>
   </property>
 
@@ -2674,5 +2824,51 @@
       files using SequenceFile.Sorter.
       This determines the number of open file handles.
     </description>
+  </property>
+
+  <property>
+    <description>Host:Port of the ZooKeeper server to be used.
+    </description>
+    <name>hadoop.zk.address</name>
+    <!--value>127.0.0.1:2181</value-->
+  </property>
+
+  <property>
+    <description>Number of tries to connect to ZooKeeper.</description>
+    <name>hadoop.zk.num-retries</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>Retry interval in milliseconds when connecting to ZooKeeper.
+    </description>
+    <name>hadoop.zk.retry-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>ZooKeeper session timeout in milliseconds. Session expiration
+    is managed by the ZooKeeper cluster itself, not by the client. This value is
+    used by the cluster to determine when the client's session expires.
+    Expirations happens when the cluster does not hear from the client within
+    the specified session timeout period (i.e. no heartbeat).</description>
+    <name>hadoop.zk.timeout-ms</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>ACL's to be used for ZooKeeper znodes.</description>
+    <name>hadoop.zk.acl</name>
+    <value>world:anyone:rwcda</value>
+  </property>
+
+  <property>
+    <description>
+        Specify the auths to be used for the ACL's specified in hadoop.zk.acl.
+        This takes a comma-separated list of authentication mechanisms, each of the
+        form 'scheme:auth' (the same syntax used for the 'addAuth' command in
+        the ZK CLI).
+    </description>
+    <name>hadoop.zk.auth</name>
   </property>
 </configuration>

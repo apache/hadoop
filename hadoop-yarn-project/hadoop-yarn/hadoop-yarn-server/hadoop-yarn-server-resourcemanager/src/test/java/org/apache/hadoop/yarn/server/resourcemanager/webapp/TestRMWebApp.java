@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -103,8 +102,6 @@ public class TestRMWebApp {
         try {
           ResourceManager mockRm = mockRm(3, 1, 2, 8*GiB);
           binder.bind(ResourceManager.class).toInstance(mockRm);
-          binder.bind(ApplicationBaseProtocol.class)
-              .toInstance(mockRm.getClientRMService());
         } catch (IOException e) {
           throw new IllegalStateException(e);
         }

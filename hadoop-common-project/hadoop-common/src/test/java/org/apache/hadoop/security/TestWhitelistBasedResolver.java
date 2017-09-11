@@ -21,17 +21,18 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.WhitelistBasedResolver;
 import org.apache.hadoop.util.TestFileBasedIPList;
 
-public class TestWhitelistBasedResolver extends TestCase {
+public class TestWhitelistBasedResolver {
 
   public static final Map<String, String> SASL_PRIVACY_PROPS =
     WhitelistBasedResolver.getSaslProperties(new Configuration());
 
+  @Test
   public void testFixedVariableAndLocalWhiteList() throws IOException {
 
     String[] fixedIps = {"10.119.103.112", "10.221.102.0/23"};
@@ -79,6 +80,7 @@ public class TestWhitelistBasedResolver extends TestCase {
    * Check  for inclusion in whitelist
    * Check for exclusion from whitelist
    */
+  @Test
   public void testFixedAndLocalWhiteList() throws IOException {
 
     String[] fixedIps = {"10.119.103.112", "10.221.102.0/23"};
@@ -128,6 +130,7 @@ public class TestWhitelistBasedResolver extends TestCase {
    * Add a bunch of subnets and IPSs to the whitelist
    * Check  for inclusion in whitelist with a null value
    */
+  @Test
   public void testNullIPAddress() throws IOException {
 
     String[] fixedIps = {"10.119.103.112", "10.221.102.0/23"};

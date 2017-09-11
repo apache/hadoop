@@ -54,6 +54,13 @@ public final class AdlConfKeys {
   public static final String TOKEN_PROVIDER_TYPE_CLIENT_CRED =
       "ClientCredential";
 
+  // MSI Auth Configuration
+  public static final String MSI_PORT = "fs.adl.oauth2.msi.port";
+
+  // DeviceCode Auth configuration
+  public static final String DEVICE_CODE_CLIENT_APP_ID =
+      "fs.adl.oauth2.devicecode.clientapp.id";
+
   public static final String READ_AHEAD_BUFFER_SIZE_KEY =
       "adl.feature.client.cache.readahead";
 

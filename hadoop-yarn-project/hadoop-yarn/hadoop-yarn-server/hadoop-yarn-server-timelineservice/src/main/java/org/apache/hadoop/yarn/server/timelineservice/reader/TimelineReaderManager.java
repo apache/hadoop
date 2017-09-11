@@ -32,8 +32,6 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * This class wraps over the timeline reader store implementation. It does some
  * non trivial manipulation of the timeline data before or after getting
@@ -43,8 +41,6 @@ import com.google.common.annotations.VisibleForTesting;
 @Unstable
 public class TimelineReaderManager extends AbstractService {
 
-  @VisibleForTesting
-  public static final String UID_KEY = "UID";
   private TimelineReader reader;
 
   public TimelineReaderManager(TimelineReader timelineReader) {
@@ -94,18 +90,18 @@ public class TimelineReaderManager extends AbstractService {
         FlowActivityEntity activityEntity = (FlowActivityEntity)entity;
         context.setUserId(activityEntity.getUser());
         context.setFlowName(activityEntity.getFlowName());
-        entity.setUID(UID_KEY,
+        entity.setUID(TimelineReaderUtils.UID_KEY,
             TimelineUIDConverter.FLOW_UID.encodeUID(context));
         return;
       case YARN_FLOW_RUN:
         FlowRunEntity runEntity = (FlowRunEntity)entity;
         context.setFlowRunId(runEntity.getRunId());
-        entity.setUID(UID_KEY,
+        entity.setUID(TimelineReaderUtils.UID_KEY,
             TimelineUIDConverter.FLOWRUN_UID.encodeUID(context));
         return;
       case YARN_APPLICATION:
         context.setAppId(entity.getId());
-        entity.setUID(UID_KEY,
+        entity.setUID(TimelineReaderUtils.UID_KEY,
             TimelineUIDConverter.APPLICATION_UID.encodeUID(context));
         return;
       default:
@@ -113,9 +109,15 @@ public class TimelineReaderManager extends AbstractService {
       }
     }
     context.setEntityType(entity.getType());
+    context.setEntityIdPrefix(entity.getIdPrefix());
     context.setEntityId(entity.getId());
-    entity.setUID(UID_KEY,
-        TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context));
+    if (context.getDoAsUser() != null) {
+      entity.setUID(TimelineReaderUtils.UID_KEY,
+          TimelineUIDConverter.SUB_APPLICATION_ENTITY_UID.encodeUID(context));
+    } else {
+      entity.setUID(TimelineReaderUtils.UID_KEY,
+          TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context));
+    }
   }
 
   /**
@@ -175,5 +177,25 @@ public class TimelineReaderManager extends AbstractService {
       fillUID(type, entity, context);
     }
     return entity;
+  }
+
+  /**
+   * Gets a list of available timeline entity types for an application. This can
+   * be done by making a call to the backend storage implementation. The meaning
+   * of each argument in detail is the same as {@link TimelineReader#getEntity}.
+   * If cluster ID has not been supplied by the client, fills the cluster id
+   * from config before making a call to backend storage.
+   *
+   * @param context Timeline context within the scope of which entity types
+   *                have to be fetched. Entity type field of this context should
+   *                be null.
+   * @return A set which contains available timeline entity types, represented
+   * as strings if found, empty otherwise.
+   * @throws IOException  if any problem occurs while getting entity types.
+   */
+  public Set<String> getEntityTypes(TimelineReaderContext context)
+      throws IOException{
+    context.setClusterId(getClusterID(context.getClusterId(), getConfig()));
+    return reader.getEntityTypes(new TimelineReaderContext(context));
   }
 }

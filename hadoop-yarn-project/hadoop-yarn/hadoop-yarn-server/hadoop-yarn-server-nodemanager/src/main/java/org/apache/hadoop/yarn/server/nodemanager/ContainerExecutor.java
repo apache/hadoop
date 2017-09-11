@@ -35,11 +35,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
@@ -68,7 +69,8 @@ import org.apache.hadoop.util.StringUtils;
  * underlying OS.  All executor implementations must extend ContainerExecutor.
  */
 public abstract class ContainerExecutor implements Configurable {
-  private static final Log LOG = LogFactory.getLog(ContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerExecutor.class);
   protected static final String WILDCARD = "*";
 
   /**
@@ -335,6 +337,9 @@ public abstract class ContainerExecutor implements Configurable {
     for (String param : nmWhiteList) {
       whitelist.add(param);
     }
+
+    // Add "set -o pipefail -e" to validate launch_container script.
+    sb.setExitOnFailure();
 
     if (environment != null) {
       for (Map.Entry<String, String> env : environment.entrySet()) {
@@ -659,7 +664,8 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   // LinuxContainerExecutor overrides this method and behaves differently.
-  public String[] getIpAndHost(Container container) {
+  public String[] getIpAndHost(Container container)
+      throws ContainerExecutionException {
     return getLocalIpAndHost(container);
   }
 

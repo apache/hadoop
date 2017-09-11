@@ -20,7 +20,8 @@ package org.apache.hadoop.mapred.nativetask.serde;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.nativetask.Constants;
@@ -30,12 +31,11 @@ import org.apache.hadoop.mapred.nativetask.testutil.TestInput;
 import org.apache.hadoop.mapred.nativetask.testutil.TestInput.KV;
 import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
 import org.junit.Assert;
-import org.junit.Before;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-public class TestKVSerializer extends TestCase {
+public class TestKVSerializer {
 
   int inputArraySize = 1000; // 1000 bytesWriable elements
   int bufferSize = 100; // bytes
@@ -46,7 +46,6 @@ public class TestKVSerializer extends TestCase {
   private SizedWritable value;
   private KVSerializer serializer;
 
-  @Override
   @Before
   public void setUp() throws IOException {
     this.inputArray = TestInput.getMapInputs(inputArraySize);
@@ -60,6 +59,7 @@ public class TestKVSerializer extends TestCase {
     serializer.updateLength(key, value);
   }
 
+  @Test
   public void testUpdateLength() throws IOException {
     Mockito.mock(DataOutputStream.class);
 
@@ -75,6 +75,7 @@ public class TestKVSerializer extends TestCase {
     }
   }
 
+  @Test
   public void testSerializeKV() throws IOException {
     final DataOutputStream dataOut = Mockito.mock(DataOutputStream.class);
 
@@ -92,6 +93,7 @@ public class TestKVSerializer extends TestCase {
     Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
   }
 
+  @Test
   public void testSerializeNoFlush() throws IOException {
     final DataOutputStream dataOut = Mockito.mock(DataOutputStream.class);
 
@@ -109,6 +111,7 @@ public class TestKVSerializer extends TestCase {
     Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
   }
 
+  @Test
   public void testSerializePartitionKV() throws IOException {
     final DataOutputStream dataOut = Mockito.mock(DataOutputStream.class);
 
@@ -130,12 +133,14 @@ public class TestKVSerializer extends TestCase {
         + Constants.SIZEOF_PARTITION_LENGTH);
   }
 
+  @Test
   public void testDeserializerNoData() throws IOException {
     final DataInputStream in = Mockito.mock(DataInputStream.class);
     Mockito.when(in.hasUnReadData()).thenReturn(false);
     Assert.assertEquals(0, serializer.deserializeKV(in, key, value));
   }
 
+  @Test
   public void testDeserializer() throws IOException {
     final DataInputStream in = Mockito.mock(DataInputStream.class);
     Mockito.when(in.hasUnReadData()).thenReturn(true);

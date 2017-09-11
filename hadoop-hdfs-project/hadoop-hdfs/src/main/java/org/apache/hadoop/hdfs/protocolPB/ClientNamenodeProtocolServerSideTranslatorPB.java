@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.ModifyAclEntriesRequestProto;
@@ -124,12 +124,12 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFil
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingRequestProto;
@@ -222,8 +222,12 @@ import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathR
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListReencryptionStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListReencryptionStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptEncryptionZoneRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptEncryptionZoneResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyRequestProto;
@@ -759,22 +763,22 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetFsBlocksStatsResponseProto getFsBlocksStats(
-      RpcController controller, GetFsBlocksStatsRequestProto request)
+  public GetFsReplicatedBlockStatsResponseProto getFsReplicatedBlockStats(
+      RpcController controller, GetFsReplicatedBlockStatsRequestProto request)
       throws ServiceException {
     try {
-      return PBHelperClient.convert(server.getBlocksStats());
+      return PBHelperClient.convert(server.getReplicatedBlockStats());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 
   @Override
-  public GetFsECBlockGroupsStatsResponseProto getFsECBlockGroupsStats(
-      RpcController controller, GetFsECBlockGroupsStatsRequestProto request)
+  public GetFsECBlockGroupStatsResponseProto getFsECBlockGroupStats(
+      RpcController controller, GetFsECBlockGroupStatsRequestProto request)
       throws ServiceException {
     try {
-      return PBHelperClient.convert(server.getECBlockGroupsStats());
+      return PBHelperClient.convert(server.getECBlockGroupStats());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1484,6 +1488,37 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
+  public ReencryptEncryptionZoneResponseProto reencryptEncryptionZone(
+      RpcController controller, ReencryptEncryptionZoneRequestProto req)
+      throws ServiceException {
+    try {
+      server.reencryptEncryptionZone(req.getZone(),
+          PBHelperClient.convert(req.getAction()));
+      return ReencryptEncryptionZoneResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  public ListReencryptionStatusResponseProto listReencryptionStatus(
+      RpcController controller, ListReencryptionStatusRequestProto req)
+      throws ServiceException {
+    try {
+      BatchedEntries<ZoneReencryptionStatus> entries = server
+          .listReencryptionStatus(req.getId());
+      ListReencryptionStatusResponseProto.Builder builder =
+          ListReencryptionStatusResponseProto.newBuilder();
+      builder.setHasMore(entries.hasMore());
+      for (int i=0; i<entries.size(); i++) {
+        builder.addStatuses(PBHelperClient.convert(entries.get(i)));
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
   public SetErasureCodingPolicyResponseProto setErasureCodingPolicy(
       RpcController controller, SetErasureCodingPolicyRequestProto req)
       throws ServiceException {
@@ -1664,7 +1699,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetErasureCodingCodecsRequestProto request)
       throws ServiceException {
     try {
-      HashMap<String, String> codecs = server.getErasureCodingCodecs();
+      Map<String, String> codecs = server.getErasureCodingCodecs();
       GetErasureCodingCodecsResponseProto.Builder resBuilder =
           GetErasureCodingCodecsResponseProto.newBuilder();
       for (Map.Entry<String, String> codec : codecs.entrySet()) {

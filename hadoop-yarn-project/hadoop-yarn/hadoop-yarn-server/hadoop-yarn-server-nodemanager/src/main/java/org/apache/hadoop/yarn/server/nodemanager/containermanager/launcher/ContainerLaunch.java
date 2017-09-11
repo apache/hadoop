@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -36,8 +38,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -89,7 +89,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class ContainerLaunch implements Callable<Integer> {
 
-  private static final Log LOG = LogFactory.getLog(ContainerLaunch.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ContainerLaunch.class);
 
   public static final String CONTAINER_SCRIPT =
     Shell.appendScriptExtension("launch_container");
@@ -269,7 +270,8 @@ public class ContainerLaunch implements Callable<Integer> {
         creds.writeTokenStorageToStream(tokensOutStream);
         // /////////// End of writing out container-tokens
       } finally {
-        IOUtils.cleanup(LOG, containerScriptOutStream, tokensOutStream);
+        IOUtils.cleanupWithLogger(LOG, containerScriptOutStream,
+            tokensOutStream);
       }
 
       ret = launchContainer(new ContainerStartContext.Builder()
@@ -518,7 +520,7 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked")
   protected void handleContainerExitWithFailure(ContainerId containerID,
       int ret, Path containerLogDir, StringBuilder diagnosticInfo) {
-    LOG.warn(diagnosticInfo);
+    LOG.warn(diagnosticInfo.toString());
 
     String errorFileNamePattern =
         conf.get(YarnConfiguration.NM_CONTAINER_STDERR_PATTERN,
@@ -562,20 +564,45 @@ public class ContainerLaunch implements Callable<Integer> {
         errorFileIS = fileSystem.open(errorFile);
         errorFileIS.readFully(startPosition, tailBuffer);
 
+        String tailBufferMsg = new String(tailBuffer, StandardCharsets.UTF_8);
         diagnosticInfo.append("Last ").append(tailSizeInBytes)
             .append(" bytes of ").append(errorFile.getName()).append(" :\n")
-            .append(new String(tailBuffer, StandardCharsets.UTF_8));
+            .append(tailBufferMsg).append("\n")
+            .append(analysesErrorMsgOfContainerExitWithFailure(tailBufferMsg));
       }
     } catch (IOException e) {
       LOG.error("Failed to get tail of the container's error log file", e);
     } finally {
-      IOUtils.cleanup(LOG, errorFileIS);
+      IOUtils.cleanupWithLogger(LOG, errorFileIS);
     }
 
     this.dispatcher.getEventHandler()
         .handle(new ContainerExitEvent(containerID,
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
             diagnosticInfo.toString()));
+  }
+
+  private String analysesErrorMsgOfContainerExitWithFailure(String errorMsg) {
+    StringBuilder analysis = new StringBuilder();
+    if (errorMsg.indexOf("Error: Could not find or load main class"
+        + " org.apache.hadoop.mapreduce") != -1) {
+      analysis.append("Please check whether your etc/hadoop/mapred-site.xml "
+          + "contains the below configuration:\n");
+      analysis.append("<property>\n")
+          .append("  <name>yarn.app.mapreduce.am.env</name>\n")
+          .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
+              + "distribution directory}</value>\n")
+          .append("</property>\n<property>\n")
+          .append("  <name>mapreduce.map.env</name>\n")
+          .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
+              + "distribution directory}</value>\n")
+          .append("</property>\n<property>\n")
+          .append("  <name>mapreduce.reduce.e nv</name>\n")
+          .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
+              + "distribution directory}</value>\n")
+          .append("</property>\n");
+    }
+    return analysis.toString();
   }
 
   protected String getPidFileSubpath(String appIdStr, String containerIdStr) {
@@ -904,6 +931,10 @@ public class ContainerLaunch implements Callable<Integer> {
       sb.append(LINE_SEPARATOR);
     }
 
+    public void setExitOnFailure() {
+      // Dummy implementation
+    }
+
     protected abstract void link(Path src, Path dst) throws IOException;
 
     protected abstract void mkdir(Path path) throws IOException;
@@ -980,6 +1011,11 @@ public class ContainerLaunch implements Callable<Integer> {
       line("echo \"broken symlinks(find -L . -maxdepth 5 -type l -ls):\" 1>>\"",
           output.toString(), "\"");
       line("find -L . -maxdepth 5 -type l -ls 1>>\"", output.toString(), "\"");
+    }
+
+    @Override
+    public void setExitOnFailure() {
+      line("set -o pipefail -e");
     }
   }
 

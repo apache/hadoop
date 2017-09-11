@@ -20,11 +20,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.0.0-beta1-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-hdfs</artifactId>
-  <version>3.0.0-beta1-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <description>Apache Hadoop HDFS</description>
   <name>Apache Hadoop HDFS</name>
   <packaging>jar</packaging>
@@ -171,11 +171,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>xerces</groupId>
-      <artifactId>xercesImpl</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

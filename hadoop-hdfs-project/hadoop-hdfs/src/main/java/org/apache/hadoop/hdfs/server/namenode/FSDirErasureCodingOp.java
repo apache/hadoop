@@ -17,6 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.erasurecode.CodecRegistry;
+import org.apache.hadoop.security.AccessControlException;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -25,27 +41,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-
-import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.XAttr;
-import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.IllegalECPolicyException;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.erasurecode.CodecRegistry;
-import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_ERASURECODING_POLICY;
 
@@ -62,7 +60,7 @@ final class FSDirErasureCodingOp {
 
   /**
    * Check if the ecPolicyName is valid and enabled, return the corresponding
-   * EC policy if is.
+   * EC policy if is, including the REPLICATION EC policy.
    * @param fsn namespace
    * @param ecPolicyName name of EC policy to be checked
    * @return an erasure coding policy if ecPolicyName is valid and enabled
@@ -213,7 +211,7 @@ final class FSDirErasureCodingOp {
   }
 
   static ErasureCodingPolicy addErasureCodePolicy(final FSNamesystem fsn,
-      ErasureCodingPolicy policy) throws IllegalECPolicyException {
+      ErasureCodingPolicy policy) {
     Preconditions.checkNotNull(policy);
     return fsn.getErasureCodingPolicyManager().addPolicy(policy);
   }
@@ -295,7 +293,12 @@ final class FSDirErasureCodingOp {
     if (iip.getLastINode() == null) {
       throw new FileNotFoundException("Path not found: " + iip.getPath());
     }
-    return getErasureCodingPolicyForPath(fsd, iip);
+
+    ErasureCodingPolicy ecPolicy = getErasureCodingPolicyForPath(fsd, iip);
+    if (ecPolicy != null && ecPolicy.isReplicationPolicy()) {
+      ecPolicy = null;
+    }
+    return ecPolicy;
   }
 
   /**
@@ -312,7 +315,8 @@ final class FSDirErasureCodingOp {
   }
 
   /**
-   * Get the erasure coding policy. This does not do any permission checking.
+   * Get the erasure coding policy, including the REPLICATION policy. This does
+   * not do any permission checking.
    *
    * @param fsn namespace
    * @param iip inodes in the path containing the file
@@ -335,7 +339,7 @@ final class FSDirErasureCodingOp {
   static ErasureCodingPolicy[] getErasureCodingPolicies(final FSNamesystem fsn)
       throws IOException {
     assert fsn.hasReadLock();
-    return fsn.getErasureCodingPolicyManager().getEnabledPolicies();
+    return fsn.getErasureCodingPolicyManager().getPolicies();
   }
 
   /**
@@ -344,12 +348,13 @@ final class FSDirErasureCodingOp {
    * @param fsn namespace
    * @return {@link java.util.HashMap} array
    */
-  static HashMap<String, String> getErasureCodingCodecs(final FSNamesystem fsn)
+  static Map<String, String> getErasureCodingCodecs(final FSNamesystem fsn)
       throws IOException {
     assert fsn.hasReadLock();
     return CodecRegistry.getInstance().getCodec2CoderCompactMap();
   }
 
+  //return erasure coding policy for path, including REPLICATION policy
   private static ErasureCodingPolicy getErasureCodingPolicyForPath(
       FSDirectory fsd, INodesInPath iip) throws IOException {
     Preconditions.checkNotNull(iip, "INodes cannot be null");

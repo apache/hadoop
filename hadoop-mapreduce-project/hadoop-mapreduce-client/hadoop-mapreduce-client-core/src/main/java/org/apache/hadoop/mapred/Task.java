@@ -887,7 +887,7 @@ abstract public class Task implements Writable, Configurable {
     }
     public void stopCommunicationThread() throws InterruptedException {
       if (pingThread != null) {
-        // Intent of the lock is to not send an interupt in the middle of an
+        // Intent of the lock is to not send an interrupt in the middle of an
         // umbilical.ping or umbilical.statusUpdate
         synchronized(lock) {
         //Interrupt if sleeping. Otherwise wait for the RPC call to return.

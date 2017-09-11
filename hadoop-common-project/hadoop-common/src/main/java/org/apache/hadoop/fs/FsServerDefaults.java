@@ -63,6 +63,15 @@ public class FsServerDefaults implements Writable {
   public FsServerDefaults(long blockSize, int bytesPerChecksum,
       int writePacketSize, short replication, int fileBufferSize,
       boolean encryptDataTransfer, long trashInterval,
+      DataChecksum.Type checksumType) {
+    this(blockSize, bytesPerChecksum, writePacketSize, replication,
+        fileBufferSize, encryptDataTransfer, trashInterval, checksumType,
+        null, (byte) 0);
+  }
+
+  public FsServerDefaults(long blockSize, int bytesPerChecksum,
+      int writePacketSize, short replication, int fileBufferSize,
+      boolean encryptDataTransfer, long trashInterval,
       DataChecksum.Type checksumType, String keyProviderUri) {
     this(blockSize, bytesPerChecksum, writePacketSize, replication,
         fileBufferSize, encryptDataTransfer, trashInterval, checksumType,

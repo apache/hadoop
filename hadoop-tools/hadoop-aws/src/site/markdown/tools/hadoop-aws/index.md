@@ -46,6 +46,7 @@ See also:
 
 * [Testing](testing.html)
 * [Troubleshooting S3a](troubleshooting_s3a.html)
+* [S3Guard](s3guard.html)
 
 ### Warning #1: Object Stores are not filesystems
 
@@ -894,6 +895,15 @@ from placing its declaration on the command line.
       any call to setReadahead() is made to an open stream.</description>
     </property>
 
+    <property>
+      <name>fs.s3a.list.version</name>
+      <value>2</value>
+      <description>
+        Select which version of the S3 SDK's List Objects API to use.  Currently
+        support 2 (default) and 1 (older API).
+      </description>
+    </property>
+
 ### Configuring different S3 buckets
 
 Different S3 buckets can be accessed with different S3A client configurations.
@@ -1552,7 +1562,7 @@ for `fs.s3a.server-side-encryption-algorithm` is `AES256`.
 
 SSE-KMS is where the user specifies a Customer Master Key(CMK) that is used to
 encrypt the objects. The user may specify a specific CMK or leave the
-`fs.s3a.server-side-encryption-key` empty to use the default auto-generated key
+`fs.s3a.server-side-encryption.key` empty to use the default auto-generated key
 in AWS IAM.  Each CMK configured in AWS IAM is region specific, and cannot be
 used in a in a S3 bucket in a different region.  There is can also be policies
 assigned to the CMK that prohibit or restrict its use for users causing S3A

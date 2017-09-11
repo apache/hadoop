@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +32,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -48,8 +48,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
-  private static final Log LOG =
-      LogFactory.getLog(DefaultLinuxContainerRuntime.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultLinuxContainerRuntime.class);
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
   private Configuration conf;
 

@@ -98,4 +98,5 @@ public class TestGetFileStatus extends AdlMockWebServer {
     Assert.assertFalse(fileStatus.hasAcl());
     Assert.assertFalse(fileStatus.getPermission().getAclBit());
   }
+
 }

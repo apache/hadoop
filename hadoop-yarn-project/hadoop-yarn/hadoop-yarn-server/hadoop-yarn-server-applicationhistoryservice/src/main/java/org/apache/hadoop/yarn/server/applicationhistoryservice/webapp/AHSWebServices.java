@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -54,8 +55,9 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
-import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
@@ -92,12 +94,14 @@ public class AHSWebServices extends WebServices {
   private static final Joiner JOINER = Joiner.on("");
   private static final Joiner DOT_JOINER = Joiner.on(". ");
   private final Configuration conf;
+  private final LogAggregationFileControllerFactory factory;
 
   @Inject
   public AHSWebServices(ApplicationBaseProtocol appBaseProt,
       Configuration conf) {
     super(appBaseProt);
     this.conf = conf;
+    this.factory = new LogAggregationFileControllerFactory(conf);
   }
 
   @GET
@@ -525,9 +529,17 @@ public class AHSWebServices extends WebServices {
       @Override
       public void write(OutputStream os) throws IOException,
           WebApplicationException {
-        byte[] buf = new byte[65535];
-        boolean findLogs = LogToolUtils.outputAggregatedContainerLog(conf,
-            appId, appOwner, containerIdStr, nodeId, logFile, bytes, os, buf);
+        ContainerLogsRequest request = new ContainerLogsRequest();
+        request.setAppId(appId);
+        request.setAppOwner(appOwner);
+        request.setContainerId(containerIdStr);
+        request.setBytes(bytes);
+        request.setNodeId(nodeId);
+        Set<String> logTypes = new HashSet<>();
+        logTypes.add(logFile);
+        request.setLogTypes(logTypes);
+        boolean findLogs = factory.getFileControllerForRead(appId, appOwner)
+            .readAggregatedLogs(request, os);
         if (!findLogs) {
           os.write(("Can not find logs for container:"
               + containerIdStr).getBytes(Charset.forName("UTF-8")));
@@ -558,9 +570,14 @@ public class AHSWebServices extends WebServices {
       final String nodeId, final String containerIdStr,
       boolean emptyLocalContainerLogMeta) {
     try {
-      List<ContainerLogMeta> containerLogMeta = LogToolUtils
-          .getContainerLogMetaFromRemoteFS(conf, appId, containerIdStr,
-              nodeId, appOwner);
+      ContainerLogsRequest request = new ContainerLogsRequest();
+      request.setAppId(appId);
+      request.setAppOwner(appOwner);
+      request.setContainerId(containerIdStr);
+      request.setNodeId(nodeId);
+      List<ContainerLogMeta> containerLogMeta = factory
+          .getFileControllerForRead(appId, appOwner)
+          .readAggregatedLogsMeta(request);
       if (containerLogMeta.isEmpty()) {
         throw new NotFoundException(
             "Can not get log meta for container: " + containerIdStr);

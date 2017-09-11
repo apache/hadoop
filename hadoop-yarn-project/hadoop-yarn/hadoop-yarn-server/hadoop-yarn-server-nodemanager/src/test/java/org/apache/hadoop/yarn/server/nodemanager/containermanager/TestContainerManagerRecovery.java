@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -90,6 +91,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -108,6 +110,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerIn
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -400,9 +403,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     NMStateStoreService stateStore = new NMMemoryStateStoreService();
     stateStore.init(conf);
     stateStore.start();
-    Context context = createContext(conf, stateStore);
+    context = createContext(conf, stateStore);
     ContainerManagerImpl cm = createContainerManager(context, delSrvc);
-    cm.dispatcher.disableExitOnDispatchException();
     cm.init(conf);
     cm.start();
     // add an application by starting a container
@@ -410,55 +412,12 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId cid = ContainerId.newContainerId(attemptId, 1);
-    Map<String, String> containerEnv = new HashMap<>();
-    setFlowContext(containerEnv, "app_name1", appId);
-    Map<String, ByteBuffer> serviceData = Collections.emptyMap();
-    Credentials containerCreds = new Credentials();
-    DataOutputBuffer dob = new DataOutputBuffer();
-    containerCreds.writeTokenStorageToStream(dob);
-    ByteBuffer containerTokens = ByteBuffer.wrap(dob.getData(), 0,
-        dob.getLength());
-    Map<ApplicationAccessType, String> acls = Collections.emptyMap();
-    File tmpDir = new File("target",
-        this.getClass().getSimpleName() + "-tmpDir");
-    File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
-    PrintWriter fileWriter = new PrintWriter(scriptFile);
-    if (Shell.WINDOWS) {
-      fileWriter.println("@ping -n 100 127.0.0.1 >nul");
-    } else {
-      fileWriter.write("\numask 0");
-      fileWriter.write("\nexec sleep 100");
-    }
-    fileWriter.close();
-    FileContext localFS = FileContext.getLocalFSFileContext();
-    URL resource_alpha =
-        URL.fromPath(localFS
-            .makeQualified(new Path(scriptFile.getAbsolutePath())));
-    LocalResource rsrc_alpha = RecordFactoryProvider
-        .getRecordFactory(null).newRecordInstance(LocalResource.class);
-    rsrc_alpha.setResource(resource_alpha);
-    rsrc_alpha.setSize(-1);
-    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
-    rsrc_alpha.setType(LocalResourceType.FILE);
-    rsrc_alpha.setTimestamp(scriptFile.lastModified());
-    String destinationFile = "dest_file";
-    Map<String, LocalResource> localResources = new HashMap<>();
-    localResources.put(destinationFile, rsrc_alpha);
-    List<String> commands =
-        Arrays.asList(Shell.getRunScriptCommand(scriptFile));
-    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
-        localResources, containerEnv, commands, serviceData,
-        containerTokens, acls);
-    StartContainersResponse startResponse = startContainer(
-        context, cm, cid, clc, null);
-    assertTrue(startResponse.getFailedRequests().isEmpty());
-    assertEquals(1, context.getApplications().size());
+
+    commonLaunchContainer(appId, cid, cm);
+
     Application app = context.getApplications().get(appId);
     assertNotNull(app);
-    // make sure the container reaches RUNNING state
-    waitForNMContainerState(cm, cid,
-        org.apache.hadoop.yarn.server.nodemanager
-            .containermanager.container.ContainerState.RUNNING);
+
     Resource targetResource = Resource.newInstance(2048, 2);
     ContainerUpdateResponse updateResponse =
         updateContainers(context, cm, cid, targetResource);
@@ -478,6 +437,58 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertNotNull(app);
     containerStatus = getContainerStatus(context, cm, cid);
     assertEquals(targetResource, containerStatus.getCapability());
+  }
+
+  @Test
+  public void testResourceMappingRecoveryForContainer() throws Exception {
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_SUPERVISED, true);
+    NMStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+    context = createContext(conf, stateStore);
+    ContainerManagerImpl cm = createContainerManager(context, delSrvc);
+    cm.init(conf);
+    cm.start();
+
+    // add an application by starting a container
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId attemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 1);
+
+    commonLaunchContainer(appId, cid, cm);
+
+    Application app = context.getApplications().get(appId);
+    assertNotNull(app);
+
+    // store resource mapping of the container
+    List<Serializable> gpuResources = Arrays.asList("1", "2", "3");
+    stateStore.storeAssignedResources(cid, "gpu", gpuResources);
+    List<Serializable> numaResources = Arrays.asList("numa1");
+    stateStore.storeAssignedResources(cid, "numa", numaResources);
+    List<Serializable> fpgaResources = Arrays.asList("fpga1", "fpga2");
+    stateStore.storeAssignedResources(cid, "fpga", fpgaResources);
+
+    cm.stop();
+    context = createContext(conf, stateStore);
+    cm = createContainerManager(context);
+    cm.init(conf);
+    cm.start();
+    assertEquals(1, context.getApplications().size());
+    app = context.getApplications().get(appId);
+    assertNotNull(app);
+
+    Container nmContainer = context.getContainers().get(cid);
+    Assert.assertNotNull(nmContainer);
+    ResourceMappings resourceMappings = nmContainer.getResourceMappings();
+    List<Serializable> assignedResource = resourceMappings
+        .getAssignedResources("gpu");
+    Assert.assertTrue(assignedResource.equals(gpuResources));
+    Assert.assertTrue(
+        resourceMappings.getAssignedResources("numa").equals(numaResources));
+    Assert.assertTrue(
+        resourceMappings.getAssignedResources("fpga").equals(fpgaResources));
   }
 
   @Test
@@ -550,6 +561,57 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.stop();
     memStore.close();
     verify(cm, never()).handle(isA(CMgrCompletedAppsEvent.class));
+  }
+
+  private void commonLaunchContainer(ApplicationId appId, ContainerId cid,
+      ContainerManagerImpl cm) throws Exception {
+    Map<String, String> containerEnv = new HashMap<>();
+    setFlowContext(containerEnv, "app_name1", appId);
+    Map<String, ByteBuffer> serviceData = Collections.emptyMap();
+    Credentials containerCreds = new Credentials();
+    DataOutputBuffer dob = new DataOutputBuffer();
+    containerCreds.writeTokenStorageToStream(dob);
+    ByteBuffer containerTokens = ByteBuffer.wrap(dob.getData(), 0,
+        dob.getLength());
+    Map<ApplicationAccessType, String> acls = Collections.emptyMap();
+    File tmpDir = new File("target",
+        this.getClass().getSimpleName() + "-tmpDir");
+    File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
+    PrintWriter fileWriter = new PrintWriter(scriptFile);
+    if (Shell.WINDOWS) {
+      fileWriter.println("@ping -n 100 127.0.0.1 >nul");
+    } else {
+      fileWriter.write("\numask 0");
+      fileWriter.write("\nexec sleep 100");
+    }
+    fileWriter.close();
+    FileContext localFS = FileContext.getLocalFSFileContext();
+    URL resource_alpha =
+        URL.fromPath(localFS
+            .makeQualified(new Path(scriptFile.getAbsolutePath())));
+    LocalResource rsrc_alpha = RecordFactoryProvider
+        .getRecordFactory(null).newRecordInstance(LocalResource.class);
+    rsrc_alpha.setResource(resource_alpha);
+    rsrc_alpha.setSize(-1);
+    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc_alpha.setType(LocalResourceType.FILE);
+    rsrc_alpha.setTimestamp(scriptFile.lastModified());
+    String destinationFile = "dest_file";
+    Map<String, LocalResource> localResources = new HashMap<>();
+    localResources.put(destinationFile, rsrc_alpha);
+    List<String> commands =
+        Arrays.asList(Shell.getRunScriptCommand(scriptFile));
+    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
+        localResources, containerEnv, commands, serviceData,
+        containerTokens, acls);
+    StartContainersResponse startResponse = startContainer(
+        context, cm, cid, clc, null);
+    assertTrue(startResponse.getFailedRequests().isEmpty());
+    assertEquals(1, context.getApplications().size());
+    // make sure the container reaches RUNNING state
+    waitForNMContainerState(cm, cid,
+        org.apache.hadoop.yarn.server.nodemanager
+            .containermanager.container.ContainerState.RUNNING);
   }
 
   private ContainerManagerImpl createContainerManager(Context context,
@@ -652,7 +714,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     final List<Token> increaseTokens = new ArrayList<Token>();
     // add increase request
     Token containerToken = TestContainerManager.createContainerToken(
-        cid, 0, context.getNodeId(), user.getShortUserName(),
+        cid, 1, 0, context.getNodeId(), user.getShortUserName(),
         capability, context.getContainerTokenSecretManager(), null);
     increaseTokens.add(containerToken);
     final ContainerUpdateRequest updateRequest =

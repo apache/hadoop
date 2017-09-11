@@ -370,6 +370,12 @@
 
     var b = function() { browse_directory($('#directory').val()); };
     $('#btn-nav-directory').click(b);
+    //Also navigate to the directory when a user presses enter.
+    $('#directory').on('keyup', function (e) {
+      if (e.which == 13) {
+        browse_directory($('#directory').val());
+      }
+    });
     var dir = window.location.hash.slice(1);
     if(dir == "") {
       window.location.hash = "/";

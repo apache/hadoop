@@ -20,55 +20,59 @@ package org.apache.hadoop.yarn.webapp.log;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_OWNER;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Map;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.HarFs;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
-import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.PRE;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationWebUtils;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-
 import com.google.inject.Inject;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class AggregatedLogsBlock extends HtmlBlock {
 
   private final Configuration conf;
+  private final LogAggregationFileControllerFactory factory;
 
   @Inject
   AggregatedLogsBlock(Configuration conf) {
     this.conf = conf;
+    factory = new LogAggregationFileControllerFactory(conf);
   }
 
   @Override
   protected void render(Block html) {
-    ContainerId containerId = verifyAndGetContainerId(html);
-    NodeId nodeId = verifyAndGetNodeId(html);
-    String appOwner = verifyAndGetAppOwner(html);
-    LogLimits logLimits = verifyAndGetLogLimits(html);
+    ContainerId containerId = LogAggregationWebUtils
+        .verifyAndGetContainerId(html, $(CONTAINER_ID));
+    NodeId nodeId = LogAggregationWebUtils
+        .verifyAndGetNodeId(html, $(NM_NODENAME));
+    String appOwner = LogAggregationWebUtils
+        .verifyAndGetAppOwner(html, $(APP_OWNER));
+    boolean isValid = true;
+    try {
+      LogAggregationWebUtils.getLogStartIndex(
+          html, $("start"));
+    } catch (NumberFormatException ne) {
+      html.h1().__("Invalid log start value: " + $("start")).__();
+      isValid = false;
+    }
+    try {
+      LogAggregationWebUtils.getLogEndIndex(
+          html, $("end"));
+    } catch (NumberFormatException ne) {
+      html.h1().__("Invalid log start value: " + $("end")).__();
+      isValid = false;
+    }
+
     if (containerId == null || nodeId == null || appOwner == null
-        || appOwner.isEmpty() || logLimits == null) {
+        || appOwner.isEmpty() || !isValid) {
       return;
     }
 
@@ -93,21 +97,11 @@ public class AggregatedLogsBlock extends HtmlBlock {
       return;
     }
 
-    Path remoteRootLogDir = new Path(conf.get(
-        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    Path remoteAppDir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogDir, applicationId, appOwner,
-        LogAggregationUtils.getRemoteNodeLogDirSuffix(conf));
-    RemoteIterator<FileStatus> nodeFiles;
+    LogAggregationFileController fileController;
     try {
-      Path qualifiedLogDir =
-          FileContext.getFileContext(conf).makeQualified(
-            remoteAppDir);
-      nodeFiles =
-          FileContext.getFileContext(qualifiedLogDir.toUri(), conf)
-            .listStatus(remoteAppDir);
-    } catch (FileNotFoundException fnf) {
+      fileController = this.factory.getFileControllerForRead(
+          applicationId, appOwner);
+    } catch (Exception fnf) {
       html.h1()
           .__("Logs not available for " + logEntity
               + ". Aggregation may not be complete, "
@@ -118,251 +112,9 @@ public class AggregatedLogsBlock extends HtmlBlock {
             .__();
       }
       return;
-    } catch (Exception ex) {
-      html.h1()
-          .__("Error getting logs at " + nodeId).__();
-      return;
     }
 
-    boolean foundLog = false;
-    String desiredLogType = $(CONTAINER_LOG_TYPE);
-    try {
-      while (nodeFiles.hasNext()) {
-        AggregatedLogFormat.LogReader reader = null;
-        try {
-          FileStatus thisNodeFile = nodeFiles.next();
-          if (thisNodeFile.getPath().getName().equals(applicationId + ".har")) {
-            Path p = new Path("har:///"
-                + thisNodeFile.getPath().toUri().getRawPath());
-            nodeFiles = HarFs.get(p.toUri(), conf).listStatusIterator(p);
-            continue;
-          }
-          if (!thisNodeFile.getPath().getName()
-            .contains(LogAggregationUtils.getNodeString(nodeId))
-              || thisNodeFile.getPath().getName()
-                .endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
-            continue;
-          }
-          long logUploadedTime = thisNodeFile.getModificationTime();
-          reader =
-              new AggregatedLogFormat.LogReader(conf, thisNodeFile.getPath());
-
-          String owner = null;
-          Map<ApplicationAccessType, String> appAcls = null;
-          try {
-            owner = reader.getApplicationOwner();
-            appAcls = reader.getApplicationAcls();
-          } catch (IOException e) {
-            LOG.error("Error getting logs for " + logEntity, e);
-            continue;
-          }
-          ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);
-          aclsManager.addApplication(applicationId, appAcls);
-
-          String remoteUser = request().getRemoteUser();
-          UserGroupInformation callerUGI = null;
-          if (remoteUser != null) {
-            callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
-          }
-          if (callerUGI != null && !aclsManager.checkAccess(callerUGI,
-              ApplicationAccessType.VIEW_APP, owner, applicationId)) {
-            html.h1()
-                .__("User [" + remoteUser
-                    + "] is not authorized to view the logs for " + logEntity
-                    + " in log file [" + thisNodeFile.getPath().getName() + "]").__();
-            LOG.error("User [" + remoteUser
-              + "] is not authorized to view the logs for " + logEntity);
-            continue;
-          }
-
-          AggregatedLogFormat.ContainerLogsReader logReader = reader
-            .getContainerLogsReader(containerId);
-          if (logReader == null) {
-            continue;
-          }
-
-          foundLog = readContainerLogs(html, logReader, logLimits,
-              desiredLogType, logUploadedTime);
-        } catch (IOException ex) {
-          LOG.error("Error getting logs for " + logEntity, ex);
-          continue;
-        } finally {
-          if (reader != null) {
-            reader.close();
-          }
-        }
-      }
-      if (!foundLog) {
-        if (desiredLogType.isEmpty()) {
-          html.h1("No logs available for container " + containerId.toString());
-        } else {
-          html.h1("Unable to locate '" + desiredLogType
-              + "' log for container " + containerId.toString());
-        }
-      }
-    } catch (IOException e) {
-      html.h1().__("Error getting logs for " + logEntity).__();
-      LOG.error("Error getting logs for " + logEntity, e);
-    }
-  }
-
-  private boolean readContainerLogs(Block html,
-      AggregatedLogFormat.ContainerLogsReader logReader, LogLimits logLimits,
-      String desiredLogType, long logUpLoadTime) throws IOException {
-    int bufferSize = 65536;
-    char[] cbuf = new char[bufferSize];
-
-    boolean foundLog = false;
-    String logType = logReader.nextLog();
-    while (logType != null) {
-      if (desiredLogType == null || desiredLogType.isEmpty()
-          || desiredLogType.equals(logType)) {
-        long logLength = logReader.getCurrentLogLength();
-        if (foundLog) {
-          html.pre().__("\n\n").__();
-        }
-
-        html.p().__("Log Type: " + logType).__();
-        html.p().__("Log Upload Time: " + Times.format(logUpLoadTime)).__();
-        html.p().__("Log Length: " + Long.toString(logLength)).__();
-
-        long start = logLimits.start < 0
-            ? logLength + logLimits.start : logLimits.start;
-        start = start < 0 ? 0 : start;
-        start = start > logLength ? logLength : start;
-        long end = logLimits.end < 0
-            ? logLength + logLimits.end : logLimits.end;
-        end = end < 0 ? 0 : end;
-        end = end > logLength ? logLength : end;
-        end = end < start ? start : end;
-
-        long toRead = end - start;
-        if (toRead < logLength) {
-            html.p().__("Showing " + toRead + " bytes of " + logLength
-                + " total. Click ")
-                .a(url("logs", $(NM_NODENAME), $(CONTAINER_ID),
-                    $(ENTITY_STRING), $(APP_OWNER),
-                    logType, "?start=0"), "here").
-                __(" for the full log.").__();
-        }
-
-        long totalSkipped = 0;
-        while (totalSkipped < start) {
-          long ret = logReader.skip(start - totalSkipped);
-          if (ret == 0) {
-            //Read one byte
-            int nextByte = logReader.read();
-            // Check if we have reached EOF
-            if (nextByte == -1) {
-              throw new IOException( "Premature EOF from container log");
-            }
-            ret = 1;
-          }
-          totalSkipped += ret;
-        }
-
-        int len = 0;
-        int currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
-        PRE<Hamlet> pre = html.pre();
-
-        while (toRead > 0
-            && (len = logReader.read(cbuf, 0, currentToRead)) > 0) {
-          pre.__(new String(cbuf, 0, len));
-          toRead = toRead - len;
-          currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
-        }
-
-        pre.__();
-        foundLog = true;
-      }
-
-      logType = logReader.nextLog();
-    }
-
-    return foundLog;
-  }
-
-  private ContainerId verifyAndGetContainerId(Block html) {
-    String containerIdStr = $(CONTAINER_ID);
-    if (containerIdStr == null || containerIdStr.isEmpty()) {
-      html.h1().__("Cannot get container logs without a ContainerId").__();
-      return null;
-    }
-    ContainerId containerId = null;
-    try {
-      containerId = ContainerId.fromString(containerIdStr);
-    } catch (IllegalArgumentException e) {
-      html.h1()
-          .__("Cannot get container logs for invalid containerId: "
-              + containerIdStr).__();
-      return null;
-    }
-    return containerId;
-  }
-
-  private NodeId verifyAndGetNodeId(Block html) {
-    String nodeIdStr = $(NM_NODENAME);
-    if (nodeIdStr == null || nodeIdStr.isEmpty()) {
-      html.h1().__("Cannot get container logs without a NodeId").__();
-      return null;
-    }
-    NodeId nodeId = null;
-    try {
-      nodeId = NodeId.fromString(nodeIdStr);
-    } catch (IllegalArgumentException e) {
-      html.h1().__("Cannot get container logs. Invalid nodeId: " + nodeIdStr)
-          .__();
-      return null;
-    }
-    return nodeId;
-  }
-  
-  private String verifyAndGetAppOwner(Block html) {
-    String appOwner = $(APP_OWNER);
-    if (appOwner == null || appOwner.isEmpty()) {
-      html.h1().__("Cannot get container logs without an app owner").__();
-    }
-    return appOwner;
-  }
-
-  private static class LogLimits {
-    long start;
-    long end;
-  }
-
-  private LogLimits verifyAndGetLogLimits(Block html) {
-    long start = -4096;
-    long end = Long.MAX_VALUE;
-    boolean isValid = true;
-
-    String startStr = $("start");
-    if (startStr != null && !startStr.isEmpty()) {
-      try {
-        start = Long.parseLong(startStr);
-      } catch (NumberFormatException e) {
-        isValid = false;
-        html.h1().__("Invalid log start value: " + startStr).__();
-      }
-    }
-
-    String endStr = $("end");
-    if (endStr != null && !endStr.isEmpty()) {
-      try {
-        end = Long.parseLong(endStr);
-      } catch (NumberFormatException e) {
-        isValid = false;
-        html.h1().__("Invalid log end value: " + endStr).__();
-      }
-    }
-
-    if (!isValid) {
-      return null;
-    }
-
-    LogLimits limits = new LogLimits();
-    limits.start = start;
-    limits.end = end;
-    return limits;
+    fileController.renderAggregatedLogsBlock(html, this.context());
   }
 
   private String getApplicationLogURL(ApplicationId applicationId) {

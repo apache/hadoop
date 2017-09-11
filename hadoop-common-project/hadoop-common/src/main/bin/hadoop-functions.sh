@@ -2578,29 +2578,6 @@ function hadoop_parse_args
   hadoop_debug "hadoop_parse: asking caller to skip ${HADOOP_PARSE_COUNTER}"
 }
 
-## @description  XML-escapes the characters (&'"<>) in the given parameter.
-## @audience     private
-## @stability    evolving
-## @replaceable  yes
-## @param        string
-## @return       XML-escaped string
-function hadoop_xml_escape
-{
-  sed -e 's/&/\&amp;/g' -e 's/"/\\\&quot;/g' \
-    -e "s/'/\\\\\&apos;/g" -e 's/</\\\&lt;/g' -e 's/>/\\\&gt;/g' <<< "$1"
-}
-
-## @description  sed-escapes the characters (\/&) in the given parameter.
-## @audience     private
-## @stability    evolving
-## @replaceable  yes
-## @param        string
-## @return       sed-escaped string
-function hadoop_sed_escape
-{
-  sed -e 's/[\/&]/\\&/g' <<< "$1"
-}
-
 ## @description Handle subcommands from main program entries
 ## @audience private
 ## @stability evolving

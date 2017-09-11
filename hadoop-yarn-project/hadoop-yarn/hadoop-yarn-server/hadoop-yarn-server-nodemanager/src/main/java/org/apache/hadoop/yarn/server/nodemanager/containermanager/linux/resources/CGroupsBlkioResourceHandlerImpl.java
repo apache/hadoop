@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,8 +45,8 @@ import java.util.List;
 @InterfaceStability.Unstable
 public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
 
-  static final Log LOG = LogFactory
-      .getLog(CGroupsBlkioResourceHandlerImpl.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(CGroupsBlkioResourceHandlerImpl.class);
 
   private CGroupsHandler cGroupsHandler;
   // Arbitrarily choose a weight - all that matters is that all containers

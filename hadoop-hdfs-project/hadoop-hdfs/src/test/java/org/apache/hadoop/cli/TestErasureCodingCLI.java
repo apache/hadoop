@@ -46,7 +46,7 @@ public class TestErasureCodingCLI extends CLITestHelper {
     super.setUp();
 
     conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        "RS-6-3-64k,RS-3-2-64k,XOR-2-1-64k");
+        "RS-6-3-1024k,RS-3-2-1024k,XOR-2-1-1024k");
 
     dfsCluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_OF_DATANODES).build();

@@ -24,9 +24,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -54,6 +56,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import static org.mockito.Mockito.spy;
 
@@ -67,7 +70,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   }
 
   static {
-    LOG = LogFactory.getLog(TestContainerSchedulerQueuing.class);
+    LOG = LoggerFactory.getLogger(TestContainerSchedulerQueuing.class);
   }
 
   private boolean delayContainers = true;
@@ -950,5 +953,98 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     Assert.assertEquals(createContainerId(2),
         map.get(org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED)
             .getContainerId());
+  }
+
+  /**
+   * Starts one OPPORTUNISTIC container that takes up the whole node's
+   * resources, and submit one more that will be queued. Now promote the
+   * queued OPPORTUNISTIC container, which should kill the current running
+   * OPPORTUNISTIC container to make room for the promoted request.
+   * @throws Exception
+   */
+  @Test
+  public void testPromotionOfOpportunisticContainers() throws Exception {
+    containerManager.start();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(2048, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(1024, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    Thread.sleep(5000);
+
+    // Ensure first container is running and others are queued.
+    List<ContainerId> statList = new ArrayList<ContainerId>();
+    for (int i = 0; i < 3; i++) {
+      statList.add(createContainerId(i));
+    }
+    GetContainerStatusesRequest statRequest = GetContainerStatusesRequest
+        .newInstance(Arrays.asList(createContainerId(0)));
+    List<ContainerStatus> containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
+      if (status.getContainerId().equals(createContainerId(0))) {
+        Assert.assertEquals(
+            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+            status.getState());
+      } else {
+        Assert.assertEquals(
+            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
+            status.getState());
+      }
+    }
+
+    ContainerScheduler containerScheduler =
+        containerManager.getContainerScheduler();
+    // Ensure two containers are properly queued.
+    Assert.assertEquals(1, containerScheduler.getNumQueuedContainers());
+    Assert.assertEquals(0,
+        containerScheduler.getNumQueuedGuaranteedContainers());
+    Assert.assertEquals(1,
+        containerScheduler.getNumQueuedOpportunisticContainers());
+
+    // Promote Queued Opportunistic Container
+    Token updateToken =
+        createContainerToken(createContainerId(1), 1, DUMMY_RM_IDENTIFIER,
+            context.getNodeId(), user, BuilderUtils.newResource(1024, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.GUARANTEED);
+    List<Token> updateTokens = new ArrayList<Token>();
+    updateTokens.add(updateToken);
+    ContainerUpdateRequest updateRequest =
+        ContainerUpdateRequest.newInstance(updateTokens);
+    ContainerUpdateResponse updateResponse =
+        containerManager.updateContainer(updateRequest);
+
+    Assert.assertEquals(1,
+        updateResponse.getSuccessfullyUpdatedContainers().size());
+    Assert.assertEquals(0, updateResponse.getFailedRequests().size());
+
+    waitForContainerState(containerManager, createContainerId(0),
+        org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE);
+
+    waitForContainerState(containerManager, createContainerId(1),
+        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING);
+
+    // Ensure no containers are queued.
+    Assert.assertEquals(0, containerScheduler.getNumQueuedContainers());
   }
 }

@@ -95,7 +95,7 @@ public class TestMapReduceJobControl extends HadoopTestCase {
     cjob2 = new ControlledJob(job2, dependingJobs);
 
     Job job3 = MapReduceTestUtil.createCopyJob(conf, outdir_3, 
-	                                   outdir_1, outdir_2);
+                                     outdir_1, outdir_2);
     dependingJobs = new ArrayList<ControlledJob>();
     dependingJobs.add(cjob1);
     dependingJobs.add(cjob2);

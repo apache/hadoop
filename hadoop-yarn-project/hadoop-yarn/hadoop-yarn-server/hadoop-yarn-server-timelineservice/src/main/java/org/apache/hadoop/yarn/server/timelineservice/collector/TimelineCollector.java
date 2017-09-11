@@ -63,6 +63,8 @@ public abstract class TimelineCollector extends CompositeService {
 
   private volatile boolean readyToAggregate = false;
 
+  private volatile boolean isStopped = false;
+
   public TimelineCollector(String name) {
     super(name);
   }
@@ -79,7 +81,12 @@ public abstract class TimelineCollector extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
+    isStopped = true;
     super.serviceStop();
+  }
+
+  boolean isStopped() {
+    return isStopped;
   }
 
   protected void setWriter(TimelineWriter w) {
@@ -139,7 +146,7 @@ public abstract class TimelineCollector extends CompositeService {
     // flush the writer buffer concurrently and swallow any exception
     // caused by the timeline enitites that are being put here.
     synchronized (writer) {
-      response = writeTimelineEntities(entities);
+      response = writeTimelineEntities(entities, callerUgi);
       flushBufferedTimelineEntities();
     }
 
@@ -147,15 +154,14 @@ public abstract class TimelineCollector extends CompositeService {
   }
 
   private TimelineWriteResponse writeTimelineEntities(
-      TimelineEntities entities) throws IOException {
+      TimelineEntities entities, UserGroupInformation callerUgi)
+      throws IOException {
     // Update application metrics for aggregation
     updateAggregateStatus(entities, aggregationGroups,
         getEntityTypesSkipAggregation());
 
     final TimelineCollectorContext context = getTimelineEntityContext();
-    return writer.write(context.getClusterId(), context.getUserId(),
-        context.getFlowName(), context.getFlowVersion(),
-        context.getFlowRunId(), context.getAppId(), entities);
+    return writer.write(context, entities, callerUgi);
   }
 
   /**
@@ -187,7 +193,7 @@ public abstract class TimelineCollector extends CompositeService {
           callerUgi + ")");
     }
 
-    writeTimelineEntities(entities);
+    writeTimelineEntities(entities, callerUgi);
   }
 
   /**

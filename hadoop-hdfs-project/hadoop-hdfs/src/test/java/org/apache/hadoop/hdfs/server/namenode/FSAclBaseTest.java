@@ -32,6 +32,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -886,6 +887,11 @@ public abstract class FSAclBaseTest {
     FsPermission perm = inode.getFsPermission();
     assertNotNull(perm);
     assertEquals(0755, perm.toShort());
+    FileStatus stat = fs.getFileStatus(path);
+    assertFalse(stat.hasAcl());
+    assertFalse(stat.isEncrypted());
+    assertFalse(stat.isErasureCoded());
+    // backwards-compat check
     assertEquals(0755, perm.toExtendedShort());
     assertAclFeature(false);
   }

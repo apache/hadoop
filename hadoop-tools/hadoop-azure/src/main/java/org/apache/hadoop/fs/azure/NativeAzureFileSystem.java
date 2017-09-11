@@ -62,6 +62,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
@@ -352,9 +354,9 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     /**
-     * This is an exact copy of org.codehaus.jettison.json.JSONObject.quote 
+     * This is an exact copy of org.codehaus.jettison.json.JSONObject.quote
      * method.
-     * 
+     *
      * Produce a string in double quotes with backslash sequences in all the
      * right places. A backslash will be inserted within </, allowing JSON
      * text to be delivered in HTML. In JSON text, a string cannot contain a
@@ -947,11 +949,11 @@ public class NativeAzureFileSystem extends FileSystem {
     }
   }
 
-  private class NativeAzureFsOutputStream extends OutputStream {
-    // We should not override flush() to actually close current block and flush
-    // to DFS, this will break applications that assume flush() is a no-op.
-    // Applications are advised to use Syncable.hflush() for that purpose.
-    // NativeAzureFsOutputStream needs to implement Syncable if needed.
+  /**
+   * Azure output stream; wraps an inner stream of different types.
+   */
+  public class NativeAzureFsOutputStream extends OutputStream
+      implements Syncable, StreamCapabilities {
     private String key;
     private String keyEncoded;
     private OutputStream out;
@@ -983,6 +985,48 @@ public class NativeAzureFileSystem extends FileSystem {
       setEncodedKey(anEncodedKey);
     }
 
+    /**
+     * Get a reference to the wrapped output stream.
+     *
+     * @return the underlying output stream
+     */
+    @InterfaceAudience.LimitedPrivate({"HDFS"})
+    public OutputStream getOutStream() {
+      return out;
+    }
+
+    @Override  // Syncable
+    public void hflush() throws IOException {
+      if (out instanceof Syncable) {
+        ((Syncable) out).hflush();
+      } else {
+        flush();
+      }
+    }
+
+    @Override  // Syncable
+    public void hsync() throws IOException {
+      if (out instanceof Syncable) {
+        ((Syncable) out).hsync();
+      } else {
+        flush();
+      }
+    }
+
+    /**
+     * Propagate probe of stream capabilities to nested stream
+     * (if supported), else return false.
+     * @param capability string to query the stream support for.
+     * @return true if the nested stream supports the specific capability.
+     */
+    @Override // StreamCapability
+    public boolean hasCapability(String capability) {
+      if (out instanceof StreamCapabilities) {
+        return ((StreamCapabilities) out).hasCapability(capability);
+      }
+      return false;
+    }
+
     @Override
     public synchronized void close() throws IOException {
       if (out != null) {
@@ -990,8 +1034,11 @@ public class NativeAzureFileSystem extends FileSystem {
         // before returning to the caller.
         //
         out.close();
-        restoreKey();
-        out = null;
+        try {
+          restoreKey();
+        } finally {
+          out = null;
+        }
       }
     }
 
@@ -1045,10 +1092,10 @@ public class NativeAzureFileSystem extends FileSystem {
     /**
      * Writes <code>len</code> from the specified byte array starting at offset
      * <code>off</code> to the output stream. The general contract for write(b,
-     * off, len) is that some of the bytes in the array <code>
-     * b</code b> are written to the output stream in order; element
-     * <code>b[off]</code> is the first byte written and
-     * <code>b[off+len-1]</code> is the last byte written by this operation.
+     * off, len) is that some of the bytes in the array <code>b</code>
+     * are written to the output stream in order; element <code>b[off]</code>
+     * is the first byte written and <code>b[off+len-1]</code> is the last
+     * byte written by this operation.
      * 
      * @param b
      *          Byte array to be written.
@@ -1749,7 +1796,7 @@ public class NativeAzureFileSystem extends FileSystem {
     OutputStream bufOutStream;
     if (store.isPageBlobKey(key)) {
       // Store page blobs directly in-place without renames.
-      bufOutStream = store.storefile(key, permissionStatus);
+      bufOutStream = store.storefile(key, permissionStatus, key);
     } else {
       // This is a block blob, so open the output blob stream based on the
       // encoded key.
@@ -1777,7 +1824,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // these
       // blocks.
       bufOutStream = new NativeAzureFsOutputStream(store.storefile(
-          keyEncoded, permissionStatus), key, keyEncoded);
+          keyEncoded, permissionStatus, key), key, keyEncoded);
     }
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);
@@ -2043,7 +2090,12 @@ public class NativeAzureFileSystem extends FileSystem {
       AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
         @Override
         public boolean execute(FileMetadata file) throws IOException{
-          return deleteFile(file.getKey(), file.isDir());
+          if (!deleteFile(file.getKey(), file.isDir())) {
+            LOG.warn("Attempt to delete non-existent {} {}",
+                file.isDir() ? "directory" : "file",
+                file.getKey());
+          }
+          return true;
         }
       };
 
@@ -2080,30 +2132,28 @@ public class NativeAzureFileSystem extends FileSystem {
     return new AzureFileSystemThreadPoolExecutor(threadCount, threadNamePrefix, operation, key, config);
   }
 
-  // Delete single file / directory from key.
+  /**
+   * Delete the specified file or directory and increment metrics.
+   * If the file or directory does not exist, the operation returns false.
+   * @param path the path to a file or directory.
+   * @param isDir true if the path is a directory; otherwise false.
+   * @return true if delete is successful; otherwise false.
+   * @throws IOException if an IO error occurs while attempting to delete the
+   * path.
+   *
+   */
   @VisibleForTesting
-  boolean deleteFile(String key, boolean isDir) throws IOException {
-    try {
-      if (store.delete(key)) {
-        if (isDir) {
-          instrumentation.directoryDeleted();
-        } else {
-          instrumentation.fileDeleted();
-        }
-        return true;
-      } else {
-        return false;
-      }
-    } catch(IOException e) {
-      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
-
-      if (innerException instanceof StorageException
-          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-        return false;
-      }
-
-      throw e;
+  boolean deleteFile(String path, boolean isDir) throws IOException {
+    if (!store.delete(path)) {
+      return false;
     }
+
+    if (isDir) {
+      instrumentation.directoryDeleted();
+    } else {
+      instrumentation.fileDeleted();
+    }
+    return true;
   }
 
   @Override
@@ -2422,13 +2472,13 @@ public class NativeAzureFileSystem extends FileSystem {
 
   private Path getAncestor(Path f) throws IOException {
 
-    for (Path current = f.getParent(), parent = current.getParent();
+    for (Path current = f, parent = current.getParent();
          parent != null; // Stop when you get to the root
          current = parent, parent = current.getParent()) {
 
       String currentKey = pathToKey(current);
       FileMetadata currentMetadata = store.retrieveMetadata(currentKey);
-      if (currentMetadata != null) {
+      if (currentMetadata != null && currentMetadata.isDir()) {
         Path ancestor = keyToPath(currentMetadata.getKey());
         LOG.debug("Found ancestor {}, for path: {}", ancestor.toString(), f.toString());
         return ancestor;
@@ -2445,7 +2495,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
   public boolean mkdirs(Path f, FsPermission permission, boolean noUmask) throws IOException {
 
-
     LOG.debug("Creating directory: {}", f.toString());
 
     if (containsColon(f)) {
@@ -2455,6 +2504,10 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
     Path ancestor = getAncestor(absolutePath);
+
+    if (absolutePath.equals(ancestor)) {
+      return true;
+    }
 
     performAuthCheck(ancestor, WasbAuthorizationOperations.WRITE, "mkdirs", absolutePath);
 

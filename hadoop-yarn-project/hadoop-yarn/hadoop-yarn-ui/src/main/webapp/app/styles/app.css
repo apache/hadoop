@@ -20,6 +20,8 @@ body, html, body > .ember-view {
   height: 100%;
   overflow: visible;
   color: @text-color;
+  background: #f6f6f8;
+  font-family: "Open Sans","Helvetica Neue", sans-serif!important;
 }
 body, html {
   min-width: 1024px;
@@ -29,11 +31,11 @@ body, html {
  Over all style
  */
 text {
-  font: 16px sans-serif;
+  font-size: 14px;
 }
 
 text.small {
-  font: 8px sans-serif;
+  font-size: 8px;
 }
 
 html, body
@@ -56,8 +58,7 @@ text.queue {
 }
 
 text.heatmap-cell {
-  font: 14px sans-serif;
-  font-weight: bold;
+  font-size: 14px;
   text-anchor: middle;
   fill: Azure;
   text-align: center;
@@ -81,11 +82,13 @@ text.heatmap-cell-notselected {
   text-anchor: middle;
   fill: Silver;
   text-align: center;
+
 }
 
 text.heatmap-rack {
-  font: 20px sans-serif;
-  fill: DimGray;
+  font-size: 18px;
+  font-weight: 400;
+  fill: #4b5052;
 }
 
 path.queue {
@@ -109,9 +112,8 @@ line.chart {
  */
 text.chart-title {
   font-size: 30px;
-  font-family: sans-serif;
   text-anchor: middle;
-  fill: Gray;
+  fill: #4b5052;
 }
 
 text.donut-highlight-text, text.donut-highlight-sub {
@@ -141,9 +143,10 @@ text.bar-chart-text {
 div.tooltip {
   position: absolute;
   text-align: center;
-  padding: 2px;
-  font: 24px sans-serif;
-  background: lightsteelblue;
+  padding: 10px;
+  font-size: 16px;
+  background: black;
+  color: white;
   border: 0px;
   border-radius: 8px;
   pointer-events: none;
@@ -184,6 +187,7 @@ table.dataTable thead .sorting_desc_disabled {
 
 .breadcrumb {
   padding-bottom: 3px;
+  background-color: #f6f6f8;
 }
 
 .navbar-default .navbar-nav > li > a {
@@ -268,12 +272,29 @@ td {
   margin: 0 auto -40px; // Must be same as footer & footer-frame
 }
 
+.panel {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 15px;
+  -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
 .panel-default .container-fluid {
   margin-top: -45px !important;
   margin-bottom: -10px !important;
 }
 
+.panel-default > .panel-heading {
+  background-image: none;
+  background-color: #f5f5f5 !important;
+  border-radius: 15px 15px 0px 0px;
+}
+
+
 .panel-heading {
+  background-color: rgba(0, 0, 0, 0) !important;
   font-weight: bold;
 }
 

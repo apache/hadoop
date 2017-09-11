@@ -19,8 +19,11 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ATTEMPT_ID;
+
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
@@ -34,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
@@ -77,15 +81,13 @@ public class AppAttemptBlock extends HtmlBlock {
           GetApplicationAttemptReportRequest.newInstance(appAttemptId);
       if (callerUGI == null) {
         appAttemptReport =
-            appBaseProt.getApplicationAttemptReport(request)
-              .getApplicationAttemptReport();
+            getApplicationAttemptReport(request);
       } else {
         appAttemptReport = callerUGI.doAs(
             new PrivilegedExceptionAction<ApplicationAttemptReport> () {
           @Override
           public ApplicationAttemptReport run() throws Exception {
-            return appBaseProt.getApplicationAttemptReport(request)
-                .getApplicationAttemptReport();
+            return getApplicationAttemptReport(request);
           }
         });
       }
@@ -108,13 +110,13 @@ public class AppAttemptBlock extends HtmlBlock {
       final GetContainersRequest request =
           GetContainersRequest.newInstance(appAttemptId);
       if (callerUGI == null) {
-        containers = appBaseProt.getContainers(request).getContainerList();
+        containers = getContainers(request);
       } else {
         containers = callerUGI.doAs(
             new PrivilegedExceptionAction<Collection<ContainerReport>> () {
           @Override
           public Collection<ContainerReport> run() throws Exception {
-            return  appBaseProt.getContainers(request).getContainerList();
+            return  getContainers(request);
           }
         });
       }
@@ -188,6 +190,18 @@ public class AppAttemptBlock extends HtmlBlock {
       .__("var containersTableData=" + containersTableData).__();
 
     tbody.__().__();
+  }
+
+  protected List<ContainerReport> getContainers(
+      final GetContainersRequest request) throws YarnException, IOException {
+    return appBaseProt.getContainers(request).getContainerList();
+  }
+
+  protected ApplicationAttemptReport getApplicationAttemptReport(
+      final GetApplicationAttemptReportRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getApplicationAttemptReport(request)
+        .getApplicationAttemptReport();
   }
 
   protected void generateOverview(ApplicationAttemptReport appAttemptReport,

@@ -23,8 +23,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -43,8 +47,6 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.http.JettyUtils;
@@ -55,8 +57,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -82,13 +86,15 @@ import com.google.inject.Singleton;
 @Singleton
 @Path("/ws/v1/node")
 public class NMWebServices {
-  private static final Log LOG = LogFactory.getLog(NMWebServices.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMWebServices.class);
   private Context nmContext;
   private ResourceView rview;
   private WebApp webapp;
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   private final String redirectWSUrl;
+  private final LogAggregationFileControllerFactory factory;
 
   private @javax.ws.rs.core.Context 
     HttpServletRequest request;
@@ -107,6 +113,8 @@ public class NMWebServices {
     this.webapp = webapp;
     this.redirectWSUrl = this.nmContext.getConf().get(
         YarnConfiguration.YARN_LOG_SERVER_WEBSERVICE_URL);
+    this.factory = new LogAggregationFileControllerFactory(
+        this.nmContext.getConf());
   }
 
   private void init() {
@@ -261,10 +269,14 @@ public class NMWebServices {
       Application app = this.nmContext.getApplications().get(appId);
       String appOwner = app == null ? null : app.getUser();
       try {
-        List<ContainerLogMeta> containerLogMeta = LogToolUtils
-            .getContainerLogMetaFromRemoteFS(this.nmContext.getConf(),
-                appId, containerIdStr,
-                this.nmContext.getNodeId().toString(), appOwner);
+        ContainerLogsRequest logRequest = new ContainerLogsRequest();
+        logRequest.setAppId(appId);
+        logRequest.setAppOwner(appOwner);
+        logRequest.setContainerId(containerIdStr);
+        logRequest.setNodeId(this.nmContext.getNodeId().toString());
+        List<ContainerLogMeta> containerLogMeta = factory
+            .getFileControllerForRead(appId, appOwner)
+            .readAggregatedLogsMeta(logRequest);
         if (!containerLogMeta.isEmpty()) {
           for (ContainerLogMeta logMeta : containerLogMeta) {
             containersLogsInfo.add(new ContainerLogsInfo(logMeta,
@@ -425,11 +437,9 @@ public class NMWebServices {
         public void write(OutputStream os) throws IOException,
             WebApplicationException {
           try {
-            int bufferSize = 65536;
-            byte[] buf = new byte[bufferSize];
-            LogToolUtils.outputContainerLog(containerId.toString(),
-                nmContext.getNodeId().toString(), outputFileName, fileLength,
-                bytes, lastModifiedTime, fis, os, buf,
+            LogToolUtils.outputContainerLogThroughZeroCopy(
+                containerId.toString(), nmContext.getNodeId().toString(),
+                outputFileName, fileLength, bytes, lastModifiedTime, fis, os,
                 ContainerLogAggregationType.LOCAL);
             StringBuilder sb = new StringBuilder();
             String endOfFile = "End of LogType:" + outputFileName;
@@ -450,10 +460,17 @@ public class NMWebServices {
             Application app = nmContext.getApplications().get(appId);
             String appOwner = app == null ? null : app.getUser();
             try {
-              LogToolUtils.outputAggregatedContainerLog(nmContext.getConf(),
-                  appId, appOwner, containerId.toString(),
-                  nmContext.getNodeId().toString(), outputFileName, bytes,
-                  os, buf);
+              ContainerLogsRequest logRequest = new ContainerLogsRequest();
+              logRequest.setAppId(appId);
+              logRequest.setAppOwner(appOwner);
+              logRequest.setContainerId(containerId.toString());
+              logRequest.setNodeId(nmContext.getNodeId().toString());
+              logRequest.setBytes(bytes);
+              Set<String> logTypes = new HashSet<>();
+              logTypes.add(outputFileName);
+              logRequest.setLogTypes(logTypes);
+              factory.getFileControllerForRead(appId, appOwner)
+                  .readAggregatedLogs(logRequest, os);
             } catch (Exception ex) {
               // Something wrong when we try to access the aggregated log.
               if (LOG.isDebugEnabled()) {

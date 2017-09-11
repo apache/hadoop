@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -777,14 +778,14 @@ public interface ClientProtocol {
    * in the filesystem.
    */
   @Idempotent
-  BlocksStats getBlocksStats() throws IOException;
+  ReplicatedBlockStats getReplicatedBlockStats() throws IOException;
 
   /**
    * Get statistics pertaining to blocks of type {@link BlockType#STRIPED}
    * in the filesystem.
    */
   @Idempotent
-  ECBlockGroupsStats getECBlockGroupsStats() throws IOException;
+  ECBlockGroupStats getECBlockGroupStats() throws IOException;
 
   /**
    * Get a report on the system's current datanodes.
@@ -1444,6 +1445,30 @@ public interface ClientProtocol {
       long prevId) throws IOException;
 
   /**
+   * Used to implement re-encryption of encryption zones.
+   *
+   * @param zone the encryption zone to re-encrypt.
+   * @param action the action for the re-encryption.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void reencryptEncryptionZone(String zone, ReencryptAction action)
+      throws IOException;
+
+  /**
+   * Used to implement cursor-based batched listing of
+   * {@ZoneReencryptionStatus}s.
+   *
+   * @param prevId ID of the last item in the previous batch. If there is no
+   *               previous batch, a negative value can be used.
+   * @return Batch of encryption zones.
+   * @throws IOException
+   */
+  @Idempotent
+  BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(long prevId)
+      throws IOException;
+
+  /**
    * Set xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
@@ -1588,7 +1613,8 @@ public interface ClientProtocol {
 
 
   /**
-   * Get the erasure coding policies loaded in Namenode.
+   * Get the erasure coding policies loaded in Namenode, excluding REPLICATION
+   * policy.
    *
    * @throws IOException
    */
@@ -1601,10 +1627,11 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  HashMap<String, String> getErasureCodingCodecs() throws IOException;
+  Map<String, String> getErasureCodingCodecs() throws IOException;
 
   /**
-   * Get the information about the EC policy for the path.
+   * Get the information about the EC policy for the path. Null will be returned
+   * if directory or file has REPLICATION policy.
    *
    * @param src path to get the info for
    * @throws IOException

@@ -73,6 +73,14 @@
   </property>
 
   <property>
+    <description>
+      If set to true, then ALL container updates will be automatically sent to
+      the NM in the next heartbeat</description>
+    <name>yarn.resourcemanager.auto-update.containers</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The number of threads used to handle applications manager requests.</description>
     <name>yarn.resourcemanager.client.thread-count</name>
     <value>50</value>
@@ -452,53 +460,12 @@
   </property>
 
   <property>
-    <description>Host:Port of the ZooKeeper server to be used by the RM. This
-      must be supplied when using the ZooKeeper based implementation of the
-      RM state store and/or embedded automatic failover in an HA setting.
-    </description>
-    <name>yarn.resourcemanager.zk-address</name>
-    <!--value>127.0.0.1:2181</value-->
-  </property>
-
-  <property>
-    <description>Number of times RM tries to connect to ZooKeeper.</description>
-    <name>yarn.resourcemanager.zk-num-retries</name>
-    <value>1000</value>
-  </property>
-
-  <property>
-    <description>Retry interval in milliseconds when connecting to ZooKeeper.
-      When HA is enabled, the value here is NOT used. It is generated
-      automatically from yarn.resourcemanager.zk-timeout-ms and
-      yarn.resourcemanager.zk-num-retries.
-    </description>
-    <name>yarn.resourcemanager.zk-retry-interval-ms</name>
-    <value>1000</value>
-  </property>
-
-  <property>
     <description>Full path of the ZooKeeper znode where RM state will be
     stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
     as the value for yarn.resourcemanager.store.class</description>
     <name>yarn.resourcemanager.zk-state-store.parent-path</name>
     <value>/rmstore</value>
-  </property>
-
-  <property>
-    <description>ZooKeeper session timeout in milliseconds. Session expiration
-    is managed by the ZooKeeper cluster itself, not by the client. This value is
-    used by the cluster to determine when the client's session expires.
-    Expirations happens when the cluster does not hear from the client within
-    the specified session timeout period (i.e. no heartbeat).</description>
-    <name>yarn.resourcemanager.zk-timeout-ms</name>
-    <value>10000</value>
-  </property>
-
-  <property>
-    <description>ACL's to be used for ZooKeeper znodes.</description>
-    <name>yarn.resourcemanager.zk-acl</name>
-    <value>world:anyone:rwcda</value>
   </property>
 
   <property>
@@ -524,18 +491,6 @@
       takes over (exclusively) the create-delete access.
     </description>
     <name>yarn.resourcemanager.zk-state-store.root-node.acl</name>
-  </property>
-
-  <property>
-    <description>
-        Specify the auths to be used for the ACL's specified in both the
-        yarn.resourcemanager.zk-acl and
-        yarn.resourcemanager.zk-state-store.root-node.acl properties.  This
-        takes a comma-separated list of authentication mechanisms, each of the
-        form 'scheme:auth' (the same syntax used for the 'addAuth' command in
-        the ZK CLI).
-    </description>
-    <name>yarn.resourcemanager.zk-auth</name>
   </property>
 
   <property>
@@ -1212,6 +1167,25 @@
   </property>
 
   <property>
+    <description>Specify which log file controllers we will support. The first
+    file controller we add will be used to write the aggregated logs.
+    This comma separated configuration will work with the configuration:
+    yarn.log-aggregation.file-controller.%s.class which defines the supported
+    file controller's class. By default, the TFile controller would be used.
+    The user could override this configuration by adding more file controllers.
+    To support back-ward compatibility, make sure that we always
+    add TFile file controller.</description>
+    <name>yarn.log-aggregation.file-formats</name>
+    <value>TFile</value>
+  </property>
+
+  <property>
+    <description>Class that supports TFile read and write operations.</description>
+    <name>yarn.log-aggregation.file-controller.TFile.class</name>
+    <value>org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController</value>
+  </property>
+
+  <property>
     <description>
     How long for ResourceManager to wait for NodeManager to report its
     log aggregation status. If waiting time of which the log aggregation
@@ -1595,6 +1569,14 @@
     turning this flag on may reduce job throughput on the cluster.</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.strict-resource-usage</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>Comma separated list of runtimes that are allowed when using
+    LinuxContainerExecutor. The allowed values are default, docker, and
+    javasandbox.</description>
+    <name>yarn.nodemanager.runtime.linux.allowed-runtimes</name>
+    <value>default</value>
   </property>
 
   <property>
@@ -2365,6 +2347,39 @@
     <name>yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds
     </name>
     <value>259200000</value>
+  </property>
+
+  <property>
+    <description>
+    The default hdfs location for flowrun coprocessor jar.
+    </description>
+    <name>yarn.timeline-service.hbase.coprocessor.jar.hdfs.location
+    </name>
+    <value>/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar</value>
+  </property>
+
+  <property>
+    <description>
+    The value of this parameter sets the prefix for all tables that are part of
+    timeline service in the hbase storage schema. It can be set to "dev."
+    or "staging." if it is to be used for development or staging instances.
+    This way the data in production tables stays in a separate set of tables
+    prefixed by "prod.".
+    </description>
+    <name>yarn.timeline-service.hbase-schema.prefix</name>
+    <value>prod.</value>
+  </property>
+
+  <property>
+    <description> Optional URL to an hbase-site.xml configuration file to be
+    used to connect to the timeline-service hbase cluster. If empty or not
+    specified, then the HBase configuration will be loaded from the classpath.
+    When specified the values in the specified configuration file will override
+    those from the ones that are present on the classpath.
+    </description>
+    <name>yarn.timeline-service.hbase.configuration.file
+    </name>
+    <value></value>
   </property>
 
   <!--  Shared Cache Configuration -->
@@ -3171,6 +3186,17 @@
     <value>64</value>
   </property>
 
+  <property>
+    <description>
+      Flag to enable cross-origin (CORS) support for timeline service v1.x or
+      Timeline Reader in timeline service v2. For timeline service v2, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+    <name>yarn.timeline-service.http-cross-origin.enabled</name>
+    <value>false</value>
+  </property>
+ 
   <property>
     <description>
       Flag to enable cross-origin (CORS) support for timeline service v1.x or

@@ -37,9 +37,9 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -98,13 +98,14 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -115,7 +116,8 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -331,66 +333,63 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         .newReflectiveBlockingService(traceAdminXlator);
 
     InetSocketAddress serviceRpcAddr = nn.getServiceRpcServerAddress(conf);
-    if (serviceRpcAddr != null) {
-      String bindHost = nn.getServiceRpcServerBindHost(conf);
-      if (bindHost == null) {
-        bindHost = serviceRpcAddr.getHostName();
-      }
-      LOG.info("Service RPC server is binding to " + bindHost + ":" +
-          serviceRpcAddr.getPort());
-
-      int serviceHandlerCount =
-        conf.getInt(DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
-                    DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
-      serviceRpcServer = new RPC.Builder(conf)
-          .setProtocol(
-              org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
-          .setInstance(clientNNPbService)
-          .setBindAddress(bindHost)
-          .setPort(serviceRpcAddr.getPort())
-          .setNumHandlers(serviceHandlerCount)
-          .setVerbose(false)
-          .setSecretManager(namesystem.getDelegationTokenSecretManager())
-          .build();
-
-      // Add all the RPC protocols that the namenode implements
-      DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
-          serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class,
-          reconfigurationPbService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
-          serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
-          serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, RefreshAuthorizationPolicyProtocolPB.class,
-          refreshAuthService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class, 
-          refreshUserMappingService, serviceRpcServer);
-      // We support Refreshing call queue here in case the client RPC queue is full
-      DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
-          refreshCallQueueService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
-          genericRefreshService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
-          getUserMappingService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, TraceAdminProtocolPB.class,
-          traceAdminService, serviceRpcServer);
-
-      // Update the address with the correct port
-      InetSocketAddress listenAddr = serviceRpcServer.getListenerAddress();
-      serviceRPCAddress = new InetSocketAddress(
-            serviceRpcAddr.getHostName(), listenAddr.getPort());
-      nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
-    } else {
-      serviceRpcServer = null;
-      serviceRPCAddress = null;
+    String bindHost = nn.getServiceRpcServerBindHost(conf);
+    if (bindHost == null) {
+      bindHost = serviceRpcAddr.getHostName();
     }
+
+    LOG.info("Service RPC server is binding to " + bindHost + ":" +
+        serviceRpcAddr.getPort());
+
+    int serviceHandlerCount = conf.getInt(
+        DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
+        DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
+    serviceRpcServer = new RPC.Builder(conf)
+        .setProtocol(
+            org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
+        .setInstance(clientNNPbService)
+        .setBindAddress(bindHost)
+        .setPort(serviceRpcAddr.getPort())
+        .setNumHandlers(serviceHandlerCount)
+        .setVerbose(false)
+        .setSecretManager(namesystem.getDelegationTokenSecretManager())
+        .build();
+
+    // Add all the RPC protocols that the namenode implements
+    DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
+        serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class,
+        reconfigurationPbService, serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
+        serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
+        serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, RefreshAuthorizationPolicyProtocolPB.class,
+        refreshAuthService, serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
+        refreshUserMappingService, serviceRpcServer);
+    // We support Refreshing call queue here in case the client RPC queue
+    // is full.
+    DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
+        refreshCallQueueService, serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
+        genericRefreshService, serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class,
+        getUserMappingService, serviceRpcServer);
+    DFSUtil.addPBProtocol(conf, TraceAdminProtocolPB.class,
+        traceAdminService, serviceRpcServer);
+
+    // Update the address with the correct port.
+    InetSocketAddress listenAddr = serviceRpcServer.getListenerAddress();
+    serviceRPCAddress = new InetSocketAddress(
+          serviceRpcAddr.getHostName(), listenAddr.getPort());
+    nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
 
     InetSocketAddress lifelineRpcAddr = nn.getLifelineRpcServerAddress(conf);
     if (lifelineRpcAddr != null) {
       RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
           ProtobufRpcEngine.class);
-      String bindHost = nn.getLifelineRpcServerBindHost(conf);
+      bindHost = nn.getLifelineRpcServerBindHost(conf);
       if (bindHost == null) {
         bindHost = lifelineRpcAddr.getHostName();
       }
@@ -420,7 +419,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           lifelineProtoPbService, lifelineRpcServer);
 
       // Update the address with the correct port
-      InetSocketAddress listenAddr = lifelineRpcServer.getListenerAddress();
+      listenAddr = lifelineRpcServer.getListenerAddress();
       lifelineRPCAddress = new InetSocketAddress(lifelineRpcAddr.getHostName(),
           listenAddr.getPort());
       nn.setRpcLifelineServerAddress(conf, lifelineRPCAddress);
@@ -430,7 +429,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     InetSocketAddress rpcAddr = nn.getRpcServerAddress(conf);
-    String bindHost = nn.getRpcServerBindHost(conf);
+    bindHost = nn.getRpcServerBindHost(conf);
     if (bindHost == null) {
       bindHost = rpcAddr.getHostName();
     }
@@ -474,16 +473,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           conf.getBoolean(
             CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
       clientRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
-      if (serviceRpcServer != null) {
-        serviceRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
-      }
+      serviceRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
       if (lifelineRpcServer != null) {
         lifelineRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
       }
     }
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
-    InetSocketAddress listenAddr = clientRpcServer.getListenerAddress();
+    listenAddr = clientRpcServer.getListenerAddress();
     clientRpcAddress = new InetSocketAddress(
         rpcAddr.getHostName(), listenAddr.getPort());
     nn.setRpcServerAddress(conf, clientRpcAddress);
@@ -521,9 +518,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class);
 
     clientRpcServer.setTracer(nn.tracer);
-    if (serviceRpcServer != null) {
-      serviceRpcServer.setTracer(nn.tracer);
-    }
+    serviceRpcServer.setTracer(nn.tracer);
     if (lifelineRpcServer != null) {
       lifelineRpcServer.setTracer(nn.tracer);
     }
@@ -552,9 +547,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    */
   void start() {
     clientRpcServer.start();
-    if (serviceRpcServer != null) {
-      serviceRpcServer.start();      
-    }
+    serviceRpcServer.start();
     if (lifelineRpcServer != null) {
       lifelineRpcServer.start();
     }
@@ -565,9 +558,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    */
   void join() throws InterruptedException {
     clientRpcServer.join();
-    if (serviceRpcServer != null) {
-      serviceRpcServer.join();      
-    }
+    serviceRpcServer.join();
     if (lifelineRpcServer != null) {
       lifelineRpcServer.join();
     }
@@ -580,9 +571,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (clientRpcServer != null) {
       clientRpcServer.stop();
     }
-    if (serviceRpcServer != null) {
-      serviceRpcServer.stop();
-    }
+    serviceRpcServer.stop();
     if (lifelineRpcServer != null) {
       lifelineRpcServer.stop();
     }
@@ -1161,17 +1150,17 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public BlocksStats getBlocksStats() throws IOException {
+  public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ);
-    return namesystem.getBlocksStats();
+    return namesystem.getReplicatedBlockStats();
   }
 
   @Override // ClientProtocol
-  public ECBlockGroupsStats getECBlockGroupsStats() throws IOException {
+  public ECBlockGroupStats getECBlockGroupStats() throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ);
-    return namesystem.getECBlockGroupsStats();
+    return namesystem.getECBlockGroupStats();
   }
 
   @Override // ClientProtocol
@@ -2052,6 +2041,31 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public void reencryptEncryptionZone(final String zone,
+      final ReencryptAction action) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    boolean success = false;
+    try {
+      namesystem.reencryptEncryptionZone(zone, action, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+
+  @Override // ClientProtocol
+  public BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(
+      final long prevId) throws IOException {
+    checkNNStartup();
+    return namesystem.listReencryptionStatus(prevId);
+  }
+
+  @Override // ClientProtocol
   public void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException {
     checkNNStartup();
@@ -2278,7 +2292,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  public Map<String, String> getErasureCodingCodecs() throws IOException {
     checkNNStartup();
     return namesystem.getErasureCodingCodecs();
   }

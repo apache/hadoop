@@ -113,13 +113,14 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
-      assertEquals(listRequests.toString(), 2, listRequests.diff());
+      if (!fs.hasMetadataStore()) {
+        assertEquals(listRequests.toString(), 2, listRequests.diff());
+      }
       reset(metadataRequests,
           listRequests,
           listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
-
 
     } finally {
       describe("deletion");

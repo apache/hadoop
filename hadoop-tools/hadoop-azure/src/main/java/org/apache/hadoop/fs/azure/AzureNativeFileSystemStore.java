@@ -203,6 +203,23 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private Set<String> pageBlobDirs;
 
   /**
+   * Configuration key to indicate the set of directories in WASB where we
+   * should store files as block blobs with block compaction enabled.
+   *
+   * Entries can be directory paths relative to the container (e.g. "/path") or
+   * fully qualified wasb:// URIs (e.g.
+   * wasb://container@example.blob.core.windows.net/path)
+   */
+  public static final String KEY_BLOCK_BLOB_WITH_COMPACTION_DIRECTORIES =
+          "fs.azure.block.blob.with.compaction.dir";
+
+  /**
+   * The set of directories where we should store files as block blobs with
+   * block compaction enabled.
+   */
+  private Set<String> blockBlobWithCompationDirs;
+
+  /**
    * Configuration key to indicate the set of directories in WASB where
    * we should do atomic folder rename synchronized with createNonRecursive.
    */
@@ -526,6 +543,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
     // User-agent
     userAgentId = conf.get(USER_AGENT_ID_KEY, USER_AGENT_ID_DEFAULT);
+
+    // Extract the directories that should contain block blobs with compaction
+    blockBlobWithCompationDirs = getDirectorySet(
+        KEY_BLOCK_BLOB_WITH_COMPACTION_DIRECTORIES);
+    LOG.debug("Block blobs with compaction directories:  {}",
+        setToString(blockBlobWithCompationDirs));
 
     // Extract directories that should have atomic rename applied.
     atomicRenameDirs = getDirectorySet(KEY_ATOMIC_RENAME_DIRECTORIES);
@@ -1165,6 +1188,17 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   /**
+   * Checks if the given key in Azure Storage should be stored as a block blobs
+   * with compaction enabled instead of normal block blob.
+   *
+   * @param key blob name
+   * @return true, if the file is in directory with block compaction enabled.
+   */
+  public boolean isBlockBlobWithCompactionKey(String key) {
+    return isKeyForDirectorySet(key, blockBlobWithCompationDirs);
+  }
+
+  /**
    * Checks if the given key in Azure storage should have synchronized
    * atomic folder rename createNonRecursive implemented.
    */
@@ -1356,7 +1390,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   @Override
-  public DataOutputStream storefile(String key, PermissionStatus permissionStatus)
+  public DataOutputStream storefile(String keyEncoded,
+                                    PermissionStatus permissionStatus,
+                                    String key)
       throws AzureException {
     try {
 
@@ -1417,12 +1453,26 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
       // Get the blob reference from the store's container and
       // return it.
-      CloudBlobWrapper blob = getBlobReference(key);
+      CloudBlobWrapper blob = getBlobReference(keyEncoded);
       storePermissionStatus(blob, permissionStatus);
 
       // Create the output stream for the Azure blob.
       //
-      OutputStream outputStream = openOutputStream(blob);
+      OutputStream outputStream;
+
+      if (isBlockBlobWithCompactionKey(key)) {
+        BlockBlobAppendStream blockBlobOutputStream = new BlockBlobAppendStream(
+            (CloudBlockBlobWrapper) blob,
+            keyEncoded,
+            this.uploadBlockSizeBytes,
+            true,
+            getInstrumentedContext());
+
+        outputStream = blockBlobOutputStream;
+      } else {
+        outputStream = openOutputStream(blob);
+      }
+
       DataOutputStream dataOutStream = new SyncableDataOutputStream(outputStream);
       return dataOutStream;
     } catch (Exception e) {
@@ -2027,24 +2077,30 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
         LOG.debug("Found {} as an explicit blob. Checking if it's a file or folder.", key);
 
-        // The blob exists, so capture the metadata from the blob
-        // properties.
-        blob.downloadAttributes(getInstrumentedContext());
-        BlobProperties properties = blob.getProperties();
+        try {
+          // The blob exists, so capture the metadata from the blob
+          // properties.
+          blob.downloadAttributes(getInstrumentedContext());
+          BlobProperties properties = blob.getProperties();
 
-        if (retrieveFolderAttribute(blob)) {
-          LOG.debug("{} is a folder blob.", key);
-          return new FileMetadata(key, properties.getLastModified().getTime(),
-              getPermissionStatus(blob), BlobMaterialization.Explicit);
-        } else {
+          if (retrieveFolderAttribute(blob)) {
+            LOG.debug("{} is a folder blob.", key);
+            return new FileMetadata(key, properties.getLastModified().getTime(),
+                getPermissionStatus(blob), BlobMaterialization.Explicit);
+          } else {
 
-          LOG.debug("{} is a normal blob.", key);
+            LOG.debug("{} is a normal blob.", key);
 
-          return new FileMetadata(
-              key, // Always return denormalized key with metadata.
-              getDataLength(blob, properties),
-              properties.getLastModified().getTime(),
-              getPermissionStatus(blob));
+            return new FileMetadata(
+                key, // Always return denormalized key with metadata.
+                getDataLength(blob, properties),
+                properties.getLastModified().getTime(),
+                getPermissionStatus(blob));
+          }
+        } catch(StorageException e){
+          if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
+            throw e;
+          }
         }
       }
 
@@ -2459,8 +2515,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     try {
       blob.delete(operationContext, lease);
     } catch (StorageException e) {
-      LOG.error("Encountered Storage Exception for delete on Blob: {}, Exception Details: {} Error Code: {}",
-          blob.getUri(), e.getMessage(), e.getErrorCode());
+      if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
+        LOG.error("Encountered Storage Exception for delete on Blob: {}"
+            + ", Exception Details: {} Error Code: {}",
+            blob.getUri(), e.getMessage(), e.getErrorCode());
+      }
       // On exception, check that if:
       // 1. It's a BlobNotFound exception AND
       // 2. It got there after one-or-more retries THEN
@@ -2491,17 +2550,17 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         // Container doesn't exist, no need to do anything
         return true;
       }
-
       // Get the blob reference and delete it.
       CloudBlobWrapper blob = getBlobReference(key);
-      if (blob.exists(getInstrumentedContext())) {
-        safeDelete(blob, lease);
-        return true;
-      } else {
+      safeDelete(blob, lease);
+      return true;
+    } catch (Exception e) {
+      if (e instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException(
+              (StorageException) e)) {
+        // the file or directory does not exist
         return false;
       }
-    } catch (Exception e) {
-      // Re-throw as an Azure storage exception.
       throw new AzureException(e);
     }
   }
@@ -2860,10 +2919,21 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
       CloudBlobWrapper blob =  this.container.getBlockBlobReference(key);
 
-      BlockBlobAppendStream appendStream = new BlockBlobAppendStream((CloudBlockBlobWrapper) blob, key, bufferSize, getInstrumentedContext());
-      appendStream.initialize();
+      OutputStream outputStream;
 
-      return new DataOutputStream(appendStream);
+      BlockBlobAppendStream blockBlobOutputStream = new BlockBlobAppendStream(
+          (CloudBlockBlobWrapper) blob,
+          key,
+          bufferSize,
+          isBlockBlobWithCompactionKey(key),
+          getInstrumentedContext());
+
+      outputStream = blockBlobOutputStream;
+
+      DataOutputStream dataOutStream = new SyncableDataOutputStream(
+          outputStream);
+
+      return dataOutStream;
     } catch(Exception ex) {
       throw new AzureException(ex);
     }

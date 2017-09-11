@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.util.List;
+import java.util.ListIterator;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -79,8 +81,9 @@ public class KeyProviderCryptoExtension extends
     protected EncryptedKeyVersion(String keyName,
         String encryptionKeyVersionName, byte[] encryptedKeyIv,
         KeyVersion encryptedKeyVersion) {
-      this.encryptionKeyName = keyName;
-      this.encryptionKeyVersionName = encryptionKeyVersionName;
+      this.encryptionKeyName = keyName == null ? null : keyName.intern();
+      this.encryptionKeyVersionName = encryptionKeyVersionName == null ?
+          null : encryptionKeyVersionName.intern();
       this.encryptedKeyIv = encryptedKeyIv;
       this.encryptedKeyVersion = encryptedKeyVersion;
     }
@@ -247,6 +250,25 @@ public class KeyProviderCryptoExtension extends
      */
     EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion ekv)
         throws IOException, GeneralSecurityException;
+
+    /**
+     * Batched version of {@link #reencryptEncryptedKey(EncryptedKeyVersion)}.
+     * <p>
+     * For each encrypted key version, re-encrypts an encrypted key version,
+     * using its initialization vector and key material, but with the latest
+     * key version name of its key name. If the latest key version name in the
+     * provider is the same as the one encrypted the passed-in encrypted key
+     * version, the same encrypted key version is returned.
+     * <p>
+     * NOTE: The generated key is not stored by the <code>KeyProvider</code>
+     *
+     * @param  ekvs List containing the EncryptedKeyVersion's
+     * @throws IOException If any EncryptedKeyVersion could not be re-encrypted
+     * @throws GeneralSecurityException If any EncryptedKeyVersion could not be
+     *                            re-encrypted because of a cryptographic issue.
+     */
+    void reencryptEncryptedKeys(List<EncryptedKeyVersion> ekvs)
+        throws IOException, GeneralSecurityException;
   }
 
   private static class DefaultCryptoExtension implements CryptoExtension {
@@ -315,7 +337,7 @@ public class KeyProviderCryptoExtension extends
           .checkNotNull(ekNow, "KeyVersion name '%s' does not exist", ekName);
       Preconditions.checkArgument(ekv.getEncryptedKeyVersion().getVersionName()
               .equals(KeyProviderCryptoExtension.EEK),
-          "encryptedKey version name must be '%s', is '%s'",
+          "encryptedKey version name must be '%s', but found '%s'",
           KeyProviderCryptoExtension.EEK,
           ekv.getEncryptedKeyVersion().getVersionName());
 
@@ -336,30 +358,67 @@ public class KeyProviderCryptoExtension extends
     }
 
     @Override
-    public KeyVersion decryptEncryptedKey(
-        EncryptedKeyVersion encryptedKeyVersion) throws IOException,
-        GeneralSecurityException {
-      // Fetch the encryption key material
-      final String encryptionKeyVersionName =
-          encryptedKeyVersion.getEncryptionKeyVersionName();
-      final KeyVersion encryptionKey =
-          keyProvider.getKeyVersion(encryptionKeyVersionName);
-      Preconditions.checkNotNull(encryptionKey,
-          "KeyVersion name '%s' does not exist", encryptionKeyVersionName);
-      Preconditions.checkArgument(
-              encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
-                    .equals(KeyProviderCryptoExtension.EEK),
-                "encryptedKey version name must be '%s', is '%s'",
-                KeyProviderCryptoExtension.EEK,
-                encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
-            );
+    public void reencryptEncryptedKeys(List<EncryptedKeyVersion> ekvs)
+        throws IOException, GeneralSecurityException {
+      Preconditions.checkNotNull(ekvs, "Input list is null");
+      KeyVersion ekNow = null;
+      Decryptor decryptor = null;
+      Encryptor encryptor = null;
+      try (CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf())) {
+        decryptor = cc.createDecryptor();
+        encryptor = cc.createEncryptor();
+        ListIterator<EncryptedKeyVersion> iter = ekvs.listIterator();
+        while (iter.hasNext()) {
+          final EncryptedKeyVersion ekv = iter.next();
+          Preconditions.checkNotNull(ekv, "EncryptedKeyVersion is null");
+          final String ekName = ekv.getEncryptionKeyName();
+          Preconditions.checkNotNull(ekName, "Key name is null");
+          Preconditions.checkNotNull(ekv.getEncryptedKeyVersion(),
+              "EncryptedKeyVersion is null");
+          Preconditions.checkArgument(
+              ekv.getEncryptedKeyVersion().getVersionName()
+                  .equals(KeyProviderCryptoExtension.EEK),
+              "encryptedKey version name must be '%s', but found '%s'",
+              KeyProviderCryptoExtension.EEK,
+              ekv.getEncryptedKeyVersion().getVersionName());
 
+          if (ekNow == null) {
+            ekNow = keyProvider.getCurrentKey(ekName);
+            Preconditions
+                .checkNotNull(ekNow, "Key name '%s' does not exist", ekName);
+          } else {
+            Preconditions.checkArgument(ekNow.getName().equals(ekName),
+                "All keys must have the same key name. Expected '%s' "
+                    + "but found '%s'", ekNow.getName(), ekName);
+          }
+
+          final String encryptionKeyVersionName =
+              ekv.getEncryptionKeyVersionName();
+          final KeyVersion encryptionKey =
+              keyProvider.getKeyVersion(encryptionKeyVersionName);
+          Preconditions.checkNotNull(encryptionKey,
+              "KeyVersion name '%s' does not exist", encryptionKeyVersionName);
+          if (encryptionKey.equals(ekNow)) {
+            // no-op if same key version
+            continue;
+          }
+
+          final KeyVersion ek =
+              decryptEncryptedKey(decryptor, encryptionKey, ekv);
+          iter.set(generateEncryptedKey(encryptor, ekNow, ek.getMaterial(),
+              ekv.getEncryptedKeyIv()));
+        }
+      }
+    }
+
+    private KeyVersion decryptEncryptedKey(final Decryptor decryptor,
+        final KeyVersion encryptionKey,
+        final EncryptedKeyVersion encryptedKeyVersion)
+        throws IOException, GeneralSecurityException {
       // Encryption key IV is determined from encrypted key's IV
       final byte[] encryptionIV =
           EncryptedKeyVersion.deriveIV(encryptedKeyVersion.getEncryptedKeyIv());
 
-      CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
-      Decryptor decryptor = cc.createDecryptor();
       decryptor.init(encryptionKey.getMaterial(), encryptionIV);
       final KeyVersion encryptedKV =
           encryptedKeyVersion.getEncryptedKeyVersion();
@@ -372,8 +431,33 @@ public class KeyProviderCryptoExtension extends
       bbOut.flip();
       byte[] decryptedKey = new byte[keyLen];
       bbOut.get(decryptedKey);
-      cc.close();
       return new KeyVersion(encryptionKey.getName(), EK, decryptedKey);
+    }
+
+    @Override
+    public KeyVersion decryptEncryptedKey(
+        EncryptedKeyVersion encryptedKeyVersion)
+        throws IOException, GeneralSecurityException {
+      // Fetch the encryption key material
+      final String encryptionKeyVersionName =
+          encryptedKeyVersion.getEncryptionKeyVersionName();
+      final KeyVersion encryptionKey =
+          keyProvider.getKeyVersion(encryptionKeyVersionName);
+      Preconditions
+          .checkNotNull(encryptionKey, "KeyVersion name '%s' does not exist",
+              encryptionKeyVersionName);
+      Preconditions.checkArgument(
+          encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+              .equals(KeyProviderCryptoExtension.EEK),
+          "encryptedKey version name must be '%s', but found '%s'",
+          KeyProviderCryptoExtension.EEK,
+          encryptedKeyVersion.getEncryptedKeyVersion().getVersionName());
+
+      try (CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf())) {
+        final Decryptor decryptor = cc.createDecryptor();
+        return decryptEncryptedKey(decryptor, encryptionKey,
+            encryptedKeyVersion);
+      }
     }
 
     @Override
@@ -468,6 +552,38 @@ public class KeyProviderCryptoExtension extends
   public EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion ekv)
       throws IOException, GeneralSecurityException {
     return getExtension().reencryptEncryptedKey(ekv);
+  }
+
+  /**
+   * Calls {@link CryptoExtension#drain(String)} for the given key name on the
+   * underlying {@link CryptoExtension}.
+   *
+   * @param keyName
+   */
+  public void drain(String keyName) {
+    getExtension().drain(keyName);
+  }
+
+  /**
+   * Batched version of {@link #reencryptEncryptedKey(EncryptedKeyVersion)}.
+   * <p>
+   * For each encrypted key version, re-encrypts an encrypted key version,
+   * using its initialization vector and key material, but with the latest
+   * key version name of its key name. If the latest key version name in the
+   * provider is the same as the one encrypted the passed-in encrypted key
+   * version, the same encrypted key version is returned.
+   * <p>
+   * NOTE: The generated key is not stored by the <code>KeyProvider</code>
+   *
+   * @param  ekvs List containing the EncryptedKeyVersion's
+   * @return      The re-encrypted EncryptedKeyVersion's, in the same order.
+   * @throws IOException If any EncryptedKeyVersion could not be re-encrypted
+   * @throws GeneralSecurityException If any EncryptedKeyVersion could not be
+   *                            re-encrypted because of a cryptographic issue.
+   */
+  public void reencryptEncryptedKeys(List<EncryptedKeyVersion> ekvs)
+      throws IOException, GeneralSecurityException {
+    getExtension().reencryptEncryptedKeys(ekvs);
   }
 
   /**

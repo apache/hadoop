@@ -37,11 +37,13 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   ContainerId getContainerId();
 
+  long getContainerStartTime();
+
   Resource getResource();
 
-  void setResource(Resource targetResource);
-
   ContainerTokenIdentifier getContainerTokenIdentifier();
+
+  void setContainerTokenIdentifier(ContainerTokenIdentifier token);
 
   String getUser();
   
@@ -94,4 +96,11 @@ public interface Container extends EventHandler<ContainerEvent> {
   void sendKillEvent(int exitStatus, String description);
 
   boolean isRecovering();
+
+  /**
+   * Get assigned resource mappings to the container.
+   *
+   * @return Resource Mappings of the container
+   */
+  ResourceMappings getResourceMappings();
 }

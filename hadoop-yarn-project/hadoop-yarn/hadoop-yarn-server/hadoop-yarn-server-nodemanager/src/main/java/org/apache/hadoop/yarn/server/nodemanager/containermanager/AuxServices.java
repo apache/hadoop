@@ -25,9 +25,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +51,8 @@ public class AuxServices extends AbstractService
 
   static final String STATE_STORE_ROOT_NAME = "nm-aux-services";
 
-  private static final Log LOG = LogFactory.getLog(AuxServices.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(AuxServices.class);
 
   protected final Map<String,AuxiliaryService> serviceMap;
   protected final Map<String,ByteBuffer> serviceMetaData;
@@ -161,7 +162,7 @@ public class AuxServices extends AbstractService
         }
         s.init(conf);
       } catch (RuntimeException e) {
-        LOG.fatal("Failed to initialize " + sName, e);
+        LOG.error("Failed to initialize " + sName, e);
         throw e;
       }
     }
@@ -205,7 +206,7 @@ public class AuxServices extends AbstractService
 
   @Override
   public void stateChanged(Service service) {
-    LOG.fatal("Service " + service.getName() + " changed state: " +
+    LOG.error("Service " + service.getName() + " changed state: " +
         service.getServiceState());
     stop();
   }
@@ -243,7 +244,8 @@ public class AuxServices extends AbstractService
         for (AuxiliaryService serv : serviceMap.values()) {
           try {
             serv.initializeContainer(new ContainerInitializationContext(
-                event.getUser(), event.getContainer().getContainerId(),
+                event.getContainer().getUser(),
+                event.getContainer().getContainerId(),
                 event.getContainer().getResource(), event.getContainer()
                 .getContainerTokenIdentifier().getContainerType()));
           } catch (Throwable th) {

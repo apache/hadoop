@@ -66,11 +66,13 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -532,16 +534,31 @@ public class DFSAdmin extends FsShell {
      * minutes. Use "-metaSave" to list of all such blocks and accurate 
      * counts.
      */
-    System.out.println("Under replicated blocks: " + 
-                       dfs.getLowRedundancyBlocksCount());
-    System.out.println("Blocks with corrupt replicas: " + 
-                       dfs.getCorruptBlocksCount());
-    System.out.println("Missing blocks: " + 
-                       dfs.getMissingBlocksCount());
-    System.out.println("Missing blocks (with replication factor 1): " +
-                      dfs.getMissingReplOneBlocksCount());
-    System.out.println("Pending deletion blocks: " +
-        dfs.getPendingDeletionBlocksCount());
+    ReplicatedBlockStats replicatedBlockStats =
+        dfs.getClient().getNamenode().getReplicatedBlockStats();
+    System.out.println("Replicated Blocks:");
+    System.out.println("\tUnder replicated blocks: " +
+        replicatedBlockStats.getLowRedundancyBlocks());
+    System.out.println("\tBlocks with corrupt replicas: " +
+        replicatedBlockStats.getCorruptBlocks());
+    System.out.println("\tMissing blocks: " +
+        replicatedBlockStats.getMissingReplicaBlocks());
+    System.out.println("\tMissing blocks (with replication factor 1): " +
+        replicatedBlockStats.getMissingReplicationOneBlocks());
+    System.out.println("\tPending deletion blocks: " +
+        replicatedBlockStats.getPendingDeletionBlocks());
+
+    ECBlockGroupStats ecBlockGroupStats =
+        dfs.getClient().getNamenode().getECBlockGroupStats();
+    System.out.println("Erasure Coded Block Groups: ");
+    System.out.println("\tLow redundancy block groups: " +
+        ecBlockGroupStats.getLowRedundancyBlockGroups());
+    System.out.println("\tBlock groups with corrupt internal blocks: " +
+        ecBlockGroupStats.getCorruptBlockGroups());
+    System.out.println("\tMissing block groups: " +
+        ecBlockGroupStats.getMissingBlockGroups());
+    System.out.println("\tPending deletion blocks: " +
+        ecBlockGroupStats.getPendingDeletionBlocks());
 
     System.out.println();
 
@@ -1992,7 +2009,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-report".equals(cmd)) {
-      if (argv.length < 1) {
+      if (argv.length > 6) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2022,7 +2039,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if (RollingUpgradeCommand.matches(cmd)) {
-      if (argv.length < 1 || argv.length > 2) {
+      if (argv.length > 2) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2097,7 +2114,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-triggerBlockReport".equals(cmd)) {
-      if (argv.length < 1) {
+      if ((argv.length != 2) && (argv.length != 3)) {
         printUsage(cmd);
         return exitCode;
       }

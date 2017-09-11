@@ -27,6 +27,7 @@ import java.security.PrivilegedExceptionAction;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -75,22 +76,8 @@ public abstract class BaseRouterWebServicesTest {
   private RouterWebServices routerWebService;
 
   @Before
-  public void setup() {
-    conf = new YarnConfiguration();
-
-    String mockPassThroughInterceptorClass =
-        PassThroughRESTRequestInterceptor.class.getName();
-
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain will call the mock resource manager. The others in the chain will
-    // simply forward it to the next one in the chain
-    conf.set(YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
-        mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
-            + "," + mockPassThroughInterceptorClass + ","
-            + MockRESTRequestInterceptor.class.getName());
-
-    conf.setInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
-        TEST_MAX_CACHE_SIZE);
+  public void setUp() {
+    this.conf = createConfiguration();
 
     router = spy(new Router());
     Mockito.doNothing().when(router).startWepApp();
@@ -101,11 +88,37 @@ public abstract class BaseRouterWebServicesTest {
     router.start();
   }
 
+  protected YarnConfiguration createConfiguration() {
+    YarnConfiguration config = new YarnConfiguration();
+    String mockPassThroughInterceptorClass =
+        PassThroughRESTRequestInterceptor.class.getName();
+
+    // Create a request intercepter pipeline for testing. The last one in the
+    // chain will call the mock resource manager. The others in the chain will
+    // simply forward it to the next one in the chain
+    config.set(YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
+        mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
+            + "," + mockPassThroughInterceptorClass + ","
+            + MockRESTRequestInterceptor.class.getName());
+
+    config.setInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
+        TEST_MAX_CACHE_SIZE);
+    return config;
+  }
+
   @After
   public void tearDown() {
     if (router != null) {
       router.stop();
     }
+  }
+
+  public void setUpConfig() {
+    this.conf = createConfiguration();
+  }
+
+  protected Configuration getConf() {
+    return this.conf;
   }
 
   protected RouterWebServices getRouterWebServices() {

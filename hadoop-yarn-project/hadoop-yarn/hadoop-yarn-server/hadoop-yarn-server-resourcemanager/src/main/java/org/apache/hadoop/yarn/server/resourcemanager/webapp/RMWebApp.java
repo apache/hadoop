@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -55,7 +54,6 @@ public class RMWebApp extends WebApp implements YarnWebParams {
 
     if (rm != null) {
       bind(ResourceManager.class).toInstance(rm);
-      bind(ApplicationBaseProtocol.class).toInstance(rm.getClientRMService());
     }
     route("/", RmController.class);
     route(pajoin("/nodes", NODE_STATE), RmController.class, "nodes");

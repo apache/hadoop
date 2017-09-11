@@ -38,8 +38,8 @@ The cluster information resource provides overall information about the cluster.
 
 Both of the following URI's give you the cluster information.
 
-      * http://<rm http address:port>/ws/v1/cluster
-      * http://<rm http address:port>/ws/v1/cluster/info
+      * http://rm-http-address:port/ws/v1/cluster
+      * http://rm-http-address:port/ws/v1/cluster/info
 
 ### HTTP Operations Supported
 
@@ -72,7 +72,7 @@ Both of the following URI's give you the cluster information.
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/info
+      GET http://rm-http-address:port/ws/v1/cluster/info
 
 Response Header:
 
@@ -107,7 +107,7 @@ Response Body:
 HTTP Request:
 
       Accept: application/xml
-      GET http://<rm http address:port>/ws/v1/cluster/info
+      GET http://rm-http-address:port/ws/v1/cluster/info
 
 Response Header:
 
@@ -143,7 +143,7 @@ The cluster metrics resource provides some overall metrics about the cluster. Mo
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/metrics
+      * http://rm-http-address:port/ws/v1/cluster/metrics
 
 ### HTTP Operations Supported
 
@@ -189,7 +189,7 @@ The cluster metrics resource provides some overall metrics about the cluster. Mo
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/metrics
+      GET http://rm-http-address:port/ws/v1/cluster/metrics
 
 Response Header:
 
@@ -237,7 +237,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/metrics
+      GET http://rm-http-address:port/ws/v1/cluster/metrics
       Accept: application/xml
 
 Response Header:
@@ -287,7 +287,7 @@ A scheduler resource contains information about the current scheduler configured
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/scheduler
+      * http://rm-http-address:port/ws/v1/cluster/scheduler
 
 ### HTTP Operations Supported
 
@@ -367,7 +367,7 @@ The capacity scheduler supports hierarchical queues. This one request will print
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler
 
 Response Header:
 
@@ -382,257 +382,257 @@ Response Body:
 {
     "scheduler": {
         "schedulerInfo": {
-            "capacity": 100.0, 
-            "maxCapacity": 100.0, 
-            "queueName": "root", 
+            "capacity": 100.0,
+            "maxCapacity": 100.0,
+            "queueName": "root",
             "queues": {
                 "queue": [
                     {
-                        "absoluteCapacity": 10.5, 
-                        "absoluteMaxCapacity": 50.0, 
-                        "absoluteUsedCapacity": 0.0, 
-                        "capacity": 10.5, 
-                        "maxCapacity": 50.0, 
-                        "numApplications": 0, 
-                        "queueName": "a", 
+                        "absoluteCapacity": 10.5,
+                        "absoluteMaxCapacity": 50.0,
+                        "absoluteUsedCapacity": 0.0,
+                        "capacity": 10.5,
+                        "maxCapacity": 50.0,
+                        "numApplications": 0,
+                        "queueName": "a",
                         "queues": {
                             "queue": [
                                 {
-                                    "absoluteCapacity": 3.15, 
-                                    "absoluteMaxCapacity": 25.0, 
-                                    "absoluteUsedCapacity": 0.0, 
-                                    "capacity": 30.000002, 
-                                    "maxCapacity": 50.0, 
-                                    "numApplications": 0, 
-                                    "queueName": "a1", 
+                                    "absoluteCapacity": 3.15,
+                                    "absoluteMaxCapacity": 25.0,
+                                    "absoluteUsedCapacity": 0.0,
+                                    "capacity": 30.000002,
+                                    "maxCapacity": 50.0,
+                                    "numApplications": 0,
+                                    "queueName": "a1",
                                     "queues": {
                                         "queue": [
                                             {
-                                                "absoluteCapacity": 2.6775, 
-                                                "absoluteMaxCapacity": 25.0, 
-                                                "absoluteUsedCapacity": 0.0, 
-                                                "capacity": 85.0, 
-                                                "maxActiveApplications": 1, 
-                                                "maxActiveApplicationsPerUser": 1, 
-                                                "maxApplications": 267, 
-                                                "maxApplicationsPerUser": 267, 
-                                                "maxCapacity": 100.0, 
-                                                "numActiveApplications": 0, 
-                                                "numApplications": 0, 
-                                                "numContainers": 0, 
-                                                "numPendingApplications": 0, 
-                                                "queueName": "a1a", 
+                                                "absoluteCapacity": 2.6775,
+                                                "absoluteMaxCapacity": 25.0,
+                                                "absoluteUsedCapacity": 0.0,
+                                                "capacity": 85.0,
+                                                "maxActiveApplications": 1,
+                                                "maxActiveApplicationsPerUser": 1,
+                                                "maxApplications": 267,
+                                                "maxApplicationsPerUser": 267,
+                                                "maxCapacity": 100.0,
+                                                "numActiveApplications": 0,
+                                                "numApplications": 0,
+                                                "numContainers": 0,
+                                                "numPendingApplications": 0,
+                                                "queueName": "a1a",
                                                 "resourcesUsed": {
-                                                    "memory": 0, 
+                                                    "memory": 0,
                                                     "vCores": 0
-                                                }, 
-                                                "state": "RUNNING", 
-                                                "type": "capacitySchedulerLeafQueueInfo", 
-                                                "usedCapacity": 0.0, 
-                                                "usedResources": "<memory:0, vCores:0>", 
-                                                "userLimit": 100, 
-                                                "userLimitFactor": 1.0, 
+                                                },
+                                                "state": "RUNNING",
+                                                "type": "capacitySchedulerLeafQueueInfo",
+                                                "usedCapacity": 0.0,
+                                                "usedResources": "<memory:0, vCores:0>",
+                                                "userLimit": 100,
+                                                "userLimitFactor": 1.0,
                                                 "users": null
-                                            }, 
+                                            },
                                             {
-                                                "absoluteCapacity": 0.47250003, 
-                                                "absoluteMaxCapacity": 25.0, 
-                                                "absoluteUsedCapacity": 0.0, 
-                                                "capacity": 15.000001, 
-                                                "maxActiveApplications": 1, 
-                                                "maxActiveApplicationsPerUser": 1, 
-                                                "maxApplications": 47, 
-                                                "maxApplicationsPerUser": 47, 
-                                                "maxCapacity": 100.0, 
-                                                "numActiveApplications": 0, 
-                                                "numApplications": 0, 
-                                                "numContainers": 0, 
-                                                "numPendingApplications": 0, 
-                                                "queueName": "a1b", 
+                                                "absoluteCapacity": 0.47250003,
+                                                "absoluteMaxCapacity": 25.0,
+                                                "absoluteUsedCapacity": 0.0,
+                                                "capacity": 15.000001,
+                                                "maxActiveApplications": 1,
+                                                "maxActiveApplicationsPerUser": 1,
+                                                "maxApplications": 47,
+                                                "maxApplicationsPerUser": 47,
+                                                "maxCapacity": 100.0,
+                                                "numActiveApplications": 0,
+                                                "numApplications": 0,
+                                                "numContainers": 0,
+                                                "numPendingApplications": 0,
+                                                "queueName": "a1b",
                                                 "resourcesUsed": {
-                                                    "memory": 0, 
+                                                    "memory": 0,
                                                     "vCores": 0
-                                                }, 
-                                                "state": "RUNNING", 
-                                                "type": "capacitySchedulerLeafQueueInfo", 
-                                                "usedCapacity": 0.0, 
-                                                "usedResources": "<memory:0, vCores:0>", 
-                                                "userLimit": 100, 
-                                                "userLimitFactor": 1.0, 
+                                                },
+                                                "state": "RUNNING",
+                                                "type": "capacitySchedulerLeafQueueInfo",
+                                                "usedCapacity": 0.0,
+                                                "usedResources": "<memory:0, vCores:0>",
+                                                "userLimit": 100,
+                                                "userLimitFactor": 1.0,
                                                 "users": null
                                             }
                                         ]
-                                    }, 
+                                    },
                                     "resourcesUsed": {
-                                        "memory": 0, 
+                                        "memory": 0,
                                         "vCores": 0
-                                    }, 
-                                    "state": "RUNNING", 
-                                    "usedCapacity": 0.0, 
+                                    },
+                                    "state": "RUNNING",
+                                    "usedCapacity": 0.0,
                                     "usedResources": "<memory:0, vCores:0>"
-                                }, 
+                                },
                                 {
-                                    "absoluteCapacity": 7.35, 
-                                    "absoluteMaxCapacity": 50.0, 
-                                    "absoluteUsedCapacity": 0.0, 
-                                    "capacity": 70.0, 
-                                    "maxActiveApplications": 1, 
-                                    "maxActiveApplicationsPerUser": 100, 
-                                    "maxApplications": 735, 
-                                    "maxApplicationsPerUser": 73500, 
-                                    "maxCapacity": 100.0, 
-                                    "numActiveApplications": 0, 
-                                    "numApplications": 0, 
-                                    "numContainers": 0, 
-                                    "numPendingApplications": 0, 
-                                    "queueName": "a2", 
+                                    "absoluteCapacity": 7.35,
+                                    "absoluteMaxCapacity": 50.0,
+                                    "absoluteUsedCapacity": 0.0,
+                                    "capacity": 70.0,
+                                    "maxActiveApplications": 1,
+                                    "maxActiveApplicationsPerUser": 100,
+                                    "maxApplications": 735,
+                                    "maxApplicationsPerUser": 73500,
+                                    "maxCapacity": 100.0,
+                                    "numActiveApplications": 0,
+                                    "numApplications": 0,
+                                    "numContainers": 0,
+                                    "numPendingApplications": 0,
+                                    "queueName": "a2",
                                     "resourcesUsed": {
-                                        "memory": 0, 
+                                        "memory": 0,
                                         "vCores": 0
-                                    }, 
-                                    "state": "RUNNING", 
-                                    "type": "capacitySchedulerLeafQueueInfo", 
-                                    "usedCapacity": 0.0, 
-                                    "usedResources": "<memory:0, vCores:0>", 
-                                    "userLimit": 100, 
-                                    "userLimitFactor": 100.0, 
+                                    },
+                                    "state": "RUNNING",
+                                    "type": "capacitySchedulerLeafQueueInfo",
+                                    "usedCapacity": 0.0,
+                                    "usedResources": "<memory:0, vCores:0>",
+                                    "userLimit": 100,
+                                    "userLimitFactor": 100.0,
                                     "users": null
                                 }
                             ]
-                        }, 
+                        },
                         "resourcesUsed": {
-                            "memory": 0, 
+                            "memory": 0,
                             "vCores": 0
-                        }, 
-                        "state": "RUNNING", 
-                        "usedCapacity": 0.0, 
+                        },
+                        "state": "RUNNING",
+                        "usedCapacity": 0.0,
                         "usedResources": "<memory:0, vCores:0>"
-                    }, 
+                    },
                     {
-                        "absoluteCapacity": 89.5, 
-                        "absoluteMaxCapacity": 100.0, 
-                        "absoluteUsedCapacity": 0.0, 
-                        "capacity": 89.5, 
-                        "maxCapacity": 100.0, 
-                        "numApplications": 2, 
-                        "queueName": "b", 
+                        "absoluteCapacity": 89.5,
+                        "absoluteMaxCapacity": 100.0,
+                        "absoluteUsedCapacity": 0.0,
+                        "capacity": 89.5,
+                        "maxCapacity": 100.0,
+                        "numApplications": 2,
+                        "queueName": "b",
                         "queues": {
                             "queue": [
                                 {
-                                    "absoluteCapacity": 53.7, 
-                                    "absoluteMaxCapacity": 100.0, 
-                                    "absoluteUsedCapacity": 0.0, 
-                                    "capacity": 60.000004, 
-                                    "maxActiveApplications": 1, 
-                                    "maxActiveApplicationsPerUser": 100, 
-                                    "maxApplications": 5370, 
-                                    "maxApplicationsPerUser": 537000, 
-                                    "maxCapacity": 100.0, 
-                                    "numActiveApplications": 1, 
-                                    "numApplications": 2, 
-                                    "numContainers": 0, 
-                                    "numPendingApplications": 1, 
-                                    "queueName": "b1", 
+                                    "absoluteCapacity": 53.7,
+                                    "absoluteMaxCapacity": 100.0,
+                                    "absoluteUsedCapacity": 0.0,
+                                    "capacity": 60.000004,
+                                    "maxActiveApplications": 1,
+                                    "maxActiveApplicationsPerUser": 100,
+                                    "maxApplications": 5370,
+                                    "maxApplicationsPerUser": 537000,
+                                    "maxCapacity": 100.0,
+                                    "numActiveApplications": 1,
+                                    "numApplications": 2,
+                                    "numContainers": 0,
+                                    "numPendingApplications": 1,
+                                    "queueName": "b1",
                                     "resourcesUsed": {
-                                        "memory": 0, 
+                                        "memory": 0,
                                         "vCores": 0
-                                    }, 
-                                    "state": "RUNNING", 
-                                    "type": "capacitySchedulerLeafQueueInfo", 
-                                    "usedCapacity": 0.0, 
-                                    "usedResources": "<memory:0, vCores:0>", 
-                                    "userLimit": 100, 
-                                    "userLimitFactor": 100.0, 
+                                    },
+                                    "state": "RUNNING",
+                                    "type": "capacitySchedulerLeafQueueInfo",
+                                    "usedCapacity": 0.0,
+                                    "usedResources": "<memory:0, vCores:0>",
+                                    "userLimit": 100,
+                                    "userLimitFactor": 100.0,
                                     "users": {
                                         "user": [
                                             {
-                                                "numActiveApplications": 0, 
-                                                "numPendingApplications": 1, 
+                                                "numActiveApplications": 0,
+                                                "numPendingApplications": 1,
                                                 "resourcesUsed": {
-                                                    "memory": 0, 
+                                                    "memory": 0,
                                                     "vCores": 0
-                                                }, 
+                                                },
                                                 "username": "user2"
-                                            }, 
+                                            },
                                             {
-                                                "numActiveApplications": 1, 
-                                                "numPendingApplications": 0, 
+                                                "numActiveApplications": 1,
+                                                "numPendingApplications": 0,
                                                 "resourcesUsed": {
-                                                    "memory": 0, 
+                                                    "memory": 0,
                                                     "vCores": 0
-                                                }, 
+                                                },
                                                 "username": "user1"
                                             }
                                         ]
                                     }
-                                }, 
+                                },
                                 {
-                                    "absoluteCapacity": 35.3525, 
-                                    "absoluteMaxCapacity": 100.0, 
-                                    "absoluteUsedCapacity": 0.0, 
-                                    "capacity": 39.5, 
-                                    "maxActiveApplications": 1, 
-                                    "maxActiveApplicationsPerUser": 100, 
-                                    "maxApplications": 3535, 
-                                    "maxApplicationsPerUser": 353500, 
-                                    "maxCapacity": 100.0, 
-                                    "numActiveApplications": 0, 
-                                    "numApplications": 0, 
-                                    "numContainers": 0, 
-                                    "numPendingApplications": 0, 
-                                    "queueName": "b2", 
+                                    "absoluteCapacity": 35.3525,
+                                    "absoluteMaxCapacity": 100.0,
+                                    "absoluteUsedCapacity": 0.0,
+                                    "capacity": 39.5,
+                                    "maxActiveApplications": 1,
+                                    "maxActiveApplicationsPerUser": 100,
+                                    "maxApplications": 3535,
+                                    "maxApplicationsPerUser": 353500,
+                                    "maxCapacity": 100.0,
+                                    "numActiveApplications": 0,
+                                    "numApplications": 0,
+                                    "numContainers": 0,
+                                    "numPendingApplications": 0,
+                                    "queueName": "b2",
                                     "resourcesUsed": {
-                                        "memory": 0, 
+                                        "memory": 0,
                                         "vCores": 0
-                                    }, 
-                                    "state": "RUNNING", 
-                                    "type": "capacitySchedulerLeafQueueInfo", 
-                                    "usedCapacity": 0.0, 
-                                    "usedResources": "<memory:0, vCores:0>", 
-                                    "userLimit": 100, 
-                                    "userLimitFactor": 100.0, 
+                                    },
+                                    "state": "RUNNING",
+                                    "type": "capacitySchedulerLeafQueueInfo",
+                                    "usedCapacity": 0.0,
+                                    "usedResources": "<memory:0, vCores:0>",
+                                    "userLimit": 100,
+                                    "userLimitFactor": 100.0,
                                     "users": null
-                                }, 
+                                },
                                 {
-                                    "absoluteCapacity": 0.4475, 
-                                    "absoluteMaxCapacity": 100.0, 
-                                    "absoluteUsedCapacity": 0.0, 
-                                    "capacity": 0.5, 
-                                    "maxActiveApplications": 1, 
-                                    "maxActiveApplicationsPerUser": 100, 
-                                    "maxApplications": 44, 
-                                    "maxApplicationsPerUser": 4400, 
-                                    "maxCapacity": 100.0, 
-                                    "numActiveApplications": 0, 
-                                    "numApplications": 0, 
-                                    "numContainers": 0, 
-                                    "numPendingApplications": 0, 
-                                    "queueName": "b3", 
+                                    "absoluteCapacity": 0.4475,
+                                    "absoluteMaxCapacity": 100.0,
+                                    "absoluteUsedCapacity": 0.0,
+                                    "capacity": 0.5,
+                                    "maxActiveApplications": 1,
+                                    "maxActiveApplicationsPerUser": 100,
+                                    "maxApplications": 44,
+                                    "maxApplicationsPerUser": 4400,
+                                    "maxCapacity": 100.0,
+                                    "numActiveApplications": 0,
+                                    "numApplications": 0,
+                                    "numContainers": 0,
+                                    "numPendingApplications": 0,
+                                    "queueName": "b3",
                                     "resourcesUsed": {
-                                        "memory": 0, 
+                                        "memory": 0,
                                         "vCores": 0
-                                    }, 
-                                    "state": "RUNNING", 
-                                    "type": "capacitySchedulerLeafQueueInfo", 
-                                    "usedCapacity": 0.0, 
-                                    "usedResources": "<memory:0, vCores:0>", 
-                                    "userLimit": 100, 
-                                    "userLimitFactor": 100.0, 
+                                    },
+                                    "state": "RUNNING",
+                                    "type": "capacitySchedulerLeafQueueInfo",
+                                    "usedCapacity": 0.0,
+                                    "usedResources": "<memory:0, vCores:0>",
+                                    "userLimit": 100,
+                                    "userLimitFactor": 100.0,
                                     "users": null
                                 }
                             ]
-                        }, 
+                        },
                         "resourcesUsed": {
-                            "memory": 0, 
+                            "memory": 0,
                             "vCores": 0
-                        }, 
-                        "state": "RUNNING", 
-                        "usedCapacity": 0.0, 
+                        },
+                        "state": "RUNNING",
+                        "usedCapacity": 0.0,
                         "usedResources": "<memory:0, vCores:0>"
                     }
                 ]
-            }, 
-            "type": "capacityScheduler", 
+            },
+            "type": "capacityScheduler",
             "usedCapacity": 0.0
         }
     }
@@ -644,7 +644,7 @@ Response Body:
 HTTP Request:
 
       Accept: application/xml
-      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler
 
 Response Header:
 
@@ -922,7 +922,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler
 
 Response Header:
 
@@ -959,7 +959,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler
       Accept: application/xml
 
 Response Header:
@@ -1033,7 +1033,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler
 
 Response Header:
 
@@ -1172,14 +1172,14 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler
       Accept: application/xml
 
 Response Header:
 
       HTTP/1.1 200 OK
       Content-Type: application/xml
-      Content-Length: 2321 
+      Content-Length: 2321
       Server: Jetty(6.1.26)
 
 Response Body:
@@ -1308,7 +1308,7 @@ With the Applications API, you can obtain a collection of resources, each of whi
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps
+      * http://rm-http-address:port/ws/v1/cluster/apps
 
 ### HTTP Operations Supported
 
@@ -1352,7 +1352,7 @@ Current supported items:
 
 e.g:
 
-      * http://<rm http address:port>/ws/v1/cluster/apps?deSelects=resouceRequests
+      * http://rm-http-address:port/ws/v1/cluster/apps?deSelects=resouceRequests
 
 
 ### Response Examples
@@ -1361,7 +1361,7 @@ e.g:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps
+      GET http://rm-http-address:port/ws/v1/cluster/apps
 
 Response Header:
 
@@ -1539,7 +1539,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps
+      GET http://rm-http-address:port/ws/v1/cluster/apps
       Accept: application/xml
 
 Response Header:
@@ -1714,7 +1714,7 @@ With the Application Statistics API, you can obtain a collection of triples, eac
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/appstatistics
+      * http://rm-http-address:port/ws/v1/cluster/appstatistics
 
 ### HTTP Operations Supported
 
@@ -1741,7 +1741,7 @@ When you make a request for the list of statistics items, the information will b
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
+      GET http://rm-http-address:port/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
 
 Response Header:
 
@@ -1782,7 +1782,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
+      GET http://rm-http-address:port/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
       Accept: application/xml
 
 Response Header:
@@ -1824,7 +1824,7 @@ An application resource contains information about a particular application that
 
 Use the following URI to obtain an app object, from a application identified by the appid value.
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}
 
 ### HTTP Operations Supported
 
@@ -1882,7 +1882,7 @@ Note that depending on security settings a user might not be able to see all the
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1476912658570_0002
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1476912658570_0002
 
 Response Header:
 
@@ -1938,7 +1938,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1326821518301_0005
       Accept: application/xml
 
 Response Header:
@@ -1997,7 +1997,7 @@ With the application attempts API, you can obtain a collection of resources that
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/appattempts
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/appattempts
 
 ### HTTP Operations Supported
 
@@ -2034,7 +2034,7 @@ appAttempts:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
 
 Response Header:
 
@@ -2066,7 +2066,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
       Accept: application/xml
 
 Response Header:
@@ -2099,7 +2099,7 @@ With the Nodes API, you can obtain a collection of resources, each of which repr
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/nodes
+      * http://rm-http-address:port/ws/v1/cluster/nodes
 
 ### HTTP Operations Supported
 
@@ -2108,7 +2108,7 @@ With the Nodes API, you can obtain a collection of resources, each of which repr
 ### Query Parameters Supported
 
       * state - the state of the node
-      * healthy - true or false 
+      * healthy - true or false
 
 ### Elements of the *nodes* object
 
@@ -2124,7 +2124,7 @@ When you make a request for the list of nodes, the information will be returned 
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/nodes
+      GET http://rm-http-address:port/ws/v1/cluster/nodes
 
 Response Header:
 
@@ -2198,7 +2198,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/nodes
+      GET http://rm-http-address:port/ws/v1/cluster/nodes
       Accept: application/xml
 
 Response Header:
@@ -2271,7 +2271,7 @@ A node resource contains information about a node in the cluster.
 
 Use the following URI to obtain a Node Object, from a node identified by the nodeid value.
 
-      * http://<rm http address:port>/ws/v1/cluster/nodes/{nodeid}
+      * http://rm-http-address:port/ws/v1/cluster/nodes/{nodeid}
 
 ### HTTP Operations Supported
 
@@ -2317,7 +2317,7 @@ The *resourceUtilization* object contains the following elements:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/nodes/h2:1235
+      GET http://rm-http-address:port/ws/v1/cluster/nodes/h2:1235
 
 Response Header:
 
@@ -2362,7 +2362,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/node/h2:1235
+      GET http://rm-http-address:port/ws/v1/cluster/node/h2:1235
       Accept: application/xml
 
 Response Header:
@@ -2415,7 +2415,7 @@ This feature is currently in the alpha stage and may change in the future.
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/new-application
+      * http://rm-http-address:port/ws/v1/cluster/apps/new-application
 
 ### HTTP Operations Supported
 
@@ -2447,7 +2447,7 @@ The *maximum-resource-capabilites* object contains the following elements:
 
 HTTP Request:
 
-      POST http://<rm http address:port>/ws/v1/cluster/apps/new-application
+      POST http://rm-http-address:port/ws/v1/cluster/apps/new-application
 
 Response Header:
 
@@ -2473,7 +2473,7 @@ Response Body:
 
 HTTP Request:
 
-      POST http://<rm http address:port>/ws/v1/cluster/apps/new-application
+      POST http://rm-http-address:port/ws/v1/cluster/apps/new-application
 
 Response Header:
 
@@ -2502,7 +2502,7 @@ The Submit Applications API can be used to submit applications. In case of submi
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps
+      * http://rm-http-address:port/ws/v1/cluster/apps
 
 ### HTTP Operations Supported
 
@@ -2598,7 +2598,7 @@ Elements of the POST request body *am-black-listing-requests* object
 HTTP Request:
 
 ```json
-  POST http://<rm http address:port>/ws/v1/cluster/apps
+  POST http://rm-http-address:port/ws/v1/cluster/apps
   Accept: application/json
   Content-Type: application/json
   {
@@ -2682,7 +2682,7 @@ Response Header:
 
       HTTP/1.1 202
       Transfer-Encoding: chunked
-      Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1404203615263_0001
+      Location: http://rm-http-address:port/ws/v1/cluster/apps/application_1404203615263_0001
       Content-Type: application/json
       Server: Jetty(6.1.26)
 
@@ -2695,7 +2695,7 @@ Response Body:
 HTTP Request:
 
 ```xml
-POST http://<rm http address:port>/ws/v1/cluster/apps
+POST http://rm-http-address:port/ws/v1/cluster/apps
 Accept: application/xml
 Content-Type: application/xml
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -2797,7 +2797,7 @@ Response Header:
 
       HTTP/1.1 202
       Transfer-Encoding: chunked
-      Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1404204891930_0002
+      Location: http://rm-http-address:port/ws/v1/cluster/apps/application_1404204891930_0002
       Content-Type: application/xml
       Server: Jetty(6.1.26)
 
@@ -2816,7 +2816,7 @@ This feature is currently in the alpha stage and may change in the future.
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/state
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/state
 
 ### HTTP Operations Supported
 
@@ -2841,7 +2841,7 @@ When you make a request for the state of an app, the information returned has th
 
 HTTP Request
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Response Header:
 
@@ -2858,7 +2858,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Request Body:
 
@@ -2871,7 +2871,7 @@ Response Header:
     HTTP/1.1 202 Accepted
     Content-Type: application/json
     Transfer-Encoding: chunked
-    Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003
+    Location: http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003
     Server: Jetty(6.1.26)
 
 Response Body:
@@ -2880,7 +2880,7 @@ Response Body:
       "state":"ACCEPTED"
     }
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Request Body:
 
@@ -2905,7 +2905,7 @@ Response Body:
 
 HTTP Request
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Response Header:
 
@@ -2923,7 +2923,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Request Body:
 
@@ -2937,7 +2937,7 @@ Response Header:
     HTTP/1.1 202 Accepted
     Content-Type: application/xml
     Content-Length: 794
-    Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003
+    Location: http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003
     Server: Jetty(6.1.26)
 
 Response Body:
@@ -2949,7 +2949,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Request Body:
 
@@ -2976,7 +2976,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Request Body:
 
@@ -2994,7 +2994,7 @@ Response Header:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
 
 Request Body:
 
@@ -3030,7 +3030,7 @@ This feature is currently in the alpha stage and may change in the future.
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/queue
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/queue
 
 ### HTTP Operations Supported
 
@@ -3055,7 +3055,7 @@ When you make a request for the state of an app, the information returned has th
 
 HTTP Request
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/queue
 
 Response Header:
 
@@ -3072,7 +3072,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/queue
 
 Request Body:
 
@@ -3097,7 +3097,7 @@ Response Body:
 
 HTTP Request
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/queue
 
 Response Header:
 
@@ -3115,7 +3115,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/queue
 
 Request Body:
 
@@ -3149,7 +3149,7 @@ This feature is currently in the alpha stage and may change in the future.
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/priority
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/priority
 
 ### HTTP Operations Supported
 
@@ -3174,7 +3174,7 @@ When you make a request for the state of an app, the information returned has th
 
 HTTP Request
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/priority
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/priority
 
 Response Header:
 
@@ -3191,7 +3191,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/priority
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/priority
 
 Request Body:
 
@@ -3216,7 +3216,7 @@ Response Body:
 
 HTTP Request
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/priority
+      GET http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/priority
 
 Response Header:
 
@@ -3234,7 +3234,7 @@ Response Body:
 
 HTTP Request
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/priority
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/priority
 
 Request Body:
 
@@ -3268,11 +3268,11 @@ This feature is currently in the alpha stage and may change in the future.
 
 Use the following URI to create and cancel delegation tokens.
 
-      * http://<rm http address:port>/ws/v1/cluster/delegation-token
+      * http://rm-http-address:port/ws/v1/cluster/delegation-token
 
 Use the following URI to renew delegation tokens.
 
-      * http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+      * http://rm-http-address:port/ws/v1/cluster/delegation-token/expiration
 
 ### HTTP Operations Supported
 
@@ -3304,7 +3304,7 @@ The response from the delegation tokens API contains one of the fields listed be
 
 HTTP Request:
 
-      POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+      POST http://rm-http-address:port/ws/v1/cluster/delegation-token
       Accept: application/json
       Content-Type: application/json
       {
@@ -3337,7 +3337,7 @@ Response body
 
 HTTP Request
 
-      POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+      POST http://rm-http-address:port/ws/v1/cluster/delegation-token
       Accept: application/xml
       Content-Type: application/xml
       <delegation-token>
@@ -3373,7 +3373,7 @@ Response Body
 
 HTTP Request:
 
-      POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+      POST http://rm-http-address:port/ws/v1/cluster/delegation-token/expiration
       Accept: application/json
       Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
       Content-Type: application/json
@@ -3397,7 +3397,7 @@ Response body
 
 HTTP Request
 
-      POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+      POST http://rm-http-address:port/ws/v1/cluster/delegation-token/expiration
       Accept: application/xml
       Content-Type: application/xml
       Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
@@ -3423,7 +3423,7 @@ Response Body
 
 HTTP Request
 
-    DELETE http://<rm http address:port>/ws/v1/cluster/delegation-token
+    DELETE http://rm-http-address:port/ws/v1/cluster/delegation-token
     Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
     Accept: application/xml
 
@@ -3451,7 +3451,7 @@ You can use delegation tokens to authenticate yourself when using YARN RM webser
 
 Once setup, delegation tokens can be fetched using the web services listed above and used as shown in an example below:
 
-      PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/application_1399397633663_0003/state
       X-Hadoop-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
       Content-Type: application/json; charset=UTF8
       {
@@ -3465,7 +3465,7 @@ The Cluster Reservation API can be used to list reservations. When listing reser
 
 ### URI
 
-    * http://<rm http address:port>/ws/v1/cluster/reservation/list
+    * http://rm-http-address:port/ws/v1/cluster/reservation/list
 
 ### HTTP Operations Supported
 
@@ -3546,7 +3546,7 @@ This request return all active reservations within the start time 1455159355000 
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/reservation/list?queue=dedicated&start-time=1455159355000&end-time=1475160036000&include-resource-allocations=true
+      GET http://rm-http-address:port/ws/v1/cluster/reservation/list?queue=dedicated&start-time=1455159355000&end-time=1475160036000&include-resource-allocations=true
 
 Response Header:
 
@@ -3617,7 +3617,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/reservation/list?queue=dedicated&start-time=1455159355000&end-time=1475160036000&include-resource-allocations=true
+      GET http://rm-http-address:port/ws/v1/cluster/reservation/list?queue=dedicated&start-time=1455159355000&end-time=1475160036000&include-resource-allocations=true
 
 Response Header:
 
@@ -3684,7 +3684,7 @@ This feature is currently in the alpha stage and may change in the future.
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/reservation/new-reservation
+      * http://rm-http-address:port/ws/v1/cluster/reservation/new-reservation
 
 ### HTTP Operations Supported
 
@@ -3708,7 +3708,7 @@ The new-reservation response contains the following elements:
 
 HTTP Request:
 
-      POST http://<rm http address:port>/ws/v1/cluster/reservation/new-reservation
+      POST http://rm-http-address:port/ws/v1/cluster/reservation/new-reservation
 
 Response Header:
 
@@ -3729,7 +3729,7 @@ Response Body:
 
 HTTP Request:
 
-      POST http://<rm http address:port>/ws/v1/cluster/reservation/new-reservation
+      POST http://rm-http-address:port/ws/v1/cluster/reservation/new-reservation
 
 Response Header:
 
@@ -3754,7 +3754,7 @@ The Cluster Reservation API can be used to submit reservations. When submitting 
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/reservation/submit
+      * http://rm-http-address:port/ws/v1/cluster/reservation/submit
 
 ### HTTP Operations Supported
 
@@ -3931,7 +3931,7 @@ The Cluster Reservation API Update can be used to update existing reservations.U
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/reservation/update
+      * http://rm-http-address:port/ws/v1/cluster/reservation/update
 
 ### HTTP Operations Supported
 
@@ -4105,7 +4105,7 @@ The Cluster Reservation API Delete can be used to delete existing reservations.D
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/reservation/delete
+      * http://rm-http-address:port/ws/v1/cluster/reservation/delete
 
 ### HTTP Operations Supported
 
@@ -4192,7 +4192,7 @@ Cluster Application Timeouts API can be used to get all configured timeouts of a
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeouts
 
 ### HTTP Operations Supported
 
@@ -4211,7 +4211,7 @@ When you make a request for the list of application timeouts, the information wi
 HTTP Request:
 
       Accept: application/json
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeouts
 
 Response Header:
 
@@ -4243,7 +4243,7 @@ Response Body:
 HTTP Request:
 
       Accept: application/xml
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeouts
 
 Response Header:
 
@@ -4273,7 +4273,7 @@ The Cluster Application Timeout resource contains information about timeout.
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts/{type}
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeouts/{type}
 
 ### HTTP Operations Supported
 
@@ -4292,7 +4292,7 @@ The Cluster Application Timeout resource contains information about timeout.
 HTTP Request:
 
       Accept: application/json
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts/LIFETIME
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeouts/LIFETIME
 
 Response Header:
 
@@ -4319,7 +4319,7 @@ Response Body:
 HTTP Request:
 
       Accept: application/xml
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts/LIFETIME
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeouts/LIFETIME
 
 Response Header:
 
@@ -4347,7 +4347,7 @@ Update timeout of an application for given timeout type.
 
 ### URI
 
-      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeout
 
 ### HTTP Operations Supported
 
@@ -4366,7 +4366,7 @@ HTTP Request:
 
 ```json
       Accept: application/json
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeout
       Content-Type: application/json
         {
         "timeout":
@@ -4404,7 +4404,7 @@ HTTP Request:
 
 ```xml
       Accept: application/xml
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeout
       Content-Type: application/xml
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <timeout>

@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.0.0-beta1-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.0.0-beta1-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -45,8 +45,6 @@
     <!-- These 2 versions are defined here because they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
     <jdiff.version>1.0.9</jdiff.version>
-    <!-- Version number for xerces used by JDiff -->
-    <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
 
     <kafka.version>0.8.2.1</kafka.version>
     <hbase.version>1.2.6</hbase.version>
@@ -98,7 +96,7 @@
     <apacheds.version>2.0.0-M21</apacheds.version>
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
-    <jcache.version>1.0.0</jcache.version>
+    <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
@@ -872,6 +870,17 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
         <version>2.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.4</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
@@ -1142,7 +1151,7 @@
       <dependency>
         <groupId>com.aliyun.oss</groupId>
         <artifactId>aliyun-sdk-oss</artifactId>
-        <version>2.4.1</version>
+        <version>2.8.1</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -1153,12 +1162,6 @@
             <artifactId>commons-beanutils</artifactId>
           </exclusion>
         </exclusions>
-     </dependency>
-
-     <dependency>
-       <groupId>xerces</groupId>
-       <artifactId>xercesImpl</artifactId>
-       <version>2.9.1</version>
      </dependency>
 
      <dependency>
@@ -1284,8 +1287,8 @@
           <version>1.0.0</version>
         </dependency>
         <dependency>
-          <groupId>javax.cache</groupId>
-          <artifactId>cache-api</artifactId>
+          <groupId>org.apache.geronimo.specs</groupId>
+          <artifactId>geronimo-jcache_1.0_spec</artifactId>
           <version>${jcache.version}</version>
         </dependency>
         <dependency>
@@ -1742,4 +1745,12 @@
       </build>
     </profile>
   </profiles>
+
+  <repositories>
+    <repository>
+      <id>dynamodb-local-oregon</id>
+      <name>DynamoDB Local Release Repository</name>
+      <url>https://s3-us-west-2.amazonaws.com/dynamodb-local/release</url>
+    </repository>
+  </repositories>
 </project>

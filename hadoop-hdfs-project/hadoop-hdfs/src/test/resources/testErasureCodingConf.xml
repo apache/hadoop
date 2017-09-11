@@ -101,7 +101,7 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>[-setPolicy -path &lt;path&gt; -policy &lt;policy&gt;]</expected-output>
+          <expected-output>[-setPolicy -path &lt;path&gt; [-policy &lt;policy&gt;] [-replicate]]</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -135,7 +135,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Get the list of enabled erasure coding policies</expected-output>
+          <expected-output>Get the list of all erasure coding policies</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
@@ -206,7 +206,7 @@
       <description>setPolicy : set erasure coding policy on a directory to encode files</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /ecdir</command>
@@ -214,7 +214,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set erasure coding policy RS-6-3-64k on /ecdir</expected-output>
+          <expected-output>Set erasure coding policy RS-6-3-1024k on /ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -223,8 +223,8 @@
       <description>setPolicy : set a policy twice</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /ecdir</command>
@@ -232,7 +232,30 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set erasure coding policy RS-6-3-64k on /ecdir</expected-output>
+          <expected-output>Set erasure coding policy RS-6-3-1024k on /ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : set replication policy on a directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir/replica</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -replicate -path /ecdir/replica</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/replica/file</command>
+        <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir/replica/file</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /ecdir/replica/file</command>
+        <command>-fs NAMENODE -rmdir /ecdir/replica</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>is unspecified</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -241,7 +264,7 @@
       <description>unsetPolicy : unset policy and get</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
         <ec-admin-command>-fs NAMENODE -unsetPolicy -path /ecdir</ec-admin-command>
         <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir</ec-admin-command>
       </test-commands>
@@ -260,8 +283,8 @@
       <description>setPolicy : change different policy and get</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-3-2-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-3-2-1024k -path /ecdir</ec-admin-command>
         <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
@@ -270,7 +293,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>RS-3-2-64k</expected-output>
+          <expected-output>RS-3-2-1024k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -280,7 +303,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <command>-fs NAMENODE -mkdir /ecdir/child</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
         <ec-admin-command>-fs NAMENODE -unsetPolicy -path /ecdir/child</ec-admin-command>
         <command>-fs NAMENODE -touchz /ecdir/child/ecfile</command>
         <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir/child/ecfile</ec-admin-command>
@@ -293,7 +316,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>RS-6-3-64k</expected-output>
+          <expected-output>RS-6-3-1024k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -319,7 +342,7 @@
       <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
         <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
@@ -328,7 +351,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>RS-6-3-64k</expected-output>
+          <expected-output>RS-6-3-1024k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -337,7 +360,7 @@
       <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
         <command>-fs NAMENODE -touchz /ecdir/ecfile</command>
         <ec-admin-command>-fs NAMENODE -getPolicy -path /ecdir/ecfile</ec-admin-command>
       </test-commands>
@@ -348,7 +371,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>RS-6-3-64k</expected-output>
+          <expected-output>RS-6-3-1024k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -382,7 +405,26 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Add ErasureCodingPolicy RS-6-3-64k failed</expected-output>
+          <expected-output>Add ErasureCodingPolicy RS-6-3-1024k failed</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listPolicies : get the list of ECPolicies supported</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listPolicies</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>XOR-2-1-128k</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>State=DISABLED</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -390,14 +432,14 @@
     <test>
       <description>enablePolicy : enable the erasure coding policy</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Erasure coding policy RS-6-3-64k is enabled</expected-output>
+          <expected-output>Erasure coding policy RS-6-3-1024k is enabled</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -405,15 +447,15 @@
     <test>
       <description>enablePolicy : enable the erasure coding policy twice</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-1024k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Erasure coding policy RS-6-3-64k is enabled</expected-output>
+          <expected-output>Erasure coding policy RS-6-3-1024k is enabled</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -421,15 +463,15 @@
     <test>
       <description>disablePolicy : disable the erasure coding policy</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-1024k</ec-admin-command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Erasure coding policy RS-6-3-64k is disabled</expected-output>
+          <expected-output>Erasure coding policy RS-6-3-1024k is disabled</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -437,23 +479,23 @@
     <test>
       <description>disablePolicy : disable the erasure coding policy twice</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-1024k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-1024k</ec-admin-command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Erasure coding policy RS-6-3-64k is disabled</expected-output>
+          <expected-output>Erasure coding policy RS-6-3-1024k is disabled</expected-output>
         </comparator>
       </comparators>
     </test>
 
 <!-- Test illegal parameters -->
     <test>
-      <description>setPolicy : illegal parameters - path is missing</description>
+      <description>setPolicy : illegal parameters - path option is missing</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy</ec-admin-command>
@@ -470,7 +512,7 @@
     </test>
 
     <test>
-      <description>setPolicy : illegal parameters - policy name is missing</description>
+      <description>setPolicy : illegal parameters - path name is missing</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy -path</ec-admin-command>
@@ -487,10 +529,27 @@
     </test>
 
     <test>
-      <description>setPolicy : illegal parameters - too many arguments</description>
+      <description>setPolicy : illegal parameters - too many arguments case 1</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir1 -policy RS-3-2-64k /ecdir2</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir1 -policy RS-3-2-1024k /ecdir2</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-setPolicy: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - too many arguments case 2</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir1 -policy RS-3-2-1024k -replicate /ecdir2</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /ecdir</command>
@@ -521,10 +580,10 @@
     </test>
 
     <test>
-      <description>setPolicy : illegal parameters - RS-10-4-64k</description>
+      <description>setPolicy : illegal parameters - RS-10-4-1024k</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-10-4-64k -path /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-10-4-1024k -path /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /ecdir</command>
@@ -532,7 +591,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Policy 'RS-10-4-64k' does not match any enabled erasure coding policies</expected-output>
+          <expected-output>Policy 'RS-10-4-1024k' does not match any enabled erasure coding policies</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -540,7 +599,7 @@
     <test>
       <description>setPolicy : illegal parameters - no such file</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy RS-3-2-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy RS-3-2-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -548,6 +607,36 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>Path not found: /ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - wrong spelling replicate </description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -replica</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-setPolicy: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - replicate and policy coexist</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy RS-3-2-1024k -replicate</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-replicate and -policy cannot been used at the same time</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -582,7 +671,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>RS-6-3-64k</expected-output>
+          <expected-output>RS-6-3-1024k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -681,7 +770,7 @@
     <test>
       <description>enablePolicy : illegal parameters - policy is missing</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -enablePolicy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy RS-6-3-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -696,7 +785,7 @@
     <test>
       <description>enablePolicy : illegal parameters - too many parameters</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-64k RS-3-2-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy RS-6-3-1024k RS-3-2-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -711,7 +800,7 @@
     <test>
       <description>disablePolicy : illegal parameters - policy is missing</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -disablePolicy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy RS-6-3-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -726,7 +815,7 @@
     <test>
       <description>disablePolicy : illegal parameters - too many parameters</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-64k RS-3-2-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy RS-6-3-1024k RS-3-2-1024k</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -772,7 +861,7 @@
       <description>count: file using absolute path with option -e to show erasurecoding policy of a directory</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir1</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -path /dir1 -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /dir1 -policy RS-6-3-1024k</ec-admin-command>
         <command>-fs NAMENODE -touchz /dir1/file1</command>
         <command>-fs NAMENODE -touchz /dir1/file2</command>
         <command>-fs NAMENODE -count -e -v /dir1</command>
@@ -813,7 +902,7 @@
       <description>ls: file using absolute path and option -e to show erasure coding policy of a directory</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir -p /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy RS-6-3-64k</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy RS-6-3-1024k</ec-admin-command>
         <command>-fs NAMENODE -touchz /ecdir/file1</command>
         <command>-fs NAMENODE -touchz /ecdir/file2</command>
         <command>-fs NAMENODE -touchz /ecdir/file3</command>

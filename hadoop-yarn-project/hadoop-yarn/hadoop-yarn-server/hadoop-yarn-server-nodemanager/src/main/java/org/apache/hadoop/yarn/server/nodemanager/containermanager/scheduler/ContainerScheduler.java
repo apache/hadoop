@@ -31,6 +31,9 @@ import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor
+    .ChangeMonitoringContainerResourceEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 
 
@@ -136,12 +139,83 @@ public class ContainerScheduler extends AbstractService implements
     case CONTAINER_COMPLETED:
       onContainerCompleted(event.getContainer());
       break;
+    case UPDATE_CONTAINER:
+      if (event instanceof UpdateContainerSchedulerEvent) {
+        onUpdateContainer((UpdateContainerSchedulerEvent) event);
+      } else {
+        LOG.error("Unknown event type on UpdateCOntainer: " + event.getType());
+      }
+      break;
     case SHED_QUEUED_CONTAINERS:
       shedQueuedOpportunisticContainers();
       break;
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
           + event.toString());
+    }
+  }
+
+  /**
+   * We assume that the ContainerManager has already figured out what kind
+   * of update this is.
+   */
+  private void onUpdateContainer(UpdateContainerSchedulerEvent updateEvent) {
+    ContainerId containerId = updateEvent.getContainer().getContainerId();
+    if (updateEvent.isResourceChange()) {
+      if (runningContainers.containsKey(containerId)) {
+        this.utilizationTracker.subtractContainerResource(
+            updateEvent.getContainer());
+        updateEvent.getContainer().setContainerTokenIdentifier(
+            updateEvent.getUpdatedToken());
+        this.utilizationTracker.addContainerResources(
+            updateEvent.getContainer());
+        getContainersMonitor().handle(
+            new ChangeMonitoringContainerResourceEvent(containerId,
+                updateEvent.getUpdatedToken().getResource()));
+      } else {
+        // Is Queued or localizing..
+        updateEvent.getContainer().setContainerTokenIdentifier(
+            updateEvent.getUpdatedToken());
+      }
+      try {
+        // Persist change in the state store.
+        this.context.getNMStateStore().storeContainerResourceChanged(
+            containerId,
+            updateEvent.getUpdatedToken().getVersion(),
+            updateEvent.getUpdatedToken().getResource());
+      } catch (IOException e) {
+        LOG.warn("Could not store container [" + containerId + "] resource " +
+            "change..", e);
+      }
+    }
+
+    if (updateEvent.isExecTypeUpdate()) {
+      updateEvent.getContainer().setContainerTokenIdentifier(
+          updateEvent.getUpdatedToken());
+      // If this is a running container.. just change the execution type
+      // and be done with it.
+      if (!runningContainers.containsKey(containerId)) {
+        // Promotion or not (Increase signifies either a promotion
+        // or container size increase)
+        if (updateEvent.isIncrease()) {
+          // Promotion of queued container..
+          if (queuedOpportunisticContainers.remove(containerId) != null) {
+            queuedGuaranteedContainers.put(containerId,
+                updateEvent.getContainer());
+          }
+          //Kill opportunistic containers if any to make room for
+          // promotion request
+          killOpportunisticContainers(updateEvent.getContainer());
+        } else {
+          // Demotion of queued container.. Should not happen too often
+          // since you should not find too many queued guaranteed
+          // containers
+          if (queuedGuaranteedContainers.remove(containerId) != null) {
+            queuedOpportunisticContainers.put(containerId,
+                updateEvent.getContainer());
+          }
+        }
+      }
     }
   }
 

@@ -51,8 +51,10 @@ public class TestAMRMClientContainerRequest {
 
     Resource capability = Resource.newInstance(1024, 1);
     ContainerRequest request =
-        new ContainerRequest(capability, new String[] {"host1", "host2"},
-            new String[] {"/rack2"}, Priority.newInstance(1));
+        ContainerRequest.newBuilder().capability(capability)
+            .nodes(new String[] { "host1", "host2" })
+            .racks(new String[] { "/rack2" }).priority(Priority.newInstance(1))
+            .build();
     client.addContainerRequest(request);
     verifyResourceRequest(client, request, "host1", true);
     verifyResourceRequest(client, request, "host2", true);

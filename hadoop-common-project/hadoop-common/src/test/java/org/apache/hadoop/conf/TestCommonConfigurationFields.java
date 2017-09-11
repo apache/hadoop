@@ -103,6 +103,12 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.s3n.");
     xmlPrefixToSkipCompare.add("s3native.");
 
+    // WASB properties are in a different subtree.
+    // - org.apache.hadoop.fs.azure.NativeAzureFileSystem
+    xmlPrefixToSkipCompare.add("fs.wasb.impl");
+    xmlPrefixToSkipCompare.add("fs.wasbs.impl");
+    xmlPrefixToSkipCompare.add("fs.azure.");
+
     // ADL properties are in a different subtree
     // - org.apache.hadoop.hdfs.web.ADLConfKeys
     xmlPrefixToSkipCompare.add("adl.");
@@ -117,6 +123,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.secure.mode");
     xmlPropsToSkipCompare.add("fs.azure.authorization");
     xmlPropsToSkipCompare.add("fs.azure.authorization.caching.enable");
+    xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
     xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
 
     // Deprecated properties.  These should eventually be removed from the

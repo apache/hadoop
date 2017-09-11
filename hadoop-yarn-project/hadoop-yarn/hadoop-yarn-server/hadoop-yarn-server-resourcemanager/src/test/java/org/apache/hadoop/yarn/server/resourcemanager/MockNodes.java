@@ -242,7 +242,7 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForContainersDecreasing(
+    public void updateNodeHeartbeatResponseForUpdatedContainers(
         NodeHeartbeatResponse response) {
       
     }
@@ -263,7 +263,7 @@ public class MockNodes {
     }
 
     public OpportunisticContainersStatus getOpportunisticContainersStatus() {
-      return null;
+      return OpportunisticContainersStatus.newInstance();
     }
 
     @Override

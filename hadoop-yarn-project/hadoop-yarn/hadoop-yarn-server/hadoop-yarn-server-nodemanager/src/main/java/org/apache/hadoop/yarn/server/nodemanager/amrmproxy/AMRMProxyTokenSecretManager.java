@@ -27,9 +27,9 @@ import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -52,8 +52,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class AMRMProxyTokenSecretManager extends
     SecretManager<AMRMTokenIdentifier> {
 
-  private static final Log LOG = LogFactory
-      .getLog(AMRMProxyTokenSecretManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(AMRMProxyTokenSecretManager.class);
 
   private int serialNo = new SecureRandom().nextInt();
   private MasterKeyData nextMasterKey;

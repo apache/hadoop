@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.impl.TimelineV2ClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -83,10 +84,13 @@ public abstract class TimelineV2Client extends CompositeService {
 
   /**
    * <p>
-   * Update the timeline service address where the request will be sent to.
+   * Update collector info received in AllocateResponse which contains the
+   * timeline service address where the request will be sent to and the timeline
+   * delegation token which will be used to send the request.
    * </p>
    *
-   * @param address the timeline service address
+   * @param collectorInfo Collector info which contains the timeline service
+   * address and timeline delegation token.
    */
-  public abstract void setTimelineServiceAddress(String address);
+  public abstract void setTimelineCollectorInfo(CollectorInfo collectorInfo);
 }

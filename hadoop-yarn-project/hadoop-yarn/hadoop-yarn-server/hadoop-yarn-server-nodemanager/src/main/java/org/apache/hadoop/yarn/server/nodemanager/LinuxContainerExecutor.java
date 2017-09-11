@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -98,8 +98,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  */
 public class LinuxContainerExecutor extends ContainerExecutor {
 
-  private static final Log LOG = LogFactory
-      .getLog(LinuxContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(LinuxContainerExecutor.class);
 
   private String nonsecureLocalUser;
   private Pattern nonsecureLocalUserPattern;
@@ -625,7 +625,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public String[] getIpAndHost(Container container) {
+  public String[] getIpAndHost(Container container)
+      throws ContainerExecutionException {
     return linuxContainerRuntime.getIpAndHost(container);
   }
 

@@ -74,9 +74,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerUpdatesAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode
-    .RMNodeDecreaseContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 
@@ -655,7 +655,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
               container.getNodeId(), getUser(), container.getResource(),
               container.getPriority(), rmContainer.getCreationTime(),
               this.logAggregationContext, rmContainer.getNodeLabelExpression(),
-              containerType));
+              containerType, container.getExecutionType()));
       updateNMToken(container);
     } catch (IllegalArgumentException e) {
       // DNS might be down, skip returning this container.
@@ -663,20 +663,38 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           + " an updated container " + container.getId(), e);
       return null;
     }
-    
-    if (updateType == null ||
-        ContainerUpdateType.PROMOTE_EXECUTION_TYPE == updateType ||
-        ContainerUpdateType.DEMOTE_EXECUTION_TYPE == updateType) {
+
+    if (updateType == null) {
+      // This is a newly allocated container
       rmContainer.handle(new RMContainerEvent(
           rmContainer.getContainerId(), RMContainerEventType.ACQUIRED));
     } else {
-      rmContainer.handle(new RMContainerUpdatesAcquiredEvent(
-          rmContainer.getContainerId(),
-          ContainerUpdateType.INCREASE_RESOURCE == updateType));
-      if (ContainerUpdateType.DECREASE_RESOURCE == updateType) {
+      // Resource increase is handled as follows:
+      // If the AM does not use the updated token to increase the container
+      // for a configured period of time, the RM will automatically rollback
+      // the update by performing a container decrease. This rollback (which
+      // essentially is another resource decrease update) is notified to the
+      // NM heartbeat response. If autoUpdate flag is set, then AM does not
+      // need to do anything - same code path as resource decrease.
+      //
+      // Resource Decrease is always automatic: the AM never has to do
+      // anything. It is always via NM heartbeat response.
+      //
+      // ExecutionType updates (both Promotion and Demotion) are either
+      // always automatic (if the flag is set) or the AM has to explicitly
+      // call updateContainer() on the NM. There is no expiry
+      boolean autoUpdate =
+          ContainerUpdateType.DECREASE_RESOURCE == updateType ||
+              ((AbstractYarnScheduler)rmContext.getScheduler())
+                  .shouldContainersBeAutoUpdated();
+      if (autoUpdate) {
         this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeDecreaseContainerEvent(rmContainer.getNodeId(),
+            new RMNodeUpdateContainerEvent(rmContainer.getNodeId(),
                 Collections.singletonList(rmContainer.getContainer())));
+      } else {
+        rmContainer.handle(new RMContainerUpdatesAcquiredEvent(
+            rmContainer.getContainerId(),
+            ContainerUpdateType.INCREASE_RESOURCE == updateType));
       }
     }
     return container;
@@ -849,10 +867,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         // Mark container for release (set RRs to null, so RM does not think
         // it is a recoverable container)
         ((RMContainerImpl) c).setResourceRequests(null);
-        ((AbstractYarnScheduler) rmContext.getScheduler()).completedContainer(c,
-            SchedulerUtils.createAbnormalContainerStatus(c.getContainerId(),
-                SchedulerUtils.UPDATED_CONTAINER),
-            RMContainerEventType.KILL);
+
+        // Release this container async-ly so as to prevent
+        // 'LeafQueue::completedContainer()' from trying to acquire a lock
+        // on the app and queue which can contended for in the reverse order
+        // by the Scheduler thread.
+        ((AbstractYarnScheduler)rmContext.getScheduler())
+            .asyncContainerRelease(c);
         tempIter.remove();
       }
       return updatedContainers;
@@ -1110,9 +1131,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       }
       LOG.info("SchedulerAttempt " + getApplicationAttemptId()
           + " is recovering container " + rmContainer.getContainerId());
-      liveContainers.put(rmContainer.getContainerId(), rmContainer);
-      attemptResourceUsage.incUsed(node.getPartition(),
-          rmContainer.getContainer().getResource());
+      addRMContainer(rmContainer.getContainerId(), rmContainer);
+      if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
+        attemptResourceUsage.incUsed(node.getPartition(),
+            rmContainer.getContainer().getResource());
+      }
 
       // resourceLimit: updated when LeafQueue#recoverContainer#allocateResource
       // is called.

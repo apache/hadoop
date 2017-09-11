@@ -26,6 +26,7 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -60,19 +61,21 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -117,8 +120,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFil
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
@@ -179,6 +182,10 @@ import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncrypt
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListReencryptionStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListReencryptionStatusResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ZoneReencryptionStatusProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesRequestProto;
@@ -239,13 +246,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   private final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
       GetFsStatusRequestProto.newBuilder().build();
 
-  private final static GetFsBlocksStatsRequestProto
-      VOID_GET_FS_REPLICABLOCKS_STATS_REQUEST =
-      GetFsBlocksStatsRequestProto.newBuilder().build();
+  private final static GetFsReplicatedBlockStatsRequestProto
+      VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST =
+      GetFsReplicatedBlockStatsRequestProto.newBuilder().build();
 
-  private final static GetFsECBlockGroupsStatsRequestProto
-      VOID_GET_FS_ECBLOCKGROUPS_STATS_REQUEST =
-      GetFsECBlockGroupsStatsRequestProto.newBuilder().build();
+  private final static GetFsECBlockGroupStatsRequestProto
+      VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST =
+      GetFsECBlockGroupStatsRequestProto.newBuilder().build();
 
   private final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST =
       RollEditsRequestProto.getDefaultInstance();
@@ -688,20 +695,20 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public BlocksStats getBlocksStats() throws IOException {
+  public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
     try {
-      return PBHelperClient.convert(rpcProxy.getFsBlocksStats(null,
-          VOID_GET_FS_REPLICABLOCKS_STATS_REQUEST));
+      return PBHelperClient.convert(rpcProxy.getFsReplicatedBlockStats(null,
+          VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public ECBlockGroupsStats getECBlockGroupsStats() throws IOException {
+  public ECBlockGroupStats getECBlockGroupStats() throws IOException {
     try {
-      return PBHelperClient.convert(rpcProxy.getFsECBlockGroupsStats(null,
-          VOID_GET_FS_ECBLOCKGROUPS_STATS_REQUEST));
+      return PBHelperClient.convert(rpcProxy.getFsECBlockGroupStats(null,
+          VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -1544,6 +1551,39 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
+  public void reencryptEncryptionZone(String zone, ReencryptAction action)
+      throws IOException {
+    final ReencryptEncryptionZoneRequestProto.Builder builder =
+        ReencryptEncryptionZoneRequestProto.newBuilder();
+    builder.setZone(zone).setAction(PBHelperClient.convert(action));
+    ReencryptEncryptionZoneRequestProto req = builder.build();
+    try {
+      rpcProxy.reencryptEncryptionZone(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(long id)
+      throws IOException {
+    final ListReencryptionStatusRequestProto req =
+        ListReencryptionStatusRequestProto.newBuilder().setId(id).build();
+    try {
+      ListReencryptionStatusResponseProto response =
+          rpcProxy.listReencryptionStatus(null, req);
+      List<ZoneReencryptionStatus> elements =
+          Lists.newArrayListWithCapacity(response.getStatusesCount());
+      for (ZoneReencryptionStatusProto p : response.getStatusesList()) {
+        elements.add(PBHelperClient.convert(p));
+      }
+      return new BatchedListEntries<>(elements, response.getHasMore());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
     SetXAttrRequestProto req = SetXAttrRequestProto.newBuilder()
@@ -1760,11 +1800,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public HashMap<String, String> getErasureCodingCodecs() throws IOException {
+  public Map<String, String> getErasureCodingCodecs() throws IOException {
     try {
       GetErasureCodingCodecsResponseProto response = rpcProxy
           .getErasureCodingCodecs(null, VOID_GET_EC_CODEC_REQUEST);
-      HashMap<String, String> ecCodecs = new HashMap<String, String>();
+      Map<String, String> ecCodecs = new HashMap<>();
       for (CodecProto codec : response.getCodecList()) {
         ecCodecs.put(codec.getCodec(), codec.getCoders());
       }

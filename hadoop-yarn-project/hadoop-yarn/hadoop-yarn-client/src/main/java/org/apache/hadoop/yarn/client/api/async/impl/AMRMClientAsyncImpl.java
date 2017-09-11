@@ -68,8 +68,6 @@ extends AMRMClientAsync<T> {
   
   private volatile boolean keepRunning;
   private volatile float progress;
-  
-  private volatile String collectorAddr;
 
   /**
    *
@@ -325,17 +323,16 @@ extends AMRMClientAsync<T> {
           }
 
           AllocateResponse response = (AllocateResponse) object;
-          String collectorAddress = response.getCollectorAddr();
+          String collectorAddress = null;
+          if (response.getCollectorInfo() != null) {
+            collectorAddress = response.getCollectorInfo().getCollectorAddr();
+          }
+
           TimelineV2Client timelineClient =
               client.getRegisteredTimelineV2Client();
-          if (timelineClient != null && collectorAddress != null
-              && !collectorAddress.isEmpty()) {
-            if (collectorAddr == null
-                || !collectorAddr.equals(collectorAddress)) {
-              collectorAddr = collectorAddress;
-              timelineClient.setTimelineServiceAddress(collectorAddress);
-              LOG.info("collectorAddress " + collectorAddress);
-            }
+          if (timelineClient != null && response.getCollectorInfo() != null) {
+            timelineClient.
+                setTimelineCollectorInfo(response.getCollectorInfo());
           }
 
           List<NodeReport> updatedNodes = response.getUpdatedNodes();

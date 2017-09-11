@@ -51,8 +51,10 @@ public class TestDataNodeReconfiguration {
   private static final Log LOG = LogFactory.getLog(TestBlockRecovery.class);
   private static final String DATA_DIR = MiniDFSCluster.getBaseDirectory()
       + "data";
-  private final static InetSocketAddress NN_ADDR = new InetSocketAddress(
-      "localhost", 5020);
+  private final static InetSocketAddress NN_ADDR =
+      new InetSocketAddress("localhost", 5020);
+  private final static InetSocketAddress NN_SERVICE_ADDR =
+      new InetSocketAddress("localhost", 5021);
   private final int NUM_NAME_NODE = 1;
   private final int NUM_DATA_NODE = 10;
   private MiniDFSCluster cluster;
@@ -99,10 +101,13 @@ public class TestDataNodeReconfiguration {
     conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        NN_SERVICE_ADDR.getHostName() + ":" + NN_SERVICE_ADDR.getPort());
 
     DataNode[] result = new DataNode[numDateNode];
     for (int i = 0; i < numDateNode; i++) {
-      result[i] = InternalDataNodeTestUtils.startDNWithMockNN(conf, NN_ADDR, DATA_DIR);
+      result[i] = InternalDataNodeTestUtils.startDNWithMockNN(
+          conf, NN_ADDR, NN_SERVICE_ADDR, DATA_DIR);
     }
     return result;
   }

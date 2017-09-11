@@ -77,7 +77,7 @@ public class TestDFSHAAdminMiniCluster {
     tool.setErrOut(new PrintStream(errOutBytes));
     cluster.waitActive();
     
-    nn1Port = cluster.getNameNodePort(0);
+    nn1Port = cluster.getNameNodeServicePort(0);
   }
 
   @After

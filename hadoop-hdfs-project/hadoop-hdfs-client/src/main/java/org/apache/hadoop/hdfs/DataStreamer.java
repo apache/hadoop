@@ -689,8 +689,7 @@ class DataStreamer extends Daemon {
           long now = Time.monotonicNow();
           while ((!shouldStop() && dataQueue.size() == 0 &&
               (stage != BlockConstructionStage.DATA_STREAMING ||
-                  stage == BlockConstructionStage.DATA_STREAMING &&
-                      now - lastPacket < halfSocketTimeout)) || doSleep ) {
+                  now - lastPacket < halfSocketTimeout)) || doSleep) {
             long timeout = halfSocketTimeout - (now-lastPacket);
             timeout = timeout <= 0 ? 1000 : timeout;
             timeout = (stage == BlockConstructionStage.DATA_STREAMING)?
@@ -1620,7 +1619,8 @@ class DataStreamer extends Daemon {
   }
 
   /** update pipeline at the namenode */
-  private void updatePipeline(long newGS) throws IOException {
+  @VisibleForTesting
+  public void updatePipeline(long newGS) throws IOException {
     final ExtendedBlock oldBlock = block.getCurrentBlock();
     // the new GS has been propagated to all DN, it should be ok to update the
     // local block state

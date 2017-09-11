@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.tools;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -179,9 +180,11 @@ public class TestDFSHAAdmin {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol)
         .getServiceStatus();
     assertEquals(0, runTool("-getAllServiceState"));
-    assertOutputContains(String.format("%-50s %-10s", (HOST_A + ":" + 12345),
+    assertOutputContains(String.format("%-50s %-10s", (HOST_A + ":" +
+            DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT),
         STANDBY_READY_RESULT.getState()));
-    assertOutputContains(String.format("%-50s %-10s", (HOST_B + ":" + 12345),
+    assertOutputContains(String.format("%-50s %-10s", (HOST_B + ":" +
+            DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT),
         STANDBY_READY_RESULT.getState()));
   }
 

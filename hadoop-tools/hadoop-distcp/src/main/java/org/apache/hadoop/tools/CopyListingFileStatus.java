@@ -280,7 +280,7 @@ public final class CopyListingFileStatus implements Writable {
     out.writeLong(getBlockSize());
     out.writeLong(getModificationTime());
     out.writeLong(getAccessTime());
-    getPermission().write(out);
+    out.writeShort(getPermission().toShort());
     Text.writeString(out, getOwner(), Text.DEFAULT_MAX_LEN);
     Text.writeString(out, getGroup(), Text.DEFAULT_MAX_LEN);
     if (aclEntries != null) {
@@ -330,7 +330,7 @@ public final class CopyListingFileStatus implements Writable {
     blocksize = in.readLong();
     modificationTime = in.readLong();
     accessTime = in.readLong();
-    permission.readFields(in);
+    permission.fromShort(in.readShort());
     owner = Text.readString(in, Text.DEFAULT_MAX_LEN);
     group = Text.readString(in, Text.DEFAULT_MAX_LEN);
     byte aclEntriesSize = in.readByte();

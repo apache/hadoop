@@ -124,6 +124,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsU
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
@@ -903,6 +905,19 @@ public class CapacityScheduler extends
       ContainerUpdates updateRequests) {
     FiCaSchedulerApp application = getApplicationAttempt(applicationAttemptId);
     if (application == null) {
+      LOG.error("Calling allocate on removed or non existent application " +
+          applicationAttemptId.getApplicationId());
+      return EMPTY_ALLOCATION;
+    }
+
+    // The allocate may be the leftover from previous attempt, and it will
+    // impact current attempt, such as confuse the request and allocation for
+    // current attempt's AM container.
+    // Note outside precondition check for the attempt id may be
+    // outdated here, so double check it here is necessary.
+    if (!application.getApplicationAttemptId().equals(applicationAttemptId)) {
+      LOG.error("Calling allocate on previous or removed " +
+          "or non existent application attempt " + applicationAttemptId);
       return EMPTY_ALLOCATION;
     }
 
@@ -1476,6 +1491,16 @@ public class CapacityScheduler extends
                 SchedulerUtils.EXPIRED_CONTAINER),
             RMContainerEventType.EXPIRE);
       }
+    }
+    break;
+    case RELEASE_CONTAINER:
+    {
+      RMContainer container = ((ReleaseContainerEvent) event).getContainer();
+      completedContainer(container,
+          SchedulerUtils.createAbnormalContainerStatus(
+            container.getContainerId(),
+            SchedulerUtils.RELEASED_CONTAINER),
+          RMContainerEventType.RELEASED);
     }
     break;
     case KILL_RESERVED_CONTAINER:
@@ -2538,5 +2563,48 @@ public class CapacityScheduler extends
     } finally {
       writeLock.unlock();
     }
+  }
+
+  @Override
+  public long checkAndGetApplicationLifetime(String queueName,
+      long lifetimeRequestedByApp) {
+    try {
+      readLock.lock();
+      CSQueue queue = getQueue(queueName);
+      if (queue == null || !(queue instanceof LeafQueue)) {
+        return lifetimeRequestedByApp;
+      }
+
+      long defaultApplicationLifetime =
+          ((LeafQueue) queue).getDefaultApplicationLifetime();
+      long maximumApplicationLifetime =
+          ((LeafQueue) queue).getMaximumApplicationLifetime();
+
+      // check only for maximum, that's enough because default cann't
+      // exceed maximum
+      if (maximumApplicationLifetime <= 0) {
+        return lifetimeRequestedByApp;
+      }
+
+      if (lifetimeRequestedByApp <= 0) {
+        return defaultApplicationLifetime;
+      } else if (lifetimeRequestedByApp > maximumApplicationLifetime) {
+        return maximumApplicationLifetime;
+      }
+      return lifetimeRequestedByApp;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public long getMaximumApplicationLifetime(String queueName) {
+    CSQueue queue = getQueue(queueName);
+    if (queue == null || !(queue instanceof LeafQueue)) {
+      LOG.error("Unknown queue: " + queueName);
+      return -1;
+    }
+    // In seconds
+    return ((LeafQueue) queue).getMaximumApplicationLifetime();
   }
 }

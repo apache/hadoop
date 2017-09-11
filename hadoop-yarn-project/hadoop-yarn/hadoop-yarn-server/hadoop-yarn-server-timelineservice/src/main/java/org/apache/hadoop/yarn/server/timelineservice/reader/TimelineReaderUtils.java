@@ -24,12 +24,31 @@ import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Set of utility methods to be used across timeline reader.
  */
-final class TimelineReaderUtils {
+public final class TimelineReaderUtils {
   private TimelineReaderUtils() {
   }
+
+  /**
+   * Default delimiter for joining strings.
+   */
+  @VisibleForTesting
+  public static final char DEFAULT_DELIMITER_CHAR = '!';
+
+  /**
+   * Default escape character used for joining strings.
+   */
+  @VisibleForTesting
+  public static final char DEFAULT_ESCAPE_CHAR = '*';
+
+  public static final String FROMID_KEY = "FROM_ID";
+
+  @VisibleForTesting
+  public static final String UID_KEY = "UID";
 
   /**
    * Split the passed string along the passed delimiter character while looking
@@ -167,5 +186,15 @@ final class TimelineReaderUtils {
     }
     // Join the strings after they have been escaped.
     return StringUtils.join(strs, delimiterChar);
+  }
+
+  public static List<String> split(final String str)
+      throws IllegalArgumentException {
+    return split(str, DEFAULT_DELIMITER_CHAR, DEFAULT_ESCAPE_CHAR);
+  }
+
+  public static String joinAndEscapeStrings(final String[] strs) {
+    return joinAndEscapeStrings(strs, DEFAULT_DELIMITER_CHAR,
+        DEFAULT_ESCAPE_CHAR);
   }
 }

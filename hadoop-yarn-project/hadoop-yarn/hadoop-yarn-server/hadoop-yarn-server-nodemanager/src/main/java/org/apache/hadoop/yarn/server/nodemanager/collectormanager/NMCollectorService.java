@@ -22,10 +22,11 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -37,10 +38,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
-import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 
 /**
@@ -50,7 +51,8 @@ import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePubli
 public class NMCollectorService extends CompositeService implements
     CollectorNodemanagerProtocol {
 
-  private static final Log LOG = LogFactory.getLog(NMCollectorService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMCollectorService.class);
 
   private final Context context;
 
@@ -73,15 +75,20 @@ public class NMCollectorService extends CompositeService implements
 
     Configuration serverConf = new Configuration(conf);
 
-    // TODO Security settings.
     YarnRPC rpc = YarnRPC.create(conf);
 
+    // Kerberos based authentication to be used for CollectorNodemanager
+    // protocol if security is enabled.
     server =
         rpc.getServer(CollectorNodemanagerProtocol.class, this,
-            collectorServerAddress, serverConf,
-            this.context.getNMTokenSecretManager(),
+            collectorServerAddress, serverConf, null,
             conf.getInt(YarnConfiguration.NM_COLLECTOR_SERVICE_THREAD_COUNT,
                 YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_THREAD_COUNT));
+
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      server.refreshServiceAcl(conf, new NMPolicyProvider());
+    }
 
     server.start();
     collectorServerAddress = conf.updateConnectAddr(
@@ -93,7 +100,6 @@ public class NMCollectorService extends CompositeService implements
     super.serviceStart();
     LOG.info("NMCollectorService started at " + collectorServerAddress);
   }
-
 
   @Override
   public void serviceStop() throws Exception {
@@ -107,23 +113,31 @@ public class NMCollectorService extends CompositeService implements
   @Override
   public ReportNewCollectorInfoResponse reportNewCollectorInfo(
       ReportNewCollectorInfoRequest request) throws YarnException, IOException {
-    List<AppCollectorsMap> newCollectorsList = request.getAppCollectorsList();
+    List<AppCollectorData> newCollectorsList = request.getAppCollectorsList();
     if (newCollectorsList != null && !newCollectorsList.isEmpty()) {
-      Map<ApplicationId, String> newCollectorsMap =
-          new HashMap<ApplicationId, String>();
-      for (AppCollectorsMap collector : newCollectorsList) {
+      Map<ApplicationId, AppCollectorData> newCollectorsMap =
+          new HashMap<>();
+      for (AppCollectorData collector : newCollectorsList) {
         ApplicationId appId = collector.getApplicationId();
-        String collectorAddr = collector.getCollectorAddr();
-        newCollectorsMap.put(appId, collectorAddr);
+        newCollectorsMap.put(appId, collector);
         // set registered collector address to TimelineClient.
+        // TODO: Do we need to do this after we received confirmation from
+        // the RM?
         NMTimelinePublisher nmTimelinePublisher =
             context.getNMTimelinePublisher();
         if (nmTimelinePublisher != null) {
-          nmTimelinePublisher.setTimelineServiceAddress(appId, collectorAddr);
+          nmTimelinePublisher.setTimelineServiceAddress(appId,
+              collector.getCollectorAddr());
         }
       }
-      ((NodeManager.NMContext)context).addRegisteredCollectors(
-          newCollectorsMap);
+      Map<ApplicationId, AppCollectorData> registeringCollectors
+          = context.getRegisteringCollectors();
+      if (registeringCollectors != null) {
+        registeringCollectors.putAll(newCollectorsMap);
+      } else {
+        LOG.warn("collectors are added when the registered collectors are " +
+            "initialized");
+      }
     }
 
     return ReportNewCollectorInfoResponse.newInstance();

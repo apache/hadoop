@@ -33,5 +33,6 @@ HDFS as these are commonly expected by Hadoop client applications.
 1. [Model](model.html)
 1. [FileSystem class](filesystem.html)
 1. [FSDataInputStream class](fsdatainputstream.html)
+1. [FSDataOutputStreamBuilder class](fsdataoutputstreambuilder.html)
 2. [Testing with the Filesystem specification](testing.html)
 2. [Extending the specification and its tests](extending.html)

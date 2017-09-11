@@ -36,6 +36,7 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointConf;
+import org.apache.hadoop.hdfs.server.namenode.CheckpointFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -120,7 +121,7 @@ public class StandbyCheckpointer {
   
   private URL getHttpAddress(Configuration conf) throws IOException {
     final String scheme = DFSUtil.getHttpClientScheme(conf);
-    String defaultHost = NameNode.getServiceAddress(conf, true).getHostName();
+    String defaultHost = NameNode.getServiceAddress(conf).getHostName();
     URI addr = DFSUtil.getInfoServerWithDefaultHost(defaultHost, conf, scheme);
     return addr.toURL();
   }
@@ -228,7 +229,9 @@ public class StandbyCheckpointer {
       Future<TransferFsImage.TransferResult> upload =
           executor.submit(new Callable<TransferFsImage.TransferResult>() {
             @Override
-            public TransferFsImage.TransferResult call() throws IOException {
+            public TransferFsImage.TransferResult call()
+                throws IOException, InterruptedException {
+              CheckpointFaultInjector.getInstance().duringUploadInProgess();
               return TransferFsImage.uploadImageFromStorage(activeNNAddress, conf, namesystem
                   .getFSImage().getStorage(), imageType, txid, canceler);
             }
@@ -258,11 +261,12 @@ public class StandbyCheckpointer {
         break;
       }
     }
-    lastUploadTime = monotonicNow();
-
-    // we are primary if we successfully updated the ANN
-    this.isPrimaryCheckPointer = success;
-
+    if (ie == null && ioe == null) {
+      //Update only when response from remote about success or
+      lastUploadTime = monotonicNow();
+      // we are primary if we successfully updated the ANN
+      this.isPrimaryCheckPointer = success;
+    }
     // cleaner than copying code for multiple catch statements and better than catching all
     // exceptions, so we just handle the ones we expect.
     if (ie != null || ioe != null) {

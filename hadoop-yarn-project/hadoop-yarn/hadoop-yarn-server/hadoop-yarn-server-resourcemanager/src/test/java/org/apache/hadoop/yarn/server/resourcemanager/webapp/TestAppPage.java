@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -80,15 +79,13 @@ public class TestAppPage {
                 try {
                   ResourceManager rm = TestRMWebApp.mockRm(rmContext);
                   binder.bind(ResourceManager.class).toInstance(rm);
-                  binder.bind(ApplicationBaseProtocol.class).toInstance(
-                    rm.getClientRMService());
                 } catch (IOException e) {
                   throw new IllegalStateException(e);
                 }
               }
             });
     
-    AppBlock instance = injector.getInstance(AppBlock.class);
+    AppBlock instance = injector.getInstance(RMAppBlock.class);
     instance.set(YarnWebParams.APPLICATION_ID, APP_ID.toString());
     instance.render();
   }

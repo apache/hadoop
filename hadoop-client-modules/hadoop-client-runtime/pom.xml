@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project</artifactId>
-   <version>3.0.0-beta1-SNAPSHOT</version>
+   <version>3.1.0-SNAPSHOT</version>
    <relativePath>../../hadoop-project</relativePath>
 </parent>
   <artifactId>hadoop-client-runtime</artifactId>
-  <version>3.0.0-beta1-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Client</description>
@@ -172,13 +172,6 @@
                       <artifact>tomcat:jasper-compiler</artifact>
                       <excludes>
                         <exclude>org/apache/jasper/compiler/Localizer.class</exclude>
-                      </excludes>
-                    </filter>
-                    <!-- We only have xerces as a dependency for XML output for the fsimage edits, we don't need anything specific to it for javax xml support -->
-                    <filter>
-                      <artifact>xerces:xercesImpl</artifact>
-                      <excludes>
-                        <exclude>META-INF/services/*</exclude>
                       </excludes>
                     </filter>
                     <!-- We rely on jersey for our web interfaces. We want to use its java services stuff only internal to jersey -->

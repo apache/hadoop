@@ -59,6 +59,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Supplier;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 /**
  * This class tests the DFS positional read functionality in a single node
@@ -71,6 +73,9 @@ public class TestPread {
   static final int fileSize = numBlocksPerFile * blockSize;
   boolean simulatedStorage;
   boolean isHedgedRead;
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestPread.class.getName());
 
   @Before
   public void setup() {
@@ -551,6 +556,64 @@ public class TestPread {
     }
   }
 
+  @Test(timeout=30000)
+  public void testHedgedReadFromAllDNFailed() throws IOException {
+    Configuration conf = new Configuration();
+    int numHedgedReadPoolThreads = 5;
+    final int hedgedReadTimeoutMillis = 50;
+
+    conf.setInt(HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
+        numHedgedReadPoolThreads);
+    conf.setLong(HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY,
+        hedgedReadTimeoutMillis);
+    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 0);
+    // Set up the InjectionHandler
+    DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
+    DFSClientFaultInjector injector = DFSClientFaultInjector.get();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (true) {
+          LOG.info("-------------- throw Checksum Exception");
+          throw new ChecksumException("ChecksumException test", 100);
+        }
+        return null;
+      }
+    }).when(injector).fetchFromDatanodeException();
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+        .format(true).build();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSClient dfsClient = fileSys.getClient();
+    FSDataOutputStream output = null;
+    DFSInputStream input = null;
+    String filename = "/hedgedReadMaxOut.dat";
+    DFSHedgedReadMetrics metrics = dfsClient.getHedgedReadMetrics();
+    // Metrics instance is static, so we need to reset counts from prior tests.
+    metrics.hedgedReadOps.set(0);
+    try {
+      Path file = new Path(filename);
+      output = fileSys.create(file, (short) 2);
+      byte[] data = new byte[64 * 1024];
+      output.write(data);
+      output.flush();
+      output.close();
+      byte[] buffer = new byte[64 * 1024];
+      input = dfsClient.open(filename);
+      input.read(0, buffer, 0, 1024);
+      Assert.fail("Reading the block should have thrown BlockMissingException");
+    } catch (BlockMissingException e) {
+      assertEquals(3, input.getHedgedReadOpsLoopNumForTesting());
+      assertTrue(metrics.getHedgedReadOps() == 0);
+    } finally {
+      Mockito.reset(injector);
+      IOUtils.cleanupWithLogger(LOG, input);
+      IOUtils.cleanupWithLogger(LOG, output);
+      fileSys.close();
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Scenario: 1. Write a file with RF=2, DN1 and DN2<br>
    * 2. Open the stream, Consider Locations are [DN1, DN2] in LocatedBlock.<br>
@@ -563,7 +626,7 @@ public class TestPread {
    */
   @Test
   public void testPreadFailureWithChangedBlockLocations() throws Exception {
-    doPreadTestWithChangedLocations();
+    doPreadTestWithChangedLocations(1);
   }
 
   /**
@@ -576,21 +639,36 @@ public class TestPread {
    * 7. Consider next calls to getBlockLocations() always returns DN3 as last
    * location.<br>
    */
-  @Test
+  @Test(timeout = 60000)
   public void testPreadHedgedFailureWithChangedBlockLocations()
       throws Exception {
     isHedgedRead = true;
-    doPreadTestWithChangedLocations();
+    DFSClientFaultInjector old = DFSClientFaultInjector.get();
+    try {
+      DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+        public void sleepBeforeHedgedGet() {
+          try {
+            Thread.sleep(500);
+          } catch (InterruptedException e) {
+          }
+        }
+      });
+      doPreadTestWithChangedLocations(2);
+    } finally {
+      DFSClientFaultInjector.set(old);
+    }
   }
 
-  private void doPreadTestWithChangedLocations()
+  private void doPreadTestWithChangedLocations(int maxFailures)
       throws IOException, TimeoutException, InterruptedException {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.DEBUG);
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 2);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (isHedgedRead) {
+      conf.setInt(HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY, 100);
       conf.setInt(HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY, 2);
+      conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 1000);
     }
     try (MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
@@ -684,6 +762,9 @@ public class TestPread {
       int n = din.read(0, buf, 0, data.length());
       assertEquals(data.length(), n);
       assertEquals("Data should be read", data, new String(buf, 0, n));
+      assertTrue("Read should complete with maximum " + maxFailures
+              + " failures, but completed with " + din.failures,
+          din.failures <= maxFailures);
       DFSClient.LOG.info("Read completed");
     }
   }

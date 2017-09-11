@@ -54,7 +54,7 @@ public class RemoteNameNodeInfo {
     for (Configuration otherNode : otherNodes) {
       String otherNNId = HAUtil.getNameNodeId(otherNode, nsId);
       // don't do any validation here as in some cases, it can be overwritten later
-      InetSocketAddress otherIpcAddr = NameNode.getServiceAddress(otherNode, true);
+      InetSocketAddress otherIpcAddr = NameNode.getServiceAddress(otherNode);
 
 
       final String scheme = DFSUtil.getHttpClientScheme(conf);

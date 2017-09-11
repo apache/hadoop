@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.Serializable;
-
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+
+import java.io.Serializable;
 
 /**
  * A policy about how to write/read/code an erasure coding file.
@@ -39,9 +40,11 @@ public final class ErasureCodingPolicy implements Serializable {
   private final ECSchema schema;
   private final int cellSize;
   private byte id;
+  private ErasureCodingPolicyState state;
+
 
   public ErasureCodingPolicy(String name, ECSchema schema,
-      int cellSize, byte id) {
+      int cellSize, byte id, ErasureCodingPolicyState state) {
     Preconditions.checkNotNull(name);
     Preconditions.checkNotNull(schema);
     Preconditions.checkArgument(cellSize > 0, "cellSize must be positive");
@@ -51,14 +54,22 @@ public final class ErasureCodingPolicy implements Serializable {
     this.schema = schema;
     this.cellSize = cellSize;
     this.id = id;
+    this.state = state;
+  }
+
+  public ErasureCodingPolicy(String name, ECSchema schema, int cellSize,
+      byte id) {
+    this(name, schema, cellSize, id, ErasureCodingPolicyState.DISABLED);
   }
 
   public ErasureCodingPolicy(ECSchema schema, int cellSize, byte id) {
-    this(composePolicyName(schema, cellSize), schema, cellSize, id);
+    this(composePolicyName(schema, cellSize), schema, cellSize, id,
+        ErasureCodingPolicyState.DISABLED);
   }
 
   public ErasureCodingPolicy(ECSchema schema, int cellSize) {
-    this(composePolicyName(schema, cellSize), schema, cellSize, (byte) -1);
+    this(composePolicyName(schema, cellSize), schema, cellSize, (byte) -1,
+        ErasureCodingPolicyState.DISABLED);
   }
 
   public static String composePolicyName(ECSchema schema, int cellSize) {
@@ -107,6 +118,35 @@ public final class ErasureCodingPolicy implements Serializable {
     this.id = id;
   }
 
+
+  public boolean isReplicationPolicy() {
+    return (id == ErasureCodeConstants.REPLICATION_POLICY_ID);
+  }
+
+  public ErasureCodingPolicyState getState() {
+    return state;
+  }
+
+  public void setState(ErasureCodingPolicyState state) {
+    this.state = state;
+  }
+
+  public boolean isSystemPolicy() {
+    return (this.id < ErasureCodeConstants.USER_DEFINED_POLICY_START_ID);
+  }
+
+  public boolean isEnabled() {
+    return (this.state == ErasureCodingPolicyState.ENABLED);
+  }
+
+  public boolean isDisabled() {
+    return (this.state == ErasureCodingPolicyState.DISABLED);
+  }
+
+  public boolean isRemoved() {
+    return (this.state == ErasureCodingPolicyState.REMOVED);
+  }
+
   @Override
   public boolean equals(Object o) {
     if (o == null) {
@@ -124,6 +164,7 @@ public final class ErasureCodingPolicy implements Serializable {
         .append(schema, rhs.schema)
         .append(cellSize, rhs.cellSize)
         .append(id, rhs.id)
+        .append(state, rhs.state)
         .isEquals();
   }
 
@@ -134,6 +175,7 @@ public final class ErasureCodingPolicy implements Serializable {
         .append(schema)
         .append(cellSize)
         .append(id)
+        .append(state)
         .toHashCode();
   }
 
@@ -142,7 +184,8 @@ public final class ErasureCodingPolicy implements Serializable {
     return "ErasureCodingPolicy=[" + "Name=" + name + ", "
         + "Schema=[" + schema.toString() + "], "
         + "CellSize=" + cellSize + ", "
-        + "Id=" + id
+        + "Id=" + id + ", "
+        + "State=" + state.toString()
         + "]";
   }
 }

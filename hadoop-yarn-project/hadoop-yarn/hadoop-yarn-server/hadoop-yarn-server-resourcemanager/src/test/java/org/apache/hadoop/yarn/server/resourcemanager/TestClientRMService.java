@@ -994,6 +994,18 @@ public class TestClientRMService {
     Assert.assertEquals(appId2,
         getAllApplicationsResponse.getApplicationList()
             .get(0).getApplicationId());
+
+    // Test query with uppercase appType also works
+    appTypes = new HashSet<String>();
+    appTypes.add("MATCHTYPE");
+    getAllAppsRequest = GetApplicationsRequest.newInstance(appTypes);
+    getAllApplicationsResponse =
+        rmService.getApplications(getAllAppsRequest);
+    Assert.assertEquals(1,
+        getAllApplicationsResponse.getApplicationList().size());
+    Assert.assertEquals(appId2,
+        getAllApplicationsResponse.getApplicationList()
+            .get(0).getApplicationId());
   }
 
   @Test
@@ -1087,7 +1099,7 @@ public class TestClientRMService {
     assertEquals("Incorrect number of applications in queue", 2,
         rmService.getApplications(request).getApplicationList().size());
     assertEquals("Incorrect number of applications in queue", 2,
-        rmService.getApplications(request, false).getApplicationList().size());
+        rmService.getApplications(request).getApplicationList().size());
 
     queueSet.add(queues[1]);
     assertEquals("Incorrect number of applications in queue", 3,

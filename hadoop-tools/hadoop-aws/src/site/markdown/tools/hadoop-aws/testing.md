@@ -76,13 +76,10 @@ over long-haul connections. Please help us identify and fix these problems
 
 ## Setting up the tests
 
-To integration test the S3* filesystem clients, you need to provide two files
-which pass in authentication details to the test runner.
+To integration test the S3* filesystem clients, you need to provide
+`auth-keys.xml` which passes in authentication details to the test runner.
 
-1. `auth-keys.xml`
-1. `contract-test-options.xml`
-
-These are both Hadoop XML configuration files, which must be placed into
+It is a Hadoop XML configuration file, which must be placed into
 `hadoop-tools/hadoop-aws/src/test/resources`.
 
 ### File `core-site.xml`
@@ -106,6 +103,12 @@ each filesystem for its testing.
 
 1. `test.fs.s3n.name` : the URL of the bucket for S3n tests
 1. `test.fs.s3a.name` : the URL of the bucket for S3a tests
+1. `fs.contract.test.fs.s3n` : the URL of the bucket for S3n filesystem contract tests
+1. `fs.contract.test.fs.s3a` : the URL of the bucket for S3a filesystem contract tests
+
+*Note* that running s3a and s3n tests in parallel mode, against the same bucket
+is unreliable.  We recommend using separate buckets or testing one connector
+at a time.
 
 The contents of each bucket will be destroyed during the test process:
 do not use the bucket for any purpose other than testing. Furthermore, for
@@ -124,8 +127,8 @@ Example:
   </property>
 
   <property>
-    <name>test.fs.s3a.name</name>
-    <value>s3a://test-aws-s3a/</value>
+    <name>fs.contract.test.fs.s3n</name>
+    <value>${test.fs.s3n.name}</value>
   </property>
 
   <property>
@@ -136,6 +139,16 @@ Example:
   <property>
     <name>fs.s3n.awsSecretAccessKey</name>
     <value>DONOTEVERSHARETHISSECRETKEY!</value>
+  </property>
+
+  <property>
+    <name>test.fs.s3a.name</name>
+    <value>s3a://test-aws-s3a/</value>
+  </property>
+
+  <property>
+    <name>fs.contract.test.fs.s3a</name>
+    <value>${test.fs.s3a.name}</value>
   </property>
 
   <property>
@@ -158,107 +171,6 @@ Example:
 
 </configuration>
 ```
-
-### File `contract-test-options.xml`
-
-The file `hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml`
-must be created and configured for the test filesystems.
-
-If a specific file `fs.contract.test.fs.*` test path is not defined for
-any of the filesystems, those tests will be skipped.
-
-The standard S3 authentication details must also be provided. This can be
-through copy-and-paste of the `auth-keys.xml` credentials, or it can be
-through direct XInclude inclusion.
-
-Here is an an example `contract-test-options.xml` which places all test options
-into the `auth-keys.xml` file, so offering a single place to keep credentials
-and define test endpoint bindings.
-
-```xml
-<configuration>
-  <include xmlns="http://www.w3.org/2001/XInclude"
-    href="auth-keys.xml"/>
-</configuration>
-```
-
-### s3n://
-
-
-In the file `src/test/resources/contract-test-options.xml`, the filesystem
-name must be defined in the property `fs.contract.test.fs.s3n`.
-The standard configuration options to define the S3N authentication details
-must also be provided.
-
-Example:
-
-```xml
-<property>
-  <name>fs.contract.test.fs.s3n</name>
-  <value>s3n://test-aws-s3n/</value>
-</property>
-```
-
-### s3a://
-
-
-In the file `src/test/resources/contract-test-options.xml`, the filesystem
-name must be defined in the property `fs.contract.test.fs.s3a`.
-The standard configuration options to define the S3N authentication details
-must also be provided.
-
-Example:
-
-```xml
-<property>
-  <name>fs.contract.test.fs.s3a</name>
-  <value>s3a://test-aws-s3a/</value>
-</property>
-```
-
-### Complete example of `contract-test-options.xml`
-
-
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<!---
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License. See accompanying LICENSE file.
--->
-
-<configuration>
-
-  <include xmlns="http://www.w3.org/2001/XInclude"
-  href="auth-keys.xml"/>
-
-  <property>
-    <name>fs.contract.test.fs.s3a</name>
-    <value>s3a://test-aws-s3a/</value>
-  </property>
-
-  <property>
-    <name>fs.contract.test.fs.s3n</name>
-    <value>s3n://test-aws-s3n/</value>
-  </property>
-
-</configuration>
-```
-
-This example pulls in the `auth-keys.xml` file for the credentials.
-This provides one single place to keep the keys up to date —and means
-that the file `contract-test-options.xml` does not contain any
-secret credentials itself. As the auth keys XML file is kept out of the
-source code tree, it is not going to get accidentally committed.
 
 ### Configuring S3a Encryption
 
@@ -342,8 +254,7 @@ like `ITestS3A*` shown above, it may cause unpredictable test failures.
 ### Testing against different regions
 
 S3A can connect to different regions —the tests support this. Simply
-define the target region in `contract-test-options.xml` or any `auth-keys.xml`
-file referenced.
+define the target region in `auth-keys.xml`.
 
 ```xml
 <property>
@@ -691,7 +602,7 @@ use requires the presence of secret credentials, where tests may be slow,
 and where finding out why something failed from nothing but the test output
 is critical.
 
-#### Subclasses Existing Shared Base Blasses
+#### Subclasses Existing Shared Base Classes
 
 Extend `AbstractS3ATestBase` or `AbstractSTestS3AHugeFiles` unless justifiable.
 These set things up for testing against the object stores, provide good threadnames,
@@ -798,7 +709,7 @@ We really appreciate this &mdash; you will too.
 
 ### How to keep your credentials really safe
 
-Although the `auth-keys.xml` file is marged as ignored in git and subversion,
+Although the `auth-keys.xml` file is marked as ignored in git and subversion,
 it is still in your source tree, and there's always that risk that it may
 creep out.
 
@@ -813,3 +724,283 @@ using an absolute XInclude reference to it.
 
 </configuration>
 ```
+
+# Failure Injection
+
+**Warning do not enable any type of failure injection in production.  The
+following settings are for testing only.**
+
+One of the challenges with S3A integration tests is the fact that S3 is an
+eventually-consistent storage system.  In practice, we rarely see delays in
+visibility of recently created objects both in listings (`listStatus()`) and
+when getting a single file's metadata (`getFileStatus()`). Since this behavior
+is rare and non-deterministic, thorough integration testing is challenging.
+
+To address this, S3A supports a shim layer on top of the `AmazonS3Client`
+class which artificially delays certain paths from appearing in listings.
+This is implemented in the class `InconsistentAmazonS3Client`.
+
+## Simulating List Inconsistencies
+
+### Enabling the InconsistentAmazonS3CClient
+
+There are two ways of enabling the `InconsistentAmazonS3Client`: at
+config-time, or programmatically. For an example of programmatic test usage,
+see `ITestS3GuardListConsistency`.
+
+To enable the fault-injecting client via configuration, switch the
+S3A client to use the "Inconsistent S3 Client Factory" when connecting to
+S3:
+
+```xml
+<property>
+  <name>fs.s3a.s3.client.factory.impl</name>
+  <value>org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory</value>
+</property>
+```
+
+The inconsistent client works by:
+
+1. Choosing which objects will be "inconsistent" at the time the object is
+created or deleted.
+2. When `listObjects()` is called, any keys that we have marked as
+inconsistent above will not be returned in the results (until the
+configured delay has elapsed). Similarly, deleted items may be *added* to
+missing results to delay the visibility of the delete.
+
+There are two ways of choosing which keys (filenames) will be affected: By
+substring, and by random probability.
+
+```xml
+<property>
+  <name>fs.s3a.failinject.inconsistency.key.substring</name>
+  <value>DELAY_LISTING_ME</value>
+</property>
+
+<property>
+  <name>fs.s3a.failinject.inconsistency.probability</name>
+  <value>1.0</value>
+</property>
+```
+
+By default, any object which has the substring "DELAY_LISTING_ME" in its key
+will subject to delayed visibility. For example, the path
+`s3a://my-bucket/test/DELAY_LISTING_ME/file.txt` would match this condition.
+To match all keys use the value "\*" (a single asterisk). This is a special
+value: *We don't support arbitrary wildcards.*
+
+The default probability of delaying an object is 1.0. This means that *all*
+keys that match the substring will get delayed visibility. Note that we take
+the logical *and* of the two conditions (substring matches *and* probability
+random chance occurs). Here are some example configurations:
+
+```
+| substring | probability |  behavior                                  |
+|-----------|-------------|--------------------------------------------|
+|           | 0.001       | An empty <value> tag in .xml config will   |
+|           |             | be interpreted as unset and revert to the  |
+|           |             | default value, "DELAY_LISTING_ME"          |
+|           |             |                                            |
+| *         | 0.001       | 1/1000 chance of *any* key being delayed.  |
+|           |             |                                            |
+| delay     | 0.01        | 1/100 chance of any key containing "delay" |
+|           |             |                                            |
+| delay     | 1.0         | All keys containing substring "delay" ..   |
+```
+
+You can also configure how long you want the delay in visibility to last.
+The default is 5000 milliseconds (five seconds).
+
+```xml
+<property>
+  <name>fs.s3a.failinject.inconsistency.msec</name>
+  <value>5000</value>
+</property>
+```
+
+Future versions of this client will introduce new failure modes,
+with simulation of S3 throttling exceptions the next feature under
+development.
+
+### Limitations of Inconsistency Injection
+
+Although `InconsistentAmazonS3Client` can delay the visibility of an object
+or parent directory, it does not prevent the key of that object from
+appearing in all prefix searches. For example, if we create the following
+object with the default configuration above, in an otherwise empty bucket:
+
+```
+s3a://bucket/a/b/c/DELAY_LISTING_ME
+```
+
+Then the following paths will still be visible as directories (ignoring
+possible real-world inconsistencies):
+
+```
+s3a://bucket/a
+s3a://bucket/a/b
+```
+
+Whereas `getFileStatus()` on the following *will* be subject to delayed
+visibility (`FileNotFoundException` until delay has elapsed):
+
+```
+s3a://bucket/a/b/c
+s3a://bucket/a/b/c/DELAY_LISTING_ME
+```
+
+In real-life S3 inconsistency, however, we expect that all the above paths
+(including `a` and `b`) will be subject to delayed visiblity.
+
+### Using the `InconsistentAmazonS3CClient` in downstream integration tests
+
+The inconsistent client is shipped in the `hadoop-aws` JAR, so it can
+be used in applications which work with S3 to see how they handle
+inconsistent directory listings.
+
+## Testing S3Guard
+
+The basic strategy for testing S3Guard correctness consists of:
+
+1. MetadataStore Contract tests.
+
+    The MetadataStore contract tests are inspired by the Hadoop FileSystem and
+    `FileContext` contract tests.  Each implementation of the `MetadataStore` interface
+    subclasses the `MetadataStoreTestBase` class and customizes it to initialize
+    their MetadataStore.  This test ensures that the different implementations
+    all satisfy the semantics of the MetadataStore API.
+
+2. Running existing S3A unit and integration tests with S3Guard enabled.
+
+    You can run the S3A integration tests on top of S3Guard by configuring your
+    `MetadataStore` in your
+    `hadoop-tools/hadoop-aws/src/test/resources/core-site.xml` or
+    `hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml` files.
+    Next run the S3A integration tests as outlined in the *Running the Tests* section
+    of the [S3A documentation](./index.html)
+
+3. Running fault-injection tests that test S3Guard's consistency features.
+
+    The `ITestS3GuardListConsistency` uses failure injection to ensure
+    that list consistency logic is correct even when the underlying storage is
+    eventually consistent.
+
+    The integration test adds a shim above the Amazon S3 Client layer that injects
+    delays in object visibility.
+
+    All of these tests will be run if you follow the steps listed in step 2 above.
+
+    No charges are incurred for using this store, and its consistency
+    guarantees are that of the underlying object store instance. <!-- :) -->
+
+## Testing S3A with S3Guard Enabled
+
+All the S3A tests which work with a private repository can be configured to
+run with S3Guard by using the `s3guard` profile. When set, this will run
+all the tests with local memory for the metadata set to "non-authoritative" mode.
+
+```bash
+mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard
+```
+
+When the `s3guard` profile is enabled, following profiles can be specified:
+
+* `dynamo`: use an AWS-hosted DynamoDB table; creating the table if it does
+  not exist. You will have to pay the bills for DynamoDB web service.
+* `dynamodblocal`: use an in-memory DynamoDBLocal server instead of real AWS
+  DynamoDB web service; launch the server and creating the table.
+  You won't be charged bills for using DynamoDB in test. As it runs in-JVM,
+  the table isn't shared across other tests running in parallel.
+* `non-auth`: treat the S3Guard metadata as authorative.
+
+```bash
+mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth
+```
+
+When experimenting with options, it is usually best to run a single test suite
+at a time until the operations appear to be working.
+
+```bash
+mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
+```
+
+### Notes
+
+1. If the `s3guard` profile is not set, then the S3Guard properties are those
+of the test configuration set in `contract-test-options.xml` or `auth-keys.xml`
+
+If the `s3guard` profile *is* set,
+1. The S3Guard options from maven (the dynamo and authoritative flags)
+  overwrite any previously set in the configuration files.
+1. DynamoDB will be configured to create any missing tables.
+
+### Warning About Concurrent Tests
+
+You must not run S3A and S3N tests in parallel on the same bucket.  This is
+especially true when S3Guard is enabled.  S3Guard requires that all clients
+that are modifying the bucket have S3Guard enabled, so having S3N
+integration tests running in parallel with S3A tests will cause strange
+failures.
+
+### Scale Testing MetadataStore Directly
+
+There are some scale tests that exercise Metadata Store implementations
+directly. These ensure that S3Guard is are robust to things like DynamoDB
+throttling, and compare performance for different implementations. These
+are included in the scale tests executed when `-Dscale` is passed to
+the maven command line.
+
+The two S3Guard scale testse are `ITestDynamoDBMetadataStoreScale` and
+`ITestLocalMetadataStoreScale`.  To run the DynamoDB test, you will need to
+define your table name and region in your test configuration.  For example,
+the following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
+artificially low read and write capacity provisioned, so we can judge the
+effects of being throttled by the DynamoDB service:
+
+```xml
+<property>
+  <name>scale.test.operation.count</name>
+  <value>10</value>
+</property>
+<property>
+  <name>scale.test.directory.count</name>
+  <value>3</value>
+</property>
+<property>
+  <name>fs.s3a.scale.test.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>fs.s3a.s3guard.ddb.table</name>
+  <value>my-scale-test</value>
+</property>
+<property>
+  <name>fs.s3a.s3guard.ddb.region</name>
+  <value>us-west-2</value>
+</property>
+<property>
+  <name>fs.s3a.s3guard.ddb.table.create</name>
+  <value>true</value>
+</property>
+<property>
+  <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
+  <value>10</value>
+</property>
+<property>
+  <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
+  <value>10</value>
+</property>
+```
+
+### Testing only: Local Metadata Store
+
+There is an in-memory Metadata Store for testing.
+
+```xml
+<property>
+  <name>fs.s3a.metadatastore.impl</name>
+  <value>org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore</value>
+</property>
+```
+
+This is not for use in production.

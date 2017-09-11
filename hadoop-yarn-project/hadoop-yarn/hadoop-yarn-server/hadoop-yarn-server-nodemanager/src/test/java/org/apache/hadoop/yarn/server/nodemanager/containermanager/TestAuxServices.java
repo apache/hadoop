@@ -26,6 +26,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Sets;
@@ -42,8 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -73,7 +73,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestAuxServices {
-  private static final Log LOG = LogFactory.getLog(TestAuxServices.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestAuxServices.class);
   private static final File TEST_DIR = new File(
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),

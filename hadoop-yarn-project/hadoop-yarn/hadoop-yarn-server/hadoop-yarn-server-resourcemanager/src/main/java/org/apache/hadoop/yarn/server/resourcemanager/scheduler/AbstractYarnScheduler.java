@@ -67,7 +67,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -89,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntit
 
 
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -150,6 +150,10 @@ public abstract class AbstractYarnScheduler
    */
   protected final ReentrantReadWriteLock.WriteLock writeLock;
 
+  // If set to true, then ALL container updates will be automatically sent to
+  // the NM in the next heartbeat.
+  private boolean autoUpdateContainers = false;
+
   /**
    * Construct the service.
    *
@@ -178,6 +182,9 @@ public abstract class AbstractYarnScheduler
         configuredMaximumAllocationWaitTime);
     maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
     createReleaseCache();
+    autoUpdateContainers =
+        conf.getBoolean(YarnConfiguration.RM_AUTO_UPDATE_CONTAINERS,
+            YarnConfiguration.DEFAULT_RM_AUTO_UPDATE_CONTAINERS);
     super.serviceInit(conf);
   }
 
@@ -233,6 +240,10 @@ public abstract class AbstractYarnScheduler
       }
     };
     return nodeTracker.getNodes(nodeFilter);
+  }
+
+  public boolean shouldContainersBeAutoUpdated() {
+    return this.autoUpdateContainers;
   }
 
   @Override
@@ -323,6 +334,7 @@ public abstract class AbstractYarnScheduler
 
   }
 
+  // TODO: Rename it to getCurrentApplicationAttempt
   public T getApplicationAttempt(ApplicationAttemptId applicationAttemptId) {
     SchedulerApplication<T> app = applications.get(
         applicationAttemptId.getApplicationId());
@@ -517,6 +529,7 @@ public abstract class AbstractYarnScheduler
           node.getHttpAddress(), status.getAllocatedResource(),
           status.getPriority(), null);
     container.setVersion(status.getVersion());
+    container.setExecutionType(status.getExecutionType());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
     RMContainer rmContainer = new RMContainerImpl(container,
@@ -1260,5 +1273,26 @@ public abstract class AbstractYarnScheduler
   @Override
   public List<NodeId> getNodeIds(String resourceName) {
     return nodeTracker.getNodeIdsByResourceName(resourceName);
+  }
+
+  /**
+   * To be used to release a container via a Scheduler Event rather than
+   * in the same thread.
+   * @param container Container.
+   */
+  public void asyncContainerRelease(RMContainer container) {
+    this.rmContext.getDispatcher().getEventHandler()
+        .handle(new ReleaseContainerEvent(container));
+  }
+
+  @Override
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
+    // -1 indicates, lifetime is not configured.
+    return -1;
+  }
+
+  @Override
+  public long getMaximumApplicationLifetime(String queueName) {
+    return -1;
   }
 }

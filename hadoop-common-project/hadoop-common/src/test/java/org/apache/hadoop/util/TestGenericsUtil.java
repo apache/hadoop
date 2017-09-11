@@ -21,12 +21,14 @@ package org.apache.hadoop.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 
-public class TestGenericsUtil extends TestCase {
+public class TestGenericsUtil {
 
+  @Test
   public void testToArray() {
 
     //test a list of size 10
@@ -45,6 +47,7 @@ public class TestGenericsUtil extends TestCase {
     }
   }
 
+  @Test
   public void testWithEmptyList() {
     try {
       List<String> list = new ArrayList<String>();
@@ -57,6 +60,7 @@ public class TestGenericsUtil extends TestCase {
     }
   }
 
+  @Test
   public void testWithEmptyList2() {
     List<String> list = new ArrayList<String>();
     //this method should not throw IndexOutOfBoundsException
@@ -81,6 +85,7 @@ public class TestGenericsUtil extends TestCase {
     }
   }
 
+  @Test
   public void testWithGenericClass() {
 
     GenericClass<String> testSubject = new GenericClass<String>();
@@ -102,6 +107,7 @@ public class TestGenericsUtil extends TestCase {
 
   }
 
+  @Test
   public void testGenericOptionsParser() throws Exception {
      GenericOptionsParser parser = new GenericOptionsParser(
         new Configuration(), new String[] {"-jt"});
@@ -116,6 +122,7 @@ public class TestGenericsUtil extends TestCase {
             "y=z", parser.getConfiguration().get("x"));
   }
 
+  @Test
   public void testGetClass() {
 
     //test with Integer
@@ -131,6 +138,7 @@ public class TestGenericsUtil extends TestCase {
             GenericClass.class, c2);
   }
 
+  @Test
   public void testIsLog4jLogger() throws Exception {
     assertFalse("False if clazz is null", GenericsUtil.isLog4jLogger(null));
     assertTrue("The implementation is Log4j",

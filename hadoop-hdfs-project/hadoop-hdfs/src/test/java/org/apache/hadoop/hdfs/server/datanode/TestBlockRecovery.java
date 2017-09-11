@@ -124,8 +124,6 @@ public class TestBlockRecovery {
   private final static long RECOVERY_ID = 3000L;
   private final static String CLUSTER_ID = "testClusterID";
   private final static String POOL_ID = "BP-TEST";
-  private final static InetSocketAddress NN_ADDR = new InetSocketAddress(
-      "localhost", 5020);
   private final static long BLOCK_ID = 1000L;
   private final static long GEN_STAMP = 2000L;
   private final static long BLOCK_LEN = 3000L;
@@ -188,7 +186,7 @@ public class TestBlockRecovery {
     }
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
     FileSystem.setDefaultUri(conf,
-        "hdfs://" + NN_ADDR.getHostName() + ":" + NN_ADDR.getPort());
+        "hdfs://localhost:5020");
     ArrayList<StorageLocation> locations = new ArrayList<StorageLocation>();
     File dataDir = new File(DATA_DIR);
     FileUtil.fullyDelete(dataDir);
@@ -231,7 +229,7 @@ public class TestBlockRecovery {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
-        Assert.assertEquals(NN_ADDR, nnAddr);
+        Assert.assertEquals("localhost:9840", nnAddr.toString());
         return namenode;
       }
     };

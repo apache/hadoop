@@ -36,7 +36,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -54,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -78,6 +78,9 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
@@ -282,7 +285,7 @@ public class TestLogsCLI {
   @Test (timeout = 15000)
   public void testFetchFinishedApplictionLogs() throws Exception {
     String remoteLogRootDir = "target/logs/";
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     configuration
       .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
@@ -466,7 +469,7 @@ public class TestLogsCLI {
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId1, "syslog")));
-    assertTrue(sysOutStream.toString().contains("Log Upload Time"));
+    assertTrue(sysOutStream.toString().contains("LogLastModifiedTime"));
     assertTrue(!sysOutStream.toString().contains(
       "Logs for container " + containerId1.toString()
           + " are not present in this log-file."));
@@ -490,8 +493,12 @@ public class TestLogsCLI {
 
     String logMessage = logMessage(containerId3, "stdout");
     int fileContentSize = logMessage.getBytes().length;
-    int tailContentSize = "\nEnd of LogType:stdout\n\n".getBytes().length;
-
+    StringBuilder sb = new StringBuilder();
+    String endOfFile = "End of LogType:stdout";
+    sb.append("\n" + endOfFile + "\n");
+    sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
+        + "\n\n");
+    int tailContentSize = sb.toString().length();
     // specify how many bytes we should get from logs
     // specify a position number, it would get the first n bytes from
     // container log
@@ -639,7 +646,7 @@ public class TestLogsCLI {
         any(ContainerId.class));
 
     // create local logs
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     FileSystem fs = FileSystem.get(configuration);
     String rootLogDir = "target/LocalLogs";
     Path rootLogDirPath = new Path(rootLogDir);
@@ -783,7 +790,7 @@ public class TestLogsCLI {
     UserGroupInformation testUgi = UserGroupInformation
         .createRemoteUser(testUser);
 
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     configuration
         .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
@@ -914,7 +921,7 @@ public class TestLogsCLI {
   public void testLogsCLIWithInvalidArgs() throws Exception {
     String localDir = "target/SaveLogs";
     Path localPath = new Path(localDir);
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     FileSystem fs = FileSystem.get(configuration);
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     YarnClient mockYarnClient =
@@ -985,7 +992,7 @@ public class TestLogsCLI {
     String localDir = "target/SaveLogs";
     Path localPath = new Path(localDir);
 
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     configuration
         .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
@@ -1076,7 +1083,7 @@ public class TestLogsCLI {
   @Test (timeout = 15000)
   public void testPrintContainerLogMetadata() throws Exception {
     String remoteLogRootDir = "target/logs/";
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     configuration
       .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
@@ -1181,7 +1188,7 @@ public class TestLogsCLI {
   @Test (timeout = 15000)
   public void testListNodeInfo() throws Exception {
     String remoteLogRootDir = "target/logs/";
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     configuration
       .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
@@ -1232,7 +1239,7 @@ public class TestLogsCLI {
   @Test (timeout = 15000)
   public void testFetchApplictionLogsHar() throws Exception {
     String remoteLogRootDir = "target/logs/";
-    Configuration configuration = new Configuration();
+    Configuration configuration = new YarnConfiguration();
     configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     configuration
         .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
@@ -1345,42 +1352,55 @@ public class TestLogsCLI {
     Path path =
         new Path(appDir, LogAggregationUtils.getNodeString(nodeId)
             + System.currentTimeMillis());
-    try (AggregatedLogFormat.LogWriter writer =
-             new AggregatedLogFormat.LogWriter()) {
-      writer.initialize(configuration, path, ugi);
-      writer.writeApplicationOwner(ugi.getUserName());
-
+    LogAggregationFileControllerFactory factory
+        = new LogAggregationFileControllerFactory(configuration);
+    LogAggregationFileController fileFormat = factory
+        .getFileControllerForWrite();
+    try {
       Map<ApplicationAccessType, String> appAcls = new HashMap<>();
       appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
-      writer.writeApplicationACLs(appAcls);
-      writer.append(new AggregatedLogFormat.LogKey(containerId),
+      LogAggregationFileControllerContext context
+          = new LogAggregationFileControllerContext(
+              path, path, true, 1000,
+              containerId.getApplicationAttemptId().getApplicationId(),
+              appAcls, nodeId, ugi);
+      fileFormat.initializeWriter(context);
+      fileFormat.write(new AggregatedLogFormat.LogKey(containerId),
           new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
               UserGroupInformation.getCurrentUser().getShortUserName()));
+    } finally {
+      fileFormat.closeWriter();
     }
   }
 
+  @SuppressWarnings("static-access")
   private static void uploadEmptyContainerLogIntoRemoteDir(UserGroupInformation ugi,
       Configuration configuration, List<String> rootLogDirs, NodeId nodeId,
       ContainerId containerId, Path appDir, FileSystem fs) throws Exception {
-    Path path =
-        new Path(appDir, LogAggregationUtils.getNodeString(nodeId)
-            + System.currentTimeMillis());
-    try (AggregatedLogFormat.LogWriter writer =
-             new AggregatedLogFormat.LogWriter()) {
-      writer.initialize(configuration, path, ugi);
-      writer.writeApplicationOwner(ugi.getUserName());
-
+    LogAggregationFileControllerFactory factory
+        = new LogAggregationFileControllerFactory(configuration);
+    LogAggregationFileController fileFormat = factory
+        .getFileControllerForWrite();
+    try {
       Map<ApplicationAccessType, String> appAcls = new HashMap<>();
       appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
-      writer.writeApplicationACLs(appAcls);
-      DataOutputStream out = writer.getWriter().prepareAppendKey(-1);
-      new AggregatedLogFormat.LogKey(containerId).write(out);
-      out.close();
-      out = writer.getWriter().prepareAppendValue(-1);
-      new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
-          UserGroupInformation.getCurrentUser().getShortUserName()).write(out,
-              new HashSet<>());
-      out.close();
+      ApplicationId appId = containerId.getApplicationAttemptId()
+          .getApplicationId();
+      Path path = fileFormat.getRemoteNodeLogFileForApp(
+          appId, ugi.getCurrentUser().getShortUserName(), nodeId);
+      LogAggregationFileControllerContext context
+          = new LogAggregationFileControllerContext(
+              path, path, true, 1000,
+              appId, appAcls, nodeId, ugi);
+      fileFormat.initializeWriter(context);
+      AggregatedLogFormat.LogKey key = new AggregatedLogFormat.LogKey(
+          containerId);
+      AggregatedLogFormat.LogValue value = new AggregatedLogFormat.LogValue(
+          rootLogDirs, containerId, UserGroupInformation.getCurrentUser()
+              .getShortUserName());
+      fileFormat.write(key, value);
+    } finally {
+      fileFormat.closeWriter();
     }
   }
 

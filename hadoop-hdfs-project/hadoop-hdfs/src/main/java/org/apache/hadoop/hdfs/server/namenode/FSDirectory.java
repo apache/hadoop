@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
@@ -73,6 +74,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -200,6 +202,10 @@ public class FSDirectory implements Closeable {
   private HdfsFileStatus[] reservedStatuses;
 
   private INodeAttributeProvider attributeProvider;
+
+  // A HashSet of principals of users for whom the external attribute provider
+  // will be bypassed
+  private HashSet<String> usersToBypassExtAttrProvider = null;
 
   public void setINodeAttributeProvider(INodeAttributeProvider provider) {
     attributeProvider = provider;
@@ -356,6 +362,49 @@ public class FSDirectory implements Closeable {
     this.quotaInitThreads = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_KEY,
         DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_DEFAULT);
+
+    initUsersToBypassExtProvider(conf);
+  }
+
+  private void initUsersToBypassExtProvider(Configuration conf) {
+    String[] bypassUsers = conf.getTrimmedStrings(
+        DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_BYPASS_USERS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_BYPASS_USERS_DEFAULT);
+    for(int i = 0; i < bypassUsers.length; i++) {
+      String tmp = bypassUsers[i].trim();
+      if (!tmp.isEmpty()) {
+        if (usersToBypassExtAttrProvider == null) {
+          usersToBypassExtAttrProvider = new HashSet<String>();
+        }
+        LOG.info("Add user " + tmp + " to the list that will bypass external"
+            + " attribute provider.");
+        usersToBypassExtAttrProvider.add(tmp);
+      }
+    }
+  }
+
+  /**
+   * Check if a given user is configured to bypass external attribute provider.
+   * @param user user principal
+   * @return true if the user is to bypass external attribute provider
+   */
+  private boolean isUserBypassingExtAttrProvider(final String user) {
+    return (usersToBypassExtAttrProvider != null) &&
+          usersToBypassExtAttrProvider.contains(user);
+  }
+
+  /**
+   * Return attributeProvider or null if ugi is to bypass attributeProvider.
+   * @param ugi
+   * @return configured attributeProvider or null
+   */
+  private INodeAttributeProvider getUserFilteredAttributeProvider(
+      UserGroupInformation ugi) {
+    if (attributeProvider == null ||
+        (ugi != null && isUserBypassingExtAttrProvider(ugi.getUserName()))) {
+      return null;
+    }
+    return attributeProvider;
   }
 
   /**
@@ -1358,12 +1407,18 @@ public class FSDirectory implements Closeable {
     }
     try {
       final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-          HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
-              xattr.getValue());
+          HdfsProtos.ZoneEncryptionInfoProto.parseFrom(xattr.getValue());
       ezManager.unprotectedAddEncryptionZone(inode.getId(),
           PBHelperClient.convert(ezProto.getSuite()),
           PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
           ezProto.getKeyName());
+      if (ezProto.hasReencryptionProto()) {
+        final ReencryptionInfoProto reProto = ezProto.getReencryptionProto();
+        // inodes parents may not be loaded if this is done during fsimage
+        // loading so cannot set full path now. Pass in null to indicate that.
+        ezManager.getReencryptionStatus()
+            .updateZoneStatus(inode.getId(), null, reProto);
+      }
     } catch (InvalidProtocolBufferException e) {
       NameNode.LOG.warn("Error parsing protocol buffer of " +
           "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
@@ -1704,7 +1759,7 @@ public class FSDirectory implements Closeable {
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
       UserGroupInformation ugi) throws AccessControlException {
     return new FSPermissionChecker(
-        fsOwner, superGroup, ugi, attributeProvider);
+        fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi));
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
@@ -1889,18 +1944,20 @@ public class FSDirectory implements Closeable {
   }
 
   INodeAttributes getAttributes(INodesInPath iip)
-      throws FileNotFoundException {
+      throws IOException {
     INode node = FSDirectory.resolveLastINode(iip);
     int snapshot = iip.getPathSnapshotId();
     INodeAttributes nodeAttrs = node.getSnapshotINode(snapshot);
-    if (attributeProvider != null) {
+    UserGroupInformation ugi = NameNode.getRemoteUser();
+    INodeAttributeProvider ap = this.getUserFilteredAttributeProvider(ugi);
+    if (ap != null) {
       // permission checking sends the full components array including the
       // first empty component for the root.  however file status
       // related calls are expected to strip out the root component according
       // to TestINodeAttributeProvider.
       byte[][] components = iip.getPathComponents();
       components = Arrays.copyOfRange(components, 1, components.length);
-      nodeAttrs = attributeProvider.getAttributes(components, nodeAttrs);
+      nodeAttrs = ap.getAttributes(components, nodeAttrs);
     }
     return nodeAttrs;
   }

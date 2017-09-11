@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# "Apache Hadoop"  3.0.0-alpha2 Release Notes
+# Apache Hadoop  3.0.0-alpha2 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
@@ -59,7 +59,15 @@ Introduces a new configuration property, yarn.resourcemanager.amlauncher.log.com
 
 * [HDFS-6962](https://issues.apache.org/jira/browse/HDFS-6962) | *Critical* | **ACL inheritance conflicts with umaskmode**
 
-The original implementation of HDFS ACLs applied the client's umask to the permissions when inheriting a default ACL defined on a parent directory.  This behavior is a deviation from the POSIX ACL specification, which states that the umask has no influence when a default ACL propagates from parent to child.  HDFS now offers the capability to ignore the umask in this case for improved compliance with POSIX.  This change is considered backward-incompatible, so the new behavior is off by default and must be explicitly configured by setting dfs.namenode.posix.acl.inheritance.enabled to true in hdfs-site.xml.  Please see the HDFS Permissions Guide for further details.
+<!-- markdown -->
+The original implementation of HDFS ACLs applied the client's umask to the permissions when
+inheriting a default ACL defined on a parent directory.  This behavior is a deviation from the
+POSIX ACL specification, which states that the umask has no influence when a default ACL
+propagates from parent to child.  HDFS now offers the capability to ignore the umask in this
+case for improved compliance with POSIX.  This change is considered backward-incompatible,
+so the new behavior is off by default and must be explicitly configured by setting
+dfs.namenode.posix.acl.inheritance.enabled to true in hdfs-site.xml.
+Please see the HDFS Permissions Guide for further details.
 
 
 ---
@@ -81,17 +89,17 @@ Developers:
 
 | Old | New |
 |:---- |:---- |
-| HADOOP\_BALANCER\_OPTS | HDFS\_BALANCER\_OPTS | 
-| HADOOP\_DATANODE\_OPTS | HDFS\_DATANODE\_OPTS | 
-| HADOOP\_DN\_SECURE_EXTRA_OPTS | HDFS\_DATANODE\_SECURE\_EXTRA\_OPTS | 
-| HADOOP\_JOB\_HISTORYSERVER\_OPTS | MAPRED\_HISTORYSERVER\_OPTS | 
-| HADOOP\_JOURNALNODE\_OPTS | HDFS\_JOURNALNODE\_OPTS | 
-| HADOOP\_MOVER\_OPTS | HDFS\_MOVER\_OPTS | 
-| HADOOP\_NAMENODE\_OPTS | HDFS\_NAMENODE\_OPTS | 
-| HADOOP\_NFS3\_OPTS | HDFS\_NFS3\_OPTS | 
-| HADOOP\_NFS3\_SECURE\_EXTRA\_OPTS | HDFS\_NFS3\_SECURE\_EXTRA\_OPTS | | HADOOP\_PORTMAP\_OPTS | HDFS\_PORTMAP\_OPTS | 
-| HADOOP\_SECONDARYNAMENODE\_OPTS | 
-HDFS\_SECONDARYNAMENODE\_OPTS | 
+| HADOOP\_BALANCER\_OPTS | HDFS\_BALANCER\_OPTS |
+| HADOOP\_DATANODE\_OPTS | HDFS\_DATANODE\_OPTS |
+| HADOOP\_DN\_SECURE_EXTRA_OPTS | HDFS\_DATANODE\_SECURE\_EXTRA\_OPTS |
+| HADOOP\_JOB\_HISTORYSERVER\_OPTS | MAPRED\_HISTORYSERVER\_OPTS |
+| HADOOP\_JOURNALNODE\_OPTS | HDFS\_JOURNALNODE\_OPTS |
+| HADOOP\_MOVER\_OPTS | HDFS\_MOVER\_OPTS |
+| HADOOP\_NAMENODE\_OPTS | HDFS\_NAMENODE\_OPTS |
+| HADOOP\_NFS3\_OPTS | HDFS\_NFS3\_OPTS |
+| HADOOP\_NFS3\_SECURE\_EXTRA\_OPTS | HDFS\_NFS3\_SECURE\_EXTRA\_OPTS |
+| HADOOP\_PORTMAP\_OPTS | HDFS\_PORTMAP\_OPTS |
+| HADOOP\_SECONDARYNAMENODE\_OPTS | HDFS\_SECONDARYNAMENODE\_OPTS |
 | HADOOP\_ZKFC\_OPTS | HDFS\_ZKFC\_OPTS |
 
 
@@ -211,7 +219,7 @@ The maximum applications the RM stores in memory and in the state-store by defau
 
 ---
 
-* [HDFS-10883](https://issues.apache.org/jira/browse/HDFS-10883) | *Major* | **`getTrashRoot`'s behavior is not consistent in DFS after enabling EZ.**
+* [HDFS-10883](https://issues.apache.org/jira/browse/HDFS-10883) | *Major* | **\`getTrashRoot\`'s behavior is not consistent in DFS after enabling EZ.**
 
 If root path / is an encryption zone, the old DistributedFileSystem#getTrashRoot(new Path("/")) returns
 /user/$USER/.Trash
@@ -245,6 +253,13 @@ The BookkeeperJournalManager implementation has been removed. Users are encourag
 * [HADOOP-13522](https://issues.apache.org/jira/browse/HADOOP-13522) | *Major* | **Add %A and %a formats for fs -stat command to print permissions**
 
 Added permissions to the fs stat command. They are now available as symbolic (%A) and octal (%a) formats, which are in line with Linux.
+
+
+---
+
+* [YARN-5718](https://issues.apache.org/jira/browse/YARN-5718) | *Major* | **TimelineClient (and other places in YARN) shouldn't over-write HDFS client retry settings which could cause unexpected behavior**
+
+**WARNING: No release note provided for this change.**
 
 
 ---
@@ -335,7 +350,7 @@ This issue fixes a bug in how resources are evicted from the PUBLIC and PRIVATE 
 
 * [HDFS-11048](https://issues.apache.org/jira/browse/HDFS-11048) | *Major* | **Audit Log should escape control characters**
 
-HDFS audit logs are formatted as individual lines, each of which has a few of key-value pair fields. Some of the values come from client request (e.g. src, dst). Before this patch the control characters including \t \n etc are not escaped in audit logs. That may break lines unexpectedly or introduce additional table character (in the worst case, both) within a field. Tools that parse audit logs had to deal with this case carefully. After this patch, the control characters in the src/dst fields are escaped.
+HDFS audit logs are formatted as individual lines, each of which has a few of key-value pair fields. Some of the values come from client request (e.g. src, dst). Before this patch the control characters including \\t \\n etc are not escaped in audit logs. That may break lines unexpectedly or introduce additional table character (in the worst case, both) within a field. Tools that parse audit logs had to deal with this case carefully. After this patch, the control characters in the src/dst fields are escaped.
 
 
 ---
@@ -400,13 +415,6 @@ The `hadoop fs -ls` command now prints "Permission denied" rather than "No such 
 
 ---
 
-* [YARN-5825](https://issues.apache.org/jira/browse/YARN-5825) | *Major* | **ProportionalPreemptionalPolicy could use readLock over LeafQueue instead of synchronized block**
-
-**WARNING: No release note provided for this change.**
-
-
----
-
 * [HDFS-11056](https://issues.apache.org/jira/browse/HDFS-11056) | *Major* | **Concurrent append and read operations lead to checksum error**
 
 Load last partial chunk checksum properly into memory when converting a finalized/temporary replica to rbw replica. This ensures concurrent reader reads the correct checksum that matches the data before the update.
@@ -417,14 +425,6 @@ Load last partial chunk checksum properly into memory when converting a finalize
 * [YARN-5765](https://issues.apache.org/jira/browse/YARN-5765) | *Blocker* | **Revert CHMOD on the new dirs created-LinuxContainerExecutor creates appcache and its subdirectories with wrong group owner.**
 
 This change reverts YARN-5287 from 3.0.0-alpha1. chmod clears the set-group-ID bit of a regular file hence folder was getting reset with the rights.
-
-
----
-
-* [YARN-5271](https://issues.apache.org/jira/browse/YARN-5271) | *Major* | **ATS client doesn't work with Jersey 2 on the classpath**
-
-A workaround to avoid dependency conflict with Spark2, before a full classpath isolation solution is implemented.
-Skip instantiating a Timeline Service client if encountering NoClassDefFoundError.
 
 
 ---
@@ -560,31 +560,35 @@ Fixed a race condition that caused VolumeScanner to recognize a good replica as 
 
 * [HADOOP-13597](https://issues.apache.org/jira/browse/HADOOP-13597) | *Major* | **Switch KMS from Tomcat to Jetty**
 
+<!-- markdown -->
+
 The following environment variables are deprecated. Set the corresponding
 configuration properties instead.
 
-Environment Variable     \| Configuration Property       \| Configuration File
--------------------------\|------------------------------\|--------------------
-KMS\_HTTP\_PORT            \| hadoop.kms.http.port         \| kms-site.xml
-KMS\_MAX\_HTTP\_HEADER\_SIZE \| hadoop.http.max.request.header.size and hadoop.http.max.response.header.size \| kms-site.xml
-KMS\_MAX\_THREADS          \| hadoop.http.max.threads      \| kms-site.xml
-KMS\_SSL\_ENABLED          \| hadoop.kms.ssl.enabled       \| kms-site.xml
-KMS\_SSL\_KEYSTORE\_FILE    \| ssl.server.keystore.location \| ssl-server.xml
-KMS\_SSL\_KEYSTORE\_PASS    \| ssl.server.keystore.password \| ssl-server.xml
-KMS\_TEMP                 \| hadoop.http.temp.dir         \| kms-site.xml
+Environment Variable     | Configuration Property       | Configuration File
+-------------------------|------------------------------|--------------------
+KMS_HTTP_PORT            | hadoop.kms.http.port         | kms-site.xml
+KMS_MAX_HTTP_HEADER_SIZE | hadoop.http.max.request.header.size and hadoop.http.max.response.header.size | kms-site.xml
+KMS_MAX_THREADS          | hadoop.http.max.threads      | kms-site.xml
+KMS_SSL_ENABLED          | hadoop.kms.ssl.enabled       | kms-site.xml
+KMS_SSL_KEYSTORE_FILE    | ssl.server.keystore.location | ssl-server.xml
+KMS_SSL_KEYSTORE_PASS    | ssl.server.keystore.password | ssl-server.xml
+KMS_TEMP                 | hadoop.http.temp.dir         | kms-site.xml
 
 These default HTTP Services have been added.
 
-Name               \| Description
--------------------\|------------------------------------
-/conf              \| Display configuration properties
-/jmx               \| Java JMX management interface
-/logLevel          \| Get or set log level per class
-/logs              \| Display log files
-/stacks            \| Display JVM stacks
-/static/index.html \| The static home page
+Name               | Description
+-------------------|------------------------------------
+/conf              | Display configuration properties
+/jmx               | Java JMX management interface
+/logLevel          | Get or set log level per class
+/logs              | Display log files
+/stacks            | Display JVM stacks
+/static/index.html | The static home page
 
-Script kms.sh has been deprecated, use 'hadoop kms' instead. Conform to the Hadoop shell scripting framework. Support 'hadoop daemonlog'. Read SSL configurations from ssl-server.xml, like many other Hadoop components.
+The JMX path has been changed from /kms/jmx to /jmx.
+
+Script kms.sh has been deprecated, use `hadoop kms` instead. The new scripts are based on the Hadoop shell scripting framework. `hadoop daemonlog` is supported. SSL configurations are read from ssl-server.xml.
 
 
 ---
@@ -615,4 +619,17 @@ Apache Hadoop is now able to switch to the appropriate user prior to launching c
 This patch removes share/hadoop/{hadoop,hdfs,mapred,yarn}/templates directories and contents.
 
 
+---
+
+* [YARN-5271](https://issues.apache.org/jira/browse/YARN-5271) | *Major* | **ATS client doesn't work with Jersey 2 on the classpath**
+
+A workaround to avoid dependency conflict with Spark2, before a full classpath isolation solution is implemented.
+Skip instantiating a Timeline Service client if encountering NoClassDefFoundError.
+
+
+---
+
+* [HADOOP-13037](https://issues.apache.org/jira/browse/HADOOP-13037) | *Major* | **Refactor Azure Data Lake Store as an independent FileSystem**
+
+Hadoop now supports integration with Azure Data Lake as an alternative Hadoop-compatible file system. Please refer to the Hadoop site documentation of Azure Data Lake for details on usage and configuration.
 

@@ -61,8 +61,7 @@
     connecting to this address if it is configured. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.servicerpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of nn-host1:rpc-port.
-    If the value of this property is unset the value of dfs.namenode.rpc-address will be used as the default.
+    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default service RPC port is 9840.
   </description>
 </property>
 
@@ -2800,6 +2799,15 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.list.reencryption.status.num.responses</name>
+  <value>100</value>
+  <description>When listing re-encryption status, the maximum number of zones
+    that will be returned in a batch. Fetching the list incrementally in
+    batches improves namenode performance.
+  </description>
+</property>
+
   <property>
     <name>dfs.namenode.list.openfiles.num.responses</name>
     <value>1000</value>
@@ -2825,6 +2833,49 @@
   <value>3000</value>
   <description>When KeyProvider is configured, the time delayed until the first
     attempt to warm up edek cache on NN start up / become active.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.sleep.interval</name>
+  <value>1m</value>
+  <description>Interval the re-encrypt EDEK thread sleeps in the main loop. The
+    interval accepts units. If none given, millisecond is assumed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.batch.size</name>
+  <value>1000</value>
+  <description>How many EDEKs should the re-encrypt thread process in one batch.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.throttle.limit.handler.ratio</name>
+  <value>1.0</value>
+  <description>Throttling ratio for the re-encryption, indicating what fraction
+    of time should the re-encrypt handler thread work under NN read lock.
+    Larger than 1.0 values are interpreted as 1.0. Negative value or 0 are
+    invalid values and will fail NN startup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.throttle.limit.updater.ratio</name>
+  <value>1.0</value>
+  <description>Throttling ratio for the re-encryption, indicating what fraction
+    of time should the re-encrypt updater thread work under NN write lock.
+    Larger than 1.0 values are interpreted as 1.0. Negative value or 0 are
+    invalid values and will fail NN startup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.edek.threads</name>
+  <value>10</value>
+  <description>Maximum number of re-encrypt threads to contact the KMS
+    and re-encrypt the edeks.
   </description>
 </property>
 
@@ -2977,7 +3028,7 @@
 
 <property>
   <name>dfs.namenode.ec.system.default.policy</name>
-  <value>RS-6-3-64k</value>
+  <value>RS-6-3-1024k</value>
   <description>The default erasure coding policy name will be used
     on the path if no policy name is passed.
   </description>
@@ -3881,7 +3932,7 @@
 
 <property>
   <name>dfs.journalnode.enable.sync</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     If true, the journal nodes wil sync with each other. The journal nodes
     will periodically gossip with other journal nodes to compare edit log
@@ -4108,6 +4159,18 @@
 </property>
 
 <property>
+  <name>dfs.namenode.inode.attributes.provider.bypass.users</name>
+  <value></value>
+  <description>
+    A list of user principals (in secure cluster) or user names (in insecure
+    cluster) for whom the external attributes provider will be bypassed for all
+    operations. This means file attributes stored in HDFS instead of the
+    external provider will be used for permission checking and be returned when
+    requested.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.max-num-blocks-to-log</name>
   <value>1000</value>
   <description>
@@ -4207,22 +4270,34 @@
   </description>
 </property>
 
-  <property>
-    <name>dfs.namenode.snapshot.capture.openfiles</name>
-    <value>false</value>
-    <description>
-      If true, snapshots taken will have an immutable shared copy of
-      the open files that have valid leases. Even after the open files
-      grow or shrink in size, snapshot will always have the previous
-      point-in-time version of the open files, just like all other
-      closed files. Default is false.
-      Note: The file length captured for open files in snapshot is
-      whats recorded in NameNode at the time of snapshot and it may
-      be shorter than what the client has written till then. In order
-      to capture the latest length, the client can call hflush/hsync
-      with the flag SyncFlag.UPDATE_LENGTH on the open files handles.
-    </description>
-  </property>
+<property>
+  <name>dfs.namenode.snapshot.capture.openfiles</name>
+  <value>false</value>
+  <description>
+    If true, snapshots taken will have an immutable shared copy of
+    the open files that have valid leases. Even after the open files
+    grow or shrink in size, snapshot will always have the previous
+    point-in-time version of the open files, just like all other
+    closed files. Default is false.
+    Note: The file length captured for open files in snapshot is
+    whats recorded in NameNode at the time of snapshot and it may
+    be shorter than what the client has written till then. In order
+    to capture the latest length, the client can call hflush/hsync
+    with the flag SyncFlag.UPDATE_LENGTH on the open files handles.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.snapshot.skip.capture.accesstime-only-change</name>
+  <value>false</value>
+  <description>
+    If accessTime of a file/directory changed but there is no other
+    modification made to the file/directory, the changed accesstime will
+    not be captured in next snapshot. However, if there is other modification
+    made to the file/directory, the latest access time will be captured
+    together with the modification in next snapshot.
+  </description>
+</property>
 
 <property>
   <name>dfs.pipeline.ecn</name>

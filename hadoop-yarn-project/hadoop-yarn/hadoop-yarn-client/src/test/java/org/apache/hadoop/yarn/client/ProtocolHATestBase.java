@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -804,11 +805,20 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     }
 
     public AllocateResponse createFakeAllocateResponse() {
-      return AllocateResponse.newInstance(-1,
-          new ArrayList<ContainerStatus>(),
-          new ArrayList<Container>(), new ArrayList<NodeReport>(),
-          Resource.newInstance(1024, 2), null, 1,
-          null, new ArrayList<NMToken>());
+      if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+        return AllocateResponse.newInstance(-1,
+            new ArrayList<ContainerStatus>(), new ArrayList<Container>(),
+            new ArrayList<NodeReport>(), Resource.newInstance(1024, 2), null, 1,
+            null, new ArrayList<NMToken>(), CollectorInfo.newInstance(
+            "host:port", Token.newInstance(new byte[] {0}, "TIMELINE",
+            new byte[] {0}, "rm")));
+      } else {
+        return AllocateResponse.newInstance(-1,
+            new ArrayList<ContainerStatus>(),
+            new ArrayList<Container>(), new ArrayList<NodeReport>(),
+            Resource.newInstance(1024, 2), null, 1,
+            null, new ArrayList<NMToken>());
+      }
     }
   }
 

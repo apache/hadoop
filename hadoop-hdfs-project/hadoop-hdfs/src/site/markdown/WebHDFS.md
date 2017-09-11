@@ -495,6 +495,45 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatus
 
+### List a File
+
+* Submit a HTTP GET request.
+
+        curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS"
+
+    The client receives a response with a [`FileStatuses` JSON object](#FileStatuses_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Content-Length: 427
+
+        {
+          "FileStatuses":
+          {
+            "FileStatus":
+            [
+              {
+                "accessTime"      : 1320171722771,
+                "blockSize"       : 33554432,
+                "childrenNum"     : 0,
+                "fileId"          : 16390,
+                "group"           : "supergroup",
+                "length"          : 1366,
+                "modificationTime": 1501770633062,
+                "owner"           : "webuser",
+                "pathSuffix"      : "",
+                "permission"      : "644",
+                "replication"     : 1,
+                "storagePolicy"   : 0,
+                "type"            : "FILE"
+              }
+            ]
+          }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatus
+
+
 ### Iteratively List a Directory
 
 * Submit a HTTP GET request.

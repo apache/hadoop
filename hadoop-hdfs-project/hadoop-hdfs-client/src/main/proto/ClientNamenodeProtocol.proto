@@ -327,10 +327,10 @@ message GetFsStatsResponseProto {
   optional uint64 pending_deletion_blocks = 9;
 }
 
-message GetFsBlocksStatsRequestProto { // no input paramters
+message GetFsReplicatedBlockStatsRequestProto { // no input paramters
 }
 
-message GetFsBlocksStatsResponseProto {
+message GetFsReplicatedBlockStatsResponseProto {
   required uint64 low_redundancy = 1;
   required uint64 corrupt_blocks = 2;
   required uint64 missing_blocks = 3;
@@ -339,10 +339,10 @@ message GetFsBlocksStatsResponseProto {
   required uint64 pending_deletion_blocks = 6;
 }
 
-message GetFsECBlockGroupsStatsRequestProto { // no input paramters
+message GetFsECBlockGroupStatsRequestProto { // no input paramters
 }
 
-message GetFsECBlockGroupsStatsResponseProto {
+message GetFsECBlockGroupStatsResponseProto {
   required uint64 low_redundancy = 1;
   required uint64 corrupt_blocks = 2;
   required uint64 missing_blocks = 3;
@@ -831,10 +831,10 @@ service ClientNamenodeProtocol {
   rpc recoverLease(RecoverLeaseRequestProto)
       returns(RecoverLeaseResponseProto);
   rpc getFsStats(GetFsStatusRequestProto) returns(GetFsStatsResponseProto);
-  rpc getFsBlocksStats(GetFsBlocksStatsRequestProto)
-      returns (GetFsBlocksStatsResponseProto);
-  rpc getFsECBlockGroupsStats(GetFsECBlockGroupsStatsRequestProto)
-      returns (GetFsECBlockGroupsStatsResponseProto);
+  rpc getFsReplicatedBlockStats(GetFsReplicatedBlockStatsRequestProto)
+      returns (GetFsReplicatedBlockStatsResponseProto);
+  rpc getFsECBlockGroupStats(GetFsECBlockGroupStatsRequestProto)
+      returns (GetFsECBlockGroupStatsResponseProto);
   rpc getDatanodeReport(GetDatanodeReportRequestProto)
       returns(GetDatanodeReportResponseProto);
   rpc getDatanodeStorageReport(GetDatanodeStorageReportRequestProto)
@@ -941,6 +941,10 @@ service ClientNamenodeProtocol {
       returns(CreateEncryptionZoneResponseProto);
   rpc listEncryptionZones(ListEncryptionZonesRequestProto)
       returns(ListEncryptionZonesResponseProto);
+  rpc reencryptEncryptionZone(ReencryptEncryptionZoneRequestProto)
+      returns(ReencryptEncryptionZoneResponseProto);
+  rpc listReencryptionStatus(ListReencryptionStatusRequestProto)
+      returns(ListReencryptionStatusResponseProto);
   rpc getEZForPath(GetEZForPathRequestProto)
       returns(GetEZForPathResponseProto);
   rpc setErasureCodingPolicy(SetErasureCodingPolicyRequestProto)

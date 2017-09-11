@@ -18,7 +18,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>3.0.0-beta1-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -92,7 +92,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
     <!-- maven plugin versions -->
     <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
-    <maven-site-plugin.version>3.5</maven-site-plugin.version>
+    <maven-site-plugin.version>3.6</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
@@ -183,6 +183,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
               <groupId>org.apache.maven.wagon</groupId>
               <artifactId>wagon-ssh</artifactId>
               <version>${wagon-ssh.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.maven.doxia</groupId>
+              <artifactId>doxia-module-markdown</artifactId>
+              <version>1.8-SNAPSHOT</version>
             </dependency>
           </dependencies>
         </plugin>

@@ -171,7 +171,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final List<ApplicationId> runningApplications =
       new ArrayList<ApplicationId>();
   
-  private final Map<ContainerId, Container> toBeDecreasedContainers =
+  private final Map<ContainerId, Container> toBeUpdatedContainers =
       new HashMap<>();
   
   private final Map<ContainerId, Container> nmReportedIncreasedContainers =
@@ -228,8 +228,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.RUNNING, NodeState.RUNNING,
           RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenRunningTransition())
       .addTransition(NodeState.RUNNING, NodeState.RUNNING,
-          RMNodeEventType.DECREASE_CONTAINER,
-          new DecreaseContainersTransition())
+          RMNodeEventType.UPDATE_CONTAINER,
+          new UpdateContainersTransition())
       .addTransition(NodeState.RUNNING, NodeState.RUNNING,
           RMNodeEventType.SIGNAL_CONTAINER, new SignalContainerTransition())
       .addTransition(NodeState.RUNNING, NodeState.SHUTDOWN,
@@ -614,18 +614,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   };
   
   @VisibleForTesting
-  public Collection<Container> getToBeDecreasedContainers() {
-    return toBeDecreasedContainers.values(); 
+  public Collection<Container> getToBeUpdatedContainers() {
+    return toBeUpdatedContainers.values();
   }
   
   @Override
-  public void updateNodeHeartbeatResponseForContainersDecreasing(
+  public void updateNodeHeartbeatResponseForUpdatedContainers(
       NodeHeartbeatResponse response) {
     this.writeLock.lock();
     
     try {
-      response.addAllContainersToDecrease(toBeDecreasedContainers.values());
-      toBeDecreasedContainers.clear();
+      response.addAllContainersToUpdate(toBeUpdatedContainers.values());
+      toBeUpdatedContainers.clear();
     } finally {
       this.writeLock.unlock();
     }
@@ -847,7 +847,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         containers = startEvent.getNMContainerStatuses();
         if (containers != null && !containers.isEmpty()) {
           for (NMContainerStatus container : containers) {
-            if (container.getContainerState() == ContainerState.RUNNING) {
+            if (container.getContainerState() == ContainerState.RUNNING ||
+                container.getContainerState() == ContainerState.SCHEDULED) {
               rmNode.launchedContainers.add(container.getContainerId());
             }
           }
@@ -1031,16 +1032,19 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           RMNodeFinishedContainersPulledByAMEvent) event).getContainers());
     }
   }
-  
-  public static class DecreaseContainersTransition
+
+  /**
+   * Transition to Update a container.
+   */
+  public static class UpdateContainersTransition
       implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
  
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
-      RMNodeDecreaseContainerEvent de = (RMNodeDecreaseContainerEvent) event;
+      RMNodeUpdateContainerEvent de = (RMNodeUpdateContainerEvent) event;
 
-      for (Container c : de.getToBeDecreasedContainers()) {
-        rmNode.toBeDecreasedContainers.put(c.getId(), c);
+      for (Container c : de.getToBeUpdatedContainers()) {
+        rmNode.toBeUpdatedContainers.put(c.getId(), c);
       }
     }
   }
