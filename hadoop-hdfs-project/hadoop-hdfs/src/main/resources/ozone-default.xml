@@ -432,6 +432,17 @@
   </property>
 
   <property>
+    <name>ozone.key.deleting.limit.per.task</name>
+    <value>1000</value>
+    <description>
+      Maximum number of keys to be scanned by key deleting service per
+      time interval in KSM. Those keys are sent to delete metadata and
+      generate transactions in SCM for next async deletion between SCM
+      and DataNode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.container.ipc</name>
     <value>50011</value>
     <description>

@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.utils.BatchOperation;
@@ -206,4 +207,16 @@ public interface KSMMetadataManager {
    */
   List<KsmVolumeArgs> listVolumes(String userName, String prefix,
       String startKey, int maxKeys) throws IOException;
+
+  /**
+   * Returns a list of pending deletion key info that ups to the given count.
+   * Each entry is a {@link BlockGroup}, which contains the info about the
+   * key name and all its associated block IDs. A pending deletion key is
+   * stored with #deleting# prefix in KSM DB.
+   *
+   * @param count max number of keys to return.
+   * @return a list of {@link BlockGroup} represent keys and blocks.
+   * @throws IOException
+   */
+  List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
 }

@@ -64,17 +64,40 @@ message AllocateScmBlockRequestProto {
 }
 
 /**
- * keys - batch of block keys to deleted
+ * A delete key request sent by KSM to SCM, it contains
+ * multiple number of keys (and their blocks).
  */
-message DeleteScmBlocksRequestProto {
-  repeated string keys = 1;
+message DeleteScmKeyBlocksRequestProto {
+  repeated KeyBlocks keyBlocks = 1;
 }
 
 /**
- * deletedKeys - keys that are deleted successfully
+ * A object key and all its associated blocks.
+ * We need to encapsulate object key name plus the blocks in this potocol
+ * because SCM needs to response KSM with the keys it has deleted.
+ * If the response only contains blocks, it will be very expensive for
+ * KSM to figure out what keys have been deleted.
  */
-message DeleteScmBlocksResponseProto {
-  repeated DeleteScmBlockResult results = 1;
+message KeyBlocks {
+  required string key = 1;
+  repeated string blocks = 2;
+}
+
+/**
+ * A delete key response from SCM to KSM, it contains multiple child-results.
+ * Each child-result represents a key deletion result, only if all blocks of
+ * a key are successfully deleted, this key result is considered as succeed.
+ */
+message DeleteScmKeyBlocksResponseProto {
+  repeated DeleteKeyBlocksResultProto results = 1;
+}
+
+/**
+ * A key deletion result. It contains all the block deletion results.
+ */
+message DeleteKeyBlocksResultProto {
+  required string objectKey = 1;
+  repeated DeleteScmBlockResult blockResults = 2;
 }
 
 message DeleteScmBlockResult {
@@ -126,8 +149,8 @@ service ScmBlockLocationProtocolService {
       returns (AllocateScmBlockResponseProto);
 
   /**
-   * Deletes one or multiple block keys from SCM.
+   * Deletes blocks for a set of object keys from SCM.
    */
-  rpc deleteScmBlocks(DeleteScmBlocksRequestProto)
-      returns (DeleteScmBlocksResponseProto);
+  rpc deleteScmKeyBlocks(DeleteScmKeyBlocksRequestProto)
+      returns (DeleteScmKeyBlocksResponseProto);
 }

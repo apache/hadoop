@@ -24,24 +24,24 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
     .AllocateScmBlockRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
     .AllocateScmBlockResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmBlocksRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmBlocksResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmBlockResult;
+    .DeleteScmKeyBlocksResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
     .GetScmBlockLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
     .GetScmBlockLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
     .ScmLocatedBlockProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
+    .KeyBlocks;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 
@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -147,30 +148,32 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   /**
    * Delete the set of keys specified.
    *
-   * @param keys batch of block keys to delete.
+   * @param keyBlocksInfoList batch of block keys to delete.
    * @return list of block deletion results.
    * @throws IOException if there is any failure.
    *
    */
   @Override
-  public List<DeleteBlockResult> deleteBlocks(Set<String> keys)
-      throws IOException {
-    Preconditions.checkArgument(keys != null && !keys.isEmpty(),
-        "keys to be deleted cannot be null or empty");
-    DeleteScmBlocksRequestProto request = DeleteScmBlocksRequestProto
-        .newBuilder()
-        .addAllKeys(keys)
-        .build();
-    final DeleteScmBlocksResponseProto resp;
+  public List<DeleteBlockGroupResult> deleteKeyBlocks(
+      List<BlockGroup> keyBlocksInfoList) throws IOException {
+    List<KeyBlocks> keyBlocksProto = keyBlocksInfoList.stream()
+        .map(BlockGroup::getProto).collect(Collectors.toList());
+    DeleteScmKeyBlocksRequestProto request = DeleteScmKeyBlocksRequestProto
+        .newBuilder().addAllKeyBlocks(keyBlocksProto).build();
+
+    final DeleteScmKeyBlocksResponseProto resp;
     try {
-      resp = rpcProxy.deleteScmBlocks(NULL_RPC_CONTROLLER, request);
+      resp = rpcProxy.deleteScmKeyBlocks(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
-    List<DeleteBlockResult> results = new ArrayList(resp.getResultsCount());
-    for (DeleteScmBlockResult result : resp.getResultsList()) {
-      results.add(new DeleteBlockResult(result.getKey(), result.getResult()));
-    }
+    List<DeleteBlockGroupResult> results =
+        new ArrayList<>(resp.getResultsCount());
+    results.addAll(resp.getResultsList().stream().map(
+        result -> new DeleteBlockGroupResult(result.getObjectKey(),
+            DeleteBlockGroupResult
+                .convertBlockResultProto(result.getBlockResultsList())))
+        .collect(Collectors.toList()));
     return results;
   }
 

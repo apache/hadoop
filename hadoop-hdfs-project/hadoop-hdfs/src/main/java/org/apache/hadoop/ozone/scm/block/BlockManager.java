@@ -22,6 +22,7 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 
 /**
  *
@@ -46,11 +47,16 @@ public interface BlockManager extends Closeable {
   Pipeline getBlock(String key) throws IOException;
 
   /**
-   * Given a key of the block, delete the block.
-   * @param key - key of the block.
-   * @throws IOException
+   * Deletes a list of blocks in an atomic operation. Internally, SCM
+   * writes these blocks into a {@link DeletedBlockLog} and deletes them
+   * from SCM DB. If this is successful, given blocks are entering pending
+   * deletion state and becomes invisible from SCM namespace.
+   *
+   * @param blockIDs block IDs. This is often the list of blocks of
+   *                 a particular object key.
+   * @throws IOException if exception happens, non of the blocks is deleted.
    */
-  void deleteBlock(String key) throws IOException;
+  void deleteBlocks(List<String> blockIDs) throws IOException;
 
   /**
    * @return the block deletion transaction log maintained by SCM.

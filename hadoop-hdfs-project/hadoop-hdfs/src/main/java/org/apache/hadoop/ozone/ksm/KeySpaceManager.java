@@ -217,6 +217,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
         ksmRpcAddress));
     DefaultMetricsSystem.initialize("KeySpaceManager");
     metadataManager.start();
+    keyManager.start();
     ksmRpcServer.start();
     httpServer.start();
     registerMXBean();
@@ -228,8 +229,9 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
    */
   public void stop() {
     try {
-      ksmRpcServer.stop();
       metadataManager.stop();
+      ksmRpcServer.stop();
+      keyManager.stop();
       httpServer.stop();
       metrics.unRegister();
       unregisterMXBean();

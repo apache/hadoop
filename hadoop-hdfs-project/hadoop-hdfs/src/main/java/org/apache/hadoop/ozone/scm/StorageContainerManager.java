@@ -33,6 +33,8 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
@@ -85,6 +87,7 @@ import org.slf4j.LoggerFactory;
 import javax.management.ObjectName;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -838,19 +841,26 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   }
 
   /**
-   * Delete blocks.
-   * @param keys batch of block keys to delete.
+   * Delete blocks for a set of object keys.
+   *
+   * @param keyBlocksInfoList list of block keys with object keys to delete.
    * @return deletion results.
    */
-  public List<DeleteBlockResult> deleteBlocks(final Set<String> keys) {
-    List<DeleteBlockResult> results = new LinkedList<>();
-    for (String key: keys) {
+  public List<DeleteBlockGroupResult> deleteKeyBlocks(
+      List<BlockGroup> keyBlocksInfoList) throws IOException {
+    LOG.info("SCM is informed by KSM to delete {} blocks",
+        keyBlocksInfoList.size());
+    List<DeleteBlockGroupResult> results = new ArrayList<>();
+    for (BlockGroup keyBlocks : keyBlocksInfoList) {
       Result resultCode;
       try {
-        scmBlockManager.deleteBlock(key);
+        // We delete blocks in an atomic operation to prevent getting
+        // into state like only a partial of blocks are deleted,
+        // which will leave key in an inconsistent state.
+        scmBlockManager.deleteBlocks(keyBlocks.getBlockIDList());
         resultCode = Result.success;
       } catch (SCMException scmEx) {
-        LOG.warn("Fail to delete block: {}", key, scmEx);
+        LOG.warn("Fail to delete block: {}", keyBlocks.getGroupID(), scmEx);
         switch (scmEx.getResult()) {
         case CHILL_MODE_EXCEPTION:
           resultCode = Result.chillMode;
@@ -862,10 +872,16 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
           resultCode = Result.unknownFailure;
         }
       } catch (IOException ex) {
-        LOG.warn("Fail to delete block: {}", key, ex);
+        LOG.warn("Fail to delete blocks for object key: {}",
+            keyBlocks.getGroupID(), ex);
         resultCode = Result.unknownFailure;
       }
-      results.add(new DeleteBlockResult(key, resultCode));
+      List<DeleteBlockResult> blockResultList = new ArrayList<>();
+      for (String blockKey : keyBlocks.getBlockIDList()) {
+        blockResultList.add(new DeleteBlockResult(blockKey, resultCode));
+      }
+      results.add(new DeleteBlockGroupResult(keyBlocks.getGroupID(),
+          blockResultList));
     }
     return results;
   }

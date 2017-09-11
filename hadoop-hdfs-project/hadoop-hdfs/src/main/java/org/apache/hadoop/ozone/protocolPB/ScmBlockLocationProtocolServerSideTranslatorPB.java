@@ -21,8 +21,10 @@ import com.google.common.collect.Sets;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.DeleteKeyBlocksResultProto;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
+import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -32,11 +34,9 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.AllocateScmBlockResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
-    .ScmBlockLocationProtocolProtos.DeleteScmBlocksRequestProto;
+    .ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
-    .ScmBlockLocationProtocolProtos.DeleteScmBlocksResponseProto;
-import static org.apache.hadoop.ozone.protocol.proto
-    .ScmBlockLocationProtocolProtos.DeleteScmBlockResult;
+    .ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.GetScmBlockLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
@@ -47,6 +47,7 @@ import org.apache.hadoop.ozone.protocol.proto
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -123,21 +124,22 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public DeleteScmBlocksResponseProto deleteScmBlocks(
-      RpcController controller, DeleteScmBlocksRequestProto req)
+  public DeleteScmKeyBlocksResponseProto deleteScmKeyBlocks(
+      RpcController controller, DeleteScmKeyBlocksRequestProto req)
       throws ServiceException {
-    Set<String> keys = Sets.newLinkedHashSetWithExpectedSize(
-        req.getKeysCount());
-    for (String key : req.getKeysList()) {
-      keys.add(key);
-    }
-    DeleteScmBlocksResponseProto.Builder resp =
-        DeleteScmBlocksResponseProto.newBuilder();
+    DeleteScmKeyBlocksResponseProto.Builder resp =
+        DeleteScmKeyBlocksResponseProto.newBuilder();
     try {
-      final List<DeleteBlockResult> results = impl.deleteBlocks(keys);
-      for (DeleteBlockResult result: results) {
-        DeleteScmBlockResult.Builder deleteResult = DeleteScmBlockResult
-            .newBuilder().setKey(result.getKey()).setResult(result.getResult());
+      List<BlockGroup> infoList = req.getKeyBlocksList().stream()
+          .map(BlockGroup::getFromProto).collect(Collectors.toList());
+      final List<DeleteBlockGroupResult> results =
+          impl.deleteKeyBlocks(infoList);
+      for (DeleteBlockGroupResult result: results) {
+        DeleteKeyBlocksResultProto.Builder deleteResult =
+            DeleteKeyBlocksResultProto
+            .newBuilder()
+            .setObjectKey(result.getObjectKey())
+            .addAllBlockResults(result.getBlockResultProtoList());
         resp.addResults(deleteResult.build());
       }
     } catch (IOException ex) {

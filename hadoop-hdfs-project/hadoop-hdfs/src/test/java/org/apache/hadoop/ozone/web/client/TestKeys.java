@@ -17,15 +17,31 @@
  */
 package org.apache.hadoop.ozone.web.client;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.ksm.KeySpaceManager;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -48,8 +64,9 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.ParseException;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -76,6 +93,9 @@ public class TestKeys {
   @BeforeClass
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
+
+    // Set short block deleting service interval to speed up deletions.
+    conf.setInt(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS, 1000);
 
     path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
@@ -104,12 +124,12 @@ public class TestKeys {
    *
    * @return File.
    */
-  static File createRandomDataFile(String dir, String fileName, long size) {
+  static File createRandomDataFile(String dir, String fileName, long size)
+      throws IOException {
     File tmpDir = new File(dir);
-    tmpDir.mkdirs();
+    FileUtils.forceMkdir(tmpDir);
     File tmpFile = new File(tmpDir, fileName);
-    try {
-      FileOutputStream randFile = new FileOutputStream(tmpFile);
+    try (FileOutputStream randFile = new FileOutputStream(tmpFile)) {
       Random r = new Random();
       for (int x = 0; x < size; x++) {
         char c = (char) (r.nextInt(26) + 'a');
@@ -176,8 +196,7 @@ public class TestKeys {
      * @return Returns the name of the new key that was created.
      * @throws OzoneException
      */
-    private String putKey() throws
-        OzoneException {
+    private KsmKeyArgs putKey() throws Exception {
       String volumeName = OzoneUtils.getRequestID().toLowerCase();
       client.setUserAuth("hdfs");
 
@@ -188,16 +207,21 @@ public class TestKeys {
       bucket = vol.createBucket(bucketName, acls, StorageType.DEFAULT);
 
       String fileName = OzoneUtils.getRequestID().toLowerCase();
+
       file = createRandomDataFile(dir, fileName, 1024);
 
       bucket.putKey(keyName, file);
-      return keyName;
+      return new KsmKeyArgs.Builder()
+          .setKeyName(keyName)
+          .setVolumeName(volumeName)
+          .setBucketName(bucketName)
+          .setDataSize(1024)
+          .build();
     }
-
   }
 
   @Test
-  public void testPutKey() throws OzoneException {
+  public void testPutKey() throws Exception {
     // Test non-delimited keys
     runTestPutKey(new PutHelper(ozoneRestClient, path));
     // Test key delimited by a random delimiter
@@ -206,7 +230,7 @@ public class TestKeys {
         getMultiPartKey(delimiter)));
   }
 
-  static void runTestPutKey(PutHelper helper) throws OzoneException {
+  static void runTestPutKey(PutHelper helper) throws Exception {
     final OzoneRestClient client = helper.client;
     helper.putKey();
     assertNotNull(helper.getBucket());
@@ -254,8 +278,7 @@ public class TestKeys {
   }
 
   @Test
-  public void testPutAndGetKeyWithDnRestart()
-      throws OzoneException, IOException, URISyntaxException {
+  public void testPutAndGetKeyWithDnRestart() throws Exception {
     runTestPutAndGetKeyWithDnRestart(
         new PutHelper(ozoneRestClient, path), ozoneCluster);
     String delimiter = RandomStringUtils.randomAscii(1);
@@ -265,9 +288,8 @@ public class TestKeys {
   }
 
   static void runTestPutAndGetKeyWithDnRestart(
-      PutHelper helper, MiniOzoneCluster cluster)
-      throws OzoneException, IOException, URISyntaxException {
-    String keyName = helper.putKey();
+      PutHelper helper, MiniOzoneCluster cluster) throws Exception {
+    String keyName = helper.putKey().getKeyName();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
@@ -281,37 +303,35 @@ public class TestKeys {
 
     helper.getBucket().getKey(keyName, newPath);
 
-    FileInputStream original = new FileInputStream(helper.getFile());
-    FileInputStream downloaded = new FileInputStream(newPath.toFile());
-
-
-    String originalHash = DigestUtils.sha256Hex(original);
-    String downloadedHash = DigestUtils.sha256Hex(downloaded);
-
-    assertEquals(
-        "Sha256 does not match between original file and downloaded file.",
-        originalHash, downloadedHash);
+    try (
+        FileInputStream original = new FileInputStream(helper.getFile());
+        FileInputStream downloaded = new FileInputStream(newPath.toFile())) {
+      String originalHash = DigestUtils.sha256Hex(original);
+      String downloadedHash = DigestUtils.sha256Hex(downloaded);
+      assertEquals(
+          "Sha256 does not match between original file and downloaded file.",
+          originalHash, downloadedHash);
+    }
   }
 
   @Test
-  public void testPutAndGetKey() throws OzoneException, IOException {
+  public void testPutAndGetKey() throws Exception {
     runTestPutAndGetKey(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAscii(1);
     runTestPutAndGetKey(new PutHelper(ozoneRestClient, path,
         getMultiPartKey(delimiter)));
   }
 
-  static void runTestPutAndGetKey(PutHelper helper)
-      throws OzoneException, IOException {
+  static void runTestPutAndGetKey(PutHelper helper) throws Exception {
     final OzoneRestClient client = helper.client;
 
-    String keyName = helper.putKey();
+    String keyName = helper.putKey().getKeyName();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
-    final String newFileName1 =  helper.dir + "/"
+    final String newFileName1 = helper.dir + "/"
         + OzoneUtils.getRequestID().toLowerCase();
-    final String newFileName2 =  helper.dir + "/"
+    final String newFileName2 = helper.dir + "/"
         + OzoneUtils.getRequestID().toLowerCase();
 
     Path newPath1 = Paths.get(newFileName1);
@@ -322,54 +342,51 @@ public class TestKeys {
     client.getKey(helper.getVol().getVolumeName(),
         helper.getBucket().getBucketName(), keyName, newPath2);
 
-    FileInputStream original = new FileInputStream(helper.getFile());
-    FileInputStream downloaded1 = new FileInputStream(newPath1.toFile());
-    FileInputStream downloaded2 = new FileInputStream(newPath1.toFile());
+    try (FileInputStream original = new FileInputStream(helper.getFile());
+        FileInputStream downloaded1 = new FileInputStream(newPath1.toFile());
+        FileInputStream downloaded2 = new FileInputStream(newPath1.toFile())) {
+      String originalHash = DigestUtils.sha256Hex(original);
+      String downloadedHash1 = DigestUtils.sha256Hex(downloaded1);
+      String downloadedHash2 = DigestUtils.sha256Hex(downloaded2);
 
-    String originalHash = DigestUtils.sha256Hex(original);
-    String downloadedHash1 = DigestUtils.sha256Hex(downloaded1);
-    String downloadedHash2 = DigestUtils.sha256Hex(downloaded2);
+      assertEquals(
+          "Sha256 does not match between original file and downloaded file.",
+          originalHash, downloadedHash1);
+      assertEquals(
+          "Sha256 does not match between original file and downloaded file.",
+          originalHash, downloadedHash2);
 
-    assertEquals(
-        "Sha256 does not match between original file and downloaded file.",
-        originalHash, downloadedHash1);
-    assertEquals(
-        "Sha256 does not match between original file and downloaded file.",
-        originalHash, downloadedHash2);
+      // test new get key with invalid volume/bucket name
+      try {
+        client.getKey("invalid-volume", helper.getBucket().getBucketName(),
+            keyName, newPath1);
+        fail("Get key should have thrown " + "when using invalid volume name.");
+      } catch (OzoneException e) {
+        GenericTestUtils
+            .assertExceptionContains(Status.KEY_NOT_FOUND.toString(), e);
+      }
 
-    // test new get key with invalid volume/bucket name
-    try {
-      client.getKey("invalid-volume",
-          helper.getBucket().getBucketName(), keyName, newPath1);
-      fail("Get key should have thrown "
-          + "when using invalid volume name.");
-    } catch (OzoneException e) {
-      GenericTestUtils.assertExceptionContains(
-          Status.KEY_NOT_FOUND.toString(), e);
-    }
-
-    try {
-      client.getKey(helper.getVol().getVolumeName(),
-          "invalid-bucket", keyName, newPath1);
-      fail("Get key should have thrown "
-          + "when using invalid bucket name.");
-    } catch (OzoneException e) {
-      GenericTestUtils.assertExceptionContains(
-          Status.KEY_NOT_FOUND.toString(), e);
+      try {
+        client.getKey(helper.getVol().getVolumeName(), "invalid-bucket",
+            keyName, newPath1);
+        fail("Get key should have thrown " + "when using invalid bucket name.");
+      } catch (OzoneException e) {
+        GenericTestUtils.assertExceptionContains(
+            Status.KEY_NOT_FOUND.toString(), e);
+      }
     }
   }
 
   @Test
-  public void testPutAndDeleteKey() throws OzoneException, IOException {
+  public void testPutAndDeleteKey() throws Exception {
     runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAscii(1);
     runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path,
         getMultiPartKey(delimiter)));
   }
 
-  static void runTestPutAndDeleteKey(PutHelper helper)
-      throws OzoneException, IOException {
-    String keyName = helper.putKey();
+  static void runTestPutAndDeleteKey(PutHelper helper) throws Exception {
+    String keyName = helper.putKey().getKeyName();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
     helper.getBucket().deleteKey(keyName);
@@ -384,16 +401,14 @@ public class TestKeys {
   }
 
   @Test
-  public void testPutAndListKey()
-      throws OzoneException, IOException, ParseException {
+  public void testPutAndListKey() throws Exception {
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAscii(1);
     runTestPutAndListKey(new PutHelper(ozoneRestClient, path,
         getMultiPartKey(delimiter)));
   }
 
-  static void runTestPutAndListKey(PutHelper helper)
-      throws OzoneException, IOException, ParseException {
+  static void runTestPutAndListKey(PutHelper helper) throws Exception {
     final OzoneRestClient client = helper.client;
     helper.putKey();
     assertNotNull(helper.getBucket());
@@ -473,17 +488,15 @@ public class TestKeys {
   }
 
   @Test
-  public void testGetKeyInfo()
-      throws OzoneException, IOException, ParseException {
+  public void testGetKeyInfo() throws Exception {
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path));
     String delimiter = RandomStringUtils.randomAscii(1);
     runTestGetKeyInfo(new PutHelper(ozoneRestClient, path,
         getMultiPartKey(delimiter)));
   }
 
-  static void runTestGetKeyInfo(PutHelper helper)
-      throws OzoneException, ParseException {
-    String keyName = helper.putKey();
+  static void runTestGetKeyInfo(PutHelper helper) throws Exception {
+    String keyName = helper.putKey().getKeyName();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
@@ -499,5 +512,171 @@ public class TestKeys {
     Assert.assertTrue(
         (OzoneUtils.formatDate(keyInfo.getObjectInfo().getModifiedOn())
             / 1000) >= (currentTime / 1000));
+  }
+
+  // Volume, bucket, keys info that helps for test create/delete keys.
+  private static class BucketKeys {
+
+    private Map<Pair<String, String>, List<String>> buckets;
+
+    BucketKeys() {
+      buckets = Maps.newHashMap();
+    }
+
+    void addKey(String volume, String bucket, String key) {
+      // check if this bucket exists
+      for (Map.Entry<Pair<String, String>, List<String>> entry :
+          buckets.entrySet()) {
+        if (entry.getKey().getValue().equals(bucket)) {
+          entry.getValue().add(key);
+          return;
+        }
+      }
+
+      // bucket not exist
+      Pair<String, String> newBucket = new ImmutablePair(volume, bucket);
+      List<String> keyList = Lists.newArrayList();
+      keyList.add(key);
+      buckets.put(newBucket, keyList);
+    }
+
+    Set<Pair<String, String>> getAllBuckets() {
+      return buckets.keySet();
+    }
+
+    List<String> getBucketKeys(String bucketName) {
+      for (Map.Entry<Pair<String, String>, List<String>> entry : buckets
+          .entrySet()) {
+        if (entry.getKey().getValue().equals(bucketName)) {
+          return entry.getValue();
+        }
+      }
+      return Lists.newArrayList();
+    }
+
+    int totalNumOfKeys() {
+      int count = 0;
+      for (Map.Entry<Pair<String, String>, List<String>> entry : buckets
+          .entrySet()) {
+        count += entry.getValue().size();
+      }
+      return count;
+    }
+  }
+
+  private int countKsmKeys(KeySpaceManager ksm) throws IOException {
+    int totalCount = 0;
+    List<KsmVolumeArgs> volumes =
+        ksm.listAllVolumes(null, null, Integer.MAX_VALUE);
+    for (KsmVolumeArgs volume : volumes) {
+      List<KsmBucketInfo> buckets =
+          ksm.listBuckets(volume.getVolume(), null, null, Integer.MAX_VALUE);
+      for (KsmBucketInfo bucket : buckets) {
+        List<KsmKeyInfo> keys = ksm.listKeys(bucket.getVolumeName(),
+            bucket.getBucketName(), null, null, Integer.MAX_VALUE);
+        totalCount += keys.size();
+      }
+    }
+    return totalCount;
+  }
+
+  @Test
+  public void testDeleteKey() throws Exception {
+    KeySpaceManager ksm = ozoneCluster.getKeySpaceManager();
+    // To avoid interference from other test cases,
+    // we collect number of existing keys at the beginning
+    int numOfExistedKeys = countKsmKeys(ksm);
+
+    // Keep tracking bucket keys info while creating them
+    PutHelper helper = new PutHelper(ozoneRestClient, path);
+    BucketKeys bucketKeys = new BucketKeys();
+    for (int i = 0; i < 20; i++) {
+      KsmKeyArgs keyArgs = helper.putKey();
+      bucketKeys.addKey(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          keyArgs.getKeyName());
+    }
+
+    // There should be 20 keys in the buckets we just created.
+    Assert.assertEquals(20, bucketKeys.totalNumOfKeys());
+
+    int numOfCreatedKeys = 0;
+    OzoneContainer cm = ozoneCluster.getDataNodes().get(0)
+        .getOzoneContainerManager();
+
+    // Expected to delete chunk file list.
+    List<File> expectedChunkFiles = Lists.newArrayList();
+    // Iterate over all buckets, and list all keys in each bucket,
+    // count the total number of created keys.
+    Set<Pair<String, String>> buckets = bucketKeys.getAllBuckets();
+    for (Pair<String, String> buk : buckets) {
+      List<KsmKeyInfo> createdKeys =
+          ksm.listKeys(buk.getKey(), buk.getValue(), null, null, 20);
+
+      // Memorize chunks that has been created,
+      // so we can verify actual deletions at DN side later.
+      for (KsmKeyInfo keyInfo : createdKeys) {
+        List<KsmKeyLocationInfo> locations = keyInfo.getKeyLocationList();
+        for (KsmKeyLocationInfo location : locations) {
+          String containerName = location.getContainerName();
+          KeyData keyData = new KeyData(containerName, location.getBlockID());
+          KeyData blockInfo = cm.getContainerManager()
+              .getKeyManager().getKey(keyData);
+          ContainerData containerData = cm.getContainerManager()
+              .readContainer(containerName);
+          File dataDir = ContainerUtils
+              .getDataDirectory(containerData).toFile();
+          for (ContainerProtos.ChunkInfo chunkInfo : blockInfo.getChunks()) {
+            File chunkFile = dataDir.toPath()
+                .resolve(chunkInfo.getChunkName()).toFile();
+            System.out.println("Chunk File created: "
+                + chunkFile.getAbsolutePath());
+            Assert.assertTrue(chunkFile.exists());
+            expectedChunkFiles.add(chunkFile);
+          }
+        }
+      }
+      numOfCreatedKeys += createdKeys.size();
+    }
+
+    // Ensure all keys are created.
+    Assert.assertEquals(20, numOfCreatedKeys);
+
+    // Ensure all keys are visible from KSM.
+    // Total number should be numOfCreated + numOfExisted
+    Assert.assertEquals(20 + numOfExistedKeys, countKsmKeys(ksm));
+
+    // Delete 10 keys
+    int delCount = 20;
+    Set<Pair<String, String>> allBuckets = bucketKeys.getAllBuckets();
+    for (Pair<String, String> bucketInfo : allBuckets) {
+      List<String> bks = bucketKeys.getBucketKeys(bucketInfo.getValue());
+      for (String keyName : bks) {
+        if (delCount > 0) {
+          KsmKeyArgs arg =
+              new KsmKeyArgs.Builder().setVolumeName(bucketInfo.getKey())
+                  .setBucketName(bucketInfo.getValue()).setKeyName(keyName)
+                  .build();
+          ksm.deleteKey(arg);
+          delCount--;
+        }
+      }
+    }
+
+    // It should be pretty quick that keys are removed from KSM namespace,
+    // because actual deletion happens in async mode.
+    GenericTestUtils.waitFor(() -> {
+      try {
+        int num = countKsmKeys(ksm);
+        return num == (numOfExistedKeys);
+      } catch (IOException e) {
+        return false;
+      }
+    }, 1000, 10000);
+
+    // It might take a while until all blocks are actually deleted,
+    // verify all chunk files created earlier are removed from disk.
+    GenericTestUtils.waitFor(
+        () -> expectedChunkFiles.stream().allMatch(file -> !file.exists()),
+        1000, 60000);
   }
 }
