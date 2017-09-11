@@ -276,7 +276,7 @@ public final class TimelineSchemaCreator {
       createAllTables(hbaseConf, skipExisting);
       LOG.info("Successfully created HBase schema. ");
     } catch (IOException e) {
-      LOG.error("Error in creating hbase tables: " + e.getMessage());
+      LOG.error("Error in creating hbase tables: ", e);
       exceptions.add(e);
     }
 
