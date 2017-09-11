@@ -24,11 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.impl.BaseResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
-
-import java.util.Arrays;
 
 /**
  * Resources is a computation class which provides a set of apis to do
@@ -45,9 +42,11 @@ public class Resources {
    * Helper class to create a resource with a fixed value for all resource
    * types. For example, a NONE resource which returns 0 for any resource type.
    */
-  static class FixedValueResource extends BaseResource {
+  @InterfaceAudience.Private
+  @Unstable
+  static class FixedValueResource extends Resource {
 
-    private long resourceValue;
+    private final long resourceValue;
     private String name;
 
     /**
@@ -101,6 +100,19 @@ public class Resources {
     }
 
     @Override
+    public void setResourceInformation(int index,
+        ResourceInformation resourceInformation)
+        throws ResourceNotFoundException {
+      throw new RuntimeException(name + " cannot be modified!");
+    }
+
+    @Override
+    public void setResourceValue(int index, long value)
+        throws ResourceNotFoundException {
+      throw new RuntimeException(name + " cannot be modified!");
+    }
+
+    @Override
     public void setResourceInformation(String resource,
         ResourceInformation resourceInformation)
         throws ResourceNotFoundException {
@@ -117,19 +129,11 @@ public class Resources {
       ResourceInformation[] types = ResourceUtils.getResourceTypesArray();
       if (types != null) {
         resources = new ResourceInformation[types.length];
-        readOnlyResources = new ResourceInformation[types.length];
         for (int index = 0; index < types.length; index++) {
           resources[index] = ResourceInformation.newInstance(types[index]);
           resources[index].setValue(resourceValue);
-
-          // this is a fix for getVirtualCores returning an int
-          if (resourceValue > Integer.MAX_VALUE && ResourceInformation.VCORES
-              .getName().equals(resources[index].getName())) {
-            resources[index].setValue((long) Integer.MAX_VALUE);
-          }
         }
       }
-      readOnlyResources = Arrays.copyOf(resources, resources.length);
     }
   }
 

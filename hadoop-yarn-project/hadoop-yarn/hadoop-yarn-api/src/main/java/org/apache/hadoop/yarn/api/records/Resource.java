@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
-import org.apache.hadoop.yarn.api.records.impl.BaseResource;
+import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -59,8 +59,15 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 @Stable
 public abstract class Resource implements Comparable<Resource> {
 
-  protected static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
-  protected static final String VCORES = ResourceInformation.VCORES.getName();
+  protected ResourceInformation[] resources = null;
+
+  // Number of mandatory resources, this is added to avoid invoke
+  // MandatoryResources.values().length, since values() internally will
+  // copy array, etc.
+  protected static final int NUM_MANDATORY_RESOURCES = 2;
+
+  protected static final int MEMORY_INDEX = 0;
+  protected static final int VCORES_INDEX = 1;
 
   @Public
   @Stable
@@ -71,7 +78,7 @@ public abstract class Resource implements Comparable<Resource> {
       ret.setVirtualCores(vCores);
       return ret;
     }
-    return new BaseResource(memory, vCores);
+    return new LightWeightResource(memory, vCores);
   }
 
   @Public
@@ -83,7 +90,7 @@ public abstract class Resource implements Comparable<Resource> {
       ret.setVirtualCores(vCores);
       return ret;
     }
-    return new BaseResource(memory, vCores);
+    return new LightWeightResource(memory, vCores);
   }
 
   @InterfaceAudience.Private
@@ -201,7 +208,9 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Evolving
-  public abstract ResourceInformation[] getResources();
+  public ResourceInformation[] getResources() {
+    return resources;
+  }
 
   /**
    * Get ResourceInformation for a specified resource.
@@ -215,7 +224,6 @@ public abstract class Resource implements Comparable<Resource> {
   public ResourceInformation getResourceInformation(String resource)
       throws ResourceNotFoundException {
     Integer index = ResourceUtils.getResourceTypeIndex().get(resource);
-    ResourceInformation[] resources = getResources();
     if (index != null) {
       return resources[index];
     }
@@ -236,12 +244,13 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public ResourceInformation getResourceInformation(int index)
       throws ResourceNotFoundException {
-    ResourceInformation[] resources = getResources();
-    if (index < 0 || index >= resources.length) {
-      throw new ResourceNotFoundException("Unknown resource at index '" + index
-          + "'. Vaid resources are: " + Arrays.toString(resources));
+    ResourceInformation ri = null;
+    try {
+      ri = resources[index];
+    } catch (ArrayIndexOutOfBoundsException e) {
+      throwExceptionWhenArrayOutOfBound(index);
     }
-    return resources[index];
+    return ri;
   }
 
   /**
@@ -271,11 +280,11 @@ public abstract class Resource implements Comparable<Resource> {
   public void setResourceInformation(String resource,
       ResourceInformation resourceInformation)
       throws ResourceNotFoundException {
-    if (resource.equals(MEMORY)) {
+    if (resource.equals(ResourceInformation.MEMORY_URI)) {
       this.setMemorySize(resourceInformation.getValue());
       return;
     }
-    if (resource.equals(VCORES)) {
+    if (resource.equals(ResourceInformation.VCORES_URI)) {
       this.setVirtualCores((int) resourceInformation.getValue());
       return;
     }
@@ -298,7 +307,6 @@ public abstract class Resource implements Comparable<Resource> {
   public void setResourceInformation(int index,
       ResourceInformation resourceInformation)
       throws ResourceNotFoundException {
-    ResourceInformation[] resources = getResources();
     if (index < 0 || index >= resources.length) {
       throw new ResourceNotFoundException("Unknown resource at index '" + index
           + "'. Valid resources are " + Arrays.toString(resources));
@@ -318,11 +326,11 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public void setResourceValue(String resource, long value)
       throws ResourceNotFoundException {
-    if (resource.equals(MEMORY)) {
+    if (resource.equals(ResourceInformation.MEMORY_URI)) {
       this.setMemorySize(value);
       return;
     }
-    if (resource.equals(VCORES)) {
+    if (resource.equals(ResourceInformation.VCORES_URI)) {
       this.setVirtualCores((int)value);
       return;
     }
@@ -346,27 +354,21 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public void setResourceValue(int index, long value)
       throws ResourceNotFoundException {
-    ResourceInformation[] resources = getResources();
-    if (index < 0 || index >= resources.length) {
-      throw new ResourceNotFoundException("Unknown resource at index '" + index
-          + "'. Valid resources are " + Arrays.toString(resources));
+    try {
+      resources[index].setValue(value);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      throwExceptionWhenArrayOutOfBound(index);
     }
-    resources[index].setValue(value);
   }
 
-  @Override
-  public int hashCode() {
-    final int prime = 263167;
+  private void throwExceptionWhenArrayOutOfBound(int index) {
+    String exceptionMsg = String.format(
+        "Trying to access ResourceInformation for given index=%d. "
+            + "Acceptable index range is [0,%d), please check double check "
+            + "configured resources in resource-types.xml",
+        index, ResourceUtils.getNumberOfKnownResourceTypes());
 
-    int result = (int) (939769357
-        + getMemorySize()); // prime * result = 939769357 initially
-    result = prime * result + getVirtualCores();
-    for (ResourceInformation entry : getResources()) {
-      if (!entry.getName().equals(MEMORY) && !entry.getName().equals(VCORES)) {
-        result = prime * result + entry.hashCode();
-      }
-    }
-    return result;
+    throw new ResourceNotFoundException(exceptionMsg);
   }
 
   @Override
@@ -381,20 +383,15 @@ public abstract class Resource implements Comparable<Resource> {
       return false;
     }
     Resource other = (Resource) obj;
-    if (getMemorySize() != other.getMemorySize()
-        || getVirtualCores() != other.getVirtualCores()) {
-      return false;
-    }
 
-    ResourceInformation[] myVectors = getResources();
     ResourceInformation[] otherVectors = other.getResources();
 
-    if (myVectors.length != otherVectors.length) {
+    if (resources.length != otherVectors.length) {
       return false;
     }
 
-    for (int i = 0; i < myVectors.length; i++) {
-      ResourceInformation a = myVectors[i];
+    for (int i = 0; i < resources.length; i++) {
+      ResourceInformation a = resources[i];
       ResourceInformation b = otherVectors[i];
       if ((a != b) && ((a == null) || !a.equals(b))) {
         return false;
@@ -404,63 +401,70 @@ public abstract class Resource implements Comparable<Resource> {
   }
 
   @Override
+  public int compareTo(Resource other) {
+    ResourceInformation[] otherResources = other.getResources();
+
+    int arrLenThis = this.resources.length;
+    int arrLenOther = otherResources.length;
+
+    // compare memory and vcores first(in that order) to preserve
+    // existing behaviour
+    for (int i = 0; i < arrLenThis; i++) {
+      ResourceInformation otherEntry;
+      try {
+        otherEntry = otherResources[i];
+      } catch (ArrayIndexOutOfBoundsException e) {
+        // For two vectors with different size and same prefix. Shorter vector
+        // goes first.
+        return 1;
+      }
+      ResourceInformation entry = resources[i];
+
+      long diff = entry.compareTo(otherEntry);
+      if (diff > 0) {
+        return 1;
+      } else if (diff < 0) {
+        return -1;
+      }
+    }
+
+    if (arrLenThis < arrLenOther) {
+      return -1;
+    }
+
+    return 0;
+  }
+
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
+
     sb.append("<memory:").append(getMemorySize()).append(", vCores:")
         .append(getVirtualCores());
-    for (ResourceInformation entry : getResources()) {
-      if (entry.getName().equals(MEMORY)
-          && entry.getUnits()
-          .equals(ResourceInformation.MEMORY_MB.getUnits())) {
+
+    for (int i = 2; i < resources.length; i++) {
+      ResourceInformation ri = resources[i];
+      if (ri.getValue() == 0) {
         continue;
       }
-      if (entry.getName().equals(VCORES)
-          && entry.getUnits()
-          .equals(ResourceInformation.VCORES.getUnits())) {
-        continue;
-      }
-      sb.append(", ").append(entry.getName()).append(": ")
-          .append(entry.getValue())
-          .append(entry.getUnits());
+      sb.append(", ");
+      sb.append(ri.getName()).append(": ")
+          .append(ri.getValue());
+      sb.append(ri.getUnits());
     }
+
     sb.append(">");
     return sb.toString();
   }
 
   @Override
-  public int compareTo(Resource other) {
-    ResourceInformation[] thisResources = this.getResources();
-    ResourceInformation[] otherResources = other.getResources();
-
-    // compare memory and vcores first(in that order) to preserve
-    // existing behaviour
-    long diff = this.getMemorySize() - other.getMemorySize();
-    if (diff == 0) {
-      diff = this.getVirtualCores() - other.getVirtualCores();
+  public int hashCode() {
+    final int prime = 47;
+    long result = 0;
+    for (ResourceInformation entry : resources) {
+      result = prime * result + entry.hashCode();
     }
-    if (diff == 0) {
-      diff = thisResources.length - otherResources.length;
-      if (diff == 0) {
-        int maxLength = ResourceUtils.getResourceTypesArray().length;
-        for (int i = 0; i < maxLength; i++) {
-          // For memory and vcores, we can skip the loop as it's already
-          // compared.
-          if (i < 2) {
-            continue;
-          }
-
-          ResourceInformation entry = thisResources[i];
-          ResourceInformation otherEntry = otherResources[i];
-          if (entry.getName().equals(otherEntry.getName())) {
-            diff = entry.compareTo(otherEntry);
-            if (diff != 0) {
-              break;
-            }
-          }
-        }
-      }
-    }
-    return Long.compare(diff, 0);
+    return (int) result;
   }
 
   /**
