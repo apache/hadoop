@@ -22,8 +22,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.scm.container.common.helpers.DeleteBlockResult;
 
 /**
  * ScmBlockLocationProtocol is used by an HDFS node to find the set of nodes
@@ -53,13 +54,14 @@ public interface ScmBlockLocationProtocol {
   AllocatedBlock allocateBlock(long size) throws IOException;
 
   /**
-   * Delete the set of keys specified.
+   * Delete blocks for a set of object keys.
    *
-   * @param keys batch of block keys to delete.
+   * @param keyBlocksInfoList Map of object key and its blocks.
    * @return list of block deletion results.
    * @throws IOException if there is any failure.
    *
    */
-  List<DeleteBlockResult> deleteBlocks(Set<String> keys) throws IOException;
+  List<DeleteBlockGroupResult> deleteKeyBlocks(
+      List<BlockGroup> keyBlocksInfoList) throws IOException;
 
 }

@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 
@@ -26,6 +27,17 @@ import java.util.List;
  * Handles key level commands.
  */
 public interface KeyManager {
+
+  /**
+   * Start key manager.
+   */
+  void start();
+
+  /**
+   * Stop key manager.
+   */
+  void stop() throws IOException;
+
   /**
    * Given the args of a key to put, return a pipeline for the key. Writes
    * the key to pipeline mapping to meta data.
@@ -89,4 +101,26 @@ public interface KeyManager {
   List<KsmKeyInfo> listKeys(String volumeName,
       String bucketName, String startKey, String keyPrefix, int maxKeys)
       throws IOException;
+
+  /**
+   * Returns a list of pending deletion key info that ups to the given count.
+   * Each entry is a {@link BlockGroup}, which contains the info about the
+   * key name and all its associated block IDs. A pending deletion key is
+   * stored with #deleting# prefix in KSM DB.
+   *
+   * @param count max number of keys to return.
+   * @return a list of {@link BlockGroup} representing keys and blocks.
+   * @throws IOException
+   */
+  List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
+
+  /**
+   * Deletes a pending deletion key by its name. This is often called when
+   * key can be safely deleted from this layer. Once called, all footprints
+   * of the key will be purged from KSM DB.
+   *
+   * @param objectKeyName object key name with #deleting# prefix.
+   * @throws IOException if specified key doesn't exist or other I/O errors.
+   */
+  void deletePendingDeletionKey(String objectKeyName) throws IOException;
 }

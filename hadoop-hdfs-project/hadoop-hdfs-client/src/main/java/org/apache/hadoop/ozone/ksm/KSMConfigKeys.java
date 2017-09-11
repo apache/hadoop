@@ -74,4 +74,8 @@ public final class KSMConfigKeys {
       "ozone.ksm.group.rights";
   public static final OzoneAcl.OzoneACLRights OZONE_KSM_GROUP_RIGHTS_DEFAULT =
       OzoneAcl.OzoneACLRights.READ_WRITE;
+
+  public static final String OZONE_KEY_DELETING_LIMIT_PER_TASK =
+      "ozone.key.deleting.limit.per.task";
+  public static final int OZONE_KEY_DELETING_LIMIT_PER_TASK_DEFAULT = 1000;
 }

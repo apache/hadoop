@@ -37,6 +37,7 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.UUID;
 
 import static org.apache.hadoop.ozone.OzoneConsts.GB;
@@ -104,7 +105,7 @@ public class TestBlockManager {
   public void testDeleteBlock() throws Exception {
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
     Assert.assertNotNull(block);
-    blockManager.deleteBlock(block.getKey());
+    blockManager.deleteBlocks(Collections.singletonList(block.getKey()));
 
     // Deleted block can not be retrieved
     thrown.expectMessage("Specified block key does not exist.");

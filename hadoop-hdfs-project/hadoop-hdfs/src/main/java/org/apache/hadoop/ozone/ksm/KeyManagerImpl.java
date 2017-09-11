@@ -17,7 +17,10 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
+import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.OzoneConfiguration;
@@ -27,6 +30,7 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyI
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.BatchOperation;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
@@ -35,7 +39,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_KEY;
 
@@ -52,6 +61,7 @@ public class KeyManagerImpl implements KeyManager {
   private final ScmBlockLocationProtocol scmBlockClient;
   private final KSMMetadataManager metadataManager;
   private final long scmBlockSize;
+  private final BackgroundService keyDeletingService;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       KSMMetadataManager metadataManager, OzoneConfiguration conf) {
@@ -59,6 +69,24 @@ public class KeyManagerImpl implements KeyManager {
     this.metadataManager = metadataManager;
     this.scmBlockSize = conf.getLong(OZONE_SCM_BLOCK_SIZE_KEY,
         OZONE_SCM_BLOCK_SIZE_DEFAULT);
+    int svcInterval = conf.getInt(
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
+    long serviceTimeout = conf.getTimeDuration(
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+    keyDeletingService = new KeyDeletingService(
+        scmBlockClient, this, svcInterval, serviceTimeout, conf);
+  }
+
+  @Override
+  public void start() {
+    keyDeletingService.start();
+  }
+
+  @Override
+  public void stop() throws IOException {
+    keyDeletingService.shutdown();
   }
 
   @Override
@@ -181,7 +209,6 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public void deleteKey(KsmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
-
     metadataManager.writeLock().lock();
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -221,6 +248,41 @@ public class KeyManagerImpl implements KeyManager {
           startKey, keyPrefix, maxKeys);
     } finally {
       metadataManager.readLock().unlock();
+    }
+  }
+
+  @Override
+  public List<BlockGroup> getPendingDeletionKeys(final int count)
+      throws IOException {
+    metadataManager.readLock().lock();
+    try {
+      return metadataManager.getPendingDeletionKeys(count);
+    } finally {
+      metadataManager.readLock().unlock();
+    }
+  }
+
+  @Override
+  public void deletePendingDeletionKey(String objectKeyName)
+      throws IOException{
+    Preconditions.checkNotNull(objectKeyName);
+    if (!objectKeyName.startsWith(OzoneConsts.DELETING_KEY_PREFIX)) {
+      throw new IllegalArgumentException("Invalid key name,"
+          + " the name should be the key name with deleting prefix");
+    }
+
+    // Simply removes the entry from KSM DB.
+    metadataManager.writeLock().lock();
+    try {
+      byte[] pendingDelKey = DFSUtil.string2Bytes(objectKeyName);
+      byte[] delKeyValue = metadataManager.get(pendingDelKey);
+      if (delKeyValue == null) {
+        throw new IOException("Failed to delete key " + objectKeyName
+            + " because it is not found in DB");
+      }
+      metadataManager.delete(pendingDelKey);
+    } finally {
+      metadataManager.writeLock().unlock();
     }
   }
 }

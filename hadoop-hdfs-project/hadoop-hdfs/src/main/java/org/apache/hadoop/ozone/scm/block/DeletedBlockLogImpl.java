@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -209,6 +210,16 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     }
   }
 
+  private DeletedBlocksTransaction constructNewTransaction(long txID,
+      String containerName, List<String> blocks) {
+    return DeletedBlocksTransaction.newBuilder()
+        .setTxID(txID)
+        .setContainerName(containerName)
+        .addAllBlockID(blocks)
+        .setCount(0)
+        .build();
+  }
+
   /**
    * {@inheritDoc}
    *
@@ -244,12 +255,8 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     BatchOperation batch = new BatchOperation();
     lock.lock();
     try {
-      DeletedBlocksTransaction tx = DeletedBlocksTransaction.newBuilder()
-          .setTxID(lastTxID + 1)
-          .setContainerName(containerName)
-          .addAllBlockID(blocks)
-          .setCount(0)
-          .build();
+      DeletedBlocksTransaction tx = constructNewTransaction(lastTxID + 1,
+          containerName, blocks);
       byte[] key = Longs.toByteArray(lastTxID + 1);
 
       batch.put(key, tx.toByteArray());
@@ -279,6 +286,35 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
         return true;
       });
       return num.get();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @param containerBlocksMap a map of containerBlocks.
+   * @throws IOException
+   */
+  @Override
+  public void addTransactions(Map<String, List<String>> containerBlocksMap)
+      throws IOException {
+    BatchOperation batch = new BatchOperation();
+    lock.lock();
+    try {
+      long currentLatestID = lastTxID;
+      for (Map.Entry<String, List<String>> entry :
+          containerBlocksMap.entrySet()) {
+        currentLatestID += 1;
+        byte[] key = Longs.toByteArray(currentLatestID);
+        DeletedBlocksTransaction tx = constructNewTransaction(currentLatestID,
+            entry.getKey(), entry.getValue());
+        batch.put(key, tx.toByteArray());
+      }
+      lastTxID = currentLatestID;
+      batch.put(LATEST_TXID, Longs.toByteArray(lastTxID));
+      deletedStore.writeBatch(batch);
     } finally {
       lock.unlock();
     }

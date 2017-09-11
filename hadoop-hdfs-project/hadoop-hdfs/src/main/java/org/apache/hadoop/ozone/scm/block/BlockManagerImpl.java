@@ -45,6 +45,7 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -382,8 +383,8 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
         }
         // now we should have some candidates in ALLOCATE state
         if (candidates.size() == 0) {
-          throw new SCMException("Fail to find any container to allocate block " +
-              "of size " + size + ".", FAILED_TO_FIND_CONTAINER_WITH_SAPCE);
+          throw new SCMException("Fail to find any container to allocate block "
+              + "of size " + size + ".", FAILED_TO_FIND_CONTAINER_WITH_SAPCE);
         }
       }
 
@@ -475,35 +476,84 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   }
 
   /**
-   * Given a block key, delete a block.
-   * @param key - block key assigned by SCM.
-   * @throws IOException
+   * Deletes a list of blocks in an atomic operation. Internally, SCM
+   * writes these blocks into a {@link DeletedBlockLog} and deletes them
+   * from SCM DB. If this is successful, given blocks are entering pending
+   * deletion state and becomes invisible from SCM namespace.
+   *
+   * @param blockIDs block IDs. This is often the list of blocks of
+   *                 a particular object key.
+   * @throws IOException if exception happens, non of the blocks is deleted.
    */
   @Override
-  public void deleteBlock(final String key) throws IOException {
+  public void deleteBlocks(List<String> blockIDs) throws IOException {
     if (!nodeManager.isOutOfNodeChillMode()) {
       throw new SCMException("Unable to delete block while in chill mode",
           CHILL_MODE_EXCEPTION);
     }
 
     lock.lock();
+    LOG.info("Deleting blocks {}", String.join(",", blockIDs));
+    Map<String, List<String>> containerBlocks = new HashMap<>();
+    BatchOperation batch = new BatchOperation();
+    BatchOperation rollbackBatch = new BatchOperation();
+    // TODO: track the block size info so that we can reclaim the container
+    // TODO: used space when the block is deleted.
     try {
-      byte[] containerBytes = blockStore.get(DFSUtil.string2Bytes(key));
-      if (containerBytes == null) {
-        throw new SCMException("Specified block key does not exist. key : " +
-            key, FAILED_TO_FIND_BLOCK);
+      for (String blockKey : blockIDs) {
+        byte[] blockKeyBytes = DFSUtil.string2Bytes(blockKey);
+        byte[] containerBytes = blockStore.get(blockKeyBytes);
+        if (containerBytes == null) {
+          throw new SCMException(
+              "Specified block key does not exist. key : " + blockKey,
+              FAILED_TO_FIND_BLOCK);
+        }
+        batch.delete(blockKeyBytes);
+        rollbackBatch.put(blockKeyBytes, containerBytes);
+
+        // Merge blocks to a container to blocks mapping,
+        // prepare to persist this info to the deletedBlocksLog.
+        String containerName = DFSUtil.bytes2String(containerBytes);
+        if (containerBlocks.containsKey(containerName)) {
+          containerBlocks.get(containerName).add(blockKey);
+        } else {
+          List<String> item = new ArrayList<>();
+          item.add(blockKey);
+          containerBlocks.put(containerName, item);
+        }
       }
-      // TODO: track the block size info so that we can reclaim the container
-      // TODO: used space when the block is deleted.
-      BatchOperation batch = new BatchOperation();
-      String deletedKeyName = getDeletedKeyName(key);
-      // Add a tombstone for the deleted key
-      batch.put(DFSUtil.string2Bytes(deletedKeyName), containerBytes);
-      // Delete the block key
-      batch.delete(DFSUtil.string2Bytes(key));
+
+      // We update SCM DB first, so if this step fails, we end up here,
+      // nothing gets into the delLog so no blocks will be accidentally
+      // removed. If we write the log first, once log is written, the
+      // async deleting service will start to scan and might be picking
+      // up some blocks to do real deletions, that might cause data loss.
       blockStore.writeBatch(batch);
-      // TODO: Add async tombstone clean thread to send delete command to
-      // datanodes in the pipeline to clean up the blocks from containers.
+      try {
+        deletedBlockLog.addTransactions(containerBlocks);
+      } catch (IOException e) {
+        try {
+          // If delLog update is failed, we need to rollback the changes.
+          blockStore.writeBatch(rollbackBatch);
+        } catch (IOException rollbackException) {
+          // This is a corner case. AddTX fails and rollback also fails,
+          // this will leave these blocks in inconsistent state. They were
+          // moved to pending deletion state in SCM DB but were not written
+          // into delLog so real deletions would not be done. Blocks become
+          // to be invisible from namespace but actual data are not removed.
+          // We log an error here so admin can manually check and fix such
+          // errors.
+          LOG.error("Blocks might be in inconsistent state because"
+                  + " they were moved to pending deletion state in SCM DB but"
+                  + " not written into delLog. Admin can manually add them"
+                  + " into delLog for deletions. Inconsistent block list: {}",
+              String.join(",", blockIDs), e);
+          throw rollbackException;
+        }
+        throw new IOException("Skip writing the deleted blocks info to"
+            + " the delLog because addTransaction fails. Batch skipped: "
+            + String.join(",", blockIDs), e);
+      }
       // TODO: Container report handling of the deleted blocks:
       // Remove tombstone and update open container usage.
       // We will revisit this when the closed container replication is done.

@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.protocol.proto
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The DeletedBlockLog is a persisted log in SCM to keep tracking
@@ -84,6 +85,22 @@ public interface DeletedBlockLog extends Closeable {
    * @throws IOException
    */
   void addTransaction(String containerName, List<String> blocks)
+      throws IOException;
+
+  /**
+   * Creates block deletion transactions for a set of containers,
+   * add into the log and persist them atomically. An object key
+   * might be stored in multiple containers and multiple blocks,
+   * this API ensures that these updates are done in atomic manner
+   * so if any of them fails, the entire operation fails without
+   * any updates to the log. Note, this doesn't mean to create only
+   * one transaction, it creates multiple transactions (depends on the
+   * number of containers) together (on success) or non (on failure).
+   *
+   * @param containerBlocksMap a map of containerBlocks.
+   * @throws IOException
+   */
+  void addTransactions(Map<String, List<String>> containerBlocksMap)
       throws IOException;
 
   /**
