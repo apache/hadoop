@@ -44,6 +44,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -132,10 +134,9 @@ public class ContainerManagerImpl implements ContainerManager {
     this.conf = config;
     readLock();
     try {
-      // TODO: Use pending deletion blocks based policy as default way
       containerDeletionChooser = ReflectionUtils.newInstance(conf.getClass(
           ScmConfigKeys.OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY,
-          RandomContainerDeletionChoosingPolicy.class,
+          TopNOrderedContainerDeletionChoosingPolicy.class,
           ContainerDeletionChoosingPolicy.class), conf);
 
       for (StorageLocation path : containerDirs) {
@@ -243,7 +244,18 @@ public class ContainerManagerImpl implements ContainerManager {
         containerMap.put(keyName, new ContainerStatus(null, false));
         return;
       }
-      containerMap.put(keyName, new ContainerStatus(containerData, true));
+
+      ContainerStatus containerStatus = new ContainerStatus(
+          containerData, true);
+      // Initialize pending deletion blocks count in in-memory
+      // container status.
+      MetadataStore metadata = KeyUtils.getDB(containerData, conf);
+      List<Map.Entry<byte[], byte[]>> underDeletionBlocks = metadata
+          .getRangeKVs(null, Integer.MAX_VALUE,
+              new MetadataKeyFilters.KeyPrefixFilter(
+                  OzoneConsts.DELETING_KEY_PREFIX));
+      containerStatus.incrPendingDeletionBlocks(underDeletionBlocks.size());
+      containerMap.put(keyName, containerStatus);
     } catch (IOException | NoSuchAlgorithmException ex) {
       LOG.error("read failed for file: {} ex: {}", containerName,
           ex.getMessage());
@@ -840,5 +852,27 @@ public class ContainerManagerImpl implements ContainerManager {
   @VisibleForTesting
   public ContainerDeletionChoosingPolicy getContainerDeletionChooser() {
     return containerDeletionChooser;
+  }
+
+  @Override
+  public void incrPendingDeletionBlocks(int numBlocks, String containerId) {
+    writeLock();
+    try {
+      ContainerStatus status = containerMap.get(containerId);
+      status.incrPendingDeletionBlocks(numBlocks);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  @Override
+  public void decrPendingDeletionBlocks(int numBlocks, String containerId) {
+    writeLock();
+    try {
+      ContainerStatus status = containerMap.get(containerId);
+      status.decrPendingDeletionBlocks(numBlocks);
+    } finally {
+      writeUnlock();
+    }
   }
 }

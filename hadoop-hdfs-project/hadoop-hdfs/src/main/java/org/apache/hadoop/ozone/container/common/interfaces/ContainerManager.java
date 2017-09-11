@@ -179,4 +179,24 @@ public interface ContainerManager extends RwLock {
    * @throws IOException
    */
   List<ContainerData> getContainerReports() throws IOException;
+
+  /**
+   * Increase pending deletion blocks count number of specified container.
+   *
+   * @param numBlocks
+   *          increment  count number
+   * @param containerId
+   *          container id
+   */
+  void incrPendingDeletionBlocks(int numBlocks, String containerId);
+
+  /**
+   * Decrease pending deletion blocks count number of specified container.
+   *
+   * @param numBlocks
+   *          decrement count number
+   * @param containerId
+   *          container id
+   */
+  void decrPendingDeletionBlocks(int numBlocks, String containerId);
 }

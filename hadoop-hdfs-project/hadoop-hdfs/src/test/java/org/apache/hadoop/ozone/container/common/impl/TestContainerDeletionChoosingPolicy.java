@@ -21,20 +21,27 @@ import static org.apache.hadoop.ozone.container.ContainerTestHelper.createSingle
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
+import org.apache.hadoop.utils.MetadataStore;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -45,8 +52,8 @@ public class TestContainerDeletionChoosingPolicy {
   private static ContainerManagerImpl containerManager;
   private static OzoneConfiguration conf;
 
-  @BeforeClass
-  public static void init() throws Throwable {
+  @Before
+  public void init() throws Throwable {
     conf = new OzoneConfiguration();
     path = GenericTestUtils
         .getTempPath(TestContainerDeletionChoosingPolicy.class.getSimpleName());
@@ -55,9 +62,16 @@ public class TestContainerDeletionChoosingPolicy {
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
   }
 
-  @AfterClass
-  public static void shutdown() throws IOException {
+  @After
+  public void shutdown() throws IOException {
     FileUtils.deleteDirectory(new File(path));
+
+    containerManager.writeLock();
+    try{
+      containerManager.shutdown();
+    } finally {
+      containerManager.writeUnlock();
+    }
   }
 
   @Test
@@ -104,5 +118,69 @@ public class TestContainerDeletionChoosingPolicy {
       }
     }
     Assert.assertTrue("Chosen container results were same", hasShuffled);
+  }
+
+  @Test
+  public void testTopNOrderedChoosingPolicy() throws IOException {
+    File containerDir = new File(path);
+    if (containerDir.exists()) {
+      FileUtils.deleteDirectory(new File(path));
+    }
+    Assert.assertTrue(containerDir.mkdirs());
+
+    conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY,
+        TopNOrderedContainerDeletionChoosingPolicy.class.getName());
+    List<StorageLocation> pathLists = new LinkedList<>();
+    pathLists.add(StorageLocation.parse(containerDir.getAbsolutePath()));
+    containerManager = new ContainerManagerImpl();
+    containerManager.init(conf, pathLists);
+
+    int numContainers = 10;
+    Random random = new Random();
+    Map<String, Integer> name2Count = new HashMap<>();
+    for (int i = 0; i < numContainers; i++) {
+      String containerName = OzoneUtils.getRequestID();
+      ContainerData data = new ContainerData(containerName);
+      containerManager.createContainer(createSingleNodePipeline(containerName),
+          data);
+      Assert.assertTrue(
+          containerManager.getContainerMap().containsKey(containerName));
+
+      // create random number of deletion blocks and write to container db
+      int deletionBlocks = random.nextInt(numContainers) + 1;
+      // record <ContainerName, DeletionCount> value
+      name2Count.put(containerName, deletionBlocks);
+      for (int j = 0; j <= deletionBlocks; j++) {
+        MetadataStore metadata = KeyUtils.getDB(data, conf);
+        String blk = "blk" + i + "-" + j;
+        byte[] blkBytes = DFSUtil.string2Bytes(blk);
+        metadata.put(
+            DFSUtil.string2Bytes(OzoneConsts.DELETING_KEY_PREFIX + blk),
+            blkBytes);
+      }
+    }
+
+    containerManager.writeLock();
+    containerManager.shutdown();
+    containerManager.writeUnlock();
+    containerManager.init(conf, pathLists);
+
+    List<ContainerData> result0 = containerManager
+        .chooseContainerForBlockDeletion(5);
+    Assert.assertEquals(5, result0.size());
+
+    List<ContainerData> result1 = containerManager
+        .chooseContainerForBlockDeletion(numContainers);
+
+    // verify the order of return list
+    int lastCount = Integer.MAX_VALUE;
+    for (ContainerData data : result1) {
+      int currentCount = name2Count.remove(data.getContainerName());
+      // previous count should not smaller than next one
+      Assert.assertTrue(currentCount > 0 && currentCount <= lastCount);
+      lastCount = currentCount;
+    }
+    // ensure all the container data are compared
+    Assert.assertEquals(0, name2Count.size());
   }
 }
