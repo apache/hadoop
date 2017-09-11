@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.ozone.container.common.impl;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
@@ -31,12 +32,23 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 
 /**
- * Randomly choosing containers for block deletion.
+ * TopN Ordered choosing policy that choosing containers based on pending
+ * deletion blocks' number.
  */
-public class RandomContainerDeletionChoosingPolicy
+public class TopNOrderedContainerDeletionChoosingPolicy
     implements ContainerDeletionChoosingPolicy {
   private static final Logger LOG =
-      LoggerFactory.getLogger(RandomContainerDeletionChoosingPolicy.class);
+      LoggerFactory.getLogger(TopNOrderedContainerDeletionChoosingPolicy.class);
+
+  /** customized comparator used to compare differentiate container status. **/
+  private static final Comparator<ContainerStatus> CONTAINER_STATUS_COMPARATOR
+      = new Comparator<ContainerStatus>() {
+        @Override
+        public int compare(ContainerStatus c1, ContainerStatus c2) {
+          return Integer.compare(c2.getNumPendingDeletionBlocks(),
+              c1.getNumPendingDeletionBlocks());
+        }
+      };
 
   @Override
   public List<ContainerData> chooseContainerForBlockDeletion(int count,
@@ -45,12 +57,14 @@ public class RandomContainerDeletionChoosingPolicy
     Preconditions.checkNotNull(candidateContainers,
         "Internal assertion: candidate containers cannot be null");
 
-    int currentCount = 0;
     List<ContainerData> result = new LinkedList<>();
-    ContainerStatus[] values = new ContainerStatus[candidateContainers.size()];
-    // to get a shuffle list
-    for (ContainerStatus entry : DFSUtil.shuffle(
-        candidateContainers.values().toArray(values))) {
+    List<ContainerStatus> orderedList = new LinkedList<>();
+    orderedList.addAll(candidateContainers.values());
+    Collections.sort(orderedList, CONTAINER_STATUS_COMPARATOR);
+
+    // get top N list ordered by pending deletion blocks' number
+    int currentCount = 0;
+    for (ContainerStatus entry : orderedList) {
       if (currentCount < count) {
         result.add(entry.getContainer());
         currentCount++;

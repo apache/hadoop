@@ -33,12 +33,18 @@ public class ContainerStatus {
   private final boolean active;
 
   /**
+   * Number of pending deletion blocks in container.
+   */
+  private int numPendingDeletionBlocks;
+
+  /**
    * Creates a Container Status class.
    *
    * @param containerData - ContainerData.
    * @param active - Active or not active.
    */
   ContainerStatus(ContainerData containerData, boolean active) {
+    this.numPendingDeletionBlocks = 0;
     this.containerData = containerData;
     this.active = active;
   }
@@ -63,5 +69,30 @@ public class ContainerStatus {
    */
   public boolean isActive() {
     return active;
+  }
+
+  /**
+   * Increase the count of pending deletion blocks.
+   *
+   * @param numBlocks increment number
+   */
+  public void incrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks += numBlocks;
+  }
+
+  /**
+   * Decrease the count of pending deletion blocks.
+   *
+   * @param numBlocks decrement number
+   */
+  public void decrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks -= numBlocks;
+  }
+
+  /**
+   * Get the number of pending deletion blocks.
+   */
+  public int getNumPendingDeletionBlocks() {
+    return this.numPendingDeletionBlocks;
   }
 }

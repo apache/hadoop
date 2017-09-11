@@ -149,6 +149,8 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
       LOG.debug("Processing Container : {}, DB path : {}", containerId,
           containerInfo.getDBPath());
     }
+
+    int newDeletionBlocks = 0;
     MetadataStore containerDB = KeyUtils.getDB(containerInfo, config);
     for (String blk : delTX.getBlockIDList()) {
       BatchOperation batch = new BatchOperation();
@@ -162,6 +164,7 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
         batch.delete(blkBytes);
         try {
           containerDB.writeBatch(batch);
+          newDeletionBlocks++;
           LOG.info("Transited Block {} to DELETING state in container {}",
               blk, containerId);
         } catch (IOException e) {
@@ -176,6 +179,9 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
                 + " container {}, skip deleting it.", blk, containerId);
       }
     }
+
+    // update pending deletion blocks count in in-memory container status
+    containerManager.incrPendingDeletionBlocks(newDeletionBlocks, containerId);
   }
 
   @Override

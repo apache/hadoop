@@ -102,12 +102,11 @@ public class BlockDeletingService extends BackgroundService{
       // We at most list a number of containers a time,
       // in case there are too many containers and start too many workers.
       // We must ensure there is no empty container in this result.
+      // The chosen result depends on what container deletion policy is
+      // configured.
       containers = containerManager.chooseContainerForBlockDeletion(
           containerLimitPerInterval);
 
-      // TODO
-      // in case we always fetch a few same containers,
-      // should we list some more containers a time and shuffle them?
       for(ContainerData container : containers) {
         BlockDeletingTask containerTask =
             new BlockDeletingTask(container, TASK_PRIORITY_DEFAULT);
@@ -214,6 +213,9 @@ public class BlockDeletingService extends BackgroundService{
       succeedBlocks.forEach(entry ->
           batch.delete(DFSUtil.string2Bytes(entry)));
       meta.writeBatch(batch);
+      // update count of pending deletion blocks in in-memory container status
+      containerManager.decrPendingDeletionBlocks(succeedBlocks.size(),
+          containerData.getContainerName());
 
       if (!succeedBlocks.isEmpty()) {
         LOG.info("Container: {}, deleted blocks: {}, task elapsed time: {}ms",
