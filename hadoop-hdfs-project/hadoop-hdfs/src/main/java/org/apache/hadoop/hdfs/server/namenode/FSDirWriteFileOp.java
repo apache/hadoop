@@ -201,7 +201,7 @@ class FSDirWriteFileOp {
     }
     storagePolicyID = pendingFile.getStoragePolicyID();
     return new ValidateAddBlockResult(blockSize, numTargets, storagePolicyID,
-                                      clientMachine, blockType, ecPolicy);
+                                      clientMachine, blockType);
   }
 
   static LocatedBlock makeLocatedBlock(FSNamesystem fsn, BlockInfo blk,
@@ -286,7 +286,7 @@ class FSDirWriteFileOp {
     return bm.chooseTarget4NewBlock(src, r.numTargets, clientNode,
                                     excludedNodesSet, r.blockSize,
                                     favoredNodesList, r.storagePolicyID,
-                                    r.blockType, r.ecPolicy, flags);
+                                    r.blockType, flags);
   }
 
   /**
@@ -836,23 +836,15 @@ class FSDirWriteFileOp {
     final byte storagePolicyID;
     final String clientMachine;
     final BlockType blockType;
-    final ErasureCodingPolicy ecPolicy;
 
     ValidateAddBlockResult(
         long blockSize, int numTargets, byte storagePolicyID,
-        String clientMachine, BlockType blockType,
-        ErasureCodingPolicy ecPolicy) {
+        String clientMachine, BlockType blockType) {
       this.blockSize = blockSize;
       this.numTargets = numTargets;
       this.storagePolicyID = storagePolicyID;
       this.clientMachine = clientMachine;
       this.blockType = blockType;
-      this.ecPolicy = ecPolicy;
-
-      if (blockType == BlockType.STRIPED) {
-        Preconditions.checkArgument(ecPolicy != null,
-            "ecPolicy is not specified for striped block");
-      }
     }
   }
 }

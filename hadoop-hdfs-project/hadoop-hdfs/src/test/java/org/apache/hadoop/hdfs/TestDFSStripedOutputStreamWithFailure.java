@@ -42,7 +42,6 @@ import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -283,7 +282,7 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   @Test(timeout = 90000)
   public void testAddBlockWhenNoSufficientDataBlockNumOfNodes()
-      throws Exception {
+      throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     try {
@@ -302,18 +301,20 @@ public class TestDFSStripedOutputStreamWithFailure {
           DatanodeReportType.LIVE);
       assertEquals("Mismatches number of live Dns ", numDatanodes, info.length);
       final Path dirFile = new Path(dir, "ecfile");
-      LambdaTestUtils.intercept(
-          IOException.class,
-          "File " + dirFile + " could only be written to " +
-              numDatanodes + " of the " + dataBlocks + " required nodes for " +
-              getEcPolicy().getName(),
-          () -> {
-            try (FSDataOutputStream out = dfs.create(dirFile, true)) {
-              out.write("something".getBytes());
-              out.flush();
-            }
-            return 0;
-          });
+      FSDataOutputStream out;
+      try {
+        out = dfs.create(dirFile, true);
+        out.write("something".getBytes());
+        out.flush();
+        out.close();
+        Assert.fail("Failed to validate available dns against blkGroupSize");
+      } catch (IOException ioe) {
+        // expected
+        GenericTestUtils.assertExceptionContains("Failed to get " +
+            dataBlocks + " nodes from namenode: blockGroupSize= " +
+            (dataBlocks + parityBlocks) + ", blocks.length= " +
+            numDatanodes, ioe);
+      }
     } finally {
       tearDown();
     }
