@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.curator.shaded.com.google.common.reflect.ClassPath;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
@@ -34,8 +36,8 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private long minimumAllocation;
   private long maximumAllocation;
 
-  private static final String MEMORY_URI = "memory-mb";
-  private static final String VCORES_URI = "vcores";
+  public static final String MEMORY_URI = "memory-mb";
+  public static final String VCORES_URI = "vcores";
 
   public static final ResourceInformation MEMORY_MB =
       ResourceInformation.newInstance(MEMORY_URI, "Mi");
@@ -80,6 +82,16 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
           "Unknown unit '" + rUnits + "'. Known units are "
               + UnitsConversionUtil.KNOWN_UNITS);
     }
+    this.units = rUnits;
+  }
+
+  /**
+   * Checking if a unit included by KNOWN_UNITS is an expensive operation. This
+   * can be avoided in critical path in RM.
+   * @param rUnits units for the resource
+   */
+  @InterfaceAudience.Private
+  public void setUnitsWithoutValidation(String rUnits) {
     this.units = rUnits;
   }
 

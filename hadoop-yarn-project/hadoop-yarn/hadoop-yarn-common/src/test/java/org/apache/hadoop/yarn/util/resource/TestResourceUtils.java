@@ -37,6 +37,8 @@ import java.util.Map;
  * Test class to verify all resource utility methods.
  */
 public class TestResourceUtils {
+  public static final String TEST_CONF_RESET_RESOURCE_TYPES =
+      "yarn.test.reset-resource-types";
 
   static class ResourceFileInformation {
     String filename;
