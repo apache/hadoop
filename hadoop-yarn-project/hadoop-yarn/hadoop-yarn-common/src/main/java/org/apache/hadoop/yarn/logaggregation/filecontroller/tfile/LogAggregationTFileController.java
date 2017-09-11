@@ -27,7 +27,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.util.Pair;
@@ -192,7 +191,7 @@ public class LogAggregationTFileController
           while (valueStream != null) {
             if (getAllContainers || (key.toString().equals(containerIdStr))) {
               if (createPrintStream) {
-                os = createPrintStream(
+                os = LogToolUtils.createPrintStream(
                     logRequest.getOutputLocalDir(),
                     thisNodeFile.getPath().getName(), key.toString());
               }
@@ -209,12 +208,7 @@ public class LogAggregationTFileController
                           Times.format(thisNodeFile.getModificationTime()),
                           valueStream, os, buf,
                           ContainerLogAggregationType.AGGREGATED);
-                      StringBuilder sb = new StringBuilder();
-                      String endOfFile = "End of LogType:" + fileType;
-                      sb.append("\n" + endOfFile + "\n");
-                      sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
-                          + "\n\n");
-                      byte[] b = sb.toString().getBytes(
+                      byte[] b = aggregatedLogSuffix(fileType).getBytes(
                           Charset.forName("UTF-8"));
                       os.write(b, 0, b.length);
                       findLogs = true;

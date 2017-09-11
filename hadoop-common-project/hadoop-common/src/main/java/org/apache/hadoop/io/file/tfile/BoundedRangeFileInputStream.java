@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
  * BoundedRangeFileInputStream on top of the same FSDataInputStream and they
  * would not interfere with each other.
  */
-class BoundedRangeFileInputStream extends InputStream {
+public class BoundedRangeFileInputStream extends InputStream {
 
   private FSDataInputStream in;
   private long pos;

@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.logaggregation;
 
 /**
- * PerContainerLogFileInfo represents the meta data for a container log file,
+ * ContainerLogFileInfo represents the meta data for a container log file,
  * which includes:
  * <ul>
  *   <li>The filename of the container log.</li>
@@ -28,15 +28,15 @@ package org.apache.hadoop.yarn.logaggregation;
  * </ul>
  *
  */
-public class PerContainerLogFileInfo {
+public class ContainerLogFileInfo {
   private String fileName;
   private String fileSize;
   private String lastModifiedTime;
 
   //JAXB needs this
-  public PerContainerLogFileInfo() {}
+  public ContainerLogFileInfo() {}
 
-  public PerContainerLogFileInfo(String fileName, String fileSize,
+  public ContainerLogFileInfo(String fileName, String fileSize,
       String lastModifiedTime) {
     this.setFileName(fileName);
     this.setFileSize(fileSize);
@@ -83,10 +83,10 @@ public class PerContainerLogFileInfo {
     if (otherObj == this) {
       return true;
     }
-    if (!(otherObj instanceof PerContainerLogFileInfo)) {
+    if (!(otherObj instanceof ContainerLogFileInfo)) {
       return false;
     }
-    PerContainerLogFileInfo other = (PerContainerLogFileInfo)otherObj;
+    ContainerLogFileInfo other = (ContainerLogFileInfo)otherObj;
     return other.fileName.equals(fileName) && other.fileSize.equals(fileSize)
         && other.lastModifiedTime.equals(lastModifiedTime);
   }

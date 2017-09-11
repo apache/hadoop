@@ -26,14 +26,14 @@ import java.util.List;
  * <ul>
  *   <li>The Container Id.</li>
  *   <li>The NodeManager Id.</li>
- *   <li>A list of {@link PerContainerLogFileInfo}.</li>
+ *   <li>A list of {@link ContainerLogFileInfo}.</li>
  * </ul>
  *
  */
 public class ContainerLogMeta {
   private String containerId;
   private String nodeId;
-  private List<PerContainerLogFileInfo> logMeta;
+  private List<ContainerLogFileInfo> logMeta;
 
   public ContainerLogMeta(String containerId, String nodeId) {
     this.containerId = containerId;
@@ -51,11 +51,11 @@ public class ContainerLogMeta {
 
   public void addLogMeta(String fileName, String fileSize,
       String lastModificationTime) {
-    logMeta.add(new PerContainerLogFileInfo(fileName, fileSize,
+    logMeta.add(new ContainerLogFileInfo(fileName, fileSize,
         lastModificationTime));
   }
 
-  public List<PerContainerLogFileInfo> getContainerLogMeta() {
+  public List<ContainerLogFileInfo> getContainerLogMeta() {
     return this.logMeta;
   }
 }
