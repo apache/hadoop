@@ -617,7 +617,7 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.yarn.api.records.impl.BaseResource" />
+    <Class name="org.apache.hadoop.yarn.api.records.Resource" />
     <Method name="getResources" />
     <Bug pattern="EI_EXPOSE_REP" />
   </Match>
