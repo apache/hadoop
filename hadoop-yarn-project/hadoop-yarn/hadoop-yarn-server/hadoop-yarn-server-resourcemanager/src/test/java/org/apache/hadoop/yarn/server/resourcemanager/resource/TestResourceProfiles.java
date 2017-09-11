@@ -33,6 +33,8 @@ import java.util.Map;
  * Common test class for resource profile related tests.
  */
 public class TestResourceProfiles {
+  public static final String TEST_CONF_RESET_RESOURCE_TYPES =
+      "yarn.test.reset-resource-types";
 
   @Test
   public void testProfilesEnabled() throws Exception {

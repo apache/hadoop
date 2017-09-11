@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -151,7 +152,10 @@ public class MockRM extends ResourceManager {
   public MockRM(Configuration conf, RMStateStore store,
       boolean useNullRMNodeLabelsManager, boolean useRealElector) {
     super();
-    ResourceUtils.resetResourceTypes(conf);
+    if (conf.getBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES,
+        true)) {
+      ResourceUtils.resetResourceTypes(conf);
+    }
     this.useNullRMNodeLabelsManager = useNullRMNodeLabelsManager;
     this.useRealElector = useRealElector;
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));

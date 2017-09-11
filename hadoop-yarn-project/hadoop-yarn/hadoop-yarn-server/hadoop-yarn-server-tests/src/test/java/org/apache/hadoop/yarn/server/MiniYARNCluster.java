@@ -101,6 +101,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES;
+
 /**
  * <p>
  * Embedded Yarn minicluster for testcases that need to interact with a cluster.
@@ -251,7 +253,10 @@ public class MiniYARNCluster extends CompositeService {
         YarnConfiguration.DEFAULT_YARN_MINICLUSTER_USE_RPC);
     failoverTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
-    ResourceUtils.resetResourceTypes(conf);
+
+    if (conf.getBoolean(TEST_CONF_RESET_RESOURCE_TYPES, true)) {
+      ResourceUtils.resetResourceTypes(conf);
+    }
 
     if (useRpc && !useFixedPorts) {
       throw new YarnRuntimeException("Invalid configuration!" +
