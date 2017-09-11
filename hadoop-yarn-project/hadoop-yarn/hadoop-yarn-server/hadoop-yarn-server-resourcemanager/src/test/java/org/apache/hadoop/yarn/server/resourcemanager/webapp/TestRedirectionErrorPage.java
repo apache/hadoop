@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
 
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -52,8 +51,6 @@ public class TestRedirectionErrorPage {
             try {
               ResourceManager rm = TestRMWebApp.mockRm(rmContext);
               binder.bind(ResourceManager.class).toInstance(rm);
-              binder.bind(ApplicationBaseProtocol.class).toInstance(
-                  rm.getClientRMService());
             } catch (IOException e) {
               throw new IllegalStateException(e);
             }

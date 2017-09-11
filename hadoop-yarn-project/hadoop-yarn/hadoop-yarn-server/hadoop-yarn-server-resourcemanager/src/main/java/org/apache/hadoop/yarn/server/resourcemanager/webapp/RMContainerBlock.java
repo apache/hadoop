@@ -15,29 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.apache.hadoop.yarn.util.StringHelper.join;
+import java.io.IOException;
 
-import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.webapp.ContainerBlock;
 
+import com.google.inject.Inject;
 
-public class ContainerPage extends RmView {
+/**
+ * RMContainer block to fetch from RM.
+ */
+public class RMContainerBlock extends ContainerBlock {
 
-  @Override
-  protected void preHead(Page.HTML<_> html) {
-    commonPreHead(html);
+  private final ResourceManager rm;
 
-    String containerId = $(YarnWebParams.CONTAINER_ID);
-    set(TITLE, containerId.isEmpty() ? "Bad request: missing container ID"
-        : join("Container ", $(YarnWebParams.CONTAINER_ID)));
+  @Inject
+  public RMContainerBlock(ResourceManager resourceManager, ViewContext ctx) {
+    super(null, ctx);
+    this.rm = resourceManager;
   }
 
   @Override
-  protected Class<? extends SubView> content() {
-    return RMContainerBlock.class;
+  protected ContainerReport getContainerReport(
+      final GetContainerReportRequest request)
+      throws YarnException, IOException {
+    return rm.getClientRMService().getContainerReport(request)
+        .getContainerReport();
   }
-
 }
