@@ -125,13 +125,6 @@ public interface KSMMetadataManager {
   byte[] getDeletedKeyName(byte[] keyName);
 
   /**
-   * Deletes the key from DB.
-   *
-   * @param key - key name
-   */
-  void deleteKey(byte[] key) throws IOException;
-
-  /**
    * Given a volume, check if it is empty,
    * i.e there are no buckets inside it.
    * @param volume - Volume name

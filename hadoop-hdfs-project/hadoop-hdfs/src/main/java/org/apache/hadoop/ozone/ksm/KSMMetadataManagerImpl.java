@@ -167,16 +167,6 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
   }
 
   /**
-   * Deletes the key on Metadata DB.
-   *
-   * @param key - key name
-   */
-  @Override
-  public void deleteKey(byte[] key) throws IOException {
-    store.delete(key);
-  }
-
-  /**
    * Returns the read lock used on Metadata DB.
    * @return readLock
    */
