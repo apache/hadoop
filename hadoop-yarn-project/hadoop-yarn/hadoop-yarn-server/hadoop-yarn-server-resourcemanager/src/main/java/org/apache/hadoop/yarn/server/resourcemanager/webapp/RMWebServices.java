@@ -72,7 +72,12 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -95,10 +100,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -223,7 +230,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
   @Inject
   public RMWebServices(final ResourceManager rm, Configuration conf) {
-    super(rm.getClientRMService());
+    // don't inject, always take appBaseRoot from RM.
+    super(null);
     this.rm = rm;
     this.conf = conf;
     isCentralizedNodeLabelConfiguration =
@@ -2403,5 +2411,47 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     AppTimeoutInfo timeout = constructAppTimeoutDao(appTimeout.getTimeoutType(),
         app.getApplicationTimeouts().get(appTimeout.getTimeoutType()));
     return Response.status(Status.OK).entity(timeout).build();
+  }
+
+  @Override
+  protected ApplicationReport getApplicationReport(
+      GetApplicationReportRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationReport(request)
+        .getApplicationReport();
+  }
+
+  @Override
+  protected List<ApplicationReport> getApplicationsReport(
+      final GetApplicationsRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getApplications(request)
+        .getApplicationList();
+  }
+
+  @Override
+  protected ApplicationAttemptReport getApplicationAttemptReport(
+      GetApplicationAttemptReportRequest request)
+      throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationAttemptReport(request)
+        .getApplicationAttemptReport();
+  }
+
+  @Override
+  protected List<ApplicationAttemptReport> getApplicationAttemptsReport(
+      GetApplicationAttemptsRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationAttempts(request)
+        .getApplicationAttemptList();
+  }
+
+  @Override
+  protected ContainerReport getContainerReport(
+      GetContainerReportRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getContainerReport(request)
+        .getContainerReport();
+  }
+
+  @Override
+  protected List<ContainerReport> getContainersReport(
+      GetContainersRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getContainers(request).getContainerList();
   }
 }
