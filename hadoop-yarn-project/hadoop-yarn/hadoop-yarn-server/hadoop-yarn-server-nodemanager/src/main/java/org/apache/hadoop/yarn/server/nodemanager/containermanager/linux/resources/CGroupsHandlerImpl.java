@@ -367,17 +367,6 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     if (enableCGroupMount) {
       // We have a controller that needs to be mounted
       mountCGroupController(controller);
-    } else {
-      String controllerPath = getControllerPath(controller);
-
-      if (controllerPath == null) {
-        throw new ResourceHandlerException(
-            String.format("Controller %s not mounted."
-                + " You either need to mount it with %s"
-                + " or mount cgroups before launching Yarn",
-                controller.getName(), YarnConfiguration.
-                NM_LINUX_CONTAINER_CGROUPS_MOUNT));
-      }
     }
 
     // We are working with a pre-mounted contoller
