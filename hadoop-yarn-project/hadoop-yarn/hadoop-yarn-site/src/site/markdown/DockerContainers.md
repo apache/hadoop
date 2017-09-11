@@ -17,12 +17,6 @@ Launching Applications Using Docker Containers
 
 <!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
-Notice
-------
-This feature is experimental and is not complete. Enabling this feature and
-running Docker containers in your cluster has security implications.
-Please do a security analysis before enabling this feature.
-
 Overview
 --------
 
