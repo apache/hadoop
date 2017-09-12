@@ -49,8 +49,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Helper class to read the resource-types to be supported by the system.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
 public class ResourceUtils {
 
   public static final String UNITS = ".units";
@@ -65,7 +63,6 @@ public class ResourceUtils {
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
       new ConcurrentHashMap<String, Integer>();
   private static volatile Map<String, ResourceInformation> resourceTypes;
-  private static volatile String[] resourceNamesArray;
   private static volatile ResourceInformation[] resourceTypesArray;
   private static volatile boolean initializedNodeResources = false;
   private static volatile Map<String, ResourceInformation> readOnlyNodeResources;
@@ -270,7 +267,6 @@ public class ResourceUtils {
 
   private static void updateKnownResources() {
     // Update resource names.
-    resourceNamesArray = new String[resourceTypes.size()];
     resourceTypesArray = new ResourceInformation[resourceTypes.size()];
 
     int index = 2;
@@ -278,14 +274,11 @@ public class ResourceUtils {
       if (resInfo.getName().equals(MEMORY)) {
         resourceTypesArray[0] = ResourceInformation
             .newInstance(resourceTypes.get(MEMORY));
-        resourceNamesArray[0] = MEMORY;
       } else if (resInfo.getName().equals(VCORES)) {
         resourceTypesArray[1] = ResourceInformation
             .newInstance(resourceTypes.get(VCORES));
-        resourceNamesArray[1] = VCORES;
       } else {
         resourceTypesArray[index] = ResourceInformation.newInstance(resInfo);
-        resourceNamesArray[index] = resInfo.getName();
         index++;
       }
     }
@@ -317,18 +310,6 @@ public class ResourceUtils {
   public static Map<String, ResourceInformation> getResourceTypes() {
     return getResourceTypes(null,
         YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
-  }
-
-  /**
-   * Get resource names array, this is mostly for performance perspective. Never
-   * modify returned array.
-   *
-   * @return resourceNamesArray
-   */
-  public static String[] getResourceNamesArray() {
-    initializeResourceTypesIfNeeded(null,
-        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
-    return resourceNamesArray;
   }
 
   public static ResourceInformation[] getResourceTypesArray() {
