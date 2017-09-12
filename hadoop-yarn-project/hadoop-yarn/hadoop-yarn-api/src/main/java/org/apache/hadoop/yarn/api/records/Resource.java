@@ -206,8 +206,8 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @return Map of resource name to ResourceInformation
    */
-  @Public
-  @Evolving
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   public ResourceInformation[] getResources() {
     return resources;
   }
@@ -220,7 +220,7 @@ public abstract class Resource implements Comparable<Resource> {
    * @throws ResourceNotFoundException if the resource can't be found
    */
   @Public
-  @Evolving
+  @InterfaceStability.Unstable
   public ResourceInformation getResourceInformation(String resource)
       throws ResourceNotFoundException {
     Integer index = ResourceUtils.getResourceTypeIndex().get(resource);
@@ -240,8 +240,8 @@ public abstract class Resource implements Comparable<Resource> {
    * @throws ResourceNotFoundException
    *           if the resource can't be found
    */
-  @Public
-  @Evolving
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   public ResourceInformation getResourceInformation(int index)
       throws ResourceNotFoundException {
     ResourceInformation ri = null;
@@ -262,7 +262,7 @@ public abstract class Resource implements Comparable<Resource> {
    * @throws ResourceNotFoundException if the resource can't be found
    */
   @Public
-  @Evolving
+  @InterfaceStability.Unstable
   public long getResourceValue(String resource)
       throws ResourceNotFoundException {
     return getResourceInformation(resource).getValue();
@@ -276,7 +276,7 @@ public abstract class Resource implements Comparable<Resource> {
    * @throws ResourceNotFoundException if the resource is not found
    */
   @Public
-  @Evolving
+  @InterfaceStability.Unstable
   public void setResourceInformation(String resource,
       ResourceInformation resourceInformation)
       throws ResourceNotFoundException {
@@ -302,8 +302,8 @@ public abstract class Resource implements Comparable<Resource> {
    * @throws ResourceNotFoundException
    *           if the resource is not found
    */
-  @Public
-  @Evolving
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   public void setResourceInformation(int index,
       ResourceInformation resourceInformation)
       throws ResourceNotFoundException {
@@ -323,7 +323,7 @@ public abstract class Resource implements Comparable<Resource> {
    * @throws ResourceNotFoundException if the resource is not found
    */
   @Public
-  @Evolving
+  @InterfaceStability.Unstable
   public void setResourceValue(String resource, long value)
       throws ResourceNotFoundException {
     if (resource.equals(ResourceInformation.MEMORY_URI)) {
@@ -350,8 +350,8 @@ public abstract class Resource implements Comparable<Resource> {
    * @throws ResourceNotFoundException
    *           if the resource is not found
    */
-  @Public
-  @Evolving
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   public void setResourceValue(int index, long value)
       throws ResourceNotFoundException {
     try {
