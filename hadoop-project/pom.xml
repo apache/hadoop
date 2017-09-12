@@ -90,7 +90,7 @@
 
     <guava.version>11.0.2</guava.version>
     <guice.version>4.0</guice.version>
-    <joda-time.version>2.9.4</joda-time.version>
+    <joda-time.version>2.9.9</joda-time.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0-M21</apacheds.version>
