@@ -576,3 +576,12 @@ The binary distribution of this product bundles binaries of
 software.amazon.ion:ion-java 1.0.1,
 which has the following notices:
  * Amazon Ion Java Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+The binary distribution of this product bundles binaries of
+joda-time:joda-time:2.9.9
+which has the following notices:
+ * =============================================================================
+   = NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
+   =============================================================================
+   This product includes software developed by
+   Joda.org (http://www.joda.org/).
