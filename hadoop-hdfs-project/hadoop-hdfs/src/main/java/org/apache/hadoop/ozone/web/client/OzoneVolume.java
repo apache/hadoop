@@ -96,6 +96,13 @@ public class OzoneVolume {
   }
 
   /**
+   * @return the volume info.
+   */
+  public VolumeInfo getVolumeInfo() {
+    return this.volumeInfo;
+  }
+
+  /**
    * Returns volume Name.
    *
    * @return Volume Name.

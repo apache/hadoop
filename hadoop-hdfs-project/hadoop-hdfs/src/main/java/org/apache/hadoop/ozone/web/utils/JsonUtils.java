@@ -19,10 +19,12 @@
 package org.apache.hadoop.ozone.web.utils;
 
 import java.io.IOException;
+import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.type.CollectionType;
 
 /**
  * JSON Utility functions used in ozone.
@@ -49,5 +51,21 @@ public final class JsonUtils {
 
   public static String toJsonString(Object obj) throws IOException {
     return MAPPER.writeValueAsString(obj);
+  }
+
+  /**
+   * Deserialize a list of elements from a given string,
+   * each element in the list is in the given type.
+   *
+   * @param str json string.
+   * @param elementType element type.
+   * @return
+   * @throws IOException
+   */
+  public static List<?> toJsonList(String str, Class<?> elementType)
+      throws IOException {
+    CollectionType type = MAPPER.getTypeFactory()
+        .constructCollectionType(List.class, elementType);
+    return MAPPER.readValue(str, type);
   }
 }
