@@ -813,10 +813,18 @@ public class ContainerImpl implements Container {
 
   @SuppressWarnings("unchecked") // dispatcher not typed
   private void sendScheduleEvent() {
-    dispatcher.getEventHandler().handle(
-        new ContainerSchedulerEvent(this,
-            ContainerSchedulerEventType.SCHEDULE_CONTAINER)
-    );
+    if (recoveredStatus == RecoveredContainerStatus.PAUSED) {
+      // Recovery is not supported for paused container so we raise the
+      // launch event which will proceed to kill the paused container instead
+      // of raising the schedule event.
+      ContainersLauncherEventType launcherEvent;
+      launcherEvent = ContainersLauncherEventType.RECOVER_PAUSED_CONTAINER;
+      dispatcher.getEventHandler()
+          .handle(new ContainersLauncherEvent(this, launcherEvent));
+    } else {
+      dispatcher.getEventHandler().handle(new ContainerSchedulerEvent(this,
+          ContainerSchedulerEventType.SCHEDULE_CONTAINER));
+    }
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed

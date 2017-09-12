@@ -813,6 +813,14 @@ public class ContainerLaunch implements Callable<Integer> {
       dispatcher.getEventHandler().handle(new ContainerEvent(
           containerId,
           ContainerEventType.CONTAINER_PAUSED));
+
+      try {
+        this.context.getNMStateStore().storeContainerPaused(
+            container.getContainerId());
+      } catch (IOException e) {
+        LOG.warn("Could not store container [" + container.getContainerId()
+            + "] state. The Container has been paused.", e);
+      }
     } catch (Exception e) {
       String message =
           "Exception when trying to pause container " + containerIdStr
@@ -849,12 +857,20 @@ public class ContainerLaunch implements Callable<Integer> {
 
     // If the container has already started
     try {
-        exec.resumeContainer(container);
-        // ResumeContainer is a blocking call. We are here almost means the
-        // container is resumed, so send out the event.
-        dispatcher.getEventHandler().handle(new ContainerEvent(
-            containerId,
-            ContainerEventType.CONTAINER_RESUMED));
+      exec.resumeContainer(container);
+      // ResumeContainer is a blocking call. We are here almost means the
+      // container is resumed, so send out the event.
+      dispatcher.getEventHandler().handle(new ContainerEvent(
+          containerId,
+          ContainerEventType.CONTAINER_RESUMED));
+
+      try {
+        this.context.getNMStateStore().removeContainerPaused(
+            container.getContainerId());
+      } catch (IOException e) {
+        LOG.warn("Could not store container [" + container.getContainerId()
+            + "] state. The Container has been resumed.", e);
+      }
     } catch (Exception e) {
       String message =
           "Exception when trying to resume container " + containerIdStr

@@ -26,6 +26,7 @@ public enum ContainersLauncherEventType {
   CLEANUP_CONTAINER_FOR_REINIT, // The process(grp) itself.
   SIGNAL_CONTAINER,
   PAUSE_CONTAINER,
-  RESUME_CONTAINER
+  RESUME_CONTAINER,
+  RECOVER_PAUSED_CONTAINER
 
 }
