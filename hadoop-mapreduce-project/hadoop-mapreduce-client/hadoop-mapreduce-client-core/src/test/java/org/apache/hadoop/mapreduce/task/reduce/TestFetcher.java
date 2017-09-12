@@ -25,9 +25,7 @@ import java.net.HttpURLConnection;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TaskID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -64,8 +62,6 @@ import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import com.nimbusds.jose.util.StringUtils;
 
 /**
  * Test that the Fetcher does what we expect it to.
