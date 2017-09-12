@@ -498,7 +498,7 @@ public class AppInfo {
   public Map<String, Long> getPreemptedResourceSecondsMap() {
     return preemptedResourceSecondsMap;
   }
-  
+
   public List<ResourceRequestInfo> getResourceRequests() {
     return this.resourceRequests;
   }
