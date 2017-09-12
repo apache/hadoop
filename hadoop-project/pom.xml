@@ -1151,7 +1151,7 @@
       <dependency>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
-          <version>3.9</version>
+          <version>4.41.1</version>
           <scope>compile</scope>
           <exclusions>
           <exclusion>
