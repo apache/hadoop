@@ -1320,7 +1320,7 @@ public class FairScheduler extends
         updateInterval = FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS;
         LOG.warn(FairSchedulerConfiguration.UPDATE_INTERVAL_MS
             + " is invalid, so using default value "
-            + +FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS
+            + FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS
             + " ms instead");
       }
 
