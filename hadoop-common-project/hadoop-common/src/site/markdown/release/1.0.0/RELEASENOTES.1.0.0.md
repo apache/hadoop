@@ -23,16 +23,9 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-7923](https://issues.apache.org/jira/browse/HADOOP-7923) | *Major* | **Automatically update doc versions**
+* [HDFS-617](https://issues.apache.org/jira/browse/HDFS-617) | *Major* | **Support for non-recursive create() in HDFS**
 
-Docs version number is now automatically updated by reference to the build number.
-
-
----
-
-* [HADOOP-7740](https://issues.apache.org/jira/browse/HADOOP-7740) | *Minor* | **security audit logger is not on by default, fix the log4j properties to enable the logger**
-
-Fixed security audit logger configuration. (Arpit Gupta via Eric Yang)
+New DFSClient.create(...) allows option of not creating missing parent(s).
 
 
 ---
@@ -44,10 +37,9 @@ Enable task memory management to be configurable via hadoop config setup script.
 
 ---
 
-* [HDFS-2316](https://issues.apache.org/jira/browse/HDFS-2316) | *Major* | **[umbrella] WebHDFS: a complete FileSystem implementation for accessing HDFS over HTTP**
+* [HADOOP-7740](https://issues.apache.org/jira/browse/HADOOP-7740) | *Minor* | **security audit logger is not on by default, fix the log4j properties to enable the logger**
 
-Provide WebHDFS as a complete FileSystem implementation for accessing HDFS over HTTP.
-Previous hftp feature was a read-only FileSystem and does not provide "write" accesses.
+Fixed security audit logger configuration. (Arpit Gupta via Eric Yang)
 
 
 ---
@@ -64,9 +56,17 @@ c. dfs.client.read.shortcircuit.skip.checksum is the key to bypass checksum chec
 
 ---
 
-* [HDFS-617](https://issues.apache.org/jira/browse/HDFS-617) | *Major* | **Support for non-recursive create() in HDFS**
+* [HADOOP-7923](https://issues.apache.org/jira/browse/HADOOP-7923) | *Major* | **Automatically update doc versions**
 
-New DFSClient.create(...) allows option of not creating missing parent(s).
+Docs version number is now automatically updated by reference to the build number.
+
+
+---
+
+* [HDFS-2316](https://issues.apache.org/jira/browse/HDFS-2316) | *Major* | **[umbrella] WebHDFS: a complete FileSystem implementation for accessing HDFS over HTTP**
+
+Provide WebHDFS as a complete FileSystem implementation for accessing HDFS over HTTP.
+Previous hftp feature was a read-only FileSystem and does not provide "write" accesses.
 
 
 

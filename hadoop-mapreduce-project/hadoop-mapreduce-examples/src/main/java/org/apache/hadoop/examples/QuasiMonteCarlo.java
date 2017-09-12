@@ -155,7 +155,7 @@ public class QuasiMonteCarlo extends Configured implements Tool {
     /** Map method.
      * @param offset samples starting from the (offset+1)th sample.
      * @param size the number of samples for this map
-     * @param context output {ture-&gt;numInside, false-&gt;numOutside}
+     * @param context output {true-&gt;numInside, false-&gt;numOutside}
      */
     public void map(LongWritable offset,
                     LongWritable size,

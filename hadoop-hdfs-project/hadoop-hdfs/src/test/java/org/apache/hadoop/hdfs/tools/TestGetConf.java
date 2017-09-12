@@ -24,6 +24,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -121,13 +122,13 @@ public class TestGetConf {
       TestType type, HdfsConfiguration conf) throws IOException {
     switch (type) {
     case NAMENODE:
-      return DFSUtil.getNNServiceRpcAddressesForCluster(conf);
+      return DFSUtil.getNNServiceRpcAddresses(conf);
     case BACKUP:
       return DFSUtil.getBackupNodeAddresses(conf);
     case SECONDARY:
       return DFSUtil.getSecondaryNameNodeAddresses(conf);
     case NNRPCADDRESSES:
-      return DFSUtil.getNNServiceRpcAddressesForCluster(conf);
+      return DFSUtil.getNNServiceRpcAddresses(conf);
     }
     return null;
   }
@@ -278,10 +279,12 @@ public class TestGetConf {
   public void testNonFederation() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
   
-    // Returned namenode address should match default address
+    // Returned namenode address should match the default service address
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://localhost:1000");
-    verifyAddresses(conf, TestType.NAMENODE, false, "localhost:1000");
-    verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:1000");
+    verifyAddresses(conf, TestType.NAMENODE, false, "localhost:" +
+        DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
+    verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:" +
+        DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
   
     // Returned address should match backupnode RPC address
     conf.set(DFS_NAMENODE_BACKUP_ADDRESS_KEY,"localhost:1001");
@@ -297,12 +300,14 @@ public class TestGetConf {
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "localhost:1001");
     verifyAddresses(conf, TestType.NAMENODE, false, "localhost:1000");
     verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:1000");
-  
-    // Returned address should match RPC address
+
+    // Returned namenode address should match the default service address
     conf = new HdfsConfiguration();
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "localhost:1001");
-    verifyAddresses(conf, TestType.NAMENODE, false, "localhost:1001");
-    verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:1001");
+    verifyAddresses(conf, TestType.NAMENODE, false, "localhost:" +
+        DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
+    verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:" +
+        DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
   }
 
   /**
@@ -325,23 +330,6 @@ public class TestGetConf {
     String[] backupAddresses = setupAddress(conf,
         DFS_NAMENODE_BACKUP_ADDRESS_KEY, nsCount, 2000);
     String[] secondaryAddresses = setupAddress(conf,
-        DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, nsCount, 3000);
-    verifyAddresses(conf, TestType.NAMENODE, false, nnAddresses);
-    verifyAddresses(conf, TestType.BACKUP, false, backupAddresses);
-    verifyAddresses(conf, TestType.SECONDARY, false, secondaryAddresses);
-    verifyAddresses(conf, TestType.NNRPCADDRESSES, true, nnAddresses);
-  
-    // Test to ensure namenode, backup, secondary namenode addresses and 
-    // namenode rpc addresses are  returned from federation configuration. 
-    // Returned namenode addresses are based on regular RPC address
-    // in the absence of service RPC address.
-    conf = new HdfsConfiguration(false);
-    setupNameServices(conf, nsCount);
-    nnAddresses = setupAddress(conf,
-        DFS_NAMENODE_RPC_ADDRESS_KEY, nsCount, 1000);
-    backupAddresses = setupAddress(conf,
-        DFS_NAMENODE_BACKUP_ADDRESS_KEY, nsCount, 2000);
-    secondaryAddresses = setupAddress(conf,
         DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, nsCount, 3000);
     verifyAddresses(conf, TestType.NAMENODE, false, nnAddresses);
     verifyAddresses(conf, TestType.BACKUP, false, backupAddresses);

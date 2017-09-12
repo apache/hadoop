@@ -1182,7 +1182,7 @@
   <property>
     <description>Class that supports TFile read and write operations.</description>
     <name>yarn.log-aggregation.file-controller.TFile.class</name>
-    <value>org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationTFileController</value>
+    <value>org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController</value>
   </property>
 
   <property>
@@ -1569,6 +1569,14 @@
     turning this flag on may reduce job throughput on the cluster.</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.strict-resource-usage</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>Comma separated list of runtimes that are allowed when using
+    LinuxContainerExecutor. The allowed values are default, docker, and
+    javasandbox.</description>
+    <name>yarn.nodemanager.runtime.linux.allowed-runtimes</name>
+    <value>default</value>
   </property>
 
   <property>
@@ -2339,6 +2347,39 @@
     <name>yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds
     </name>
     <value>259200000</value>
+  </property>
+
+  <property>
+    <description>
+    The default hdfs location for flowrun coprocessor jar.
+    </description>
+    <name>yarn.timeline-service.hbase.coprocessor.jar.hdfs.location
+    </name>
+    <value>/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar</value>
+  </property>
+
+  <property>
+    <description>
+    The value of this parameter sets the prefix for all tables that are part of
+    timeline service in the hbase storage schema. It can be set to "dev."
+    or "staging." if it is to be used for development or staging instances.
+    This way the data in production tables stays in a separate set of tables
+    prefixed by "prod.".
+    </description>
+    <name>yarn.timeline-service.hbase-schema.prefix</name>
+    <value>prod.</value>
+  </property>
+
+  <property>
+    <description> Optional URL to an hbase-site.xml configuration file to be
+    used to connect to the timeline-service hbase cluster. If empty or not
+    specified, then the HBase configuration will be loaded from the classpath.
+    When specified the values in the specified configuration file will override
+    those from the ones that are present on the classpath.
+    </description>
+    <name>yarn.timeline-service.hbase.configuration.file
+    </name>
+    <value></value>
   </property>
 
   <!--  Shared Cache Configuration -->
@@ -3145,6 +3186,17 @@
     <value>64</value>
   </property>
 
+  <property>
+    <description>
+      Flag to enable cross-origin (CORS) support for timeline service v1.x or
+      Timeline Reader in timeline service v2. For timeline service v2, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+    <name>yarn.timeline-service.http-cross-origin.enabled</name>
+    <value>false</value>
+  </property>
+ 
   <property>
     <description>
       Flag to enable cross-origin (CORS) support for timeline service v1.x or

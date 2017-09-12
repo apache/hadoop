@@ -24,7 +24,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -75,8 +74,6 @@ public class TestRMWebAppFairScheduler {
                   mockRm(rmContext);
               binder.bind(ResourceManager.class).toInstance
                   (mockRmWithFairScheduler);
-              binder.bind(ApplicationBaseProtocol.class).toInstance(
-                mockRmWithFairScheduler.getClientRMService());
             } catch (IOException e) {
               throw new IllegalStateException(e);
             }
@@ -115,9 +112,6 @@ public class TestRMWebAppFairScheduler {
                   mockRmWithApps(rmContext);
               binder.bind(ResourceManager.class).toInstance
                   (mockRmWithFairScheduler);
-              binder.bind(ApplicationBaseProtocol.class).toInstance(
-                  mockRmWithFairScheduler.getClientRMService());
-
             } catch (IOException e) {
               throw new IllegalStateException(e);
             }

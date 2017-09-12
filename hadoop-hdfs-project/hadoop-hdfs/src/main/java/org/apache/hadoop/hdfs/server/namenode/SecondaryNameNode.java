@@ -228,7 +228,7 @@ public class SecondaryNameNode implements Runnable,
 
     // Create connection to the namenode.
     shouldRun = true;
-    nameNodeAddr = NameNode.getServiceAddress(conf, true);
+    nameNodeAddr = NameNode.getServiceAddress(conf);
 
     this.conf = conf;
     this.namenode = NameNodeProxies.createNonHAProxy(conf, nameNodeAddr, 

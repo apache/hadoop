@@ -1364,9 +1364,9 @@ public class TestCheckpoint {
       Configuration snConf1 = new HdfsConfiguration(cluster.getConfiguration(0));
       Configuration snConf2 = new HdfsConfiguration(cluster.getConfiguration(1));
       InetSocketAddress nn1RpcAddress = cluster.getNameNode(0)
-          .getNameNodeAddress();
+          .getServiceRpcAddress();
       InetSocketAddress nn2RpcAddress = cluster.getNameNode(1)
-          .getNameNodeAddress();
+          .getServiceRpcAddress();
       String nn1 = nn1RpcAddress.getHostName() + ":" + nn1RpcAddress.getPort();
       String nn2 = nn2RpcAddress.getHostName() + ":" + nn2RpcAddress.getPort();
 
@@ -1923,6 +1923,7 @@ public class TestCheckpoint {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
           .format(true).build();
       int origPort = cluster.getNameNodePort();
+      int origServicePort = cluster.getNameNodeServicePort();
       int origHttpPort = cluster.getNameNode().getHttpAddress().getPort();
       Configuration snnConf = new Configuration(conf);
       File checkpointDir = new File(MiniDFSCluster.getBaseDirectory(),
@@ -1949,6 +1950,7 @@ public class TestCheckpoint {
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(0)
           .nameNodePort(origPort)
+          .nameNodeServicePort(origServicePort)
           .nameNodeHttpPort(origHttpPort)
           .format(true).build();
 

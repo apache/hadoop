@@ -18,25 +18,34 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
-import org.apache.hadoop.yarn.webapp.NotFoundException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class mocks the RESTRequestInterceptor.
@@ -101,6 +110,27 @@ public class MockDefaultRequestInterceptorREST
   }
 
   @Override
+  public AppsInfo getApps(HttpServletRequest hsr, String stateQuery,
+      Set<String> statesQuery, String finalStatusQuery, String userQuery,
+      String queueQuery, String count, String startedBegin, String startedEnd,
+      String finishBegin, String finishEnd, Set<String> applicationTypes,
+      Set<String> applicationTags, Set<String> unselectedFields) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    AppsInfo appsInfo = new AppsInfo();
+    AppInfo appInfo = new AppInfo();
+
+    appInfo.setAppId(
+        ApplicationId.newInstance(Integer.valueOf(getSubClusterId().getId()),
+            applicationCounter.incrementAndGet()).toString());
+    appInfo.setAMHostHttpAddress("http://i_am_the_AM:1234");
+
+    appsInfo.add(appInfo);
+    return appsInfo;
+  }
+
+  @Override
   public Response updateAppState(AppState targetState, HttpServletRequest hsr,
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
@@ -120,6 +150,46 @@ public class MockDefaultRequestInterceptorREST
     AppState ret = new AppState();
     ret.setState(targetState.toString());
     return Response.status(Status.OK).entity(ret).build();
+  }
+
+  @Override
+  public NodeInfo getNode(String nodeId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    NodeInfo node = new NodeInfo();
+    node.setId(nodeId);
+    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    return node;
+  }
+
+  @Override
+  public NodesInfo getNodes(String states) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    NodeInfo node = new NodeInfo();
+    node.setId("Node " + Integer.valueOf(getSubClusterId().getId()));
+    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    NodesInfo nodes = new NodesInfo();
+    nodes.add(node);
+    return nodes;
+  }
+
+  @Override
+  public ClusterMetricsInfo getClusterMetricsInfo() {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    ClusterMetricsInfo metrics = new ClusterMetricsInfo();
+    metrics.setAppsSubmitted(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsCompleted(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsPending(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsRunning(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsFailed(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsKilled(Integer.valueOf(getSubClusterId().getId()));
+
+    return metrics;
   }
 
   public void setSubClusterId(int subClusterId) {

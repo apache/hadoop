@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -33,24 +41,17 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(AbstractSchedulerPlanFollower.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractSchedulerPlanFollower.class);
 
   protected Collection<Plan> plans = new ArrayList<Plan>();
   protected YarnScheduler scheduler;
   protected Clock clock;
 
   @Override
-  public void init(Clock clock, ResourceScheduler sched, Collection<Plan> plans) {
+  public void init(Clock clock, ResourceScheduler sched,
+      Collection<Plan> plans) {
     this.clock = clock;
     this.scheduler = sched;
     this.plans.addAll(plans);
@@ -71,7 +72,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
 
   @Override
   public synchronized void synchronizePlan(Plan plan, boolean shouldReplan) {
-     String planQueueName = plan.getQueueName();
+    String planQueueName = plan.getQueueName();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Running plan follower edit policy for plan: " + planQueueName);
     }
@@ -82,12 +83,14 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       now += step - (now % step);
     }
     Queue planQueue = getPlanQueue(planQueueName);
-    if (planQueue == null) return;
+    if (planQueue == null) {
+      return;
+    }
 
     // first we publish to the plan the current availability of resources
     Resource clusterResources = scheduler.getClusterResource();
-    Resource planResources = getPlanResources(plan, planQueue,
-        clusterResources);
+    Resource planResources =
+        getPlanResources(plan, planQueue, clusterResources);
     Set<ReservationAllocation> currentReservations =
         plan.getReservationsAtTime(now);
     Set<String> curReservationNames = new HashSet<String>();
@@ -95,12 +98,11 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     int numRes = getReservedResources(now, currentReservations,
         curReservationNames, reservedResources);
     // create the default reservation queue if it doesnt exist
-    String defReservationId = getReservationIdFromQueueName(planQueueName) +
-        ReservationConstants.DEFAULT_QUEUE_SUFFIX;
-    String defReservationQueue = getReservationQueueName(planQueueName,
-        defReservationId);
-    createDefaultReservationQueue(planQueueName, planQueue,
-        defReservationId);
+    String defReservationId = getReservationIdFromQueueName(planQueueName)
+        + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
+    String defReservationQueue =
+        getReservationQueueName(planQueueName, defReservationId);
+    createDefaultReservationQueue(planQueueName, planQueue, defReservationId);
     curReservationNames.add(defReservationId);
     // if the resources dedicated to this plan has shrunk invoke replanner
     boolean shouldResize = false;
@@ -149,10 +151,8 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       // sort allocations from the one giving up the most resources, to the
       // one asking for the most avoid order-of-operation errors that
       // temporarily violate 100% capacity bound
-      List<ReservationAllocation> sortedAllocations =
-          sortByDelta(
-              new ArrayList<ReservationAllocation>(currentReservations), now,
-              plan);
+      List<ReservationAllocation> sortedAllocations = sortByDelta(
+          new ArrayList<ReservationAllocation>(currentReservations), now, plan);
       for (ReservationAllocation res : sortedAllocations) {
         String currResId = res.getReservationId().toString();
         if (curReservationNames.contains(currResId)) {
@@ -163,10 +163,9 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         if (planResources.getMemorySize() > 0
             && planResources.getVirtualCores() > 0) {
           if (shouldResize) {
-            capToAssign =
-                calculateReservationToPlanProportion(
-                    plan.getResourceCalculator(), planResources,
-                    reservedResources, capToAssign);
+            capToAssign = calculateReservationToPlanProportion(
+                plan.getResourceCalculator(), planResources, reservedResources,
+                capToAssign);
           }
           targetCapacity =
               calculateReservationToPlanRatio(plan.getResourceCalculator(),
@@ -185,7 +184,8 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
           maxCapacity = targetCapacity;
         }
         try {
-          setQueueEntitlement(planQueueName, currResId, targetCapacity, maxCapacity);
+          setQueueEntitlement(planQueueName, currResId, targetCapacity,
+              maxCapacity);
         } catch (YarnException e) {
           LOG.warn("Exception while trying to size reservation for plan: {}",
               currResId, planQueueName, e);
@@ -196,9 +196,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     // compute the default queue capacity
     float defQCap = 1.0f - totalAssignedCapacity;
     if (LOG.isDebugEnabled()) {
-      LOG.debug("PlanFollowerEditPolicyTask: total Plan Capacity: {} "
-          + "currReservation: {} default-queue capacity: {}", planResources,
-          numRes, defQCap);
+      LOG.debug(
+          "PlanFollowerEditPolicyTask: total Plan Capacity: {} "
+              + "currReservation: {} default-queue capacity: {}",
+          planResources, numRes, defQCap);
     }
     // set the default queue to eat-up all remaining capacity
     try {
@@ -225,12 +226,11 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
   }
 
   protected void setQueueEntitlement(String planQueueName, String currResId,
-      float targetCapacity,
-      float maxCapacity) throws YarnException {
-    String reservationQueueName = getReservationQueueName(planQueueName,
-        currResId);
-    scheduler.setEntitlement(reservationQueueName, new QueueEntitlement(
-        targetCapacity, maxCapacity));
+      float targetCapacity, float maxCapacity) throws YarnException {
+    String reservationQueueName =
+        getReservationQueueName(planQueueName, currResId);
+    scheduler.setEntitlement(reservationQueueName,
+        new QueueEntitlement(targetCapacity, maxCapacity));
   }
 
   // Schedulers have different ways of naming queues. See YARN-2773
@@ -244,14 +244,21 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
    * Then move all apps in the set of queues to the parent plan queue's default
    * reservation queue if move is enabled. Finally cleanups the queue by killing
    * any apps (if move is disabled or move failed) and removing the queue
+   *
+   * @param planQueueName the name of {@code PlanQueue}
+   * @param shouldMove flag to indicate if any running apps should be moved or
+   *          killed
+   * @param toRemove the remnant apps to clean up
+   * @param defReservationQueue the default {@code ReservationQueue} of the
+   *          {@link Plan}
    */
-  protected void cleanupExpiredQueues(String planQueueName,
-      boolean shouldMove, Set<String> toRemove, String defReservationQueue) {
+  protected void cleanupExpiredQueues(String planQueueName, boolean shouldMove,
+      Set<String> toRemove, String defReservationQueue) {
     for (String expiredReservationId : toRemove) {
       try {
         // reduce entitlement to 0
-        String expiredReservation = getReservationQueueName(planQueueName,
-            expiredReservationId);
+        String expiredReservation =
+            getReservationQueueName(planQueueName, expiredReservationId);
         setQueueEntitlement(planQueueName, expiredReservation, 0.0f, 0.0f);
         if (shouldMove) {
           moveAppsInQueueSync(expiredReservation, defReservationQueue);
@@ -275,7 +282,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
    * reservation queue in a synchronous fashion
    */
   private void moveAppsInQueueSync(String expiredReservation,
-                                   String defReservationQueue) {
+      String defReservationQueue) {
     List<ApplicationAttemptId> activeApps =
         scheduler.getAppsInQueue(expiredReservation);
     if (activeApps.isEmpty()) {
@@ -287,16 +294,16 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         scheduler.moveApplication(app.getApplicationId(), defReservationQueue);
       } catch (YarnException e) {
         LOG.warn(
-            "Encountered unexpected error during migration of application: {}" +
-                " from reservation: {}",
+            "Encountered unexpected error during migration of application: {}"
+                + " from reservation: {}",
             app, expiredReservation, e);
       }
     }
   }
 
-  protected int getReservedResources(long now, Set<ReservationAllocation>
-      currentReservations, Set<String> curReservationNames,
-                                     Resource reservedResources) {
+  protected int getReservedResources(long now,
+      Set<ReservationAllocation> currentReservations,
+      Set<String> curReservationNames, Resource reservedResources) {
     int numRes = 0;
     if (currentReservations != null) {
       numRes = currentReservations.size();
@@ -312,23 +319,30 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
    * Sort in the order from the least new amount of resources asked (likely
    * negative) to the highest. This prevents "order-of-operation" errors related
    * to exceeding 100% capacity temporarily.
+   *
+   * @param currentReservations the currently active reservations
+   * @param now the current time
+   * @param plan the {@link Plan} that is being considered
+   *
+   * @return the sorted list of {@link ReservationAllocation}s
    */
   protected List<ReservationAllocation> sortByDelta(
       List<ReservationAllocation> currentReservations, long now, Plan plan) {
-    Collections.sort(currentReservations, new ReservationAllocationComparator(
-        now, this, plan));
+    Collections.sort(currentReservations,
+        new ReservationAllocationComparator(now, this, plan));
     return currentReservations;
   }
 
   /**
-   * Get queue associated with reservable queue named
-   * @param planQueueName Name of the reservable queue
+   * Get queue associated with reservable queue named.
+   *
+   * @param planQueueName name of the reservable queue
    * @return queue associated with the reservable queue
    */
   protected abstract Queue getPlanQueue(String planQueueName);
 
   /**
-   * Resizes reservations based on currently available resources
+   * Resizes reservations based on currently available resources.
    */
   private Resource calculateReservationToPlanProportion(
       ResourceCalculator rescCalculator, Resource availablePlanResources,
@@ -338,7 +352,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
   }
 
   /**
-   * Calculates ratio of reservationResources to planResources
+   * Calculates ratio of reservationResources to planResources.
    */
   private float calculateReservationToPlanRatio(
       ResourceCalculator rescCalculator, Resource clusterResources,
@@ -348,7 +362,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
   }
 
   /**
-   * Check if plan resources are less than expected reservation resources
+   * Check if plan resources are less than expected reservation resources.
    */
   private boolean arePlanResourcesLessThanReservations(
       ResourceCalculator rescCalculator, Resource clusterResources,
@@ -358,38 +372,56 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
   }
 
   /**
-   * Get a list of reservation queues for this planQueue
+   * Get a list of reservation queues for this planQueue.
+   *
+   * @param planQueue the queue for the current {@link Plan}
+   *
+   * @return the queues corresponding to the reservations
    */
   protected abstract List<? extends Queue> getChildReservationQueues(
       Queue planQueue);
 
   /**
-   * Add a new reservation queue for reservation currResId for this planQueue
+   * Add a new reservation queue for reservation currResId for this planQueue.
    */
-  protected abstract void addReservationQueue(
-      String planQueueName, Queue queue, String currResId);
+  protected abstract void addReservationQueue(String planQueueName, Queue queue,
+      String currResId);
 
   /**
-   * Creates the default reservation queue for use when no reservation is
-   * used for applications submitted to this planQueue
+   * Creates the default reservation queue for use when no reservation is used
+   * for applications submitted to this planQueue.
+   *
+   * @param planQueueName name of the reservable queue
+   * @param queue the queue for the current {@link Plan}
+   * @param defReservationQueue name of the default {@code ReservationQueue}
    */
-  protected abstract void createDefaultReservationQueue(
-      String planQueueName, Queue queue, String defReservationQueue);
+  protected abstract void createDefaultReservationQueue(String planQueueName,
+      Queue queue, String defReservationQueue);
 
   /**
-   * Get plan resources for this planQueue
+   * Get plan resources for this planQueue.
+   *
+   * @param plan the current {@link Plan} being considered
+   * @param clusterResources the resources available in the cluster
+   *
+   * @return the resources allocated to the specified {@link Plan}
    */
-  protected abstract Resource getPlanResources(
-      Plan plan, Queue queue, Resource clusterResources);
+  protected abstract Resource getPlanResources(Plan plan, Queue queue,
+      Resource clusterResources);
 
   /**
    * Get reservation queue resources if it exists otherwise return null.
+   *
+   * @param plan the current {@link Plan} being considered
+   * @param reservationId the identifier of the reservation
+   *
+   * @return the resources allocated to the specified reservation
    */
   protected abstract Resource getReservationQueueResourceIfExists(Plan plan,
       ReservationId reservationId);
 
-  private static class ReservationAllocationComparator implements
-      Comparator<ReservationAllocation> {
+  private static class ReservationAllocationComparator
+      implements Comparator<ReservationAllocation> {
     AbstractSchedulerPlanFollower planFollower;
     long now;
     Plan plan;
@@ -404,14 +436,12 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     private Resource getUnallocatedReservedResources(
         ReservationAllocation reservation) {
       Resource resResource;
-      Resource reservationResource = planFollower
-          .getReservationQueueResourceIfExists
-              (plan, reservation.getReservationId());
+      Resource reservationResource =
+          planFollower.getReservationQueueResourceIfExists(plan,
+              reservation.getReservationId());
       if (reservationResource != null) {
-        resResource =
-            Resources.subtract(
-                reservation.getResourcesAtTime(now),
-                reservationResource);
+        resResource = Resources.subtract(reservation.getResourcesAtTime(now),
+            reservationResource);
       } else {
         resResource = reservation.getResourcesAtTime(now);
       }
@@ -428,4 +458,3 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     }
   }
 }
-

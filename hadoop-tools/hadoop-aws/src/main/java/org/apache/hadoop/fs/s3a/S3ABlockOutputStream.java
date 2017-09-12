@@ -79,6 +79,9 @@ class S3ABlockOutputStream extends OutputStream {
   /** Size of all blocks. */
   private final int blockSize;
 
+  /** Total bytes for uploads submitted so far. */
+  private long bytesSubmitted;
+
   /** Callback for progress. */
   private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
@@ -302,6 +305,7 @@ class S3ABlockOutputStream extends OutputStream {
     }
     try {
       multiPartUpload.uploadBlockAsync(getActiveBlock());
+      bytesSubmitted += getActiveBlock().dataSize();
     } finally {
       // set the block to null, so the next write will create a new block.
       clearActiveBlock();
@@ -330,13 +334,14 @@ class S3ABlockOutputStream extends OutputStream {
         this,
         blockCount,
         hasBlock ? block : "(none)");
+    long bytes = 0;
     try {
       if (multiPartUpload == null) {
         if (hasBlock) {
           // no uploads of data have taken place, put the single block up.
           // This must happen even if there is no data, so that 0 byte files
           // are created.
-          putObject();
+          bytes = putObject();
         }
       } else {
         // there has already been at least one block scheduled for upload;
@@ -350,6 +355,7 @@ class S3ABlockOutputStream extends OutputStream {
             multiPartUpload.waitForAllPartUploads();
         // then complete the operation
         multiPartUpload.complete(partETags);
+        bytes = bytesSubmitted;
       }
       LOG.debug("Upload complete for {}", writeOperationHelper);
     } catch (IOException ioe) {
@@ -362,7 +368,7 @@ class S3ABlockOutputStream extends OutputStream {
       clearActiveBlock();
     }
     // All end of write operations, including deleting fake parent directories
-    writeOperationHelper.writeSuccessful();
+    writeOperationHelper.writeSuccessful(bytes);
   }
 
   /**
@@ -370,8 +376,11 @@ class S3ABlockOutputStream extends OutputStream {
    * is empty a 0-byte PUT will be invoked, as it is needed to create an
    * entry at the far end.
    * @throws IOException any problem.
+   * @return number of bytes uploaded. If thread was interrupted while
+   * waiting for upload to complete, returns zero with interrupted flag set
+   * on this thread.
    */
-  private void putObject() throws IOException {
+  private int putObject() throws IOException {
     LOG.debug("Executing regular upload for {}", writeOperationHelper);
 
     final S3ADataBlocks.DataBlock block = getActiveBlock();
@@ -405,9 +414,11 @@ class S3ABlockOutputStream extends OutputStream {
     //wait for completion
     try {
       putObjectResult.get();
+      return size;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted object upload", ie);
       Thread.currentThread().interrupt();
+      return 0;
     } catch (ExecutionException ee) {
       throw extractException("regular upload", key, ee);
     }

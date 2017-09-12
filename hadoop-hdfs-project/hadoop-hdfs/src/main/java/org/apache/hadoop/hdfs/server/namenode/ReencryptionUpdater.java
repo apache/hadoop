@@ -39,6 +39,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -72,6 +73,7 @@ public final class ReencryptionUpdater implements Runnable {
   private final StopWatch throttleTimerLocked = new StopWatch();
 
   private volatile long faultRetryInterval = 60000;
+  private volatile boolean isRunning = false;
 
   /**
    * Class to track re-encryption submissions of a single zone. It contains
@@ -201,6 +203,11 @@ public final class ReencryptionUpdater implements Runnable {
     pauseZoneId = zoneId;
   }
 
+  @VisibleForTesting
+  boolean isRunning() {
+    return isRunning;
+  }
+
   private final FSDirectory dir;
   private final CompletionService<ReencryptionTask> batchService;
   private final ReencryptionHandler handler;
@@ -242,6 +249,7 @@ public final class ReencryptionUpdater implements Runnable {
 
   @Override
   public void run() {
+    isRunning = true;
     throttleTimerAll.start();
     while (true) {
       try {
@@ -250,11 +258,13 @@ public final class ReencryptionUpdater implements Runnable {
       } catch (InterruptedException ie) {
         LOG.warn("Re-encryption updater thread interrupted. Exiting.");
         Thread.currentThread().interrupt();
+        isRunning = false;
         return;
-      } catch (IOException ioe) {
-        LOG.warn("Re-encryption updater thread exception.", ioe);
+      } catch (IOException | CancellationException e) {
+        LOG.warn("Re-encryption updater thread exception.", e);
       } catch (Throwable t) {
         LOG.error("Re-encryption updater thread exiting.", t);
+        isRunning = false;
         return;
       }
     }
@@ -405,6 +415,7 @@ public final class ReencryptionUpdater implements Runnable {
     if (completed.isCancelled()) {
       LOG.debug("Skipped canceled re-encryption task for zone {}, last: {}",
           task.zoneId, task.lastFile);
+      return;
     }
 
     boolean shouldRetry;

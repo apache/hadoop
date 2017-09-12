@@ -55,17 +55,15 @@ documentation.
 YARN Timeline Service v.2
 -------------------
 
-We are introducing an early preview (alpha 1) of a major revision of YARN
+We are introducing an early preview (alpha 2) of a major revision of YARN
 Timeline Service: v.2. YARN Timeline Service v.2 addresses two major
 challenges: improving scalability and reliability of Timeline Service, and
 enhancing usability by introducing flows and aggregation.
 
-YARN Timeline Service v.2 alpha 1 is provided so that users and developers
+YARN Timeline Service v.2 alpha 2 is provided so that users and developers
 can test it and provide feedback and suggestions for making it a ready
 replacement for Timeline Service v.1.x. It should be used only in a test
-capacity. Most importantly, security is not enabled. Do not set up or use
-Timeline Service v.2 until security is implemented if security is a
-critical requirement.
+capacity.
 
 More details are available in the
 [YARN Timeline Service v.2](./hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html)

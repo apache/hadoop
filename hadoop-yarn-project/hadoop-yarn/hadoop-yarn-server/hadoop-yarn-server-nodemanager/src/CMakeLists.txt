@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
@@ -29,25 +29,7 @@ set(GTEST_SRC_DIR ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoo
 string(REGEX MATCH . HCD_ONE "${HADOOP_CONF_DIR}")
 string(COMPARE EQUAL ${HCD_ONE} / HADOOP_CONF_DIR_IS_ABS)
 
-if (CMAKE_VERSION VERSION_LESS "3.1")
-  # subset of CMAKE_<LANG>_COMPILER_ID
-  # https://cmake.org/cmake/help/v3.0/variable/CMAKE_LANG_COMPILER_ID.html
-  if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
-      CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
-      CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
-    set (CMAKE_C_FLAGS "-std=c99 -Wall -pedantic-errors ${CMAKE_C_FLAGS}")
-  elseif (CMAKE_C_COMPILER_ID STREQUAL "Intel")
-    set (CMAKE_C_FLAGS "-std=c99 -Wall ${CMAKE_C_FLAGS}")
-  elseif (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
-    set (CMAKE_C_FLAGS "-xc99 ${CMAKE_C_FLAGS}")
-  endif ()
-else ()
-  set (CMAKE_C_STANDARD 99)
-endif ()
-
-# Note: can't use -D_FILE_OFFSET_BITS=64, see MAPREDUCE-4258
-string(REPLACE "-D_FILE_OFFSET_BITS=64" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-string(REPLACE "-D_FILE_OFFSET_BITS=64" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+set (CMAKE_C_STANDARD 99)
 
 include(CheckIncludeFiles)
 check_include_files("sys/types.h;sys/sysctl.h" HAVE_SYS_SYSCTL_H)
@@ -70,6 +52,51 @@ if(APPLE)
   mark_as_advanced(COCOA_LIBRARY)
   set(EXTRA_LIBS ${COCOA_LIBRARY})
 endif(APPLE)
+
+include(CheckCCompilerFlag)
+
+# Building setuid = attempt to enable stack protection.
+# assumption here is that the C compiler and the C++
+# compiler match.  need both so that gtest gets same
+# stack treatment that the real c-e does
+IF(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    CHECK_C_COMPILER_FLAG("-fstack-check" STACKRESULT)
+    IF(STACKRESULT)
+      SET (CMAKE_C_FLAGS "-fstack-check ${CMAKE_C_FLAGS}")
+      SET (CMAKE_CXX_FLAGS "-fstack-check ${CMAKE_CXX_FLAGS}")
+    ENDIF()
+ELSEIF(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
+       CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+
+  # clang is a bit difficult here:
+  # - some versions don't support the flag
+  # - some versions support the flag, despite not having
+  #   the library that is actually required (!)
+  # Notably, Xcode is a problem here.
+  # In the end, this is needlessly complex. :(
+
+  SET(PRE_SANITIZE ${CMAKE_REQUIRED_FLAGS})
+  SET(CMAKE_REQUIRED_FLAGS "-fsanitize=safe-stack ${CMAKE_REQUIRED_FLAGS}")
+  CHECK_C_COMPILER_FLAG("" STACKRESULT)
+  SET(CMAKE_REQUIRED_FLAGS ${PRE_SANITIZE})
+  IF(STACKRESULT)
+     SET(CMAKE_C_FLAGS "-fsanitize=safe-stack ${CMAKE_C_FLAGS}")
+     SET(CMAKE_CXX_FLAGS "-fsanitize=safe-stack ${CMAKE_CXX_FLAGS}")
+  ENDIF()
+ELSEIF(CMAKE_C_COMPILER_ID STREQUAL "SunPro")
+
+  # this appears to only be supported on SPARC, for some reason
+
+  CHECK_C_COMPILER_FLAG("-xcheck=stkovf" STACKRESULT)
+  IF(STACKRESULT)
+    SET (CMAKE_C_FLAGS "-xcheck=stkovf ${CMAKE_C_FLAGS}")
+    SET (CMAKE_CXX_FLAGS "-xcheck=stkovf ${CMAKE_CXX_FLAGS}")
+  ENDIF()
+ENDIF()
+
+IF(NOT STACKRESULT)
+   MESSAGE(WARNING "Stack Clash security protection is not suported.")
+ENDIF()
 
 function(output_directory TGT DIR)
     set_target_properties(${TGT} PROPERTIES

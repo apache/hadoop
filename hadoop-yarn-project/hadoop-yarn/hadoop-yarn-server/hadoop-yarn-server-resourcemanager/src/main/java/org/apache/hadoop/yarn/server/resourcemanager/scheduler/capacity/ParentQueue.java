@@ -37,6 +37,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -861,6 +862,9 @@ public class ParentQueue extends AbstractCSQueue {
   public void recoverContainer(Resource clusterResource,
       SchedulerApplicationAttempt attempt, RMContainer rmContainer) {
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
+      return;
+    }
+    if (rmContainer.getExecutionType() != ExecutionType.GUARANTEED) {
       return;
     }
 

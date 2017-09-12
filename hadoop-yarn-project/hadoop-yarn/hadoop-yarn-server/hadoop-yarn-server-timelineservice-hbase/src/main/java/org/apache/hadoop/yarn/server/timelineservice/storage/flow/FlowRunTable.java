@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Coprocessor;
 
 /**
  * The flow run table has column family info
@@ -133,8 +135,15 @@ public class FlowRunTable extends BaseTable<FlowRunTable> {
     infoCF.setMaxVersions(DEFAULT_METRICS_MAX_VERSIONS);
 
     // TODO: figure the split policy
-    flowRunTableDescp.addCoprocessor(FlowRunCoprocessor.class
-        .getCanonicalName());
+    String coprocessorJarPathStr = hbaseConf.get(
+        YarnConfiguration.FLOW_RUN_COPROCESSOR_JAR_HDFS_LOCATION,
+        YarnConfiguration.DEFAULT_HDFS_LOCATION_FLOW_RUN_COPROCESSOR_JAR);
+
+    Path coprocessorJarPath = new Path(coprocessorJarPathStr);
+    LOG.info("CoprocessorJarPath=" + coprocessorJarPath.toString());
+    flowRunTableDescp.addCoprocessor(
+        FlowRunCoprocessor.class.getCanonicalName(), coprocessorJarPath,
+        Coprocessor.PRIORITY_USER, null);
     admin.createTable(flowRunTableDescp);
     LOG.info("Status of table creation for " + table.getNameAsString() + "="
         + admin.tableExists(table));

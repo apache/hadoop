@@ -81,8 +81,9 @@ public class KeyProviderCryptoExtension extends
     protected EncryptedKeyVersion(String keyName,
         String encryptionKeyVersionName, byte[] encryptedKeyIv,
         KeyVersion encryptedKeyVersion) {
-      this.encryptionKeyName = keyName;
-      this.encryptionKeyVersionName = encryptionKeyVersionName;
+      this.encryptionKeyName = keyName == null ? null : keyName.intern();
+      this.encryptionKeyVersionName = encryptionKeyVersionName == null ?
+          null : encryptionKeyVersionName.intern();
       this.encryptedKeyIv = encryptedKeyIv;
       this.encryptedKeyVersion = encryptedKeyVersion;
     }
@@ -551,6 +552,16 @@ public class KeyProviderCryptoExtension extends
   public EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion ekv)
       throws IOException, GeneralSecurityException {
     return getExtension().reencryptEncryptedKey(ekv);
+  }
+
+  /**
+   * Calls {@link CryptoExtension#drain(String)} for the given key name on the
+   * underlying {@link CryptoExtension}.
+   *
+   * @param keyName
+   */
+  public void drain(String keyName) {
+    getExtension().drain(keyName);
   }
 
   /**

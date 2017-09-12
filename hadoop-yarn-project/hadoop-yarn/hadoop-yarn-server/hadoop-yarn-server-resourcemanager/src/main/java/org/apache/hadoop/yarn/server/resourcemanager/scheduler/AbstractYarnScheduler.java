@@ -529,6 +529,7 @@ public abstract class AbstractYarnScheduler
           node.getHttpAddress(), status.getAllocatedResource(),
           status.getPriority(), null);
     container.setVersion(status.getVersion());
+    container.setExecutionType(status.getExecutionType());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
     RMContainer rmContainer = new RMContainerImpl(container,
@@ -1282,5 +1283,16 @@ public abstract class AbstractYarnScheduler
   public void asyncContainerRelease(RMContainer container) {
     this.rmContext.getDispatcher().getEventHandler()
         .handle(new ReleaseContainerEvent(container));
+  }
+
+  @Override
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
+    // -1 indicates, lifetime is not configured.
+    return -1;
+  }
+
+  @Override
+  public long getMaximumApplicationLifetime(String queueName) {
+    return -1;
   }
 }

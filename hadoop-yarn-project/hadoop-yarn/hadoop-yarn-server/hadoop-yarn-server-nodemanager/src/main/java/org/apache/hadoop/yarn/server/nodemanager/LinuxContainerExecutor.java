@@ -625,7 +625,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public String[] getIpAndHost(Container container) {
+  public String[] getIpAndHost(Container container)
+      throws ContainerExecutionException {
     return linuxContainerRuntime.getIpAndHost(container);
   }
 

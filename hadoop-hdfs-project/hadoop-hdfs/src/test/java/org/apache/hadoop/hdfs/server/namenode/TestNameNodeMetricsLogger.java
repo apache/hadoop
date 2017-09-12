@@ -110,6 +110,7 @@ public class TestNameNodeMetricsLogger {
       throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://localhost:0");
+    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.setInt(DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY,
         enableMetricsLogging ? 1 : 0);  // If enabled, log early and log often

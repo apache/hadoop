@@ -196,6 +196,45 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalBadbefore + 1, metrics.getAppsFailedRetrieved());
   }
 
+  /**
+   * This test validates the correctness of the metric: Retrieved Multiple Apps
+   * successfully.
+   */
+  @Test
+  public void testSucceededMultipleAppsReport() {
+
+    long totalGoodBefore = metrics.getNumSucceededMultipleAppsRetrieved();
+
+    goodSubCluster.getApplicationsReport(100);
+
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededMultipleAppsRetrieved());
+    Assert.assertEquals(100, metrics.getLatencySucceededMultipleGetAppReport(),
+        0);
+
+    goodSubCluster.getApplicationsReport(200);
+
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededMultipleAppsRetrieved());
+    Assert.assertEquals(150, metrics.getLatencySucceededMultipleGetAppReport(),
+        0);
+  }
+
+  /**
+   * This test validates the correctness of the metric: Failed to retrieve
+   * Multiple Apps.
+   */
+  @Test
+  public void testMulipleAppsReportFailed() {
+
+    long totalBadbefore = metrics.getMultipleAppsFailedRetrieved();
+
+    badSubCluster.getApplicationsReport();
+
+    Assert.assertEquals(totalBadbefore + 1,
+        metrics.getMultipleAppsFailedRetrieved());
+  }
+
   // Records failures for all calls
   private class MockBadSubCluster {
     public void getNewApplication() {
@@ -216,6 +255,11 @@ public class TestRouterMetrics {
     public void getApplicationReport() {
       LOG.info("Mocked: failed getApplicationReport call");
       metrics.incrAppsFailedRetrieved();
+    }
+
+    public void getApplicationsReport() {
+      LOG.info("Mocked: failed getApplicationsReport call");
+      metrics.incrMultipleAppsFailedRetrieved();
     }
   }
 
@@ -243,6 +287,12 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful getApplicationReport call with duration {}",
           duration);
       metrics.succeededAppsRetrieved(duration);
+    }
+
+    public void getApplicationsReport(long duration) {
+      LOG.info("Mocked: successful getApplicationsReport call with duration {}",
+          duration);
+      metrics.succeededMultipleAppsRetrieved(duration);
     }
   }
 }

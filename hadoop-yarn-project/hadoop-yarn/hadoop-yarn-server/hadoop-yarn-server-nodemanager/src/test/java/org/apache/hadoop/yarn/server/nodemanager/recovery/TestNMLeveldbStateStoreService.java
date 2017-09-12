@@ -32,6 +32,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -234,7 +235,8 @@ public class TestNMLeveldbStateStoreService {
     StartContainerRequest containerReq = createContainerRequest(containerId);
 
     // store a container and verify recovered
-    stateStore.storeContainer(containerId, 0, containerReq);
+    long containerStartTime = System.currentTimeMillis();
+    stateStore.storeContainer(containerId, 0, containerStartTime, containerReq);
 
     // verify the container version key is not stored for new containers
     DB db = stateStore.getDB();
@@ -246,6 +248,7 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
     assertEquals(0, rcs.getVersion());
+    assertEquals(containerStartTime, rcs.getStartTime());
     assertEquals(RecoveredContainerStatus.REQUESTED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());
@@ -959,46 +962,12 @@ public class TestNMLeveldbStateStoreService {
         .loadContainersState();
     assertTrue(recoveredContainers.isEmpty());
 
-    // create a container request
     ApplicationId appId = ApplicationId.newInstance(1234, 3);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
         4);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
-    LocalResource lrsrc = LocalResource.newInstance(
-        URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
-        LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
-        1234567890L);
-    Map<String, LocalResource> localResources =
-        new HashMap<String, LocalResource>();
-    localResources.put("rsrc", lrsrc);
-    Map<String, String> env = new HashMap<String, String>();
-    env.put("somevar", "someval");
-    List<String> containerCmds = new ArrayList<String>();
-    containerCmds.add("somecmd");
-    containerCmds.add("somearg");
-    Map<String, ByteBuffer> serviceData = new HashMap<String, ByteBuffer>();
-    serviceData.put("someservice",
-        ByteBuffer.wrap(new byte[] { 0x1, 0x2, 0x3 }));
-    ByteBuffer containerTokens = ByteBuffer
-        .wrap(new byte[] { 0x7, 0x8, 0x9, 0xa });
-    Map<ApplicationAccessType, String> acls =
-        new HashMap<ApplicationAccessType, String>();
-    acls.put(ApplicationAccessType.VIEW_APP, "viewuser");
-    acls.put(ApplicationAccessType.MODIFY_APP, "moduser");
-    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
-        localResources, env, containerCmds,
-        serviceData, containerTokens, acls);
-    Resource containerRsrc = Resource.newInstance(1357, 3);
-    ContainerTokenIdentifier containerTokenId = new ContainerTokenIdentifier(
-        containerId, "host", "user", containerRsrc, 9876543210L, 42, 2468,
-        Priority.newInstance(7), 13579);
-    Token containerToken = Token.newInstance(containerTokenId.getBytes(),
-        ContainerTokenIdentifier.KIND.toString(), "password".getBytes(),
-        "tokenservice");
-    StartContainerRequest containerReq = StartContainerRequest.newInstance(clc,
-        containerToken);
-
-    stateStore.storeContainer(containerId, 0, containerReq);
+    StartContainerRequest startContainerRequest = storeMockContainer(
+        containerId);
 
     // add a invalid key
     byte[] invalidKey = ("ContainerManager/containers/"
@@ -1011,7 +980,7 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(RecoveredContainerStatus.REQUESTED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());
-    assertEquals(containerReq, rcs.getStartRequest());
+    assertEquals(startContainerRequest, rcs.getStartRequest());
     assertTrue(rcs.getDiagnostics().isEmpty());
     assertEquals(RecoveredContainerType.KILL, rcs.getRecoveryType());
     // assert unknown keys are cleaned up finally
@@ -1117,6 +1086,86 @@ public class TestNMLeveldbStateStoreService {
     } finally {
       secretManager.stop();
     }
+  }
+
+  @Test
+  public void testStateStoreForResourceMapping() throws IOException {
+    // test empty when no state
+    List<RecoveredContainerState> recoveredContainers = stateStore
+        .loadContainersState();
+    assertTrue(recoveredContainers.isEmpty());
+
+    ApplicationId appId = ApplicationId.newInstance(1234, 3);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
+        4);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
+    storeMockContainer(containerId);
+
+    // Store ResourceMapping
+    stateStore.storeAssignedResources(containerId, "gpu",
+        Arrays.asList("1", "2", "3"));
+    // This will overwrite above
+    List<Serializable> gpuRes1 = Arrays.asList("1", "2", "4");
+    stateStore.storeAssignedResources(containerId, "gpu", gpuRes1);
+    List<Serializable> fpgaRes = Arrays.asList("3", "4", "5", "6");
+    stateStore.storeAssignedResources(containerId, "fpga", fpgaRes);
+    List<Serializable> numaRes = Arrays.asList("numa1");
+    stateStore.storeAssignedResources(containerId, "numa", numaRes);
+
+    // add a invalid key
+    restartStateStore();
+    recoveredContainers = stateStore.loadContainersState();
+    assertEquals(1, recoveredContainers.size());
+    RecoveredContainerState rcs = recoveredContainers.get(0);
+    List<Serializable> res = rcs.getResourceMappings()
+        .getAssignedResources("gpu");
+    Assert.assertTrue(res.equals(gpuRes1));
+
+    res = rcs.getResourceMappings().getAssignedResources("fpga");
+    Assert.assertTrue(res.equals(fpgaRes));
+
+    res = rcs.getResourceMappings().getAssignedResources("numa");
+    Assert.assertTrue(res.equals(numaRes));
+  }
+
+  private StartContainerRequest storeMockContainer(ContainerId containerId)
+      throws IOException {
+    // create a container request
+    LocalResource lrsrc = LocalResource.newInstance(
+        URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
+        LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
+        1234567890L);
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put("rsrc", lrsrc);
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("somevar", "someval");
+    List<String> containerCmds = new ArrayList<String>();
+    containerCmds.add("somecmd");
+    containerCmds.add("somearg");
+    Map<String, ByteBuffer> serviceData = new HashMap<String, ByteBuffer>();
+    serviceData.put("someservice",
+        ByteBuffer.wrap(new byte[] { 0x1, 0x2, 0x3 }));
+    ByteBuffer containerTokens = ByteBuffer
+        .wrap(new byte[] { 0x7, 0x8, 0x9, 0xa });
+    Map<ApplicationAccessType, String> acls =
+        new HashMap<ApplicationAccessType, String>();
+    acls.put(ApplicationAccessType.VIEW_APP, "viewuser");
+    acls.put(ApplicationAccessType.MODIFY_APP, "moduser");
+    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
+        localResources, env, containerCmds,
+        serviceData, containerTokens, acls);
+    Resource containerRsrc = Resource.newInstance(1357, 3);
+    ContainerTokenIdentifier containerTokenId = new ContainerTokenIdentifier(
+        containerId, "host", "user", containerRsrc, 9876543210L, 42, 2468,
+        Priority.newInstance(7), 13579);
+    Token containerToken = Token.newInstance(containerTokenId.getBytes(),
+        ContainerTokenIdentifier.KIND.toString(), "password".getBytes(),
+        "tokenservice");
+    StartContainerRequest containerReq = StartContainerRequest.newInstance(clc,
+        containerToken);
+    stateStore.storeContainer(containerId, 0, 0, containerReq);
+    return containerReq;
   }
 
   private static class NMTokenSecretManagerForTest extends

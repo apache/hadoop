@@ -22,8 +22,10 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.WEB_UI_TYPE;
 
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringEscapeUtils;
@@ -49,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -114,8 +117,7 @@ public class AppBlock extends HtmlBlock {
             new PrivilegedExceptionAction<ApplicationReport> () {
           @Override
           public ApplicationReport run() throws Exception {
-            return appBaseProt.getApplicationReport(request)
-                .getApplicationReport();
+            return getApplicationReport(request);
           }
         });
       }
@@ -144,7 +146,8 @@ public class AppBlock extends HtmlBlock {
         && webUiType.equals(YarnWebParams.RM_WEB_UI)
         && conf.getBoolean(YarnConfiguration.RM_WEBAPP_UI_ACTIONS_ENABLED,
           YarnConfiguration.DEFAULT_RM_WEBAPP_UI_ACTIONS_ENABLED)
-            && !unsecuredUIForSecuredCluster) {
+            && !unsecuredUIForSecuredCluster
+            && !isAppInFinalState(app)) {
       // Application Kill
       html.div()
         .button()
@@ -189,8 +192,7 @@ public class AppBlock extends HtmlBlock {
               ApplicationAttemptReport>>() {
             @Override
             public Collection<ApplicationAttemptReport> run() throws Exception {
-              return appBaseProt.getApplicationAttempts(request)
-                  .getApplicationAttemptList();
+              return getApplicationAttemptsReport(request);
             }
           });
     } catch (Exception e) {
@@ -300,7 +302,7 @@ public class AppBlock extends HtmlBlock {
                       appAttemptReport.getAMContainerId());
         if (callerUGI == null) {
           containerReport =
-              appBaseProt.getContainerReport(request).getContainerReport();
+              getContainerReport(request);
         } else {
           containerReport = callerUGI.doAs(
               new PrivilegedExceptionAction<ContainerReport>() {
@@ -309,8 +311,7 @@ public class AppBlock extends HtmlBlock {
               ContainerReport report = null;
               if (request.getContainerId() != null) {
                   try {
-                    report = appBaseProt.getContainerReport(request)
-                        .getContainerReport();
+                    report = getContainerReport(request);
                   } catch (ContainerNotFoundException ex) {
                     LOG.warn(ex.getMessage());
                   }
@@ -362,6 +363,26 @@ public class AppBlock extends HtmlBlock {
 
     tbody.__().__();
   }
+
+  protected ContainerReport getContainerReport(
+      final GetContainerReportRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getContainerReport(request).getContainerReport();
+  }
+
+  protected List<ApplicationAttemptReport> getApplicationAttemptsReport(
+      final GetApplicationAttemptsRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getApplicationAttempts(request)
+        .getApplicationAttemptList();
+  }
+
+  protected ApplicationReport getApplicationReport(
+      final GetApplicationReportRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getApplicationReport(request).getApplicationReport();
+  }
+
 
   private String clarifyAppState(YarnApplicationState state) {
     String ret = state.toString();
@@ -418,5 +439,11 @@ public class AppBlock extends HtmlBlock {
       ret += "' : 'null' },";
     }
     return ret;
+  }
+
+  private boolean isAppInFinalState(AppInfo app) {
+    return app.getAppState() == YarnApplicationState.FINISHED
+        || app.getAppState() == YarnApplicationState.FAILED
+        || app.getAppState() == YarnApplicationState.KILLED;
   }
 }

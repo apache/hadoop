@@ -371,5 +371,4 @@ public final class TimelineStorageUtils {
     return (obj instanceof Short) || (obj instanceof Integer) ||
         (obj instanceof Long);
   }
-
 }

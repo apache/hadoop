@@ -70,7 +70,7 @@ public final class LambdaTestUtils {
      * @throws Exception if the handler wishes to raise an exception
      * that way.
      */
-    Exception evaluate(int timeoutMillis, Exception caught) throws Exception;
+    Throwable evaluate(int timeoutMillis, Throwable caught) throws Throwable;
   }
 
   /**
@@ -116,7 +116,7 @@ public final class LambdaTestUtils {
     Preconditions.checkNotNull(timeoutHandler);
 
     long endTime = Time.now() + timeoutMillis;
-    Exception ex = null;
+    Throwable ex = null;
     boolean running = true;
     int iterations = 0;
     while (running) {
@@ -128,9 +128,11 @@ public final class LambdaTestUtils {
         // the probe failed but did not raise an exception. Reset any
         // exception raised by a previous probe failure.
         ex = null;
-      } catch (InterruptedException | FailFastException e) {
+      } catch (InterruptedException
+          | FailFastException
+          | VirtualMachineError e) {
         throw e;
-      } catch (Exception e) {
+      } catch (Throwable e) {
         LOG.debug("eventually() iteration {}", iterations, e);
         ex = e;
       }
@@ -145,15 +147,20 @@ public final class LambdaTestUtils {
       }
     }
     // timeout
-    Exception evaluate = timeoutHandler.evaluate(timeoutMillis, ex);
-    if (evaluate == null) {
-      // bad timeout handler logic; fall back to GenerateTimeout so the
-      // underlying problem isn't lost.
-      LOG.error("timeout handler {} did not throw an exception ",
-          timeoutHandler);
-      evaluate = new GenerateTimeout().evaluate(timeoutMillis, ex);
+    Throwable evaluate;
+    try {
+      evaluate = timeoutHandler.evaluate(timeoutMillis, ex);
+      if (evaluate == null) {
+        // bad timeout handler logic; fall back to GenerateTimeout so the
+        // underlying problem isn't lost.
+        LOG.error("timeout handler {} did not throw an exception ",
+            timeoutHandler);
+        evaluate = new GenerateTimeout().evaluate(timeoutMillis, ex);
+      }
+    } catch (Throwable throwable) {
+      evaluate = throwable;
     }
-    throw evaluate;
+    return raise(evaluate);
   }
 
   /**
@@ -217,6 +224,7 @@ public final class LambdaTestUtils {
    * @throws Exception the last exception thrown before timeout was triggered
    * @throws FailFastException if raised -without any retry attempt.
    * @throws InterruptedException if interrupted during the sleep operation.
+   * @throws OutOfMemoryError you've run out of memory.
    */
   public static <T> T eventually(int timeoutMillis,
       Callable<T> eval,
@@ -224,7 +232,7 @@ public final class LambdaTestUtils {
     Preconditions.checkArgument(timeoutMillis >= 0,
         "timeoutMillis must be >= 0");
     long endTime = Time.now() + timeoutMillis;
-    Exception ex;
+    Throwable ex;
     boolean running;
     int sleeptime;
     int iterations = 0;
@@ -232,10 +240,12 @@ public final class LambdaTestUtils {
       iterations++;
       try {
         return eval.call();
-      } catch (InterruptedException | FailFastException e) {
+      } catch (InterruptedException
+          | FailFastException
+          | VirtualMachineError e) {
         // these two exceptions trigger an immediate exit
         throw e;
-      } catch (Exception e) {
+      } catch (Throwable e) {
         LOG.debug("evaluate() iteration {}", iterations, e);
         ex = e;
       }
@@ -245,7 +255,43 @@ public final class LambdaTestUtils {
       }
     } while (running);
     // timeout. Throw the last exception raised
-    throw ex;
+    return raise(ex);
+  }
+
+  /**
+   * Take the throwable and raise it as an exception or an error, depending
+   * upon its type. This allows callers to declare that they only throw
+   * Exception (i.e. can be invoked by Callable) yet still rethrow a
+   * previously caught Throwable.
+   * @param throwable Throwable to rethrow
+   * @param <T> expected return type
+   * @return never
+   * @throws Exception if throwable is an Exception
+   * @throws Error if throwable is not an Exception
+   */
+  private static <T> T raise(Throwable throwable) throws Exception {
+    if (throwable instanceof Exception) {
+      throw (Exception) throwable;
+    } else {
+      throw (Error) throwable;
+    }
+  }
+
+  /**
+   * Variant of {@link #eventually(int, Callable, Callable)} method for
+   * void lambda expressions.
+   * @param timeoutMillis timeout in milliseconds.
+   * Can be zero, in which case only one attempt is made before failing.
+   * @param eval expression to evaluate
+   * @param retry retry interval generator
+   * @throws Exception the last exception thrown before timeout was triggered
+   * @throws FailFastException if raised -without any retry attempt.
+   * @throws InterruptedException if interrupted during the sleep operation.
+   */
+  public static void eventually(int timeoutMillis,
+      VoidCallable eval,
+      Callable<Integer> retry) throws Exception {
+    eventually(timeoutMillis, new VoidCaller(eval), retry);
   }
 
   /**
@@ -273,6 +319,25 @@ public final class LambdaTestUtils {
       int intervalMillis,
       Callable<T> eval) throws Exception {
     return eventually(timeoutMillis, eval,
+        new FixedRetryInterval(intervalMillis));
+  }
+
+  /**
+   /**
+   * Variant of {@link #eventually(int, int, Callable)} method for
+   * void lambda expressions.
+   * @param timeoutMillis timeout in milliseconds.
+   * Can be zero, in which case only one attempt is made before failing.
+   * @param intervalMillis interval in milliseconds
+   * @param eval expression to evaluate
+   * @throws Exception the last exception thrown before timeout was triggered
+   * @throws FailFastException if raised -without any retry attempt.
+   * @throws InterruptedException if interrupted during the sleep operation.
+   */
+  public static void eventually(int timeoutMillis,
+      int intervalMillis,
+      VoidCallable eval) throws Exception {
+    eventually(timeoutMillis, eval,
         new FixedRetryInterval(intervalMillis));
   }
 
@@ -319,6 +384,33 @@ public final class LambdaTestUtils {
   }
 
   /**
+   * Variant of {@link #intercept(Class, Callable)} to simplify void
+   * invocations.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param eval expression to eval
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   */
+  @SuppressWarnings("unchecked")
+  public static <E extends Throwable> E intercept(
+      Class<E> clazz,
+      VoidCallable eval)
+      throws Exception {
+    try {
+      eval.call();
+      throw new AssertionError("Expected an exception");
+    } catch (Throwable e) {
+      if (clazz.isAssignableFrom(e.getClass())) {
+        return (E)e;
+      }
+      throw e;
+    }
+  }
+
+  /**
    * Intercept an exception; throw an {@code AssertionError} if one not raised.
    * The caught exception is rethrown if it is of the wrong class or
    * does not contain the text defined in {@code contained}.
@@ -352,6 +444,29 @@ public final class LambdaTestUtils {
       Class<E> clazz,
       String contained,
       Callable<T> eval)
+      throws Exception {
+    E ex = intercept(clazz, eval);
+    GenericTestUtils.assertExceptionContains(contained, ex);
+    return ex;
+  }
+
+  /**
+   * Variant of {@link #intercept(Class, Callable)} to simplify void
+   * invocations.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param eval expression to eval
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   */
+  public static <E extends Throwable> E intercept(
+      Class<E> clazz,
+      String contained,
+      VoidCallable eval)
       throws Exception {
     E ex = intercept(clazz, eval);
     GenericTestUtils.assertExceptionContains(contained, ex);
@@ -402,14 +517,14 @@ public final class LambdaTestUtils {
      * @return TimeoutException
      */
     @Override
-    public Exception evaluate(int timeoutMillis, Exception caught)
-        throws Exception {
+    public Throwable evaluate(int timeoutMillis, Throwable caught)
+        throws Throwable {
       String s = String.format("%s: after %d millis", message,
           timeoutMillis);
       String caughtText = caught != null
           ? ("; " + robustToString(caught)) : "";
 
-      return (TimeoutException) (new TimeoutException(s + caughtText)
+      return (new TimeoutException(s + caughtText)
                                      .initCause(caught));
     }
   }
@@ -518,4 +633,31 @@ public final class LambdaTestUtils {
       return new FailFastException(String.format(format, args));
     }
   }
+
+  /**
+   * A simple interface for lambdas, which returns nothing; this exists
+   * to simplify lambda tests on operations with no return value.
+   */
+  public interface VoidCallable {
+    void call() throws Exception;
+  }
+
+  /**
+   * Bridge class to make {@link VoidCallable} something to use in anything
+   * which takes an {@link Callable}.
+   */
+  public static class VoidCaller implements Callable<Void> {
+    private final VoidCallable callback;
+
+    public VoidCaller(VoidCallable callback) {
+      this.callback = callback;
+    }
+
+    @Override
+    public Void call() throws Exception {
+      callback.call();
+      return null;
+    }
+  }
+
 }

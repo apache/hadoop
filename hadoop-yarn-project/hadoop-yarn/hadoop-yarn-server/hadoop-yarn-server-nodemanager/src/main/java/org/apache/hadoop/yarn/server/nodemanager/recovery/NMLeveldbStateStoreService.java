@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
@@ -60,6 +62,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDelet
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
@@ -112,6 +115,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       "ContainerManager/containers/";
   private static final String CONTAINER_REQUEST_KEY_SUFFIX = "/request";
   private static final String CONTAINER_VERSION_KEY_SUFFIX = "/version";
+  private static final String CONTAINER_START_TIME_KEY_SUFFIX = "/starttime";
   private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
   private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
   private static final String CONTAINER_QUEUED_KEY_SUFFIX = "/queued";
@@ -142,6 +146,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
 
   private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
+
+  private static final String CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX =
+      "/assignedResources_";
 
   private static final byte[] EMPTY_VALUE = new byte[0];
 
@@ -257,6 +264,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             StartContainerRequestProto.parseFrom(entry.getValue()));
       } else if (suffix.equals(CONTAINER_VERSION_KEY_SUFFIX)) {
         rcs.version = Integer.parseInt(asString(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_START_TIME_KEY_SUFFIX)) {
+        rcs.setStartTime(Long.parseLong(asString(entry.getValue())));
       } else if (suffix.equals(CONTAINER_DIAGS_KEY_SUFFIX)) {
         rcs.diagnostics = asString(entry.getValue());
       } else if (suffix.equals(CONTAINER_QUEUED_KEY_SUFFIX)) {
@@ -283,6 +292,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         rcs.setWorkDir(asString(entry.getValue()));
       } else if (suffix.equals(CONTAINER_LOG_DIR_KEY_SUFFIX)) {
         rcs.setLogDir(asString(entry.getValue()));
+      } else if (suffix.startsWith(CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX)) {
+        String resourceType = suffix.substring(
+            CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX.length());
+        ResourceMappings.AssignedResources assignedResources =
+            ResourceMappings.AssignedResources.fromBytes(entry.getValue());
+        rcs.getResourceMappings().addAssignedResources(resourceType,
+            assignedResources);
       } else {
         LOG.warn("the container " + containerId
             + " will be killed because of the unknown key " + key
@@ -296,21 +312,23 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainer(ContainerId containerId, int containerVersion,
-      StartContainerRequest startRequest) throws IOException {
+      long startTime, StartContainerRequest startRequest) throws IOException {
     String idStr = containerId.toString();
     if (LOG.isDebugEnabled()) {
       LOG.debug("storeContainer: containerId= " + idStr
           + ", startRequest= " + startRequest);
     }
-    String keyRequest = CONTAINERS_KEY_PREFIX + idStr
-        + CONTAINER_REQUEST_KEY_SUFFIX;
+    String keyRequest = getContainerKey(idStr, CONTAINER_REQUEST_KEY_SUFFIX);
     String keyVersion = getContainerVersionKey(idStr);
+    String keyStartTime =
+        getContainerKey(idStr, CONTAINER_START_TIME_KEY_SUFFIX);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
         batch.put(bytes(keyRequest),
-            ((StartContainerRequestPBImpl) startRequest)
-                .getProto().toByteArray());
+            ((StartContainerRequestPBImpl) startRequest).getProto().
+                toByteArray());
+        batch.put(bytes(keyStartTime), bytes(Long.toString(startTime)));
         if (containerVersion != 0) {
           batch.put(bytes(keyVersion),
               bytes(Integer.toString(containerVersion)));
@@ -326,7 +344,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @VisibleForTesting
   String getContainerVersionKey(String containerId) {
-    return CONTAINERS_KEY_PREFIX + containerId + CONTAINER_VERSION_KEY_SUFFIX;
+    return getContainerKey(containerId, CONTAINER_VERSION_KEY_SUFFIX);
+  }
+
+  private String getContainerKey(String containerId, String suffix) {
+    return CONTAINERS_KEY_PREFIX + containerId + suffix;
   }
 
   @Override
@@ -1077,6 +1099,35 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String key = getLogDeleterKey(appId);
     try {
       db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeAssignedResources(ContainerId containerId,
+      String resourceType, List<Serializable> assignedResources)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("storeAssignedResources: containerId=" + containerId
+          + ", assignedResources=" + StringUtils.join(",", assignedResources));
+    }
+
+    String keyResChng = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + resourceType;
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        ResourceMappings.AssignedResources res =
+            new ResourceMappings.AssignedResources();
+        res.updateAssignedResources(assignedResources);
+
+        // New value will overwrite old values for the same key
+        batch.put(bytes(keyResChng), res.toBytes());
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
     } catch (DBException e) {
       throw new IOException(e);
     }

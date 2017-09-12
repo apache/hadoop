@@ -593,6 +593,7 @@
         <crypto-admin-command>-listZones</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
+        <command>-fs NAMENODE -deleteSnapshot /snapshotable snapshot1</command>
         <command>-fs NAMENODE -rm -r /snapshotable</command>
         <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
       </cleanup-commands>
@@ -680,6 +681,37 @@
         <comparator>
           <type>TokenComparator</type>
           <expected-output>/src,Completed,false,myKey,zone2</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test adding two zones to a snapshotable directory;
+        The second zone is not a direct child of snapshottable directory;
+        Take snapshot, permanently delete second EZ, then list zones;</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <command>-fs NAMENODE -mkdir /snapshotable</command>
+        <command>-fs NAMENODE -mkdir /snapshotable/test1</command>
+        <command>-fs NAMENODE -mkdir /snapshotable/test1/test2</command>
+        <command>-fs NAMENODE -mkdir /snapshotable/test3</command>
+        <dfs-admin-command>-fs NAMENODE -allowSnapshot /snapshotable</dfs-admin-command>
+        <crypto-admin-command>-createZone -path /snapshotable/test1/test2 -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /snapshotable/test3 -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -createSnapshot /snapshotable snapshot1</command>
+        <command>-fs NAMENODE -rm -r /snapshotable/test1</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <crypto-admin-command>-listZones</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -deleteSnapshot /snapshotable snapshot1</command>
+        <command>-fs NAMENODE -rm -r /snapshotable</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>(/test3)\s*(myKey)\s*</expected-output>
         </comparator>
       </comparators>
     </test>

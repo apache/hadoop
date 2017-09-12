@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.S3ClientOptions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
@@ -483,7 +484,7 @@ public class ITestS3AConfiguration {
       }
     });
     assertEquals("username", alice, fs.getUsername());
-    S3AFileStatus status = fs.getFileStatus(new Path("/"));
+    FileStatus status = fs.getFileStatus(new Path("/"));
     assertEquals("owner in " + status, alice, status.getOwner());
     assertEquals("group in " + status, alice, status.getGroup());
   }

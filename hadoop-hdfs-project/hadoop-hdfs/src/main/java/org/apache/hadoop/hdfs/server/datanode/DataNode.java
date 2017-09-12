@@ -2554,7 +2554,8 @@ public class DataNode extends ReconfigurableBase
         // disk check moved to FileIoProvider
         IOException cause = DatanodeUtil.getCauseIfDiskError(ie);
         if (cause != null) { // possible disk error
-          LOG.warn("IOException in DataTransfer#run(). Cause is ", cause);
+          LOG.warn("IOException in DataTransfer#run() "+ ie.getMessage() +". "
+                  + "Cause is ", cause);
         }
       } finally {
         decrementXmitsInProgress();

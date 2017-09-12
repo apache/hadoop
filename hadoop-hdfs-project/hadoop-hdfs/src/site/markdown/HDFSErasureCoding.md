@@ -192,7 +192,7 @@ Below are the details about each command.
 
  *  `[-listPolicies]`
 
-     Lists the set of enabled erasure coding policies. These names are suitable for use with the `setPolicy` command.
+     Lists all (enabled, disabled and removed) erasure coding policies registered in HDFS. Only the enabled policies are suitable for use with the `setPolicy` command.
 
  *  `[-addPolicies -policyFile <file>]`
 

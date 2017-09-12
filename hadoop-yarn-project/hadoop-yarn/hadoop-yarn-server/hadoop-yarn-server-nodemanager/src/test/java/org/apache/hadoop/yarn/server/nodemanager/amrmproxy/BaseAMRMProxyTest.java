@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -659,7 +660,13 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
-    public Map<ApplicationId, String> getRegisteredCollectors() {
+    public ConcurrentMap<ApplicationId, AppCollectorData>
+        getRegisteringCollectors() {
+      return null;
+    }
+
+    @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors() {
       return null;
     }
 

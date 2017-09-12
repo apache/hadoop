@@ -155,6 +155,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProv
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -400,6 +401,16 @@ public class ContainerManagerImpl extends CompositeService implements
       if (LOG.isDebugEnabled()) {
         LOG.debug(
             "Recovering Flow context: " + fc + " for an application " + appId);
+      }
+    } else {
+      // in upgrade situations, where there is no prior existing flow context,
+      // default would be used.
+      fc = new FlowContext(TimelineUtils.generateDefaultFlowName(null, appId),
+          YarnConfiguration.DEFAULT_FLOW_VERSION, appId.getClusterTimestamp());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "No prior existing flow context found. Using default Flow context: "
+                + fc + " for an application " + appId);
       }
     }
 
@@ -1052,10 +1063,11 @@ public class ContainerManagerImpl extends CompositeService implements
     Credentials credentials =
         YarnServerSecurityUtils.parseCredentials(launchContext);
 
+    long containerStartTime = SystemClock.getInstance().getTime();
     Container container =
         new ContainerImpl(getConfig(), this.dispatcher,
             launchContext, credentials, metrics, containerTokenIdentifier,
-            context);
+            context, containerStartTime);
     ApplicationId applicationID =
         containerId.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerId, container) != null) {
@@ -1112,7 +1124,7 @@ public class ContainerManagerImpl extends CompositeService implements
         }
 
         this.context.getNMStateStore().storeContainer(containerId,
-            containerTokenIdentifier.getVersion(), request);
+            containerTokenIdentifier.getVersion(), containerStartTime, request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
 

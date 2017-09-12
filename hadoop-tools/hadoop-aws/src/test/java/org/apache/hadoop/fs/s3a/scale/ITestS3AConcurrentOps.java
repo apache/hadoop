@@ -107,7 +107,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
 
   private S3AFileSystem getNormalFileSystem() throws Exception {
     S3AFileSystem s3a = new S3AFileSystem();
-    Configuration conf = new Configuration();
+    Configuration conf = createScaleConfiguration();
     URI rootURI = new URI(conf.get(TEST_FS_S3A_NAME));
     s3a.initialize(rootURI, conf);
     return s3a;
@@ -115,6 +115,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
 
   @After
   public void teardown() throws Exception {
+    super.teardown();
     if (auxFs != null) {
       auxFs.delete(testRoot, true);
     }

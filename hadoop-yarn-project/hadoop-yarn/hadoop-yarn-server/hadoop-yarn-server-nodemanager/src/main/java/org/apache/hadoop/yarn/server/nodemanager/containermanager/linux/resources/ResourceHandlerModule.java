@@ -268,11 +268,11 @@ public class ResourceHandlerModule {
       // Collect the valid subsystem names
       cgroupList.retainAll(validCGroups);
       if (!cgroupList.isEmpty()) {
-        if (candidate.isDirectory() && candidate.canWrite()) {
+        if (candidate.isDirectory()) {
           pathSubsystemMappings.put(candidate.getAbsolutePath(), cgroupList);
         } else {
-          LOG.warn("The following cgroup is not a directory or it is not"
-              + " writable" + candidate.getAbsolutePath());
+          LOG.warn("The following cgroup is not a directory " +
+              candidate.getAbsolutePath());
         }
       }
     }

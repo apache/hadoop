@@ -113,7 +113,8 @@ public class RMAdminCLI extends HAAdmin {
               + " be handled by the client or the ResourceManager. The client"
               + "-side tracking is blocking, while the server-side tracking"
               + " is not. Omitting the timeout, or a timeout of -1, indicates"
-              + " an infinite timeout."))
+              + " an infinite timeout. Known Issue: the server-side tracking"
+              + " will immediately decommission if an RM HA failover occurs."))
           .put("-refreshNodesResources", new UsageInfo("",
               "Refresh resources of NodeManagers at the ResourceManager."))
           .put("-refreshSuperUserGroupsConfiguration", new UsageInfo("",

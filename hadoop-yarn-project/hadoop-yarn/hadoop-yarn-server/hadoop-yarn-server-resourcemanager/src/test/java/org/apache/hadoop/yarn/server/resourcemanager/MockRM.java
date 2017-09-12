@@ -513,6 +513,17 @@ public class MockRM extends ResourceManager {
         false, false, null, 0, null, true, priority);
   }
 
+  public RMApp submitApp(int masterMemory, Priority priority,
+      Credentials cred, ByteBuffer tokensConf) throws Exception {
+    Resource resource = Resource.newInstance(masterMemory, 0);
+    return submitApp(resource, "", UserGroupInformation.getCurrentUser()
+        .getShortUserName(), null, false, null,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), cred, null, true,
+        false, false, null, 0, null, true, priority, null, null,
+        tokensConf);
+  }
+
   public RMApp submitApp(int masterMemory, boolean unmanaged)
       throws Exception {
     return submitApp(masterMemory, "", UserGroupInformation.getCurrentUser()

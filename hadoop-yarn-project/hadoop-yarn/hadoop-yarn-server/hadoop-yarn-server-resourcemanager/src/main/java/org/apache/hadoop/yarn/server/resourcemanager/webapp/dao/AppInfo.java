@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.DeSelectFields.DeSel
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 
 @XmlRootElement(name = "app")
@@ -71,9 +72,9 @@ public class AppInfo {
   // these are ok for any user to see
   protected String id;
   protected String user;
-  protected String name;
+  private String name;
   protected String queue;
-  protected YarnApplicationState state;
+  private YarnApplicationState state;
   protected FinalApplicationStatus finalStatus;
   protected float progress;
   protected String trackingUI;
@@ -91,21 +92,21 @@ public class AppInfo {
   protected String amContainerLogs;
   protected String amHostHttpAddress;
   private String amRPCAddress;
-  protected long allocatedMB;
-  protected long allocatedVCores;
-  protected long reservedMB;
-  protected long reservedVCores;
-  protected int runningContainers;
-  protected long memorySeconds;
-  protected long vcoreSeconds;
+  private long allocatedMB;
+  private long allocatedVCores;
+  private long reservedMB;
+  private long reservedVCores;
+  private int runningContainers;
+  private long memorySeconds;
+  private long vcoreSeconds;
   protected float queueUsagePercentage;
   protected float clusterUsagePercentage;
 
   // preemption info fields
-  protected long preemptedResourceMB;
-  protected long preemptedResourceVCores;
-  protected int numNonAMContainerPreempted;
-  protected int numAMContainerPreempted;
+  private long preemptedResourceMB;
+  private long preemptedResourceVCores;
+  private int numNonAMContainerPreempted;
+  private int numAMContainerPreempted;
   private long preemptedMemorySeconds;
   private long preemptedVcoreSeconds;
 
@@ -142,12 +143,11 @@ public class AppInfo {
           || YarnApplicationState.NEW_SAVING == this.state
           || YarnApplicationState.SUBMITTED == this.state
           || YarnApplicationState.ACCEPTED == this.state;
-      this.trackingUI = this.trackingUrlIsNotReady ? "UNASSIGNED" : (app
-          .getFinishTime() == 0 ? "ApplicationMaster" : "History");
+      this.trackingUI = this.trackingUrlIsNotReady ? "UNASSIGNED"
+          : (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
       if (!trackingUrlIsNotReady) {
         this.trackingUrl =
-            WebAppUtils.getURLWithScheme(schemePrefix,
-                trackingUrl);
+            WebAppUtils.getURLWithScheme(schemePrefix, trackingUrl);
         this.trackingUrlPretty = this.trackingUrl;
       } else {
         this.trackingUrlPretty = "UNASSIGNED";
@@ -162,15 +162,15 @@ public class AppInfo {
       this.priority = 0;
 
       if (app.getApplicationPriority() != null) {
-        this.priority = app.getApplicationPriority()
-            .getPriority();
+        this.priority = app.getApplicationPriority().getPriority();
       }
       this.progress = app.getProgress() * 100;
       this.diagnostics = app.getDiagnostics().toString();
       if (diagnostics == null || diagnostics.isEmpty()) {
         this.diagnostics = "";
       }
-      if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
+      if (app.getApplicationTags() != null
+          && !app.getApplicationTags().isEmpty()) {
         this.applicationTags = Joiner.on(',').join(app.getApplicationTags());
       }
       this.finalStatus = app.getFinalApplicationStatus();
@@ -178,8 +178,8 @@ public class AppInfo {
       if (hasAccess) {
         this.startedTime = app.getStartTime();
         this.finishedTime = app.getFinishTime();
-        this.elapsedTime = Times.elapsed(app.getStartTime(),
-            app.getFinishTime());
+        this.elapsedTime =
+            Times.elapsed(app.getStartTime(), app.getFinishTime());
         this.logAggregationStatus = app.getLogAggregationStatusForAppReport();
         RMAppAttempt attempt = app.getCurrentAppAttempt();
         if (attempt != null) {
@@ -194,8 +194,8 @@ public class AppInfo {
 
           this.amRPCAddress = getAmRPCAddressFromRMAppAttempt(attempt);
 
-          ApplicationResourceUsageReport resourceReport = attempt
-              .getApplicationResourceUsageReport();
+          ApplicationResourceUsageReport resourceReport =
+              attempt.getApplicationResourceUsageReport();
           if (resourceReport != null) {
             Resource usedResources = resourceReport.getUsedResources();
             Resource reservedResources = resourceReport.getReservedResources();
@@ -208,10 +208,11 @@ public class AppInfo {
             clusterUsagePercentage = resourceReport.getClusterUsagePercentage();
           }
 
-          /* When the deSelects parameter contains "resourceRequests",
-             it skips returning massive ResourceRequest objects and vice versa.
-             Default behavior is no skipping. (YARN-6280)
-          */
+          /*
+           * When the deSelects parameter contains "resourceRequests", it skips
+           * returning massive ResourceRequest objects and vice versa. Default
+           * behavior is no skipping. (YARN-6280)
+           */
           if (!deSelects.contains(DeSelectType.RESOURCE_REQUESTS)) {
             List<ResourceRequest> resourceRequestsRaw = rm.getRMContext()
                 .getScheduler().getPendingResourceRequestsForAttempt(
@@ -228,12 +229,9 @@ public class AppInfo {
 
       // copy preemption info fields
       RMAppMetrics appMetrics = app.getRMAppMetrics();
-      numAMContainerPreempted =
-          appMetrics.getNumAMContainersPreempted();
-      preemptedResourceMB =
-          appMetrics.getResourcePreempted().getMemorySize();
-      numNonAMContainerPreempted =
-          appMetrics.getNumNonAMContainersPreempted();
+      numAMContainerPreempted = appMetrics.getNumAMContainersPreempted();
+      preemptedResourceMB = appMetrics.getResourcePreempted().getMemorySize();
+      numNonAMContainerPreempted = appMetrics.getNumNonAMContainersPreempted();
       preemptedResourceVCores =
           appMetrics.getResourcePreempted().getVirtualCores();
       memorySeconds = appMetrics.getMemorySeconds();
@@ -242,8 +240,7 @@ public class AppInfo {
       preemptedVcoreSeconds = appMetrics.getPreemptedVcoreSeconds();
       ApplicationSubmissionContext appSubmissionContext =
           app.getApplicationSubmissionContext();
-      unmanagedApplication =
-          appSubmissionContext.getUnmanagedAM();
+      unmanagedApplication = appSubmissionContext.getUnmanagedAM();
       appNodeLabelExpression =
           app.getApplicationSubmissionContext().getNodeLabelExpression();
       amNodeLabelExpression = (unmanagedApplication) ? null
@@ -286,6 +283,7 @@ public class AppInfo {
           timeouts.add(timeout);
         }
       }
+
     }
   }
 
@@ -396,19 +394,19 @@ public class AppInfo {
   public String getApplicationTags() {
     return this.applicationTags;
   }
-  
+
   public int getRunningContainers() {
     return this.runningContainers;
   }
-  
+
   public long getAllocatedMB() {
     return this.allocatedMB;
   }
-  
+
   public long getAllocatedVCores() {
     return this.allocatedVCores;
   }
-  
+
   public long getReservedMB() {
     return this.reservedMB;
   }
@@ -417,22 +415,6 @@ public class AppInfo {
     return this.reservedVCores;
   }
 
-  public long getPreemptedMB() {
-    return preemptedResourceMB;
-  }
-
-  public long getPreemptedVCores() {
-    return preemptedResourceVCores;
-  }
-
-  public int getNumNonAMContainersPreempted() {
-    return numNonAMContainerPreempted;
-  }
-  
-  public int getNumAMContainersPreempted() {
-    return numAMContainerPreempted;
-  }
- 
   public long getMemorySeconds() {
     return memorySeconds;
   }
@@ -448,8 +430,13 @@ public class AppInfo {
   public long getPreemptedVcoreSeconds() {
     return preemptedVcoreSeconds;
   }
+
   public List<ResourceRequestInfo> getResourceRequests() {
     return this.resourceRequests;
+  }
+
+  public void setResourceRequests(List<ResourceRequestInfo> resourceRequests) {
+    this.resourceRequests = resourceRequests;
   }
 
   public LogAggregationStatus getLogAggregationStatus() {
@@ -474,5 +461,90 @@ public class AppInfo {
 
   public ResourcesInfo getResourceInfo() {
     return resourceInfo;
+  }
+
+  public long getPreemptedResourceMB() {
+    return preemptedResourceMB;
+  }
+
+  public void setPreemptedResourceMB(long preemptedResourceMB) {
+    this.preemptedResourceMB = preemptedResourceMB;
+  }
+
+  public long getPreemptedResourceVCores() {
+    return preemptedResourceVCores;
+  }
+
+  public void setPreemptedResourceVCores(long preemptedResourceVCores) {
+    this.preemptedResourceVCores = preemptedResourceVCores;
+  }
+
+  public int getNumNonAMContainerPreempted() {
+    return numNonAMContainerPreempted;
+  }
+
+  public void setNumNonAMContainerPreempted(int numNonAMContainerPreempted) {
+    this.numNonAMContainerPreempted = numNonAMContainerPreempted;
+  }
+
+  public int getNumAMContainerPreempted() {
+    return numAMContainerPreempted;
+  }
+
+  public void setNumAMContainerPreempted(int numAMContainerPreempted) {
+    this.numAMContainerPreempted = numAMContainerPreempted;
+  }
+
+  public void setPreemptedMemorySeconds(long preemptedMemorySeconds) {
+    this.preemptedMemorySeconds = preemptedMemorySeconds;
+  }
+
+  public void setPreemptedVcoreSeconds(long preemptedVcoreSeconds) {
+    this.preemptedVcoreSeconds = preemptedVcoreSeconds;
+  }
+
+  public void setAllocatedMB(long allocatedMB) {
+    this.allocatedMB = allocatedMB;
+  }
+
+  public void setAllocatedVCores(long allocatedVCores) {
+    this.allocatedVCores = allocatedVCores;
+  }
+
+  public void setReservedMB(long reservedMB) {
+    this.reservedMB = reservedMB;
+  }
+
+  public void setReservedVCores(long reservedVCores) {
+    this.reservedVCores = reservedVCores;
+  }
+
+  public void setRunningContainers(int runningContainers) {
+    this.runningContainers = runningContainers;
+  }
+
+  public void setMemorySeconds(long memorySeconds) {
+    this.memorySeconds = memorySeconds;
+  }
+
+  public void setVcoreSeconds(long vcoreSeconds) {
+    this.vcoreSeconds = vcoreSeconds;
+  }
+
+  public void setAppId(String appId) {
+    this.id = appId;
+  }
+
+  @VisibleForTesting
+  public void setAMHostHttpAddress(String amHost) {
+    this.amHostHttpAddress = amHost;
+  }
+
+  public void setState(YarnApplicationState state) {
+    this.state = state;
+  }
+
+  public void setName(String name) {
+    this.name = name;
   }
 }

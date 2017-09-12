@@ -848,7 +848,8 @@ public class RMContainerAllocator extends RMContainerRequestor
       updateAMRMToken(response.getAMRMToken());
     }
 
-    List<ContainerStatus> finishedContainers = response.getCompletedContainersStatuses();
+    List<ContainerStatus> finishedContainers =
+        response.getCompletedContainersStatuses();
 
     // propagate preemption requests
     final PreemptionMessage preemptReq = response.getPreemptionMessage();
@@ -877,16 +878,13 @@ public class RMContainerAllocator extends RMContainerRequestor
 
     handleUpdatedNodes(response);
     handleJobPriorityChange(response);
-    // handle receiving the timeline collector address for this app
-    String collectorAddr = response.getCollectorAddr();
+    // Handle receiving the timeline collector address and token for this app.
     MRAppMaster.RunningAppContext appContext =
         (MRAppMaster.RunningAppContext)this.getContext();
-    if (collectorAddr != null && !collectorAddr.isEmpty()
-        && appContext.getTimelineV2Client() != null) {
-      appContext.getTimelineV2Client().setTimelineServiceAddress(
-          response.getCollectorAddr());
+    if (appContext.getTimelineV2Client() != null) {
+      appContext.getTimelineV2Client().
+          setTimelineCollectorInfo(response.getCollectorInfo());
     }
-
     for (ContainerStatus cont : finishedContainers) {
       processFinishedContainer(cont);
     }

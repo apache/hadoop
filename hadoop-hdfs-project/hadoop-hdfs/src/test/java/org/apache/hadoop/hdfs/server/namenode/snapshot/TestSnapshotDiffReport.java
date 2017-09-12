@@ -18,10 +18,13 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Random;
@@ -43,15 +46,21 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests snapshot deletion.
  */
 public class TestSnapshotDiffReport {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSnapshotDiffReport.class);
+
   private static final long SEED = 0;
   private static final short REPLICATION = 3;
   private static final short REPLICATION_1 = 2;
@@ -73,6 +82,10 @@ public class TestSnapshotDiffReport {
     conf = new Configuration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES, true);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 1);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE,
+        true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .format(true).build();
     cluster.waitActive();
@@ -167,8 +180,8 @@ public class TestSnapshotDiffReport {
     // reverse the order of from and to
     SnapshotDiffReport inverseReport = hdfs
         .getSnapshotDiffReport(dir, to, from);
-    System.out.println(report.toString());
-    System.out.println(inverseReport.toString() + "\n");
+    LOG.info(report.toString());
+    LOG.info(inverseReport.toString() + "\n");
     
     assertEquals(entries.length, report.getDiffList().size());
     assertEquals(entries.length, inverseReport.getDiffList().size());
@@ -221,20 +234,20 @@ public class TestSnapshotDiffReport {
     
     // diff between the same snapshot
     SnapshotDiffReport report = hdfs.getSnapshotDiffReport(sub1, "s0", "s0");
-    System.out.println(report);
+    LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
     
     report = hdfs.getSnapshotDiffReport(sub1, "", "");
-    System.out.println(report);
+    LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
     
     report = hdfs.getSnapshotDiffReport(subsubsub1, "s0", "s2");
-    System.out.println(report);
+    LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
 
     // test path with scheme also works
     report = hdfs.getSnapshotDiffReport(hdfs.makeQualified(subsubsub1), "s0", "s2");
-    System.out.println(report);
+    LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
 
     verifyDiffReport(sub1, "s0", "s2", 
@@ -677,4 +690,142 @@ public class TestSnapshotDiffReport {
 
   }
 
+  private long getAccessTime(Path path) throws IOException {
+    return hdfs.getFileStatus(path).getAccessTime();
+  }
+
+  private String getAccessTimeStr(Path path) throws IOException {
+    SimpleDateFormat timeFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    return timeFmt.format(new Date(getAccessTime(path)));
+  }
+
+  private Path getSSpath(Path path, Path ssRoot, String ssName) {
+    return new Path(ssRoot, ".snapshot/" + ssName + "/" +
+        path.toString().substring(ssRoot.toString().length()));
+  }
+
+  private void printAtime(Path path, Path ssRoot, String ssName)
+      throws IOException {
+    Path ssPath = getSSpath(path, ssRoot, ssName);
+    LOG.info("Access time "
+        + path + ": " + getAccessTimeStr(path)
+        + " " + ssPath + ": " + getAccessTimeStr(ssPath));
+  }
+
+  private void assertAtimeEquals(Path path, Path ssRoot,
+      String ssName1, String ssName2)
+      throws IOException {
+    Path ssPath1 = getSSpath(path, ssRoot, ssName1);
+    Path ssPath2 = getSSpath(path, ssRoot, ssName2);
+    assertEquals(getAccessTime(ssPath1), getAccessTime(ssPath2));
+  }
+
+  private void assertAtimeNotEquals(Path path, Path ssRoot,
+      String ssName1, String ssName2)
+      throws IOException {
+    Path ssPath1 = getSSpath(path, ssRoot, ssName1);
+    Path ssPath2 = getSSpath(path, ssRoot, ssName2);
+    assertNotEquals(getAccessTime(ssPath1), getAccessTime(ssPath2));
+  }
+
+  /**
+   * Check to see access time is not captured in snapshot when applicable.
+   * When DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE
+   * is set to true, and if a file's access time changed between two
+   * snapshots but has no other modification, then the access time is not
+   * captured in snapshot.
+   */
+  @Test
+  public void testDontCaptureAccessTimeOnlyChangeReport() throws Exception {
+    final Path froot = new Path("/");
+    final Path root = new Path(froot, "/testSdiffCalc");
+
+    // items created pre enabling snapshot
+    final Path filePreSS = new Path(root, "fParent/filePreSS");
+    final Path dirPreSS = new Path(root, "dirPreSS");
+    final Path dirPreSSChild = new Path(dirPreSS, "dirPreSSChild");
+
+    // items created after enabling snapshot
+    final Path filePostSS = new Path(root, "fParent/filePostSS");
+    final Path dirPostSS = new Path(root, "dirPostSS");
+    final Path dirPostSSChild = new Path(dirPostSS, "dirPostSSChild");
+
+    DFSTestUtil.createFile(hdfs, filePreSS, BLOCKSIZE, REPLICATION, SEED);
+    DFSTestUtil.createFile(hdfs, dirPreSSChild, BLOCKSIZE, REPLICATION, SEED);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    printAtime(filePreSS, root, "s0");
+    printAtime(dirPreSS, root, "s0");
+
+    // items created after creating the first snapshot
+    DFSTestUtil.createFile(hdfs, filePostSS, BLOCKSIZE, REPLICATION, SEED);
+    DFSTestUtil.createFile(hdfs, dirPostSSChild, BLOCKSIZE, REPLICATION, SEED);
+
+    Thread.sleep(3000);
+    long now = Time.now();
+    hdfs.setTimes(filePreSS, -1, now);
+    hdfs.setTimes(filePostSS, -1, now);
+    hdfs.setTimes(dirPreSS, -1, now);
+    hdfs.setTimes(dirPostSS, -1, now);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+    printAtime(filePreSS, root, "s1");
+    printAtime(dirPreSS, root, "s1");
+    printAtime(filePostSS, root, "s1");
+    printAtime(dirPostSS, root, "s1");
+
+    Thread.sleep(3000);
+    now = Time.now();
+    hdfs.setTimes(filePreSS, -1, now);
+    hdfs.setTimes(filePostSS, -1, now);
+    hdfs.setTimes(dirPreSS, -1, now);
+    hdfs.setTimes(dirPostSS, -1, now);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
+    printAtime(filePreSS, root, "s2");
+    printAtime(dirPreSS, root, "s2");
+    printAtime(filePostSS, root, "s2");
+    printAtime(dirPostSS, root, "s2");
+
+    Thread.sleep(3000);
+    now = Time.now();
+    // modify filePostSS, and change access time
+    hdfs.setReplication(filePostSS, (short) (REPLICATION - 1));
+    hdfs.setTimes(filePostSS, -1, now);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s3");
+
+    LOG.info("\nsnapshotDiff s0 -> s1:");
+    LOG.info(hdfs.getSnapshotDiffReport(root, "s0", "s1").toString());
+    LOG.info("\nsnapshotDiff s1 -> s2:");
+    LOG.info(hdfs.getSnapshotDiffReport(root, "s1", "s2").toString());
+
+    assertAtimeEquals(filePreSS, root, "s0", "s1");
+    assertAtimeEquals(dirPreSS, root, "s0", "s1");
+
+    assertAtimeEquals(filePreSS, root, "s1", "s2");
+    assertAtimeEquals(dirPreSS, root, "s1", "s2");
+
+    assertAtimeEquals(filePostSS, root, "s1", "s2");
+    assertAtimeEquals(dirPostSS, root, "s1", "s2");
+
+    // access time should be captured in snapshot due to
+    // other modification
+    assertAtimeNotEquals(filePostSS, root, "s2", "s3");
+
+    // restart NN, and see the access time relationship
+    // still stands (no change caused by edit logs
+    // loading)
+    cluster.restartNameNodes();
+    cluster.waitActive();
+    assertAtimeEquals(filePreSS, root, "s0", "s1");
+    assertAtimeEquals(dirPreSS, root, "s0", "s1");
+
+    assertAtimeEquals(filePreSS, root, "s1", "s2");
+    assertAtimeEquals(dirPreSS, root, "s1", "s2");
+
+    assertAtimeEquals(filePostSS, root, "s1", "s2");
+    assertAtimeEquals(dirPostSS, root, "s1", "s2");
+
+    assertAtimeNotEquals(filePostSS, root, "s2", "s3");
+  }
 }

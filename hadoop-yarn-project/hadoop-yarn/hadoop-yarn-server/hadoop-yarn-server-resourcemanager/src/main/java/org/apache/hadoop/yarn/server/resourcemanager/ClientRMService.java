@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -765,21 +766,14 @@ public class ClientRMService extends AbstractService implements
     response.setClusterMetrics(ymetrics);
     return response;
   }
-  
-  @Override
-  public GetApplicationsResponse getApplications(
-      GetApplicationsRequest request) throws YarnException {
-    return getApplications(request, true);
-  }
 
   /**
    * Get applications matching the {@link GetApplicationsRequest}. If
    * caseSensitive is set to false, applicationTypes in
    * GetApplicationRequest are expected to be in all-lowercase
    */
-  @Private
-  public GetApplicationsResponse getApplications(
-      GetApplicationsRequest request, boolean caseSensitive)
+  @Override
+  public GetApplicationsResponse getApplications(GetApplicationsRequest request)
       throws YarnException {
     UserGroupInformation callerUGI;
     try {
@@ -789,7 +783,7 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
-    Set<String> applicationTypes = request.getApplicationTypes();
+    Set<String> applicationTypes = getLowerCasedAppTypes(request);
     EnumSet<YarnApplicationState> applicationStates =
         request.getApplicationStates();
     Set<String> users = request.getUsers();
@@ -853,9 +847,8 @@ public class ClientRMService extends AbstractService implements
       }
 
       if (applicationTypes != null && !applicationTypes.isEmpty()) {
-        String appTypeToMatch = caseSensitive
-            ? application.getApplicationType()
-            : StringUtils.toLowerCase(application.getApplicationType());
+        String appTypeToMatch =
+            StringUtils.toLowerCase(application.getApplicationType());
         if (!applicationTypes.contains(appTypeToMatch)) {
           continue;
         }
@@ -913,6 +906,17 @@ public class ClientRMService extends AbstractService implements
       recordFactory.newRecordInstance(GetApplicationsResponse.class);
     response.setApplicationList(reports);
     return response;
+  }
+
+  private Set<String> getLowerCasedAppTypes(GetApplicationsRequest request) {
+    Set<String> applicationTypes = new HashSet<>();
+    if (request.getApplicationTypes() != null && !request.getApplicationTypes()
+        .isEmpty()) {
+      for (String type : request.getApplicationTypes()) {
+        applicationTypes.add(StringUtils.toLowerCase(type));
+      }
+    }
+    return applicationTypes;
   }
 
   @Override
@@ -1687,6 +1691,7 @@ public class ClientRMService extends AbstractService implements
         RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
             AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService",
             applicationId);
+        response.setApplicationTimeouts(applicationTimeouts);
         return response;
       }
       String msg =
@@ -1698,7 +1703,8 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmAppManager.updateApplicationTimeout(application, applicationTimeouts);
+      applicationTimeouts = rmAppManager.updateApplicationTimeout(application,
+          applicationTimeouts);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
@@ -1708,6 +1714,7 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
         AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService", applicationId);
+    response.setApplicationTimeouts(applicationTimeouts);
     return response;
   }
 

@@ -287,7 +287,7 @@ public class TestDistCpOptions {
         "mapBandwidth=0.0, copyStrategy='uniformsize', preserveStatus=[], " +
         "atomicWorkPath=null, logPath=null, sourceFileListing=abc, " +
         "sourcePaths=null, targetPath=xyz, filtersFile='null'," +
-        " blocksPerChunk=0, copyBufferSize=8192}";
+        " blocksPerChunk=0, copyBufferSize=8192, verboseLog=false}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -513,5 +513,24 @@ public class TestDistCpOptions {
     builder.withCopyBufferSize(-1);
     Assert.assertEquals(DistCpConstants.COPY_BUFFER_SIZE_DEFAULT,
         builder.build().getCopyBufferSize());
+  }
+
+  @Test
+  public void testVerboseLog() {
+    final DistCpOptions.Builder builder = new DistCpOptions.Builder(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"));
+    Assert.assertFalse(builder.build().shouldVerboseLog());
+
+    try {
+      builder.withVerboseLog(true).build();
+      fail("-v should fail if -log option is not specified");
+    } catch (IllegalArgumentException e) {
+      assertExceptionContains("-v is valid only with -log option", e);
+    }
+
+    final Path logPath = new Path("hdfs://localhost:8020/logs");
+    builder.withLogPath(logPath).withVerboseLog(true);
+    Assert.assertTrue(builder.build().shouldVerboseLog());
   }
 }

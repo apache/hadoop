@@ -35,7 +35,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
@@ -70,6 +73,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.http.HttpConfig;
@@ -80,6 +84,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -488,61 +493,25 @@ public class DFSUtil {
   }
 
   /**
-   * Returns list of InetSocketAddresses corresponding to namenodes from the
-   * configuration.
-   * 
-   * Returns namenode address specifically configured for datanodes (using
-   * service ports), if found. If not, regular RPC address configured for other
-   * clients is returned.
-   * 
-   * @param conf configuration
-   * @return list of InetSocketAddress
-   * @throws IOException on error
-   */
-  public static Map<String, Map<String, InetSocketAddress>> getNNServiceRpcAddresses(
-      Configuration conf) throws IOException {
-    // Use default address as fall back
-    String defaultAddress;
-    try {
-      defaultAddress = NetUtils.getHostPortString(
-          DFSUtilClient.getNNAddress(conf));
-    } catch (IllegalArgumentException e) {
-      defaultAddress = null;
-    }
-    
-    Map<String, Map<String, InetSocketAddress>> addressList =
-      DFSUtilClient.getAddresses(conf, defaultAddress,
-                                 DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-                                 DFS_NAMENODE_RPC_ADDRESS_KEY);
-    if (addressList.isEmpty()) {
-      throw new IOException("Incorrect configuration: namenode address "
-          + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + " or "  
-          + DFS_NAMENODE_RPC_ADDRESS_KEY
-          + " is not configured.");
-    }
-    return addressList;
-  }
-
-  /**
    * Returns list of InetSocketAddresses corresponding to the namenode
    * that manages this cluster. Note this is to be used by datanodes to get
    * the list of namenode addresses to talk to.
    *
-   * Returns namenode address specifically configured for datanodes (using
-   * service ports), if found. If not, regular RPC address configured for other
-   * clients is returned.
+   * Returns namenode address specifically configured for datanodes
    *
    * @param conf configuration
    * @return list of InetSocketAddress
    * @throws IOException on error
    */
   public static Map<String, Map<String, InetSocketAddress>>
-    getNNServiceRpcAddressesForCluster(Configuration conf) throws IOException {
+      getNNServiceRpcAddresses(Configuration conf) throws IOException {
     // Use default address as fall back
     String defaultAddress;
     try {
-      defaultAddress = NetUtils.getHostPortString(
-          DFSUtilClient.getNNAddress(conf));
+      InetSocketAddress rpcAddress = DFSUtilClient.getNNAddress(conf);
+      InetSocketAddress serviceAddress = InetSocketAddress.createUnresolved(
+          rpcAddress.getHostName(), DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
+      defaultAddress = NetUtils.getHostPortString(serviceAddress);
     } catch (IllegalArgumentException e) {
       defaultAddress = null;
     }
@@ -565,16 +534,46 @@ public class DFSUtil {
       }
     }
 
+    // If true, then replace the port numbers in the final address list
+    // with the default service RPC port.
+    boolean replacePortNumbers = false;
+
+    // First try to lookup using the service RPC address keys.
     Map<String, Map<String, InetSocketAddress>> addressList =
-            DFSUtilClient.getAddressesForNsIds(conf, parentNameServices,
-                                               defaultAddress,
-                                               DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-                                               DFS_NAMENODE_RPC_ADDRESS_KEY);
+            DFSUtilClient.getAddressesForNsIds(
+                conf, parentNameServices, null,
+                DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+
+    // Next try to lookup using the RPC address key.
+    if (addressList.isEmpty()) {
+      replacePortNumbers = true;
+      addressList = DFSUtilClient.getAddressesForNsIds(
+          conf, parentNameServices, null, DFS_NAMENODE_RPC_ADDRESS_KEY);
+    }
+
+    // Finally, fallback to the default address.
+    // This will not yield the correct address in a federated/HA setup.
+    if (addressList.isEmpty()) {
+      addressList = DFSUtilClient.getAddressesForNsIds(
+          conf, parentNameServices, defaultAddress);
+    }
+
     if (addressList.isEmpty()) {
       throw new IOException("Incorrect configuration: namenode address "
-              + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + " or "
-              + DFS_NAMENODE_RPC_ADDRESS_KEY
-              + " is not configured.");
+          + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + " or "
+          + DFS_NAMENODE_RPC_ADDRESS_KEY
+          + " is not configured.");
+    }
+
+    if (replacePortNumbers) {
+      // Replace the RPC port(s) with the default service RPC port(s)
+      addressList.forEach((nsId, addresses) -> {
+        addresses.forEach((nnId, address) -> {
+          InetSocketAddress serviceAddress = InetSocketAddress.createUnresolved(
+              address.getHostName(), DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
+          addresses.put(nnId, serviceAddress);
+        });
+      });
     }
     return addressList;
   }
@@ -1226,12 +1225,17 @@ public class DFSUtil {
     String serviceAddrKey = DFSUtilClient.concatSuffixes(
         DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nsId, nnId);
 
-    String addrKey = DFSUtilClient.concatSuffixes(
-        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, nnId);
-
     String serviceRpcAddr = conf.get(serviceAddrKey);
     if (serviceRpcAddr == null) {
-      serviceRpcAddr = conf.get(addrKey);
+      String addrKey = DFSUtilClient.concatSuffixes(
+          DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, nnId);
+      String rpcAddress = conf.get(addrKey);
+      if (rpcAddress != null) {
+        InetSocketAddress rpcAddr = NetUtils.createSocketAddr(rpcAddress);
+        InetSocketAddress serviceAddr = InetSocketAddress.createUnresolved(
+            rpcAddr.getHostName(), DFS_NAMENODE_SERVICE_RPC_PORT_DEFAULT);
+        serviceRpcAddr = NetUtils.getHostPortString(serviceAddr);
+      }
     }
     return serviceRpcAddr;
   }
@@ -1569,5 +1573,23 @@ public class DFSUtil {
     KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
         .createKeyProviderCryptoExtension(keyProvider);
     return cryptoProvider;
+  }
+
+  /**
+   * Decodes an HDFS delegation token to its identifier.
+   *
+   * @param token the token
+   * @return the decoded identifier.
+   * @throws IOException
+   */
+  public static DelegationTokenIdentifier decodeDelegationToken(
+      final Token<DelegationTokenIdentifier> token) throws IOException {
+    final DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+    final ByteArrayInputStream buf =
+        new ByteArrayInputStream(token.getIdentifier());
+    try (DataInputStream in = new DataInputStream(buf)) {
+      id.readFields(in);
+    }
+    return id;
   }
 }

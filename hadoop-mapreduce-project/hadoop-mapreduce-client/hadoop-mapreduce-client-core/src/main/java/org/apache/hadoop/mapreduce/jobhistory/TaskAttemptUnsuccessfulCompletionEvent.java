@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
  * Event to record unsuccessful (Killed/Failed) completion of task attempts
@@ -58,10 +59,11 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   int[] cpuUsages;
   int[] vMemKbytes;
   int[] physMemKbytes;
+  private long startTime;
   private static final Counters EMPTY_COUNTERS = new Counters();
 
   /**
-   * Create an event to record the unsuccessful completion of attempts
+   * Create an event to record the unsuccessful completion of attempts.
    * @param id Attempt ID
    * @param taskType Type of the task
    * @param status Status of the attempt
@@ -75,12 +77,13 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
    *        measurable worker node state variables against progress.
    *        Currently there are four; wallclock time, CPU time,
    *        virtual memory and physical memory.
+   * @param startTs Task start time to be used for writing entity to ATSv2.
    */
   public TaskAttemptUnsuccessfulCompletionEvent
        (TaskAttemptID id, TaskType taskType,
         String status, long finishTime,
         String hostname, int port, String rackName,
-        String error, Counters counters, int[][] allSplits) {
+        String error, Counters counters, int[][] allSplits, long startTs) {
     this.attemptId = id;
     this.taskType = taskType;
     this.status = status;
@@ -99,6 +102,15 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
         ProgressSplitsBlock.arrayGetVMemKbytes(allSplits);
     this.physMemKbytes =
         ProgressSplitsBlock.arrayGetPhysMemKbytes(allSplits);
+    this.startTime = startTs;
+  }
+
+  public TaskAttemptUnsuccessfulCompletionEvent(TaskAttemptID id,
+      TaskType taskType, String status, long finishTime, String hostname,
+      int port, String rackName, String error, Counters counters,
+      int[][] allSplits) {
+    this(id, taskType, status, finishTime, hostname, port, rackName, error,
+        counters, allSplits, SystemClock.getInstance().getTime());
   }
 
   /**
@@ -190,39 +202,49 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
         AvroArrayUtils.fromAvro(datum.getPhysMemKbytes());
   }
 
-  /** Get the task id */
+  /** Gets the task id. */
   public TaskID getTaskId() {
     return attemptId.getTaskID();
   }
-  /** Get the task type */
+  /** Gets the task type. */
   public TaskType getTaskType() {
     return TaskType.valueOf(taskType.toString());
   }
-  /** Get the attempt id */
+  /** Gets the attempt id. */
   public TaskAttemptID getTaskAttemptId() {
     return attemptId;
   }
-  /** Get the finish time */
+  /** Gets the finish time. */
   public long getFinishTime() { return finishTime; }
-  /** Get the name of the host where the attempt executed */
+  /**
+   * Gets the task attempt start time to be used while publishing to ATSv2.
+   * @return task attempt start time.
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+  /** Gets the name of the host where the attempt executed. */
   public String getHostname() { return hostname; }
-  /** Get the rpc port for the host where the attempt executed */
+  /** Gets the rpc port for the host where the attempt executed. */
   public int getPort() { return port; }
 
-  /** Get the rack name of the node where the attempt ran */
+  /** Gets the rack name of the node where the attempt ran. */
   public String getRackName() {
     return rackName == null ? null : rackName.toString();
   }
 
-  /** Get the error string */
+  /** Gets the error string. */
   public String getError() { return error.toString(); }
-  /** Get the task status */
+  /**
+   * Gets the task attempt status.
+   * @return task attempt status.
+   */
   public String getTaskStatus() {
     return status.toString();
   }
-  /** Get the counters */
+  /** Gets the counters. */
   Counters getCounters() { return counters; }
-  /** Get the event type */
+  /** Gets the event type. */
   public EventType getEventType() {
     // Note that the task type can be setup/map/reduce/cleanup but the
     // attempt-type can only be map/reduce.

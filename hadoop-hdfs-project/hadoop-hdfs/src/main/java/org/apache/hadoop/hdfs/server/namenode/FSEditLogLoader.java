@@ -413,7 +413,7 @@ public class FSEditLogLoader {
       // update the block list.
       
       // Update the salient file attributes.
-      newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID, false);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       ErasureCodingPolicy ecPolicy =
           FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
@@ -436,7 +436,7 @@ public class FSEditLogLoader {
       final INodeFile file = INodeFile.valueOf(iip.getLastINode(), path);
 
       // Update the salient file attributes.
-      file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID, false);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       ErasureCodingPolicy ecPolicy =
           FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(

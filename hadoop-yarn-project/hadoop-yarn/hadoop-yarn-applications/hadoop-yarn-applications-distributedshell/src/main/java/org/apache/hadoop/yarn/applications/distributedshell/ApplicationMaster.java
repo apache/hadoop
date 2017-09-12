@@ -104,6 +104,8 @@ import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
@@ -312,6 +314,17 @@ public class ApplicationMaster {
   @VisibleForTesting
   protected final Set<ContainerId> launchedContainers =
       Collections.newSetFromMap(new ConcurrentHashMap<ContainerId, Boolean>());
+
+  /**
+   * Container start times used to set id prefix while publishing entity
+   * to ATSv2.
+   */
+  private final ConcurrentMap<ContainerId, Long> containerStartTimes =
+      new ConcurrentHashMap<ContainerId, Long>();
+
+  private ConcurrentMap<ContainerId, Long> getContainerStartTimes() {
+    return containerStartTimes;
+  }
 
   /**
    * @param args Command line args
@@ -866,7 +879,15 @@ public class ApplicationMaster {
               + containerStatus.getContainerId());
         }
         if (timelineServiceV2Enabled) {
-          publishContainerEndEventOnTimelineServiceV2(containerStatus);
+          Long containerStartTime =
+              containerStartTimes.get(containerStatus.getContainerId());
+          if (containerStartTime == null) {
+            containerStartTime = SystemClock.getInstance().getTime();
+            containerStartTimes.put(containerStatus.getContainerId(),
+                containerStartTime);
+          }
+          publishContainerEndEventOnTimelineServiceV2(containerStatus,
+              containerStartTime);
         } else if (timelineServiceV1Enabled) {
           publishContainerEndEvent(timelineClient, containerStatus, domainId,
               appSubmitterUgi);
@@ -994,18 +1015,16 @@ public class ApplicationMaster {
             containerId, container.getNodeId());
       }
       if (applicationMaster.timelineServiceV2Enabled) {
-        applicationMaster
-            .publishContainerStartEventOnTimelineServiceV2(container);
+        long startTime = SystemClock.getInstance().getTime();
+        applicationMaster.getContainerStartTimes().put(containerId, startTime);
+        applicationMaster.publishContainerStartEventOnTimelineServiceV2(
+            container, startTime);
       } else if (applicationMaster.timelineServiceV1Enabled) {
         applicationMaster.publishContainerStartEvent(
             applicationMaster.timelineClient, container,
             applicationMaster.domainId, applicationMaster.appSubmitterUgi);
       }
     }
-
-    @Override
-    public void onContainerResourceIncreased(
-        ContainerId containerId, Resource resource) {}
 
     @Override
     public void onStartContainerError(ContainerId containerId, Throwable t) {
@@ -1027,10 +1046,25 @@ public class ApplicationMaster {
       containers.remove(containerId);
     }
 
+    @Deprecated
     @Override
     public void onIncreaseContainerResourceError(
         ContainerId containerId, Throwable t) {}
 
+    @Deprecated
+    @Override
+    public void onContainerResourceIncreased(
+        ContainerId containerId, Resource resource) {}
+
+    @Override
+    public void onUpdateContainerResourceError(
+        ContainerId containerId, Throwable t) {
+    }
+
+    @Override
+    public void onContainerResourceUpdated(ContainerId containerId,
+        Resource resource) {
+    }
   }
 
   /**
@@ -1356,24 +1390,24 @@ public class ApplicationMaster {
   }
 
   private void publishContainerStartEventOnTimelineServiceV2(
-      Container container) {
+      Container container, long startTime) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
         entity =
             new org.apache.hadoop.yarn.api.records.timelineservice.
             TimelineEntity();
     entity.setId(container.getId().toString());
     entity.setType(DSEntity.DS_CONTAINER.toString());
-    long ts = System.currentTimeMillis();
-    entity.setCreatedTime(ts);
+    entity.setCreatedTime(startTime);
     entity.addInfo("user", appSubmitterUgi.getShortUserName());
 
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent event =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent();
-    event.setTimestamp(ts);
+    event.setTimestamp(startTime);
     event.setId(DSEvent.DS_CONTAINER_START.toString());
     event.addInfo("Node", container.getNodeId().toString());
     event.addInfo("Resources", container.getResource().toString());
     entity.addEvent(event);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(startTime));
 
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
@@ -1391,7 +1425,7 @@ public class ApplicationMaster {
   }
 
   private void publishContainerEndEventOnTimelineServiceV2(
-      final ContainerStatus container) {
+      final ContainerStatus container, long containerStartTime) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
         entity =
             new org.apache.hadoop.yarn.api.records.timelineservice.
@@ -1407,6 +1441,7 @@ public class ApplicationMaster {
     event.addInfo("State", container.getState().name());
     event.addInfo("Exit Status", container.getExitStatus());
     entity.addEvent(event);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
 
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
@@ -1441,6 +1476,8 @@ public class ApplicationMaster {
     event.setId(appEvent.toString());
     event.setTimestamp(ts);
     entity.addEvent(event);
+    entity.setIdPrefix(
+        TimelineServiceHelper.invertLong(appAttemptID.getAttemptId()));
 
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {

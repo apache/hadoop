@@ -173,10 +173,10 @@ public class ContainerImpl implements Container {
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
+  private final long startTime;
 
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainerImpl.class);
-
 
   // whether container has been recovered after a restart
   private RecoveredContainerStatus recoveredStatus =
@@ -185,11 +185,22 @@ public class ContainerImpl implements Container {
   private boolean recoveredAsKilled = false;
   private Context context;
   private ResourceSet resourceSet;
+  private ResourceMappings resourceMappings;
 
   public ContainerImpl(Configuration conf, Dispatcher dispatcher,
       ContainerLaunchContext launchContext, Credentials creds,
       NodeManagerMetrics metrics,
       ContainerTokenIdentifier containerTokenIdentifier, Context context) {
+    this(conf, dispatcher, launchContext, creds, metrics,
+        containerTokenIdentifier, context, SystemClock.getInstance().getTime());
+  }
+
+  public ContainerImpl(Configuration conf, Dispatcher dispatcher,
+      ContainerLaunchContext launchContext, Credentials creds,
+      NodeManagerMetrics metrics,
+      ContainerTokenIdentifier containerTokenIdentifier, Context context,
+      long startTs) {
+    this.startTime = startTs;
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.stateStore = context.getNMStateStore();
@@ -232,6 +243,7 @@ public class ContainerImpl implements Container {
     stateMachine = stateMachineFactory.make(this);
     this.context = context;
     this.resourceSet = new ResourceSet();
+    this.resourceMappings = new ResourceMappings();
   }
 
   private static ContainerRetryContext configureRetryContext(
@@ -263,7 +275,7 @@ public class ContainerImpl implements Container {
       ContainerTokenIdentifier containerTokenIdentifier, Context context,
       RecoveredContainerState rcs) {
     this(conf, dispatcher, launchContext, creds, metrics,
-        containerTokenIdentifier, context);
+        containerTokenIdentifier, context, rcs.getStartTime());
     this.recoveredStatus = rcs.getStatus();
     this.exitCode = rcs.getExitCode();
     this.recoveredAsKilled = rcs.getKilled();
@@ -272,6 +284,7 @@ public class ContainerImpl implements Container {
     this.remainingRetryAttempts = rcs.getRemainingRetryAttempts();
     this.workDir = rcs.getWorkDir();
     this.logDir = rcs.getLogDir();
+    this.resourceMappings = rcs.getResourceMappings();
   }
 
   private static final ContainerDiagnosticsUpdateTransition UPDATE_DIAGNOSTICS_TRANSITION =
@@ -619,7 +632,8 @@ public class ContainerImpl implements Container {
           getCurrentState(), getResource(), diagnostics.toString(), exitCode,
           containerTokenIdentifier.getPriority(),
           containerTokenIdentifier.getCreationTime(),
-          containerTokenIdentifier.getNodeLabelExpression());
+          containerTokenIdentifier.getNodeLabelExpression(),
+          containerTokenIdentifier.getExecutionType());
     } finally {
       this.readLock.unlock();
     }
@@ -628,6 +642,11 @@ public class ContainerImpl implements Container {
   @Override
   public ContainerId getContainerId() {
     return this.containerId;
+  }
+
+  @Override
+  public long getContainerStartTime() {
+    return this.startTime;
   }
 
   @Override
@@ -694,7 +713,8 @@ public class ContainerImpl implements Container {
     EventHandler eventHandler = dispatcher.getEventHandler();
 
     ContainerStatus containerStatus = cloneAndGetContainerStatus();
-    eventHandler.handle(new ApplicationContainerFinishedEvent(containerStatus));
+    eventHandler.handle(
+        new ApplicationContainerFinishedEvent(containerStatus, startTime));
 
     // Tell the scheduler the container is Done
     eventHandler.handle(new ContainerSchedulerEvent(this,
@@ -1772,5 +1792,15 @@ public class ContainerImpl implements Container {
         recoveredStatus != RecoveredContainerStatus.REQUESTED &&
         getContainerState() == ContainerState.NEW);
     return isRecovering;
+  }
+
+  /**
+   * Get assigned resource mappings to the container.
+   *
+   * @return Resource Mappings of the container
+   */
+  @Override
+  public ResourceMappings getResourceMappings() {
+    return resourceMappings;
   }
 }

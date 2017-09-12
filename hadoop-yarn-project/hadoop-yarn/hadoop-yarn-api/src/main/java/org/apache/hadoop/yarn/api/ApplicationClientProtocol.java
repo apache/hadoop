@@ -578,7 +578,7 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    * <b>Note:</b> If application timeout value is less than or equal to current
    * time then update application throws YarnException.
    * @param request to set ApplicationTimeouts of an application
-   * @return an empty response that the update has completed successfully.
+   * @return a response with updated timeouts.
    * @throws YarnException if update request has empty values or application is
    *           in completing states.
    * @throws IOException on IO failures

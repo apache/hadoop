@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,7 +63,6 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
 
 public class TestAMRMClientAsync {
 
@@ -426,7 +426,7 @@ public class TestAMRMClientAsync {
     }
     AllocateResponse response =
         AllocateResponse.newInstance(0, completed, allocated,
-            new ArrayList<NodeReport>(), null, null, 1, null, nmTokens,
+            new ArrayList<NodeReport>(), null, null, 1, null, nmTokens, null,
             updatedContainers);
     return response;
   }

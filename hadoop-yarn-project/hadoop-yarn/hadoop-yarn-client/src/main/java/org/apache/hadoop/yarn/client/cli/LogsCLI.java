@@ -62,9 +62,10 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
-import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -411,10 +412,10 @@ public class LogsCLI extends Configured implements Tool {
     return false;
   }
 
-  private List<Pair<PerContainerLogFileInfo, String>> getContainerLogFiles(
+  private List<Pair<ContainerLogFileInfo, String>> getContainerLogFiles(
       Configuration conf, String containerIdStr, String nodeHttpAddress)
       throws IOException {
-    List<Pair<PerContainerLogFileInfo, String>> logFileInfos
+    List<Pair<ContainerLogFileInfo, String>> logFileInfos
         = new ArrayList<>();
     Client webServiceClient = Client.create();
     try {
@@ -453,12 +454,12 @@ public class LogsCLI extends Configured implements Tool {
             if (ob instanceof JSONArray) {
               JSONArray obArray = (JSONArray)ob;
               for (int j = 0; j < obArray.length(); j++) {
-                logFileInfos.add(new Pair<PerContainerLogFileInfo, String>(
+                logFileInfos.add(new Pair<ContainerLogFileInfo, String>(
                     generatePerContainerLogFileInfoFromJSON(
                         obArray.getJSONObject(j)), aggregateType));
               }
             } else if (ob instanceof JSONObject) {
-              logFileInfos.add(new Pair<PerContainerLogFileInfo, String>(
+              logFileInfos.add(new Pair<ContainerLogFileInfo, String>(
                   generatePerContainerLogFileInfoFromJSON(
                       (JSONObject)ob), aggregateType));
             }
@@ -477,7 +478,7 @@ public class LogsCLI extends Configured implements Tool {
     return logFileInfos;
   }
 
-  private PerContainerLogFileInfo generatePerContainerLogFileInfoFromJSON(
+  private ContainerLogFileInfo generatePerContainerLogFileInfoFromJSON(
       JSONObject meta) throws JSONException {
     String fileName = meta.has("fileName") ?
         meta.getString("fileName") : "N/A";
@@ -485,7 +486,7 @@ public class LogsCLI extends Configured implements Tool {
         meta.getString("fileSize") : "N/A";
     String lastModificationTime = meta.has("lastModifiedTime") ?
         meta.getString("lastModifiedTime") : "N/A";
-    return new PerContainerLogFileInfo(fileName, fileSize,
+    return new ContainerLogFileInfo(fileName, fileSize,
         lastModificationTime);
   }
 
@@ -506,7 +507,7 @@ public class LogsCLI extends Configured implements Tool {
       return -1;
     }
     String nodeId = request.getNodeId();
-    PrintStream out = logCliHelper.createPrintStream(localDir, nodeId,
+    PrintStream out = LogToolUtils.createPrintStream(localDir, nodeId,
         containerIdStr);
     try {
       Set<String> matchedFiles = getMatchedContainerLogFiles(request,
@@ -1235,9 +1236,9 @@ public class LogsCLI extends Configured implements Tool {
     outStream.printf(LogCLIHelpers.PER_LOG_FILE_INFO_PATTERN,
         "LogFile", "LogLength", "LastModificationTime", "LogAggregationType");
     outStream.println(StringUtils.repeat("=", containerString.length() * 2));
-    List<Pair<PerContainerLogFileInfo, String>> infos = getContainerLogFiles(
+    List<Pair<ContainerLogFileInfo, String>> infos = getContainerLogFiles(
         getConf(), containerId, nodeHttpAddress);
-    for (Pair<PerContainerLogFileInfo, String> info : infos) {
+    for (Pair<ContainerLogFileInfo, String> info : infos) {
       outStream.printf(LogCLIHelpers.PER_LOG_FILE_INFO_PATTERN,
           info.getKey().getFileName(), info.getKey().getFileSize(),
           info.getKey().getLastModifiedTime(), info.getValue());
@@ -1249,11 +1250,11 @@ public class LogsCLI extends Configured implements Tool {
       boolean useRegex) throws IOException {
     // fetch all the log files for the container
     // filter the log files based on the given -log_files pattern
-    List<Pair<PerContainerLogFileInfo, String>> allLogFileInfos=
+    List<Pair<ContainerLogFileInfo, String>> allLogFileInfos=
         getContainerLogFiles(getConf(), request.getContainerId(),
             request.getNodeHttpAddress());
     List<String> fileNames = new ArrayList<String>();
-    for (Pair<PerContainerLogFileInfo, String> fileInfo : allLogFileInfos) {
+    for (Pair<ContainerLogFileInfo, String> fileInfo : allLogFileInfos) {
       fileNames.add(fileInfo.getKey().getFileName());
     }
     return getMatchedLogFiles(request, fileNames,

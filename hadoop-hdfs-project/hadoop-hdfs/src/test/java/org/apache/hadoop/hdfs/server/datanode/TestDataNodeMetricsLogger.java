@@ -61,11 +61,16 @@ import com.google.common.base.Supplier;
 public class TestDataNodeMetricsLogger {
   static final Log LOG = LogFactory.getLog(TestDataNodeMetricsLogger.class);
 
+  @Rule
+  public Timeout globalTimeout = new Timeout(120_000);
+
   private static final String DATA_DIR = MiniDFSCluster.getBaseDirectory()
       + "data";
 
   private final static InetSocketAddress NN_ADDR = new InetSocketAddress(
       "localhost", 5020);
+  private final static InetSocketAddress NN_SERVICE_ADDR =
+      new InetSocketAddress("localhost", 5021);
 
   private DataNode dn;
 
@@ -86,10 +91,13 @@ public class TestDataNodeMetricsLogger {
     conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        NN_SERVICE_ADDR.getHostName() + ":" + NN_SERVICE_ADDR.getPort());
     conf.setInt(DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY,
         enableMetricsLogging ? 1 : 0); // If enabled, log early and log often
 
-    dn = InternalDataNodeTestUtils.startDNWithMockNN(conf, NN_ADDR, DATA_DIR);
+    dn = InternalDataNodeTestUtils.startDNWithMockNN(
+        conf, NN_ADDR, NN_SERVICE_ADDR, DATA_DIR);
   }
 
   /**

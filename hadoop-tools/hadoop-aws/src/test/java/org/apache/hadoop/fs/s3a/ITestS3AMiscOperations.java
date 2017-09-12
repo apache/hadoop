@@ -22,10 +22,17 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 /**
  * Tests of the S3A FileSystem which don't have a specific home and can share
@@ -53,6 +60,26 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     Path parent = path("/file.txt");
     ContractTestUtils.touch(getFileSystem(), parent);
     createNonRecursive(new Path(parent, "fail"));
+  }
+
+  @Test
+  public void testPutObjectDirect() throws Throwable {
+    final S3AFileSystem fs = getFileSystem();
+    ObjectMetadata metadata = fs.newObjectMetadata(-1);
+    metadata.setContentLength(-1);
+    Path path = path("putDirect");
+    final PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
+        path.toUri().getPath(),
+        new ByteArrayInputStream("PUT".getBytes()),
+        metadata);
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        new Callable<PutObjectResult>() {
+          @Override
+          public PutObjectResult call() throws Exception {
+            return fs.putObjectDirect(put);
+          }
+        });
+    assertPathDoesNotExist("put object was created", path);
   }
 
   private FSDataOutputStream createNonRecursive(Path path) throws IOException {

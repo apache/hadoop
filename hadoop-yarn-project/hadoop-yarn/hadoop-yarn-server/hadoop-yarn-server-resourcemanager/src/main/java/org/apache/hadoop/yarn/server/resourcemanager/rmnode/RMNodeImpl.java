@@ -847,7 +847,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         containers = startEvent.getNMContainerStatuses();
         if (containers != null && !containers.isEmpty()) {
           for (NMContainerStatus container : containers) {
-            if (container.getContainerState() == ContainerState.RUNNING) {
+            if (container.getContainerState() == ContainerState.RUNNING ||
+                container.getContainerState() == ContainerState.SCHEDULED) {
               rmNode.launchedContainers.add(container.getContainerId());
             }
           }

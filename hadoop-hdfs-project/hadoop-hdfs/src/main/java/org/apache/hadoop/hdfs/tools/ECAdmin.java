@@ -20,7 +20,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -100,9 +99,7 @@ public class ECAdmin extends Configured implements Tool {
     @Override
     public String getLongUsage() {
       return getShortUsage() + "\n" +
-          "Get the list of enabled erasure coding policies.\n" +
-          "Policies can be enabled on the NameNode via `" +
-          DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY + "`.\n";
+          "Get the list of all erasure coding policies.\n";
     }
 
     @Override
@@ -117,17 +114,13 @@ public class ECAdmin extends Configured implements Tool {
         Collection<ErasureCodingPolicy> policies =
             dfs.getAllErasureCodingPolicies();
         if (policies.isEmpty()) {
-          System.out.println("No erasure coding policies are enabled on the " +
+          System.out.println("There is no erasure coding policies in the " +
               "cluster.");
-          System.out.println("The set of enabled policies can be " +
-              "configured at '" +
-              DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY + "' on the " +
-              "NameNode.");
         } else {
           System.out.println("Erasure Coding Policies:");
           for (ErasureCodingPolicy policy : policies) {
             if (policy != null) {
-              System.out.println("\t" + policy.getName());
+              System.out.println(policy.toString());
             }
           }
         }

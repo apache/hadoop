@@ -20,16 +20,6 @@
 
 ## Release 1.0.2 - 2012-04-03
 
-### INCOMPATIBLE CHANGES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### IMPORTANT ISSUES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### NEW FEATURES:
@@ -43,45 +33,27 @@
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
-| [HADOOP-8090](https://issues.apache.org/jira/browse/HADOOP-8090) | rename hadoop 64 bit rpm/deb package name |  Major | . | Giridharan Kesavan | Giridharan Kesavan |
-| [HADOOP-5450](https://issues.apache.org/jira/browse/HADOOP-5450) | Add support for application-specific typecodes to typed bytes |  Blocker | . | Klaas Bosteels | Klaas Bosteels |
 | [HADOOP-1722](https://issues.apache.org/jira/browse/HADOOP-1722) | Make streaming to handle non-utf8 byte array |  Major | . | Runping Qi | Klaas Bosteels |
-| [HDFS-3075](https://issues.apache.org/jira/browse/HDFS-3075) | Backport HADOOP-4885 to branch-1 |  Major | namenode | Brandon Li | Brandon Li |
+| [HADOOP-5450](https://issues.apache.org/jira/browse/HADOOP-5450) | Add support for application-specific typecodes to typed bytes |  Blocker | . | Klaas Bosteels | Klaas Bosteels |
 | [HDFS-2701](https://issues.apache.org/jira/browse/HDFS-2701) | Cleanup FS\* processIOError methods |  Major | namenode | Eli Collins | Eli Collins |
+| [HDFS-3075](https://issues.apache.org/jira/browse/HDFS-3075) | Backport HADOOP-4885 to branch-1 |  Major | namenode | Brandon Li | Brandon Li |
+| [HADOOP-8090](https://issues.apache.org/jira/browse/HADOOP-8090) | rename hadoop 64 bit rpm/deb package name |  Major | . | Giridharan Kesavan | Giridharan Kesavan |
 
 
 ### BUG FIXES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
-| [HADOOP-8201](https://issues.apache.org/jira/browse/HADOOP-8201) | create the configure script for native compilation as part of the build |  Blocker | build | Giridharan Kesavan | Giridharan Kesavan |
-| [HADOOP-8132](https://issues.apache.org/jira/browse/HADOOP-8132) | 64bit secure datanodes do not start as the jsvc path is wrong |  Major | . | Arpit Gupta | Arpit Gupta |
-| [HADOOP-8050](https://issues.apache.org/jira/browse/HADOOP-8050) | Deadlock in metrics |  Major | metrics | Kihwal Lee | Kihwal Lee |
-| [HDFS-3101](https://issues.apache.org/jira/browse/HDFS-3101) | cannot read empty file using webhdfs |  Major | webhdfs | Zhanwei Wang | Tsz Wo Nicholas Sze |
-| [HDFS-3006](https://issues.apache.org/jira/browse/HDFS-3006) | Webhdfs "SETOWNER" call returns incorrect content-type |  Major | webhdfs | bc Wong | Tsz Wo Nicholas Sze |
+| [MAPREDUCE-764](https://issues.apache.org/jira/browse/MAPREDUCE-764) | TypedBytesInput's readRaw() does not preserve custom type codes |  Blocker | contrib/streaming | Klaas Bosteels | Klaas Bosteels |
 | [HDFS-2703](https://issues.apache.org/jira/browse/HDFS-2703) | removedStorageDirs is not updated everywhere we remove a storage dir |  Major | namenode | Eli Collins | Eli Collins |
 | [HDFS-2702](https://issues.apache.org/jira/browse/HDFS-2702) | A single failed name dir can cause the NN to exit |  Critical | namenode | Eli Collins | Eli Collins |
-| [MAPREDUCE-3851](https://issues.apache.org/jira/browse/MAPREDUCE-3851) | Allow more aggressive action on detection of the jetty issue |  Major | tasktracker | Kihwal Lee | Thomas Graves |
 | [MAPREDUCE-3824](https://issues.apache.org/jira/browse/MAPREDUCE-3824) | Distributed caches are not removed properly |  Critical | distributed-cache | Allen Wittenauer | Thomas Graves |
+| [HADOOP-8050](https://issues.apache.org/jira/browse/HADOOP-8050) | Deadlock in metrics |  Major | metrics | Kihwal Lee | Kihwal Lee |
 | [MAPREDUCE-3583](https://issues.apache.org/jira/browse/MAPREDUCE-3583) | ProcfsBasedProcessTree#constructProcessInfo() may throw NumberFormatException |  Critical | . | Ted Yu | Ted Yu |
-| [MAPREDUCE-764](https://issues.apache.org/jira/browse/MAPREDUCE-764) | TypedBytesInput's readRaw() does not preserve custom type codes |  Blocker | contrib/streaming | Klaas Bosteels | Klaas Bosteels |
-
-
-### TESTS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### SUB-TASKS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### OTHER:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
+| [HDFS-3006](https://issues.apache.org/jira/browse/HDFS-3006) | Webhdfs "SETOWNER" call returns incorrect content-type |  Major | webhdfs | bc Wong | Tsz Wo Nicholas Sze |
+| [HDFS-3101](https://issues.apache.org/jira/browse/HDFS-3101) | cannot read empty file using webhdfs |  Major | webhdfs | Zhanwei Wang | Tsz Wo Nicholas Sze |
+| [MAPREDUCE-3851](https://issues.apache.org/jira/browse/MAPREDUCE-3851) | Allow more aggressive action on detection of the jetty issue |  Major | tasktracker | Kihwal Lee | Thomas Graves |
+| [HADOOP-8132](https://issues.apache.org/jira/browse/HADOOP-8132) | 64bit secure datanodes do not start as the jsvc path is wrong |  Major | . | Arpit Gupta | Arpit Gupta |
+| [HADOOP-8201](https://issues.apache.org/jira/browse/HADOOP-8201) | create the configure script for native compilation as part of the build |  Blocker | build | Giridharan Kesavan | Giridharan Kesavan |
 
 

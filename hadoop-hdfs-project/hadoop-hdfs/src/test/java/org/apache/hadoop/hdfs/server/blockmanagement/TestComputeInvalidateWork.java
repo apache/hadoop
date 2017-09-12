@@ -268,9 +268,9 @@ public class TestComputeInvalidateWork {
           "Striped BlockGroups!",
           (long) expected, invalidateBlocks.numBlocks());
       assertEquals("Unexpected invalidate count for replicas!",
-          totalReplicas, invalidateBlocks.getBlocksStat());
+          totalReplicas, invalidateBlocks.getBlocks());
       assertEquals("Unexpected invalidate count for striped block groups!",
-          totalStripedDataBlocks, invalidateBlocks.getECBlockGroupsStat());
+          totalStripedDataBlocks, invalidateBlocks.getECBlocks());
     } finally {
       namesystem.writeUnlock();
     }

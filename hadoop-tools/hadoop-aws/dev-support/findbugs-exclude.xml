@@ -26,4 +26,10 @@
   <Match>
     <Class name="org.apache.hadoop.fs.s3.INode" />
   </Match>
+  <!-- Redundant null check makes code clearer, future-proof here. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem" />
+    <Method name="s3Exists" />
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
+  </Match>
 </FindBugsFilter>
