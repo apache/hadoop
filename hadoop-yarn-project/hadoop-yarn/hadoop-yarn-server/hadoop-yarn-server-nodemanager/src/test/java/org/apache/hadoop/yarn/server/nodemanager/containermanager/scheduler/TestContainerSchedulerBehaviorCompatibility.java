@@ -36,7 +36,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Make sure CantainerScheduler related changes are compatible to old behaviors
+ * Make sure ContainerScheduler related changes are compatible
+ * with old behavior.
  */
 public class TestContainerSchedulerBehaviorCompatibility
     extends BaseContainerManagerTest {
@@ -73,7 +74,8 @@ public class TestContainerSchedulerBehaviorCompatibility
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
 
-    StartContainersRequest allRequests = StartContainersRequest.newInstance(list);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
     containerManager.startContainers(allRequests);
 
     ContainerScheduler cs = containerManager.getContainerScheduler();
