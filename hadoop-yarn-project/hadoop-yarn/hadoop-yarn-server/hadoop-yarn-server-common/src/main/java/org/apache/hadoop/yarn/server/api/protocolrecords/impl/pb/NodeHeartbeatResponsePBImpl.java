@@ -73,6 +73,8 @@ public class NodeHeartbeatResponsePBImpl extends
   private MasterKey nmTokenMasterKey = null;
   private ContainerQueuingLimit containerQueuingLimit = null;
   private List<Container> containersToUpdate = null;
+  // NOTE: This should be removed in 3.x
+  private List<Container> containersToDecrease = null;
   private List<SignalContainerRequest> containersToSignal = null;
 
   public NodeHeartbeatResponsePBImpl() {
@@ -118,6 +120,9 @@ public class NodeHeartbeatResponsePBImpl extends
     }
     if (this.containersToUpdate != null) {
       addContainersToUpdateToProto();
+    }
+    if (this.containersToDecrease != null) {
+      addContainersToDecreaseToProto();
     }
     if (this.containersToSignal != null) {
       addContainersToSignalToProto();
@@ -540,6 +545,66 @@ public class NodeHeartbeatResponsePBImpl extends
       }
     };
     builder.addAllContainersToUpdate(iterable);
+  }
+
+  private void initContainersToDecrease() {
+    if (this.containersToDecrease != null) {
+      return;
+    }
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerProto> list = p.getContainersToDecreaseList();
+    this.containersToDecrease = new ArrayList<>();
+
+    for (ContainerProto c : list) {
+      this.containersToDecrease.add(convertFromProtoFormat(c));
+    }
+  }
+
+  @Override
+  public List<Container> getContainersToDecrease() {
+    initContainersToDecrease();
+    return this.containersToDecrease;
+  }
+
+  @Override
+  public void addAllContainersToDecrease(
+      final Collection<Container> containersToDecrease) {
+    if (containersToDecrease == null) {
+      return;
+    }
+    initContainersToDecrease();
+    this.containersToDecrease.addAll(containersToDecrease);
+  }
+
+  private void addContainersToDecreaseToProto() {
+    maybeInitBuilder();
+    builder.clearContainersToDecrease();
+    if (this.containersToDecrease == null) {
+      return;
+    }
+
+    Iterable<ContainerProto> iterable = new
+        Iterable<ContainerProto>() {
+      @Override
+      public Iterator<ContainerProto> iterator() {
+        return new Iterator<ContainerProto>() {
+          private Iterator<Container> iter = containersToDecrease.iterator();
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+          @Override
+          public ContainerProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    builder.addAllContainersToDecrease(iterable);
   }
 
   @Override

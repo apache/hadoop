@@ -690,7 +690,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       if (autoUpdate) {
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMNodeUpdateContainerEvent(rmContainer.getNodeId(),
-                Collections.singletonList(rmContainer.getContainer())));
+                Collections.singletonMap(
+                    rmContainer.getContainer(), updateType)));
       } else {
         rmContainer.handle(new RMContainerUpdatesAcquiredEvent(
             rmContainer.getContainerId(),

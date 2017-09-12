@@ -89,6 +89,11 @@ public interface NodeHeartbeatResponse {
   public abstract void addAllContainersToUpdate(
       Collection<Container> containersToUpdate);
 
+  public abstract List<Container> getContainersToDecrease();
+
+  public abstract void addAllContainersToDecrease(
+      Collection<Container> containersToDecrease);
+
   ContainerQueuingLimit getContainerQueuingLimit();
   void setContainerQueuingLimit(ContainerQueuingLimit containerQueuingLimit);
 }
