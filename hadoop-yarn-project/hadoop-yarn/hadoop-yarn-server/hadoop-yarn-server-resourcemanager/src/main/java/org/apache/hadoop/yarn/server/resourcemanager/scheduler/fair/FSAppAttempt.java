@@ -614,9 +614,16 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     // Check if the app's allocation will be over its fairshare even
     // after preempting this container
-    Resource usageAfterPreemption = Resources.subtract(
-        getResourceUsage(), container.getAllocatedResource());
+    Resource usageAfterPreemption = Resources.clone(getResourceUsage());
 
+    // Subtract resources of containers already queued for preemption
+    synchronized (preemptionVariablesLock) {
+      Resources.subtractFrom(usageAfterPreemption, resourcesToBePreempted);
+    }
+
+    // Subtract this container's allocation to compute usage after preemption
+    Resources.subtractFrom(
+        usageAfterPreemption, container.getAllocatedResource());
     return !isUsageBelowShare(usageAfterPreemption, getFairShare());
   }
 
@@ -1270,13 +1277,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public Resource getResourceUsage() {
-    // Subtract copies the object, so that we have a snapshot,
-    // in case usage changes, while the caller is using the value
-    synchronized (preemptionVariablesLock) {
-      return containersToBePreempted.isEmpty()
-          ? getCurrentConsumption()
-          : Resources.subtract(getCurrentConsumption(), resourcesToBePreempted);
-    }
+    return getCurrentConsumption();
   }
 
   @Override
