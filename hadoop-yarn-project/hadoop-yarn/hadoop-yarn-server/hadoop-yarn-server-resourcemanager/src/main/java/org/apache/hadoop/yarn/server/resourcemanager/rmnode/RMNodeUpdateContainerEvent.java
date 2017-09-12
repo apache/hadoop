@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 
 /**
@@ -29,16 +31,15 @@ import org.apache.hadoop.yarn.api.records.NodeId;
  *
  */
 public class RMNodeUpdateContainerEvent extends RMNodeEvent {
-  private List<Container> toBeUpdatedContainers;
+  private Map<Container, ContainerUpdateType> toBeUpdatedContainers;
 
   public RMNodeUpdateContainerEvent(NodeId nodeId,
-      List<Container> toBeUpdatedContainers) {
+      Map<Container, ContainerUpdateType> toBeUpdatedContainers) {
     super(nodeId, RMNodeEventType.UPDATE_CONTAINER);
-
     this.toBeUpdatedContainers = toBeUpdatedContainers;
   }
 
-  public List<Container> getToBeUpdatedContainers() {
+  public Map<Container, ContainerUpdateType> getToBeUpdatedContainers() {
     return toBeUpdatedContainers;
   }
 }

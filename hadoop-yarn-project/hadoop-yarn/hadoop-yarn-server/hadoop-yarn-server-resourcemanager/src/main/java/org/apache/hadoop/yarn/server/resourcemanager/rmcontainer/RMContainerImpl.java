@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -641,7 +642,8 @@ public class RMContainerImpl implements RMContainer {
             new AllocationExpirationInfo(event.getContainerId()));
         container.eventHandler.handle(new RMNodeUpdateContainerEvent(
             container.nodeId,
-            Collections.singletonList(container.getContainer())));
+            Collections.singletonMap(container.getContainer(),
+                ContainerUpdateType.DECREASE_RESOURCE)));
       } else if (Resources.fitsIn(nmContainerResource, rmContainerResource)) {
         // If nmContainerResource < rmContainerResource, this is caused by the
         // following sequence:
