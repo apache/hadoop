@@ -55,6 +55,14 @@ public interface ScmClient {
   Pipeline getContainer(String containerId) throws IOException;
 
   /**
+   * Close a container by name.
+   *
+   * @param pipeline the container to be closed.
+   * @throws IOException
+   */
+  void closeContainer(Pipeline pipeline) throws IOException;
+
+  /**
    * Deletes an existing container.
    * @param pipeline - Pipeline that represents the container.
    * @param force - true to forcibly delete the container.

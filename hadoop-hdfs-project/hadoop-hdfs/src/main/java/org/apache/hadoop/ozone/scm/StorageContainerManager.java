@@ -398,6 +398,11 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     return scmContainerManager.getContainer(containerName).getPipeline();
   }
 
+  @VisibleForTesting
+  ContainerInfo getContainerInfo(String containerName) throws IOException {
+    return scmContainerManager.getContainer(containerName);
+  }
+
   /**
    * {@inheritDoc}
    */
@@ -485,6 +490,12 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       throws IOException {
      // TODO: will be addressed in future patch.
     return null;
+  }
+
+  @Override
+  public void closeContainer(String containerName) throws IOException {
+    checkAdminAccess();
+    scmContainerManager.closeContainer(containerName);
   }
 
   /**

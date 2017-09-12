@@ -111,6 +111,12 @@ public class MockStorageClient implements ScmClient {
   }
 
   @Override
+  public void closeContainer(Pipeline container) throws IOException {
+    // Do nothing, because the mock container does not have the notion of
+    // "open" and "close".
+  }
+
+  @Override
   public long getContainerSize(Pipeline pipeline) throws IOException {
     // just return a constant value for now
     return 5L * OzoneConsts.GB; // 5GB

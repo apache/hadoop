@@ -31,6 +31,8 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
@@ -170,6 +172,18 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       return NotifyObjectCreationStageResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public CloseContainerResponseProto closeContainer(
+      RpcController controller, CloseContainerRequestProto request)
+      throws ServiceException {
+    try {
+      impl.closeContainer(request.getContainerName());
+      return CloseContainerResponseProto.newBuilder().build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
   }
 

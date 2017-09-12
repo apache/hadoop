@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.scm.cli.SCMCLI;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.client.ContainerOperationClient;
 import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.util.StringUtils;
@@ -48,6 +49,9 @@ import java.io.PrintStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState.CLOSED;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState.OPEN;
+import static org.apache.hadoop.ozone.scm.cli.ResultCode.EXECUTION_ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -174,7 +178,7 @@ public class TestSCMCli {
     testErr = new ByteArrayOutputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     exitCode = runCommandAndGetOutput(delCmd, out, testErr);
-    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertEquals(EXECUTION_ERROR, exitCode);
     assertTrue(testErr.toString()
         .contains("Deleting an open container is not allowed."));
     Assert.assertTrue(containerExist(containerName));
@@ -185,7 +189,7 @@ public class TestSCMCli {
     // Gracefully delete a container should fail because it is not empty.
     testErr = new ByteArrayOutputStream();
     int exitCode2 = runCommandAndGetOutput(delCmd, out, testErr);
-    assertEquals(ResultCode.EXECUTION_ERROR, exitCode2);
+    assertEquals(EXECUTION_ERROR, exitCode2);
     assertTrue(testErr.toString()
         .contains("Container cannot be deleted because it is not empty."));
     Assert.assertTrue(containerExist(containerName));
@@ -228,7 +232,7 @@ public class TestSCMCli {
     delCmd = new String[] {"-container", "-delete", "-c", containerName};
     testErr = new ByteArrayOutputStream();
     exitCode = runCommandAndGetOutput(delCmd, out, testErr);
-    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertEquals(EXECUTION_ERROR, exitCode);
     assertTrue(testErr.toString()
         .contains("Specified key does not exist."));
   }
@@ -261,7 +265,7 @@ public class TestSCMCli {
     String[] info = {"-container", "-info", cname};
     int exitCode = runCommandAndGetOutput(info, null, null);
     assertEquals("Expected Execution Error, Did not find that.",
-        ResultCode.EXECUTION_ERROR, exitCode);
+        EXECUTION_ERROR, exitCode);
 
     // Create an empty container.
     cname = "ContainerTestInfo1";
@@ -384,7 +388,7 @@ public class TestSCMCli {
     // Test without -start, -prefix and -count
     String[] args = new String[] {"-container", "-list"};
     int exitCode = runCommandAndGetOutput(args, out, err);
-    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertEquals(EXECUTION_ERROR, exitCode);
     assertTrue(err.toString()
         .contains("Expecting container count"));
 
@@ -395,7 +399,7 @@ public class TestSCMCli {
     args = new String[] {"-container", "-list",
         "-start", prefix + 0, "-count", "-1"};
     exitCode = runCommandAndGetOutput(args, out, err);
-    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertEquals(EXECUTION_ERROR, exitCode);
     assertTrue(err.toString()
         .contains("-count should not be negative"));
 
@@ -466,6 +470,28 @@ public class TestSCMCli {
     exitCode = runCommandAndGetOutput(args, out, err);
     assertEquals(ResultCode.SUCCESS, exitCode);
     assertTrue(out.toString().isEmpty());
+  }
+
+  @Test
+  public void testCloseContainer() throws Exception {
+    String containerName =  "containerTestClose";
+    String[] args = {"-container", "-create", "-c", containerName};
+    assertEquals(ResultCode.SUCCESS, cli.run(args));
+    Pipeline container = scm.getContainer(containerName);
+    assertNotNull(container);
+    assertEquals(containerName, container.getContainerName());
+
+    ContainerInfo containerInfo = scm.getContainerInfo(containerName);
+    assertEquals(OPEN, containerInfo.getState());
+
+    String[] args1 = {"-container", "-close", "-c", containerName};
+    assertEquals(ResultCode.SUCCESS, cli.run(args1));
+
+    containerInfo = scm.getContainerInfo(containerName);
+    assertEquals(CLOSED, containerInfo.getState());
+
+    // closing this container again will trigger an error.
+    assertEquals(EXECUTION_ERROR, cli.run(args1));
   }
 
   @Test

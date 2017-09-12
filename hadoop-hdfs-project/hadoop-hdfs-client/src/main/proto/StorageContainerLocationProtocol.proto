@@ -64,6 +64,14 @@ message GetContainerResponseProto {
   required hadoop.hdfs.ozone.Pipeline pipeline = 1;
 }
 
+message CloseContainerRequestProto {
+  required string containerName = 1;
+}
+
+message CloseContainerResponseProto {
+
+}
+
 message ListContainerRequestProto {
   required uint32 count = 1;
   optional string startName = 2;
@@ -183,6 +191,10 @@ service StorageContainerLocationProtocolService {
   */
   rpc notifyObjectCreationStage(NotifyObjectCreationStageRequestProto) returns (NotifyObjectCreationStageResponseProto);
 
+  /**
+  * Close a container.
+  */
+  rpc closeContainer(CloseContainerRequestProto) returns (CloseContainerResponseProto);
   /*
   *  Apis that Manage Pipelines.
   *
