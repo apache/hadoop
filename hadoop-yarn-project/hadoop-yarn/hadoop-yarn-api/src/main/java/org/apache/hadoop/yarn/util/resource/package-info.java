@@ -19,8 +19,4 @@
  * Package org.apache.hadoop.yarn.util.resource contains classes
  * which is used as utility class for resource profile computations.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
 package org.apache.hadoop.yarn.util.resource;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
