@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.records;
 import java.io.Serializable;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -103,7 +104,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   }
 
   @Public
-  @Evolving
+  @Unstable
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers, boolean relaxLocality,
       String labelExpression, ExecutionTypeRequest executionTypeRequest,
@@ -261,7 +262,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
      * @return {@link ResourceRequestBuilder}
      */
     @Public
-    @Evolving
+    @InterfaceStability.Unstable
     public ResourceRequestBuilder profileCapability(
         ProfileCapability profileCapability) {
       resourceRequest.setProfileCapability(profileCapability);
@@ -486,11 +487,11 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public abstract void setNodeLabelExpression(String nodelabelExpression);
 
   @Public
-  @Evolving
+  @InterfaceStability.Unstable
   public abstract ProfileCapability getProfileCapability();
 
   @Public
-  @Evolving
+  @InterfaceStability.Unstable
   public abstract void setProfileCapability(ProfileCapability p);
 
   /**
