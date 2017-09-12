@@ -55,6 +55,7 @@ import org.junit.Test;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import org.mockito.Mockito;
 
 
 public class TestJournalNode {
@@ -342,4 +343,24 @@ public class TestJournalNode {
     System.err.println("Time per batch: " + avgRtt + "ms");
     System.err.println("Throughput: " + throughput + " bytes/sec");
   }
+
+  /**
+   * Test case to check if JournalNode exits cleanly when httpserver or rpc
+   * server fails to start. Call to JournalNode start should fail with bind
+   * exception as the port is in use by the JN started in @Before routine
+   */
+  @Test
+  public void testJournalNodeStartupFailsCleanly() {
+    JournalNode jNode = Mockito.spy(new JournalNode());
+    try {
+      jNode.setConf(conf);
+      jNode.start();
+      fail("Should throw bind exception");
+    } catch (Exception e) {
+      GenericTestUtils
+          .assertExceptionContains("java.net.BindException: Port in use", e);
+    }
+    Mockito.verify(jNode).stop(1);
+  }
+
 }
