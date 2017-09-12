@@ -26,6 +26,7 @@ import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
@@ -264,6 +265,21 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
             response.hasErrorMessage() ? response.getErrorMessage() : "");
         throw new IOException(errorMessage);
       }
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void closeContainer(String containerName) throws IOException {
+    Preconditions.checkState(!Strings.isNullOrEmpty(containerName),
+        "Container name cannot be null or empty");
+    CloseContainerRequestProto request = CloseContainerRequestProto
+        .newBuilder()
+        .setContainerName(containerName)
+        .build();
+    try {
+      rpcProxy.closeContainer(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

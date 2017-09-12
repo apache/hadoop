@@ -280,6 +280,29 @@ public final class ContainerProtocolCalls  {
   }
 
   /**
+   * Close a container.
+   *
+   * @param client
+   * @param traceID
+   * @throws IOException
+   */
+  public static void closeContainer(XceiverClientSpi client, String traceID)
+      throws IOException {
+    ContainerProtos.CloseContainerRequestProto.Builder closeRequest =
+        ContainerProtos.CloseContainerRequestProto.newBuilder();
+    closeRequest.setPipeline(client.getPipeline().getProtobufMessage());
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(Type.CloseContainer);
+    request.setCloseContainer(closeRequest);
+    request.setTraceID(traceID);
+    ContainerCommandResponseProto response =
+        client.sendCommand(request.build());
+    validateContainerResponse(response);
+  }
+
+  /**
    * readContainer call that gets meta data from an existing container.
    *
    * @param client - client

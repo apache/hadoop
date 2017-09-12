@@ -65,7 +65,7 @@ import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
     FAILED_TO_FIND_CONTAINER;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
-    FAILED_TO_FIND_CONTAINER_WITH_SAPCE;
+    FAILED_TO_FIND_CONTAINER_WITH_SPACE;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
     FAILED_TO_FIND_BLOCK;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.
@@ -384,7 +384,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
         // now we should have some candidates in ALLOCATE state
         if (candidates.size() == 0) {
           throw new SCMException("Fail to find any container to allocate block "
-              + "of size " + size + ".", FAILED_TO_FIND_CONTAINER_WITH_SAPCE);
+              + "of size " + size + ".", FAILED_TO_FIND_CONTAINER_WITH_SPACE);
         }
       }
 

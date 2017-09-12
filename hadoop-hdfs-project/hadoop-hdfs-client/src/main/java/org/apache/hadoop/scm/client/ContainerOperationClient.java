@@ -256,6 +256,49 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   /**
+   * Close a container.
+   *
+   * @param pipeline the container to be closed.
+   * @throws IOException
+   */
+  @Override
+  public void closeContainer(Pipeline pipeline) throws IOException {
+    XceiverClientSpi client = null;
+    try {
+      LOG.debug("Close container {}", pipeline);
+      /*
+      TODO: two orders here, revisit this later:
+      1. close on SCM first, then on data node
+      2. close on data node first, then on SCM
+
+      with 1: if client failed after closing on SCM, then there is a
+      container SCM thinks as closed, but is actually open. Then SCM will no
+      longer allocate block to it, which is fine. But SCM may later try to
+      replicate this "closed" container, which I'm not sure is safe.
+
+      with 2: if client failed after close on datanode, then there is a
+      container SCM thinks as open, but is actually closed. Then SCM will still
+      try to allocate block to it. Which will fail when actually doing the
+      write. No more data can be written, but at least the correctness and
+      consistency of existing data will maintain.
+
+      For now, take the #2 way.
+       */
+      // Actually close the container on Datanode
+      client = xceiverClientManager.acquireClient(pipeline);
+      String traceID = UUID.randomUUID().toString();
+      ContainerProtocolCalls.closeContainer(client, traceID);
+      // Notify SCM to close the container
+      String containerId = pipeline.getContainerName();
+      storageContainerLocationClient.closeContainer(containerId);
+    } finally {
+      if (client != null) {
+        xceiverClientManager.releaseClient(client);
+      }
+    }
+  }
+
+  /**
    * Get the the current usage information.
    * @param pipeline - Pipeline
    * @return the size of the given container.

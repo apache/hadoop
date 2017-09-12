@@ -108,4 +108,12 @@ public interface StorageContainerLocationProtocol {
   Pipeline createReplicationPipeline(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor factor, OzoneProtos.NodePool nodePool)
       throws IOException;
+
+  /**
+   * Clsoe a container.
+   *
+   * @param containerName the name of the container to close.
+   * @throws IOException
+   */
+  void closeContainer(String containerName) throws IOException;
 }

@@ -278,6 +278,22 @@ public class ContainerMapping implements Mapping {
     }
   }
 
+  @Override
+  public void closeContainer(String containerName) throws IOException {
+    lock.lock();
+    try {
+      OzoneProtos.LifeCycleState newState =
+          updateContainerState(containerName, OzoneProtos.LifeCycleEvent.CLOSE);
+      if (newState != OzoneProtos.LifeCycleState.CLOSED) {
+        throw new SCMException("Failed to close container " + containerName +
+            ", reason : container in state " + newState,
+            SCMException.ResultCodes.UNEXPECTED_CONTAINER_STATE);
+      }
+    } finally {
+      lock.unlock();
+    }
+  }
+
   /**
    * {@inheritDoc}
    * Used by client to update container state on SCM.
