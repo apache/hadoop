@@ -139,6 +139,16 @@ public class ContainersLauncher extends AbstractService
         containerLauncher.submit(launch);
         running.put(containerId, launch);
         break;
+      case RECOVER_PAUSED_CONTAINER:
+        // Recovery for paused containers is not supported, thus here
+        // we locate any paused containers, and terminate them.
+        app = context.getApplications().get(
+            containerId.getApplicationAttemptId().getApplicationId());
+        launch = new RecoverPausedContainerLaunch(context, getConfig(),
+            dispatcher, exec, app, event.getContainer(), dirsHandler,
+            containerManager);
+        containerLauncher.submit(launch);
+        break;
       case CLEANUP_CONTAINER:
       case CLEANUP_CONTAINER_FOR_REINIT:
         ContainerLaunch launcher = running.remove(containerId);

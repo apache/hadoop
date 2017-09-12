@@ -288,6 +288,23 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(containerReq, rcs.getStartRequest());
     assertEquals(diags.toString(), rcs.getDiagnostics());
 
+    // pause the container, and verify recovered
+    stateStore.storeContainerPaused(containerId);
+    restartStateStore();
+    recoveredContainers = stateStore.loadContainersState();
+    assertEquals(1, recoveredContainers.size());
+    rcs = recoveredContainers.get(0);
+    assertEquals(RecoveredContainerStatus.PAUSED, rcs.getStatus());
+    assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
+    assertEquals(false, rcs.getKilled());
+    assertEquals(containerReq, rcs.getStartRequest());
+
+    // Resume the container
+    stateStore.removeContainerPaused(containerId);
+    restartStateStore();
+    recoveredContainers = stateStore.loadContainersState();
+    assertEquals(1, recoveredContainers.size());
+
     // increase the container size, and verify recovered
     stateStore.storeContainerResourceChanged(containerId, 2,
         Resource.newInstance(2468, 4));

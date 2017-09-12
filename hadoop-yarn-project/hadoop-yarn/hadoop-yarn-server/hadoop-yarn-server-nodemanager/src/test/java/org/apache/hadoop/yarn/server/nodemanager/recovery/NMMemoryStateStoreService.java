@@ -142,6 +142,19 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public void storeContainerPaused(ContainerId containerId) throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.status = RecoveredContainerStatus.PAUSED;
+  }
+
+  @Override
+  public void removeContainerPaused(ContainerId containerId)
+      throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.status = RecoveredContainerStatus.LAUNCHED;
+  }
+
+  @Override
   public synchronized void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException {
     RecoveredContainerState rcs = getRecoveredContainerState(containerId);

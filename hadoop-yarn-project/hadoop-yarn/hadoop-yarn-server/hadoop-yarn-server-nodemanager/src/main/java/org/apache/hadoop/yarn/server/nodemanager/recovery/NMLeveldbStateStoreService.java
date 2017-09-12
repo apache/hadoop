@@ -116,6 +116,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
   private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
   private static final String CONTAINER_QUEUED_KEY_SUFFIX = "/queued";
+  private static final String CONTAINER_PAUSED_KEY_SUFFIX = "/paused";
   private static final String CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX =
       "/resourceChanged";
   private static final String CONTAINER_KILLED_KEY_SUFFIX = "/killed";
@@ -266,9 +267,16 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         if (rcs.status == RecoveredContainerStatus.REQUESTED) {
           rcs.status = RecoveredContainerStatus.QUEUED;
         }
+      } else if (suffix.equals(CONTAINER_PAUSED_KEY_SUFFIX)) {
+        if ((rcs.status == RecoveredContainerStatus.LAUNCHED)
+            ||(rcs.status == RecoveredContainerStatus.QUEUED)
+            ||(rcs.status == RecoveredContainerStatus.REQUESTED)) {
+          rcs.status = RecoveredContainerStatus.PAUSED;
+        }
       } else if (suffix.equals(CONTAINER_LAUNCHED_KEY_SUFFIX)) {
         if ((rcs.status == RecoveredContainerStatus.REQUESTED)
-            || (rcs.status == RecoveredContainerStatus.QUEUED)) {
+            || (rcs.status == RecoveredContainerStatus.QUEUED)
+            ||(rcs.status == RecoveredContainerStatus.PAUSED)) {
           rcs.status = RecoveredContainerStatus.LAUNCHED;
         }
       } else if (suffix.equals(CONTAINER_KILLED_KEY_SUFFIX)) {
@@ -348,6 +356,37 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         + CONTAINER_QUEUED_KEY_SUFFIX;
     try {
       db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerPaused(ContainerId containerId) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("storeContainerPaused: containerId=" + containerId);
+    }
+
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_PAUSED_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeContainerPaused(ContainerId containerId)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("removeContainerPaused: containerId=" + containerId);
+    }
+
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_PAUSED_KEY_SUFFIX;
+    try {
+      db.delete(bytes(key));
     } catch (DBException e) {
       throw new IOException(e);
     }
@@ -497,6 +536,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.delete(bytes(keyPrefix + CONTAINER_DIAGS_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_LAUNCHED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_QUEUED_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_PAUSED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
         List<String> unknownKeysForContainer = containerUnknownKeySuffixes
