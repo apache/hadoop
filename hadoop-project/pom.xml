@@ -76,7 +76,7 @@
     <slf4j.version>1.7.25</slf4j.version>
 
     <!-- com.google.re2j version -->
-    <re2j.version>1.0</re2j.version>
+    <re2j.version>1.1</re2j.version>
 
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
