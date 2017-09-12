@@ -613,4 +613,24 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       fs.delete(p1, true);
     }
   }
+
+  @Test
+  public void testListStatusNamesWithColon() throws Exception {
+    // not supported
+  }
+
+  @Test
+  public void testGlobStatusWithColon() throws Exception {
+    // not supported
+  }
+
+  @Test
+  public void testDeleteRecursivelyColonInName() throws IOException {
+    // not supported
+  }
+
+  @Test
+  public void testRenameNonExistentPathWithColon() throws Exception {
+    // not supported
+  }
 }

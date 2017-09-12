@@ -63,4 +63,24 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   public void testAppend() throws IOException {
     AppendTestUtil.testAppend(fs, new Path("/testAppend/f"));
   }
+
+  @Test
+  public void testListStatusNamesWithColon() throws Exception {
+    // not supported
+  }
+
+  @Test
+  public void testGlobStatusWithColon() throws Exception {
+    // not supported
+  }
+
+  @Test
+  public void testDeleteRecursivelyColonInName() throws IOException {
+    // not supported
+  }
+
+  @Test
+  public void testRenameNonExistentPathWithColon() throws Exception {
+    // not supported
+  }
 }
