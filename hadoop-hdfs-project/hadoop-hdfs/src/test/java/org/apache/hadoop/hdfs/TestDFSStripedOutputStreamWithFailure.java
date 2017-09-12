@@ -259,6 +259,8 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   @Test(timeout=240000)
   public void testBlockTokenExpired() throws Exception {
+    // TODO: this is very flaky, re-enable it later. See HDFS-12417.
+    assumeTrue("Test has been temporarily disabled. See HDFS-12417.", false);
     final int length = dataBlocks * (blockSize - cellSize);
     final HdfsConfiguration conf = newHdfsConfiguration();
 
@@ -631,6 +633,8 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   private void run(int offset) {
     int base = getBase();
+    // TODO: Fix and re-enable these flaky tests. See HDFS-12417.
+    assumeTrue("Test has been temporarily disabled. See HDFS-12417.", false);
     assumeTrue(base >= 0);
     final int i = offset + base;
     final Integer length = getLength(i);
