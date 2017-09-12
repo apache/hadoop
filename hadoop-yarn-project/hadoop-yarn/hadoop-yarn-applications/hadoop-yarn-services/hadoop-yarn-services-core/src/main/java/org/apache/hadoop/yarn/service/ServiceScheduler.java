@@ -574,6 +574,11 @@ public class ServiceScheduler extends CompositeService {
 
     }
 
+    @Override public void onContainerResourceUpdated(ContainerId containerId,
+        Resource resource) {
+
+    }
+
     @Override public void onGetContainerStatusError(ContainerId containerId,
         Throwable t) {
 
@@ -581,6 +586,12 @@ public class ServiceScheduler extends CompositeService {
 
     @Override
     public void onIncreaseContainerResourceError(ContainerId containerId,
+        Throwable t) {
+
+    }
+
+    @Override
+    public void onUpdateContainerResourceError(ContainerId containerId,
         Throwable t) {
 
     }
