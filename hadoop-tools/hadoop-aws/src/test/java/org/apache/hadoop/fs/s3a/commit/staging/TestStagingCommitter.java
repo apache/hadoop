@@ -218,13 +218,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     config.set(Constants.BUFFER_DIR,
         "hdfs://nn:8020/tmp/mr-local-0,hdfs://nn:8020/tmp/mr-local-1");
     intercept(IllegalArgumentException.class, "Wrong FS",
-        new Callable<Path>() {
-          @Override
-          public Path call() throws Exception {
-            return getLocalTaskAttemptTempDir(config, jobUUID,
-                tac.getTaskAttemptID());
-          }
-        });
+        () -> getLocalTaskAttemptTempDir(config, jobUUID,
+                tac.getTaskAttemptID()));
   }
 
   @Test
@@ -349,15 +344,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     writeOutputFile(tac.getTaskAttemptID(), attemptPath,
         UUID.randomUUID().toString(), 10);
 
-    intercept((Class<? extends Exception>) AWSClientIOException.class,
+    intercept(AWSClientIOException.class,
         "Fail on init 1", "Should fail during init",
-        (Callable<?>) new Callable<Void>() {
-          @Override
-          public Void call() throws IOException {
-            committer.commitTask(tac);
-            return null;
-          }
-        });
+        () -> committer.commitTask(tac));
 
     assertEquals("Should have initialized one file upload",
         1, results.getUploads().size());
@@ -384,13 +373,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
     intercept((Class<? extends Exception>) AWSClientIOException.class,
         "Fail on upload 2", "Should fail during upload",
-        (Callable<?>) new Callable<String>() {
-          @Override
-          public String call() throws IOException {
+        () -> {
             committer.commitTask(tac);
             return committer.toString();
-          }
-        });
+          });
 
     assertEquals("Should have attempted one file upload",
         1, results.getUploads().size());
@@ -417,13 +403,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
     intercept((Class<? extends Exception>) AWSClientIOException.class,
         "Fail on upload 5", "Should fail during upload",
-        (Callable<?>) new Callable<String>() {
-          @Override
-          public String call() throws IOException {
+        () -> {
             committer.commitTask(tac);
             return committer.toString();
-          }
-        });
+          });
 
     assertEquals("Should have attempted two file uploads",
         2, results.getUploads().size());
@@ -452,13 +435,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     intercept((Class<? extends Exception>) AWSClientIOException.class,
         "Fail on upload 5",
         "Should suppress abort failure, propagate upload failure",
-        (Callable<?>) new Callable<String>() {
-          @Override
-          public String call() throws IOException {
+        ()-> {
             committer.commitTask(tac);
             return committer.toString();
-          }
-        });
+          });
 
     assertEquals("Should have attempted two file uploads",
         2, results.getUploads().size());
@@ -525,14 +505,12 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     errors.failOnCommit(5);
     setMockLogLevel(MockS3AFileSystem.LOG_NAME);
 
-    intercept((Class<? extends Exception>) AWSClientIOException.class,
-        "Fail on commit 5", "Should propagate the commit failure",
-        (Callable<?>) new Callable<String>() {
-          @Override
-          public String call() throws IOException {
-            jobCommitter.commitJob(job);
-            return jobCommitter.toString();
-          }
+    intercept(AWSClientIOException.class,
+        "Fail on commit 5",
+        "Should propagate the commit failure",
+        () -> {
+          jobCommitter.commitJob(job);
+          return jobCommitter.toString();
         });
 
     assertEquals("Should have succeeded to commit some uploads",
