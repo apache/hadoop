@@ -86,7 +86,17 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
           "org.apache.hadoop.yarn.server.timelineservice.storage."
               + "HBaseTimelineReaderImpl");
       config.setInt("hfile.format.version", 3);
-      server = new TimelineReaderServer();
+      server = new TimelineReaderServer() {
+        @Override
+        protected void addFilters(Configuration conf) {
+          // The parent code uses hadoop-common jar from this version of
+          // Hadoop, but the tests are using hadoop-common jar from
+          // ${hbase-compatible-hadoop.version}. Between these versions, there
+          // are many differences, including classnames and packages.
+          // We do nothing here, so that we don't cause a NoSuchMethodError or
+          // NoClassDefFoundError.
+        }
+      };
       server.init(config);
       server.start();
       serverPort = server.getWebServerPort();
