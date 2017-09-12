@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
@@ -34,6 +35,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Executes List Bucket.
@@ -102,10 +104,10 @@ public class ListBucketHandler extends Handler {
     OzoneVolume vol = client.getVolume(volumeName);
     List<OzoneBucket> bucketList = vol.listBuckets(length, startBucket, prefix);
 
-    for (OzoneBucket bucket : bucketList) {
-      System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-          bucket.getBucketInfo().toJsonString()));
-    }
+    List<BucketInfo> jsonData = bucketList.stream()
+        .map(OzoneBucket::getBucketInfo).collect(Collectors.toList());
+    System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+        JsonUtils.toJsonString(jsonData)));
   }
 }
 

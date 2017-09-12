@@ -53,6 +53,10 @@ import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.KeyInfo;
+import org.apache.hadoop.ozone.web.response.VolumeInfo;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -245,6 +249,8 @@ public class TestOzoneShell {
 
   @Test
   public void testListVolume() throws Exception {
+    String commandOutput;
+    List<VolumeInfo> volumes;
     final int volCount = 20;
     final String user1 = "test-user-a";
     final String user2 = "test-user-b";
@@ -271,28 +277,24 @@ public class TestOzoneShell {
     String[] args = new String[] {"-listVolume", url + "/", "-user",
         user1, "-length", "100"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    volumes = (List<VolumeInfo>) JsonUtils
+        .toJsonList(commandOutput, VolumeInfo.class);
 
-    List<String> names = getValueLines("name", out.toString());
-    List<String> volumes = getValueLines("volumeName", out.toString());
-    List<String> creationTimes = getValueLines("createdOn", out.toString());
     assertEquals(10, volumes.size());
-    assertEquals(10, names.size());
-    assertEquals(10, creationTimes.size());
-
-    for (String user : names) {
-      assertTrue(user.contains(user1));
-    }
-
-    for (String time : creationTimes) {
-      assertTrue(time.contains(OzoneConsts.OZONE_TIME_ZONE));
+    for (VolumeInfo volume : volumes) {
+      assertEquals(volume.getOwner().getName(), user1);
+      assertTrue(volume.getCreatedOn().contains(OzoneConsts.OZONE_TIME_ZONE));
     }
 
     out.reset();
     args = new String[] {"-listVolume", url + "/", "-user",
         user1, "-length", "2"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    volumes = (List<VolumeInfo>) JsonUtils
+        .toJsonList(commandOutput, VolumeInfo.class);
 
-    volumes = getValueLines("volumeName", out.toString());
     assertEquals(2, volumes.size());
 
     // test -prefix option
@@ -300,15 +302,15 @@ public class TestOzoneShell {
     args = new String[] {"-listVolume", url + "/", "-user",
         user1, "-length", "100", "-prefix", "test-vol1"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    volumes = (List<VolumeInfo>) JsonUtils
+        .toJsonList(commandOutput, VolumeInfo.class);
 
-    names = getValueLines("name", out.toString());
-    volumes = getValueLines("volumeName", out.toString());
     assertEquals(5, volumes.size());
-    assertEquals(5, names.size());
     // return volume names should be [test-vol10, test-vol12, ..., test-vol18]
     for (int i = 0; i < volumes.size(); i++) {
-      assertTrue(volumes.get(i).contains("test-vol" + ((i + 5) * 2)));
-      assertTrue(names.get(i).contains(user1));
+      assertEquals(volumes.get(i).getVolumeName(), "test-vol" + ((i + 5) * 2));
+      assertEquals(volumes.get(i).getOwner().getName(), user1);
     }
 
     // test -start option
@@ -316,14 +318,16 @@ public class TestOzoneShell {
     args = new String[] {"-listVolume", url + "/", "-user",
         user2, "-length", "100", "-start", "test-vol15"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    volumes = (List<VolumeInfo>) JsonUtils
+        .toJsonList(commandOutput, VolumeInfo.class);
 
-    names = getValueLines("name", out.toString());
-    volumes = getValueLines("volumeName", out.toString());
     assertEquals(2, volumes.size());
-    assertTrue(volumes.get(0).contains("test-vol17")
-        && volumes.get(1).contains("test-vol19"));
-    assertTrue(names.get(0).contains(user2)
-        && names.get(1).contains(user2));
+
+    assertEquals(volumes.get(0).getVolumeName(), "test-vol17");
+    assertEquals(volumes.get(1).getVolumeName(), "test-vol19");
+    assertEquals(volumes.get(0).getOwner().getName(), user2);
+    assertEquals(volumes.get(1).getOwner().getName(), user2);
 
     // test error conditions
     err.reset();
@@ -468,6 +472,8 @@ public class TestOzoneShell {
 
   @Test
   public void testListBucket() throws Exception {
+    List<BucketInfo> buckets;
+    String commandOutput;
     int bucketCount = 11;
     OzoneVolume vol = creatVolume();
 
@@ -484,59 +490,63 @@ public class TestOzoneShell {
     String[] args = new String[] {"-listBucket",
         url + "/" + vol.getVolumeName(), "-length", "100"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
+        BucketInfo.class);
 
-    List<String> volumes = getValueLines("volumeName", out.toString());
-    List<String> buckets = getValueLines("bucketName", out.toString());
-    List<String> creationTimes = getValueLines("createdOn", out.toString());
-    assertEquals(11, volumes.size());
     assertEquals(11, buckets.size());
-    assertEquals(11, creationTimes.size());
-
     // sort bucket names since the return buckets isn't in created order
     Collections.sort(bucketNames);
     // return bucket names should be [test-bucket0, test-bucket1,
     // test-bucket10, test-bucket2, ,..., test-bucket9]
     for (int i = 0; i < buckets.size(); i++) {
-      assertTrue(buckets.get(i).contains(bucketNames.get(i)));
-      assertTrue(volumes.get(i).contains(vol.getVolumeName()));
-      assertTrue(creationTimes.get(i).contains(OzoneConsts.OZONE_TIME_ZONE));
+      assertEquals(buckets.get(i).getBucketName(), bucketNames.get(i));
+      assertEquals(buckets.get(i).getVolumeName(), vol.getVolumeName());
+      assertTrue(buckets.get(i).getCreatedOn()
+          .contains(OzoneConsts.OZONE_TIME_ZONE));
     }
 
     out.reset();
     args = new String[] {"-listBucket", url + "/" + vol.getVolumeName(),
         "-length", "3"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
+        BucketInfo.class);
 
-    buckets = getValueLines("bucketName", out.toString());
     assertEquals(3, buckets.size());
     // return bucket names should be [test-bucket0,
     // test-bucket1, test-bucket10]
-    assertTrue(buckets.get(0).contains("test-bucket0")
-        && buckets.get(1).contains("test-bucket1")
-        && buckets.get(2).contains("test-bucket10"));
+    assertEquals(buckets.get(0).getBucketName(), "test-bucket0");
+    assertEquals(buckets.get(1).getBucketName(), "test-bucket1");
+    assertEquals(buckets.get(2).getBucketName(), "test-bucket10");
 
     // test -prefix option
     out.reset();
     args = new String[] {"-listBucket", url + "/" + vol.getVolumeName(),
         "-length", "100", "-prefix", "test-bucket1"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
+        BucketInfo.class);
 
-    buckets = getValueLines("bucketName", out.toString());
     assertEquals(2, buckets.size());
     // return bucket names should be [test-bucket1, test-bucket10]
-    assertTrue(buckets.get(0).contains("test-bucket1")
-        && buckets.get(1).contains("test-bucket10"));
+    assertEquals(buckets.get(0).getBucketName(), "test-bucket1");
+    assertEquals(buckets.get(1).getBucketName(), "test-bucket10");
 
     // test -start option
     out.reset();
     args = new String[] {"-listBucket", url + "/" + vol.getVolumeName(),
         "-length", "100", "-start", "test-bucket7"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
+        BucketInfo.class);
 
-    buckets = getValueLines("bucketName", out.toString());
     assertEquals(2, buckets.size());
-    assertTrue(buckets.get(0).contains("test-bucket8")
-        && buckets.get(1).contains("test-bucket9"));
+    assertEquals(buckets.get(0).getBucketName(), "test-bucket8");
+    assertEquals(buckets.get(1).getBucketName(), "test-bucket9");
 
     // test error conditions
     err.reset();
@@ -671,6 +681,8 @@ public class TestOzoneShell {
 
   @Test
   public void testListKey() throws Exception {
+    String commandOutput;
+    List<KeyInfo> keys;
     int keyCount = 11;
     OzoneBucket bucket = creatBucket();
     String volumeName = bucket.getBucketInfo().getVolumeName();
@@ -688,61 +700,63 @@ public class TestOzoneShell {
     String[] args = new String[] {"-listKey",
         url + "/" + volumeName + "/" + bucketName, "-length", "100"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
+        KeyInfo.class);
 
-    List<String> keys = getValueLines("keyName", out.toString());
     assertEquals(11, keys.size());
-
-    List<String> creationTime = getValueLines("createdOn", out.toString());
-    List<String> modificationTime = getValueLines("modifiedOn", out.toString());
-    assertEquals(11, creationTime.size());
-    assertEquals(11, modificationTime.size());
-
     // sort key names since the return keys isn't in created order
     Collections.sort(keyNames);
     // return key names should be [test-key0, test-key1,
     // test-key10, test-key2, ,..., test-key9]
     for (int i = 0; i < keys.size(); i++) {
-      assertTrue(keys.get(i).contains(keyNames.get(i)));
-
+      assertEquals(keys.get(i).getKeyName(), keyNames.get(i));
       // verify the creation/modification time of key
-      assertTrue(creationTime.get(i).contains(OzoneConsts.OZONE_TIME_ZONE));
-      assertTrue(
-          modificationTime.get(i).contains(OzoneConsts.OZONE_TIME_ZONE));
+      assertTrue(keys.get(i).getCreatedOn()
+          .contains(OzoneConsts.OZONE_TIME_ZONE));
+      assertTrue(keys.get(i).getModifiedOn()
+          .contains(OzoneConsts.OZONE_TIME_ZONE));
     }
 
     out.reset();
     args = new String[] {"-listKey", url + "/" + volumeName + "/" + bucketName,
         "-length", "3"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
+        KeyInfo.class);
 
-    keys = getValueLines("keyName", out.toString());
     assertEquals(3, keys.size());
     // return key names should be [test-key0, test-key1, test-key10]
-    assertTrue(keys.get(0).contains("test-key0")
-        && keys.get(1).contains("test-key1")
-        && keys.get(2).contains("test-key10"));
+    assertEquals(keys.get(0).getKeyName(), "test-key0");
+    assertEquals(keys.get(1).getKeyName(), "test-key1");
+    assertEquals(keys.get(2).getKeyName(), "test-key10");
 
     // test -prefix option
     out.reset();
     args = new String[] {"-listKey", url + "/" + volumeName + "/" + bucketName,
         "-length", "100", "-prefix", "test-key1"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
+        KeyInfo.class);
 
-    keys = getValueLines("keyName", out.toString());
     assertEquals(2, keys.size());
     // return key names should be [test-key1, test-key10]
-    assertTrue(keys.get(0).contains("test-key1")
-        && keys.get(1).contains("test-key10"));
+    assertEquals(keys.get(0).getKeyName(), "test-key1");
+    assertEquals(keys.get(1).getKeyName(), "test-key10");
 
     // test -start option
     out.reset();
     args = new String[] {"-listKey", url + "/" + volumeName + "/" + bucketName,
         "-length", "100", "-start", "test-key7"};
     assertEquals(0, ToolRunner.run(shell, args));
+    commandOutput = out.toString();
+    keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
+        KeyInfo.class);
 
-    keys = getValueLines("keyName", out.toString());
-    assertTrue(keys.get(0).contains("test-key8")
-        && keys.get(1).contains("test-key9"));
+    assertEquals(keys.get(0).getKeyName(), "test-key8");
+    assertEquals(keys.get(1).getKeyName(), "test-key9");
 
     // test error conditions
     err.reset();
@@ -786,24 +800,5 @@ public class TestOzoneShell {
     randFile.close();
 
     return tmpFile.getAbsolutePath();
-  }
-
-  /**
-   * Extract lines from output string that contains specified key name.
-   * @param keyName Key name that line should contained.
-   * @param outputStr Response output content.
-   * @return List of string.
-   */
-  private List<String> getValueLines(String keyName, String outputStr) {
-    List<String> nameLines = new ArrayList<>();
-    String[] lines = outputStr.split("\n");
-
-    for (String line : lines) {
-      if (line.contains(keyName)) {
-        nameLines.add(line);
-      }
-    }
-
-    return nameLines;
   }
 }

@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.web.client.OzoneKey;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
+import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
@@ -33,6 +34,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Executes List Keys.
@@ -104,10 +106,11 @@ public class ListKeyHandler extends Handler {
 
     List<OzoneKey> keys = client.listKeys(volumeName, bucketName, length,
         startKey, prefix);
-    for (OzoneKey key : keys) {
-      System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-          key.getObjectInfo().toJsonString()));
-    }
+
+    List<KeyInfo> jsonData = keys.stream()
+        .map(OzoneKey::getObjectInfo).collect(Collectors.toList());
+    System.out.printf(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+        JsonUtils.toJsonString(jsonData)));
   }
 
 }
