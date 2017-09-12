@@ -147,7 +147,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Before
   public void setup() throws IOException {
     conf.setInt(
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
+        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 0);
     super.setup();
   }
   
